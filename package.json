@@ -1,0 +1,20 @@
+{
+  "name": "cyntex-web",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.10.0",
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "preview": "pnpm --filter web preview",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^9.1.0",
+    "@intlify/eslint-plugin-vue-i18n": "^4.5.1",
+    "eslint": "^10.6.0",
+    "typescript": "^6.0.3"
+  }
+}

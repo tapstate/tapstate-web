@@ -1,0 +1,324 @@
+{
+  "app": {
+    "brand": "Cyntex",
+    "primaryNavigation": "主導覽",
+    "previewMode": "AI Studio 遷移預覽",
+    "language": "語言",
+    "languageOptions": {
+      "en": "英文",
+      "zh-CN": "簡體中文",
+      "zh-TW": "繁體中文"
+    },
+    "notifications": "查看通知",
+    "shortcuts": {
+      "ask": "⌘J"
+    },
+    "user": {
+      "avatar": "使用者頭像",
+      "initial": "U"
+    }
+  },
+  "nav": {
+    "overview": "概覽",
+    "resources": "資源",
+    "develop": "開發",
+    "operations": "運行",
+    "governance": "治理",
+    "services": "資料服務",
+    "admin": "管理",
+    "sources": "資料來源",
+    "pipelines": "流水線",
+    "explorations": "探索"
+  },
+  "context": {
+    "demoLine": "Acme / 預設租戶 / prod"
+  },
+  "common": {
+    "actions": "操作",
+    "back": "返回",
+    "create": "建立",
+    "expand": "展開",
+    "more": "更多操作",
+    "separator": "/"
+  },
+  "state": {
+    "success": "成功",
+    "loading": "載入中",
+    "empty": {
+      "short": "空態",
+      "title": "這裡還沒有內容"
+    },
+    "error": {
+      "short": "錯誤",
+      "title": "需要處理的問題",
+      "retry": "重試"
+    }
+  },
+  "sources": {
+    "title": "資料來源",
+    "subtitle": "瀏覽已連接系統、資料表、Schema 和資料預覽。",
+    "allSources": "全部資料來源",
+    "allSourcesDescription": "管理已連接的資料庫、數倉和串流平台。",
+    "connectionError": "該資料來源已在目錄中，但最近一次連線檢查失敗。",
+    "generatedEndpoint": "產生的 API 端點",
+    "noTablesTitle": "沒有發現資料表",
+    "noTablesBody": "目前預覽資料集中，這個資料來源沒有已發現的資料表。",
+    "tablesIn": "{name} 中的資料表",
+    "tablesCount": "{count} 張表",
+    "tabComingSoonTitle": "{tab} 預覽",
+    "tabComingSoonBody": "此標籤頁在遷移預覽中以空態表示。",
+    "actions": {
+      "create": "建立資料來源",
+      "sync": "同步設定",
+      "test": "測試連線"
+    },
+    "columns": {
+      "comment": "備註",
+      "name": "名稱",
+      "noComment": "暫無備註",
+      "position": "位置",
+      "type": "類型"
+    },
+    "search": {
+      "label": "搜尋資料來源",
+      "placeholder": "搜尋資料來源..."
+    },
+    "states": {
+      "empty": "建立一個資料來源後即可瀏覽資料表和預覽資料。",
+      "error": "目前預覽狀態下無法載入資料來源目錄。",
+      "loading": "正在載入資料來源目錄和資料表元資料。"
+    },
+    "stats": {
+      "id": "ID",
+      "ingestedRows": "寫入列數",
+      "last24h": "最近 24 小時",
+      "lastUpdate": "最後更新",
+      "quarantine": "隔離",
+      "rows": "列數",
+      "size": "大小"
+    },
+    "status": {
+      "connected": "已連接",
+      "error": "連線錯誤"
+    },
+    "table": {
+      "host": "Host",
+      "lastSync": "最後同步",
+      "name": "資料表名稱",
+      "rowNumber": "#",
+      "rows": "列數",
+      "size": "大小",
+      "sourceName": "資料來源名稱",
+      "status": "狀態",
+      "tables": "資料表",
+      "type": "類型"
+    },
+    "tabs": {
+      "columns": "欄位",
+      "data": "資料",
+      "lineage": "血緣",
+      "log": "日誌",
+      "settings": "設定"
+    }
+  },
+  "pipelines": {
+    "title": "流水線",
+    "subtitle": "查看流水線資源、產生視圖和服務 API。",
+    "allPipelines": "全部流水線",
+    "explorer": "資源樹",
+    "states": {
+      "empty": "從向導開始，為目前工作區建立第一條流水線。",
+      "error": "目前預覽狀態下無法載入流水線元資料。",
+      "loading": "正在載入流水線圖和資源狀態。"
+    },
+    "createMenu": {
+      "title": "建立方式",
+      "wizard": "使用向導構建",
+      "wizardDescription": "一步步完成引導式設定",
+      "sql": "使用 DuckDB SQL 構建",
+      "sqlDescription": "編寫 SQL 轉換資料",
+      "dag": "使用 DAG 設計器構建",
+      "dagDescription": "視覺化節點編輯器",
+      "ai": "使用 AI 構建",
+      "aiDescription": "透過提示詞產生流水線"
+    },
+    "table": {
+      "modified": "最後修改",
+      "resourceName": "資源名稱",
+      "status": "狀態",
+      "type": "類型"
+    },
+    "type": {
+      "api": "API",
+      "pipeline": "流水線",
+      "view": "視圖"
+    },
+    "status": {
+      "error": "錯誤",
+      "paused": "已暫停",
+      "ready": "就緒",
+      "running": "運行中"
+    },
+    "modified": {
+      "twoHoursAgo": "2 小時前"
+    },
+    "metrics": {
+      "delay": "複製延遲",
+      "latency": "延遲 (p95)",
+      "requests": "每分鐘請求",
+      "storageSize": "儲存大小",
+      "totalRows": "總列數"
+    },
+    "schema": {
+      "column": "欄位名",
+      "createdAtDescription": "記錄寫入時的時間戳",
+      "description": "描述",
+      "eventNameDescription": "使用者觸發的具體動作或事件",
+      "idDescription": "記錄的唯一識別",
+      "title": "Schema 定義",
+      "type": "資料類型"
+    },
+    "preview": {
+      "createdAt": "created_at",
+      "eventName": "event_name",
+      "id": "id",
+      "title": "資料預覽"
+    },
+    "api": {
+      "auth": "鑑權",
+      "authBody": "Authorization header 中需要 Bearer Token",
+      "endpoint": "端點",
+      "method": "GET",
+      "responsePreview": "回應預覽"
+    }
+  },
+  "explorations": {
+    "title": "探索",
+    "threadTitle": "模型能力",
+    "actions": {
+      "mention": "提及資源",
+      "new": "新增探索",
+      "send": "傳送"
+    },
+    "history": {
+      "capabilities": "模型能力",
+      "tipZones": "檢查 best_tip_zones",
+      "tripTrends": "分析行程趨勢"
+    },
+    "input": {
+      "placeholder": "你想探索什麼？"
+    },
+    "states": {
+      "empty": "開始一次探索，圍繞資料來源、視圖和 API 提問。",
+      "error": "目前預覽狀態下無法載入探索執行緒。",
+      "loading": "正在載入探索歷史和對話上下文。"
+    },
+    "messages": {
+      "answerClose": "你想從哪裡開始？",
+      "answerIntro": "我可以協助你在 Cyntex 中探索和分析資料。",
+      "userQuestion": "你可以做哪些事情？"
+    },
+    "capabilities": {
+      "explore": {
+        "title": "資料探索",
+        "item1": "瀏覽資料來源和已發布端點。",
+        "item2": "查詢資料，理解結構和內容。",
+        "item3": "分析分布、趨勢和模式。"
+      },
+      "nodes": {
+        "title": "建立節點",
+        "item1": "建立查詢節點，保存有價值的查詢邏輯。",
+        "item2": "建立時間序列節點，用於趨勢視覺化。",
+        "item3": "構建聚合、過濾和關聯查詢。"
+      },
+      "resources": {
+        "title": "支援的資源",
+        "body": "這個預覽工作區包含以下資源。",
+        "item1": "資料來源：trips、taxi_zone_lookup。",
+        "item2": "API 端點：best_tip_zones。"
+      },
+      "examples": {
+        "title": "範例問題",
+        "body": "你可以這樣提問。",
+        "item1": "分析 trips 資料來源的資料分布。",
+        "item2": "每天的行程數量趨勢是什麼？",
+        "item3": "哪些區域的小費最高？"
+      }
+    }
+  },
+  "ask": {
+    "launch": "Ask Cyntex",
+    "newChat": "新對話",
+    "panelLabel": "Ask Cyntex 面板",
+    "skills": "技能",
+    "actions": {
+      "attach": "新增附件",
+      "close": "關閉",
+      "maximize": "最大化",
+      "minimize": "最小化",
+      "send": "傳送"
+    },
+    "input": {
+      "placeholder": "詢問 Cyntex..."
+    },
+    "preview": {
+      "rows": "100k+ 列"
+    },
+    "prompts": {
+      "pipeline": "建立流水線",
+      "pipelinePrompt": "建立一條新流水線",
+      "source": "建立資料來源",
+      "sourcePrompt": "建立一個資料來源",
+      "trends": "分析資料趨勢",
+      "trendsPrompt": "分析活躍使用者趨勢"
+    },
+    "responses": {
+      "default": "我可以協助你探索資料。\n\n1. 分析 trips 資料來源\n2. 建立新流水線\n3. 檢查 best_tip_zones API\n\n你想從哪一步開始？",
+      "queryPreview": "我已經為你查詢 [View: daily_active_users]。以下是最新資料預覽：\n\n[DataPreview: daily_active_users]\n\n資料看起來正常，並且正在即時更新。需要我分析本週趨勢嗎？",
+      "sourceCreated": "我已經建立資料來源 [DataSource: user_events]，並連接到 PostgreSQL 實例。你可以打開它查看 schema 和同步狀態。"
+    },
+    "shortcuts": {
+      "context": "將目前視圖加入上下文",
+      "contextKey": "Tab",
+      "mention": "提及任意表、視圖或 API",
+      "mentionKey": "{'@'}"
+    },
+    "welcome": {
+      "body": "可以提問，也可以告訴 Cyntex 你需要什麼。",
+      "title": "歡迎使用 Cyntex"
+    }
+  },
+  "wizard": {
+    "addOutput": "新增輸出",
+    "addStep": "新增步驟",
+    "createView": "建立視圖",
+    "or": "或",
+    "pickFields": "選擇欄位",
+    "publishApi": "發布 API",
+    "sourceData": "來源資料",
+    "sourceName": "0426-01",
+    "title": "untitled_view_3",
+    "preview": {
+      "empty": "暫無資料。點擊預覽後產生樣例列。",
+      "grid": "表格預覽",
+      "json": "JSON 預覽",
+      "title": "結果預覽"
+    },
+    "rename": {
+      "field": "欄位名",
+      "newField": "新欄位名",
+      "revert": "還原欄位",
+      "title": "欄位重新命名",
+      "transform": "轉換"
+    }
+  },
+  "view": {
+    "overview": { "title": "概覽", "placeholder": "工作區健康概覽。" },
+    "resources": { "title": "資源", "placeholder": "按 kind 篩選全部資產。" },
+    "develop": { "title": "開發", "placeholder": "DAG 畫布與 SQL 編輯器。" },
+    "operations": { "title": "運行", "placeholder": "任務運行、集群和 Share CDC。" },
+    "governance": { "title": "治理", "placeholder": "血緣、校驗和監控。" },
+    "services": { "title": "資料服務", "placeholder": "已發布 API 和 Token。" },
+    "admin": { "title": "管理", "placeholder": "使用者、角色、租戶和設定。" }
+  }
+}

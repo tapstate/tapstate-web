@@ -1,0 +1,130 @@
+:root {
+  --el-border-radius-base: 10px;
+  --el-border-radius-small: 8px;
+  --el-border-radius-round: 999px;
+  --el-color-primary: #111827;
+  --el-color-primary-light-3: #334155;
+  --el-color-primary-light-5: #475569;
+  --el-color-primary-light-7: #64748b;
+  --el-color-primary-light-8: #94a3b8;
+  --el-color-primary-light-9: #e2e8f0;
+  --el-color-success: #059669;
+  --el-color-warning: #d97706;
+  --el-color-danger: #dc2626;
+  --el-fill-color-blank: #fff;
+  --el-bg-color: var(--app-surface);
+  --el-bg-color-page: var(--app-bg);
+  --el-border-color: var(--app-border);
+  --el-border-color-light: rgba(226, 232, 240, 0.72);
+  --el-border-color-lighter: rgba(226, 232, 240, 0.56);
+  --el-text-color-primary: var(--app-text);
+  --el-text-color-regular: #1f2937;
+  --el-text-color-secondary: var(--app-text-muted);
+  --el-text-color-placeholder: var(--app-text-subtle);
+  --el-font-size-extra-large: 18px;
+  --el-font-size-large: 16px;
+  --el-font-size-medium: 14px;
+  --el-font-size-base: 13px;
+  --el-font-size-small: 12px;
+  --el-font-size-extra-small: 11px;
+}
+
+.el-button--default {
+  border-color: var(--app-border);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.el-button--default:hover {
+  border-color: var(--app-border-strong);
+  background: var(--app-surface-strong);
+}
+
+.el-button--primary {
+  background: var(--app-accent);
+  border-color: var(--app-accent);
+}
+
+.el-button--primary:hover {
+  background: #0f172a;
+  border-color: #0f172a;
+}
+
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select__wrapper,
+.el-autocomplete__wrapper {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  box-shadow: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.el-input__wrapper:hover,
+.el-textarea__inner:hover,
+.el-select__wrapper:hover,
+.el-autocomplete__wrapper:hover {
+  border-color: var(--app-border-strong);
+}
+
+.el-input.is-focus .el-input__wrapper,
+.el-textarea.is-focus .el-textarea__inner,
+.el-select__wrapper.is-focused,
+.el-autocomplete.is-focused .el-autocomplete__wrapper,
+.el-date-editor.is-focused .el-input__wrapper,
+.el-input__wrapper.is-focus,
+.el-textarea__inner:focus,
+.el-select__wrapper:focus-within,
+.el-autocomplete__wrapper:focus-within {
+  border-color: rgba(59, 130, 246, 0.55);
+  box-shadow: 0 0 0 3px var(--app-focus);
+}
+
+.el-card {
+  --el-card-border-color: var(--app-border);
+  --el-card-border-radius: var(--el-border-radius-base);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.el-table {
+  --el-table-border-color: var(--app-border);
+  --el-table-header-bg-color: rgba(248, 250, 252, 0.92);
+  --el-table-row-hover-bg-color: rgba(248, 250, 252, 0.8);
+  --el-table-text-color: var(--app-text);
+  --el-table-header-text-color: #64748b;
+}
+
+.el-table th.el-table__cell {
+  font-weight: 600;
+}
+
+.el-dialog {
+  --el-dialog-border-radius: var(--el-border-radius-base);
+  --el-dialog-box-shadow: 0 24px 64px rgba(15, 23, 42, 0.18);
+}
+
+.el-dropdown__popper,
+.el-select__popper,
+.el-picker__popper,
+.el-tooltip__popper.is-dark {
+  border-radius: var(--el-border-radius-base);
+}
+
+.el-dropdown-menu,
+.el-select-dropdown__wrap,
+.el-popper {
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
+}
+
+.el-menu {
+  border-right: 0;
+}
+
+.el-menu-item.is-active {
+  border-radius: var(--el-border-radius-base);
+}
+
+.el-form-item__label {
+  color: var(--app-text-muted);
+  font-weight: 500;
+}
