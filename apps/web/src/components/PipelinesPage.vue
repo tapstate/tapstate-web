@@ -213,7 +213,7 @@ function statusClass(status: NodeStatus) {
         <div class="relative">
           <button
             type="button"
-            class="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-gray-900 px-3 py-1.5 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-gray-800"
+            class="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-gray-800"
             @click="isCreateOpen = !isCreateOpen"
           >
             <Plus class="h-3.5 w-3.5" aria-hidden="true" />
@@ -287,7 +287,7 @@ function statusClass(status: NodeStatus) {
             <span v-if="selectedNode.status" class="text-gray-200">{{ t('common.separator') }}</span>
             <span
               v-if="selectedNode.status"
-              class="inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius-sm)] px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset"
+              class="inline-flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset"
               :class="statusClass(selectedNode.status)"
             >
               <span class="h-1 w-1 rounded-full" :class="statusDotClass(selectedNode.status)" aria-hidden="true" />
@@ -323,7 +323,7 @@ function statusClass(status: NodeStatus) {
                   <tr v-for="child in displayItems" :key="child.id" class="group transition-colors hover:bg-gray-50/70">
                     <td class="px-4 py-3">
                       <div class="flex items-center gap-2.5">
-                        <div class="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] border border-gray-200/70 bg-gray-50">
+                        <div class="flex h-6 w-6 items-center justify-center rounded-lg border border-gray-200/70 bg-gray-50">
                           <component :is="nodeIcon(child.type)" class="h-3.5 w-3.5" :class="[nodeIconColor(child.type)]" aria-hidden="true" />
                         </div>
                         <span class="font-medium text-gray-900">{{ child.name }}</span>
@@ -333,7 +333,7 @@ function statusClass(status: NodeStatus) {
                       {{ t(nodeTypeLabelKey(child.type)) }}
                     </td>
                     <td class="px-4 py-3">
-                      <span v-if="child.status" class="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-1.5 py-0.5 text-[11px] font-medium text-gray-600">
+                      <span v-if="child.status" class="inline-flex items-center gap-1.5 rounded-lg px-1.5 py-0.5 text-[11px] font-medium text-gray-600">
                         <span class="h-1.5 w-1.5 rounded-full" :class="statusDotClass(child.status)" aria-hidden="true" />
                         {{ t(statusLabelKey(child.status)) }}
                       </span>

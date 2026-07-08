@@ -44,6 +44,8 @@
 
 ## 样式约束
 
+长期整体设计规范见 `./design-system.md`。本节只保留工程边界和高频硬约束。
+
 ### 文件边界
 
 - `apps/web/src/styles/main.css` 只作为样式入口，负责按顺序 import。
@@ -60,7 +62,7 @@
 
 ### Element Plus
 
-1. **基础圆角默认 10px** —— `--radius`、`--el-border-radius-base` 和 app token 保持一致。
+1. **基础控件圆角默认 10px** —— shadcn 的 `--radius` 为 `0.625rem`，Tailwind `rounded-lg` 映射到 `var(--radius)`；当前 shadcn docs/base style 的 Input、Button 等默认控件使用 `rounded-lg`，所以 Element Plus 的 `--el-border-radius-base` 必须保持 `var(--radius)`，让表单控件、按钮和 Select trigger 默认是 10px。`--radius-sm` 只用于 menu item、tag、compact icon button 等更紧凑场景。
 2. **Element Plus 优先用于交互组件** —— `button`、`form`、`table`、`dialog`、`select`、`card` 等先复用现成组件，再统一做外观覆盖。
 3. **覆盖优先级：官方变量 > 组件级 CSS 变量 > `.el-*` class** —— 写具体 class 是最后手段，且要控制范围。
 4. **不要用页面内硬编码反复压样式** —— 如果同一类视觉在多个页面重复出现，优先沉淀成 token、语义 class 或组件覆盖。

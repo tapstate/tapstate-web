@@ -25,7 +25,7 @@ const hasChildren = computed(() => !!props.node.children && props.node.children.
 <template>
   <div>
     <div
-      class="flex items-center py-1.5 px-2 rounded-[var(--radius-sm)] cursor-pointer text-[13px] select-none transition-colors" :class="[
+      class="flex items-center py-1.5 px-2 rounded-lg cursor-pointer text-[13px] select-none transition-colors" :class="[
         isSelected ? 'bg-gray-900/5 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-900/5',
       ]"
       :style="{ paddingLeft: `${level * 12 + 8}px` }"

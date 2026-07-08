@@ -10,6 +10,7 @@ docs/
 ├── product/
 │   └── information-architecture.md
 ├── engineering/
+│   ├── design-system.md
 │   └── tech-stack.md
 └── workflow/
     ├── README.md
@@ -24,7 +25,7 @@ docs/
 - 流程规则、模板、阶段门禁：放在 `docs/workflow/`。
 - 从同步主干、开分支到提交 PR 的开发者日常流程：放在 `docs/workflow/branch-pr-flow.md`。
 - 一级导航、产品对象边界、菜单 IA、稳定的产品决策：放在 `docs/product/`。
-- 技术栈、依赖策略、i18n、测试、构建、工程门禁：放在 `docs/engineering/`。
+- 技术栈、依赖策略、i18n、测试、构建、工程门禁、长期设计系统规范：放在 `docs/engineering/`。
 
 ## 最小闭环
 

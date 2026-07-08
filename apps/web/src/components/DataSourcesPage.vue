@@ -229,7 +229,7 @@ function sourceIconColor(type: SourceType) {
       </h1>
 
       <div class="flex shrink-0 items-center gap-2">
-        <button class="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-gray-900 px-3 py-1.5 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-gray-800">
+        <button class="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-gray-800">
           <Plus class="h-4 w-4" aria-hidden="true" />
           {{ t('sources.actions.create') }}
         </button>
@@ -245,7 +245,7 @@ function sourceIconColor(type: SourceType) {
             <input
               v-model="searchText"
               type="search"
-              class="w-full rounded-[var(--radius-sm)] border border-gray-200/80 bg-white py-1.5 pl-9 pr-3 text-[13px] outline-none transition focus:border-gray-300 focus:ring-2 focus:ring-gray-900/10"
+              class="w-full rounded-lg border border-gray-200/80 bg-white py-1.5 pl-9 pr-3 text-[13px] outline-none transition focus:border-gray-300 focus:ring-2 focus:ring-gray-900/10"
               :placeholder="t('sources.search.placeholder')"
             >
           </label>
@@ -309,10 +309,10 @@ function sourceIconColor(type: SourceType) {
               </div>
 
               <div class="flex flex-wrap gap-2">
-                <button class="rounded-[var(--radius-sm)] border border-gray-200 bg-white px-3 py-1.5 text-[13px] font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+                <button class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-[13px] font-medium text-gray-700 shadow-sm hover:bg-gray-50">
                   {{ t('sources.actions.test') }}
                 </button>
-                <button class="rounded-[var(--radius-sm)] border border-gray-200 bg-white px-3 py-1.5 text-[13px] font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+                <button class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-[13px] font-medium text-gray-700 shadow-sm hover:bg-gray-50">
                   {{ t('sources.actions.sync') }}
                 </button>
               </div>
@@ -635,7 +635,7 @@ function sourceIconColor(type: SourceType) {
                     >
                       <td class="px-4 py-3">
                         <div class="flex items-center gap-2.5">
-                          <div class="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] border border-gray-200/70 bg-gray-50">
+                          <div class="flex h-6 w-6 items-center justify-center rounded-lg border border-gray-200/70 bg-gray-50">
                             <component :is="sourceIcon(source.type)" class="h-3.5 w-3.5" :class="[sourceIconColor(source.type)]" aria-hidden="true" />
                           </div>
                           <span class="font-medium text-gray-900">{{ source.name }}</span>
@@ -646,7 +646,7 @@ function sourceIconColor(type: SourceType) {
                       </td>
                       <td class="px-4 py-3">
                         <span
-                          class="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset"
+                          class="inline-flex items-center gap-1.5 rounded-lg px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset"
                           :class="source.status === 'connected'
                             ? 'bg-green-50 text-green-700 ring-green-600/20'
                             : 'bg-red-50 text-red-700 ring-red-600/20'"

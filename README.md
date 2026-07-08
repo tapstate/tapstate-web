@@ -21,6 +21,7 @@ cyntex-web/
 │   ├── product/
 │   │   └── information-architecture.md    顶层 IA / 菜单设计
 │   ├── engineering/
+│   │   ├── design-system.md               shadcn 对齐的设计系统规范
 │   │   └── tech-stack.md                  技术栈登记 + 未决雷达
 │   └── workflow/
 │       ├── README.md                      agent 研发流程与阶段门禁
@@ -97,11 +98,12 @@ JetBrains 系装 **Vue I18n** 插件(marketplace 搜 "Vue i18n"),识别同样的
 
 ## 企业级约束(摘要)
 
-详见 `docs/engineering/tech-stack.md`。要点:strict TS + 禁 any、i18n no-raw-text 门禁、Element Plus locale 联动、四态 UI、错误文案对接后端错误码 catalog、bundle budget(雷达)。
+详见 `docs/engineering/tech-stack.md` 和 `docs/engineering/design-system.md`。要点:strict TS + 禁 any、i18n no-raw-text 门禁、Element Plus locale 联动、四态 UI、错误文案对接后端错误码 catalog、bundle budget(雷达)。
 
 ### 样式基线
 
-- 全局圆角默认 `10px`。
+- shadcn 对齐的整体设计规范见 `docs/engineering/design-system.md`；新增 UI 先按 token、组件状态、Element Plus 映射和工作台密度规则执行。
+- 表单控件、按钮和 Select trigger 默认圆角按 shadcn `rounded-lg` / `var(--radius)` / `10px` 落地。
 - `apps/web/src/styles/main.css` 只做入口汇总；Tailwind、Element Plus 覆盖、应用语义样式拆到独立文件。
 - Tailwind CSS 优先用于布局和局部样式表达，项目显式使用 `@layer theme, base, components, utilities;`。
 - Element Plus 负责交互组件,但其外观要通过官方 CSS 变量优先覆盖，无法用变量解决时才写具体 `.el-*` class。

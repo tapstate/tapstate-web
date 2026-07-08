@@ -37,7 +37,7 @@
 - 样式入口必须分层：`main.css` 只汇总 import，Tailwind 放 `tailwind.css`，Element Plus 覆盖放 `element-plus.css`，应用语义样式放 `app.css`。
 - Tailwind v4 显式使用 `@layer theme, base, components, utilities;`；自定义默认样式放 `@layer base`，应用语义 class 放 `@layer components`，确保 utilities 能覆盖默认样式。
 - Element Plus 覆盖优先用官方 CSS 变量和组件级 CSS 变量；只有变量无法表达时才写具体 `.el-*` class。
-- UI 风格按 shadcn / Linear 产品工作台气质收敛，基础圆角默认 `10px`。
+- UI 风格按 `docs/engineering/design-system.md` 的 shadcn / Linear 产品工作台规范收敛：语义 token 优先、Element Plus 变量优先、状态完整、信息密度清晰；`--radius` 为 `0.625rem`，Tailwind `rounded-lg` 映射到 `var(--radius)`，表单控件 / 按钮 / Select trigger 等默认控件圆角按 `rounded-lg` / `var(--radius)` 即 `10px` 落地。
 - 图标优先用现有图标库或 Element Plus 图标，不手写一次性复杂 SVG。
 - 页面应该是企业产品工作台气质：信息密度清晰、布局稳定、操作路径短，不做营销式 hero。
 - 固定格式区域要有稳定尺寸约束，例如表格、工具栏、侧栏、状态卡、画布容器。
