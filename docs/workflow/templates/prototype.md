@@ -66,14 +66,28 @@
 - Tablet：
 - Mobile：
 
-## 8. 原型资产
+## 8. 控件密度与视觉决策
+
+记录本次新增或修改的视觉 props / utility 的依据。默认遵循 `docs/engineering/design-system.md`；偏离默认时必须说明理由。
+
+| 控件 / 区域 | 默认规则 | 本次选择 | 依据 | 是否例外 |
+|---|---|---|---|---|
+|  |  |  |  |  |
+
+重点检查：
+
+- Element Plus `size`、`type`、`effect`、`round`、`plain`、`text`、`link`。
+- 自定义高度、padding、圆角、阴影、颜色、字体大小、状态色。
+- 图标选择、icon-only button、状态图标、筛选 / 排序 / 操作图标。
+
+## 9. 原型资产
 
 - Markdown wireframe：
 - HTML 原型：
 - 截图：
 - 设计稿链接：
 
-## 9. 评审记录
+## 10. 评审记录
 
 | 时间 | Reviewer | 结论 | 备注 |
 |---|---|---|---|

@@ -83,6 +83,13 @@
       "label": "Search sources",
       "placeholder": "Search sources..."
     },
+    "filters": {
+      "connectionStatus": {
+        "label": "Connection status",
+        "all": "All"
+      },
+      "noResults": "No data sources match the current filters."
+    },
     "states": {
       "empty": "Create a source to start browsing tables and previews.",
       "error": "The source catalog could not be loaded in this preview state.",

@@ -83,6 +83,13 @@
       "label": "搜索数据源",
       "placeholder": "搜索数据源..."
     },
+    "filters": {
+      "connectionStatus": {
+        "label": "连接状态",
+        "all": "全部"
+      },
+      "noResults": "当前筛选条件下没有匹配的数据源。"
+    },
     "states": {
       "empty": "创建一个数据源后即可浏览表和预览数据。",
       "error": "当前预览状态下无法加载数据源目录。",

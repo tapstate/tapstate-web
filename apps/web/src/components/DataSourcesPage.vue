@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
+import type { SourceConnectionStatus, SourceConnectionStatusFilter } from './dataSourcesFilter'
 import {
   Activity,
   AlertCircle,
@@ -13,6 +14,7 @@ import {
   GitMerge,
   HardDrive,
   Leaf,
+  ListFilter,
   Maximize2,
   MoreHorizontal,
   Plus,
@@ -21,10 +23,11 @@ import {
   Settings,
   Table as TableIcon,
 } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { filterSourcesBySearchAndStatus } from './dataSourcesFilter'
 
-type SourceStatus = 'connected' | 'error'
+type SourceStatus = SourceConnectionStatus
 type SourceType = 'postgres' | 'kafka' | 'mssql' | 'mongodb' | 'snowflake' | 'bigquery'
 type SourceTab = 'data' | 'columns' | 'settings' | 'lineage' | 'log'
 
@@ -61,6 +64,7 @@ interface PreviewRow {
 
 const { t } = useI18n()
 const searchText = ref('')
+const connectionStatusFilter = ref<SourceConnectionStatusFilter>('all')
 const activeTab = ref<SourceTab>('data')
 const selectedSource = ref<Source | null>(null)
 const selectedTable = ref<SourceTable | null>(null)
@@ -71,6 +75,12 @@ const tabs: Array<{ value: SourceTab, labelKey: string }> = [
   { value: 'settings', labelKey: 'sources.tabs.settings' },
   { value: 'lineage', labelKey: 'sources.tabs.lineage' },
   { value: 'log', labelKey: 'sources.tabs.log' },
+]
+
+const connectionStatusOptions: Array<{ value: SourceConnectionStatusFilter, labelKey: string }> = [
+  { value: 'all', labelKey: 'sources.filters.connectionStatus.all' },
+  { value: 'connected', labelKey: 'sources.status.connected' },
+  { value: 'error', labelKey: 'sources.status.error' },
 ]
 
 const mockSources: Source[] = [
@@ -143,18 +153,17 @@ const previewRows: PreviewRow[] = Array.from({ length: 15 }, (_, index) => {
 
 const activityBars = [28, 44, 36, 62, 48, 78, 54, 88, 65, 72, 58, 92, 76, 63, 84]
 
-const filteredSources = computed(() => {
-  const query = searchText.value.trim().toLowerCase()
-  if (!query)
-    return mockSources
-  return mockSources.filter(source =>
-    source.name.toLowerCase().includes(query)
-    || source.type.includes(query)
-    || source.host.toLowerCase().includes(query),
-  )
-})
+const filteredSources = computed(() =>
+  filterSourcesBySearchAndStatus(mockSources, searchText.value, connectionStatusFilter.value),
+)
 
 const activeTabLabel = computed(() => t(tabs.find(tab => tab.value === activeTab.value)?.labelKey ?? 'sources.tabs.data'))
+
+watch(filteredSources, (sources) => {
+  if (selectedSource.value && !sources.some(source => source.id === selectedSource.value?.id)) {
+    selectSource(null)
+  }
+})
 
 function selectSource(source: Source | null) {
   selectedSource.value = source
@@ -249,6 +258,23 @@ function sourceIconColor(type: SourceType) {
               :placeholder="t('sources.search.placeholder')"
             >
           </label>
+
+          <el-select
+            v-model="connectionStatusFilter"
+            class="mt-2 w-full"
+            :aria-label="t('sources.filters.connectionStatus.label')"
+            :placeholder="t('sources.filters.connectionStatus.label')"
+          >
+            <template #prefix>
+              <ListFilter class="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />
+            </template>
+            <el-option
+              v-for="option in connectionStatusOptions"
+              :key="option.value"
+              :label="t(option.labelKey)"
+              :value="option.value"
+            />
+          </el-select>
         </div>
 
         <div class="flex min-h-[150px] flex-1 gap-1 overflow-auto p-2 md:flex-col">
@@ -627,6 +653,11 @@ function sourceIconColor(type: SourceType) {
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-gray-100/70">
+                    <tr v-if="filteredSources.length === 0">
+                      <td colspan="6" class="px-4 py-10 text-center text-[13px] text-gray-500">
+                        {{ t('sources.filters.noResults') }}
+                      </td>
+                    </tr>
                     <tr
                       v-for="source in filteredSources"
                       :key="source.id"

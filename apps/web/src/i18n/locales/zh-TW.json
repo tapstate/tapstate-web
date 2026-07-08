@@ -83,6 +83,13 @@
       "label": "搜尋資料來源",
       "placeholder": "搜尋資料來源..."
     },
+    "filters": {
+      "connectionStatus": {
+        "label": "連線狀態",
+        "all": "全部"
+      },
+      "noResults": "目前篩選條件下沒有匹配的資料來源。"
+    },
     "states": {
       "empty": "建立一個資料來源後即可瀏覽資料表和預覽資料。",
       "error": "目前預覽狀態下無法載入資料來源目錄。",

@@ -119,6 +119,36 @@ Element Plus 是默认交互组件库，但外观必须接入 shadcn token。
 
 写具体 class 时必须控制范围，例如 `.el-select__popper.el-select__popper`，不要写会泄漏到全站的粗暴覆盖。
 
+### 5.3 控件尺寸默认值
+
+Element Plus 的默认交互控件尺寸是 Cyntex Web 的基线尺寸：
+
+| 控件尺寸 | Element Plus token | 用途 |
+|---|---|---|
+| Default | `--el-component-size: 32px` | 默认 Button、Input、Select、Date picker、表单控件和普通 toolbar 控件 |
+| Small | `--el-component-size-small: 24px` | 仅用于表格行内操作、紧凑 toolbar、tag / badge、compact icon control，或已有同一区域控件全部为 24px 的局部模式 |
+| Large | `--el-component-size-large: 40px` | 仅用于明确需要更高触达面积的表单、空态主操作或移动端主操作 |
+
+默认不要为 Element Plus 控件显式写 `size`。只有当控件所在区域已经有清楚的局部尺寸模式，或 feature prototype 明确要求偏离默认 32px 时，才允许使用 `size="small"` / `size="large"`。
+
+例外必须在 feature `prototype.md` 的“控件密度与视觉决策”中说明依据。不能只以“更紧凑”“更突出”“看起来更合适”为理由偏离默认尺寸。
+
+### 5.4 Visual Props Decision Rule
+
+新增或修改视觉 props / utility 时，必须能指向以下至少一种依据：
+
+1. 本设计系统的默认规则。
+2. 同一页面、同一组件族、同一密度区域里已经存在的局部模式。
+3. 当前 feature `prototype.md` 中明确记录的视觉决策。
+
+需要证明依据的常见项包括：
+
+- Element Plus props：`size`、`type`、`effect`、`round`、`plain`、`text`、`link`。
+- Tailwind / class：自定义高度、padding、圆角、阴影、颜色、字体大小、状态色。
+- 图标选择：新增图标、icon-only button、状态图标、筛选 / 排序 / 操作图标。
+
+如果一个视觉选择无法说明依据，默认回到设计系统基线：32px 控件高度、`var(--radius)` 圆角、语义 token、Element Plus 默认交互语义。
+
 ## 6. 组件状态规范
 
 | 状态 | 规范 |
@@ -144,6 +174,7 @@ Element Plus 是默认交互组件库，但外观必须接入 shadcn token。
 
 ### Form Controls
 
+- Input、Textarea、Select trigger、Date picker 等默认使用 Element Plus default size，即 32px；不要为普通表单控件显式写 `size="small"`。
 - Input、Textarea、Select trigger、Date picker 等默认圆角为 `var(--radius)`。
 - Border 使用 `--input` 或 `--border`。
 - Placeholder 使用 `--muted-foreground`。
@@ -198,9 +229,10 @@ Element Plus 是默认交互组件库，但外观必须接入 shadcn token。
 
 - 是否使用 shadcn 语义 token，而不是新增硬编码色值。
 - Element Plus 覆盖是否优先变量，具体 `.el-*` class 是否范围足够窄。
+- 新增或修改的 `size`、`type`、`effect`、`round`、颜色、圆角、高度、padding、图标等视觉选择是否有设计系统、既有局部模式或 feature prototype 依据。
+- 普通 Button / Input / Select / Date picker 是否保持默认 32px 控件尺寸；使用 `size="small"` / `size="large"` 时是否已记录例外依据。
 - Button / form control / select trigger 是否保持 `var(--radius)` 默认圆角。
 - Dropdown / select / list / tree item hover 是否使用 `--accent`。
 - Focus visible、disabled、invalid、loading、empty、error、success 是否都有可用表现。
 - 桌面和移动视口是否无页面级横向溢出、文字溢出和元素重叠。
 - `pnpm lint`、`pnpm typecheck` 是否按风险等级执行；样式入口、Tailwind theme 或构建边界变更时补 `pnpm build`。
-
