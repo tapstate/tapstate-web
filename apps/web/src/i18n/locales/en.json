@@ -10,6 +10,7 @@
       "zh-TW": "Traditional Chinese"
     },
     "notifications": "View notifications",
+    "logout": "Sign out",
     "shortcuts": {
       "ask": "⌘J"
     },
@@ -41,6 +42,60 @@
     "more": "More actions",
     "separator": "/"
   },
+  "auth": {
+    "login": {
+      "eyebrow": "REAL-TIME CONTEXT",
+      "signalTitle": "Make every decision current.",
+      "signalBody": "Cyntex keeps operational data moving, so AI and people can work from the same live context.",
+      "systemReady": "CONTROL PLANE READY",
+      "contextLine": "STREAM / OBSERVE / ACT",
+      "versionLine": "Cyntex Web 0.1",
+      "controlPlane": "CONTROL PLANE",
+      "formIndex": "SECURE WORKSPACE",
+      "title": "Welcome back",
+      "subtitle": "Sign in to continue working with your live data.",
+      "usernameLabel": "Username",
+      "usernamePlaceholder": "you{'@'}company.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "passwordShow": "Show password",
+      "passwordHide": "Hide password",
+      "submit": "Sign in",
+      "submitting": "Checking credentials",
+      "success": "Signed in",
+      "footerNote": "Secure session. Scoped to this browser tab and expires automatically.",
+      "terminal": {
+        "previewLabel": "Cyntex CLI workflow preview",
+        "shell": "bash",
+        "prompt": "› ~",
+        "successMark": "✓",
+        "connectCommand": "cyntex auth login",
+        "connectResult": "Authenticated successfully",
+        "workspaceCommand": "cyntex workspace init ai-context",
+        "workspaceResult": "Workspace initialized",
+        "sourceCommand": "cyntex connect postgres --prod",
+        "sourceResult": "Connected to production database (14.2ms)",
+        "pipelineCommand": "cyntex pipeline deploy user-events",
+        "pipelineResult": "Pipeline user-events is running",
+        "footerTitle": "Developer-first data workflows.",
+        "footerBody": "Connect, transform, and deliver live context from the CLI or Web."
+      },
+      "errors": {
+        "invalidCredentials": "We could not verify those credentials. Check them and try again.",
+        "network": "The control plane is unreachable. Check the connection and try again.",
+        "protocol": "The control plane returned an unexpected response. Try again.",
+        "server": "Sign in was refused by the control plane. Try again.",
+        "unknown": "Something went wrong while signing in. Try again."
+      }
+    },
+    "validation": {
+      "usernameRequired": "Enter your username.",
+      "passwordRequired": "Enter your password."
+    },
+    "session": {
+      "expired": "Your session expired. Sign in again."
+    }
+  },
   "state": {
     "success": "Success",
     "loading": "Loading",
@@ -69,8 +124,13 @@
     "tabComingSoonBody": "This tab is represented as an empty state in the migration preview.",
     "actions": {
       "create": "Create source",
+      "refresh": "Refresh sources",
       "sync": "Sync config",
       "test": "Test connection"
+    },
+    "empty": {
+      "title": "No sources yet",
+      "body": "Add a connector-backed source to make live data available to Cyntex."
     },
     "columns": {
       "comment": "Comment",
@@ -92,8 +152,55 @@
     },
     "states": {
       "empty": "Create a source to start browsing tables and previews.",
-      "error": "The source catalog could not be loaded in this preview state.",
-      "loading": "Loading source catalog and table metadata."
+      "error": "The source catalog could not be loaded.",
+      "loading": "Loading source catalog.",
+      "network": "The control plane is unreachable. Check the backend connection and try again."
+    },
+    "details": {
+      "mode": "Read mode",
+      "tables": "Table selectors",
+      "configuredFields": "Configured fields",
+      "configuration": "Connection configuration",
+      "tableSelection": "Table selection",
+      "connectionOnly": "Connection only",
+      "endpointUnavailable": "Endpoint not exposed",
+      "noConfiguration": "This source has no visible non-secret configuration.",
+      "secretConfigured": "Configured",
+      "noTables": "No table selectors are configured for this source.",
+      "unnamedTable": "Unnamed selector"
+    },
+    "create": {
+      "title": "Create source",
+      "subtitle": "Choose a connector and configure the fields declared by its PDK metadata.",
+      "idLabel": "Source ID",
+      "idPlaceholder": "production-postgres",
+      "idHint": "Stable workspace identifier. Dots are reserved for stream addressing.",
+      "connectorLabel": "Connector",
+      "connectorPlaceholder": "Select a connector",
+      "optionMeta": "{group} / {id}",
+      "loadingSchema": "Loading connector configuration",
+      "connectionTitle": "Connection configuration",
+      "connectionSubtitle": "Fields normalized from {connector} connector metadata.",
+      "modeLabel": "Read mode",
+      "required": "Required",
+      "arrayPlaceholder": "Enter a JSON array",
+      "noConfig": "This connector does not declare connection fields.",
+      "cancel": "Cancel",
+      "submit": "Create source",
+      "submitting": "Creating source",
+      "success": "Source {id} created",
+      "validation": {
+        "required": "This field is required.",
+        "id": "Source IDs cannot contain a dot.",
+        "number": "Enter a valid number.",
+        "array": "Enter a valid JSON array."
+      },
+      "errors": {
+        "network": "The control plane is unreachable. Check the backend connection and try again.",
+        "exists": "A source with this ID already exists.",
+        "server": "The control plane rejected this source configuration.",
+        "unknown": "The source could not be created. Try again."
+      }
     },
     "stats": {
       "id": "ID",
