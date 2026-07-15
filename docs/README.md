@@ -1,4 +1,4 @@
-# Cyntex Web Docs
+# Tapstate Web Docs
 
 > 作用：给人和 agent 一个稳定的文档地图。需求细节先进入 feature 文件夹，长期稳定的产品 / 工程结论再沉淀到对应目录。
 

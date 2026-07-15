@@ -7,7 +7,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppHeader from '@/components/AppHeader.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
-import AskCyntex from '@/components/AskCyntex.vue'
+import AskTapstate from '@/components/AskTapstate.vue'
 
 const { locale } = useI18n()
 
@@ -34,7 +34,7 @@ const elLocale = computed(
           </main>
         </div>
 
-        <AskCyntex />
+        <AskTapstate />
       </div>
     </ElConfigProvider>
   </div>

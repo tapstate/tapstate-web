@@ -1,4 +1,4 @@
-# cyntex-web Agent Instructions
+# tapstate-web Agent Instructions
 
 ## Goal
 

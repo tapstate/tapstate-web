@@ -31,7 +31,7 @@ function logout() {
       <button
         type="button"
         class="app-header__ask"
-        @click="uiStore.isAskCyntexOpen = true"
+        @click="uiStore.isAskTapstateOpen = true"
       >
         <Sparkles class="h-3.5 w-3.5" aria-hidden="true" />
         <span>{{ t('ask.launch') }}</span>

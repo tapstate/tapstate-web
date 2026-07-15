@@ -1,13 +1,13 @@
-# Cyntex Shadcn-Aligned Design System
+# Tapstate Shadcn-Aligned Design System
 
 > 状态：长期设计规范
 > 日期：2026-07-08
-> 范围：Cyntex Web 的视觉 token、Tailwind 使用、Element Plus 外观映射、组件状态和 UI 质量门禁
+> 范围：Tapstate Web 的视觉 token、Tailwind 使用、Element Plus 外观映射、组件状态和 UI 质量门禁
 > 参考源：shadcn/ui theming docs、shadcn `apps/v4/app/globals.css`、shadcn 当前 docs/base style 组件、Element Plus 官方 CSS 变量
 
 ## 1. 目标
 
-Cyntex Web 的 UI 以 shadcn 的语义 token 和组件状态语言为基础，以 Element Plus 作为 Vue 交互组件实现层，以 Tailwind CSS 作为布局和局部表达工具。
+Tapstate Web 的 UI 以 shadcn 的语义 token 和组件状态语言为基础，以 Element Plus 作为 Vue 交互组件实现层，以 Tailwind CSS 作为布局和局部表达工具。
 
 这份规范解决三个问题：
 
@@ -121,7 +121,7 @@ Element Plus 是默认交互组件库，但外观必须接入 shadcn token。
 
 ### 5.3 控件尺寸默认值
 
-Element Plus 的默认交互控件尺寸是 Cyntex Web 的基线尺寸：
+Element Plus 的默认交互控件尺寸是 Tapstate Web 的基线尺寸：
 
 | 控件尺寸 | Element Plus token | 用途 |
 |---|---|---|

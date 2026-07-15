@@ -1,4 +1,4 @@
-export const AUTH_TOKEN_KEY = 'cyntex.auth.token'
+export const AUTH_TOKEN_KEY = 'tapstate.auth.token'
 
 export function browserSessionStorage(): Storage | null {
   if (typeof window === 'undefined')

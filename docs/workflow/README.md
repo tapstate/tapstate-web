@@ -1,4 +1,4 @@
-# Cyntex Web Workflow
+# Tapstate Web Workflow
 
 > 状态：项目级工作流
 > 作用：把“需求输入 -> 需求拆解 -> 原型 -> 计划 -> 实现 -> 审查 -> 验收”落到一个可追踪 feature 闭环。
@@ -13,7 +13,7 @@
 - [BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD)：按需求复杂度引入 PM、架构、开发、QA 等结构化角色与门禁。
 - [Superpowers](https://github.com/obra/superpowers)：强调技能化、计划执行、TDD、系统化调试、代码审查与完成验证。
 
-Cyntex Web 的固定主线是：
+Tapstate Web 的固定主线是：
 
 ```text
 intake -> spec -> prototype -> plan -> implement -> review -> acceptance
@@ -154,7 +154,7 @@ docs/workflow/
 
 ## 5. 与工具的关系
 
-- Codex：读取 `AGENTS.md`，并使用 `.agents/skills/cyntex-workflow` 作为 repo skill。
+- Codex：读取 `AGENTS.md`，并使用 `.agents/skills/tapstate-workflow` 作为 repo skill。
 - Claude Code：读取 `CLAUDE.md` 和 `.claude/rules/`。
 - Superpowers：可以作为个人插件增强执行纪律；仓库流程本身不依赖它安装。
 

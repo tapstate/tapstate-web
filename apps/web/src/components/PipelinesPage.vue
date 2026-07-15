@@ -97,7 +97,7 @@ const previewRows = [
   { id: 'e5f6g7h8...', createdAt: '2026-06-29 10:05:12', eventName: 'button_click' },
 ]
 
-const apiEndpoint = 'https://api.cyntex.dev/v1/user_profile'
+const apiEndpoint = 'https://api.tapstate.dev/v1/user_profile'
 const responsePreview = `{
   "data": [
     {

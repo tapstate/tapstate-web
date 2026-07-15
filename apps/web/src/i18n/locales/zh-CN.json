@@ -1,6 +1,6 @@
 {
   "app": {
-    "brand": "Cyntex",
+    "brand": "Tapstate",
     "primaryNavigation": "主导航",
     "previewMode": "AI Studio 迁移预览",
     "language": "语言",
@@ -46,10 +46,10 @@
     "login": {
       "eyebrow": "实时上下文",
       "signalTitle": "让每个决策保持最新。",
-      "signalBody": "Cyntex 让业务数据持续流动，让 AI 和人始终基于同一份实时上下文协作。",
+      "signalBody": "Tapstate 让业务数据持续流动，让 AI 和人始终基于同一份实时上下文协作。",
       "systemReady": "控制面已就绪",
       "contextLine": "流转 / 观测 / 执行",
-      "versionLine": "Cyntex Web 0.1",
+      "versionLine": "Tapstate Web 0.1",
       "controlPlane": "控制面",
       "formIndex": "安全工作区",
       "title": "欢迎回来",
@@ -65,17 +65,17 @@
       "success": "登录成功",
       "footerNote": "安全会话，仅保存在当前浏览器标签页，并会自动过期。",
       "terminal": {
-        "previewLabel": "Cyntex CLI 工作流预览",
+        "previewLabel": "Tapstate CLI 工作流预览",
         "shell": "bash",
         "prompt": "› ~",
         "successMark": "✓",
-        "connectCommand": "cyntex auth login",
+        "connectCommand": "tapstate auth login",
         "connectResult": "Authenticated successfully",
-        "workspaceCommand": "cyntex workspace init ai-context",
+        "workspaceCommand": "tapstate workspace init ai-context",
         "workspaceResult": "Workspace initialized",
-        "sourceCommand": "cyntex connect postgres --prod",
+        "sourceCommand": "tapstate connect postgres --prod",
         "sourceResult": "Connected to production database (14.2ms)",
-        "pipelineCommand": "cyntex pipeline deploy user-events",
+        "pipelineCommand": "tapstate pipeline deploy user-events",
         "pipelineResult": "Pipeline user-events is running",
         "footerTitle": "开发者优先的数据工作流。",
         "footerBody": "通过 CLI 或 Web 连接、转换并交付实时上下文。"
@@ -130,7 +130,7 @@
     },
     "empty": {
       "title": "还没有数据源",
-      "body": "添加一个由连接器驱动的数据源，让 Cyntex 可以使用实时数据。"
+      "body": "添加一个由连接器驱动的数据源，让 Tapstate 可以使用实时数据。"
     },
     "columns": {
       "comment": "备注",
@@ -329,7 +329,7 @@
     },
     "messages": {
       "answerClose": "你想从哪里开始？",
-      "answerIntro": "我可以帮助你在 Cyntex 中探索和分析数据。",
+      "answerIntro": "我可以帮助你在 Tapstate 中探索和分析数据。",
       "userQuestion": "你可以做哪些事情？"
     },
     "capabilities": {
@@ -361,9 +361,9 @@
     }
   },
   "ask": {
-    "launch": "Ask Cyntex",
+    "launch": "Ask Tapstate",
     "newChat": "新对话",
-    "panelLabel": "Ask Cyntex 面板",
+    "panelLabel": "Ask Tapstate 面板",
     "skills": "技能",
     "actions": {
       "attach": "添加附件",
@@ -373,7 +373,7 @@
       "send": "发送"
     },
     "input": {
-      "placeholder": "询问 Cyntex..."
+      "placeholder": "询问 Tapstate..."
     },
     "preview": {
       "rows": "100k+ 行"
@@ -398,8 +398,8 @@
       "mentionKey": "{'@'}"
     },
     "welcome": {
-      "body": "可以提问，也可以告诉 Cyntex 你需要什么。",
-      "title": "欢迎使用 Cyntex"
+      "body": "可以提问，也可以告诉 Tapstate 你需要什么。",
+      "title": "欢迎使用 Tapstate"
     }
   },
   "wizard": {

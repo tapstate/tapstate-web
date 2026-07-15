@@ -5,7 +5,7 @@ paths:
   - "CLAUDE.md"
 ---
 
-# Cyntex Workflow Rules
+# Tapstate Workflow Rules
 
 - 非微小需求先写 spec，再按需写 prototype，再写 plan，再实现，最后写 acceptance。
 - 每个需求使用一个 feature 文件夹：`docs/workflow/features/YYYY-MM-DD-slug/`。

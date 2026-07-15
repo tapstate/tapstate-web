@@ -1,9 +1,9 @@
 ---
-name: cyntex-workflow
-description: Use when working in the Cyntex Web repo on requirements, UI, IA, routes, i18n, data flow, tests, docs, plans, reviews, or acceptance records.
+name: tapstate-workflow
+description: Use when working in the Tapstate Web repo on requirements, UI, IA, routes, i18n, data flow, tests, docs, plans, reviews, or acceptance records.
 ---
 
-# Cyntex Workflow
+# Tapstate Workflow
 
 ## Overview
 
@@ -19,7 +19,7 @@ Use the project's workflow as the repo-specific overlay for generic workflow ski
 6. Verify and review: run relevant commands from `AGENTS.md`; for UI work, inspect desktop and mobile states.
 7. Accept: create or update `docs/workflow/features/YYYY-MM-DD-kebab-name/acceptance.md` from `docs/workflow/templates/acceptance.md`.
 
-## Cyntex Constraints
+## Tapstate Constraints
 
 - User-visible text must use vue-i18n and update `en`, `zh-CN`, and `zh-TW` together.
 - UI work must cover loading, empty, error, and success states.

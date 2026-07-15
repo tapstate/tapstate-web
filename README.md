@@ -1,13 +1,13 @@
-# cyntex-web
+# tapstate-web
 
-Cyntex 前端这条线的独立工作区,也是企业级 Web 应用本体。收拢两样东西:
+Tapstate 前端这条线的独立工作区,也是企业级 Web 应用本体。收拢两样东西:
 
 - **前端设计 / IA / 技术栈思考**(`docs/`)
 - **前端代码**(pnpm monorepo:Vue 3 + Vite + Element Plus + Pinia + vue-i18n)
 
 ## 治理定位
 
-- **memory 仓不追踪本目录**(见 `memory/.gitignore` 的 `/cyntex-web/`)。跟 `memory/cyntex/` 同等待遇:嵌套工作区,不进 memory 版本控制。
+- **memory 仓不追踪本目录**(见 `memory/.gitignore` 的 `/tapstate-web/`)。跟 `memory/tapstate/` 同等待遇:嵌套工作区,不进 memory 版本控制。
 - 本目录(将)是独立 git 仓。文档与代码都进它自己的版本控制。
 - **两层规则**:全局底座是 `memory/AGENTS.md`(walk-up 自动加载,前端同样生效);前端专属约束叠在本目录的 `AGENTS.md`、`CLAUDE.md`、`.agents/skills/`、`.claude/rules/`、`docs/` 与配置里(eslint / i18n / tsconfig)。
 - 与 memory 的关系:本目录是**消费方**——依据 `memory/research/legacy-feature-inventory.md` 与 `memory/reference/canonical-form.md` 做设计;该回 memory 的 ADR / plan / progress 不沉淀在这。
@@ -15,7 +15,7 @@ Cyntex 前端这条线的独立工作区,也是企业级 Web 应用本体。收�
 ## 目录结构
 
 ```
-cyntex-web/
+tapstate-web/
 ├── docs/                              产品、工程与 agent 流程文档
 │   ├── README.md                          文档地图
 │   ├── product/

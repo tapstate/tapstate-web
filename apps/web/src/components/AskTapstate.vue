@@ -125,7 +125,7 @@ function navigateTo(type: ResourceType | undefined) {
   else {
     router.push('/pipelines')
   }
-  uiStore.isAskCyntexOpen = false
+  uiStore.isAskTapstateOpen = false
 }
 
 async function sendMessage() {
@@ -176,7 +176,7 @@ async function sendMessage() {
 
 <template>
   <Transition name="fade-slide">
-    <aside v-if="uiStore.isAskCyntexOpen" class="ask-panel" :aria-label="t('ask.panelLabel')">
+    <aside v-if="uiStore.isAskTapstateOpen" class="ask-panel" :aria-label="t('ask.panelLabel')">
       <section class="ask-panel__window">
         <header class="flex h-12 shrink-0 items-center justify-between border-b border-gray-100 px-4">
           <h3 class="flex items-center gap-2 text-[14px] font-medium text-gray-900">
@@ -190,7 +190,7 @@ async function sendMessage() {
             <button class="rounded-md p-1.5 transition-colors hover:bg-gray-100 hover:text-gray-600" :aria-label="t('ask.actions.maximize')">
               <Maximize2 class="h-3.5 w-3.5" aria-hidden="true" />
             </button>
-            <button class="rounded-md p-1.5 transition-colors hover:bg-gray-100 hover:text-gray-600" :aria-label="t('ask.actions.close')" @click="uiStore.isAskCyntexOpen = false">
+            <button class="rounded-md p-1.5 transition-colors hover:bg-gray-100 hover:text-gray-600" :aria-label="t('ask.actions.close')" @click="uiStore.isAskTapstateOpen = false">
               <X class="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
