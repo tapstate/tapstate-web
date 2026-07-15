@@ -63,7 +63,6 @@
       "submit": "登入",
       "submitting": "正在驗證憑據",
       "success": "登入成功",
-      "footerNote": "安全工作階段，僅保存在目前瀏覽器分頁，並會自動過期。",
       "terminal": {
         "previewLabel": "Tapstate CLI 工作流程預覽",
         "shell": "bash",

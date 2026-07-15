@@ -63,7 +63,6 @@
       "submit": "登录",
       "submitting": "正在验证凭据",
       "success": "登录成功",
-      "footerNote": "安全会话，仅保存在当前浏览器标签页，并会自动过期。",
       "terminal": {
         "previewLabel": "Tapstate CLI 工作流预览",
         "shell": "bash",
