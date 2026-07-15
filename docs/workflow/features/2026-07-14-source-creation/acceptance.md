@@ -20,6 +20,7 @@
 | 路由 layout 恢复 | Pass | login 裸布局；protected routes 共享 sidebar/header/Ask Cyntex |
 | connector catalog API | Pass | 既有 list 保持兼容，新增 detail 与 coded 404 |
 | Source 真实列表与创建 | Pass | mockSources 已移除；创建后立即排序、选中并显示真实响应 |
+| 既有 Sources 布局保持 | Pass | 左侧 Source 树、All Sources 表格、Source 详情、表详情和 tabs 均与接 API 前一致 |
 | catalog-driven dynamic config | Pass | default/enum/number/boolean/array/secret/visibleWhen 均由归一化字段驱动 |
 | 三套 locale 与质量门禁 | Pass | 本次 scoped lint、build、31-module Maven、桌面/移动验收通过 |
 
@@ -33,6 +34,8 @@
 | Maven focused/full test | Pass | 31 modules，BUILD SUCCESS |
 | 桌面视口检查 | Pass | 应用壳、真实详情、动态弹窗与创建成功态无重叠 |
 | 移动视口检查 | Pass | 390×844 页面与 dialog 均可用，控件不溢出 |
+
+手工回归路径：登录后进入 `/sources`，确认默认展示 All Sources 表格；点击左侧 Source 后进入原详情结构；点击表名后进入原 tabs 与右侧信息栏；Create source 仅打开 dialog，不改变页面骨架。
 
 ## 4. UI 状态覆盖
 

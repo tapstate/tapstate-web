@@ -3,7 +3,7 @@
 > 状态：Done
 > 进度：100%
 > 当前步骤：实现与验收完成
-> 下一步：提交并更新两个仓库的远端分支
+> 下一步：等待 PR review/CI
 > 日期：2026-07-14
 > Owner：xufei@tapdata.io
 > Feature folder：docs/workflow/features/2026-07-14-source-creation/
@@ -36,8 +36,8 @@
 | 2 | Done | TDD 扩展 connector catalog detail、operation 与 coded 404 | focused JUnit RED/GREEN | 不暴露原始 PDK schema |
 | 3 | Done | 复用 `/api/connectors` list，新增 detail 并接入 assembly | HTTP contract + app assembly tests | read scope、unaudited |
 | 4 | Done | 前端 Source/catalog client 与动态 config helper | executable assertions + typecheck | secret 不记录/回显 |
-| 5 | Done | Sources 真实列表和 Create dialog | desktop/mobile browser checks | mock 数据已移除 |
-| 6 | Done | 全量验证、review、acceptance 和 progress closeout | 31-module Maven test + lint/typecheck/build | PR #15 待 push 更新 |
+| 5 | Done | 在既有 Sources 页面框架内接入真实列表和 Create dialog | desktop/mobile browser checks | mock 数据已移除；左栏、总表、详情和 tabs 结构保留 |
+| 6 | Done | 全量验证、review、acceptance 和 progress closeout | 31-module Maven test + lint/typecheck/build | cyntex PR #15、web PR #1 已更新 |
 
 ## 4. Progress Log
 

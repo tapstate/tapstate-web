@@ -40,6 +40,7 @@
 
 ### 非目标
 
+- 不重做 `DataSourcesPage` 已定型的页面框架；保留左侧 Source 导航、All Sources 表格、Source 详情、表详情和 tabs 层级，只替换数据与动作接线。
 - 不引入 Formily 依赖或执行原始 `x-reactions` 表达式。
 - 不实现 connection test、discover schema、Source update/delete、OAuth 或 connector registration。
 - 不保留静态 source 指标、预览行或伪造 connected/error 状态作为真实数据。
@@ -100,6 +101,7 @@
 - [x] 业务子路由切换不重建 layout。
 - [x] connector list/detail exact JSON、auth、scope 和 404 coded error 有测试。
 - [x] Source 页面不再使用 mockSources，真实 loading/empty/error/success 可用。
+- [x] `DataSourcesPage` 既有信息架构和视觉骨架保持不变，API 对接不改页面结构。
 - [x] 创建表单按 catalog 动态渲染 default、enum、number、boolean、secret 和 visibleWhen。
 - [x] 成功提交 Source JSON 并刷新列表；错误时保留输入且可重试。
 - [x] 三套 locale、lint、typecheck、build、后端 focused/full tests 和桌面/移动浏览器检查通过。
