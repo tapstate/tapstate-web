@@ -19,8 +19,8 @@
 |---|---|---|
 | 未认证访问受保护 route 会进入 `/login` | Pass | route guard 已实现 |
 | 正确凭据调用 `/auth/login` 并注入 bearer token | Partial | wire shape 与 store 完成；无有效账号见证 200 |
-| 错误、提交、过期 session 和网络不可达可恢复 | Pass | coded 401、401 clear、network/protocol 分支均实现 |
-| 桌面和窄屏无溢出、重叠或跳动 | Pass | 1440×900、500px 实拍；全屏背景和悬浮卡片复验 |
+| 错误、提交、过期 session 和网络不可达可恢复 | Pass | coded 401、401 clear、network/protocol 分支均实现；2026-07-15 新设计下无效凭据交互复验通过 |
+| 桌面和窄屏无溢出、重叠或跳动 | Pass | 1440×900、500px 实拍；2026-07-15 复验 1440×900 与 390px，右上角语言按钮不与 card 重叠 |
 | 三套 locale 完整，lint/typecheck/build 通过 | Pass | changed-file lint、vue-tsc、Vite build |
 
 ## 3. 源稿 / 设计保真对照
@@ -30,6 +30,7 @@
 | 标题 / 表单 / 主操作 | Pass | 对照用户草图，冷灰表单 + navy CTA |
 | 页面布局与区域层级 | Pass | 左登录、右终端，移动端纵向排列 |
 | 交互入口 | Pass | 登录、语言、密码可见性、退出登录 |
+| 语言切换位置 | Pass | 已移出 card，改为页面右上角 EN/简/繁 分段按钮 |
 | 未引入源稿外产品 UI | Pass | 未加入无协议的 OAuth / forgot password |
 
 ## 4. 验证结果
@@ -41,6 +42,11 @@
 | local Vite build | Pass | 仅既有 warning |
 | 桌面视口检查 | Pass | 1440×900，深色背景铺满视口，白色卡片悬浮层级正常 |
 | 窄屏检查 | Pass | 500px，控件和命令未溢出 |
+| `pnpm --filter web typecheck` | Pass | 2026-07-15 复跑 |
+| scoped ESLint | Pass | 2026-07-15 复跑 `LoginView.vue` + auth/router 源文件 |
+| `pnpm --filter web build` | Pass | 2026-07-15 复跑，仅既有 Rolldown pure annotation / chunk warning |
+| 浏览器表单交互 | Pass | 无效凭据显示安全错误并停留 `/login` |
+| 浏览器语言切换 | Pass | EN/简/繁 可切换，`aria-pressed` 正确，中文文案即时生效 |
 
 ## 5. UI 状态覆盖
 

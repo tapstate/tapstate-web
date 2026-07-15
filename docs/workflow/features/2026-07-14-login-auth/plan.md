@@ -52,6 +52,7 @@
 | 2026-07-14 | Codex | 95% | 按用户草图改成浅色表单 + CLI glass terminal，补打字动画、reduced-motion 和 route transition；桌面/窄屏实拍通过 | 用户视觉确认、有效账号成功登录 | 无有效测试账号 |
 | 2026-07-14 | Codex | 95% | 将右侧折线光带替换为连续 blurred liquid field，移除同心圆，terminal 增加 pointer tilt + glass shine；复跑 lint/typecheck/build | 用户视觉确认、有效账号成功登录 | 无有效测试账号 |
 | 2026-07-14 | Codex | 95% | 根据最终反馈删除液态色场、glass shine、backdrop filter 和 pointer tilt；页面改为全屏深色背景上的悬浮白卡片 | 用户视觉确认、有效账号成功登录 | 无有效测试账号 |
+| 2026-07-15 | Codex | 95% | 新设计重新接回登录功能：输入 v-model、submit、错误态、密码显示、禁用态、i18n 文案；语言切换从 card 移到页面右上角 EN/简/繁 分段按钮；移除无协议社交登录按钮 | 用户视觉确认、有效账号成功登录 | 无有效测试账号 |
 
 ## 5. TDD / Verification Strategy
 
@@ -92,6 +93,12 @@
 | 2026-07-14 | 桌面视口检查 | Pass | 1440×900 实拍 |
 | 2026-07-14 | 窄屏检查 | Pass | 500px 实拍，结构为表单后终端 |
 | 2026-07-14 | `/auth/login` direct/proxy | Pass | 无效凭据均返回 `401 control.auth-failed` |
+| 2026-07-15 | `pnpm --filter web typecheck` | Pass | 新设计登录功能回接后复跑 |
+| 2026-07-15 | scoped ESLint | Pass | `LoginView.vue` + auth/router 相关源文件 |
+| 2026-07-15 | `pnpm --filter web build` | Pass | 仅既有 Rolldown pure annotation / chunk warning |
+| 2026-07-15 | 浏览器桌面 / 390px 检查 | Pass | 右上角语言按钮不与 card/terminal/submit 重叠，无溢出 |
+| 2026-07-15 | 浏览器表单交互 | Pass | 填入无效凭据后按钮启用，调用 login，显示安全错误并停留 `/login` |
+| 2026-07-15 | 浏览器语言切换 | Pass | EN/简/繁 `aria-pressed` 正确，中文标题和提交文案即时切换 |
 
 ## 9. Finish Notes
 
