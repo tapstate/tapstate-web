@@ -18,22 +18,31 @@ const elLocale = computed(
 </script>
 
 <template>
-  <ElConfigProvider :locale="elLocale">
-    <div class="app-shell">
-      <div class="app-shell__wash" aria-hidden="true" />
-      <AppSidebar />
+  <div class="default-layout-root">
+    <ElConfigProvider :locale="elLocale">
+      <div class="app-shell">
+        <div class="app-shell__wash" aria-hidden="true" />
+        <AppSidebar />
 
-      <div class="app-shell__body">
-        <AppHeader />
+        <div class="app-shell__body">
+          <AppHeader />
 
-        <main class="app-shell__main">
-          <div class="app-shell__panel">
-            <RouterView />
-          </div>
-        </main>
+          <main class="app-shell__main">
+            <div class="app-shell__panel">
+              <RouterView />
+            </div>
+          </main>
+        </div>
+
+        <AskCyntex />
       </div>
-
-      <AskCyntex />
-    </div>
-  </ElConfigProvider>
+    </ElConfigProvider>
+  </div>
 </template>
+
+<style scoped>
+.default-layout-root {
+  width: 100%;
+  height: 100%;
+}
+</style>

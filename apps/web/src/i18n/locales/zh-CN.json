@@ -10,6 +10,7 @@
       "zh-TW": "繁体中文"
     },
     "notifications": "查看通知",
+    "logout": "退出登录",
     "shortcuts": {
       "ask": "⌘J"
     },
@@ -41,6 +42,60 @@
     "more": "更多操作",
     "separator": "/"
   },
+  "auth": {
+    "login": {
+      "eyebrow": "实时上下文",
+      "signalTitle": "让每个决策保持最新。",
+      "signalBody": "Cyntex 让业务数据持续流动，让 AI 和人始终基于同一份实时上下文协作。",
+      "systemReady": "控制面已就绪",
+      "contextLine": "流转 / 观测 / 执行",
+      "versionLine": "Cyntex Web 0.1",
+      "controlPlane": "控制面",
+      "formIndex": "安全工作区",
+      "title": "欢迎回来",
+      "subtitle": "登录后继续处理实时数据。",
+      "usernameLabel": "用户名",
+      "usernamePlaceholder": "you{'@'}company.com",
+      "passwordLabel": "密码",
+      "passwordPlaceholder": "输入密码",
+      "passwordShow": "显示密码",
+      "passwordHide": "隐藏密码",
+      "submit": "登录",
+      "submitting": "正在验证凭据",
+      "success": "登录成功",
+      "footerNote": "安全会话，仅保存在当前浏览器标签页，并会自动过期。",
+      "terminal": {
+        "previewLabel": "Cyntex CLI 工作流预览",
+        "shell": "bash",
+        "prompt": "› ~",
+        "successMark": "✓",
+        "connectCommand": "cyntex auth login",
+        "connectResult": "Authenticated successfully",
+        "workspaceCommand": "cyntex workspace init ai-context",
+        "workspaceResult": "Workspace initialized",
+        "sourceCommand": "cyntex connect postgres --prod",
+        "sourceResult": "Connected to production database (14.2ms)",
+        "pipelineCommand": "cyntex pipeline deploy user-events",
+        "pipelineResult": "Pipeline user-events is running",
+        "footerTitle": "开发者优先的数据工作流。",
+        "footerBody": "通过 CLI 或 Web 连接、转换并交付实时上下文。"
+      },
+      "errors": {
+        "invalidCredentials": "无法验证这些凭据，请检查后重试。",
+        "network": "无法连接到控制面，请检查连接后重试。",
+        "protocol": "控制面返回了无法识别的响应，请重试。",
+        "server": "控制面拒绝了登录请求，请重试。",
+        "unknown": "登录时发生了问题，请重试。"
+      }
+    },
+    "validation": {
+      "usernameRequired": "请输入用户名。",
+      "passwordRequired": "请输入密码。"
+    },
+    "session": {
+      "expired": "会话已过期，请重新登录。"
+    }
+  },
   "state": {
     "success": "成功",
     "loading": "加载中",
@@ -69,8 +124,13 @@
     "tabComingSoonBody": "此标签页在迁移预览中以空态表示。",
     "actions": {
       "create": "创建数据源",
+      "refresh": "刷新数据源",
       "sync": "同步配置",
       "test": "测试连接"
+    },
+    "empty": {
+      "title": "还没有数据源",
+      "body": "添加一个由连接器驱动的数据源，让 Cyntex 可以使用实时数据。"
     },
     "columns": {
       "comment": "备注",
@@ -92,8 +152,55 @@
     },
     "states": {
       "empty": "创建一个数据源后即可浏览表和预览数据。",
-      "error": "当前预览状态下无法加载数据源目录。",
-      "loading": "正在加载数据源目录和表元数据。"
+      "error": "无法加载数据源目录。",
+      "loading": "正在加载数据源目录。",
+      "network": "无法连接控制面，请检查后端连接后重试。"
+    },
+    "details": {
+      "mode": "读取模式",
+      "tables": "表选择器",
+      "configuredFields": "已配置字段",
+      "configuration": "连接配置",
+      "tableSelection": "表选择",
+      "connectionOnly": "仅连接",
+      "endpointUnavailable": "未暴露连接地址",
+      "noConfiguration": "此数据源没有可显示的非密钥配置。",
+      "secretConfigured": "已配置",
+      "noTables": "此数据源尚未配置表选择器。",
+      "unnamedTable": "未命名选择器"
+    },
+    "create": {
+      "title": "创建数据源",
+      "subtitle": "选择连接器，并配置其 PDK 元数据声明的字段。",
+      "idLabel": "数据源 ID",
+      "idPlaceholder": "production-postgres",
+      "idHint": "工作区内稳定的标识符。点号保留给数据流寻址使用。",
+      "connectorLabel": "连接器",
+      "connectorPlaceholder": "选择连接器",
+      "optionMeta": "{group} / {id}",
+      "loadingSchema": "正在加载连接配置",
+      "connectionTitle": "连接配置",
+      "connectionSubtitle": "以下字段由 {connector} 的连接器元数据归一化生成。",
+      "modeLabel": "读取模式",
+      "required": "必填",
+      "arrayPlaceholder": "输入 JSON 数组",
+      "noConfig": "此连接器没有声明连接配置字段。",
+      "cancel": "取消",
+      "submit": "创建数据源",
+      "submitting": "正在创建",
+      "success": "数据源 {id} 已创建",
+      "validation": {
+        "required": "此字段为必填项。",
+        "id": "数据源 ID 不能包含点号。",
+        "number": "请输入有效数字。",
+        "array": "请输入有效的 JSON 数组。"
+      },
+      "errors": {
+        "network": "无法连接控制面，请检查后端连接后重试。",
+        "exists": "已存在相同 ID 的数据源。",
+        "server": "控制面拒绝了此数据源配置。",
+        "unknown": "无法创建数据源，请重试。"
+      }
     },
     "stats": {
       "id": "ID",
