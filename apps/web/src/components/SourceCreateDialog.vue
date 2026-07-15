@@ -188,6 +188,7 @@ async function submit() {
     v-model="open"
     class="source-create-dialog"
     width="min(680px, calc(100vw - 32px))"
+    append-to-body
     align-center
     :close-on-click-modal="!submitting"
     :close-on-press-escape="!submitting"
