@@ -1,21 +1,26 @@
 ---
 paths:
-  - "apps/web/src/**/*.vue"
-  - "apps/web/src/**/*.ts"
-  - "apps/web/src/**/*.css"
-  - "apps/web/src/i18n/locales/*.json"
+  - "apps/web/app/**/*.tsx"
+  - "apps/web/components/**/*.tsx"
+  - "apps/web/features/**/*.tsx"
+  - "apps/web/**/*.ts"
+  - "apps/web/styles/**/*.css"
+  - "apps/web/i18n/locales/*.json"
 ---
 
 # Frontend UI Rules
 
-- 用户可见文案必须通过 vue-i18n，不在模板里写裸字符串。
+- 用户可见文案必须通过 i18next / react-i18next，不在 JSX 里写裸字符串。
 - 新增 locale key 时同步 `en`、`zh-CN`、`zh-TW`。
 - 页面必须考虑 loading、empty、error、success 四态。
 - 非微小 UI 变更必须先有 feature 文件夹内的 `spec.md` 需求拆解和 `prototype.md` 原型，再按同目录 `plan.md` 实现。
-- Element Plus 是默认组件库；优先组合现有组件，不新增重型 UI 依赖。
-- 样式入口必须分层：`main.css` 只汇总 import，Tailwind 放 `tailwind.css`，Element Plus 覆盖放 `element-plus.css`，应用语义样式放 `app.css`。
+- React 19 + TanStack Router file-based 路由是默认页面模型；Vite 负责开发、预览和打包。
+- shadcn/ui 风格组件和 Radix primitives 是默认 UI 基座；优先组合现有组件，不新增重型 UI 依赖。
+- Select / Dropdown / Menu 使用 `apps/web/components/ui/*` 的 shadcn-compatible primitives，不在业务页使用原生 `<select>` 或手写 floating dropdown。
+- 动效使用 Motion，保持克制，优先服务浮层、状态切换和局部反馈。
+- 服务端状态用 TanStack Query；客户端 UI/session 状态用 Zustand。
+- 样式入口必须分层：`main.css` 只汇总 import，Tailwind 放 `tailwind.css`，应用语义样式放 `app.css`。
 - Tailwind v4 显式使用 `@layer theme, base, components, utilities;`；自定义默认样式放 `@layer base`，应用语义 class 放 `@layer components`。
-- Element Plus 覆盖优先用官方 CSS 变量和组件级 CSS 变量；只有变量无法表达时才写具体 `.el-*` class。
 - UI 风格按 shadcn / Linear 产品工作台气质收敛，基础圆角默认 `10px`。
 - 表格、工具栏、侧栏、状态区和画布容器要有稳定尺寸约束。
 - UI 改动后检查文字溢出、元素重叠、移动端布局和交互可达性。

@@ -1,0 +1,448 @@
+{
+  "app": {
+    "brand": "Tapstate",
+    "primaryNavigation": "Primary navigation",
+    "previewMode": "AI Studio migration preview",
+    "language": "Language",
+    "languageOptions": {
+      "en": "English",
+      "zh-CN": "Simplified Chinese",
+      "zh-TW": "Traditional Chinese"
+    },
+    "notifications": "View notifications",
+    "logout": "Sign out",
+    "shortcuts": {
+      "ask": "⌘J"
+    },
+    "user": {
+      "avatar": "User avatar",
+      "initial": "U"
+    }
+  },
+  "nav": {
+    "overview": "Overview",
+    "resources": "Resources",
+    "develop": "Develop",
+    "operations": "Operations",
+    "governance": "Governance",
+    "services": "Data Services",
+    "admin": "Admin",
+    "sources": "Data Sources",
+    "pipelines": "Pipelines",
+    "explorations": "Explorations"
+  },
+  "context": {
+    "demoLine": "Acme / Default Tenant / prod"
+  },
+  "common": {
+    "actions": "Actions",
+    "back": "Back",
+    "create": "Create",
+    "expand": "Expand",
+    "more": "More actions",
+    "separator": "/"
+  },
+  "auth": {
+    "login": {
+      "eyebrow": "REAL-TIME CONTEXT",
+      "signalTitle": "Make every decision current.",
+      "signalBody": "Tapstate keeps operational data moving, so AI and people can work from the same live context.",
+      "systemReady": "CONTROL PLANE READY",
+      "contextLine": "STREAM / OBSERVE / ACT",
+      "versionLine": "Tapstate Web 0.1",
+      "controlPlane": "CONTROL PLANE",
+      "formIndex": "SECURE WORKSPACE",
+      "title": "Welcome back",
+      "subtitle": "Sign in to continue working with your live data.",
+      "usernameLabel": "Username",
+      "usernamePlaceholder": "you{'@'}company.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "passwordShow": "Show password",
+      "passwordHide": "Hide password",
+      "submit": "Sign in",
+      "submitting": "Checking credentials",
+      "success": "Signed in",
+      "terminal": {
+        "previewLabel": "Tapstate CLI workflow preview",
+        "shell": "bash",
+        "prompt": "› ~",
+        "successMark": "✓",
+        "connectCommand": "tapstate auth login",
+        "connectResult": "Authenticated successfully",
+        "workspaceCommand": "tapstate workspace init ai-context",
+        "workspaceResult": "Workspace initialized",
+        "sourceCommand": "tapstate connect postgres --prod",
+        "sourceResult": "Connected to production database (14.2ms)",
+        "pipelineCommand": "tapstate pipeline deploy user-events",
+        "pipelineResult": "Pipeline user-events is running",
+        "footerTitle": "Developer-first data workflows.",
+        "footerBody": "Connect, transform, and deliver live context from the CLI or Web."
+      },
+      "errors": {
+        "invalidCredentials": "We could not verify those credentials. Check them and try again.",
+        "network": "The control plane is unreachable. Check the connection and try again.",
+        "protocol": "The control plane returned an unexpected response. Try again.",
+        "server": "Sign in was refused by the control plane. Try again.",
+        "unknown": "Something went wrong while signing in. Try again."
+      }
+    },
+    "validation": {
+      "usernameRequired": "Enter your username.",
+      "passwordRequired": "Enter your password."
+    },
+    "session": {
+      "expired": "Your session expired. Sign in again."
+    }
+  },
+  "state": {
+    "success": "Success",
+    "loading": "Loading",
+    "empty": {
+      "short": "Empty",
+      "title": "Nothing here yet"
+    },
+    "error": {
+      "short": "Error",
+      "title": "Something needs attention",
+      "retry": "Retry"
+    }
+  },
+  "sources": {
+    "title": "Data Sources",
+    "subtitle": "Browse connected systems, tables, schema, and preview data.",
+    "allSources": "All Sources",
+    "allSourcesDescription": "Manage connected databases, warehouses, and streaming platforms.",
+    "connectionError": "This source is reachable in the catalog, but the latest connection check failed.",
+    "generatedEndpoint": "Generated API endpoint",
+    "noTablesTitle": "No tables found",
+    "noTablesBody": "This source has no discovered tables in the current preview dataset.",
+    "tablesIn": "Tables in {name}",
+    "tablesCount": "{count} tables",
+    "tabComingSoonTitle": "{tab} preview",
+    "tabComingSoonBody": "This tab is represented as an empty state in the migration preview.",
+    "actions": {
+      "create": "Create source",
+      "refresh": "Refresh sources",
+      "sync": "Sync config",
+      "test": "Test connection"
+    },
+    "empty": {
+      "title": "No sources yet",
+      "body": "Add a connector-backed source to make live data available to Tapstate."
+    },
+    "columns": {
+      "comment": "Comment",
+      "name": "Name",
+      "noComment": "No comment provided",
+      "position": "Position",
+      "type": "Type"
+    },
+    "search": {
+      "label": "Search sources",
+      "placeholder": "Search sources..."
+    },
+    "filters": {
+      "connectionStatus": {
+        "label": "Connection status",
+        "all": "All"
+      },
+      "noResults": "No data sources match the current filters."
+    },
+    "states": {
+      "empty": "Create a source to start browsing tables and previews.",
+      "error": "The source catalog could not be loaded.",
+      "loading": "Loading source catalog.",
+      "network": "The control plane is unreachable. Check the backend connection and try again."
+    },
+    "details": {
+      "mode": "Read mode",
+      "tables": "Table selectors",
+      "configuredFields": "Configured fields",
+      "configuration": "Connection configuration",
+      "tableSelection": "Table selection",
+      "connectionOnly": "Connection only",
+      "endpointUnavailable": "Endpoint not exposed",
+      "noConfiguration": "This source has no visible non-secret configuration.",
+      "secretConfigured": "Configured",
+      "noTables": "No table selectors are configured for this source.",
+      "unnamedTable": "Unnamed selector"
+    },
+    "create": {
+      "title": "Create source",
+      "subtitle": "Choose a connector and configure the fields declared by its PDK metadata.",
+      "idLabel": "Source ID",
+      "idPlaceholder": "production-postgres",
+      "idHint": "Stable workspace identifier. Dots are reserved for stream addressing.",
+      "connectorLabel": "Connector",
+      "connectorPlaceholder": "Select a connector",
+      "optionMeta": "{group} / {id}",
+      "loadingSchema": "Loading connector configuration",
+      "connectionTitle": "Connection configuration",
+      "connectionSubtitle": "Fields normalized from {connector} connector metadata.",
+      "modeLabel": "Read mode",
+      "required": "Required",
+      "arrayPlaceholder": "Enter a JSON array",
+      "noConfig": "This connector does not declare connection fields.",
+      "cancel": "Cancel",
+      "submit": "Create source",
+      "submitting": "Creating source",
+      "success": "Source {id} created",
+      "validation": {
+        "required": "This field is required.",
+        "id": "Source IDs cannot contain a dot.",
+        "number": "Enter a valid number.",
+        "array": "Enter a valid JSON array."
+      },
+      "errors": {
+        "network": "The control plane is unreachable. Check the backend connection and try again.",
+        "exists": "A source with this ID already exists.",
+        "server": "The control plane rejected this source configuration.",
+        "unknown": "The source could not be created. Try again."
+      }
+    },
+    "stats": {
+      "id": "ID",
+      "ingestedRows": "Ingested rows",
+      "last24h": "Last 24h",
+      "lastUpdate": "Last update",
+      "quarantine": "Quarantine",
+      "rows": "Rows",
+      "size": "Size"
+    },
+    "status": {
+      "connected": "Connected",
+      "error": "Connection Error"
+    },
+    "table": {
+      "host": "Host",
+      "lastSync": "Last sync",
+      "name": "Table name",
+      "rowNumber": "#",
+      "rows": "Rows",
+      "size": "Size",
+      "sourceName": "Source name",
+      "status": "Status",
+      "tables": "Tables",
+      "type": "Type"
+    },
+    "tabs": {
+      "columns": "Columns",
+      "data": "Data",
+      "lineage": "Lineage",
+      "log": "Log",
+      "settings": "Settings"
+    }
+  },
+  "pipelines": {
+    "title": "Pipelines",
+    "subtitle": "Inspect pipeline resources, generated views, and serving APIs.",
+    "allPipelines": "All Pipelines",
+    "explorer": "Explorer",
+    "states": {
+      "empty": "Start with the wizard to create the first pipeline in this workspace.",
+      "error": "Pipeline metadata could not be loaded in this preview state.",
+      "loading": "Loading pipeline graph and resource status."
+    },
+    "createMenu": {
+      "title": "Creation mode",
+      "wizard": "Build with Wizard",
+      "wizardDescription": "Step-by-step guided setup",
+      "sql": "Build with DuckDB SQL",
+      "sqlDescription": "Write SQL to transform data",
+      "dag": "Build with DAG Designer",
+      "dagDescription": "Visual node-based editor",
+      "ai": "Build with AI",
+      "aiDescription": "Generate pipeline from prompt"
+    },
+    "actions": {
+      "collapseNode": "Collapse {{name}}",
+      "expandNode": "Expand {{name}}"
+    },
+    "table": {
+      "modified": "Last modified",
+      "resourceName": "Resource name",
+      "status": "Status",
+      "type": "Type"
+    },
+    "type": {
+      "api": "API",
+      "pipeline": "Pipeline",
+      "view": "View"
+    },
+    "status": {
+      "error": "Error",
+      "paused": "Paused",
+      "ready": "Ready",
+      "running": "Running"
+    },
+    "modified": {
+      "twoHoursAgo": "2 hours ago"
+    },
+    "metrics": {
+      "delay": "Replication delay",
+      "latency": "Latency (p95)",
+      "requests": "Requests / min",
+      "storageSize": "Storage size",
+      "totalRows": "Total rows"
+    },
+    "schema": {
+      "column": "Column name",
+      "createdAtDescription": "Timestamp when the record was ingested",
+      "description": "Description",
+      "eventNameDescription": "Specific action or event triggered by the user",
+      "idDescription": "Unique identifier for the record",
+      "title": "Schema definition",
+      "type": "Data type"
+    },
+    "preview": {
+      "createdAt": "created_at",
+      "eventName": "event_name",
+      "id": "id",
+      "title": "Data preview"
+    },
+    "api": {
+      "auth": "Authentication",
+      "authBody": "Bearer token required in Authorization header",
+      "endpoint": "Endpoint",
+      "method": "GET",
+      "responsePreview": "Response preview"
+    }
+  },
+  "explorations": {
+    "title": "Explorations",
+    "threadTitle": "Model Capabilities",
+    "actions": {
+      "mention": "Mention resource",
+      "new": "New exploration",
+      "send": "Send"
+    },
+    "history": {
+      "capabilities": "Model Capabilities",
+      "tipZones": "Check best_tip_zones",
+      "tripTrends": "Analyze trip trends"
+    },
+    "input": {
+      "placeholder": "What do you want to explore?"
+    },
+    "states": {
+      "empty": "Start an exploration to ask questions over sources, views, and APIs.",
+      "error": "The exploration thread could not be loaded in this preview state.",
+      "loading": "Loading exploration history and conversation context."
+    },
+    "messages": {
+      "answerClose": "Where would you like to start?",
+      "answerIntro": "I can help you explore and analyze data in Tapstate.",
+      "userQuestion": "What can you do?"
+    },
+    "capabilities": {
+      "explore": {
+        "title": "Data exploration",
+        "item1": "Browse data sources and published endpoints.",
+        "item2": "Query data to understand structure and content.",
+        "item3": "Analyze distributions, trends, and patterns."
+      },
+      "nodes": {
+        "title": "Create nodes",
+        "item1": "Create query nodes that preserve useful logic.",
+        "item2": "Create time-series nodes for trend visualization.",
+        "item3": "Build aggregations, filters, and joins."
+      },
+      "resources": {
+        "title": "Supported resources",
+        "body": "This preview workspace includes these resources.",
+        "item1": "Data sources: trips, taxi_zone_lookup.",
+        "item2": "API endpoint: best_tip_zones."
+      },
+      "examples": {
+        "title": "Example questions",
+        "body": "You can ask questions like these.",
+        "item1": "Analyze the distribution of the trips source.",
+        "item2": "What is the daily trip count trend?",
+        "item3": "Which zones have the highest tips?"
+      }
+    }
+  },
+  "ask": {
+    "launch": "Ask Tapstate",
+    "newChat": "New chat",
+    "panelLabel": "Ask Tapstate panel",
+    "skills": "Skills",
+    "actions": {
+      "attach": "Attach file",
+      "close": "Close",
+      "maximize": "Maximize",
+      "minimize": "Minimize",
+      "send": "Send"
+    },
+    "input": {
+      "placeholder": "Ask Tapstate..."
+    },
+    "preview": {
+      "rows": "100k+ rows"
+    },
+    "prompts": {
+      "pipeline": "Create Pipeline",
+      "pipelinePrompt": "Create a new pipeline",
+      "source": "Create Data Source",
+      "sourcePrompt": "Create a data source",
+      "trends": "Analyze data trends",
+      "trendsPrompt": "Analyze active user trends"
+    },
+    "responses": {
+      "default": "I can help you explore your data.\n\n1. Analyze your trips data source\n2. Create a new pipeline\n3. Check the best_tip_zones API\n\nWhat would you like to start with?",
+      "queryPreview": "I queried [View: daily_active_users] for you. Here is a preview of the latest data:\n\n[DataPreview: daily_active_users]\n\nThe data looks clean and is updating in real time. Do you want me to analyze this week's trend?",
+      "sourceCreated": "I created the Data Source [DataSource: user_events] connected to your PostgreSQL instance. Open it to inspect schema and sync status."
+    },
+    "shortcuts": {
+      "context": "to add current view to context",
+      "contextKey": "Tab",
+      "mention": "to mention any table, view, or API",
+      "mentionKey": "{'@'}"
+    },
+    "welcome": {
+      "body": "Ask anything or tell Tapstate what you need.",
+      "title": "Welcome to Tapstate"
+    }
+  },
+  "wizard": {
+    "addOutput": "Add output",
+    "addStep": "Add step",
+    "createView": "Create View",
+    "or": "or",
+    "pickFields": "Pick fields",
+    "publishApi": "Publish API",
+    "sourceData": "Source Data",
+    "sourceName": "0426-01",
+    "title": "untitled_view_3",
+    "preview": {
+      "empty": "No data. Click preview to generate sample rows.",
+      "grid": "Grid preview",
+      "json": "JSON preview",
+      "title": "Result Preview"
+    },
+    "rename": {
+      "field": "Field name",
+      "newField": "New field name",
+      "noTransform": "No transform configured",
+      "revert": "Revert field",
+      "title": "Field Rename",
+      "transform": "Transform"
+    }
+  },
+  "notFound": {
+    "back": "Back to workspace",
+    "description": "The route does not exist in this Tapstate workspace preview.",
+    "eyebrow": "404",
+    "title": "Page not found"
+  },
+  "view": {
+    "overview": { "title": "Overview", "placeholder": "Workspace health at a glance." },
+    "resources": { "title": "Resources", "placeholder": "All assets, filterable by kind." },
+    "develop": { "title": "Develop", "placeholder": "DAG canvas & SQL editor." },
+    "operations": { "title": "Operations", "placeholder": "Task runs, cluster, Share CDC." },
+    "governance": { "title": "Governance", "placeholder": "Lineage, verification, monitoring." },
+    "services": { "title": "Data Services", "placeholder": "Published APIs & tokens." },
+    "admin": { "title": "Admin", "placeholder": "Users, roles, tenants, settings." }
+  }
+}

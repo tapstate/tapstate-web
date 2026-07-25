@@ -1,24 +1,14 @@
 import process from 'node:process'
 import { fileURLToPath, URL } from 'node:url'
-import vueI18n from '@intlify/unplugin-vue-i18n/vite'
 import tailwindcss from '@tailwindcss/vite'
-import vue from '@vitejs/plugin-vue'
+import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  plugins: [
-    vue(),
-    tailwindcss(),
-    vueI18n({
-      // Load messages from src/i18n/locales/<locale>/<namespace>.json.
-      // Each directory name becomes a locale, each file a namespace.
-      include: [fileURLToPath(new URL('./src/i18n/locales/**', import.meta.url))],
-      runtimeOnly: false,
-    }),
-  ],
+  plugins: [tailwindcss(), react()],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@': fileURLToPath(new URL('.', import.meta.url)),
     },
   },
   server: {
@@ -33,5 +23,9 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+  },
+  test: {
+    environment: 'jsdom',
+    include: ['**/*.test.ts', '**/*.test.tsx'],
   },
 })

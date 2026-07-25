@@ -1,20 +1,22 @@
 {
   "name": "tapstate-web",
-  "type": "module",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "pnpm@11.10.0",
+  "type": "module",
   "scripts": {
     "dev": "pnpm --filter web dev",
     "build": "pnpm --filter web build",
     "preview": "pnpm --filter web preview",
+    "format": "pnpm exec oxfmt .",
+    "format:check": "pnpm exec oxfmt --check .",
     "typecheck": "pnpm -r typecheck",
-    "lint": "eslint ."
+    "lint:code": "pnpm exec oxlint .",
+    "lint": "pnpm lint:code && pnpm format:check"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^9.1.0",
-    "@intlify/eslint-plugin-vue-i18n": "^4.5.1",
-    "eslint": "^10.6.0",
+    "oxfmt": "^0.60.0",
+    "oxlint": "^1.75.0",
     "typescript": "^6.0.3"
-  }
+  },
+  "packageManager": "pnpm@11.10.0"
 }

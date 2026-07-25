@@ -2,13 +2,32 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "jsx": "react-jsx",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./*"]
     },
-    "types": ["vite/client"],
+    "types": ["vite/client", "node"],
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
   "references": [{ "path": "./tsconfig.node.json" }],
-  "include": ["src/**/*.ts", "src/**/*.vue", "src/**/*.json"]
+  "include": [
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "components/**/*.ts",
+    "components/**/*.tsx",
+    "context/**/*.ts",
+    "context/**/*.tsx",
+    "features/**/*.ts",
+    "features/**/*.tsx",
+    "hooks/**/*.ts",
+    "hooks/**/*.tsx",
+    "i18n/**/*.ts",
+    "scripts/**/*.mjs",
+    "service/**/*.ts",
+    "stores/**/*.ts",
+    "types/**/*.ts",
+    "lib/**/*.ts",
+    "styles/**/*.css"
+  ]
 }

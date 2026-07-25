@@ -92,9 +92,9 @@
 
 必须同步：
 
-- `apps/web/src/i18n/locales/en.json`
-- `apps/web/src/i18n/locales/zh-CN.json`
-- `apps/web/src/i18n/locales/zh-TW.json`
+- `apps/web/i18n/locales/en.json`
+- `apps/web/i18n/locales/zh-CN.json`
+- `apps/web/i18n/locales/zh-TW.json`
 
 ## 7. 数据与接口
 

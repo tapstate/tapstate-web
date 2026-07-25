@@ -76,7 +76,7 @@
 
 重点检查：
 
-- Element Plus `size`、`type`、`effect`、`round`、`plain`、`text`、`link`。
+- shadcn / Radix 组件 variant、size、asChild、portal、focus ring、disabled、aria 属性。
 - 自定义高度、padding、圆角、阴影、颜色、字体大小、状态色。
 - 图标选择、icon-only button、状态图标、筛选 / 排序 / 操作图标。
 

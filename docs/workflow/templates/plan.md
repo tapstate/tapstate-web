@@ -47,7 +47,7 @@
 - 单元 / 组件 / E2E：
 - 手工 UI 检查：
 - 视觉决策扫描：
-  - 按需检查 `size="small"`、`size="large"`、`type="primary"`、`effect=`、`round`、`plain`、自定义高度 / padding / 圆角 / 颜色 / 阴影等是否都有 prototype 或 design-system 依据。
+  - 按需检查 shadcn / Radix 组件 variant、size、asChild、portal、focus ring、disabled、aria 属性，以及自定义高度 / padding / 圆角 / 颜色 / 阴影等是否都有 prototype 或 design-system 依据。
 - 验证分级：
   - Level 1：轻量改动，源码静态检查、`rg`、`pnpm lint`、`pnpm typecheck`；通常不跑 `pnpm build`。
   - Level 2：中等交互 / UI 改动，Level 1 + 本地页面手工目检；触及构建边界时才跑 `pnpm build`。
@@ -70,7 +70,7 @@
 - [ ] loading / empty / error / success 四态可用。
 - [ ] 与 prototype 的布局、交互和响应式规则一致。
 - [ ] 新增或修改的视觉 props / utility 均有设计系统、既有局部模式或 prototype 依据。
-- [ ] 未使用无依据的 Element Plus `size`、`type`、`effect`、`round`、`plain`、`text`、`link` 等视觉捷径。
+- [ ] 未使用无依据的 shadcn / Radix variant、size、portal、focus ring、disabled、aria 属性或视觉捷径。
 - [ ] 桌面和移动视口无明显溢出、重叠、错位。
 - [ ] TypeScript、lint 和按风险选择的 build 结果记录清楚。
 

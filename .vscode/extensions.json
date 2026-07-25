@@ -1,7 +1,6 @@
 {
   "recommendations": [
     "lokalise.i18n-ally",
-    "Vue.volar",
-    "dbaeumer.vscode-eslint"
+    "oxc.oxc-vscode"
   ]
 }

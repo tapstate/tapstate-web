@@ -31,14 +31,17 @@
 
 ## Frontend Rules
 
-- 使用 Vue 3 Composition API。
+- 使用 React 19，页面路由使用 TanStack Router，路由源码按 file-based 形态放在 `apps/web/app/routes/`；开发、预览和打包都使用 Vite。
 - 遵循 strict TypeScript；避免 `any`，除非需求文档解释原因。
-- Element Plus 是默认组件库；不要为了单个页面引入新的重型 UI 依赖。
-- 样式入口必须分层：`main.css` 只汇总 import，Tailwind 放 `tailwind.css`，Element Plus 覆盖放 `element-plus.css`，应用语义样式放 `app.css`。
+- shadcn/ui 风格组件和 Radix primitives 是默认 UI 基座；不要为了单个页面引入新的重型 UI 依赖。
+- Select / Dropdown / Menu 必须优先使用 `apps/web/components/ui/*` 的 shadcn-compatible primitives；不要在业务页使用原生 `<select>` 或手写 floating dropdown。
+- 动效使用 Motion，保持克制，优先用于浮层进入/退出、状态切换和局部过渡。
+- 服务端状态使用 TanStack Query；客户端 UI/session 状态使用 Zustand。
+- 国际化使用 i18next + react-i18next。
+- 样式入口必须分层：`main.css` 只汇总 import，Tailwind 放 `tailwind.css`，应用语义样式放 `app.css`。
 - Tailwind v4 显式使用 `@layer theme, base, components, utilities;`；自定义默认样式放 `@layer base`，应用语义 class 放 `@layer components`，确保 utilities 能覆盖默认样式。
-- Element Plus 覆盖优先用官方 CSS 变量和组件级 CSS 变量；只有变量无法表达时才写具体 `.el-*` class。
-- UI 风格按 `docs/engineering/design-system.md` 的 shadcn / Linear 产品工作台规范收敛：语义 token 优先、Element Plus 变量优先、状态完整、信息密度清晰；`--radius` 为 `0.625rem`，Tailwind `rounded-lg` 映射到 `var(--radius)`，表单控件 / 按钮 / Select trigger 等默认控件圆角按 `rounded-lg` / `var(--radius)` 即 `10px` 落地。
-- 图标优先用现有图标库或 Element Plus 图标，不手写一次性复杂 SVG。
+- UI 风格按 `docs/engineering/design-system.md` 的 shadcn / Linear 产品工作台规范收敛：语义 token 优先、状态完整、信息密度清晰；`--radius` 为 `0.625rem`，Tailwind `rounded-lg` 映射到 `var(--radius)`，表单控件 / 按钮 / Select trigger 等默认控件圆角按 `rounded-lg` / `var(--radius)` 即 `10px` 落地。
+- 图标优先用 lucide-react，不手写一次性复杂 SVG。
 - 页面应该是企业产品工作台气质：信息密度清晰、布局稳定、操作路径短，不做营销式 hero。
 - 固定格式区域要有稳定尺寸约束，例如表格、工具栏、侧栏、状态卡、画布容器。
 - 避免裸字符串、单语言文案、临时 mock 文案进主干。
@@ -50,7 +53,7 @@
 - Prototype 必须写清楚布局、交互、响应式、四态和评审结论；UI / IA / 复杂交互改动不能跳过。
 - Plan 必须写清楚受影响文件、执行步骤、验证命令、风险、回滚/降级策略、进度字段和 Progress Log。
 - UI 页面必须考虑 loading、empty、error、success 四态；表单还要考虑 disabled、validation、submitting。
-- 用户可见文案必须走 `vue-i18n`，同步更新 `en`、`zh-CN`、`zh-TW` 三套 locale key。
+- 用户可见文案必须走 i18next，同步更新 `en`、`zh-CN`、`zh-TW` 三套 locale key，并通过 `pnpm --filter web i18n:check`。
 - 涉及视觉布局时，启动本地页面并做桌面 / 移动视口检查；检查文字不溢出、元素不重叠、空态和错误态可用。
 
 ## Verification Policy
@@ -72,7 +75,7 @@ pnpm typecheck
 
 ### Level 2：中等改动
 
-适用：组件结构变化、多个文件联动、表单交互、状态切换、i18n 与 Element Plus locale 联动、需要实际页面确认的 UI 行为。
+适用：组件结构变化、多个文件联动、表单交互、状态切换、i18n 语言切换、需要实际页面确认的 UI 行为。
 
 建议验证：
 

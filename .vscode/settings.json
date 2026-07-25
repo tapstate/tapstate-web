@@ -1,17 +1,17 @@
 {
-  "i18n-ally.localesPaths": ["apps/web/src/i18n/locales"],
+  "i18n-ally.localesPaths": ["apps/web/i18n/locales"],
   "i18n-ally.keystyle": "nested",
   "i18n-ally.enabledParsers": ["json"],
-  "i18n-ally.enabledFrameworks": ["vue"],
+  "i18n-ally.enabledFrameworks": ["react-i18next", "i18next"],
   "i18n-ally.pathMatcher": "{locale}.json",
   "i18n-ally.sourceLanguage": "en",
   "i18n-ally.displayLanguage": "zh-CN",
   "i18n-ally.namespace": false,
   "i18n-ally.sortKeys": true,
+  "editor.defaultFormatter": "oxc.oxc-vscode",
+  "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit"
-  },
-  "[vue]": {
-    "editor.defaultFormatter": "Vue.volar"
+    "source.format.oxc": "always",
+    "source.fixAll.oxc": "always"
   }
 }
