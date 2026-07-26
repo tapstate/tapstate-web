@@ -3,7 +3,7 @@
 Tapstate 前端这条线的独立工作区，也是企业级 Web 应用本体。仓库同时收拢两样东西：
 
 - **前端设计 / IA / 技术栈思考**（`docs/`）
-- **前端代码**（pnpm monorepo：Vite + React 19 + TanStack Router file-based 路由 + Tailwind CSS + TanStack Query + Zustand + i18next + Motion）
+- **前端代码**（pnpm monorepo：Vite + React 19 + TanStack Router File Routes + Tailwind CSS + TanStack Query + Zustand + i18next + Motion）
 
 ## 治理定位
 
@@ -65,7 +65,7 @@ pnpm lint         # oxlint diagnostics + repo-wide format check
 本项目使用 Vite + TanStack Router：
 
 - Vite 负责本地开发服务器、预览与打包产物。
-- TanStack Router 负责 SPA 路由；路由源码按 file-based 形态维护在 `apps/web/app/routes/`。
+- TanStack Router 负责 SPA 路由；路由源码按 File Routes 形态维护在 `apps/web/app/routes/`，由 `@tanstack/router-plugin` 生成 `apps/web/app/routeTree.gen.ts`。
 - 当前仍按 SPA / client-first 落地；不引入 SSR、Server Actions、API Routes 或 BFF。
 
 依赖版本以各 `package.json` 的 `^` 范围为准；lockfile 以实际 install 为准。

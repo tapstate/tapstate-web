@@ -27,13 +27,13 @@
 
 `tapstate/v1` 把所有"东西"都建模成 5 种 `kind` 的资源(`canonical-form.md`):
 
-| kind | 是什么 | 旧系统对应 |
-|---|---|---|
-| `source` | 数据源(连接器 + config + mode + tables) | Connection / DataSource(§3.1.1) |
-| `pipeline` | 流水线 = source + transforms + view + serve + settings | Task / DAG(§3.4 / §3.9.9) |
-| `view` | 物化视图,带 storage(hot/warm/cold) | Data Modeling 视图(§3.2) |
-| `serve` | 对外发布:同步(sync)/ 查询(query)/ 推送(push) | API Management(§3.5 / §3.9.14) |
-| `transform` | 可复用变换器,被 `use:` 引用 | Data Development 自定义处理器(§3.9.12) |
+| kind        | 是什么                                                 | 旧系统对应                             |
+| ----------- | ------------------------------------------------------ | -------------------------------------- |
+| `source`    | 数据源(连接器 + config + mode + tables)                | Connection / DataSource(§3.1.1)        |
+| `pipeline`  | 流水线 = source + transforms + view + serve + settings | Task / DAG(§3.4 / §3.9.9)              |
+| `view`      | 物化视图,带 storage(hot/warm/cold)                     | Data Modeling 视图(§3.2)               |
+| `serve`     | 对外发布:同步(sync)/ 查询(query)/ 推送(push)           | API Management(§3.5 / §3.9.14)         |
+| `transform` | 可复用变换器,被 `use:` 引用                            | Data Development 自定义处理器(§3.9.12) |
 
 每个资源有 `id`,可序列化成 `.tap.yml`;CLI 已能 `validate / new / explain / ls / desc`。这跟 Tinybird Forward、K8s、Terraform 是同一个范式。
 
@@ -73,15 +73,15 @@
 
 ## 3. 每区装什么(映射到 kind 与功能域)
 
-| 菜单 | 看什么 | 对应 kind / 功能域 | 备注 |
-|---|---|---|---|
-| **Overview** | 任务状态、集群健康、近 7 天错误与吞吐、最近部署 | —(聚合,§3.6 指标) | Tinybird 式落地页,替代旧"一进来就是数据源列表" |
-| **Resources** | 全部资产统一表 + lineage 视图 | `source` `pipeline` `view` `serve` `transform` | **核心区**。顶部 kind facet:Sources / Pipelines / Views / Serves / Transforms,可叠加"有错误""延迟 > 阈值" |
-| **Develop** | DAG 画布编辑器、SQL→DAG 编辑器、试跑 N 行、schema 预览 | `pipeline` 的编辑态 + 决策 6 | Resources 里点 pipeline 进这里;也可从"New"直接进 SQL 编辑器从零生成 DAG |
-| **Operations** | 运行中任务实例、状态机、CDC offset、集群拓扑(Hz 成员 / leader)、Share CDC 挖掘、Shared Cache | §3.3 Runtime + §3.4 + §3.9.15/16/18 | **静态资产 vs 运行实例分开**——Tapstate 比 Tinybird 多出来的一层,因为 HA / CDC / 集群是真运维 |
-| **Governance** | 字段级 Lineage 图谱、数据校验、指标 / 告警、审计日志、元数据浏览 | §3.6 + 决策 3 + §3.9.13/21 | Lineage 横跨所有 kind,独立成区比塞进 Resources 合理 |
-| **Data Services** | `serve` 发布的 API、调用统计、Token / 鉴权、限流 | `serve` 消费侧 + §3.5 apiserver | Resources 里 serve 是"资产定义",这里看"它怎么被外部消费" |
-| **Admin** | 用户 / 角色 / 权限(SPI)、租户管理、通知通道(Notifier SPI)、加密、系统设置 | §3.7 + §3.9.17/20 + 决策 4 | Tenant 在顶部切换、在这里管理 |
+| 菜单              | 看什么                                                                                       | 对应 kind / 功能域                             | 备注                                                                                                      |
+| ----------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Overview**      | 任务状态、集群健康、近 7 天错误与吞吐、最近部署                                              | —(聚合,§3.6 指标)                              | Tinybird 式落地页,替代旧"一进来就是数据源列表"                                                            |
+| **Resources**     | 全部资产统一表 + lineage 视图                                                                | `source` `pipeline` `view` `serve` `transform` | **核心区**。顶部 kind facet:Sources / Pipelines / Views / Serves / Transforms,可叠加"有错误""延迟 > 阈值" |
+| **Develop**       | DAG 画布编辑器、SQL→DAG 编辑器、试跑 N 行、schema 预览                                       | `pipeline` 的编辑态 + 决策 6                   | Resources 里点 pipeline 进这里;也可从"New"直接进 SQL 编辑器从零生成 DAG                                   |
+| **Operations**    | 运行中任务实例、状态机、CDC offset、集群拓扑(Hz 成员 / leader)、Share CDC 挖掘、Shared Cache | §3.3 Runtime + §3.4 + §3.9.15/16/18            | **静态资产 vs 运行实例分开**——Tapstate 比 Tinybird 多出来的一层,因为 HA / CDC / 集群是真运维              |
+| **Governance**    | 字段级 Lineage 图谱、数据校验、指标 / 告警、审计日志、元数据浏览                             | §3.6 + 决策 3 + §3.9.13/21                     | Lineage 横跨所有 kind,独立成区比塞进 Resources 合理                                                       |
+| **Data Services** | `serve` 发布的 API、调用统计、Token / 鉴权、限流                                             | `serve` 消费侧 + §3.5 apiserver                | Resources 里 serve 是"资产定义",这里看"它怎么被外部消费"                                                  |
+| **Admin**         | 用户 / 角色 / 权限(SPI)、租户管理、通知通道(Notifier SPI)、加密、系统设置                    | §3.7 + §3.9.17/20 + 决策 4                     | Tenant 在顶部切换、在这里管理                                                                             |
 
 ---
 
@@ -105,12 +105,12 @@ Tapstate 带着 Tapdata 的运维基因:集群 HA(决策:Hz 默认分布式)、C
 
 ## 5. 对比:三套 IA 的位置
 
-| | Tapdata 旧 UI | Tinybird 新 UI(2026-03) | **Tapstate 提议** |
-|---|---|---|---|
-| 资源组织 | 按 controller 碎成几十页 | 统一 Resources + facet | 统一 Resources + kind facet(§4.1) |
-| 创作入口 | 散在各页面 | 退化为 pipe 编辑态 | Develop 独立(人主导 authoring)(§4.2) |
-| 运行/治理 | 混在功能页里 | 并进 Resources / Overview | Operations / Governance 独立(运维面厚)(§4.3) |
-| 多租户 | 设置页深处 | —(单租户 SaaS) | 顶部 context 一等公民 |
+|           | Tapdata 旧 UI            | Tinybird 新 UI(2026-03)   | **Tapstate 提议**                            |
+| --------- | ------------------------ | ------------------------- | -------------------------------------------- |
+| 资源组织  | 按 controller 碎成几十页 | 统一 Resources + facet    | 统一 Resources + kind facet(§4.1)            |
+| 创作入口  | 散在各页面               | 退化为 pipe 编辑态        | Develop 独立(人主导 authoring)(§4.2)         |
+| 运行/治理 | 混在功能页里             | 并进 Resources / Overview | Operations / Governance 独立(运维面厚)(§4.3) |
+| 多租户    | 设置页深处               | —(单租户 SaaS)            | 顶部 context 一等公民                        |
 
 Tapstate 的位置:**采用 Tinybird 的资源统一范式,但保留 Tapdata 该有的运维/治理/创作分区。**
 

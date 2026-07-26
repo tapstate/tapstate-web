@@ -26,18 +26,18 @@ Tapstate Web 的 UI 以 shadcn 的语义 token、Radix 可达性交互和 Tailwi
 
 `apps/web/styles/tailwind.css` 是 shadcn token 的源头，必须维护这些语义组：
 
-| 组 | Token | 用途 |
-|---|---|---|
-| 页面 | `--background` / `--foreground` | app 背景和主文本 |
-| 容器 | `--card` / `--card-foreground` | cards、panels、table 容器 |
-| 浮层 | `--popover` / `--popover-foreground` | dropdown、select、tooltip、popover |
-| 主操作 | `--primary` / `--primary-foreground` | primary button、selected check、关键强调 |
-| 次级区域 | `--secondary` / `--secondary-foreground` | secondary button、轻量背景 |
-| 弱化信息 | `--muted` / `--muted-foreground` | placeholder、辅助文本、弱背景 |
-| 交互 hover | `--accent` / `--accent-foreground` | menu/list/select/tree item hover、ghost hover |
-| 破坏性 | `--destructive` / `--destructive-foreground` | danger button、错误、invalid |
-| 线框 | `--border` / `--input` / `--ring` | border、form border、focus ring |
-| 侧栏 | `--sidebar-*` | app sidebar 和 sidebar item 状态 |
+| 组         | Token                                        | 用途                                          |
+| ---------- | -------------------------------------------- | --------------------------------------------- |
+| 页面       | `--background` / `--foreground`              | app 背景和主文本                              |
+| 容器       | `--card` / `--card-foreground`               | cards、panels、table 容器                     |
+| 浮层       | `--popover` / `--popover-foreground`         | dropdown、select、tooltip、popover            |
+| 主操作     | `--primary` / `--primary-foreground`         | primary button、selected check、关键强调      |
+| 次级区域   | `--secondary` / `--secondary-foreground`     | secondary button、轻量背景                    |
+| 弱化信息   | `--muted` / `--muted-foreground`             | placeholder、辅助文本、弱背景                 |
+| 交互 hover | `--accent` / `--accent-foreground`           | menu/list/select/tree item hover、ghost hover |
+| 破坏性     | `--destructive` / `--destructive-foreground` | danger button、错误、invalid                  |
+| 线框       | `--border` / `--input` / `--ring`            | border、form border、focus ring               |
+| 侧栏       | `--sidebar-*`                                | app sidebar 和 sidebar item 状态              |
 
 新增颜色时先判断是否能归入上表语义。不能归入时，先在 feature spec 里说明原因，再新增 token。
 
@@ -88,16 +88,16 @@ Tapstate Web 的 UI 以 shadcn 的语义 token、Radix 可达性交互和 Tailwi
 
 ## 6. 状态规范
 
-| 状态 | 规范 |
-|---|---|
-| Default | 背景、文字、边框来自对应语义 token |
-| Hover | 菜单、列表、树、select、dropdown item 使用 accent 语义 |
-| Active / Selected | 保留明确选中语义 |
-| Focus visible | 使用 `--ring`，focus ring 必须可见 |
-| Disabled | 禁用态不得响应 hover |
-| Invalid / Error | 使用 `--destructive` |
-| Loading / Submitting | 控件尺寸稳定，loading icon 不改变布局宽高 |
-| Empty / Error / Success | 页面级四态必须有可读文本和稳定容器 |
+| 状态                    | 规范                                                   |
+| ----------------------- | ------------------------------------------------------ |
+| Default                 | 背景、文字、边框来自对应语义 token                     |
+| Hover                   | 菜单、列表、树、select、dropdown item 使用 accent 语义 |
+| Active / Selected       | 保留明确选中语义                                       |
+| Focus visible           | 使用 `--ring`，focus ring 必须可见                     |
+| Disabled                | 禁用态不得响应 hover                                   |
+| Invalid / Error         | 使用 `--destructive`                                   |
+| Loading / Submitting    | 控件尺寸稳定，loading icon 不改变布局宽高              |
+| Empty / Error / Success | 页面级四态必须有可读文本和稳定容器                     |
 
 ## 7. 验收检查
 

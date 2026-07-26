@@ -28,12 +28,12 @@ export function AppHeader() {
   }
 
   return (
-    <header className='app-header'>
-      <div className='app-header__context' />
+    <header className="app-header">
+      <div className="app-header__context" />
 
-      <div className='app-header__actions'>
-        <button type='button' className='app-header__ask' onClick={() => setAskTapstateOpen(true)}>
-          <Sparkles className='h-3.5 w-3.5' aria-hidden='true' />
+      <div className="app-header__actions">
+        <button type="button" className="app-header__ask" onClick={() => setAskTapstateOpen(true)}>
+          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
           <span>{t('ask.launch')}</span>
           <kbd>{t('app.shortcuts.ask')}</kbd>
         </button>
@@ -41,24 +41,24 @@ export function AppHeader() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              type='button'
-              className='app-header__icon-button'
+              type="button"
+              className="app-header__icon-button"
               aria-label={t('app.language')}
             >
-              <Languages className='h-4 w-4' aria-hidden='true' />
+              <Languages className="h-4 w-4" aria-hidden="true" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align='end' className='min-w-36'>
+          <DropdownMenuContent align="end" className="min-w-36">
             {SUPPORTED_LOCALES.map((locale) => (
               <DropdownMenuItem
                 key={locale}
-                className='justify-between'
+                className="justify-between"
                 disabled={i18n.language === locale}
                 onSelect={() => switchLocale(locale)}
               >
                 {t(`app.languageOptions.${locale}`)}
                 {i18n.language === locale && (
-                  <span className='h-1.5 w-1.5 rounded-full bg-gray-900' aria-hidden='true' />
+                  <span className="h-1.5 w-1.5 rounded-full bg-gray-900" aria-hidden="true" />
                 )}
               </DropdownMenuItem>
             ))}
@@ -66,24 +66,24 @@ export function AppHeader() {
         </DropdownMenu>
 
         <button
-          type='button'
-          className='app-header__icon-button'
+          type="button"
+          className="app-header__icon-button"
           aria-label={t('app.notifications')}
         >
-          <Bell className='h-4 w-4' aria-hidden='true' />
+          <Bell className="h-4 w-4" aria-hidden="true" />
         </button>
 
         <button
-          type='button'
-          className='app-header__icon-button'
+          type="button"
+          className="app-header__icon-button"
           aria-label={t('app.logout')}
           title={t('app.logout')}
           onClick={logout}
         >
-          <LogOut className='h-4 w-4' aria-hidden='true' />
+          <LogOut className="h-4 w-4" aria-hidden="true" />
         </button>
 
-        <div className='app-header__avatar' aria-label={t('app.user.avatar')}>
+        <div className="app-header__avatar" aria-label={t('app.user.avatar')}>
           {t('app.user.initial')}
         </div>
       </div>

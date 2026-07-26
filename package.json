@@ -7,8 +7,8 @@
     "dev": "pnpm --filter web dev",
     "build": "pnpm --filter web build",
     "preview": "pnpm --filter web preview",
-    "format": "pnpm exec oxfmt .",
-    "format:check": "pnpm exec oxfmt --check .",
+    "format": "pnpm exec oxfmt . '!apps/web/app/routeTree.gen.ts'",
+    "format:check": "pnpm exec oxfmt --check . '!apps/web/app/routeTree.gen.ts'",
     "typecheck": "pnpm -r typecheck",
     "lint:code": "pnpm exec oxlint .",
     "lint": "pnpm lint:code && pnpm format:check"

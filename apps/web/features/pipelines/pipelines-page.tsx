@@ -183,25 +183,25 @@ export function PipelinesPage() {
   if (creationMode === 'wizard') return <WizardBuilder onBack={() => setCreationMode(null)} />
 
   return (
-    <section className='flex h-full w-full flex-col overflow-hidden bg-white'>
-      <header className='flex h-14 shrink-0 items-center justify-between gap-3 border-b border-gray-100/70 px-4 md:px-6'>
-        <h1 className='min-w-0 truncate text-[15px] font-semibold text-gray-900'>
+    <section className="flex h-full w-full flex-col overflow-hidden bg-white">
+      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-gray-100/70 px-4 md:px-6">
+        <h1 className="min-w-0 truncate text-[15px] font-semibold text-gray-900">
           {t('pipelines.title')}
         </h1>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              type='button'
-              className='inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-gray-800'
+              type="button"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-gray-800"
             >
-              <Plus className='h-3.5 w-3.5' aria-hidden='true' />
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
               {t('common.create')}
-              <ChevronDown className='-mr-1 ml-0.5 h-3.5 w-3.5 opacity-70' aria-hidden='true' />
+              <ChevronDown className="-mr-1 ml-0.5 h-3.5 w-3.5 opacity-70" aria-hidden="true" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            align='end'
-            className='w-72 border-gray-200/70 p-1.5 shadow-[0_12px_40px_rgba(15,23,42,0.12)]'
+            align="end"
+            className="w-72 border-gray-200/70 p-1.5 shadow-[0_12px_40px_rgba(15,23,42,0.12)]"
           >
             <DropdownMenuLabel>{t('pipelines.createMenu.title')}</DropdownMenuLabel>
             {createModes.map((mode) => {
@@ -209,7 +209,7 @@ export function PipelinesPage() {
               return (
                 <DropdownMenuItem
                   key={mode.labelKey}
-                  className='group items-start gap-3 px-3 py-2'
+                  className="group items-start gap-3 px-3 py-2"
                   onSelect={() => {
                     if (mode.value === 'wizard') setCreationMode('wizard')
                   }}
@@ -220,13 +220,13 @@ export function PipelinesPage() {
                       mode.iconClass,
                     )}
                   >
-                    <Icon className='h-3.5 w-3.5' aria-hidden='true' />
+                    <Icon className="h-3.5 w-3.5" aria-hidden="true" />
                   </span>
-                  <span className='min-w-0'>
-                    <span className='block text-[13px] font-medium text-gray-900'>
+                  <span className="min-w-0">
+                    <span className="block text-[13px] font-medium text-gray-900">
                       {t(mode.labelKey)}
                     </span>
-                    <span className='block text-[11px] text-gray-500'>
+                    <span className="block text-[11px] text-gray-500">
                       {t(mode.descriptionKey)}
                     </span>
                   </span>
@@ -237,16 +237,16 @@ export function PipelinesPage() {
         </DropdownMenu>
       </header>
 
-      <div className='flex min-h-0 flex-1 flex-col bg-white md:flex-row'>
-        <aside className='flex w-full shrink-0 flex-col border-b border-gray-100/70 bg-[#fcfcfd]/80 md:w-64 md:border-b-0 md:border-r'>
-          <div className='flex items-center justify-between border-b border-gray-100/70 p-3'>
-            <h2 className='ml-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500'>
+      <div className="flex min-h-0 flex-1 flex-col bg-white md:flex-row">
+        <aside className="flex w-full shrink-0 flex-col border-b border-gray-100/70 bg-[#fcfcfd]/80 md:w-64 md:border-b-0 md:border-r">
+          <div className="flex items-center justify-between border-b border-gray-100/70 p-3">
+            <h2 className="ml-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
               {t('pipelines.explorer')}
             </h2>
           </div>
-          <div className='flex min-h-[160px] flex-1 gap-1 overflow-auto p-2 md:flex-col'>
+          <div className="flex min-h-[160px] flex-1 gap-1 overflow-auto p-2 md:flex-col">
             <button
-              type='button'
+              type="button"
               className={cn(
                 'flex min-w-[160px] items-center gap-2 rounded-md px-2 py-1.5 text-[13px] transition-colors md:min-w-0',
                 selectedId === null
@@ -255,7 +255,7 @@ export function PipelinesPage() {
               )}
               onClick={() => setSelectedId(null)}
             >
-              <GitMerge className='h-4 w-4 text-gray-400' aria-hidden='true' />
+              <GitMerge className="h-4 w-4 text-gray-400" aria-hidden="true" />
               <span>{t('pipelines.allPipelines')}</span>
             </button>
             {treeData.map((node) => (
@@ -271,9 +271,9 @@ export function PipelinesPage() {
           </div>
         </aside>
 
-        <main className='flex min-w-0 flex-1 flex-col bg-white'>
+        <main className="flex min-w-0 flex-1 flex-col bg-white">
           {selectedNode && <ResourceHeader node={selectedNode} />}
-          <div className='min-h-0 flex-1 overflow-auto bg-white p-4 md:p-6'>
+          <div className="min-h-0 flex-1 overflow-auto bg-white p-4 md:p-6">
             {!selectedNode || selectedNode.type === 'pipeline' ? (
               <ResourceTable items={displayItems} />
             ) : selectedNode.type === 'view' ? (
@@ -290,11 +290,11 @@ export function PipelinesPage() {
   function ResourceHeader({ node }: { node: TreeNode }) {
     const Icon = nodeIcon(node.type)
     return (
-      <div className='flex h-14 shrink-0 items-center justify-between border-b border-gray-100/70 px-4 md:px-6'>
-        <div className='flex min-w-0 items-center gap-2'>
-          <Icon className={cn('h-4 w-4 shrink-0', nodeIconColor(node.type))} aria-hidden='true' />
-          <h2 className='truncate text-[14px] font-semibold text-gray-900'>{node.name}</h2>
-          {node.status && <span className='text-gray-200'>{t('common.separator')}</span>}
+      <div className="flex h-14 shrink-0 items-center justify-between border-b border-gray-100/70 px-4 md:px-6">
+        <div className="flex min-w-0 items-center gap-2">
+          <Icon className={cn('h-4 w-4 shrink-0', nodeIconColor(node.type))} aria-hidden="true" />
+          <h2 className="truncate text-[14px] font-semibold text-gray-900">{node.name}</h2>
+          {node.status && <span className="text-gray-200">{t('common.separator')}</span>}
           {node.status && (
             <span
               className={cn(
@@ -304,7 +304,7 @@ export function PipelinesPage() {
             >
               <span
                 className={cn('h-1 w-1 rounded-full', statusDotClass(node.status))}
-                aria-hidden='true'
+                aria-hidden="true"
               />
               {t(statusLabelKey(node.status))}
             </span>
@@ -316,63 +316,63 @@ export function PipelinesPage() {
 
   function ResourceTable({ items }: { items: TreeNode[] }) {
     return (
-      <div className='overflow-hidden rounded-lg border border-gray-200/70'>
-        <div className='overflow-x-auto'>
-          <table className='w-full min-w-[720px] text-left text-[13px]'>
-            <thead className='border-b border-gray-200/70 bg-gray-50/70 text-gray-500'>
+      <div className="overflow-hidden rounded-lg border border-gray-200/70">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-[13px]">
+            <thead className="border-b border-gray-200/70 bg-gray-50/70 text-gray-500">
               <tr>
-                <th className='px-4 py-3 font-medium'>{t('pipelines.table.resourceName')}</th>
-                <th className='px-4 py-3 font-medium'>{t('pipelines.table.type')}</th>
-                <th className='px-4 py-3 font-medium'>{t('pipelines.table.status')}</th>
-                <th className='px-4 py-3 font-medium'>{t('pipelines.table.modified')}</th>
-                <th className='px-4 py-3 text-right font-medium'>{t('common.actions')}</th>
+                <th className="px-4 py-3 font-medium">{t('pipelines.table.resourceName')}</th>
+                <th className="px-4 py-3 font-medium">{t('pipelines.table.type')}</th>
+                <th className="px-4 py-3 font-medium">{t('pipelines.table.status')}</th>
+                <th className="px-4 py-3 font-medium">{t('pipelines.table.modified')}</th>
+                <th className="px-4 py-3 text-right font-medium">{t('common.actions')}</th>
               </tr>
             </thead>
-            <tbody className='divide-y divide-gray-100/70'>
+            <tbody className="divide-y divide-gray-100/70">
               {items.map((child) => {
                 const Icon = nodeIcon(child.type)
                 return (
-                  <tr key={child.id} className='group transition-colors hover:bg-gray-50/70'>
-                    <td className='px-4 py-3'>
-                      <div className='flex items-center gap-2.5'>
-                        <div className='flex h-6 w-6 items-center justify-center rounded-lg border border-gray-200/70 bg-gray-50'>
+                  <tr key={child.id} className="group transition-colors hover:bg-gray-50/70">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-lg border border-gray-200/70 bg-gray-50">
                           <Icon
                             className={cn('h-3.5 w-3.5', nodeIconColor(child.type))}
-                            aria-hidden='true'
+                            aria-hidden="true"
                           />
                         </div>
-                        <span className='font-medium text-gray-900'>{child.name}</span>
+                        <span className="font-medium text-gray-900">{child.name}</span>
                       </div>
                     </td>
-                    <td className='px-4 py-3 text-gray-500'>{t(nodeTypeLabelKey(child.type))}</td>
-                    <td className='px-4 py-3'>
+                    <td className="px-4 py-3 text-gray-500">{t(nodeTypeLabelKey(child.type))}</td>
+                    <td className="px-4 py-3">
                       {child.status ? (
-                        <span className='inline-flex items-center gap-1.5 rounded-lg px-1.5 py-0.5 text-[11px] font-medium text-gray-600'>
+                        <span className="inline-flex items-center gap-1.5 rounded-lg px-1.5 py-0.5 text-[11px] font-medium text-gray-600">
                           <span
                             className={cn('h-1.5 w-1.5 rounded-full', statusDotClass(child.status))}
-                            aria-hidden='true'
+                            aria-hidden="true"
                           />
                           {t(statusLabelKey(child.status))}
                         </span>
                       ) : (
-                        <span className='text-[11px] font-medium text-gray-500'>
+                        <span className="text-[11px] font-medium text-gray-500">
                           {t('pipelines.status.ready')}
                         </span>
                       )}
                     </td>
-                    <td className='px-4 py-3 text-gray-500'>
-                      <span className='inline-flex items-center gap-1.5'>
-                        <Clock className='h-3.5 w-3.5' aria-hidden='true' />
+                    <td className="px-4 py-3 text-gray-500">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5" aria-hidden="true" />
                         {t('pipelines.modified.twoHoursAgo')}
                       </span>
                     </td>
-                    <td className='px-4 py-3 text-right'>
+                    <td className="px-4 py-3 text-right">
                       <button
-                        className='rounded-md p-1 text-gray-400 opacity-0 transition-colors hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100'
-                        type='button'
+                        className="rounded-md p-1 text-gray-400 opacity-0 transition-colors hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100"
+                        type="button"
                         aria-label={t('common.more')}
                       >
-                        <MoreHorizontal className='h-4 w-4' aria-hidden='true' />
+                        <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
                       </button>
                     </td>
                   </tr>
@@ -392,47 +392,47 @@ export function PipelinesPage() {
       { labelKey: 'pipelines.metrics.delay', value: '12 ms', icon: Clock },
     ]
     return (
-      <div className='max-w-4xl space-y-6'>
-        <div className='grid gap-4 md:grid-cols-3'>
+      <div className="max-w-4xl space-y-6">
+        <div className="grid gap-4 md:grid-cols-3">
           {metrics.map((metric) => {
             const Icon = metric.icon
             return (
               <article
                 key={metric.labelKey}
-                className='rounded-[var(--radius)] border border-gray-100/70 bg-gray-50/40 p-4'
+                className="rounded-[var(--radius)] border border-gray-100/70 bg-gray-50/40 p-4"
               >
-                <div className='mb-1.5 flex items-center gap-1.5 text-[12px] font-medium text-gray-500'>
-                  <Icon className='h-3.5 w-3.5' aria-hidden='true' />
+                <div className="mb-1.5 flex items-center gap-1.5 text-[12px] font-medium text-gray-500">
+                  <Icon className="h-3.5 w-3.5" aria-hidden="true" />
                   {t(metric.labelKey)}
                 </div>
-                <div className='text-2xl font-semibold text-gray-900'>{metric.value}</div>
+                <div className="text-2xl font-semibold text-gray-900">{metric.value}</div>
               </article>
             )
           })}
         </div>
         <section>
-          <h3 className='mb-3 text-[13px] font-semibold text-gray-900'>
+          <h3 className="mb-3 text-[13px] font-semibold text-gray-900">
             {t('pipelines.schema.title')}
           </h3>
-          <div className='overflow-hidden rounded-lg border border-gray-200/70'>
-            <table className='w-full min-w-[540px] text-left text-[13px]'>
-              <thead className='border-b border-gray-200/70 bg-gray-50/70 text-gray-500'>
+          <div className="overflow-hidden rounded-lg border border-gray-200/70">
+            <table className="w-full min-w-[540px] text-left text-[13px]">
+              <thead className="border-b border-gray-200/70 bg-gray-50/70 text-gray-500">
                 <tr>
-                  <th className='px-4 py-2.5 font-medium'>{t('pipelines.schema.column')}</th>
-                  <th className='px-4 py-2.5 font-medium'>{t('pipelines.schema.type')}</th>
-                  <th className='px-4 py-2.5 font-medium'>{t('pipelines.schema.description')}</th>
+                  <th className="px-4 py-2.5 font-medium">{t('pipelines.schema.column')}</th>
+                  <th className="px-4 py-2.5 font-medium">{t('pipelines.schema.type')}</th>
+                  <th className="px-4 py-2.5 font-medium">{t('pipelines.schema.description')}</th>
                 </tr>
               </thead>
-              <tbody className='divide-y divide-gray-100/70'>
+              <tbody className="divide-y divide-gray-100/70">
                 {schemaFields.map((field) => (
                   <tr key={field.name}>
-                    <td className='px-4 py-2.5 font-medium text-gray-900'>{field.name}</td>
-                    <td className='px-4 py-2.5'>
-                      <span className='rounded bg-indigo-50 px-1.5 py-0.5 font-mono text-[11px] text-indigo-600'>
+                    <td className="px-4 py-2.5 font-medium text-gray-900">{field.name}</td>
+                    <td className="px-4 py-2.5">
+                      <span className="rounded bg-indigo-50 px-1.5 py-0.5 font-mono text-[11px] text-indigo-600">
                         {field.type}
                       </span>
                     </td>
-                    <td className='px-4 py-2.5 text-gray-500'>{t(field.descriptionKey)}</td>
+                    <td className="px-4 py-2.5 text-gray-500">{t(field.descriptionKey)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -440,24 +440,24 @@ export function PipelinesPage() {
           </div>
         </section>
         <section>
-          <h3 className='mb-3 text-[13px] font-semibold text-gray-900'>
+          <h3 className="mb-3 text-[13px] font-semibold text-gray-900">
             {t('pipelines.preview.title')}
           </h3>
-          <div className='overflow-hidden rounded-lg border border-gray-200/70'>
-            <table className='w-full min-w-[520px] whitespace-nowrap text-left text-[13px]'>
-              <thead className='border-b border-gray-200/70 bg-gray-50/70 text-gray-500'>
+          <div className="overflow-hidden rounded-lg border border-gray-200/70">
+            <table className="w-full min-w-[520px] whitespace-nowrap text-left text-[13px]">
+              <thead className="border-b border-gray-200/70 bg-gray-50/70 text-gray-500">
                 <tr>
-                  <th className='px-4 py-2.5 font-medium'>{t('pipelines.preview.id')}</th>
-                  <th className='px-4 py-2.5 font-medium'>{t('pipelines.preview.createdAt')}</th>
-                  <th className='px-4 py-2.5 font-medium'>{t('pipelines.preview.eventName')}</th>
+                  <th className="px-4 py-2.5 font-medium">{t('pipelines.preview.id')}</th>
+                  <th className="px-4 py-2.5 font-medium">{t('pipelines.preview.createdAt')}</th>
+                  <th className="px-4 py-2.5 font-medium">{t('pipelines.preview.eventName')}</th>
                 </tr>
               </thead>
-              <tbody className='divide-y divide-gray-100/70 font-mono text-[12px] text-gray-600'>
+              <tbody className="divide-y divide-gray-100/70 font-mono text-[12px] text-gray-600">
                 {previewRows.map((row) => (
                   <tr key={row.id}>
-                    <td className='px-4 py-2 text-gray-400'>{row.id}</td>
-                    <td className='px-4 py-2'>{row.createdAt}</td>
-                    <td className='px-4 py-2 text-gray-900'>{row.eventName}</td>
+                    <td className="px-4 py-2 text-gray-400">{row.id}</td>
+                    <td className="px-4 py-2">{row.createdAt}</td>
+                    <td className="px-4 py-2 text-gray-900">{row.eventName}</td>
                   </tr>
                 ))}
               </tbody>
@@ -474,49 +474,49 @@ export function PipelinesPage() {
       { labelKey: 'pipelines.metrics.latency', value: '45 ms', icon: Clock },
     ]
     return (
-      <div className='max-w-4xl space-y-6'>
-        <div className='grid gap-4 md:grid-cols-2'>
+      <div className="max-w-4xl space-y-6">
+        <div className="grid gap-4 md:grid-cols-2">
           {metrics.map((metric) => {
             const Icon = metric.icon
             return (
               <article
                 key={metric.labelKey}
-                className='rounded-[var(--radius)] border border-gray-100/70 bg-gray-50/40 p-4'
+                className="rounded-[var(--radius)] border border-gray-100/70 bg-gray-50/40 p-4"
               >
-                <div className='mb-1.5 flex items-center gap-1.5 text-[12px] font-medium text-gray-500'>
-                  <Icon className='h-3.5 w-3.5' aria-hidden='true' />
+                <div className="mb-1.5 flex items-center gap-1.5 text-[12px] font-medium text-gray-500">
+                  <Icon className="h-3.5 w-3.5" aria-hidden="true" />
                   {t(metric.labelKey)}
                 </div>
-                <div className='text-2xl font-semibold text-gray-900'>{metric.value}</div>
+                <div className="text-2xl font-semibold text-gray-900">{metric.value}</div>
               </article>
             )
           })}
         </div>
-        <div className='grid gap-4 lg:grid-cols-2'>
-          <section className='space-y-3'>
-            <h3 className='text-[13px] font-semibold text-gray-900'>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <section className="space-y-3">
+            <h3 className="text-[13px] font-semibold text-gray-900">
               {t('pipelines.api.endpoint')}
             </h3>
-            <div className='flex items-center gap-2 rounded-md border border-gray-200/70 bg-gray-50/60 p-2.5'>
-              <span className='rounded bg-emerald-100 px-1.5 py-0.5 text-[11px] font-bold text-emerald-600'>
+            <div className="flex items-center gap-2 rounded-md border border-gray-200/70 bg-gray-50/60 p-2.5">
+              <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[11px] font-bold text-emerald-600">
                 {t('pipelines.api.method')}
               </span>
-              <code className='truncate font-mono text-[12px] text-gray-700'>{apiEndpoint}</code>
+              <code className="truncate font-mono text-[12px] text-gray-700">{apiEndpoint}</code>
             </div>
           </section>
-          <section className='space-y-3'>
-            <h3 className='text-[13px] font-semibold text-gray-900'>{t('pipelines.api.auth')}</h3>
-            <div className='rounded-md border border-gray-200/70 bg-gray-50/60 p-2.5 text-[12px] text-gray-600'>
+          <section className="space-y-3">
+            <h3 className="text-[13px] font-semibold text-gray-900">{t('pipelines.api.auth')}</h3>
+            <div className="rounded-md border border-gray-200/70 bg-gray-50/60 p-2.5 text-[12px] text-gray-600">
               {t('pipelines.api.authBody')}
             </div>
           </section>
         </div>
         <section>
-          <h3 className='mb-3 flex items-center gap-1.5 text-[13px] font-semibold text-gray-900'>
-            <Braces className='h-4 w-4 text-gray-400' aria-hidden='true' />
+          <h3 className="mb-3 flex items-center gap-1.5 text-[13px] font-semibold text-gray-900">
+            <Braces className="h-4 w-4 text-gray-400" aria-hidden="true" />
             {t('pipelines.api.responsePreview')}
           </h3>
-          <pre className='overflow-x-auto rounded-lg bg-[#1e1e1e] p-4 font-mono text-[12px] leading-relaxed text-gray-300 shadow-sm'>
+          <pre className="overflow-x-auto rounded-lg bg-[#1e1e1e] p-4 font-mono text-[12px] leading-relaxed text-gray-300 shadow-sm">
             {responsePreview}
           </pre>
         </section>

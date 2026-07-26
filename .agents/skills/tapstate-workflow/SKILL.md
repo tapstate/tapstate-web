@@ -21,9 +21,9 @@ Use the project's workflow as the repo-specific overlay for generic workflow ski
 
 ## Tapstate Constraints
 
-- User-visible text must use vue-i18n and update `en`, `zh-CN`, and `zh-TW` together.
+- User-visible text must use i18next / react-i18next and update `en`, `zh-CN`, and `zh-TW` together.
 - UI work must cover loading, empty, error, and success states.
-- Use Vue 3 Composition API, Element Plus, Pinia, and existing repo structure.
+- Use React 19, TanStack Router File Routes, TanStack Query, Zustand, Tailwind CSS, and the existing repo structure.
 - Do not add production dependencies unless the spec and plan justify them.
 - Treat each `docs/workflow/features/YYYY-MM-DD-kebab-name/` folder as the source of truth for intent, design, execution state, and acceptance.
 

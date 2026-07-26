@@ -8,8 +8,8 @@
 
 | 领域        | 选型                                                         | 状态 | 备注                                                                                                                                                 |
 | ----------- | ------------------------------------------------------------ | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 框架        | React 19                                                     | KEEP | 全面替代 Vue                                                                                                                                         |
-| 路由模型    | TanStack Router file-based route source                      | KEEP | 路由源码放 `apps/web/app/routes/`，当前手写 route tree，待 router-plugin trust gate 通过后可自动生成                                                 |
+| 框架        | React 19                                                     | KEEP | 前端应用运行时                                                                                                                                       |
+| 路由模型    | TanStack Router File Routes                                  | KEEP | 路由源码放 `apps/web/app/routes/`，由 `@tanstack/router-plugin` 生成 `apps/web/app/routeTree.gen.ts`                                                 |
 | 开发 / 打包 | Vite 8                                                       | KEEP | `vite` / `vite build` / `vite preview`                                                                                                               |
 | 仓库形态    | pnpm monorepo                                                | KEEP | root scripts 直接覆盖 repo root；子包命令保留包内入口并向上发现根配置                                                                                |
 | UI 基座     | shadcn/ui 风格组件 + Radix primitives                        | KEEP | 本地维护 primitives，避免引入大型 UI 套件                                                                                                            |
@@ -44,9 +44,10 @@
 
 ## Vite / TanStack Router 边界
 
-- Vite 是唯一开发、预览和打包入口；不要引入 Next/vinext 作为运行层。
-- TanStack Router 负责 SPA 路由。路由源码按 file-based 形态维护在 `apps/web/app/routes/`。
-- 当前 `@tanstack/router-plugin` 因 pnpm supply-chain trust gate 未落入项目依赖；`app/route-tree.tsx` 是手写 route tree。后续插件获批后可改为生成文件。
+- Vite 是唯一开发、预览和打包入口；不要引入其他前端 runtime 或路由框架作为运行层。
+- TanStack Router 负责 SPA 路由。路由源码按 File Route 形态维护在 `apps/web/app/routes/`。
+- `@tanstack/router-plugin` 在 Vite 中生成 `apps/web/app/routeTree.gen.ts`；业务代码不得恢复手写 route tree。
+- `apps/web/app/router.tsx` 保留为 router instance 入口，负责 `createRouter({ routeTree })` 和 `@tanstack/react-router` 类型注册；File Routes 生成的是 route tree，不替代 router instance。
 - 当前应用按 SPA/client-first 方式实现；不要引入 Server Actions、API Routes、Edge Runtime 或后端 BFF，除非先更新 spec / prototype / plan。
 - 每次变更路由或 Vite 配置时，运行 `pnpm typecheck`、`pnpm build`，必要时启动 `pnpm dev` 做路由 smoke check。
 

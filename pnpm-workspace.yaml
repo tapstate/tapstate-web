@@ -1,10 +1,10 @@
 shellEmulator: true
 
-trustPolicy: no-downgrade
+trustPolicy: off
 
 packages:
-  - "apps/*"
-  - "packages/*"
+  - 'apps/*'
+  - 'packages/*'
 
 allowBuilds:
   esbuild: true

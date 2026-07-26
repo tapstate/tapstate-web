@@ -1,8 +1,8 @@
 ---
 paths:
-  - "docs/workflow/**/*.md"
-  - "AGENTS.md"
-  - "CLAUDE.md"
+  - 'docs/workflow/**/*.md'
+  - 'AGENTS.md'
+  - 'CLAUDE.md'
 ---
 
 # Tapstate Workflow Rules

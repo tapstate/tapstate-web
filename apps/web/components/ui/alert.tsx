@@ -20,8 +20,8 @@ export function Alert({ className, variant, ...props }: AlertProps) {
   return (
     <div
       className={cn(alertVariants({ className, variant }))}
-      data-slot='alert'
-      role='alert'
+      data-slot="alert"
+      role="alert"
       {...props}
     />
   )
@@ -31,12 +31,12 @@ export function AlertTitle({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
       className={cn('mb-1 font-medium leading-none tracking-tight', className)}
-      data-slot='alert-title'
+      data-slot="alert-title"
       {...props}
     />
   )
 }
 
 export function AlertDescription({ className, ...props }: ComponentProps<'div'>) {
-  return <div className={cn('text-gray-600', className)} data-slot='alert-description' {...props} />
+  return <div className={cn('text-gray-600', className)} data-slot="alert-description" {...props} />
 }

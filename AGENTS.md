@@ -31,7 +31,7 @@
 
 ## Frontend Rules
 
-- 使用 React 19，页面路由使用 TanStack Router，路由源码按 file-based 形态放在 `apps/web/app/routes/`；开发、预览和打包都使用 Vite。
+- 使用 React 19，页面路由使用 TanStack Router File Routes，路由源码放在 `apps/web/app/routes/`，由 `@tanstack/router-plugin` 生成 `apps/web/app/routeTree.gen.ts`；开发、预览和打包都使用 Vite。
 - 遵循 strict TypeScript；避免 `any`，除非需求文档解释原因。
 - shadcn/ui 风格组件和 Radix primitives 是默认 UI 基座；不要为了单个页面引入新的重型 UI 依赖。
 - Select / Dropdown / Menu 必须优先使用 `apps/web/components/ui/*` 的 shadcn-compatible primitives；不要在业务页使用原生 `<select>` 或手写 floating dropdown。

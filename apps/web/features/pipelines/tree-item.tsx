@@ -38,8 +38,8 @@ export function TreeItem({
       >
         {hasChildren ? (
           <button
-            className='flex h-4 w-4 items-center justify-center text-gray-400 hover:text-gray-600'
-            type='button'
+            className="flex h-4 w-4 items-center justify-center text-gray-400 hover:text-gray-600"
+            type="button"
             aria-label={t(
               isExpanded ? 'pipelines.actions.collapseNode' : 'pipelines.actions.expandNode',
               { name: node.name },
@@ -50,41 +50,41 @@ export function TreeItem({
             }}
           >
             {isExpanded ? (
-              <ChevronDown className='h-3 w-3' aria-hidden='true' />
+              <ChevronDown className="h-3 w-3" aria-hidden="true" />
             ) : (
-              <ChevronRight className='h-3 w-3' aria-hidden='true' />
+              <ChevronRight className="h-3 w-3" aria-hidden="true" />
             )}
           </button>
         ) : (
-          <span className='w-4' aria-hidden='true' />
+          <span className="w-4" aria-hidden="true" />
         )}
         <button
-          className='ml-1 flex min-w-0 flex-1 items-center text-left'
-          type='button'
+          className="ml-1 flex min-w-0 flex-1 items-center text-left"
+          type="button"
           aria-pressed={isSelected}
           onClick={() => onSelect(node.id)}
         >
-          <span className='mr-1.5'>
+          <span className="mr-1.5">
             {node.type === 'pipeline' ? (
-              <GitMerge className='h-3.5 w-3.5 text-blue-500' />
+              <GitMerge className="h-3.5 w-3.5 text-blue-500" />
             ) : node.type === 'view' ? (
-              <Table className='h-3.5 w-3.5 text-indigo-500' />
+              <Table className="h-3.5 w-3.5 text-indigo-500" />
             ) : (
-              <Zap className='h-3.5 w-3.5 text-emerald-500' />
+              <Zap className="h-3.5 w-3.5 text-emerald-500" />
             )}
           </span>
-          <span className='flex-1 truncate'>{node.name}</span>
+          <span className="flex-1 truncate">{node.name}</span>
           {node.status === 'running' && (
-            <span className='ml-2 h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_4px_rgba(34,197,94,0.5)]' />
+            <span className="ml-2 h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_4px_rgba(34,197,94,0.5)]" />
           )}
           {node.status === 'paused' && (
-            <span className='ml-2 h-1.5 w-1.5 rounded-full bg-yellow-500 shadow-[0_0_4px_rgba(234,179,8,0.5)]' />
+            <span className="ml-2 h-1.5 w-1.5 rounded-full bg-yellow-500 shadow-[0_0_4px_rgba(234,179,8,0.5)]" />
           )}
         </button>
       </div>
 
       {isExpanded && hasChildren && (
-        <div className='mt-0.5'>
+        <div className="mt-0.5">
           {node.children?.map((child) => (
             <TreeItem
               key={child.id}
