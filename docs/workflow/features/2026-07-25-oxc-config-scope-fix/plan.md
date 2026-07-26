@@ -3,7 +3,7 @@
 > 状态：Done
 > 进度：100%
 > 当前步骤：已完成
-> 下一步：如需要，可继续清理 repo 现有格式债务或单独澄清 OXC 支持的文件类型边界
+> 下一步：如需要，可继续清理 repo 现有格式债务、确认 Cursor 是否以 tapstate-web 为 workspace root 打开，或单独澄清 OXC 支持的文件类型边界
 > 日期：2026-07-25
 > Owner：Codex
 > Feature folder：docs/workflow/features/2026-07-25-oxc-config-scope-fix/
@@ -25,6 +25,8 @@
 - `apps/web/package.json`
 - `README.md`
 - `docs/engineering/tech-stack.md`
+- `.oxfmtrc.json`
+- `.vscode/settings.json`
 - `docs/workflow/features/2026-07-25-oxc-config-scope-fix/spec.md`
 - `docs/workflow/features/2026-07-25-oxc-config-scope-fix/plan.md`
 - `docs/workflow/features/2026-07-25-oxc-config-scope-fix/acceptance.md`
@@ -39,6 +41,7 @@
 | 2    | Done | 修正 root / `apps/web` package scripts，统一 repo 与子包入口 | 脚本 diff                                                         | root 直接跑 OXC；子包保留自动向上发现       |
 | 3    | Done | 同步 README / tech-stack 描述                                | 文档复核                                                          | 避免继续误导                                |
 | 4    | Done | 运行验证并记录剩余风险                                       | 命令记录                                                          | 根级入口已生效，并暴露既有格式债务          |
+| 5    | Done | 为 Cursor 保存链路补语言级 OXC formatter 覆盖，并补 JSX 单引号配置 | CLI 对照与配置复核                                                | 用户级 `[typescript]` Prettier 会抢占保存格式 |
 
 ## 4. Progress Log
 
@@ -48,12 +51,14 @@
 | ---------- | ----- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ---- |
 | 2026-07-25 | Codex | 25%  | 已复核 root/package scripts、`oxfmt` / `oxlint` CLI 行为，并确认 root `pnpm format` 目前只委派 `apps/web` 且脚本名失配；`pnpm exec oxfmt --check package.json .oxlintrc.json auth-client.ts` 与 `pnpm --filter web exec oxfmt --check service/auth-client.ts` 证明 root 与子包文件都可被 OXC 命中 | 修改 scripts 与文档，然后做验证                                               | 无   |
 | 2026-07-25 | Codex | 100% | 已改 root 与 `apps/web` scripts；root `pnpm format` / `pnpm format:check` 现直接覆盖 repo root；README / tech-stack 已与脚本对齐；本次 touched 文件已用 OXC 格式化                                                                                                                                | 如需继续，可执行 repo-wide `pnpm format` 清理既有债务，或单独定义文件类型策略 | 无   |
+| 2026-07-25 | Codex | 100% | 用户补充 CLI 可正常格式化但 Cursor 保存无效；已确认 Cursor 用户级 `[typescript]` 使用 Prettier，仓库级普通 `editor.defaultFormatter` 不足以稳定覆盖；已在 workspace 对 JS / JSX / TS / TSX 增加语言级 OXC formatter，并在 `.oxfmtrc.json` 增加 `jsxSingleQuote` | 如仍无效，确认 Cursor 打开的 workspace root 是 `tapstate-web` 而不是父级 `memory` | 无   |
 
 ## 5. TDD / Verification Strategy
 
 - 先失败的用例或检查：
   - `pnpm format` 现状失败，因为 root 仍委派到不存在的 `web:format` 脚本。
   - `pnpm exec oxfmt --check package.json .oxlintrc.json auth-client.ts` 报出 root 文件格式问题。
+  - `pnpm exec oxfmt auth-client.ts` 可按根配置格式化；Prettier 对同一 TS 输入会输出双引号与分号。
 - 单元 / 组件 / E2E：不适用。
 - 手工 UI 检查：不适用。
 - 视觉决策扫描：
@@ -67,6 +72,7 @@
 | ---------- | -------------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------- |
 | 2026-07-25 | `pnpm format` 失败且 root 文件没有格式化效果 | root script 只委派子包，未覆盖 repo root | 检查根 `package.json` scripts，并执行 `pnpm format`                                     | 成立；当前 script scope 错了                   |
 | 2026-07-25 | 用户认为显式 `--config` 不是关键             | `apps/web` 默认向上发现应正常可用        | 阅读 OXC CLI 帮助，并执行 `pnpm --filter web exec oxfmt --check service/auth-client.ts` | 成立；子包本身可命中 OXC，问题主要在 root 入口 |
+| 2026-07-25 | Cursor 保存时仍加分号和双引号               | 保存时走了用户级 Prettier，而非 OXC      | 检查 Cursor 用户级 settings；用 Prettier 与 OXC 对同一输入做输出对照                    | 成立；用户级 `[typescript]` 指向 `esbenp.prettier-vscode` |
 
 ## 7. Review Checklist
 
@@ -97,6 +103,9 @@
 | 2026-07-25 | `pnpm --filter web format:check`                                                                                                                                                                                                                                                                         | Failed after fix  | 子包入口无需显式 `--config`，可直接发现根配置并报出 24 个既有 app 文件格式问题          |
 | 2026-07-25 | `pnpm --filter web exec oxlint --print-config service/auth-client.ts`                                                                                                                                                                                                                                    | Passed            | 输出根 `.oxlintrc.json` 的合成配置，证明子包可向上发现根 lint 配置                      |
 | 2026-07-25 | `pnpm exec oxfmt --check package.json apps/web/package.json README.md docs/engineering/tech-stack.md docs/workflow/features/2026-07-25-oxc-config-scope-fix/spec.md docs/workflow/features/2026-07-25-oxc-config-scope-fix/plan.md docs/workflow/features/2026-07-25-oxc-config-scope-fix/acceptance.md` | Passed            | 本次 touched 文件已按 OXC 规则格式化                                                    |
+| 2026-07-25 | `printf 'const x = "a";\n' \| pnpm exec oxfmt --stdin-filepath sample.ts`                                                                                                                                                                                                                             | Passed            | OXC 输出 `const x = 'a'`，证明 CLI 配置读取正常                                          |
+| 2026-07-25 | `printf 'const x = "a";\n' \| prettier --parser typescript`                                                                                                                                                                                                                                            | Passed            | Prettier 输出 `const x = "a";`，与 Cursor 保存症状一致                                  |
+| 2026-07-25 | `printf 'const el = <Comp title="A" className="x">{"b"}</Comp>;\n' \| pnpm exec oxfmt --stdin-filepath sample.tsx`                                                                                                                                                                                   | Passed            | 加 `jsxSingleQuote` 后 TSX JSX attribute 也输出单引号                                   |
 | 2026-07-25 | `pnpm typecheck`                                                                                                                                                                                                                                                                                         | Skipped           | 本次属 Level 1 工程脚本修正，无类型层改动                                               |
 | 2026-07-25 | 桌面视口检查                                                                                                                                                                                                                                                                                             | Skipped           | 无 UI 改动                                                                              |
 | 2026-07-25 | 移动视口检查                                                                                                                                                                                                                                                                                             | Skipped           | 无 UI 改动                                                                              |
@@ -106,5 +115,5 @@
 - 交付摘要：
 - 最终进度：100%
 - 最终步骤：完成
-- 剩余风险：repo 里仍有 81 个既有格式问题；root 入口接通后会被即时暴露。
+- 剩余风险：repo 里仍有既有格式问题；root 入口接通后会被即时暴露。若 Cursor 打开的 workspace root 是父级 `memory`，`tapstate-web/.vscode/settings.json` 仍可能不被加载。
 - Follow-up：如需真正让 `pnpm lint` / `pnpm format:check` 通过，可再开一条 feature 清理历史格式债务，并明确 OXC 对 Markdown / YAML / JSON 等文件类型的长期覆盖策略。

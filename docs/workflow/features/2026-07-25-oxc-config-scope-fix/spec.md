@@ -17,14 +17,19 @@
 
 > monorepo apps 里面的包应该自动向上找。跟这个没关系。root 上的文件也没有格式化效果
 
+> pnpm exec oxfmt auth-client.ts 这个都可以正常格式化。但是依赖编辑器自动格式化没效果
+
 ### 背景与上下文
 
 前一轮排查把重点放在 `apps/web` 显式传 `--config` 上，但当前仓库事实与用户反馈都指向另一个问题：根级 `pnpm lint` / `pnpm format` 没有真正覆盖 repo root，只委派给了 `apps/web`，导致根目录文件看起来没有吃到 `.oxlintrc.json` / `.oxfmtrc.json`。同时，`apps/web` 作为 monorepo 子包，应当依赖 OXC 向上发现根配置，而不是用手工路径兜底。
+
+后续用户补充：命令行 `pnpm exec oxfmt auth-client.ts` 可以正常按根 `.oxfmtrc.json` 格式化，但 Cursor 保存时仍会加分号和双引号。排查 Cursor 用户级设置后发现 `[typescript]` 显式指定了 `esbenp.prettier-vscode`，其默认输出正是双引号和分号；仓库级 `editor.defaultFormatter` 不是语言级覆盖，无法稳定压过用户级语言设置。
 
 ### 假设
 
 - 用户说的“两个配置”指根目录 `.oxlintrc.json` 与 `.oxfmtrc.json`。
 - `oxfmt` / `oxlint` 的向上配置发现机制在 `apps/web` 中可用，问题主要在脚本覆盖范围而不是配置文件路径。
+- Cursor 保存路径需要使用语言级 workspace formatter 覆盖，才能避免用户级 `[typescript]` Prettier 设置抢占。
 - 本次不扩大到为 Markdown 等 OXC 不支持的文件类型引入新 formatter。
 
 ### 未决问题
@@ -39,18 +44,22 @@
 - 让根级 `pnpm lint` 同时覆盖 repo root 与 `apps/web`，并包含格式检查。
 - 保持 `apps/web` 内部使用默认的向上配置发现，不依赖显式 `--config`。
 - 把 README 和工程文档更新为与实际脚本一致。
+- 让 Cursor 保存 JS / JSX / TS / TSX 时稳定使用 OXC formatter。
+- 让 TSX JSX attribute 也使用单引号。
 
 ### 非目标
 
 - 不新增其他 formatter / linter。
 - 不处理当前仓库里所有既有格式问题和 lint warning。
 - 不扩展到 OXC 当前不支持的文件类型。
+- 不修改用户级 Cursor 设置。
 
 ### 用户路径
 
 1. 在仓库根运行 `pnpm format`，根目录与 `apps/web` 的受支持文件都会进入 OXC formatter。
 2. 在仓库根运行 `pnpm lint`，根目录与 `apps/web` 的受支持源码都会进入 oxlint，且附带格式检查。
 3. 在 `apps/web` 包内直接运行 formatter / lint 命令时，仍然自动向上读取根配置。
+4. 在 Cursor 中保存 JS / JSX / TS / TSX 文件时，workspace 语言级设置优先选择 OXC formatter。
 
 ### 影响面
 
@@ -87,6 +96,7 @@ N/A
 | Empty   | N/A                                                            | N/A                                                                 | N/A      |
 | Error   | 根级脚本未覆盖 repo root，配置看似未生效                       | 只能手动跑子包命令或直接调 OXC CLI                                  | N/A      |
 | Success | 根级 lint / format 与 `apps/web` 包命令都能命中 OXC 配置作用域 | 运行 `pnpm lint` / `pnpm format` 或在 `apps/web` 内直接运行对应命令 | N/A      |
+| Success | Cursor 保存时使用 OXC formatter                               | 保存 JS / JSX / TS / TSX 文件                                      | N/A      |
 
 ## 6. i18n 范围
 
@@ -112,6 +122,8 @@ N/A
 - [ ] 根级 `pnpm lint` 覆盖 repo root 与 `apps/web`，且包含格式检查。
 - [ ] `apps/web` 的本地命令保留自动向上配置发现，不需要显式 `--config`。
 - [ ] README / tech-stack 与实际脚本一致。
+- [ ] Cursor 保存 JS / JSX / TS / TSX 文件时使用 OXC formatter，而不是用户级 Prettier。
+- [ ] `.oxfmtrc.json` 覆盖 TSX JSX attribute 单引号需求。
 - [ ] 验证记录清楚说明通过项与既有剩余问题。
 
 ## 9. 风险
