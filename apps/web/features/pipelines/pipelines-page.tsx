@@ -1,5 +1,5 @@
 import type { ComponentType, SVGProps } from 'react'
-import type { NodeStatus, TreeNode, TreeNodeType } from './types'
+
 import {
   Activity,
   Braces,
@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +26,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+
+import type { NodeStatus, TreeNode, TreeNodeType } from './types'
+
 import { TreeItem } from './tree-item'
 import { WizardBuilder } from './wizard-builder'
 
