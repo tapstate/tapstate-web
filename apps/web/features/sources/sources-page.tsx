@@ -1,6 +1,7 @@
 import type { ComponentType, SVGProps } from 'react'
-import type { SourceTableView, SourceView } from '@/service/source-client'
+
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import {
   Activity,
   AlertCircle,
@@ -25,7 +26,9 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { listSources, SourceClientError } from '@/service/source-client'
+
+import type { SourceTableView, SourceView } from '@/service/source-client'
+
 import {
   Select,
   SelectContent,
@@ -33,8 +36,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useAuthStore } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
+import { listSources, SourceClientError } from '@/service/source-client'
+import { useAuthStore } from '@/stores/auth-store'
+
 import { SourceCreateDialog } from './source-create-dialog'
 
 type SourceTab = 'data' | 'columns' | 'settings' | 'lineage' | 'log'
@@ -103,6 +108,7 @@ function tabIcon(tabName: SourceTab): ComponentType<SVGProps<SVGSVGElement>> {
 
 export function SourcesPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const [searchText, setSearchText] = useState('')
@@ -178,7 +184,11 @@ export function SourcesPage() {
   )
 
   function selectSource(source: Source | null) {
-    setSelectedSourceId(source?.id ?? null)
+    if (source) {
+      void navigate({ to: '/sources/$id', params: { id: source.id } })
+      return
+    }
+    setSelectedSourceId(null)
     setSelectedTableId(null)
     setActiveTab('data')
   }
@@ -197,6 +207,7 @@ export function SourcesPage() {
     setSelectedSourceId(created.id)
     setSelectedTableId(null)
     setSuccessMessage(t('sources.create.success', { id: created.id }))
+    void navigate({ to: '/sources/$id', params: { id: created.id } })
   }
 
   const loadError =
@@ -229,15 +240,15 @@ export function SourcesPage() {
       )}
 
       <div className="flex min-h-0 flex-1 flex-col bg-white md:flex-row">
-        <aside className="flex w-full shrink-0 flex-col border-b border-gray-100/70 bg-[#fcfcfd]/80 md:w-64 md:border-b-0 md:border-r">
+        <aside className="flex w-full shrink-0 flex-col border-b border-gray-100/70 bg-[#fcfcfd]/80 md:w-64 md:border-r md:border-b-0">
           <div className="border-b border-gray-100/70 p-3">
             <label className="relative block">
               <span className="sr-only">{t('sources.search.label')}</span>
-              <Search className="absolute left-3 top-2 h-4 w-4 text-gray-400" aria-hidden="true" />
+              <Search className="absolute top-2 left-3 h-4 w-4 text-gray-400" aria-hidden="true" />
               <input
                 value={searchText}
                 type="search"
-                className="w-full rounded-lg border border-gray-200/80 bg-white py-1.5 pl-9 pr-3 text-[13px] outline-none transition focus:border-gray-300 focus:ring-2 focus:ring-gray-900/10"
+                className="w-full rounded-lg border border-gray-200/80 bg-white py-1.5 pr-3 pl-9 text-[13px] transition outline-none focus:border-gray-300 focus:ring-2 focus:ring-gray-900/10"
                 placeholder={t('sources.search.placeholder')}
                 onChange={(event) => setSearchText(event.target.value)}
               />
@@ -246,13 +257,13 @@ export function SourcesPage() {
             <label className="relative mt-2 block">
               <span className="sr-only">{t('sources.filters.connectionStatus.label')}</span>
               <ListFilter
-                className="absolute left-3 top-2 h-3.5 w-3.5 text-gray-400"
+                className="absolute top-2 left-3 h-3.5 w-3.5 text-gray-400"
                 aria-hidden="true"
               />
               <Select value="all">
                 <SelectTrigger
                   aria-label={t('sources.filters.connectionStatus.label')}
-                  className="border-gray-200/80 py-1.5 pl-8 pr-3 text-gray-600 shadow-none"
+                  className="border-gray-200/80 py-1.5 pr-3 pl-8 text-gray-600 shadow-none"
                 >
                   <SelectValue />
                 </SelectTrigger>
@@ -483,8 +494,8 @@ export function SourcesPage() {
                     <p className="page-state__body">{t('sources.tabComingSoonBody')}</p>
                   </div>
                 </div>
-                <aside className="flex w-full shrink-0 flex-col gap-5 border-t border-gray-100/70 bg-[#fcfcfd]/80 p-5 lg:w-64 lg:border-l lg:border-t-0">
-                  <div className="mb-4 text-[11px] font-semibold uppercase text-gray-500">
+                <aside className="flex w-full shrink-0 flex-col gap-5 border-t border-gray-100/70 bg-[#fcfcfd]/80 p-5 lg:w-64 lg:border-t-0 lg:border-l">
+                  <div className="mb-4 text-[11px] font-semibold text-gray-500 uppercase">
                     {t('sources.stats.last24h')}
                   </div>
                   <dl className="space-y-3.5 border-t border-gray-200/70 pt-5 text-[12px]">
@@ -609,7 +620,7 @@ function AllSourcesView({
                     </td>
                     <td className="px-4 py-3 text-gray-600">{source.type}</td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 px-1.5 py-0.5 text-[11px] font-medium text-gray-600 ring-1 ring-inset ring-gray-600/15">
+                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 px-1.5 py-0.5 text-[11px] font-medium text-gray-600 ring-1 ring-gray-600/15 ring-inset">
                         <span className="h-1 w-1 rounded-full bg-gray-400" aria-hidden="true" />
                         {t('sources.details.secretConfigured')}
                       </span>
@@ -620,7 +631,7 @@ function AllSourcesView({
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
-                        className="rounded-md p-1 text-gray-400 opacity-0 transition-colors hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100"
+                        className="rounded-md p-1 text-gray-400 opacity-0 transition-colors group-hover:opacity-100 hover:bg-gray-100 hover:text-gray-600"
                         type="button"
                         aria-label={t('common.more')}
                       >

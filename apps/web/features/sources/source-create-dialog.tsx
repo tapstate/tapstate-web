@@ -1,19 +1,9 @@
-import type {
-  ConnectorConfigField,
-  ConnectorDetail,
-  ConnectorSummary,
-  JsonValue,
-  SourceView,
-} from '@/service/source-client'
 import { AlertCircle, Check, Database, LoaderCircle } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  createSource,
-  getConnector,
-  listConnectors,
-  SourceClientError,
-} from '@/service/source-client'
+
+import type { ConnectorDetail, ConnectorSummary, SourceView } from '@/service/source-client'
+
 import {
   Dialog,
   DialogContent,
@@ -30,13 +20,16 @@ import {
   SelectValue,
   SelectGroup,
 } from '@/components/ui/select'
-import { useAuthStore } from '@/stores/auth-store'
 import {
-  buildSourceConfig,
-  createInitialConfig,
-  isFieldVisible,
-  type SourceConfigState,
-} from './source-form'
+  createSource,
+  getConnector,
+  listConnectors,
+  SourceClientError,
+} from '@/service/source-client'
+import { useAuthStore } from '@/stores/auth-store'
+
+import { ConnectorFormily } from './connector-formily'
+import { buildSourceConfig, createInitialConfig, type SourceConfigState } from './source-form'
 
 interface SourceCreateDialogProps {
   open: boolean
@@ -49,21 +42,6 @@ function errorMessage(error: unknown, t: ReturnType<typeof useTranslation>['t'])
   if (error.kind === 'network') return t('sources.create.errors.network')
   if (error.code === 'source.already-exists') return t('sources.create.errors.exists')
   return t('sources.create.errors.server')
-}
-
-function arrayValue(field: ConnectorConfigField, config: SourceConfigState) {
-  const value = config[field.name]
-  return Array.isArray(value) ? JSON.stringify(value, null, 2) : String(value ?? '')
-}
-
-const EMPTY_SELECT_VALUE = '__tapstate_empty_value__'
-
-function encodeSelectValue(value: string) {
-  return value === '' ? EMPTY_SELECT_VALUE : value
-}
-
-function decodeSelectValue(value: string) {
-  return value === EMPTY_SELECT_VALUE ? '' : value
 }
 
 export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCreateDialogProps) {
@@ -80,11 +58,6 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
   const [loadingConnector, setLoadingConnector] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [requestError, setRequestError] = useState('')
-
-  const visibleFields = useMemo(
-    () => connector?.config.filter((field) => isFieldVisible(field, config)) ?? [],
-    [connector, config],
-  )
 
   useEffect(() => {
     if (!open) return
@@ -123,15 +96,6 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
       .finally(() => setLoadingConnector(false))
   }, [apiFetch, connectorId, t])
 
-  function setValue(field: ConnectorConfigField, value: JsonValue | undefined) {
-    setConfig((current) => ({ ...current, [field.name]: value }))
-    setFieldErrors((current) => {
-      const next = { ...current }
-      delete next[field.name]
-      return next
-    })
-  }
-
   async function submit() {
     const nextErrors: Record<string, string> = {}
     setRequestError('')
@@ -163,7 +127,7 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
         },
         apiFetch,
       )
-      onCreated(created)
+      onCreated(created.source)
       onOpenChange(false)
     } catch (error) {
       setRequestError(errorMessage(error, t))
@@ -294,81 +258,15 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
                 </label>
               )}
 
-              {visibleFields.length > 0 ? (
-                <div className="source-create-dialog__fields">
-                  {visibleFields.map((field) => (
-                    <label key={field.name} className="source-field">
-                      <span className="source-field__label">
-                        {field.label}
-                        {field.required && <small>{t('sources.create.required')}</small>}
-                      </span>
-
-                      {field.options.length > 0 ? (
-                        <Select
-                          value={encodeSelectValue(String(config[field.name] ?? ''))}
-                          onValueChange={(value) => {
-                            if (value === null) return
-                            setValue(field, decodeSelectValue(value))
-                          }}
-                        >
-                          <SelectTrigger aria-label={field.label}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {field.options.map((option) => (
-                              <SelectItem
-                                key={`${field.name}-${option.value}`}
-                                value={encodeSelectValue(option.value)}
-                              >
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : field.type === 'boolean' ? (
-                        <input
-                          type="checkbox"
-                          checked={Boolean(config[field.name])}
-                          onChange={(event) => setValue(field, event.target.checked)}
-                        />
-                      ) : field.type === 'number' ? (
-                        <input
-                          type="number"
-                          value={
-                            typeof config[field.name] === 'number' ? String(config[field.name]) : ''
-                          }
-                          className="h-9 rounded-lg border border-gray-200 px-3 text-[13px]"
-                          onChange={(event) =>
-                            setValue(
-                              field,
-                              event.target.value ? Number(event.target.value) : undefined,
-                            )
-                          }
-                        />
-                      ) : field.type === 'array' ? (
-                        <textarea
-                          value={arrayValue(field, config)}
-                          rows={3}
-                          className="rounded-lg border border-gray-200 px-3 py-2 text-[13px]"
-                          placeholder={t('sources.create.arrayPlaceholder')}
-                          onChange={(event) => setValue(field, event.target.value)}
-                        />
-                      ) : (
-                        <input
-                          value={String(config[field.name] ?? '')}
-                          type={field.secret ? 'password' : 'text'}
-                          autoComplete="off"
-                          className="h-9 rounded-lg border border-gray-200 px-3 text-[13px]"
-                          onChange={(event) => setValue(field, event.target.value)}
-                        />
-                      )}
-
-                      {fieldErrors[field.name] && (
-                        <span className="source-field__error">{fieldErrors[field.name]}</span>
-                      )}
-                    </label>
-                  ))}
-                </div>
+              {connector.config.length > 0 ? (
+                <ConnectorFormily
+                  fields={connector.config}
+                  resetKey={connector.id}
+                  initialValues={config}
+                  errors={fieldErrors}
+                  disabled={submitting}
+                  onValuesChange={setConfig}
+                />
               ) : (
                 <div className="source-create-dialog__no-fields">
                   {t('sources.create.noConfig')}

@@ -166,7 +166,11 @@
       "noConfiguration": "此数据源没有可显示的非密钥配置。",
       "secretConfigured": "已配置",
       "noTables": "此数据源尚未配置表选择器。",
-      "unnamedTable": "未命名选择器"
+      "unnamedTable": "未命名选择器",
+      "secretConfiguredCount": "已配置 {count} 个密钥",
+      "srs": "共享记录设置",
+      "noSrs": "尚未配置共享记录设置。",
+      "hash": "内容哈希"
     },
     "create": {
       "title": "创建数据源",
@@ -199,6 +203,87 @@
         "exists": "已存在相同 ID 的数据源。",
         "server": "控制面拒绝了此数据源配置。",
         "unknown": "无法创建数据源，请重试。"
+      }
+    },
+    "detail": {
+      "back": "返回数据源",
+      "edit": "编辑",
+      "delete": "删除",
+      "notFoundTitle": "找不到数据源",
+      "notFoundBody": "这个 Source 投影已经不存在。"
+    },
+    "edit": {
+      "title": "编辑 {id}",
+      "subtitle": "更新 {connector} 投影，但不改变其身份。",
+      "idLabel": "数据源 ID",
+      "connectorLabel": "连接器",
+      "modeLabel": "读取模式",
+      "configuration": "连接配置",
+      "metadata": "Metadata JSON",
+      "tables": "表选择器",
+      "srs": "共享记录设置",
+      "srsKey": "SRS 键",
+      "srsRetention": "保留时间",
+      "srsSchemaEvolution": "Schema 演进",
+      "srsQueryable": "可查询",
+      "srsEnabled": "已启用",
+      "tableType": "选择器类型",
+      "tableName": "表名",
+      "tablePattern": "正则表达式",
+      "tableFilter": "过滤表达式",
+      "tablePk": "主键字段，用逗号分隔",
+      "tablesEmpty": "暂无表选择器；需要发现表时可以添加。",
+      "removeTable": "删除表选择器",
+      "addLiteral": "字面量",
+      "addRegex": "正则",
+      "addSpec": "规格",
+      "tableTypes": {
+        "literal": "字面量",
+        "regex": "正则",
+        "spec": "规格"
+      },
+      "secretConfigured": "已配置密钥",
+      "secretPlaceholder": "输入新密钥",
+      "secretCleared": "保存后将清除密钥",
+      "secretConfiguredHint": "API 永远不会返回密钥值。",
+      "secretWriteOnlyHint": "仅写入值；保存后不会显示。",
+      "secretClearHint": "保存后移除该密钥。",
+      "secretShow": "显示密钥",
+      "secretHide": "隐藏密钥",
+      "secretReplace": "替换已配置密钥",
+      "secretClear": "清除密钥",
+      "secretKeep": "保留已配置密钥",
+      "cancel": "取消",
+      "save": "保存更改",
+      "submitting": "正在保存",
+      "reload": "重新加载最新版本",
+      "keepDraft": "保留草稿并刷新 ETag",
+      "validation": {
+        "required": "此字段为必填项。",
+        "number": "请输入有效数字。",
+        "array": "请输入有效的 JSON 数组。",
+        "metadata": "Metadata 必须是 JSON 对象。"
+      },
+      "errors": {
+        "network": "无法连接控制面，请检查后端连接后重试。",
+        "precondition": "保存前请先读取当前数据源。",
+        "conflict": {
+          "title": "数据源已被其他人修改。",
+          "body": "你的草稿仍然保留。可以重新加载最新投影，或刷新 ETag 后重试。",
+          "retry": "重试保存"
+        },
+        "server": "控制面拒绝了这些数据源修改。",
+        "unknown": "无法保存数据源，请重试。"
+      }
+    },
+    "delete": {
+      "title": "删除 {id}？",
+      "body": "这会删除 Source 投影。Pipeline 引用必须单独处理。",
+      "cancel": "取消",
+      "confirm": "删除数据源",
+      "errors": {
+        "inUse": "此数据源仍被以下 Pipeline 引用：",
+        "server": "无法删除数据源，请刷新后重试。"
       }
     },
     "stats": {

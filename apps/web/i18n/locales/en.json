@@ -165,8 +165,12 @@
       "endpointUnavailable": "Endpoint not exposed",
       "noConfiguration": "This source has no visible non-secret configuration.",
       "secretConfigured": "Configured",
+      "secretConfiguredCount": "{count} configured secrets",
       "noTables": "No table selectors are configured for this source.",
-      "unnamedTable": "Unnamed selector"
+      "unnamedTable": "Unnamed selector",
+      "srs": "Shared-record settings",
+      "noSrs": "No shared-record settings are configured.",
+      "hash": "Content hash"
     },
     "create": {
       "title": "Create source",
@@ -199,6 +203,87 @@
         "exists": "A source with this ID already exists.",
         "server": "The control plane rejected this source configuration.",
         "unknown": "The source could not be created. Try again."
+      }
+    },
+    "detail": {
+      "back": "Back to sources",
+      "edit": "Edit",
+      "delete": "Delete",
+      "notFoundTitle": "Source not found",
+      "notFoundBody": "This Source projection no longer exists."
+    },
+    "edit": {
+      "title": "Edit {id}",
+      "subtitle": "Update the {connector} projection without changing its identity.",
+      "idLabel": "Source ID",
+      "connectorLabel": "Connector",
+      "modeLabel": "Read mode",
+      "configuration": "Connection configuration",
+      "metadata": "Metadata JSON",
+      "tables": "Table selectors",
+      "srs": "Shared-record settings",
+      "srsKey": "SRS key",
+      "srsRetention": "Retention",
+      "srsSchemaEvolution": "Schema evolution",
+      "srsQueryable": "Queryable",
+      "srsEnabled": "Enabled",
+      "tableType": "Selector type",
+      "tableName": "Table name",
+      "tablePattern": "Regular expression",
+      "tableFilter": "Filter expression",
+      "tablePk": "Primary key fields, comma separated",
+      "tablesEmpty": "No table selectors. Add one if this Source should discover tables.",
+      "removeTable": "Remove table selector",
+      "addLiteral": "Literal",
+      "addRegex": "Regex",
+      "addSpec": "Spec",
+      "tableTypes": {
+        "literal": "Literal",
+        "regex": "Regex",
+        "spec": "Spec"
+      },
+      "secretConfigured": "Configured secret",
+      "secretPlaceholder": "Enter a new secret",
+      "secretCleared": "Secret will be cleared",
+      "secretConfiguredHint": "The value is never returned by the API.",
+      "secretWriteOnlyHint": "Write-only value; it will not be shown after save.",
+      "secretClearHint": "Save to remove this secret.",
+      "secretShow": "Show secret",
+      "secretHide": "Hide secret",
+      "secretReplace": "Replace configured secret",
+      "secretClear": "Clear secret",
+      "secretKeep": "Keep configured secret",
+      "cancel": "Cancel",
+      "save": "Save changes",
+      "submitting": "Saving changes",
+      "reload": "Reload latest",
+      "keepDraft": "Keep draft, refresh ETag",
+      "validation": {
+        "required": "This field is required.",
+        "number": "Enter a valid number.",
+        "array": "Enter a valid JSON array.",
+        "metadata": "Metadata must be a JSON object."
+      },
+      "errors": {
+        "network": "The control plane is unreachable. Check the connection and try again.",
+        "precondition": "Read the current Source before saving.",
+        "conflict": {
+          "title": "This Source changed elsewhere.",
+          "body": "Your draft is still here. Reload the latest projection or refresh the ETag and retry.",
+          "retry": "Retry save"
+        },
+        "server": "The control plane rejected these Source changes.",
+        "unknown": "The Source could not be saved. Try again."
+      }
+    },
+    "delete": {
+      "title": "Delete {id}?",
+      "body": "This removes the Source projection. Any Pipeline references must be removed separately.",
+      "cancel": "Cancel",
+      "confirm": "Delete source",
+      "errors": {
+        "inUse": "This Source is still referenced by the following Pipelines:",
+        "server": "The Source could not be deleted. Refresh and try again."
       }
     },
     "stats": {
