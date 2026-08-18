@@ -166,7 +166,11 @@
       "noConfiguration": "此資料來源沒有可顯示的非密鑰設定。",
       "secretConfigured": "已設定",
       "noTables": "此資料來源尚未設定資料表選擇器。",
-      "unnamedTable": "未命名選擇器"
+      "unnamedTable": "未命名選擇器",
+      "secretConfiguredCount": "已設定 {count} 個密鑰",
+      "srs": "共享記錄設定",
+      "noSrs": "尚未設定共享記錄設定。",
+      "hash": "內容雜湊"
     },
     "create": {
       "title": "建立資料來源",
@@ -199,6 +203,87 @@
         "exists": "已存在相同 ID 的資料來源。",
         "server": "控制面拒絕了此資料來源設定。",
         "unknown": "無法建立資料來源，請重試。"
+      }
+    },
+    "detail": {
+      "back": "返回資料來源",
+      "edit": "編輯",
+      "delete": "刪除",
+      "notFoundTitle": "找不到資料來源",
+      "notFoundBody": "這個 Source 投影已不存在。"
+    },
+    "edit": {
+      "title": "編輯 {id}",
+      "subtitle": "更新 {connector} 投影，但不改變其身份。",
+      "idLabel": "資料來源 ID",
+      "connectorLabel": "連接器",
+      "modeLabel": "讀取模式",
+      "configuration": "連線設定",
+      "metadata": "Metadata JSON",
+      "tables": "資料表選擇器",
+      "srs": "共享記錄設定",
+      "srsKey": "SRS 金鑰",
+      "srsRetention": "保留時間",
+      "srsSchemaEvolution": "Schema 演進",
+      "srsQueryable": "可查詢",
+      "srsEnabled": "已啟用",
+      "tableType": "選擇器類型",
+      "tableName": "資料表名稱",
+      "tablePattern": "正規表示式",
+      "tableFilter": "篩選表示式",
+      "tablePk": "主鍵欄位，以逗號分隔",
+      "tablesEmpty": "目前沒有資料表選擇器；需要發現資料表時可以新增。",
+      "removeTable": "移除資料表選擇器",
+      "addLiteral": "字面值",
+      "addRegex": "正規表示式",
+      "addSpec": "規格",
+      "tableTypes": {
+        "literal": "字面值",
+        "regex": "正規表示式",
+        "spec": "規格"
+      },
+      "secretConfigured": "已設定密鑰",
+      "secretPlaceholder": "輸入新密鑰",
+      "secretCleared": "儲存後將清除密鑰",
+      "secretConfiguredHint": "API 永遠不會返回密鑰值。",
+      "secretWriteOnlyHint": "僅寫入值；儲存後不會顯示。",
+      "secretClearHint": "儲存後移除這個密鑰。",
+      "secretShow": "顯示密鑰",
+      "secretHide": "隱藏密鑰",
+      "secretReplace": "取代已設定密鑰",
+      "secretClear": "清除密鑰",
+      "secretKeep": "保留已設定密鑰",
+      "cancel": "取消",
+      "save": "儲存變更",
+      "submitting": "正在儲存",
+      "reload": "重新載入最新版本",
+      "keepDraft": "保留草稿並重新整理 ETag",
+      "validation": {
+        "required": "此欄位為必填項。",
+        "number": "請輸入有效數字。",
+        "array": "請輸入有效的 JSON 陣列。",
+        "metadata": "Metadata 必須是 JSON 物件。"
+      },
+      "errors": {
+        "network": "無法連接控制面，請檢查後端連線後重試。",
+        "precondition": "儲存前請先讀取目前資料來源。",
+        "conflict": {
+          "title": "資料來源已被其他人修改。",
+          "body": "你的草稿仍然保留。可以重新載入最新投影，或重新整理 ETag 後重試。",
+          "retry": "重試儲存"
+        },
+        "server": "控制面拒絕了這些資料來源修改。",
+        "unknown": "無法儲存資料來源，請重試。"
+      }
+    },
+    "delete": {
+      "title": "刪除 {id}？",
+      "body": "這會刪除 Source 投影。Pipeline 引用必須另外處理。",
+      "cancel": "取消",
+      "confirm": "刪除資料來源",
+      "errors": {
+        "inUse": "此資料來源仍被以下 Pipeline 引用：",
+        "server": "無法刪除資料來源，請重新整理後重試。"
       }
     },
     "stats": {

@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedExplorationsRouteImport } from './routes/_authenticated.explorations'
 import { Route as AuthenticatedPipelinesRouteImport } from './routes/_authenticated.pipelines'
 import { Route as AuthenticatedSourcesRouteImport } from './routes/_authenticated.sources'
+import { Route as AuthenticatedSourcesIdRouteImport } from './routes/_authenticated.sources.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,20 +47,27 @@ const AuthenticatedSourcesRoute = AuthenticatedSourcesRouteImport.update({
   path: '/sources',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedSourcesIdRoute = AuthenticatedSourcesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedSourcesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
-  '/sources': typeof AuthenticatedSourcesRoute
+  '/sources': typeof AuthenticatedSourcesRouteWithChildren
+  '/sources/$id': typeof AuthenticatedSourcesIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
-  '/sources': typeof AuthenticatedSourcesRoute
+  '/sources': typeof AuthenticatedSourcesRouteWithChildren
+  '/sources/$id': typeof AuthenticatedSourcesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -68,13 +76,26 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/explorations': typeof AuthenticatedExplorationsRoute
   '/_authenticated/pipelines': typeof AuthenticatedPipelinesRoute
-  '/_authenticated/sources': typeof AuthenticatedSourcesRoute
+  '/_authenticated/sources': typeof AuthenticatedSourcesRouteWithChildren
+  '/_authenticated/sources/$id': typeof AuthenticatedSourcesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/explorations' | '/pipelines' | '/sources'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/explorations'
+    | '/pipelines'
+    | '/sources'
+    | '/sources/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/explorations' | '/pipelines' | '/sources'
+  to:
+    | '/'
+    | '/login'
+    | '/explorations'
+    | '/pipelines'
+    | '/sources'
+    | '/sources/$id'
   id:
     | '__root__'
     | '/'
@@ -83,6 +104,7 @@ export interface FileRouteTypes {
     | '/_authenticated/explorations'
     | '/_authenticated/pipelines'
     | '/_authenticated/sources'
+    | '/_authenticated/sources/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -135,19 +157,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSourcesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/sources/$id': {
+      id: '/_authenticated/sources/$id'
+      path: '/$id'
+      fullPath: '/sources/$id'
+      preLoaderRoute: typeof AuthenticatedSourcesIdRouteImport
+      parentRoute: typeof AuthenticatedSourcesRoute
+    }
   }
 }
+
+interface AuthenticatedSourcesRouteChildren {
+  AuthenticatedSourcesIdRoute: typeof AuthenticatedSourcesIdRoute
+}
+
+const AuthenticatedSourcesRouteChildren: AuthenticatedSourcesRouteChildren = {
+  AuthenticatedSourcesIdRoute: AuthenticatedSourcesIdRoute,
+}
+
+const AuthenticatedSourcesRouteWithChildren =
+  AuthenticatedSourcesRoute._addFileChildren(AuthenticatedSourcesRouteChildren)
 
 interface AuthenticatedRouteChildren {
   AuthenticatedExplorationsRoute: typeof AuthenticatedExplorationsRoute
   AuthenticatedPipelinesRoute: typeof AuthenticatedPipelinesRoute
-  AuthenticatedSourcesRoute: typeof AuthenticatedSourcesRoute
+  AuthenticatedSourcesRoute: typeof AuthenticatedSourcesRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedExplorationsRoute: AuthenticatedExplorationsRoute,
   AuthenticatedPipelinesRoute: AuthenticatedPipelinesRoute,
-  AuthenticatedSourcesRoute: AuthenticatedSourcesRoute,
+  AuthenticatedSourcesRoute: AuthenticatedSourcesRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
