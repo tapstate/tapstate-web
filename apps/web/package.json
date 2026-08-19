@@ -23,6 +23,7 @@
     "@formily/core": "^2.3.2",
     "@formily/json-schema": "^2.3.2",
     "@formily/react": "^2.3.2",
+    "@tapstate-web/formily": "workspace:*",
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-router": "^1.170.18",
     "class-variance-authority": "^0.7.1",

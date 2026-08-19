@@ -74,6 +74,30 @@ describe('source client', () => {
     ).resolves.toMatchObject([{ id: 'mysql', name: 'MySQL' }])
   })
 
+  it('rejects malformed connector summaries instead of leaking an unsafe card model to the UI', async () => {
+    await expect(
+      listConnectors(
+        fetcherFor(
+          jsonResponse({
+            connectors: [
+              {
+                id: 'mysql',
+                name: 'MySQL',
+                icon: 42,
+                group: 'database',
+                modes: ['cdc'],
+                discovery: 'table',
+                sink: false,
+                pushOut: false,
+                origin: 'registered',
+              },
+            ],
+          }),
+        ),
+      ),
+    ).rejects.toMatchObject({ kind: 'protocol' })
+  })
+
   it('lists and fetches projected sources', async () => {
     const fetcher = fetcherFor(jsonResponse({ items: [source] }))
     await expect(listSources(fetcher)).resolves.toEqual([source])

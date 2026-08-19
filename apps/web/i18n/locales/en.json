@@ -180,6 +180,8 @@
     "stepSelect": "Step 1 of 2",
     "stepConfigure": "Step 2 of 2",
     "chooseConnector": "Choose a connector",
+    "searchConnectors": "Search connectors",
+    "noMatchingConnectors": "No connectors match your search.",
     "chooseAnother": "Choose another connector",
     "continue": "Continue",
       "idLabel": "Source ID",

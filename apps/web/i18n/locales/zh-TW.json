@@ -180,6 +180,8 @@
     "stepSelect": "第 1 步，共 2 步",
     "stepConfigure": "第 2 步，共 2 步",
     "chooseConnector": "選擇連接器",
+    "searchConnectors": "搜尋連接器",
+    "noMatchingConnectors": "沒有符合搜尋條件的連接器。",
     "chooseAnother": "重新選擇連接器",
     "continue": "繼續",
       "idLabel": "資料來源 ID",

@@ -3,15 +3,12 @@ import type { ISchema } from '@formily/json-schema'
 import {
   AlertCircle,
   ArrowLeft,
-  ArrowRight,
   Check,
-  CheckCircle2,
-  Cloud,
   Database,
   LoaderCircle,
-  Server,
+  Search,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { ConnectorDetail, ConnectorSummary, SourceView } from '@/service/source-client'
@@ -37,6 +34,9 @@ import {
   SourceClientError,
 } from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { ConnectorIcon } from '@/components/connector-icon'
 
 import { ConnectorFormily } from './connector-formily'
 import {
@@ -58,14 +58,6 @@ function errorMessage(error: unknown, t: ReturnType<typeof useTranslation>['t'])
   return t('sources.create.errors.server')
 }
 
-function connectorIcon(id: string) {
-  const connector = id.toLowerCase()
-  if (connector.includes('cloud') || connector.includes('s3') || connector.includes('bigquery'))
-    return Cloud
-  if (connector.includes('kafka') || connector.includes('pulsar')) return Server
-  return Database
-}
-
 export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCreateDialogProps) {
   const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
@@ -74,7 +66,8 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
   const [schema, setSchema] = useState<ISchema | null>(null)
   const [sourceId, setSourceId] = useState('')
   const [connectorId, setConnectorId] = useState('')
-  const [step, setStep] = useState<'connector' | 'form'>('connector')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [view, setView] = useState<'picker' | 'form'>('picker')
   const [sourceMode, setSourceMode] = useState('')
   const [config, setConfig] = useState<SourceConfigState>({})
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -82,12 +75,14 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
   const [loadingConnector, setLoadingConnector] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [requestError, setRequestError] = useState('')
+  const connectorButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
   useEffect(() => {
     if (!open) return
     setSourceId('')
     setConnectorId('')
-    setStep('connector')
+    setSearchTerm('')
+    setView('picker')
     setSourceMode('')
     setConnector(null)
     setSchema(null)
@@ -110,7 +105,7 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
     setConfig({})
     setFieldErrors({})
     setRequestError('')
-    if (!connectorId) return
+    if (!connectorId || view !== 'form') return
 
     setLoadingConnector(true)
     getConnector(connectorId, apiFetch)
@@ -133,7 +128,7 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
       })
       .catch((error) => setRequestError(errorMessage(error, t)))
       .finally(() => setLoadingConnector(false))
-  }, [apiFetch, connectorId, t])
+  }, [apiFetch, connectorId, t, view])
 
   async function submit() {
     const nextErrors: Record<string, string> = {}
@@ -180,32 +175,40 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
     onOpenChange(nextOpen)
   }
 
-  function continueToForm() {
-    if (!connectorId) {
-      setFieldErrors({ connector: t('sources.create.validation.required') })
-      return
-    }
-    setFieldErrors({})
+  function chooseConnector(id: string) {
+    setConnectorId(id)
+    setFieldErrors((current) => ({ ...current, connector: '' }))
     setRequestError('')
-    setStep('form')
+    setView('form')
   }
 
   function chooseAnotherConnector() {
     if (submitting) return
+    const previousConnectorId = connectorId
     setConnectorId('')
     setConnector(null)
     setSchema(null)
     setConfig({})
     setRequestError('')
-    setStep('connector')
+    setView('picker')
+    requestAnimationFrame(() => connectorButtonRefs.current[previousConnectorId]?.focus())
   }
+
+  const normalizedSearch = searchTerm.trim().toLocaleLowerCase()
+  const visibleConnectors = normalizedSearch
+    ? connectors.filter((item) =>
+        [item.name, item.id, item.group, ...item.modes].some((value) =>
+          value.toLocaleLowerCase().includes(normalizedSearch),
+        ),
+      )
+    : connectors
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         closeDisabled={submitting}
         closeLabel={t('ask.actions.close')}
-        className="source-create-dialog sm:max-w-[920px]"
+        className="source-create-dialog sm:max-w-[1020px]"
       >
         <DialogHeader className="source-create-dialog__create-header">
           <DialogTitle>{t('sources.create.title')}</DialogTitle>
@@ -219,19 +222,26 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
             </div>
           )}
 
-          {step === 'connector' ? (
+          {view === 'picker' ? (
             <section
               className="source-create-dialog__picker"
               aria-labelledby="connector-picker-title"
             >
-              <div className="source-create-dialog__step-heading">
-                <div>
-                  <span className="source-create-dialog__eyebrow">
-                    {t('sources.create.stepSelect')}
-                  </span>
-                  <h3 id="connector-picker-title">{t('sources.create.chooseConnector')}</h3>
-                </div>
+              <div className="source-create-dialog__section-heading">
+                <h3 id="connector-picker-title">{t('sources.create.chooseConnector')}</h3>
+                <span className="source-create-dialog__catalog-count">
+                  {visibleConnectors.length}/{connectors.length}
+                </span>
               </div>
+              <label className="source-create-dialog__search">
+                <Search size={15} aria-hidden="true" />
+                <Input
+                  value={searchTerm}
+                  placeholder={t('sources.create.searchConnectors')}
+                  aria-label={t('sources.create.searchConnectors')}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                />
+              </label>
               {loadingConnectors ? (
                 <div className="source-create-dialog__loading">
                   <LoaderCircle className="animate-spin" size={18} />
@@ -241,27 +251,31 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
                 <div className="source-create-dialog__no-fields">
                   {t('sources.create.noConnectors')}
                 </div>
+              ) : visibleConnectors.length === 0 ? (
+                <div className="source-create-dialog__no-fields">
+                  {t('sources.create.noMatchingConnectors')}
+                </div>
               ) : (
                 <div className="source-create-dialog__connector-grid" role="list">
-                  {connectors.map((item) => {
-                    const Icon = connectorIcon(item.id)
-                    const selected = item.id === connectorId
+                  {visibleConnectors.map((item) => {
                     return (
                       <button
                         key={item.id}
                         className="source-create-dialog__connector-card"
-                        data-selected={selected || undefined}
                         type="button"
                         role="listitem"
-                        aria-pressed={selected}
-                        onClick={() => {
-                          setConnectorId(item.id)
-                          setFieldErrors((current) => ({ ...current, connector: '' }))
+                        ref={(element) => {
+                          connectorButtonRefs.current[item.id] = element
                         }}
+                        onClick={() => chooseConnector(item.id)}
                       >
-                        <span className="source-create-dialog__connector-icon" aria-hidden="true">
-                          <Icon size={18} />
-                        </span>
+                        <ConnectorIcon
+                          connectorId={item.id}
+                          name={item.name}
+                          iconPath={item.icon}
+                          size={56}
+                          className="source-create-dialog__connector-icon"
+                        />
                         <span className="source-create-dialog__connector-copy">
                           <span className="source-create-dialog__connector-name">{item.name}</span>
                           <span className="source-create-dialog__connector-tags">
@@ -271,7 +285,6 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
                             ))}
                           </span>
                         </span>
-                        {selected && <CheckCircle2 className="h-4 w-4 text-gray-900" />}
                       </button>
                     )
                   })}
@@ -300,19 +313,13 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
                         <ArrowLeft size={14} />
                         {t('sources.create.chooseAnother')}
                       </button>
-                      <div>
-                        <span className="source-create-dialog__eyebrow">
-                          {t('sources.create.stepConfigure')}
-                        </span>
-                        <h3>{connector.name}</h3>
-                      </div>
+                      <h3>{connector.name}</h3>
                     </div>
                     <label className="source-field">
                       <span className="source-field__label">{t('sources.create.idLabel')}</span>
-                      <input
+                      <Input
                         value={sourceId}
                         placeholder={t('sources.create.idPlaceholder')}
-                        className="h-9 rounded-lg border border-gray-200 px-3 text-[13px] outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
                         onChange={(event) => {
                           setSourceId(event.target.value)
                           setFieldErrors((current) => ({ ...current, id: '' }))
@@ -373,33 +380,25 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
         </div>
 
         <DialogFooter className="source-create-dialog__footer mt-5">
-          <button
-            className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-[13px] font-medium text-gray-700"
+          <Button
+            variant="outline"
+            size="sm"
             type="button"
             disabled={submitting}
             onClick={() => onOpenChange(false)}
           >
             {t('sources.create.cancel')}
-          </button>
-          {step === 'connector' ? (
-            <button
-              className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-3 py-1.5 text-[13px] font-medium text-white disabled:opacity-50"
-              type="button"
-              disabled={!connectorId || loadingConnectors}
-              onClick={continueToForm}
-            >
-              {t('sources.create.continue')} <ArrowRight size={14} />
-            </button>
-          ) : (
-            <button
-              className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-3 py-1.5 text-[13px] font-medium text-white disabled:opacity-50"
+          </Button>
+          {view === 'form' && (
+            <Button
+              size="sm"
               type="button"
               disabled={connector === null || schema === null || submitting}
               onClick={() => void submit()}
             >
               {submitting && <LoaderCircle className="h-3.5 w-3.5 animate-spin" />}
               {submitting ? t('sources.create.submitting') : t('sources.create.submit')}
-            </button>
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>

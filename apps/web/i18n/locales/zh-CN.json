@@ -180,6 +180,8 @@
     "stepSelect": "第 1 步，共 2 步",
     "stepConfigure": "第 2 步，共 2 步",
     "chooseConnector": "选择连接器",
+    "searchConnectors": "搜索连接器",
+    "noMatchingConnectors": "没有匹配的连接器。",
     "chooseAnother": "重新选择连接器",
     "continue": "继续",
       "idLabel": "数据源 ID",
