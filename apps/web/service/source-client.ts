@@ -58,6 +58,7 @@ export interface SourceDraft {
 export interface ConnectorSummary {
   id: string
   name: string
+  icon: string | null
   group: string
   modes: string[]
   discovery: string
@@ -145,6 +146,47 @@ function isConnectorSpecSource(value: unknown): value is ConnectorSpecSource {
   )
 }
 
+function isConnectorSummary(value: unknown): value is ConnectorSummary {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.name === 'string' &&
+    (value.icon === null || typeof value.icon === 'string') &&
+    typeof value.group === 'string' &&
+    Array.isArray(value.modes) &&
+    value.modes.every((mode) => typeof mode === 'string') &&
+    typeof value.discovery === 'string' &&
+    typeof value.sink === 'boolean' &&
+    typeof value.pushOut === 'boolean' &&
+    typeof value.origin === 'string'
+  )
+}
+
+function isConnectorConfigField(value: unknown): value is ConnectorConfigField {
+  return (
+    isRecord(value) &&
+    typeof value.name === 'string' &&
+    (value.type === 'string' ||
+      value.type === 'number' ||
+      value.type === 'boolean' ||
+      value.type === 'array') &&
+    typeof value.label === 'string' &&
+    typeof value.required === 'boolean' &&
+    (value.defaultValue === null || typeof value.defaultValue === 'string') &&
+    typeof value.secret === 'boolean' &&
+    Array.isArray(value.options) &&
+    value.options.every(
+      (option) =>
+        isRecord(option) && typeof option.value === 'string' && typeof option.label === 'string',
+    ) &&
+    (value.visibleWhen === null ||
+      (isRecord(value.visibleWhen) &&
+        typeof value.visibleWhen.controllingField === 'string' &&
+        Array.isArray(value.visibleWhen.equalsAnyOf) &&
+        value.visibleWhen.equalsAnyOf.every((item) => typeof item === 'string')))
+  )
+}
+
 function isSourceView(value: unknown): value is SourceView {
   return (
     isRecord(value) &&
@@ -219,9 +261,13 @@ export async function listSources(fetcher: ApiFetcher = fetch): Promise<SourceVi
 
 export async function listConnectors(fetcher: ApiFetcher = fetch): Promise<ConnectorSummary[]> {
   const { payload } = await requestJson('/connectors', fetcher)
-  if (!isRecord(payload) || !Array.isArray(payload.connectors))
+  if (
+    !isRecord(payload) ||
+    !Array.isArray(payload.connectors) ||
+    !payload.connectors.every(isConnectorSummary)
+  )
     throw new SourceClientError('protocol', 'the connector list response is malformed')
-  return payload.connectors as ConnectorSummary[]
+  return payload.connectors
 }
 
 export async function getConnector(
@@ -232,7 +278,9 @@ export async function getConnector(
   if (
     !isRecord(payload) ||
     payload.id !== id ||
+    !isConnectorSummary(payload) ||
     !Array.isArray(payload.config) ||
+    !payload.config.every(isConnectorConfigField) ||
     !isConnectorSpecSource(payload.spec) ||
     typeof payload.runtimeAvailable !== 'boolean'
   )

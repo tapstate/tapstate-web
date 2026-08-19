@@ -1,17 +1,9 @@
 import type { ISchema } from '@formily/json-schema'
-import type { ReactNode } from 'react'
 
-import { createForm, onFieldValueChange } from '@formily/core'
-import {
-  connect,
-  createSchemaField,
-  FormProvider,
-  mapProps,
-  observer,
-  useField,
-} from '@formily/react'
+import { FormilySchema, useFormilyForm, type FormilyComponentMap } from '@tapstate-web/formily'
 import { Eye, EyeOff, KeyRound, Pencil, Trash2 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { connect, mapProps, observer, useField } from '@formily/react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { ConnectorConfigField, JsonValue } from '@/service/source-client'
@@ -23,6 +15,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Checkbox as ShadcnCheckbox } from '@/components/ui/checkbox'
+import { Input as ShadcnInput } from '@/components/ui/input'
+import { Textarea as ShadcnTextarea } from '@/components/ui/textarea'
 
 import type { SourceConfigState } from './source-form'
 
@@ -48,61 +43,6 @@ type ControlProps = {
   draft?: SecretDraft
   fieldName?: string
   onSecretChange?: (name: string, draft: SecretDraft) => void
-}
-
-function InputBase({ value, onChange, disabled, readOnly, ...props }: ControlProps) {
-  return (
-    <input
-      {...props}
-      value={typeof value === 'string' ? value : String(value ?? '')}
-      disabled={disabled}
-      readOnly={readOnly}
-      className="h-8 w-full rounded-lg border border-gray-200 px-2.5 text-[12px] outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400 disabled:bg-gray-50"
-      onChange={(event) => onChange?.(event.target.value)}
-    />
-  )
-}
-
-function NumberInputBase({ value, onChange, disabled, readOnly }: ControlProps) {
-  return (
-    <input
-      type="number"
-      value={typeof value === 'number' ? String(value) : ''}
-      disabled={disabled}
-      readOnly={readOnly}
-      className="h-8 w-full rounded-lg border border-gray-200 px-2.5 text-[12px] outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400 disabled:bg-gray-50"
-      onChange={(event) =>
-        onChange?.(event.target.value === '' ? undefined : Number(event.target.value))
-      }
-    />
-  )
-}
-
-function CheckboxBase({ value, onChange, disabled, readOnly }: ControlProps) {
-  return (
-    <input
-      type="checkbox"
-      checked={Boolean(value)}
-      disabled={disabled}
-      readOnly={readOnly}
-      className="h-4 w-4 rounded border-gray-300"
-      onChange={(event) => onChange?.(event.target.checked)}
-    />
-  )
-}
-
-function ArrayInputBase({ value, onChange, disabled, readOnly }: ControlProps) {
-  const text = Array.isArray(value) ? JSON.stringify(value, null, 2) : String(value ?? '')
-  return (
-    <textarea
-      rows={2}
-      value={text}
-      disabled={disabled}
-      readOnly={readOnly}
-      className="w-full rounded-lg border border-gray-200 px-2.5 py-2 text-[12px] outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400 disabled:bg-gray-50"
-      onChange={(event) => onChange?.(event.target.value)}
-    />
-  )
 }
 
 const EMPTY_SELECT_VALUE = '__tapstate_empty_value__'
@@ -136,6 +76,58 @@ function SelectInputBase({ value, onChange, disabled, dataSource }: ControlProps
         ))}
       </SelectContent>
     </Select>
+  )
+}
+
+function TextInputBase({ value, onChange, disabled, readOnly, placeholder }: ControlProps) {
+  return (
+    <ShadcnInput
+      value={typeof value === 'string' ? value : String(value ?? '')}
+      disabled={disabled}
+      readOnly={readOnly}
+      placeholder={placeholder}
+      onChange={(event) => onChange?.(event.target.value)}
+    />
+  )
+}
+
+function NumberInputBase({ value, onChange, disabled, readOnly, placeholder }: ControlProps) {
+  return (
+    <ShadcnInput
+      type="number"
+      value={typeof value === 'number' ? String(value) : String(value ?? '')}
+      disabled={disabled}
+      readOnly={readOnly}
+      placeholder={placeholder}
+      onChange={(event) =>
+        onChange?.(event.target.value === '' ? undefined : Number(event.target.value))
+      }
+    />
+  )
+}
+
+function CheckboxBase({ value, onChange, disabled, readOnly }: ControlProps) {
+  return (
+    <ShadcnCheckbox
+      checked={Boolean(value)}
+      disabled={disabled}
+      readOnly={readOnly}
+      onCheckedChange={(checked) => onChange?.(checked)}
+      aria-label="checkbox"
+    />
+  )
+}
+
+function ArrayInputBase({ value, onChange, disabled, readOnly }: ControlProps) {
+  const text = Array.isArray(value) ? JSON.stringify(value, null, 2) : String(value ?? '')
+  return (
+    <ShadcnTextarea
+      rows={3}
+      value={text}
+      disabled={disabled}
+      readOnly={readOnly}
+      onChange={(event) => onChange?.(event.target.value)}
+    />
   )
 }
 
@@ -252,8 +244,17 @@ function SecretInputBase({
   )
 }
 
+const SelectInput = connect(
+  SelectInputBase,
+  mapProps((props, field) => ({
+    ...props,
+    value: (field as any).value,
+    onChange: (field as any).onInput,
+  })),
+)
+
 const TextInput = connect(
-  InputBase,
+  TextInputBase,
   mapProps((props, field) => ({
     ...props,
     value: (field as any).value,
@@ -288,15 +289,6 @@ const ArrayInput = connect(
   })),
 )
 
-const SelectInput = connect(
-  SelectInputBase,
-  mapProps((props, field) => ({
-    ...props,
-    value: (field as any).value,
-    onChange: (field as any).onInput,
-  })),
-)
-
 const SecretInput = connect(
   SecretInputBase,
   mapProps((props, field) => ({
@@ -321,6 +313,7 @@ const FormItem = observer(function FormItem({
   const feedback = field?.selfErrors?.[0]
   const label = title ?? field?.title
   const isRequired = required ?? field?.required
+
   return (
     <label className="source-field">
       <span className="source-field__label">
@@ -331,18 +324,6 @@ const FormItem = observer(function FormItem({
       {(error || feedback) && <span className="source-field__error">{error || feedback}</span>}
     </label>
   )
-})
-
-const FormilySchemaField = createSchemaField({
-  components: {
-    FormItem,
-    TextInput,
-    NumberInput,
-    Checkbox,
-    ArrayInput,
-    Select: SelectInput,
-    SecretInput,
-  },
 })
 
 export interface ConnectorFormilyProps {
@@ -432,23 +413,12 @@ export function ConnectorFormily({
   onValuesChange,
   onSecretChange,
 }: ConnectorFormilyProps) {
-  const valuesCallback = useRef(onValuesChange)
-  valuesCallback.current = onValuesChange
   const formKey = connectorFormKey(fields, resetKey)
-  const form = useMemo(
-    () =>
-      createForm({
-        initialValues: initialValues ?? formilyInitialValues(fields),
-        effects: () => {
-          onFieldValueChange('*', (_field, nextForm) => {
-            valuesCallback.current?.(sourceConfigState({ ...nextForm.values }))
-          })
-        },
-      }),
-    // The field list defines the lifecycle of a connector form. Values are updated
-    // through Formily and are intentionally not recreated on every keystroke.
-    [formKey],
-  )
+  const form = useFormilyForm<FormValues>({
+    resetKey: formKey,
+    initialValues: initialValues ?? formilyInitialValues(fields),
+    onValuesChange: (values) => onValuesChange?.(sourceConfigState(values)),
+  })
 
   const schema = useMemo(
     () =>
@@ -463,12 +433,22 @@ export function ConnectorFormily({
       ),
     [configuredSecrets, disabled, errors, fields, onSecretChange, secretDrafts, sourceSchema],
   )
-
-  return (
-    <FormProvider key={formKey} form={form}>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <FormilySchemaField schema={schema} />
-      </div>
-    </FormProvider>
+  const components = useMemo<FormilyComponentMap>(
+    () => ({
+      FormItem,
+      Input: TextInput,
+      TextInput,
+      InputNumber: NumberInput,
+      NumberInput,
+      Switch: Checkbox,
+      Checkbox,
+      ArrayItems: ArrayInput,
+      ArrayInput,
+      Select: SelectInput,
+      SecretInput,
+    }),
+    [],
   )
+
+  return <FormilySchema key={formKey} form={form} schema={schema} components={components} />
 }
