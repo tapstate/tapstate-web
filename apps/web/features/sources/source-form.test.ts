@@ -1,5 +1,7 @@
-import type { ConnectorConfigField } from '@/service/source-client'
 import { describe, expect, it } from 'vitest'
+
+import type { ConnectorConfigField } from '@/service/source-client'
+
 import { buildSourceConfig, createInitialConfig, isFieldVisible } from './source-form'
 
 const fields: ConnectorConfigField[] = [
@@ -68,6 +70,42 @@ describe('source form helpers', () => {
         port: 'number',
         sslMode: 'required',
       },
+    })
+  })
+
+  it('keeps configured required secrets write-only while accepting replacements', () => {
+    const secretFields: ConnectorConfigField[] = [
+      {
+        name: 'host',
+        type: 'string',
+        label: 'Host',
+        required: true,
+        defaultValue: null,
+        secret: false,
+        options: [],
+        visibleWhen: null,
+      },
+      {
+        name: 'password',
+        type: 'string',
+        label: 'Password',
+        required: true,
+        defaultValue: null,
+        secret: true,
+        options: [],
+        visibleWhen: null,
+      },
+    ]
+
+    expect(buildSourceConfig(secretFields, { host: 'db.local' }, ['password'])).toEqual({
+      config: { host: 'db.local' },
+      errors: {},
+    })
+    expect(
+      buildSourceConfig(secretFields, { host: 'db.local', password: 'replacement' }, []),
+    ).toEqual({
+      config: { host: 'db.local', password: 'replacement' },
+      errors: {},
     })
   })
 })

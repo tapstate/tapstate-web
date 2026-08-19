@@ -55,16 +55,19 @@ function isEmpty(value: JsonValue | undefined) {
 export function buildSourceConfig(
   fields: readonly ConnectorConfigField[],
   state: SourceConfigState,
+  retainedRequiredFields: readonly string[] = [],
 ): SourceConfigResult {
   const config: Record<string, JsonValue> = {}
   const errors: SourceConfigResult['errors'] = {}
+  const retainedRequiredFieldNames = new Set(retainedRequiredFields)
 
   for (const field of fields) {
     if (!isFieldVisible(field, state)) continue
 
     const value = state[field.name]
     if (isEmpty(value)) {
-      if (field.required) errors[field.name] = 'required'
+      if (field.required && !retainedRequiredFieldNames.has(field.name))
+        errors[field.name] = 'required'
       continue
     }
 

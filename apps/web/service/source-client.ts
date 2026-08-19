@@ -8,7 +8,7 @@ export interface SourceTableView {
   pattern: string | null
   filter: string | null
   pk: string[] | null
-  options: Record<string, JsonValue>
+  options: Record<string, JsonValue> | null
 }
 
 export interface SourceView {
@@ -31,7 +31,7 @@ export interface SourceTableDraft {
   pattern?: string | null
   filter?: string | null
   pk?: string[] | null
-  options?: Record<string, JsonValue>
+  options?: Record<string, JsonValue> | null
 }
 
 export interface SourceSrs {
