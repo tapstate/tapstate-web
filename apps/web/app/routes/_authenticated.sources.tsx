@@ -1,10 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { SourcesPage } from '@/features/sources/sources-page'
+import { createFileRoute, Outlet } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/_authenticated/sources')({
   component: SourcesRouteComponent,
 })
 
-function SourcesRouteComponent() {
-  return <SourcesPage />
+export function SourcesRouteComponent() {
+  return <Outlet />
 }

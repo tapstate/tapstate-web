@@ -7,6 +7,7 @@ import type {
   JsonValue,
   SourceDraft,
   SourceEnvelope,
+  SourceSrs,
   SourceView,
 } from '@/service/source-client'
 
@@ -75,6 +76,39 @@ function srsValue(source: SourceView): EditableSrs {
     schemaEvolution: stringValue(source.srs?.schemaEvolution),
     queryable: booleanValue(source.srs?.queryable),
     enabled: booleanValue(source.srs?.enabled),
+  }
+}
+
+export function serializeSourceSrs(srs: EditableSrs): SourceSrs | null {
+  const hasTextValue = Boolean(srs.key || srs.retention || srs.schemaEvolution)
+  if (!hasTextValue && !srs.queryable && !srs.enabled) return null
+
+  return {
+    ...(srs.key ? { key: srs.key } : {}),
+    ...(srs.retention ? { retention: srs.retention } : {}),
+    ...(srs.schemaEvolution ? { schemaEvolution: srs.schemaEvolution } : {}),
+    queryable: srs.queryable,
+    enabled: srs.enabled,
+  }
+}
+
+export function buildSourceEditConfig(
+  fields: ConnectorDetail['config'],
+  config: SourceConfigState,
+  secretDrafts: Record<string, SecretDraft>,
+) {
+  const clearSecrets: string[] = []
+  const secretValues: Record<string, JsonValue> = {}
+  const retainedRequiredSecrets: string[] = []
+  for (const [name, draft] of Object.entries(secretDrafts)) {
+    if (draft.action === 'clear') clearSecrets.push(name)
+    if (draft.action === 'keep') retainedRequiredSecrets.push(name)
+    if (draft.action === 'replace' && draft.value) secretValues[name] = draft.value
+  }
+
+  return {
+    ...buildSourceConfig(fields, { ...config, ...secretValues }, retainedRequiredSecrets),
+    clearSecrets,
   }
 }
 
@@ -157,9 +191,10 @@ export function SourceEditDialog({
     if (!connector) return
     setRequestError('')
     const nextErrors: Record<string, string> = {}
-    const result = buildSourceConfig(connector.config, config)
-    for (const [name, code] of Object.entries(result.errors))
+    const sourceConfig = buildSourceEditConfig(connector.config, config, secretDrafts)
+    for (const [name, code] of Object.entries(sourceConfig.errors)) {
       nextErrors[name] = t(`sources.edit.validation.${code}`)
+    }
 
     let metadataValue: Record<string, JsonValue> | null = null
     try {
@@ -176,13 +211,6 @@ export function SourceEditDialog({
       return
     }
 
-    const clearSecrets: string[] = []
-    const secretValues: Record<string, JsonValue> = {}
-    for (const [name, draft] of Object.entries(secretDrafts)) {
-      if (draft.action === 'clear') clearSecrets.push(name)
-      if (draft.action === 'replace' && draft.value) secretValues[name] = draft.value
-    }
-
     setSubmitting(true)
     try {
       const resultEnvelope = await updateSource(
@@ -190,14 +218,14 @@ export function SourceEditDialog({
         {
           id: currentSource.id,
           connector: currentSource.connector,
-          config: { ...currentSource.config, ...result.config, ...secretValues },
+          config: { ...currentSource.config, ...sourceConfig.config },
           metadata: metadataValue,
           mode: mode || undefined,
           tables,
           options: currentSource.options,
-          srs,
+          srs: serializeSourceSrs(srs),
           experimental: currentSource.experimental,
-          clearSecrets,
+          clearSecrets: sourceConfig.clearSecrets,
         } satisfies SourceDraft,
         currentEtag,
         apiFetch,

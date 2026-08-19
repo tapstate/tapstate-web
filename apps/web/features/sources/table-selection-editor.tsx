@@ -23,6 +23,32 @@ function decode(value: string) {
   return value === EMPTY_VALUE ? '' : value
 }
 
+export function createTableSelection(type: SourceTableView['type']): SourceTableView {
+  return {
+    type,
+    name: type === 'literal' || type === 'spec' ? '' : null,
+    pattern: type === 'regex' ? '' : null,
+    filter: type === 'spec' ? '' : null,
+    pk: type === 'spec' ? [] : null,
+    options: type === 'spec' ? {} : null,
+  }
+}
+
+export function updateTableSelectionType(
+  table: SourceTableView,
+  type: SourceTableView['type'],
+): SourceTableView {
+  return {
+    ...table,
+    type,
+    name: type === 'regex' ? null : (table.name ?? ''),
+    pattern: type === 'regex' ? (table.pattern ?? '') : null,
+    filter: type === 'spec' ? (table.filter ?? '') : null,
+    pk: type === 'spec' ? (table.pk ?? []) : null,
+    options: type === 'spec' ? (table.options ?? {}) : null,
+  }
+}
+
 export function TableSelectionEditor({
   value,
   disabled,
@@ -41,17 +67,7 @@ export function TableSelectionEditor({
   }
 
   function add(type: SourceTableView['type']) {
-    onChange([
-      ...value,
-      {
-        type,
-        name: type === 'literal' || type === 'spec' ? '' : null,
-        pattern: type === 'regex' ? '' : null,
-        filter: type === 'spec' ? '' : null,
-        pk: type === 'spec' ? [] : null,
-        options: {},
-      },
-    ])
+    onChange([...value, createTableSelection(type)])
   }
 
   return (
@@ -73,13 +89,7 @@ export function TableSelectionEditor({
               onValueChange={(selected) => {
                 if (selected === null) return
                 const type = decode(selected) as SourceTableView['type']
-                update(index, {
-                  type,
-                  name: type === 'regex' ? null : (table.name ?? ''),
-                  pattern: type === 'regex' ? (table.pattern ?? '') : null,
-                  filter: type === 'spec' ? (table.filter ?? '') : null,
-                  pk: type === 'spec' ? (table.pk ?? []) : null,
-                })
+                update(index, updateTableSelectionType(table, type))
               }}
             >
               <SelectTrigger className="w-28" aria-label={t('sources.edit.tableType')}>

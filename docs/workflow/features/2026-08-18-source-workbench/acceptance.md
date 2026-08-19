@@ -17,8 +17,8 @@
 
 | 验收标准 | 结果 | 备注 |
 | -------- | ---- | ---- |
-| Web client 完成 Source CRUD 和 ETag | Passed | client contract and Source pages cover list/get/create/replace/delete and 412 refresh |
-| 编辑不会回填 secret，支持 omit/clear | Passed | Formily bridge uses configured-secret keep / replace / clear intents |
+| Web client 完成 Source CRUD 和 ETag | Passed | client contract and Source pages cover list/get/create/replace/delete and 412 refresh; detail now renders through the nested route outlet |
+| 编辑不会回填 secret，支持 omit/clear | Passed | configured required secrets can keep their write-only value or submit a replacement; clear remains explicit |
 | 删除展示 in-use referrer ids，不级联 | Passed | source delete dialog renders API referrer ids |
 | 页面覆盖状态矩阵和窄屏 | Partial | source UI states are implemented and desktop browser read paths were observed; the 375px check remains pending |
 | lint/typecheck/i18n/build + live check | Partial | automated matrix, isolated control-plane CRUD, and browser catalog/Formily rendering passed; browser mutations remain pending |
@@ -36,11 +36,11 @@
 
 | 命令 / 检查 | 结果 | 备注 |
 | ----------- | ---- | ---- |
-| `pnpm --filter web test` | Passed | 6 files / 17 tests |
-| `pnpm lint:code` | Passed | |
-| `pnpm typecheck` | Passed | |
-| `pnpm --filter web i18n:check` | Passed | |
-| `pnpm --filter web build` | Passed | existing large-chunk warning only |
+| `pnpm --config.store-dir=/private/tmp/tapstate-web-pnpm-store --filter web test` | Passed | 9 files / 24 tests, including route, secret, SRS, and table selector regressions |
+| package format check | Partial | changed files pass targeted `oxfmt --check`; package-wide command remains blocked by 30 pre-existing formatting failures |
+| `pnpm --config.store-dir=/private/tmp/tapstate-web-pnpm-store --filter web typecheck` | Passed | |
+| `pnpm --config.store-dir=/private/tmp/tapstate-web-pnpm-store --filter web i18n:check` | Passed | |
+| `pnpm --config.store-dir=/private/tmp/tapstate-web-pnpm-store --filter web build` | Passed | existing large-chunk warning only |
 | Isolated control-plane API CRUD | Passed | bootstrap/login/catalog and Source create/update/delete, secret omission/clear, and stale ETag `412` completed on port 8081 |
 | 桌面视口检查 | Partial | authenticated browser rendered the empty state, create dialog, live connector selector, and MySQL Formily fields |
 | 移动视口检查 | Pending | restart the isolated control-plane and dev server, then inspect at 375px |

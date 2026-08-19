@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedExplorationsRouteImport } from './routes/_authenticated.explorations'
 import { Route as AuthenticatedPipelinesRouteImport } from './routes/_authenticated.pipelines'
 import { Route as AuthenticatedSourcesRouteImport } from './routes/_authenticated.sources'
+import { Route as AuthenticatedSourcesIndexRouteImport } from './routes/_authenticated.sources.index'
 import { Route as AuthenticatedSourcesIdRouteImport } from './routes/_authenticated.sources.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -47,6 +48,12 @@ const AuthenticatedSourcesRoute = AuthenticatedSourcesRouteImport.update({
   path: '/sources',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedSourcesIndexRoute =
+  AuthenticatedSourcesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedSourcesRoute,
+  } as any)
 const AuthenticatedSourcesIdRoute = AuthenticatedSourcesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -60,14 +67,15 @@ export interface FileRoutesByFullPath {
   '/pipelines': typeof AuthenticatedPipelinesRoute
   '/sources': typeof AuthenticatedSourcesRouteWithChildren
   '/sources/$id': typeof AuthenticatedSourcesIdRoute
+  '/sources/': typeof AuthenticatedSourcesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
-  '/sources': typeof AuthenticatedSourcesRouteWithChildren
   '/sources/$id': typeof AuthenticatedSourcesIdRoute
+  '/sources': typeof AuthenticatedSourcesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/_authenticated/pipelines': typeof AuthenticatedPipelinesRoute
   '/_authenticated/sources': typeof AuthenticatedSourcesRouteWithChildren
   '/_authenticated/sources/$id': typeof AuthenticatedSourcesIdRoute
+  '/_authenticated/sources/': typeof AuthenticatedSourcesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -88,14 +97,15 @@ export interface FileRouteTypes {
     | '/pipelines'
     | '/sources'
     | '/sources/$id'
+    | '/sources/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/explorations'
     | '/pipelines'
-    | '/sources'
     | '/sources/$id'
+    | '/sources'
   id:
     | '__root__'
     | '/'
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
     | '/_authenticated/pipelines'
     | '/_authenticated/sources'
     | '/_authenticated/sources/$id'
+    | '/_authenticated/sources/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -157,6 +168,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSourcesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/sources/': {
+      id: '/_authenticated/sources/'
+      path: '/'
+      fullPath: '/sources/'
+      preLoaderRoute: typeof AuthenticatedSourcesIndexRouteImport
+      parentRoute: typeof AuthenticatedSourcesRoute
+    }
     '/_authenticated/sources/$id': {
       id: '/_authenticated/sources/$id'
       path: '/$id'
@@ -169,10 +187,12 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedSourcesRouteChildren {
   AuthenticatedSourcesIdRoute: typeof AuthenticatedSourcesIdRoute
+  AuthenticatedSourcesIndexRoute: typeof AuthenticatedSourcesIndexRoute
 }
 
 const AuthenticatedSourcesRouteChildren: AuthenticatedSourcesRouteChildren = {
   AuthenticatedSourcesIdRoute: AuthenticatedSourcesIdRoute,
+  AuthenticatedSourcesIndexRoute: AuthenticatedSourcesIndexRoute,
 }
 
 const AuthenticatedSourcesRouteWithChildren =
