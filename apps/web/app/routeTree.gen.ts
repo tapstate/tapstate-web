@@ -16,7 +16,6 @@ import { Route as AuthenticatedExplorationsRouteImport } from './routes/_authent
 import { Route as AuthenticatedPipelinesRouteImport } from './routes/_authenticated.pipelines'
 import { Route as AuthenticatedSourcesRouteImport } from './routes/_authenticated.sources'
 import { Route as AuthenticatedSourcesIndexRouteImport } from './routes/_authenticated.sources.index'
-import { Route as AuthenticatedSourcesIdRouteImport } from './routes/_authenticated.sources.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -54,11 +53,6 @@ const AuthenticatedSourcesIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedSourcesRoute,
   } as any)
-const AuthenticatedSourcesIdRoute = AuthenticatedSourcesIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AuthenticatedSourcesRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -66,7 +60,6 @@ export interface FileRoutesByFullPath {
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
   '/sources': typeof AuthenticatedSourcesRouteWithChildren
-  '/sources/$id': typeof AuthenticatedSourcesIdRoute
   '/sources/': typeof AuthenticatedSourcesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -74,7 +67,6 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
-  '/sources/$id': typeof AuthenticatedSourcesIdRoute
   '/sources': typeof AuthenticatedSourcesIndexRoute
 }
 export interface FileRoutesById {
@@ -85,27 +77,14 @@ export interface FileRoutesById {
   '/_authenticated/explorations': typeof AuthenticatedExplorationsRoute
   '/_authenticated/pipelines': typeof AuthenticatedPipelinesRoute
   '/_authenticated/sources': typeof AuthenticatedSourcesRouteWithChildren
-  '/_authenticated/sources/$id': typeof AuthenticatedSourcesIdRoute
   '/_authenticated/sources/': typeof AuthenticatedSourcesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/login'
-    | '/explorations'
-    | '/pipelines'
-    | '/sources'
-    | '/sources/$id'
-    | '/sources/'
+    '/' | '/login' | '/explorations' | '/pipelines' | '/sources' | '/sources/'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/login'
-    | '/explorations'
-    | '/pipelines'
-    | '/sources/$id'
-    | '/sources'
+  to: '/' | '/login' | '/explorations' | '/pipelines' | '/sources'
   id:
     | '__root__'
     | '/'
@@ -114,7 +93,6 @@ export interface FileRouteTypes {
     | '/_authenticated/explorations'
     | '/_authenticated/pipelines'
     | '/_authenticated/sources'
-    | '/_authenticated/sources/$id'
     | '/_authenticated/sources/'
   fileRoutesById: FileRoutesById
 }
@@ -175,23 +153,14 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSourcesIndexRouteImport
       parentRoute: typeof AuthenticatedSourcesRoute
     }
-    '/_authenticated/sources/$id': {
-      id: '/_authenticated/sources/$id'
-      path: '/$id'
-      fullPath: '/sources/$id'
-      preLoaderRoute: typeof AuthenticatedSourcesIdRouteImport
-      parentRoute: typeof AuthenticatedSourcesRoute
-    }
   }
 }
 
 interface AuthenticatedSourcesRouteChildren {
-  AuthenticatedSourcesIdRoute: typeof AuthenticatedSourcesIdRoute
   AuthenticatedSourcesIndexRoute: typeof AuthenticatedSourcesIndexRoute
 }
 
 const AuthenticatedSourcesRouteChildren: AuthenticatedSourcesRouteChildren = {
-  AuthenticatedSourcesIdRoute: AuthenticatedSourcesIdRoute,
   AuthenticatedSourcesIndexRoute: AuthenticatedSourcesIndexRoute,
 }
 

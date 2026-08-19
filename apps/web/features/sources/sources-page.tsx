@@ -1,7 +1,6 @@
 import type { ComponentType, SVGProps } from 'react'
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
 import {
   Activity,
   AlertCircle,
@@ -48,12 +47,7 @@ interface SourceTable {
   id: string
   name: string
   type: string
-  rows: string
-  size: string
-  lastSync: string
-  ingestedRows: string
-  quarantine: string
-  endpoint: string
+  selector: string
 }
 
 interface Source {
@@ -108,7 +102,6 @@ function tabIcon(tabName: SourceTab): ComponentType<SVGProps<SVGSVGElement>> {
 
 export function SourcesPage() {
   const { t } = useTranslation()
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const [searchText, setSearchText] = useState('')
@@ -124,13 +117,16 @@ export function SourcesPage() {
       id: `${table.type}-${name}-${index}`,
       name,
       type: table.type,
-      rows: '—',
-      size: '—',
-      lastSync: '—',
-      ingestedRows: '—',
-      quarantine: '—',
-      endpoint: t('sources.details.endpointUnavailable'),
+      selector: selectorDescription(table),
     }
+  }
+
+  function selectorDescription(table: SourceTableView) {
+    if (table.type === 'literal' && table.name) return table.name
+    if (table.pattern) return table.pattern
+    if (table.filter) return table.filter
+    if (table.pk?.length) return table.pk.join(', ')
+    return t('sources.details.selectorUnavailable')
   }
 
   function sourceEndpoint(source: SourceView) {
@@ -184,11 +180,7 @@ export function SourcesPage() {
   )
 
   function selectSource(source: Source | null) {
-    if (source) {
-      void navigate({ to: '/sources/$id', params: { id: source.id } })
-      return
-    }
-    setSelectedSourceId(null)
+    setSelectedSourceId(source?.id ?? null)
     setSelectedTableId(null)
     setActiveTab('data')
   }
@@ -207,7 +199,6 @@ export function SourcesPage() {
     setSelectedSourceId(created.id)
     setSelectedTableId(null)
     setSuccessMessage(t('sources.create.success', { id: created.id }))
-    void navigate({ to: '/sources/$id', params: { id: created.id } })
   }
 
   const loadError =
@@ -368,7 +359,9 @@ export function SourcesPage() {
                             className="h-1.5 w-1.5 rounded-full bg-gray-300"
                             aria-hidden="true"
                           />
-                          {t('sources.details.secretConfigured')}
+                          {t('sources.details.secretConfiguredCount', {
+                            count: selectedSource.raw.configuredSecrets.length,
+                          })}
                         </span>
                       </div>
                     </div>
@@ -404,9 +397,8 @@ export function SourcesPage() {
                   <DataTable
                     headers={[
                       t('sources.table.name'),
-                      t('sources.table.rows'),
-                      t('sources.table.size'),
-                      t('sources.table.lastSync'),
+                      t('sources.table.type'),
+                      t('sources.table.selector'),
                       t('common.actions'),
                     ]}
                   >
@@ -425,13 +417,10 @@ export function SourcesPage() {
                             <span className="font-medium text-gray-900">{table.name}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right font-mono text-[12px] text-gray-400">
-                          {table.rows}
+                        <td className="px-4 py-3 text-gray-600">{table.type}</td>
+                        <td className="max-w-[320px] truncate px-4 py-3 font-mono text-[12px] text-gray-500">
+                          {table.selector}
                         </td>
-                        <td className="px-4 py-3 text-right font-mono text-[12px] text-gray-400">
-                          {table.size}
-                        </td>
-                        <td className="px-4 py-3 text-gray-400">{table.lastSync}</td>
                         <td className="px-4 py-3 text-right">
                           <ChevronRight
                             className="inline-block h-4 w-4 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100"
@@ -489,21 +478,11 @@ export function SourcesPage() {
                       return <Icon className="h-8 w-8 text-gray-300" aria-hidden="true" />
                     })()}
                     <div className="page-state__title">
-                      {t('sources.tabComingSoonTitle', { tab: activeTabLabel })}
+                      {t('sources.observationUnavailableTitle', { tab: activeTabLabel })}
                     </div>
-                    <p className="page-state__body">{t('sources.tabComingSoonBody')}</p>
+                    <p className="page-state__body">{t('sources.observationUnavailableBody')}</p>
                   </div>
                 </div>
-                <aside className="flex w-full shrink-0 flex-col gap-5 border-t border-gray-100/70 bg-[#fcfcfd]/80 p-5 lg:w-64 lg:border-t-0 lg:border-l">
-                  <div className="mb-4 text-[11px] font-semibold text-gray-500 uppercase">
-                    {t('sources.stats.last24h')}
-                  </div>
-                  <dl className="space-y-3.5 border-t border-gray-200/70 pt-5 text-[12px]">
-                    <Stat label={t('sources.stats.size')} value={selectedTable.size} />
-                    <Stat label={t('sources.stats.rows')} value={selectedTable.rows} />
-                    <Stat label={t('sources.stats.lastUpdate')} value={selectedTable.lastSync} />
-                  </dl>
-                </aside>
               </div>
             </div>
           ) : (
@@ -645,15 +624,6 @@ function AllSourcesView({
           </DataTable>
         )}
       </div>
-    </div>
-  )
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between gap-3">
-      <dt className="text-gray-500">{label}</dt>
-      <dd className="font-medium text-gray-400">{value}</dd>
     </div>
   )
 }
