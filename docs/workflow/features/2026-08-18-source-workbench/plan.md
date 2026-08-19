@@ -1,9 +1,9 @@
 # Source Workbench CRUD
 
 > 状态：In Progress
-> 进度：90%
+> 进度：95%
 > 当前步骤：验证与分支交付
-> 下一步：等待可连接 SourceController 的控制面完成一次 live CRUD
+> 下一步：恢复隔离控制面后完成浏览器写操作和窄屏验收
 > 日期：2026-08-18
 > Owner：Codex
 > Feature folder：docs/workflow/features/2026-08-18-source-workbench/
@@ -43,7 +43,7 @@
 
 | 时间 | Actor | 进度 | 已完成 | 下一步 | 阻塞 |
 | ---- | ----- | ---- | ------ | ------ | ---- |
-| 2026-08-18 | Codex | 90% | 完成 Source CRUD、Formily connector UI bridge、路由和三套 locale | 提交并推送；等待连接到 SourceController 的 live CRUD | 本地 UI 后端未提供 connector catalog |
+| 2026-08-18 | Codex | 95% | 完成 Source CRUD、Formily connector UI bridge、路由和三套 locale；隔离控制面已验证 catalog 与 Source HTTP CRUD | 恢复隔离控制面，完成浏览器 create/edit/delete 和 375px 检查 | 当前本机隔离 Mongo / dev server 未运行 |
 
 ## 5. TDD / Verification Strategy
 
@@ -80,12 +80,14 @@
 | 2026-08-18 | `pnpm --filter web i18n:check` | Passed | en / zh-CN / zh-TW keys synchronized |
 | 2026-08-18 | `pnpm lint:code` | Passed | |
 | 2026-08-18 | `pnpm --filter web build` | Passed | Existing large-chunk warning only |
-| 2026-08-18 | Local UI smoke | Blocked | Local page reaches login, but its backend does not expose the Source connector catalog |
+| 2026-08-18 | Isolated control-plane API CRUD | Passed | Bootstrap, login, catalog, list/create/update/delete, secret omit/clear and stale ETag `412` verified against port 8081 and an isolated Mongo database |
+| 2026-08-18 | Local browser read smoke | Passed | Authenticated browser reached `/sources`, rendered the empty state and create dialog, loaded the live connector catalog, and rendered the MySQL Formily fields including the secret control |
+| 2026-08-19 | Browser mutation / responsive smoke | Pending | The previously isolated Mongo, control-plane, and dev servers are no longer running; restart them before the final browser create/edit/delete and 375px pass |
 
 ## 9. Finish Notes
 
 - 交付摘要：Source CRUD uses artifact-backed API projections. Connector forms are bridged through Formily schemas and write only structured Source config state back to the page.
-- 最终进度：90%。
+- 最终进度：95%。
 - 最终步骤：验证与分支交付。
-- 剩余风险：connector catalog 字段扩展、连接到新 SourceController 的浏览器 live CRUD。
+- 剩余风险：connector catalog 字段扩展、恢复隔离环境后的浏览器 live CRUD 与窄屏检查。
 - Follow-up：Pipeline UI/runtime observation。
