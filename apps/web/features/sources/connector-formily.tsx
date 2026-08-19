@@ -11,7 +11,7 @@ import {
   useField,
 } from '@formily/react'
 import { Eye, EyeOff, KeyRound, Pencil, Trash2 } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { ConnectorConfigField, JsonValue } from '@/service/source-client'
@@ -44,6 +44,7 @@ type ControlProps = {
   dataSource?: SelectOption[]
   placeholder?: string
   configured?: boolean
+  requiredSecret?: boolean
   draft?: SecretDraft
   fieldName?: string
   onSecretChange?: (name: string, draft: SecretDraft) => void
@@ -143,13 +144,26 @@ function SecretInputBase({
   onChange,
   disabled,
   configured,
+  requiredSecret,
   draft,
   fieldName,
   onSecretChange,
 }: ControlProps) {
   const { t } = useTranslation()
   const [visible, setVisible] = useState(false)
-  const currentDraft = draft ?? { action: 'keep' as const, value: '' }
+  const [currentDraft, setCurrentDraft] = useState<SecretDraft>(
+    draft ?? { action: 'keep', value: '' },
+  )
+
+  useEffect(() => {
+    setCurrentDraft(draft ?? { action: 'keep', value: '' })
+  }, [draft?.action, draft?.value])
+
+  function updateSecretDraft(nextDraft: SecretDraft) {
+    setCurrentDraft(nextDraft)
+    if (fieldName) onSecretChange?.(fieldName, nextDraft)
+  }
+
   const replacing = currentDraft.action === 'replace'
   const cleared = currentDraft.action === 'clear'
 
@@ -190,10 +204,7 @@ function SecretInputBase({
             cleared ? t('sources.edit.secretCleared') : t('sources.edit.secretConfigured')
           }
           autoComplete="new-password"
-          onChange={(event) =>
-            fieldName &&
-            onSecretChange?.(fieldName, { action: 'replace', value: event.target.value })
-          }
+          onChange={(event) => updateSecretDraft({ action: 'replace', value: event.target.value })}
         />
         {replacing && (
           <button
@@ -211,30 +222,28 @@ function SecretInputBase({
             disabled={disabled}
             className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
             aria-label={t('sources.edit.secretReplace')}
-            onClick={() =>
-              fieldName && onSecretChange?.(fieldName, { action: 'replace', value: '' })
-            }
+            onClick={() => updateSecretDraft({ action: 'replace', value: '' })}
           >
             <Pencil className="h-3.5 w-3.5" />
           </button>
         )}
-        <button
-          type="button"
-          disabled={disabled}
-          className={`rounded p-1 ${
-            cleared ? 'text-red-600' : 'text-gray-400 hover:bg-gray-100 hover:text-red-600'
-          }`}
-          aria-label={cleared ? t('sources.edit.secretKeep') : t('sources.edit.secretClear')}
-          onClick={() =>
-            fieldName &&
-            onSecretChange?.(
-              fieldName,
-              cleared ? { action: 'keep', value: '' } : { action: 'clear', value: '' },
-            )
-          }
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        {!requiredSecret && (
+          <button
+            type="button"
+            disabled={disabled}
+            className={`rounded p-1 ${
+              cleared ? 'text-red-600' : 'text-gray-400 hover:bg-gray-100 hover:text-red-600'
+            }`}
+            aria-label={cleared ? t('sources.edit.secretKeep') : t('sources.edit.secretClear')}
+            onClick={() =>
+              updateSecretDraft(
+                cleared ? { action: 'keep', value: '' } : { action: 'clear', value: '' },
+              )
+            }
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
       <span className="source-field__hint">
         {cleared ? t('sources.edit.secretClearHint') : t('sources.edit.secretConfiguredHint')}
@@ -338,6 +347,7 @@ const FormilySchemaField = createSchemaField({
 
 export interface ConnectorFormilyProps {
   fields: readonly ConnectorConfigField[]
+  schema?: ISchema
   resetKey?: string
   initialValues?: SourceConfigState
   configuredSecrets?: readonly string[]
@@ -372,31 +382,33 @@ function createSchema(
   secretDrafts: Record<string, SecretDraft>,
   disabled: boolean,
   onSecretChange?: (name: string, draft: SecretDraft) => void,
+  sourceSchema?: ISchema,
 ) {
-  const base = connectorFieldsToFormilySchema(fields) as ISchema & {
+  const base = (sourceSchema ?? connectorFieldsToFormilySchema(fields)) as ISchema & {
     properties: Record<string, ISchema>
   }
   const properties = Object.fromEntries(
-    fields.map((field) => {
-      const property = base.properties[field.name] ?? {}
+    Object.entries(base.properties ?? {}).map(([name, property]) => {
+      const field = fields.find((candidate) => candidate.name === name)
       const decoratorProps = {
         ...(property['x-decorator-props'] as Record<string, unknown> | undefined),
-        error: errors[field.name],
+        ...(field ? { error: errors[field.name] } : {}),
       }
       const componentProps = {
         ...(property['x-component-props'] as Record<string, unknown> | undefined),
         disabled,
-        ...(field.secret
+        ...(field?.secret
           ? {
-              configured: configuredSecrets.includes(field.name),
-              draft: secretDrafts[field.name],
-              fieldName: field.name,
+              configured: configuredSecrets.includes(name),
+              requiredSecret: field.required,
+              draft: secretDrafts[name],
+              fieldName: name,
               onSecretChange,
             }
           : {}),
       }
       return [
-        field.name,
+        name,
         {
           ...property,
           'x-decorator-props': decoratorProps,
@@ -410,6 +422,7 @@ function createSchema(
 
 export function ConnectorFormily({
   fields,
+  schema: sourceSchema,
   resetKey,
   initialValues,
   configuredSecrets = [],
@@ -438,8 +451,17 @@ export function ConnectorFormily({
   )
 
   const schema = useMemo(
-    () => createSchema(fields, errors, configuredSecrets, secretDrafts, disabled, onSecretChange),
-    [configuredSecrets, disabled, errors, fields, onSecretChange, secretDrafts],
+    () =>
+      createSchema(
+        fields,
+        errors,
+        configuredSecrets,
+        secretDrafts,
+        disabled,
+        onSecretChange,
+        sourceSchema,
+      ),
+    [configuredSecrets, disabled, errors, fields, onSecretChange, secretDrafts, sourceSchema],
   )
 
   return (

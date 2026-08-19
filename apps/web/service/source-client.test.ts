@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest'
 import {
   createSource,
   deleteSource,
+  getConnector,
   getSource,
+  listConnectors,
   listSources,
   SourceClientError,
   updateSource,
@@ -44,6 +46,34 @@ function fetcherFor(response: Response, seen: Request[] = []): ApiFetcher {
 }
 
 describe('source client', () => {
+  it('retains the verbatim connector spec source for a Formily consumer', async () => {
+    const connector = {
+      id: 'mysql',
+      name: 'MySQL',
+      group: 'database',
+      modes: ['cdc'],
+      discovery: 'table',
+      sink: false,
+      pushOut: false,
+      origin: 'registered',
+      icon: 'icons/mysql.png',
+      runtimeAvailable: true,
+      config: [],
+      spec: {
+        contentHash: 'b'.repeat(64),
+        text: '{"configOptions":{"connection":{"type":"object","properties":{}}}}',
+        unavailable: null,
+      },
+    }
+
+    await expect(getConnector('mysql', fetcherFor(jsonResponse(connector)))).resolves.toEqual(
+      connector,
+    )
+    await expect(
+      listConnectors(fetcherFor(jsonResponse({ connectors: [connector] }))),
+    ).resolves.toMatchObject([{ id: 'mysql', name: 'MySQL' }])
+  })
+
   it('lists and fetches projected sources', async () => {
     const fetcher = fetcherFor(jsonResponse({ items: [source] }))
     await expect(listSources(fetcher)).resolves.toEqual([source])
@@ -53,6 +83,25 @@ describe('source client', () => {
       fetcherFor(jsonResponse(source, 200, `"${source.contentHash}"`)),
     )
     expect(detail).toEqual({ source, etag: `"${source.contentHash}"` })
+  })
+
+  it('accepts nullable optional projection maps from the control plane', async () => {
+    const nullableMapsSource = { ...source, options: null, experimental: null }
+    const { options: _options, experimental: _experimental, ...omittedMapsSource } = source
+
+    await expect(
+      getSource(
+        'orders',
+        fetcherFor(jsonResponse(nullableMapsSource, 200, `"${source.contentHash}"`)),
+      ),
+    ).resolves.toEqual({ source: nullableMapsSource, etag: `"${source.contentHash}"` })
+
+    await expect(
+      getSource(
+        'orders',
+        fetcherFor(jsonResponse(omittedMapsSource, 200, `"${source.contentHash}"`)),
+      ),
+    ).resolves.toEqual({ source: omittedMapsSource, etag: `"${source.contentHash}"` })
   })
 
   it('captures the server ETag for create and reuses it for update', async () => {

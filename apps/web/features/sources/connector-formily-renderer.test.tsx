@@ -1,11 +1,12 @@
 import '@/i18n/index'
-import { act } from 'react'
+import { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import type { ConnectorConfigField } from '@/service/source-client'
 
 import { ConnectorFormily } from './connector-formily'
+import { connectorSpecConnectionSchema } from './connector-spec-formily-schema'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
@@ -104,6 +105,44 @@ function fieldControl(label: string) {
 }
 
 describe('ConnectorFormily', () => {
+  it('renders the connection schema declared in connector spec text', async () => {
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const schema = connectorSpecConnectionSchema(
+      JSON.stringify({
+        configOptions: {
+          connection: {
+            type: 'object',
+            properties: {
+              host: {
+                type: 'string',
+                title: 'Spec host',
+                'x-decorator': 'FormItem',
+                'x-component': 'Input',
+              },
+            },
+          },
+        },
+      }),
+      fields,
+    )
+
+    await act(async () => {
+      root?.render(
+        <ConnectorFormily
+          fields={fields}
+          schema={schema}
+          resetKey="create:mysql:spec"
+          initialValues={{ host: 'db.local' }}
+        />,
+      )
+    })
+
+    expect(fieldControl('Spec host')).toBeInstanceOf(HTMLInputElement)
+    expect(container.textContent).not.toContain('Host')
+  })
+
   it('renders catalog field types and synchronizes Formily input changes', async () => {
     const changes: Array<Record<string, unknown>> = []
     container = document.createElement('div')
@@ -226,5 +265,98 @@ describe('ConnectorFormily', () => {
     await act(async () => replace?.click())
 
     expect(secretChanges).toContainEqual({ name: 'password', action: 'replace', value: '' })
+  })
+
+  it('only exposes clearing for configured optional secrets', async () => {
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+
+    await act(async () => {
+      root?.render(
+        <ConnectorFormily
+          fields={fields}
+          resetKey="orders:etag-1"
+          initialValues={{
+            host: 'db.local',
+            port: 5432,
+            tls: true,
+            schemas: ['public'],
+            mode: '',
+          }}
+          configuredSecrets={['password']}
+          secretDrafts={{ password: { action: 'keep', value: '' } }}
+        />,
+      )
+    })
+
+    expect(container.querySelector('[aria-label="Clear secret"]')).toBeNull()
+
+    await act(async () => {
+      root?.render(
+        <ConnectorFormily
+          fields={fields.map((field) =>
+            field.name === 'password' ? { ...field, required: false } : field,
+          )}
+          resetKey="orders:etag-2"
+          initialValues={{
+            host: 'db.local',
+            port: 5432,
+            tls: true,
+            schemas: ['public'],
+            mode: '',
+          }}
+          configuredSecrets={['password']}
+          secretDrafts={{ password: { action: 'keep', value: '' } }}
+        />,
+      )
+    })
+
+    expect(container.querySelector('[aria-label="Clear secret"]')).not.toBeNull()
+  })
+
+  it('reflects configured secret draft changes back into the Formily control', async () => {
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+
+    function SecretDraftBridge() {
+      const [secretDrafts, setSecretDrafts] = useState({
+        password: { action: 'keep' as const, value: '' },
+      })
+
+      return (
+        <ConnectorFormily
+          fields={fields}
+          resetKey="orders:etag-1"
+          initialValues={{
+            host: 'db.local',
+            port: 5432,
+            tls: true,
+            schemas: ['public'],
+            mode: '',
+          }}
+          configuredSecrets={['password']}
+          secretDrafts={secretDrafts}
+          onSecretChange={(name, draft) =>
+            setSecretDrafts((current) => ({ ...current, [name]: draft }))
+          }
+        />
+      )
+    }
+
+    await act(async () => {
+      root?.render(<SecretDraftBridge />)
+    })
+
+    const password = fieldControl('Password') as HTMLInputElement
+    expect(password.disabled).toBe(true)
+
+    const replace = container.querySelector<HTMLButtonElement>(
+      '[aria-label="Replace configured secret"]',
+    )
+    await act(async () => replace?.click())
+
+    expect((fieldControl('Password') as HTMLInputElement).disabled).toBe(false)
   })
 })

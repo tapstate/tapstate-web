@@ -19,9 +19,9 @@ export interface SourceView {
   configuredSecrets: string[]
   mode: string | null
   tables: SourceTableView[] | null
-  options: Record<string, JsonValue>
+  options?: Record<string, JsonValue> | null
   srs: Record<string, JsonValue> | null
-  experimental: Record<string, JsonValue>
+  experimental?: Record<string, JsonValue> | null
   contentHash: string
 }
 
@@ -89,9 +89,17 @@ export interface ConnectorConfigField {
   visibleWhen: ConnectorVisibility | null
 }
 
+export interface ConnectorSpecSource {
+  contentHash: string
+  text: string | null
+  unavailable: string | null
+}
+
 export interface ConnectorDetail extends ConnectorSummary {
   icon: string | null
   config: ConnectorConfigField[]
+  spec: ConnectorSpecSource
+  runtimeAvailable: boolean
 }
 
 export type SourceClientErrorKind = 'network' | 'server' | 'protocol'
@@ -127,6 +135,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+function isConnectorSpecSource(value: unknown): value is ConnectorSpecSource {
+  return (
+    isRecord(value) &&
+    typeof value.contentHash === 'string' &&
+    (value.text === null || typeof value.text === 'string') &&
+    (value.unavailable === null || typeof value.unavailable === 'string') &&
+    (value.text === null) !== (value.unavailable === null)
+  )
+}
+
 function isSourceView(value: unknown): value is SourceView {
   return (
     isRecord(value) &&
@@ -135,8 +153,10 @@ function isSourceView(value: unknown): value is SourceView {
     isRecord(value.config) &&
     Array.isArray(value.configuredSecrets) &&
     typeof value.contentHash === 'string' &&
-    isRecord(value.options) &&
-    isRecord(value.experimental)
+    (value.options === undefined || value.options === null || isRecord(value.options)) &&
+    (value.experimental === undefined ||
+      value.experimental === null ||
+      isRecord(value.experimental))
   )
 }
 
@@ -209,7 +229,13 @@ export async function getConnector(
   fetcher: ApiFetcher = fetch,
 ): Promise<ConnectorDetail> {
   const { payload } = await requestJson(`/connectors/${encodeURIComponent(id)}`, fetcher)
-  if (!isRecord(payload) || payload.id !== id || !Array.isArray(payload.config))
+  if (
+    !isRecord(payload) ||
+    payload.id !== id ||
+    !Array.isArray(payload.config) ||
+    !isConnectorSpecSource(payload.spec) ||
+    typeof payload.runtimeAvailable !== 'boolean'
+  )
     throw new SourceClientError('protocol', 'the connector detail response is malformed')
   return payload as unknown as ConnectorDetail
 }
