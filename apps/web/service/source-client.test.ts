@@ -8,6 +8,7 @@ import {
   listConnectors,
   listSources,
   SourceClientError,
+  testConnection,
   updateSource,
   type ApiFetcher,
   type SourceDraft,
@@ -178,6 +179,62 @@ describe('source client', () => {
     const body = JSON.parse(await requests[0].text())
     expect(body.config).toEqual({ host: 'localhost' })
     expect(body.clearSecrets).toEqual(['password'])
+  })
+
+  it('posts the current connection draft and returns the complete test report', async () => {
+    const requests: Request[] = []
+    const report = {
+      connectionId: 'orders',
+      connectorId: 'mysql',
+      outcome: 'PASSED',
+      checks: [
+        {
+          name: 'connection',
+          status: 'PASSED',
+          message: 'Connected',
+          reason: null,
+          solution: null,
+          connectorErrorCode: null,
+        },
+      ],
+      testedAt: 1_754_800_000_000,
+    }
+
+    await expect(
+      testConnection(
+        {
+          id: 'orders',
+          connectorId: 'mysql',
+          settings: { host: 'db.internal', password: 'write-only' },
+        },
+        fetcherFor(jsonResponse(report), requests),
+      ),
+    ).resolves.toEqual(report)
+
+    expect(requests).toHaveLength(1)
+    expect(new URL(requests[0].url).pathname).toBe('/api/connections:test')
+    expect(requests[0].method).toBe('POST')
+    expect(JSON.parse(await requests[0].text())).toEqual({
+      id: 'orders',
+      connectorId: 'mysql',
+      settings: { host: 'db.internal', password: 'write-only' },
+    })
+  })
+
+  it('refuses a malformed connection test response', async () => {
+    await expect(
+      testConnection(
+        { id: 'orders', connectorId: 'mysql', settings: { host: 'db.internal' } },
+        fetcherFor(
+          jsonResponse({
+            connectionId: 'orders',
+            connectorId: 'mysql',
+            outcome: 'PASSED',
+            checks: [],
+          }),
+        ),
+      ),
+    ).rejects.toMatchObject({ kind: 'protocol' })
   })
 
   it('preserves structured server errors including referrer params', async () => {

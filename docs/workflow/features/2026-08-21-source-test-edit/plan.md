@@ -1,8 +1,8 @@
 # Source edit and connection test plan
 
 > 状态：In Progress
-> 进度：98%
-> 当前步骤：完成创建连接器多列浮层卡片与标题语义的本地页面目检
+> 进度：99%
+> 当前步骤：完成连接测试的 build、格式和差异检查
 > 下一步：在经确认的本地认证会话中完成桌面和窄屏检查
 > 日期：2026-08-21
 > Owner：Codex
@@ -13,11 +13,11 @@
 
 ## 1. Scope Check
 
-- Spec 已确认：是，connection test contract 缺口已记录。
+- Spec 已确认：是，既有 connection test contract 已核对。
 - Prototype 已确认 / 已说明跳过：是，见 `prototype.md`。
-- 非目标已确认：不猜测 test endpoint，不变更 create 和 Formily runtime。
+- 非目标已确认：不新增 Source test endpoint，不变更 create 和 Formily runtime。
 - 是否新增依赖：否。
-- 是否影响 IA / 权限 / 数据契约：不新增 IA 或权限。编辑消费现有 get/update。测试需要后端新合同。
+- 是否影响 IA / 权限 / 数据契约：不新增 IA 或权限。编辑消费现有 get/update；测试消费已有一次性 JSON 合同。
 
 ## 2. 受影响文件
 
@@ -25,21 +25,24 @@
 - `apps/web/features/sources/sources-page.test.tsx`
 - `apps/web/features/sources/source-edit-dialog.tsx`，如需把未接入的旧布局收敛至当前 Formily 规范。
 - `apps/web/features/sources/source-edit-dialog.test.ts`
+- `apps/web/features/sources/connection-test-result.tsx`
+- `apps/web/service/source-client.ts`
+- `apps/web/service/source-client.test.ts`
 - `docs/workflow/features/2026-08-21-source-test-edit/*`
 
 ## 3. Implementation Steps
 
 状态枚举：`Todo` / `In Progress` / `Blocked` / `Done` / `Skipped`
 
-| Step | 状态        | 改动                                                                     | 验证                                       | 备注                                                 |
-| ---- | ----------- | ------------------------------------------------------------------------ | ------------------------------------------ | ---------------------------------------------------- |
-| 1    | Done        | 检索现有 API、Source page、edit dialog 和测试合同                        | `rg`, source client tests                  | 未发现 connection test endpoint                      |
-| 2    | Done        | Source page Edit loading, success, error 用例                            | Focused Vitest                             | 不依赖未确认测试 API                                 |
-| 3    | Done        | 接入 getSource detail query、Edit action、cache update、retry            | Focused Vitest + typecheck                 | ETag 来自 detail GET                                 |
-| 4    | Done        | 复核 Edit dialog 外层布局、单列字段和 token 使用                         | Source review + focused tests              | 不暴露旧双列 grid                                    |
-| 5    | Blocked     | 实现 Test connection client 与 UI                                        | backend contract                           | 需要 endpoint 语义和 error contract                  |
-| 6    | In Progress | 完成 tests、i18n、typecheck、format、diff 与 authenticated UI inspection | Level 2                                    | 新增 Source ID 语义校验，仍剩本地登录后的 UI 目检    |
-| 7    | Done        | 将创建连接器选择改为多列无边框浮层卡片                                   | Focused Vitest + typecheck + format + diff | 选择区按产品决定使用 `bg-gray-50/40`；页面目检待认证 |
+| Step | 状态        | 改动                                                                            | 验证                                       | 备注                                                 |
+| ---- | ----------- | ------------------------------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------- |
+| 1    | Done        | 检索现有 API、Source page、edit dialog 和测试合同                               | `rg`, backend control API                  | 既有 `POST /api/connections:test` 为同步 JSON 合同   |
+| 2    | Done        | Source page Edit loading, success, error 用例                                   | Focused Vitest                             | 不依赖未确认测试 API                                 |
+| 3    | Done        | 接入 getSource detail query、Edit action、cache update、retry                   | Focused Vitest + typecheck                 | ETag 来自 detail GET                                 |
+| 4    | Done        | 复核 Edit dialog 外层布局、单列字段和 token 使用                                | Source review + focused tests              | 不暴露旧双列 grid                                    |
+| 5    | Done        | 实现 Test connection client、create/edit draft UI 和结果反馈                    | client + component focused Vitest          | 直接返回完整报告；保留密钥必须重新输入               |
+| 6    | In Progress | 完成 tests、i18n、typecheck、format、build、diff 与 authenticated UI inspection | Level 3                                    | 仍剩本地登录后的 UI 目检                             |
+| 7    | Done        | 将创建连接器选择改为多列无边框浮层卡片                                          | Focused Vitest + typecheck + format + diff | 选择区按产品决定使用 `bg-gray-50/40`；页面目检待认证 |
 
 ## 4. Progress Log
 
@@ -54,20 +57,21 @@
 | 2026-08-21 | Codex | 97%  | 连接器卡片动效按最新要求统一为 `transition-all duration-300`，保留 1px hover 上移与弥散阴影反馈                                                                 | 重跑 focused test、format 与 diff  | connection-test API contract 未定义 |
 | 2026-08-21 | Codex | 97%  | 移除连接器数量对搜索框显隐和过滤的影响，搜索框成为选择页的固定布局区域                                                                                          | 重跑 focused test、format 与 diff  | connection-test API contract 未定义 |
 | 2026-08-21 | Codex | 98%  | 经过术语复核，创建流程首步标题定为“选择连接器 / Choose a connector”，避免与最终产物 Source 混淆，配置步骤继续使用所选连接器名                                   | 重跑 focused test、i18n 与格式检查 | connection-test API contract 未定义 |
+| 2026-08-21 | Codex | 99%  | 核对既有 `POST /api/connections:test`：请求一次性返回完整 JSON report；create/edit footer 已接入，保留的 write-only 密钥需重输后测试                            | build、格式、差异和认证页面目检    | 认证页面目检待本地会话              |
 
 ## 5. TDD / Verification Strategy
 
-- 先失败的用例或检查：点击 Edit 使用 detail GET 的 Source/ETag 打开 dialog；loading 不丢失操作区；detail failure 提供 retry；save 回写 list/detail cache。
-- 单元 / 组件 / E2E：`sources-page.test.tsx`，既有 `source-edit-dialog.test.ts` 和 `source-client.test.ts`。
+- 先失败的用例或检查：connection test client 使用既有 path/POST body 并拒绝不完整 report；编辑保留密钥被识别为不可测试；创建表单提交当前草稿并渲染 report。
+- 单元 / 组件 / E2E：`source-client.test.ts`、`source-create-dialog.test.tsx`、`source-edit-dialog.test.ts` 和既有 `sources-page.test.tsx`。
 - 手工 UI 检查：桌面 1280px 和 mobile 375px，检查 detail action 换行、dialog 单列、长 locale 字符串。
 - 视觉决策扫描：复用 current Source workbench 的静态 Toolbar 与 shadcn token。Edit pending 仅改变 icon，保持 action slot 的字体和高度。
 - 验证分级：Level 2，focused tests、i18n check、typecheck、lint/format、可用时 local browser inspection。
 
 ## 6. Debug Log
 
-| 时间       | 现象                 | 假设                               | 实验                                 | 结论                                  |
-| ---------- | -------------------- | ---------------------------------- | ------------------------------------ | ------------------------------------- |
-| 2026-08-21 | Test button disabled | 前端已具备 test client 或 contract | 搜索 source client、docs、repository | 只有 UI placeholder，无 test endpoint |
+| 时间       | 现象            | 假设                     | 实验                                  | 结论                                                        |
+| ---------- | --------------- | ------------------------ | ------------------------------------- | ----------------------------------------------------------- |
+| 2026-08-21 | Test button缺失 | 后端尚未实现 Source test | 核对 control REST API 和 report model | 已有通用 `POST /api/connections:test`，direct JSON response |
 
 ## 7. Review Checklist
 
@@ -96,11 +100,15 @@
 | 2026-08-21 | `pnpm typecheck`                            | Passed              | packages/formily and apps/web completed                                                                                           |
 | 2026-08-21 | scoped `oxfmt --check` + `git diff --check` | Passed              | Source create and feature documents are formatted, with no diff whitespace errors                                                 |
 | 2026-08-21 | Desktop / mobile inspection                 | Pending             | local login requires password-entry confirmation                                                                                  |
+| 2026-08-21 | Source test focused Vitest                  | Passed              | 3 files, 19 tests: path/body/report、draft test feedback 与保留密钥边界                                                           |
+| 2026-08-21 | `pnpm typecheck` + i18n check               | Passed              | `packages/formily` 和 `apps/web` completed；3 套 locale key 一致                                                                  |
+| 2026-08-21 | `pnpm build`                                | Passed              | Vite production build completed; only the existing chunk-size warning remains                                                     |
+| 2026-08-21 | `pnpm lint`                                 | Blocked by baseline | oxlint passed; repo-wide format check reports 36 unrelated existing files                                                         |
 
 ## 9. Finish Notes
 
-- 交付摘要：Pending。
-- 最终进度：Pending。
-- 最终步骤：Pending。
-- 剩余风险：connection-test API contract。
-- Follow-up：在 endpoint 确认后实现 pending, success 和 failure feedback。
+- 交付摘要：实现 Source create/edit 草稿的同步连接测试，展示真实 outcome 和 checks。
+- 最终进度：99%，等待认证会话下的视觉检查。
+- 最终步骤：在本地认证会话检查 desktop 和 375px 窄屏。
+- 剩余风险：认证状态下的 desktop/mobile 页面目检。
+- Follow-up：如后端增加细粒度 test error catalog，再映射为面向用户的行动提示。

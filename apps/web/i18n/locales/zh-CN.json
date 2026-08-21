@@ -129,6 +129,24 @@
       "sync": "同步配置",
       "test": "测试连接"
     },
+    "test": {
+      "action": "测试连接",
+      "testing": "正在测试连接",
+      "passed": "连接测试通过",
+      "failed": "连接测试失败",
+      "reenterSecrets": "测试此草稿前，请重新输入已配置的密钥。",
+      "status": {
+        "passed": "通过",
+        "warning": "警告",
+        "failed": "失败"
+      },
+      "errors": {
+        "network": "无法连接控制面，请检查后端连接后重试。",
+        "protocol": "控制面返回了无效的连接测试结果，请重试。",
+        "server": "控制面无法测试此连接。",
+        "unknown": "无法测试此连接，请重试。"
+      }
+    },
     "empty": {
       "title": "还没有数据源",
       "body": "添加一个由连接器驱动的数据源，让 Tapstate 可以使用实时数据。"

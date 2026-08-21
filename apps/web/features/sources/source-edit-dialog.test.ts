@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest'
 
 import type { ConnectorConfigField } from '@/service/source-client'
 
-import { buildSourceEditConfig, serializeSourceSrs } from './source-edit-dialog'
+import {
+  buildSourceEditConfig,
+  retainedSecretNames,
+  serializeSourceSrs,
+} from './source-edit-dialog'
 
 describe('SourceEditDialog source payload helpers', () => {
   const fields: ConnectorConfigField[] = [
@@ -55,6 +59,14 @@ describe('SourceEditDialog source payload helpers', () => {
       clearSecrets: [],
       errors: {},
     })
+  })
+
+  it('identifies configured secrets that must be re-entered before testing', () => {
+    expect(retainedSecretNames({ password: { action: 'keep', value: '' } })).toEqual(['password'])
+
+    expect(retainedSecretNames({ password: { action: 'replace', value: 'replacement' } })).toEqual(
+      [],
+    )
   })
 
   it('omits an untouched empty SRS from an unrelated edit', () => {

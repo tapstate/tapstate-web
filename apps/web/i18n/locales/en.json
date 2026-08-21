@@ -129,6 +129,24 @@
       "sync": "Sync config",
       "test": "Test connection"
     },
+    "test": {
+      "action": "Test connection",
+      "testing": "Testing connection",
+      "passed": "Connection test passed",
+      "failed": "Connection test failed",
+      "reenterSecrets": "Re-enter configured secrets before testing this draft.",
+      "status": {
+        "passed": "Passed",
+        "warning": "Warning",
+        "failed": "Failed"
+      },
+      "errors": {
+        "network": "The control plane is unreachable. Check the connection and try again.",
+        "protocol": "The control plane returned an invalid connection test result. Try again.",
+        "server": "The control plane could not test this connection.",
+        "unknown": "The connection could not be tested. Try again."
+      }
+    },
     "empty": {
       "title": "No sources yet",
       "body": "Add a connector-backed source to make live data available to Tapstate."

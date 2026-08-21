@@ -129,6 +129,24 @@
       "sync": "同步設定",
       "test": "測試連線"
     },
+    "test": {
+      "action": "測試連線",
+      "testing": "正在測試連線",
+      "passed": "連線測試通過",
+      "failed": "連線測試失敗",
+      "reenterSecrets": "測試此草稿前，請重新輸入已設定的密鑰。",
+      "status": {
+        "passed": "通過",
+        "warning": "警告",
+        "failed": "失敗"
+      },
+      "errors": {
+        "network": "無法連接控制面，請檢查後端連線後重試。",
+        "protocol": "控制面回傳了無效的連線測試結果，請重試。",
+        "server": "控制面無法測試此連線。",
+        "unknown": "無法測試此連線，請重試。"
+      }
+    },
     "empty": {
       "title": "尚未建立資料來源",
       "body": "新增一個由連接器驅動的資料來源，讓 Tapstate 可以使用即時資料。"

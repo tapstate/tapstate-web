@@ -132,6 +132,32 @@ export interface SourceEnvelope {
   etag: string
 }
 
+export type ConnectionTestOutcome = 'PASSED' | 'FAILED'
+export type ConnectionTestCheckStatus = 'PASSED' | 'WARNING' | 'FAILED'
+
+export interface ConnectionTestCheck {
+  name: string
+  status: ConnectionTestCheckStatus
+  message?: string | null
+  reason?: string | null
+  solution?: string | null
+  connectorErrorCode?: string | null
+}
+
+export interface ConnectionTestReport {
+  connectionId: string
+  connectorId: string
+  outcome: ConnectionTestOutcome
+  checks: ConnectionTestCheck[]
+  testedAt: number
+}
+
+export interface ConnectionTestRequest {
+  id: string
+  connectorId: string
+  settings: Record<string, JsonValue>
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -199,6 +225,34 @@ function isSourceView(value: unknown): value is SourceView {
     (value.experimental === undefined ||
       value.experimental === null ||
       isRecord(value.experimental))
+  )
+}
+
+function optionalString(value: unknown) {
+  return value === undefined || value === null || typeof value === 'string'
+}
+
+function isConnectionTestCheck(value: unknown): value is ConnectionTestCheck {
+  return (
+    isRecord(value) &&
+    typeof value.name === 'string' &&
+    (value.status === 'PASSED' || value.status === 'WARNING' || value.status === 'FAILED') &&
+    optionalString(value.message) &&
+    optionalString(value.reason) &&
+    optionalString(value.solution) &&
+    optionalString(value.connectorErrorCode)
+  )
+}
+
+function isConnectionTestReport(value: unknown): value is ConnectionTestReport {
+  return (
+    isRecord(value) &&
+    typeof value.connectionId === 'string' &&
+    typeof value.connectorId === 'string' &&
+    (value.outcome === 'PASSED' || value.outcome === 'FAILED') &&
+    Array.isArray(value.checks) &&
+    value.checks.every(isConnectionTestCheck) &&
+    typeof value.testedAt === 'number'
   )
 }
 
@@ -294,6 +348,24 @@ export async function getSource(id: string, fetcher: ApiFetcher = fetch): Promis
   if (!isSourceView(payload) || payload.id !== id || !quotedHash(etag))
     throw new SourceClientError('protocol', 'the source detail response is malformed')
   return { source: payload, etag }
+}
+
+export async function testConnection(
+  request: ConnectionTestRequest,
+  fetcher: ApiFetcher = fetch,
+): Promise<ConnectionTestReport> {
+  const { payload } = await requestJson('/connections:test', fetcher, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  })
+  if (
+    !isConnectionTestReport(payload) ||
+    payload.connectionId !== request.id ||
+    payload.connectorId !== request.connectorId
+  )
+    throw new SourceClientError('protocol', 'the connection test response is malformed')
+  return payload
 }
 
 function requireIfMatch(id: string, etag: string) {
