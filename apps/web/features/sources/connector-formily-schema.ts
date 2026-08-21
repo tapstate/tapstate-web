@@ -15,17 +15,17 @@ type FormilySchema = ISchema & {
 }
 
 function fieldComponent(field: ConnectorConfigField) {
-  if (field.secret) return 'SecretInput'
+  if (field.secret) return 'Password'
   if (field.options.length > 0) return 'Select'
   switch (field.type) {
     case 'number':
-      return 'NumberInput'
+      return 'NumberPicker'
     case 'boolean':
-      return 'Checkbox'
+      return 'Switch'
     case 'array':
       return 'ArrayInput'
     default:
-      return 'TextInput'
+      return 'Input'
   }
 }
 

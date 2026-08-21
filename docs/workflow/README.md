@@ -5,7 +5,7 @@
 
 ## 1. 设计原则
 
-本仓库采用 feature-centric 文档结构：一个需求一个 feature 文件夹，需求意图、原型、执行计划、验收记录放在一起。这样比按 `specs/`、`plans/`、`acceptance/` 分散存放更接近现代前端项目与 AI 研发流程的主流做法，也更方便 Codex、Claude Code、reviewer 和后续维护者追踪上下文。
+本仓库采用 feature-centric 文档结构：需要持续追踪的需求使用一个 feature 文件夹，把需求意图、原型、执行计划、验收记录放在一起。微小改动、问答、诊断和单点文档修订不强制建立 feature，避免流程文档反过来成为负担。
 
 本流程参考但不绑定任何插件：
 
@@ -22,6 +22,14 @@ intake -> spec -> prototype -> plan -> implement -> review -> acceptance
 其中 `plan.md` 同时承担执行进度账本，不再单独维护一份 plan progress 文件。
 
 ## 2. 文件落点
+
+### Feature Scope Gate
+
+默认不建 feature 的任务包括：问答、状态查询、代码阅读 / 诊断、单文件 typo 或文案修订、单点 class / 图标 / 默认值调整、格式化，以及可在一次短改动内完成且没有数据流、交互流程或跨模块风险的任务。
+
+必须建 feature 的任务包括：新增页面或路由、复杂 UI / 表单流程、跨模块改动、数据契约 / 权限 / API 变化、i18n 多语言联动、依赖或构建边界变化，以及用户明确要求 spec / plan / 验收追踪的任务。
+
+边界情况先按小任务开始；如果范围扩大，再建立 feature 并纳入已有改动。
 
 ```text
 docs/workflow/
@@ -65,11 +73,13 @@ docs/workflow/
 
 ## 4. 阶段门禁
 
+以下阶段门禁只适用于 feature-scope 任务。小任务直接执行与风险匹配的验证，不要求补齐 feature 文档。
+
 ### G0 Intake
 
 - 保留用户原始输入，不能只写 agent 总结。
 - 记录上下文、假设、未决问题。
-- 建立或定位 `docs/workflow/features/<date>-<slug>/spec.md`。
+- 对 feature-scope 任务建立或定位 `docs/workflow/features/<date>-<slug>/spec.md`。
 
 ### G1 Decompose
 

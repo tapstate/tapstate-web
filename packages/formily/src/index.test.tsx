@@ -74,6 +74,7 @@ describe('FormilySchema', () => {
 
     const input = container.querySelector('input')
     expect(container.textContent).toContain('Host')
+    expect(container.firstElementChild?.getAttribute('class')).toBeNull()
     expect(input).toBeInstanceOf(HTMLInputElement)
     expect((input as HTMLInputElement).value).toBe('db.local')
 

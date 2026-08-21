@@ -1,14 +1,27 @@
 import '@/i18n/index'
+import type { ISchema } from '@formily/json-schema'
+
 import { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import type { ConnectorConfigField } from '@/service/source-client'
 
+import { formilyAntdPrefixCls, formilyAntdTheme } from '@/components/formily/formily-antd-provider'
+
 import { ConnectorFormily } from './connector-formily'
 import { connectorSpecConnectionSchema } from './connector-spec-formily-schema'
 
-Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+Object.assign(globalThis, {
+  IS_REACT_ACT_ENVIRONMENT: true,
+  ResizeObserver: ResizeObserverMock,
+})
 
 const fields: ConnectorConfigField[] = [
   {
@@ -97,14 +110,114 @@ afterEach(async () => {
 })
 
 function fieldControl(label: string) {
-  const field = [...(container?.querySelectorAll('label') ?? [])].find(
-    (element) => element.querySelector('.source-field__label')?.textContent?.trim() === label,
+  const field = [...(container?.querySelectorAll('[class*="formily-item"]') ?? [])].find(
+    (element) => element.querySelector('label')?.textContent?.trim() === label,
   )
   if (!field) throw new Error(`Expected ${label} field`)
   return field.querySelector('input, textarea, button')
 }
 
 describe('ConnectorFormily', () => {
+  it('shares a generic shadcn-aligned provider with other Formily renderers', () => {
+    expect(formilyAntdPrefixCls).toBe('tap-formily')
+    expect(formilyAntdTheme.token).toMatchObject({
+      borderRadius: 10,
+      colorBgContainer: 'var(--background)',
+      colorBorder: 'var(--border)',
+      colorPrimary: 'var(--primary)',
+      colorText: 'var(--foreground)',
+      controlOutline: 'color-mix(in oklch, var(--ring) 20%, transparent)',
+    })
+  })
+
+  it('renders Formily radio groups as shadcn-style segmented button groups', async () => {
+    const changes: Array<Record<string, unknown>> = []
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const schema: ISchema = {
+      type: 'object',
+      properties: {
+        strategy: {
+          type: 'string',
+          title: 'Strategy',
+          enum: [
+            { label: 'Balanced', value: 'balanced' },
+            { label: 'Fast', value: 'fast' },
+          ],
+          'x-decorator': 'FormItem',
+          'x-component': 'Radio.Group',
+        },
+      },
+    }
+
+    await act(async () => {
+      root?.render(
+        <ConnectorFormily
+          fields={fields}
+          schema={schema}
+          resetKey="create:radio-group"
+          initialValues={{ strategy: 'balanced' }}
+          onValuesChange={(values) => changes.push(values)}
+        />,
+      )
+    })
+
+    const group = container.querySelector<HTMLElement>('[role="group"][aria-label="Strategy"]')
+    expect(group?.dataset.slot).toBe('button-group')
+    expect(group?.classList).toContain('bg-muted')
+    expect(group?.classList).toContain('border-border')
+
+    const buttons = [...(group?.querySelectorAll<HTMLButtonElement>('button') ?? [])]
+    expect(buttons.map((button) => button.textContent)).toEqual(['Balanced', 'Fast'])
+    expect(buttons[0]?.getAttribute('aria-pressed')).toBe('true')
+    expect(buttons[1]?.getAttribute('aria-pressed')).toBe('false')
+
+    await act(async () => buttons[1]?.click())
+
+    expect(changes.at(-1)).toMatchObject({ strategy: 'fast' })
+  })
+
+  it('registers adapter components and backend-compatible aliases', async () => {
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const schema: ISchema = {
+      type: 'object',
+      properties: {
+        adapterPassword: {
+          type: 'string',
+          title: 'Adapter password',
+          'x-decorator': 'FormItem',
+          'x-component': 'Password',
+        },
+        adapterPort: {
+          type: 'number',
+          title: 'Adapter port',
+          'x-decorator': 'FormItem',
+          'x-component': 'InputNumber',
+        },
+      },
+    }
+
+    await act(async () => {
+      root?.render(
+        <ConnectorFormily
+          fields={fields}
+          schema={schema}
+          resetKey="create:adapter-password"
+          initialValues={{ adapterPassword: '', adapterPort: 5432 }}
+        />,
+      )
+    })
+
+    expect(
+      container.querySelector('.tap-formily-formily-layout.tap-formily-form-vertical'),
+    ).not.toBeNull()
+    expect(fieldControl('Adapter password')).toHaveProperty('type', 'password')
+    expect(fieldControl('Adapter port')).toHaveProperty('value', '5432')
+  })
+
   it('renders the connection schema declared in connector spec text', async () => {
     container = document.createElement('div')
     document.body.append(container)
@@ -125,7 +238,7 @@ describe('ConnectorFormily', () => {
           },
         },
       }),
-      fields,
+      'en',
     )
 
     await act(async () => {
@@ -141,6 +254,45 @@ describe('ConnectorFormily', () => {
 
     expect(fieldControl('Spec host')).toBeInstanceOf(HTMLInputElement)
     expect(container.textContent).not.toContain('Host')
+  })
+
+  it('uses the AntD Password renderer for unconfigured catalog secrets in raw specs', async () => {
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+
+    const schema = connectorSpecConnectionSchema(
+      JSON.stringify({
+        configOptions: {
+          connection: {
+            type: 'object',
+            properties: {
+              password: {
+                type: 'string',
+                title: 'Spec password',
+                'x-decorator': 'FormItem',
+                'x-component': 'Input',
+              },
+            },
+          },
+        },
+      }),
+      'en',
+    )
+
+    await act(async () => {
+      root?.render(
+        <ConnectorFormily
+          fields={fields}
+          schema={schema}
+          resetKey="create:mysql:secret-spec"
+          initialValues={{ password: '' }}
+        />,
+      )
+    })
+
+    expect(fieldControl('Spec password')).toHaveProperty('type', 'password')
+    expect(container.querySelector('[aria-label="Replace configured secret"]')).toBeNull()
   })
 
   it('renders catalog field types and synchronizes Formily input changes', async () => {
@@ -168,12 +320,13 @@ describe('ConnectorFormily', () => {
     })
 
     expect(fieldControl('Host')).toBeInstanceOf(HTMLInputElement)
-    expect(fieldControl('Port')).toHaveProperty('type', 'number')
-    expect(fieldControl('TLS')).toHaveProperty('type', 'checkbox')
+    expect(fieldControl('Port')?.getAttribute('role')).toBe('spinbutton')
+    expect(fieldControl('TLS')?.getAttribute('role')).toBe('switch')
     expect(fieldControl('Schemas')).toBeInstanceOf(HTMLTextAreaElement)
+    expect((fieldControl('Schemas') as HTMLTextAreaElement).value).toBe('[\n  "public"\n]')
     expect(fieldControl('Database')).toBeInstanceOf(HTMLInputElement)
     expect(fieldControl('Password')).toHaveProperty('type', 'password')
-    expect(fieldControl('Mode')?.getAttribute('aria-label')).toBe('select')
+    expect(fieldControl('Mode')?.getAttribute('aria-label')).toBe('Mode')
 
     const host = fieldControl('Host') as HTMLInputElement
     const setNativeValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set

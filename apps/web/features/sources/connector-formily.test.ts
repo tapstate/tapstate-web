@@ -94,12 +94,12 @@ describe('connector Formily adapter', () => {
       type: 'number',
       title: 'Port',
       default: 5432,
-      'x-component': 'NumberInput',
+      'x-component': 'NumberPicker',
     })
     expect(schema.properties?.ssl).toMatchObject({
       type: 'boolean',
       default: true,
-      'x-component': 'Checkbox',
+      'x-component': 'Switch',
     })
     expect(schema.properties?.mode).toMatchObject({
       'x-component': 'Select',
@@ -122,7 +122,7 @@ describe('connector Formily adapter', () => {
       },
     })
     expect(schema.properties?.password).toMatchObject({
-      'x-component': 'SecretInput',
+      'x-component': 'Password',
       'x-value-change': 'replace',
     })
   })

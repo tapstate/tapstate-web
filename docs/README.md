@@ -21,7 +21,7 @@ docs/
 
 ## 放置规则
 
-- 新需求、需求拆解、原型、执行计划、验收记录：放在 `docs/workflow/features/YYYY-MM-DD-slug/`。
+- 需要持续追踪的新需求、需求拆解、原型、执行计划、验收记录：放在 `docs/workflow/features/YYYY-MM-DD-slug/`；微小改动、问答、诊断和单点文档修订不强制建立 feature。
 - 流程规则、模板、阶段门禁：放在 `docs/workflow/`。
 - 从同步主干、开分支到提交 PR 的开发者日常流程：放在 `docs/workflow/branch-pr-flow.md`。
 - 一级导航、产品对象边界、菜单 IA、稳定的产品决策：放在 `docs/product/`。
@@ -29,7 +29,7 @@ docs/
 
 ## 最小闭环
 
-每个非微小需求至少包含：
+每个 feature-scope 需求至少包含：
 
 1. `spec.md`
 2. `plan.md`

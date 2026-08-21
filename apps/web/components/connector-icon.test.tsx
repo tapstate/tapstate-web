@@ -23,22 +23,20 @@ afterEach(async () => {
 })
 
 describe('ConnectorIcon', () => {
-  it('renders two layers from the direct registered connector image URL', async () => {
+  it('renders the direct registered connector image URL', async () => {
     await act(async () => {
-      root?.render(
-        <ConnectorIcon connectorId="mysql" name="MySQL" iconPath="icons/mysql.png" />,
-      )
+      root?.render(<ConnectorIcon connectorId="mysql" name="MySQL" iconPath="icons/mysql.png" />)
     })
 
     const images = [...(host?.querySelectorAll('img') ?? [])]
-    expect(images).toHaveLength(2)
-    expect(images.map((image) => image.getAttribute('src'))).toEqual([
-      '/connector-icons/mysql',
-      '/connector-icons/mysql',
-    ])
+    expect(images).toHaveLength(1)
+    expect(images.map((image) => image.getAttribute('src'))).toEqual(['/connector-icons/mysql'])
     expect(images[0]?.className).toContain('connector-icon__image')
-    expect(images[1]?.className).toContain('connector-icon__ambient')
-    expect(images[1]?.getAttribute('aria-hidden')).toBe('true')
+
+    const icon = host?.querySelector('.connector-icon')
+    expect(icon?.classList.contains('relative')).toBe(true)
+    expect(icon?.classList.contains('overflow-hidden')).toBe(true)
+    expect(icon?.classList.contains('isolate')).toBe(true)
   })
 
   it('shows a monogram fallback when the direct image cannot load', async () => {

@@ -1,6 +1,6 @@
 import type { ISchema } from '@formily/json-schema'
 
-import type { ConnectorConfigField, JsonValue } from '@/service/source-client'
+import type { JsonValue } from '@/service/source-client'
 
 import type { SourceConfigState } from './source-form'
 
@@ -12,7 +12,27 @@ function asRecord(value: unknown): JsonRecord | null {
     : null
 }
 
-function connectionSchema(text: string): JsonRecord {
+function resolveSchemaMessages(value: unknown, messages: JsonRecord): unknown {
+  if (typeof value === 'string') {
+    return value.replace(/\$\{([^{}]+)\}/g, (template, key: string) => {
+      const message = messages[key.trim()]
+      return typeof message === 'string' ? message : template
+    })
+  }
+
+  if (Array.isArray(value)) return value.map((item) => resolveSchemaMessages(item, messages))
+
+  const record = asRecord(value)
+  if (record === null) return value
+
+  const resolved: JsonRecord = {}
+  for (const [key, child] of Object.entries(record)) {
+    resolved[key] = resolveSchemaMessages(child, messages)
+  }
+  return resolved
+}
+
+function parseConnectionSchema(text: string): { connection: JsonRecord; spec: JsonRecord } {
   let parsed: unknown
   try {
     parsed = JSON.parse(text)
@@ -21,69 +41,38 @@ function connectionSchema(text: string): JsonRecord {
   }
 
   const spec = asRecord(parsed)
+  if (spec === null) throw new Error('Connector spec does not declare configOptions.connection')
   const options = asRecord(spec?.configOptions)
   const connection = asRecord(options?.connection)
   if (connection === null || asRecord(connection.properties) === null)
     throw new Error('Connector spec does not declare configOptions.connection')
-  return connection
+  return { connection, spec }
 }
 
-function componentAlias(component: unknown) {
-  switch (component) {
-    case 'Input':
-      return 'TextInput'
-    case 'InputNumber':
-      return 'NumberInput'
-    case 'Password':
-      return 'SecretInput'
-    case 'Switch':
-      return 'Checkbox'
-    case 'ArrayItems':
-      return 'ArrayInput'
-    default:
-      return component
-  }
+function messageLocaleCandidates(locale: string) {
+  const normalized = locale.replace('-', '_')
+  const candidates = normalized === 'en' ? ['en_US', 'en'] : [normalized, locale]
+  return [...new Set(candidates)]
 }
 
-function adaptNode(
-  value: unknown,
-  secretFields: ReadonlySet<string>,
-  fieldName?: string,
-): JsonRecord {
-  const node = asRecord(value) ?? {}
-  const properties = asRecord(node.properties)
-  const component = secretFields.has(fieldName ?? '')
-    ? 'SecretInput'
-    : componentAlias(node['x-component'])
+function messagesForLocale(spec: JsonRecord, locale: string) {
+  const messages = asRecord(spec.messages)
+  if (messages === null) return {}
 
-  const next: JsonRecord = {
-    ...node,
-    ...(component === undefined ? {} : { 'x-component': component }),
+  for (const candidate of messageLocaleCandidates(locale)) {
+    const localizedMessages = asRecord(messages[candidate])
+    if (localizedMessages !== null) return localizedMessages
   }
-
-  if (properties) {
-    next.properties = Object.fromEntries(
-      Object.entries(properties).map(([name, property]) => [
-        name,
-        adaptNode(property, secretFields, name),
-      ]),
-    )
-  }
-
-  if (component === 'ArrayInput') {
-    delete next.items
-    delete next.properties
-  }
-
-  return next
+  return {}
 }
 
-export function connectorSpecConnectionSchema(
-  text: string,
-  fields: readonly ConnectorConfigField[],
-): ISchema {
-  const secretFields = new Set(fields.filter((field) => field.secret).map((field) => field.name))
-  return adaptNode(connectionSchema(text), secretFields) as ISchema
+function connectionSchema(text: string, locale: string): JsonRecord {
+  const { connection, spec } = parseConnectionSchema(text)
+  return resolveSchemaMessages(connection, messagesForLocale(spec, locale)) as JsonRecord
+}
+
+export function connectorSpecConnectionSchema(text: string, locale: string): ISchema {
+  return connectionSchema(text, locale) as ISchema
 }
 
 function isJsonValue(value: unknown): value is JsonValue {
@@ -110,6 +99,6 @@ function readDefaults(node: JsonRecord, values: SourceConfigState) {
 
 export function connectorSpecInitialValues(text: string): SourceConfigState {
   const values: SourceConfigState = {}
-  readDefaults(connectionSchema(text), values)
+  readDefaults(parseConnectionSchema(text).connection, values)
   return values
 }
