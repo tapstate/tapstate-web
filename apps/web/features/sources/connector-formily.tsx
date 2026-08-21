@@ -1,23 +1,18 @@
+import type { Field } from '@formily/core'
 import type { ISchema } from '@formily/json-schema'
 
+import { connect, mapProps } from '@formily/react'
+import * as AntdFormily from '@potop/formily-antd-v6'
 import { FormilySchema, useFormilyForm, type FormilyComponentMap } from '@tapstate-web/formily'
+import { Input as AntdInput } from 'antd'
 import { Eye, EyeOff, KeyRound, Pencil, Trash2 } from 'lucide-react'
-import { connect, mapProps, observer, useField } from '@formily/react'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { ConnectorConfigField, JsonValue } from '@/service/source-client'
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Checkbox as ShadcnCheckbox } from '@/components/ui/checkbox'
-import { Input as ShadcnInput } from '@/components/ui/input'
-import { Textarea as ShadcnTextarea } from '@/components/ui/textarea'
+import { FormilyAntdProvider } from '@/components/formily/formily-antd-provider'
+import { FormilySegmentedRadioGroup } from '@/components/formily/formily-segmented-radio'
 
 import type { SourceConfigState } from './source-form'
 
@@ -28,7 +23,6 @@ import {
 } from './connector-formily-schema'
 
 type FormValues = Record<string, unknown>
-type SelectOption = { label: string; value: string }
 export type SecretDraft = { action: 'keep' | 'replace' | 'clear'; value: string }
 
 type ControlProps = {
@@ -36,92 +30,16 @@ type ControlProps = {
   onChange?: (value: unknown) => void
   disabled?: boolean
   readOnly?: boolean
-  dataSource?: SelectOption[]
-  placeholder?: string
-  configured?: boolean
   requiredSecret?: boolean
   draft?: SecretDraft
   fieldName?: string
   onSecretChange?: (name: string, draft: SecretDraft) => void
 }
 
-const EMPTY_SELECT_VALUE = '__tapstate_empty_value__'
-
-function encodeSelectValue(value: string) {
-  return value === '' ? EMPTY_SELECT_VALUE : value
-}
-
-function decodeSelectValue(value: string) {
-  return value === EMPTY_SELECT_VALUE ? '' : value
-}
-
-function SelectInputBase({ value, onChange, disabled, dataSource }: ControlProps) {
-  return (
-    <Select
-      value={encodeSelectValue(typeof value === 'string' ? value : String(value ?? ''))}
-      disabled={disabled}
-      onValueChange={(next) => next !== null && onChange?.(decodeSelectValue(next))}
-    >
-      <SelectTrigger className="w-full" aria-label="select">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {(dataSource ?? []).map((option) => (
-          <SelectItem
-            key={`${option.value}-${option.label}`}
-            value={encodeSelectValue(option.value)}
-          >
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  )
-}
-
-function TextInputBase({ value, onChange, disabled, readOnly, placeholder }: ControlProps) {
-  return (
-    <ShadcnInput
-      value={typeof value === 'string' ? value : String(value ?? '')}
-      disabled={disabled}
-      readOnly={readOnly}
-      placeholder={placeholder}
-      onChange={(event) => onChange?.(event.target.value)}
-    />
-  )
-}
-
-function NumberInputBase({ value, onChange, disabled, readOnly, placeholder }: ControlProps) {
-  return (
-    <ShadcnInput
-      type="number"
-      value={typeof value === 'number' ? String(value) : String(value ?? '')}
-      disabled={disabled}
-      readOnly={readOnly}
-      placeholder={placeholder}
-      onChange={(event) =>
-        onChange?.(event.target.value === '' ? undefined : Number(event.target.value))
-      }
-    />
-  )
-}
-
-function CheckboxBase({ value, onChange, disabled, readOnly }: ControlProps) {
-  return (
-    <ShadcnCheckbox
-      checked={Boolean(value)}
-      disabled={disabled}
-      readOnly={readOnly}
-      onCheckedChange={(checked) => onChange?.(checked)}
-      aria-label="checkbox"
-    />
-  )
-}
-
 function ArrayInputBase({ value, onChange, disabled, readOnly }: ControlProps) {
   const text = Array.isArray(value) ? JSON.stringify(value, null, 2) : String(value ?? '')
   return (
-    <ShadcnTextarea
+    <AntdInput.TextArea
       rows={3}
       value={text}
       disabled={disabled}
@@ -131,11 +49,8 @@ function ArrayInputBase({ value, onChange, disabled, readOnly }: ControlProps) {
   )
 }
 
-function SecretInputBase({
-  value,
-  onChange,
+function ConfiguredSecretInputBase({
   disabled,
-  configured,
   requiredSecret,
   draft,
   fieldName,
@@ -159,84 +74,61 @@ function SecretInputBase({
   const replacing = currentDraft.action === 'replace'
   const cleared = currentDraft.action === 'clear'
 
-  if (!configured) {
-    return (
-      <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5">
-        <KeyRound className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
-        <input
-          className="min-w-0 flex-1 bg-transparent text-[13px] outline-none"
-          type={visible ? 'text' : 'password'}
-          value={typeof value === 'string' ? value : ''}
-          disabled={disabled}
-          autoComplete="new-password"
-          onChange={(event) => onChange?.(event.target.value)}
-        />
-        <button
-          type="button"
-          className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-          aria-label={visible ? t('sources.edit.secretHide') : t('sources.edit.secretShow')}
-          onClick={() => setVisible((current) => !current)}
-        >
-          {visible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-        </button>
-      </div>
-    )
-  }
-
   return (
-    <div className="source-field">
-      <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5">
-        <KeyRound className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
-        <input
-          className="min-w-0 flex-1 bg-transparent text-[13px] outline-none"
-          type={visible ? 'text' : 'password'}
-          value={replacing ? currentDraft.value : ''}
-          disabled={disabled || (!replacing && !cleared)}
-          placeholder={
-            cleared ? t('sources.edit.secretCleared') : t('sources.edit.secretConfigured')
-          }
-          autoComplete="new-password"
-          onChange={(event) => updateSecretDraft({ action: 'replace', value: event.target.value })}
-        />
-        {replacing && (
-          <button
-            type="button"
-            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-            aria-label={visible ? t('sources.edit.secretHide') : t('sources.edit.secretShow')}
-            onClick={() => setVisible((current) => !current)}
-          >
-            {visible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-          </button>
-        )}
-        {!replacing && !cleared && (
-          <button
-            type="button"
-            disabled={disabled}
-            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-            aria-label={t('sources.edit.secretReplace')}
-            onClick={() => updateSecretDraft({ action: 'replace', value: '' })}
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-        )}
-        {!requiredSecret && (
-          <button
-            type="button"
-            disabled={disabled}
-            className={`rounded p-1 ${
-              cleared ? 'text-red-600' : 'text-gray-400 hover:bg-gray-100 hover:text-red-600'
-            }`}
-            aria-label={cleared ? t('sources.edit.secretKeep') : t('sources.edit.secretClear')}
-            onClick={() =>
-              updateSecretDraft(
-                cleared ? { action: 'keep', value: '' } : { action: 'clear', value: '' },
-              )
-            }
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
+    <div>
+      <AntdInput
+        type={visible ? 'text' : 'password'}
+        prefix={<KeyRound className="text-muted-foreground size-3.5" aria-hidden="true" />}
+        suffix={
+          <div className="flex items-center gap-0.5">
+            {replacing && (
+              <button
+                type="button"
+                className="text-muted-foreground hover:bg-muted hover:text-foreground inline-flex size-7 items-center justify-center rounded-md transition-colors"
+                aria-label={visible ? t('sources.edit.secretHide') : t('sources.edit.secretShow')}
+                onClick={() => setVisible((current) => !current)}
+              >
+                {visible ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+              </button>
+            )}
+            {!replacing && !cleared && (
+              <button
+                type="button"
+                disabled={disabled}
+                className="text-muted-foreground hover:bg-muted hover:text-foreground inline-flex size-7 items-center justify-center rounded-md transition-colors"
+                aria-label={t('sources.edit.secretReplace')}
+                onClick={() => updateSecretDraft({ action: 'replace', value: '' })}
+              >
+                <Pencil className="size-3.5" />
+              </button>
+            )}
+            {!requiredSecret && (
+              <button
+                type="button"
+                disabled={disabled}
+                className={`inline-flex size-7 items-center justify-center rounded-md transition-colors ${
+                  cleared
+                    ? 'text-destructive'
+                    : 'text-muted-foreground hover:bg-destructive/10 hover:text-destructive'
+                }`}
+                aria-label={cleared ? t('sources.edit.secretKeep') : t('sources.edit.secretClear')}
+                onClick={() =>
+                  updateSecretDraft(
+                    cleared ? { action: 'keep', value: '' } : { action: 'clear', value: '' },
+                  )
+                }
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            )}
+          </div>
+        }
+        value={replacing ? currentDraft.value : ''}
+        disabled={disabled || (!replacing && !cleared)}
+        placeholder={cleared ? t('sources.edit.secretCleared') : t('sources.edit.secretConfigured')}
+        autoComplete="new-password"
+        onChange={(event) => updateSecretDraft({ action: 'replace', value: event.target.value })}
+      />
       <span className="source-field__hint">
         {cleared ? t('sources.edit.secretClearHint') : t('sources.edit.secretConfiguredHint')}
       </span>
@@ -244,87 +136,23 @@ function SecretInputBase({
   )
 }
 
-const SelectInput = connect(
-  SelectInputBase,
-  mapProps((props, field) => ({
-    ...props,
-    value: (field as any).value,
-    onChange: (field as any).onInput,
-  })),
-)
-
-const TextInput = connect(
-  TextInputBase,
-  mapProps((props, field) => ({
-    ...props,
-    value: (field as any).value,
-    onChange: (field as any).onInput,
-  })),
-)
-
-const NumberInput = connect(
-  NumberInputBase,
-  mapProps((props, field) => ({
-    ...props,
-    value: (field as any).value,
-    onChange: (field as any).onInput,
-  })),
-)
-
-const Checkbox = connect(
-  CheckboxBase,
-  mapProps((props, field) => ({
-    ...props,
-    value: (field as any).value,
-    onChange: (field as any).onInput,
-  })),
-)
+function formilyControlProps(field: unknown) {
+  const connectedField = field as Field | undefined
+  return {
+    value: connectedField?.value,
+    onChange: (value: unknown) => connectedField?.onInput(value),
+  }
+}
 
 const ArrayInput = connect(
   ArrayInputBase,
-  mapProps((props, field) => ({
-    ...props,
-    value: (field as any).value,
-    onChange: (field as any).onInput,
-  })),
+  mapProps((props, field) => ({ ...props, ...formilyControlProps(field) })),
 )
 
-const SecretInput = connect(
-  SecretInputBase,
-  mapProps((props, field) => ({
-    ...props,
-    value: (field as any).value,
-    onChange: (field as any).onInput,
-  })),
+const ConfiguredSecretInput = connect(
+  ConfiguredSecretInputBase,
+  mapProps((props, field) => ({ ...props, ...formilyControlProps(field) })),
 )
-
-const FormItem = observer(function FormItem({
-  title,
-  required,
-  error,
-  children,
-}: {
-  title?: ReactNode
-  required?: boolean
-  error?: string
-  children?: ReactNode
-}) {
-  const field = useField<any>()
-  const feedback = field?.selfErrors?.[0]
-  const label = title ?? field?.title
-  const isRequired = required ?? field?.required
-
-  return (
-    <label className="source-field">
-      <span className="source-field__label">
-        {label}
-        {isRequired && <small>*</small>}
-      </span>
-      {children}
-      {(error || feedback) && <span className="source-field__error">{error || feedback}</span>}
-    </label>
-  )
-})
 
 export interface ConnectorFormilyProps {
   fields: readonly ConnectorConfigField[]
@@ -371,17 +199,33 @@ function createSchema(
   const properties = Object.fromEntries(
     Object.entries(base.properties ?? {}).map(([name, property]) => {
       const field = fields.find((candidate) => candidate.name === name)
+      const configuredSecret = Boolean(field?.secret && configuredSecrets.includes(name))
+      const decoratorPropsFromSchema = property['x-decorator-props'] as
+        | Record<string, unknown>
+        | undefined
+      const componentPropsFromSchema = property['x-component-props'] as
+        | Record<string, unknown>
+        | undefined
+      const fieldTitle = typeof property.title === 'string' ? property.title : field?.label
       const decoratorProps = {
-        ...(property['x-decorator-props'] as Record<string, unknown> | undefined),
-        ...(field ? { error: errors[field.name] } : {}),
+        ...decoratorPropsFromSchema,
+        label: decoratorPropsFromSchema?.label ?? fieldTitle,
+        colon: false,
+        layout: 'vertical',
+        feedbackLayout: 'loose',
+        ...(field && errors[field.name]
+          ? { feedbackStatus: 'error', feedbackText: errors[field.name] }
+          : {}),
       }
       const componentProps = {
-        ...(property['x-component-props'] as Record<string, unknown> | undefined),
+        ...componentPropsFromSchema,
+        ...(typeof fieldTitle === 'string' && componentPropsFromSchema?.['aria-label'] === undefined
+          ? { 'aria-label': fieldTitle }
+          : {}),
         disabled,
-        ...(field?.secret
+        ...(configuredSecret
           ? {
-              configured: configuredSecrets.includes(name),
-              requiredSecret: field.required,
+              requiredSecret: field?.required ?? false,
               draft: secretDrafts[name],
               fieldName: name,
               onSecretChange,
@@ -392,6 +236,9 @@ function createSchema(
         name,
         {
           ...property,
+          ...(field?.secret
+            ? { 'x-component': configuredSecret ? 'ConfiguredSecretInput' : 'Password' }
+            : {}),
           'x-decorator-props': decoratorProps,
           'x-component-props': componentProps,
         },
@@ -400,6 +247,43 @@ function createSchema(
   )
   return { ...base, properties }
 }
+
+const {
+  FormDialog: _formDialog,
+  FormDrawer: _formDrawer,
+  FormLayoutDeepContext: _formLayoutDeepContext,
+  FormLayoutShallowContext: _formLayoutShallowContext,
+  InternalArrayCards: _internalArrayCards,
+  InternalRadio: _internalRadio,
+  Placeholder: _placeholder,
+  PlaceholderContext: _placeholderContext,
+  createFormGrid: _createFormGrid,
+  useFormDeepLayout: _useFormDeepLayout,
+  useFormGrid: _useFormGrid,
+  useFormItemLayout: _useFormItemLayout,
+  useFormLayout: _useFormLayout,
+  useFormShallowLayout: _useFormShallowLayout,
+  useOverflow: _useOverflow,
+  usePlaceholder: _usePlaceholder,
+  ...schemaAdapterComponents
+} = AntdFormily
+
+/**
+ * Register every public adapter component that is safe for a backend-defined
+ * `x-component`. The package's imperative factories, hooks, contexts, and
+ * internal implementation details are intentionally omitted.
+ */
+const antdFormilyComponents = {
+  ...schemaAdapterComponents,
+  // Connector specs also use Ant Design's familiar component name.
+  InputNumber: AntdFormily.NumberPicker,
+  Radio: Object.assign(
+    function FormilyRadio(props: ComponentProps<typeof AntdFormily.Radio>) {
+      return <AntdFormily.Radio {...props} />
+    },
+    { Group: FormilySegmentedRadioGroup },
+  ),
+} satisfies FormilyComponentMap
 
 export function ConnectorFormily({
   fields,
@@ -435,20 +319,18 @@ export function ConnectorFormily({
   )
   const components = useMemo<FormilyComponentMap>(
     () => ({
-      FormItem,
-      Input: TextInput,
-      TextInput,
-      InputNumber: NumberInput,
-      NumberInput,
-      Switch: Checkbox,
-      Checkbox,
-      ArrayItems: ArrayInput,
+      ...antdFormilyComponents,
       ArrayInput,
-      Select: SelectInput,
-      SecretInput,
+      ConfiguredSecretInput,
     }),
     [],
   )
 
-  return <FormilySchema key={formKey} form={form} schema={schema} components={components} />
+  return (
+    <FormilyAntdProvider>
+      <AntdFormily.FormLayout layout="vertical">
+        <FormilySchema key={formKey} form={form} schema={schema} components={components} />
+      </AntdFormily.FormLayout>
+    </FormilyAntdProvider>
+  )
 }

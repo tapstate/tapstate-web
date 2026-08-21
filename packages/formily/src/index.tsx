@@ -1,7 +1,7 @@
-import { createForm, onFieldValueChange, type Form } from '@formily/core'
 import type { ISchema } from '@formily/json-schema'
 import type { ComponentType } from 'react'
 
+import { createForm, onFieldValueChange, type Form } from '@formily/core'
 import { createSchemaField, FormProvider } from '@formily/react'
 import { useMemo, useRef } from 'react'
 
@@ -65,7 +65,7 @@ export function FormilySchema({
   form,
   schema,
   components,
-  className = 'grid gap-3 sm:grid-cols-2',
+  className,
   schemaKey,
 }: FormilySchemaProps) {
   const SchemaField = useMemo(() => createSchemaField({ components }), [components])

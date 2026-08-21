@@ -5,6 +5,7 @@ import {
   Activity,
   AlertCircle,
   ArrowLeft,
+  CheckCircle2,
   ChevronRight,
   Cloud,
   Columns,
@@ -23,11 +24,12 @@ import {
   Settings,
   Table as TableIcon,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import type { SourceTableView, SourceView } from '@/service/source-client'
+import type { SourceEnvelope, SourceTableView, SourceView } from '@/service/source-client'
 
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -36,10 +38,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { listSources, SourceClientError } from '@/service/source-client'
+import { getSource, listSources, SourceClientError } from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { SourceCreateDialog } from './source-create-dialog'
+import { SourceEditDialog } from './source-edit-dialog'
 
 type SourceTab = 'data' | 'columns' | 'settings' | 'lineage' | 'log'
 
@@ -109,6 +112,7 @@ export function SourcesPage() {
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<SourceTab>('data')
   const [createOpen, setCreateOpen] = useState(false)
+  const [editingSourceId, setEditingSourceId] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState('')
 
   function toTable(table: SourceTableView, index: number): SourceTable {
@@ -161,6 +165,12 @@ export function SourcesPage() {
     queryKey: ['sources'],
     queryFn: () => listSources(apiFetch),
   })
+  const editingSourceQuery = useQuery({
+    queryKey: ['source', editingSourceId],
+    enabled: editingSourceId !== null,
+    retry: false,
+    queryFn: () => getSource(editingSourceId!, apiFetch),
+  })
 
   const sources = (sourcesQuery.data ?? []).map(toSource)
   const sourceSearchQuery = searchText.trim().toLowerCase()
@@ -201,12 +211,33 @@ export function SourcesPage() {
     setSuccessMessage(t('sources.create.success', { id: created.id }))
   }
 
+  function onEdited(result: SourceEnvelope) {
+    queryClient.setQueryData<SourceView[]>(['sources'], (current) =>
+      [...(current ?? []).filter((item) => item.id !== result.source.id), result.source].sort(
+        (left, right) => left.id.localeCompare(right.id),
+      ),
+    )
+    queryClient.setQueryData<SourceEnvelope>(['source', result.source.id], result)
+    setSelectedSourceId(result.source.id)
+    setSelectedTableId(null)
+    setEditingSourceId(null)
+    setSuccessMessage(t('sources.edit.success', { id: result.source.id }))
+  }
+
+  useEffect(() => {
+    if (!successMessage) return
+    const timeoutId = window.setTimeout(() => setSuccessMessage(''), 4000)
+    return () => window.clearTimeout(timeoutId)
+  }, [successMessage])
+
   const loadError =
     sourcesQuery.error instanceof SourceClientError && sourcesQuery.error.kind === 'network'
       ? t('sources.states.network')
       : sourcesQuery.error
         ? t('sources.states.error')
         : ''
+  const editLoadFailed = editingSourceId === selectedSource?.id && editingSourceQuery.isError
+  const editLoading = editingSourceId === selectedSource?.id && editingSourceQuery.isFetching
 
   return (
     <section className="flex h-full w-full flex-col overflow-hidden bg-white">
@@ -225,8 +256,15 @@ export function SourcesPage() {
       </header>
 
       {successMessage && (
-        <div className="border-b border-emerald-100 bg-emerald-50 px-4 py-2 text-[13px] text-emerald-700 md:px-6">
-          {successMessage}
+        <div
+          className="pointer-events-none fixed top-4 right-4 z-50"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="border-border bg-background text-foreground flex items-center gap-2 rounded-lg border px-3 py-2 text-[13px] shadow-lg">
+            <CheckCircle2 className="text-primary size-4 shrink-0" aria-hidden="true" />
+            <span>{successMessage}</span>
+          </div>
         </div>
       )}
 
@@ -366,19 +404,35 @@ export function SourcesPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      disabled
-                      className="cursor-not-allowed rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-[13px] font-medium text-gray-400 shadow-sm"
+                  <div className="flex flex-wrap items-center gap-2">
+                    {editLoadFailed && (
+                      <div
+                        className="text-destructive flex items-center gap-1.5 text-[12px]"
+                        role="alert"
+                      >
+                        <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
+                        <span>{t('sources.edit.errors.unknown')}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => void editingSourceQuery.refetch()}
+                        >
+                          {t('state.error.retry')}
+                        </Button>
+                      </div>
+                    )}
+                    <Button
+                      variant="outline"
+                      type="button"
+                      disabled={editLoading}
+                      className="min-w-[72px]"
+                      onClick={() => setEditingSourceId(selectedSource.id)}
                     >
-                      {t('sources.actions.test')}
-                    </button>
-                    <button
-                      disabled
-                      className="cursor-not-allowed rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-[13px] font-medium text-gray-400 shadow-sm"
-                    >
-                      {t('sources.actions.sync')}
-                    </button>
+                      {editLoading && <LoaderCircle className="size-3.5 animate-spin" />}
+                      {t('sources.detail.edit')}
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -497,6 +551,20 @@ export function SourcesPage() {
       </div>
 
       <SourceCreateDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={onCreated} />
+      {editingSourceId &&
+        editingSourceQuery.data &&
+        !editingSourceQuery.isFetching &&
+        !editingSourceQuery.isError && (
+          <SourceEditDialog
+            open
+            source={editingSourceQuery.data.source}
+            etag={editingSourceQuery.data.etag}
+            onOpenChange={(nextOpen) => {
+              if (!nextOpen) setEditingSourceId(null)
+            }}
+            onSaved={onEdited}
+          />
+        )}
     </section>
   )
 }

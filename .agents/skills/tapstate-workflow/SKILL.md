@@ -1,6 +1,6 @@
 ---
 name: tapstate-workflow
-description: Use when working in the Tapstate Web repo on requirements, UI, IA, routes, i18n, data flow, tests, docs, plans, reviews, or acceptance records.
+description: Use when working in the Tapstate Web repo on feature-scope requirements, UI, IA, routes, i18n, data flow, tests, docs, plans, reviews, or acceptance records. Do not create feature documents for trivial edits, questions, status checks, read-only diagnostics, or single-point documentation changes.
 ---
 
 # Tapstate Workflow
@@ -11,7 +11,9 @@ Use the project's workflow as the repo-specific overlay for generic workflow ski
 
 ## Phase Map
 
-1. Intake: read `docs/workflow/README.md`; read `docs/product/information-architecture.md` only for IA/product-boundary work and `docs/engineering/tech-stack.md` only for engineering constraints; preserve the user's raw request in the spec.
+Classify the task before entering the workflow. Small tasks can be handled directly with risk-matched verification. Feature-scope tasks use the full workflow below.
+
+1. Intake: for feature-scope tasks, read `docs/workflow/README.md`; read `docs/product/information-architecture.md` only for IA/product-boundary work and `docs/engineering/tech-stack.md` only for engineering constraints; preserve the user's raw request in the spec.
 2. Decompose: create or update `docs/workflow/features/YYYY-MM-DD-kebab-name/spec.md` from `docs/workflow/templates/spec.md`.
 3. Prototype: for UI, IA, route, or complex interaction work, create or update `docs/workflow/features/YYYY-MM-DD-kebab-name/prototype.md` from `docs/workflow/templates/prototype.md`.
 4. Plan: create or update `docs/workflow/features/YYYY-MM-DD-kebab-name/plan.md` from `docs/workflow/templates/plan.md`; include small steps, progress fields, Progress Log, and verification gates.

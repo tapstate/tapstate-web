@@ -6,12 +6,16 @@
 
 ## Read Order
 
+涉及生成、修改、迁移、审查或验收 UI 的需求，必须阅读并执行根目录 [UI_DESIGN_GUIDELINES.md](./UI_DESIGN_GUIDELINES.md) 中的 Anti-Slop、布局、排版、颜色、交互和表单规则。
+
+开始前先判断任务复杂度：只有达到 feature scope 的任务才建立 feature 文件夹；微小改动、问答、状态查询、只读诊断和单点文档修订不需要建立 feature。
+
 每次开始需求前，先按需阅读这些文件：
 
 1. `README.md`：仓库结构、启动与门禁命令。
 2. `docs/README.md`：文档地图和放置规则。
 3. `docs/workflow/README.md`：项目研发流程和阶段门禁。
-4. 当前任务的 `docs/workflow/features/<date>-<slug>/`。没有时先创建。
+4. 如果任务属于 feature scope，读取或建立当前任务的 `docs/workflow/features/<date>-<slug>/`；否则直接按任务范围处理，不创建 feature 文档。
 5. `docs/product/information-architecture.md`：仅当需求触及 IA、一级导航、路由分组或产品对象边界时阅读。
 6. `docs/engineering/tech-stack.md`：仅当需求触及依赖、构建、i18n、测试策略或工程约束时阅读。
 
@@ -19,11 +23,20 @@
 
 ## Required Workflow
 
-1. Intake：建立或定位 `docs/workflow/features/<date>-<slug>/`，把用户原始需求、上下文、假设和未决问题写进 `spec.md`；不要只留在聊天里。
-2. Decompose：把需求拆成目标、非目标、用户路径、状态、数据、i18n、验收标准和风险。
-3. Prototype：UI / IA / 路由 / 复杂交互改动必须先有同一 feature 文件夹下的 `prototype.md` 或原型链接；纯逻辑小改可在 `spec.md` 中说明跳过原因。
-4. Plan：开始写代码前必须有同一 feature 文件夹下的 `plan.md`，使用 `docs/workflow/templates/plan.md`。
-5. Implement：按 plan 小步推进，完成一步就更新 step 状态、文件头进度和 Progress Log；不要把未计划的大重构混进去。
+生成或修改 UI 前必须完成 UI_DESIGN_GUIDELINES.md 的视觉决策扫描；发现禁用模式、无依据的视觉捷径或缺失交互状态时，先修正再交付，并在 feature 文档中记录必要例外。
+
+### Feature Scope Gate
+
+- **默认不建 feature**：问答、状态汇报、代码阅读 / 诊断、单文件 typo 或文案修订、单点 class / 图标 / 默认值调整、格式化和其他可在一次短改动内完成且没有数据流、交互流程或跨模块风险的任务。
+- **必须建 feature**：新增页面或路由、复杂 UI / 表单流程、跨多个模块的改动、数据契约 / 权限 / API 变化、i18n 多语言联动、依赖或构建边界变化，以及用户明确要求 spec / plan / 验收追踪的任务。
+- **边界情况**：先按小任务开始；如果范围扩大、出现第二个独立交互或产生跨模块风险，再建立 feature 并把已有改动纳入记录。
+- 小任务仍需做与风险匹配的验证，但不强制创建 spec、prototype、plan、acceptance。
+
+1. Intake（feature scope）：建立或定位 `docs/workflow/features/<date>-<slug>/`，把用户原始需求、上下文、假设和未决问题写进 `spec.md`；不要只留在聊天里。
+2. Decompose（feature scope）：把需求拆成目标、非目标、用户路径、状态、数据、i18n、验收标准和风险。
+3. Prototype（需要 UI / IA / 路由 / 复杂交互时）：在同一 feature 文件夹下维护 `prototype.md` 或原型链接；小任务不要求补齐该文件。
+4. Plan（feature scope）：开始写代码前维护同一 feature 文件夹下的 `plan.md`，使用 `docs/workflow/templates/plan.md`。
+5. Implement：feature scope 按 plan 小步推进；小任务直接完成并保留必要的验证记录，不补充不必要的流程文档。
 6. TDD / tests：涉及业务逻辑、状态流、工具函数或可测试交互时，先定义失败用例或验收检查，再实现。
 7. Debug：遇到失败时走系统化调试：复现、定位、提出假设、做最小实验、记录结论。
 8. Review：完成后做代码审查姿态的自检，优先找 bug、回归风险、缺失测试和 UI 状态遗漏。
@@ -42,12 +55,15 @@
 - Tailwind v4 显式使用 `@layer theme, base, components, utilities;`；自定义默认样式放 `@layer base`，应用语义 class 放 `@layer components`，确保 utilities 能覆盖默认样式。
 - UI 风格按 `docs/engineering/design-system.md` 的 shadcn / Linear 产品工作台规范收敛：语义 token 优先、状态完整、信息密度清晰；`--radius` 为 `0.625rem`，Tailwind `rounded-lg` 映射到 `var(--radius)`，表单控件 / 按钮 / Select trigger 等默认控件圆角按 `rounded-lg` / `var(--radius)` 即 `10px` 落地。
 - 图标优先用 lucide-react，不手写一次性复杂 SVG。
+- UI 生成和审查必须同时遵循根目录 [UI_DESIGN_GUIDELINES.md](./UI_DESIGN_GUIDELINES.md)。必须主动识别并拒绝其中列出的 AI Slop 模式；对间距、按钮比例、嵌套圆角、排版密度、颜色对比、focus ring、hover / active 状态和移动端 44px 触控目标逐项自检。未经明确产品、设计系统或无障碍依据，不得以“看起来没问题”为理由偏离规范。
 - 页面应该是企业产品工作台气质：信息密度清晰、布局稳定、操作路径短，不做营销式 hero。
 - 固定格式区域要有稳定尺寸约束，例如表格、工具栏、侧栏、状态卡、画布容器。
 - 避免裸字符串、单语言文案、临时 mock 文案进主干。
 - 不做无关重构；发现坏味道可记录到需求文档的 follow-up。
 
 ## Product Gates
+
+以下 spec、prototype、plan、acceptance 门禁只适用于 feature-scope 任务。小任务按风险执行必要检查，并在交付说明中简要记录结果即可。
 
 - Spec 必须写清楚原始输入、目标、非目标、用户路径、状态矩阵、i18n 范围和验收标准。
 - Prototype 必须写清楚布局、交互、响应式、四态和评审结论；UI / IA / 复杂交互改动不能跳过。

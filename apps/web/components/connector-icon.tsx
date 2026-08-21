@@ -13,7 +13,7 @@ function monogram(name: string) {
   return first ? first.toUpperCase() : '?'
 }
 
-/** Projects a registered connector icon as a direct image with a soft ambient duplicate behind it. */
+/** Projects a registered connector icon as a direct image with a restrained monogram fallback. */
 export function ConnectorIcon({
   connectorId,
   name,
@@ -30,33 +30,24 @@ export function ConnectorIcon({
 
   return (
     <span
-      className={'connector-icon' + (className ? ' ' + className : '')}
+      className={
+        'connector-icon relative isolate block shrink-0 overflow-hidden' +
+        (className ? ' ' + className : '')
+      }
       style={{ width: size, height: size }}
       data-fallback={src === null || failed ? monogram(name) : undefined}
       aria-hidden="true"
     >
       {src !== null && !failed && (
-        <>
-          <img
-            className="connector-icon__image"
-            src={src}
-            alt=""
-            width={size}
-            height={size}
-            loading="lazy"
-            onError={() => setFailed(true)}
-          />
-          <img
-            className="connector-icon__ambient"
-            src={src}
-            alt=""
-            width={size}
-            height={size}
-            loading="lazy"
-            aria-hidden="true"
-            onError={() => setFailed(true)}
-          />
-        </>
+        <img
+          className="connector-icon__image"
+          src={src}
+          alt=""
+          width={size}
+          height={size}
+          loading="lazy"
+          onError={() => setFailed(true)}
+        />
       )}
     </span>
   )
