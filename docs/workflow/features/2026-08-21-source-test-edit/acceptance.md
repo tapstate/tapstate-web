@@ -20,14 +20,14 @@
 | Edit 获取最新 Source 与 ETag 后打开编辑器              | Passed                                      | Source page integration test covers latest detail and ETag                                                         |
 | 保存同步 list、detail cache 与当前选择                 | Passed                                      | Source page integration test covers cache updates                                                                  |
 | 编辑 loading/error/validation/submitting/conflict 可用 | Passed by focused tests and source review   | loading, retry, payload validation, submitting guard and conflict recovery are covered by implementation and tests |
-| 创建/编辑草稿使用既有测试合同并显示完整报告            | Passed by focused tests                     | client 使用 `POST /api/connections:test`；component test 覆盖当前草稿和 report feedback                            |
+| 创建/编辑草稿使用既有测试合同并在 dialog 显示完整报告  | Passed by focused tests                     | client 使用 `POST /api/connections:test`；component test 覆盖当前草稿和 result dialog                              |
 | 编辑保持原值的密钥不会作为测试配置发送                 | Passed by helper coverage and source review | browser 不持有 write-only value；提示用户先替换并重新输入                                                          |
 
 ## 3. 源稿 / 设计保真对照
 
 | 对照项                  | 结果                                   | 备注                                                                                                                           |
 | ----------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| 标题 / toolbar / 主操作 | Pending authenticated inspection       | source review confirms existing shadcn toolbar, dialog footer and inline feedback vocabulary                                   |
+| 标题 / toolbar / 主操作 | Pending authenticated inspection       | source review confirms existing shadcn toolbar, dialog footer and nested result dialog vocabulary                              |
 | 页面布局与区域层级      | Pending authenticated inspection       | large split dialog, single-column form and responsive help panel are implemented                                               |
 | 交互入口                | Passed by Source page integration test | Edit loads latest detail rather than using the list projection                                                                 |
 | 未引入源稿外产品 UI     | Passed                                 | 使用实际 report；没有 fake latency、mock result 或持久化 health status                                                         |
@@ -62,7 +62,7 @@
 | Conflict               | Passed by source review                     | reload and keep-draft recovery are available after version conflict |
 | Test validation        | Passed by focused tests and source review   | 使用与 create/edit 相同的连接字段校验                               |
 | Testing                | Passed by source review                     | Test spinner 期间禁用连接字段、footer 动作和 dialog close           |
-| Test success / failure | Passed by focused tests                     | 表单显示真实 report outcome/check，或安全错误提示                   |
+| Test success / failure | Passed by focused tests                     | result dialog 显示真实 report outcome/check，或安全错误提示         |
 | Retained secret        | Passed by helper coverage and source review | keep 状态不发请求，用户须替换并重新输入                             |
 
 ## 6. 剩余风险

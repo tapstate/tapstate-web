@@ -103,6 +103,13 @@ function dialogContent() {
   return document.body.querySelector<HTMLElement>('[data-slot="dialog-content"]')
 }
 
+function testResultDialog() {
+  return [...document.body.querySelectorAll<HTMLElement>('[data-slot="dialog-content"]')].find(
+    (content) =>
+      content.querySelector('[data-slot="dialog-title"]')?.textContent === 'Connection test',
+  )
+}
+
 function connectorSearchField() {
   return document.body.querySelector<HTMLInputElement>('input[aria-label="Search connectors"]')
 }
@@ -362,7 +369,7 @@ describe('SourceCreateDialog', () => {
     expect(document.body.textContent).not.toContain('English host')
   })
 
-  it('tests the current draft and renders the complete one-shot connection result', async () => {
+  it('tests the current draft and opens the complete one-shot result in a dialog', async () => {
     host = document.createElement('div')
     document.body.append(host)
     root = createRoot(host)
@@ -402,7 +409,17 @@ describe('SourceCreateDialog', () => {
         expect.any(Function),
       ),
     )
-    expect(document.body.textContent).toContain('Connection test passed')
-    expect(document.body.textContent).toContain('Connected')
+    await vi.waitFor(() => expect(testResultDialog()).toBeDefined())
+    expect(testResultDialog()?.textContent).toContain('Connection test passed')
+    expect(testResultDialog()?.textContent).toContain('Connected')
+    expect(dialogContent()?.textContent).not.toContain('Connection test passed')
+
+    await act(async () =>
+      testResultDialog()
+        ?.querySelector<HTMLButtonElement>('[data-slot="dialog-footer"] button')
+        ?.click(),
+    )
+    await vi.waitFor(() => expect(testResultDialog()).toBeUndefined())
+    expect(document.body.querySelector('input[aria-label="Spec host"]')).not.toBeNull()
   })
 })

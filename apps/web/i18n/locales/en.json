@@ -130,6 +130,8 @@
       "test": "Test connection"
     },
     "test": {
+      "title": "Connection test",
+      "description": "Results are based on the current Source configuration.",
       "action": "Test connection",
       "testing": "Testing connection",
       "passed": "Connection test passed",

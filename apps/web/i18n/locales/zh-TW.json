@@ -130,6 +130,8 @@
       "test": "測試連線"
     },
     "test": {
+      "title": "連線測試",
+      "description": "結果以目前資料來源設定為準。",
       "action": "測試連線",
       "testing": "正在測試連線",
       "passed": "連線測試通過",

@@ -40,7 +40,7 @@
 | 2    | Done        | Source page Edit loading, success, error 用例                                   | Focused Vitest                             | 不依赖未确认测试 API                                 |
 | 3    | Done        | 接入 getSource detail query、Edit action、cache update、retry                   | Focused Vitest + typecheck                 | ETag 来自 detail GET                                 |
 | 4    | Done        | 复核 Edit dialog 外层布局、单列字段和 token 使用                                | Source review + focused tests              | 不暴露旧双列 grid                                    |
-| 5    | Done        | 实现 Test connection client、create/edit draft UI 和结果反馈                    | client + component focused Vitest          | 直接返回完整报告；保留密钥必须重新输入               |
+| 5    | Done        | 实现 Test connection client、create/edit draft UI 和结果 dialog                 | client + component focused Vitest          | 直接返回完整报告；保留密钥必须重新输入               |
 | 6    | In Progress | 完成 tests、i18n、typecheck、format、build、diff 与 authenticated UI inspection | Level 3                                    | 仍剩本地登录后的 UI 目检                             |
 | 7    | Done        | 将创建连接器选择改为多列无边框浮层卡片                                          | Focused Vitest + typecheck + format + diff | 选择区按产品决定使用 `bg-gray-50/40`；页面目检待认证 |
 
@@ -58,6 +58,7 @@
 | 2026-08-21 | Codex | 97%  | 移除连接器数量对搜索框显隐和过滤的影响，搜索框成为选择页的固定布局区域                                                                                          | 重跑 focused test、format 与 diff  | connection-test API contract 未定义 |
 | 2026-08-21 | Codex | 98%  | 经过术语复核，创建流程首步标题定为“选择连接器 / Choose a connector”，避免与最终产物 Source 混淆，配置步骤继续使用所选连接器名                                   | 重跑 focused test、i18n 与格式检查 | connection-test API contract 未定义 |
 | 2026-08-21 | Codex | 99%  | 核对既有 `POST /api/connections:test`：请求一次性返回完整 JSON report；create/edit footer 已接入，保留的 write-only 密钥需重输后测试                            | build、格式、差异和认证页面目检    | 认证页面目检待本地会话              |
+| 2026-08-21 | Codex | 99%  | 按产品反馈将测试 outcome 和 checks 从表单内容移入自动打开的独立 result dialog，表单高度与扫描节奏保持不变                                                       | 重跑 typecheck、build 与目检       | 认证页面目检待本地会话              |
 
 ## 5. TDD / Verification Strategy
 
@@ -107,7 +108,7 @@
 
 ## 9. Finish Notes
 
-- 交付摘要：实现 Source create/edit 草稿的同步连接测试，展示真实 outcome 和 checks。
+- 交付摘要：实现 Source create/edit 草稿的同步连接测试，并在独立 dialog 展示真实 outcome 和 checks。
 - 最终进度：99%，等待认证会话下的视觉检查。
 - 最终步骤：在本地认证会话检查 desktop 和 375px 窄屏。
 - 剩余风险：认证状态下的 desktop/mobile 页面目检。

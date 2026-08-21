@@ -32,7 +32,7 @@ import {
 } from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
 
-import { ConnectionTestResult } from './connection-test-result'
+import { ConnectionTestResultDialog } from './connection-test-result'
 import { ConnectorFormily } from './connector-formily'
 import {
   connectorSpecConnectionSchema,
@@ -380,8 +380,6 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
                 <div className="flex-1 overflow-y-auto">
                   <section className="mx-auto grid w-full max-w-3xl gap-6 p-6 lg:p-8">
                     {requestError && <RequestError message={requestError} />}
-                    <ConnectionTestResult report={testReport} error={testError} />
-
                     {loadingConnector ? (
                       <div className="text-muted-foreground flex min-h-24 items-center justify-center gap-2 text-[13px]">
                         <LoaderCircle className="size-4 animate-spin" />
@@ -527,6 +525,16 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
             </div>
           </>
         )}
+        <ConnectionTestResultDialog
+          report={testReport}
+          error={testError}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) {
+              setTestReport(null)
+              setTestError('')
+            }
+          }}
+        />
       </DialogContent>
     </Dialog>
   )

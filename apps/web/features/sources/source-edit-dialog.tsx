@@ -28,7 +28,7 @@ import {
 } from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
 
-import { ConnectionTestResult } from './connection-test-result'
+import { ConnectionTestResultDialog } from './connection-test-result'
 import { ConnectorFormily, type SecretDraft } from './connector-formily'
 import {
   connectorSpecConnectionSchema,
@@ -379,8 +379,6 @@ export function SourceEditDialog({
             <div className="min-h-0 flex-1 overflow-y-auto">
               <section className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6 lg:p-8">
                 {requestError && <RequestError message={requestError} />}
-                <ConnectionTestResult report={testReport} error={testError} />
-
                 {conflict && (
                   <div className="border-border bg-background rounded-lg border p-3 text-[13px] leading-relaxed">
                     <p className="text-foreground font-medium">
@@ -641,6 +639,16 @@ export function SourceEditDialog({
             </div>
           </aside>
         </div>
+        <ConnectionTestResultDialog
+          report={testReport}
+          error={testError}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) {
+              setTestReport(null)
+              setTestError('')
+            }
+          }}
+        />
       </DialogContent>
     </Dialog>
   )

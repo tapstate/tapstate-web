@@ -61,7 +61,7 @@
 1. 用户在 Source 工作台选择一个 Source。
 2. 用户点击 Edit，页面获取最新 Source 与 ETag 后打开编辑对话框。
 3. 用户修改配置并保存，成功后详情和列表立即使用服务端返回的 SourceView。
-4. 用户在创建或编辑表单点击 Test connection，前端校验当前连接字段后调用既有 endpoint，并在表单中显示完整报告。
+4. 用户在创建或编辑表单点击 Test connection，前端校验当前连接字段后调用既有 endpoint，并自动打开独立 dialog 显示完整报告。
 5. 编辑时若密钥仍是“保持原值”，前端要求重新输入，不发送脱敏的配置。
 
 ### 影响面
@@ -103,9 +103,18 @@ Edit dialog
 │ configuration form, vertically stacked│ existing setup help   │
 │ metadata, tables, SRS                 │                       │
 ├──────────────────────────────────────┴───────────────────────┤
-│                         [inline test report]              │
-├──────────────────────────────────────────────────────────────┤
 │                          Cancel  Test connection  Save       │
+└──────────────────────────────────────────────────────────────┘
+
+Connection test dialog
+┌──────────────────────────────────────────────────────────────┐
+│ Connection test                                            × │
+│ Results are based on the current Source configuration.       │
+│ [Passed]                                                     │
+│ connection                                        Passed      │
+│ Connected                                                    │
+├──────────────────────────────────────────────────────────────┤
+│                                                    Close     │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -121,8 +130,8 @@ Edit dialog
 | Conflict        | 保留草稿，提供 reload / keep draft           | 恢复或重试       | `sources.edit.errors.conflict.*` |
 | Test validation | 与创建/编辑一致的字段级校验                  | 修正当前草稿     | `sources.*.validation.*`         |
 | Test pending    | Test button spinner，字段与关闭动作禁用      | 等待             | `sources.test.testing`           |
-| Test success    | 表单内报告展示 outcome 和每项 check          | 编辑或继续保存   | `sources.test.passed`            |
-| Test error      | 表单内轻量 destructive feedback              | 修正或重试       | `sources.test.errors.*`          |
+| Test success    | 独立 dialog 展示 outcome 和每项 check        | 关闭后编辑或保存 | `sources.test.passed`            |
+| Test error      | 独立 dialog 展示安全的 destructive feedback  | 关闭后修正或重试 | `sources.test.errors.*`          |
 | Retained secret | 不发请求，提示重新输入已配置密钥             | 替换后测试       | `sources.test.reenterSecrets`    |
 
 ## 6. i18n 范围

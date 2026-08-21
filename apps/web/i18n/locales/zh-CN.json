@@ -130,6 +130,8 @@
       "test": "测试连接"
     },
     "test": {
+      "title": "连接测试",
+      "description": "结果基于当前数据源配置。",
       "action": "测试连接",
       "testing": "正在测试连接",
       "passed": "连接测试通过",

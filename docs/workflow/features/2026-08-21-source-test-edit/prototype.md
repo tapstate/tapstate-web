@@ -40,7 +40,7 @@
 └──────────────────────────────────────────────────────────────┘
 ```
 
-Edit remains a dialog, not a new route. Its body is vertically ordered so field scanning follows the existing Formily vertical layout. Create 和 Edit 的 footer 均包含 `Cancel / Test connection / Save or Create`，测试报告显示在表单内容的顶部。
+Edit remains a dialog, not a new route. Its body is vertically ordered so field scanning follows the existing Formily vertical layout. Create 和 Edit 的 footer 均包含 `Cancel / Test connection / Save or Create`。测试完成后自动打开独立的 result dialog，不改变表单内容高度。
 
 ## 4. 源稿 / 设计保真边界
 
@@ -52,27 +52,27 @@ Edit remains a dialog, not a new route. Its body is vertically ordered so field 
 
 ## 5. 关键交互
 
-| 触发                 | 页面反馈                                        | 结果                                              |
-| -------------------- | ----------------------------------------------- | ------------------------------------------------- |
-| 点击 Edit            | action 固定宽度显示 spinner                     | 拉取 `GET /sources/:id` 和 ETag                   |
-| detail 成功          | 打开已有编辑 dialog                             | 可编辑最新 Source                                 |
-| detail 失败          | action 下方轻量错误和 Retry                     | Source 页面保持可浏览                             |
-| 保存成功             | dialog 关闭，list/detail 更新                   | 显示更新后的 Source projection                    |
-| 保存冲突             | dialog 保留本地草稿                             | 用户可 reload 或保留草稿更新 ETag                 |
-| 点击 Test connection | footer 固定宽度 spinner，表单与关闭动作暂时禁用 | `POST /api/connections:test` 返回完整 JSON report |
-| test 成功 / 失败     | 表单顶部显示 outcome、check status 和非敏感说明 | 用户可修改草稿、重试或保存                        |
-| 编辑时保持密钥       | 不发送请求，显示重新输入提示                    | 用户替换并输入密钥后再测试                        |
+| 触发                 | 页面反馈                                                        | 结果                                              |
+| -------------------- | --------------------------------------------------------------- | ------------------------------------------------- |
+| 点击 Edit            | action 固定宽度显示 spinner                                     | 拉取 `GET /sources/:id` 和 ETag                   |
+| detail 成功          | 打开已有编辑 dialog                                             | 可编辑最新 Source                                 |
+| detail 失败          | action 下方轻量错误和 Retry                                     | Source 页面保持可浏览                             |
+| 保存成功             | dialog 关闭，list/detail 更新                                   | 显示更新后的 Source projection                    |
+| 保存冲突             | dialog 保留本地草稿                                             | 用户可 reload 或保留草稿更新 ETag                 |
+| 点击 Test connection | footer 固定宽度 spinner，表单与关闭动作暂时禁用                 | `POST /api/connections:test` 返回完整 JSON report |
+| test 成功 / 失败     | 自动打开 result dialog，显示 outcome、check status 和非敏感说明 | 关闭后可修改草稿、重试或保存                      |
+| 编辑时保持密钥       | 不发送请求，显示重新输入提示                                    | 用户替换并输入密钥后再测试                        |
 
 ## 6. 状态覆盖
 
-| 状态        | 表现                                     | 操作           | 文案 key                       |
-| ----------- | ---------------------------------------- | -------------- | ------------------------------ |
-| Loading     | Edit button 内 spinner，不改变高度或字号 | 等待           | `sources.create.loadingSchema` |
-| Empty       | N/A，未选 Source 无 detail action        | 选择 Source    | N/A                            |
-| Error       | action area 中的 error text + Retry      | 重试           | `sources.edit.errors.*`        |
-| Success     | dialog/updated detail                    | 编辑或继续浏览 | `sources.edit.*`               |
-| Testing     | footer Test action 内 spinner            | 等待           | `sources.test.testing`         |
-| Test result | 表单内轻量报告，不新增装饰性卡片层级     | 修改或重试     | `sources.test.*`               |
+| 状态        | 表现                                     | 操作             | 文案 key                       |
+| ----------- | ---------------------------------------- | ---------------- | ------------------------------ |
+| Loading     | Edit button 内 spinner，不改变高度或字号 | 等待             | `sources.create.loadingSchema` |
+| Empty       | N/A，未选 Source 无 detail action        | 选择 Source      | N/A                            |
+| Error       | action area 中的 error text + Retry      | 重试             | `sources.edit.errors.*`        |
+| Success     | dialog/updated detail                    | 编辑或继续浏览   | `sources.edit.*`               |
+| Testing     | footer Test action 内 spinner            | 等待             | `sources.test.testing`         |
+| Test result | 独立 dialog，保留原表单的扫描节奏        | 关闭后修改或重试 | `sources.test.*`               |
 
 ## 6.1 创建连接器选择区补充
 
@@ -98,13 +98,13 @@ Edit remains a dialog, not a new route. Its body is vertically ordered so field 
 
 ## 8. 控件密度与视觉决策
 
-| 控件 / 区域  | 默认规则                        | 本次选择                                 | 依据                              | 是否例外 |
-| ------------ | ------------------------------- | ---------------------------------------- | --------------------------------- | -------- |
-| Edit action  | shadcn compact secondary button | `outline` token, 32px high               | current toolbar and design system | 否       |
-| Edit pending | 固定 action slot                | 同字号 spinner + text                    | anti-jitter rule                  | 否       |
-| Error        | destructive semantic text       | action-adjacent, no card                 | quiet product boundary            | 否       |
-| Test action  | shadcn compact secondary button | footer `outline`，与 Save/Create 并列    | 当前草稿可提供真实 settings       | 否       |
-| Test report  | 轻量 semantic feedback          | 表单顶部一层边框，按 outcome 展示 checks | 避免伪造 health card              | 否       |
+| 控件 / 区域  | 默认规则                        | 本次选择                                    | 依据                                   | 是否例外 |
+| ------------ | ------------------------------- | ------------------------------------------- | -------------------------------------- | -------- |
+| Edit action  | shadcn compact secondary button | `outline` token, 32px high                  | current toolbar and design system      | 否       |
+| Edit pending | 固定 action slot                | 同字号 spinner + text                       | anti-jitter rule                       | 否       |
+| Error        | destructive semantic text       | action-adjacent, no card                    | quiet product boundary                 | 否       |
+| Test action  | shadcn compact secondary button | footer `outline`，与 Save/Create 并列       | 当前草稿可提供真实 settings            | 否       |
+| Test report  | 轻量 semantic feedback          | 560px result dialog，按 outcome 展示 checks | 保持表单扫描节奏，避免伪造 health card | 否       |
 
 ## 9. 原型资产
 

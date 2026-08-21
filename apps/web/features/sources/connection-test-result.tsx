@@ -3,6 +3,16 @@ import { useTranslation } from 'react-i18next'
 
 import type { ConnectionTestCheck, ConnectionTestReport } from '@/service/source-client'
 
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+
 interface ConnectionTestResultProps {
   report: ConnectionTestReport | null
   error: string
@@ -72,5 +82,34 @@ export function ConnectionTestResult({ report, error }: ConnectionTestResultProp
         </ul>
       )}
     </section>
+  )
+}
+
+export function ConnectionTestResultDialog({
+  report,
+  error,
+  onOpenChange,
+}: ConnectionTestResultProps & { onOpenChange: (open: boolean) => void }) {
+  const { t } = useTranslation()
+  const open = report !== null || Boolean(error)
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        closeLabel={t('ask.actions.close')}
+        className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-[560px]"
+      >
+        <DialogHeader>
+          <DialogTitle>{t('sources.test.title')}</DialogTitle>
+          <DialogDescription>{t('sources.test.description')}</DialogDescription>
+        </DialogHeader>
+        <ConnectionTestResult report={report} error={error} />
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            {t('ask.actions.close')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
