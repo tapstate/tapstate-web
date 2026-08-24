@@ -1,6 +1,9 @@
 import { ChevronDown, ChevronRight, GitMerge, Table, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+
 import type { TreeNode } from './types'
 
 interface TreeItemProps {
@@ -29,7 +32,7 @@ export function TreeItem({
     <div>
       <div
         className={cn(
-          'flex select-none items-center rounded-lg px-2 py-1.5 text-[13px] transition-colors',
+          'flex items-center rounded-lg px-2 py-1.5 text-[13px] transition-colors select-none',
           isSelected
             ? 'bg-gray-900/5 font-medium text-gray-900'
             : 'text-gray-600 hover:bg-gray-900/5',
@@ -37,9 +40,11 @@ export function TreeItem({
         style={{ paddingLeft: `${level * 12 + 8}px` }}
       >
         {hasChildren ? (
-          <button
-            className="flex h-4 w-4 items-center justify-center text-gray-400 hover:text-gray-600"
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
+            className="text-gray-400 hover:text-gray-600"
             aria-label={t(
               isExpanded ? 'pipelines.actions.collapseNode' : 'pipelines.actions.expandNode',
               { name: node.name },
@@ -54,12 +59,13 @@ export function TreeItem({
             ) : (
               <ChevronRight className="h-3 w-3" aria-hidden="true" />
             )}
-          </button>
+          </Button>
         ) : (
           <span className="w-4" aria-hidden="true" />
         )}
-        <button
-          className="ml-1 flex min-w-0 flex-1 items-center text-left"
+        <Button
+          variant="ghost"
+          className="ml-1 h-auto min-w-0 flex-1 justify-start px-0 text-left"
           type="button"
           aria-pressed={isSelected}
           onClick={() => onSelect(node.id)}
@@ -80,7 +86,7 @@ export function TreeItem({
           {node.status === 'paused' && (
             <span className="ml-2 h-1.5 w-1.5 rounded-full bg-yellow-500 shadow-[0_0_4px_rgba(234,179,8,0.5)]" />
           )}
-        </button>
+        </Button>
       </div>
 
       {isExpanded && hasChildren && (

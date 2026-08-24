@@ -11,11 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as PipelineEditorRouteImport } from './routes/_pipeline-editor'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedExplorationsRouteImport } from './routes/_authenticated.explorations'
 import { Route as AuthenticatedPipelinesRouteImport } from './routes/_authenticated.pipelines'
 import { Route as AuthenticatedSourcesRouteImport } from './routes/_authenticated.sources'
 import { Route as AuthenticatedSourcesIndexRouteImport } from './routes/_authenticated.sources.index'
+import { Route as PipelineEditorPipelinesPipelineIdEditRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -24,6 +26,10 @@ const IndexRoute = IndexRouteImport.update({
 } as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PipelineEditorRoute = PipelineEditorRouteImport.update({
+  id: '/_pipeline-editor',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -53,6 +59,12 @@ const AuthenticatedSourcesIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedSourcesRoute,
   } as any)
+const PipelineEditorPipelinesPipelineIdEditRoute =
+  PipelineEditorPipelinesPipelineIdEditRouteImport.update({
+    id: '/pipelines/$pipelineId/edit',
+    path: '/pipelines/$pipelineId/edit',
+    getParentRoute: () => PipelineEditorRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -61,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/pipelines': typeof AuthenticatedPipelinesRoute
   '/sources': typeof AuthenticatedSourcesRouteWithChildren
   '/sources/': typeof AuthenticatedSourcesIndexRoute
+  '/pipelines/$pipelineId/edit': typeof PipelineEditorPipelinesPipelineIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -68,37 +81,55 @@ export interface FileRoutesByTo {
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
   '/sources': typeof AuthenticatedSourcesIndexRoute
+  '/pipelines/$pipelineId/edit': typeof PipelineEditorPipelinesPipelineIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/_pipeline-editor': typeof PipelineEditorRouteWithChildren
   '/login': typeof LoginRoute
   '/_authenticated/explorations': typeof AuthenticatedExplorationsRoute
   '/_authenticated/pipelines': typeof AuthenticatedPipelinesRoute
   '/_authenticated/sources': typeof AuthenticatedSourcesRouteWithChildren
   '/_authenticated/sources/': typeof AuthenticatedSourcesIndexRoute
+  '/_pipeline-editor/pipelines/$pipelineId/edit': typeof PipelineEditorPipelinesPipelineIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/login' | '/explorations' | '/pipelines' | '/sources' | '/sources/'
+    | '/'
+    | '/login'
+    | '/explorations'
+    | '/pipelines'
+    | '/sources'
+    | '/sources/'
+    | '/pipelines/$pipelineId/edit'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/explorations' | '/pipelines' | '/sources'
+  to:
+    | '/'
+    | '/login'
+    | '/explorations'
+    | '/pipelines'
+    | '/sources'
+    | '/pipelines/$pipelineId/edit'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/_pipeline-editor'
     | '/login'
     | '/_authenticated/explorations'
     | '/_authenticated/pipelines'
     | '/_authenticated/sources'
     | '/_authenticated/sources/'
+    | '/_pipeline-editor/pipelines/$pipelineId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  PipelineEditorRoute: typeof PipelineEditorRouteWithChildren
   LoginRoute: typeof LoginRoute
 }
 
@@ -116,6 +147,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_pipeline-editor': {
+      id: '/_pipeline-editor'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof PipelineEditorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -153,6 +191,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSourcesIndexRouteImport
       parentRoute: typeof AuthenticatedSourcesRoute
     }
+    '/_pipeline-editor/pipelines/$pipelineId/edit': {
+      id: '/_pipeline-editor/pipelines/$pipelineId/edit'
+      path: '/pipelines/$pipelineId/edit'
+      fullPath: '/pipelines/$pipelineId/edit'
+      preLoaderRoute: typeof PipelineEditorPipelinesPipelineIdEditRouteImport
+      parentRoute: typeof PipelineEditorRoute
+    }
   }
 }
 
@@ -183,9 +228,23 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
   AuthenticatedRouteChildren,
 )
 
+interface PipelineEditorRouteChildren {
+  PipelineEditorPipelinesPipelineIdEditRoute: typeof PipelineEditorPipelinesPipelineIdEditRoute
+}
+
+const PipelineEditorRouteChildren: PipelineEditorRouteChildren = {
+  PipelineEditorPipelinesPipelineIdEditRoute:
+    PipelineEditorPipelinesPipelineIdEditRoute,
+}
+
+const PipelineEditorRouteWithChildren = PipelineEditorRoute._addFileChildren(
+  PipelineEditorRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  PipelineEditorRoute: PipelineEditorRouteWithChildren,
   LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport

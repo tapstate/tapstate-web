@@ -342,9 +342,9 @@
     "allPipelines": "全部流水线",
     "explorer": "资源树",
     "states": {
-      "empty": "从向导开始，为当前工作区创建第一条流水线。",
-      "error": "当前预览状态下无法加载流水线元数据。",
-      "loading": "正在加载流水线图和资源状态。"
+      "empty": "当前工作区尚未存储任何流水线。",
+      "error": "无法加载已存储的流水线。",
+      "loading": "正在加载已存储的流水线。"
     },
     "createMenu": {
       "title": "创建方式",
@@ -359,13 +359,15 @@
     },
     "actions": {
       "collapseNode": "折叠 {{name}}",
-      "expandNode": "展开 {{name}}"
+      "expandNode": "展开 {{name}}",
+      "editPipeline": "编辑 {{id}}"
     },
     "table": {
       "modified": "最后修改",
       "resourceName": "资源名称",
       "status": "状态",
-      "type": "类型"
+      "type": "类型",
+      "version": "版本"
     },
     "type": {
       "api": "API",

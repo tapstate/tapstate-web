@@ -342,9 +342,9 @@
     "allPipelines": "All Pipelines",
     "explorer": "Explorer",
     "states": {
-      "empty": "Start with the wizard to create the first pipeline in this workspace.",
-      "error": "Pipeline metadata could not be loaded in this preview state.",
-      "loading": "Loading pipeline graph and resource status."
+      "empty": "No pipelines have been stored in this workspace.",
+      "error": "We couldn't load stored pipelines.",
+      "loading": "Loading stored pipelines."
     },
     "createMenu": {
       "title": "Creation mode",
@@ -359,13 +359,15 @@
     },
     "actions": {
       "collapseNode": "Collapse {{name}}",
-      "expandNode": "Expand {{name}}"
+      "expandNode": "Expand {{name}}",
+      "editPipeline": "Edit {{id}}"
     },
     "table": {
       "modified": "Last modified",
       "resourceName": "Resource name",
       "status": "Status",
-      "type": "Type"
+      "type": "Type",
+      "version": "Version"
     },
     "type": {
       "api": "API",

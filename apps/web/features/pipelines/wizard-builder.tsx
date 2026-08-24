@@ -15,6 +15,8 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { Button } from '@/components/ui/button'
+
 const fields = [
   '_id',
   'CITY',
@@ -34,13 +36,16 @@ export function WizardBuilder({ onBack }: { onBack: () => void }) {
   return (
     <section className="flex h-full w-full flex-col bg-[#fafafa]">
       <header className="flex h-14 shrink-0 items-center border-b border-gray-200/70 bg-white px-4">
-        <button
-          className="mr-2 rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="mr-2 text-gray-500 hover:text-gray-900"
           aria-label={t('common.back')}
           onClick={onBack}
         >
           <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-        </button>
+        </Button>
         <div className="flex min-w-0 items-center gap-2">
           <h1 className="truncate text-[14px] font-semibold text-gray-900">{t('wizard.title')}</h1>
           <Edit2 className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
@@ -48,7 +53,7 @@ export function WizardBuilder({ onBack }: { onBack: () => void }) {
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4 lg:flex-row">
-        <main className="flex min-h-[460px] flex-1 flex-col items-center overflow-y-auto pb-20 pr-0 lg:pr-2">
+        <main className="flex min-h-[460px] flex-1 flex-col items-center overflow-y-auto pr-0 pb-20 lg:pr-2">
           <article className="w-full max-w-2xl rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2 text-[14px] font-semibold text-gray-900">
@@ -56,7 +61,12 @@ export function WizardBuilder({ onBack }: { onBack: () => void }) {
                 {t('wizard.sourceData')}
               </div>
             </div>
-            <button className="flex w-full items-center rounded-md border border-gray-200 bg-white p-2 text-[13px] transition-colors hover:border-gray-300">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-auto w-full justify-between p-2 text-[13px] hover:border-gray-300"
+            >
               <span className="flex flex-1 items-center gap-2 text-gray-700">
                 <Database className="h-3.5 w-3.5 text-blue-400" aria-hidden="true" />
                 {t('wizard.sourceName')}
@@ -65,7 +75,7 @@ export function WizardBuilder({ onBack }: { onBack: () => void }) {
                 {t('wizard.pickFields')}
                 <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
               </span>
-            </button>
+            </Button>
           </article>
 
           <ConnectorButton label={t('wizard.addStep')} tone="purple" />
@@ -103,13 +113,15 @@ export function WizardBuilder({ onBack }: { onBack: () => void }) {
                         <span className="sr-only">{t('wizard.rename.noTransform')}</span>
                       </td>
                       <td className="px-4 py-2 text-right">
-                        <button
-                          className="text-gray-400 hover:text-gray-600"
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          className="text-gray-400 hover:text-gray-600"
                           aria-label={t('wizard.rename.revert')}
                         >
                           <CornerUpLeft className="h-3.5 w-3.5" aria-hidden="true" />
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -121,15 +133,23 @@ export function WizardBuilder({ onBack }: { onBack: () => void }) {
           <ConnectorButton label={t('wizard.addOutput')} tone="red" />
 
           <div className="mt-4 flex w-full max-w-2xl flex-wrap items-center justify-center gap-4">
-            <button className="flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-4 py-2 text-[13px] font-medium text-indigo-700 shadow-sm transition-colors hover:bg-indigo-50">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-auto border-indigo-200 bg-white px-4 py-2 text-[13px] font-medium text-indigo-700 shadow-sm hover:bg-indigo-50"
+            >
               <Table className="h-4 w-4" aria-hidden="true" />
               {t('wizard.createView')}
-            </button>
+            </Button>
             <span className="text-[13px] text-gray-400">{t('wizard.or')}</span>
-            <button className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-white px-4 py-2 text-[13px] font-medium text-emerald-700 shadow-sm transition-colors hover:bg-emerald-50">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-auto border-emerald-200 bg-white px-4 py-2 text-[13px] font-medium text-emerald-700 shadow-sm hover:bg-emerald-50"
+            >
               <Zap className="h-4 w-4" aria-hidden="true" />
               {t('wizard.publishApi')}
-            </button>
+            </Button>
           </div>
         </main>
 
@@ -137,18 +157,24 @@ export function WizardBuilder({ onBack }: { onBack: () => void }) {
           <div className="flex h-12 shrink-0 items-center justify-between border-b border-gray-100 px-4">
             <h2 className="text-[13px] font-medium text-gray-900">{t('wizard.preview.title')}</h2>
             <div className="flex overflow-hidden rounded-md border border-gray-200">
-              <button
-                className="border-r border-gray-200 bg-white px-2 py-1 text-gray-600 hover:bg-gray-50"
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="rounded-none border-r border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                 aria-label={t('wizard.preview.json')}
               >
                 <Braces className="h-3.5 w-3.5" aria-hidden="true" />
-              </button>
-              <button
-                className="bg-gray-100 px-2 py-1 text-gray-900"
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon-sm"
+                className="rounded-none bg-gray-100 text-gray-900"
                 aria-label={t('wizard.preview.grid')}
               >
                 <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" />
-              </button>
+              </Button>
             </div>
           </div>
           <div className="flex flex-1 flex-col items-center justify-center p-8 text-center text-gray-400">
@@ -156,7 +182,7 @@ export function WizardBuilder({ onBack }: { onBack: () => void }) {
               <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-gray-100 bg-gray-50 shadow-sm">
                 <Database className="h-8 w-8 text-gray-300" aria-hidden="true" />
               </div>
-              <div className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border border-gray-100 bg-white shadow-sm">
+              <div className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border border-gray-100 bg-white shadow-sm">
                 <MessageSquare className="h-3 w-3 text-gray-300" aria-hidden="true" />
               </div>
             </div>
@@ -171,12 +197,15 @@ export function WizardBuilder({ onBack }: { onBack: () => void }) {
 function ConnectorButton({ label, tone }: { label: string; tone: 'purple' | 'red' }) {
   return (
     <div className="relative my-2 flex h-10 w-px items-center justify-center border-l border-dashed border-gray-300 bg-gray-200">
-      <button
-        className={`absolute z-10 flex h-6 w-6 items-center justify-center rounded-full border bg-white transition-colors ${tone === 'purple' ? 'border-purple-200 text-purple-600 hover:bg-purple-50' : 'border-red-200 text-red-500 hover:bg-red-50'}`}
+      <Button
+        type="button"
+        variant="outline"
+        size="icon-xs"
+        className={`absolute z-10 rounded-full bg-white ${tone === 'purple' ? 'border-purple-200 text-purple-600 hover:bg-purple-50' : 'border-red-200 text-red-500 hover:bg-red-50'}`}
         aria-label={label}
       >
         <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-      </button>
+      </Button>
     </div>
   )
 }
