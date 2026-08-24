@@ -13,7 +13,7 @@ export interface PipelineDagEdge {
   id: string
   source: string
   target: string
-  alias: string | null
+  label: string | null
 }
 
 export interface PipelineDag {
@@ -88,7 +88,7 @@ function isDagEdge(value: unknown): value is PipelineDagEdge {
     typeof value.id === 'string' &&
     typeof value.source === 'string' &&
     typeof value.target === 'string' &&
-    (value.alias === null || typeof value.alias === 'string')
+    (value.label === null || typeof value.label === 'string')
   )
 }
 

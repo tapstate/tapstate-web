@@ -60,7 +60,7 @@ export function pipelineDagToFlow(
       source: edge.source,
       target: edge.target,
       type: 'bezier',
-      ...(edge.alias ? { label: edge.alias } : {}),
+      ...(edge.label ? { label: edge.label } : {}),
     })),
     viewport: layout?.viewport ?? null,
   }

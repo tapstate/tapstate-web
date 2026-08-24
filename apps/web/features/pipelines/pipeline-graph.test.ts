@@ -21,7 +21,7 @@ describe('pipelineDagToFlow', () => {
           id: 'source:orders->transform:filter_orders',
           source: 'source:orders',
           target: 'transform:filter_orders',
-          alias: null,
+          label: null,
         },
       ],
     }
@@ -59,9 +59,9 @@ describe('pipelineDagToFlow', () => {
         { id: 'target:warehouse', type: 'target', label: 'warehouse', detail: 'sync' },
       ],
       edges: [
-        { id: 'a', source: 'source:orders', target: 'transform:filter_orders', alias: null },
-        { id: 'b', source: 'transform:filter_orders', target: 'serve:orders_api', alias: null },
-        { id: 'c', source: 'serve:orders_api', target: 'target:warehouse', alias: null },
+        { id: 'a', source: 'source:orders', target: 'transform:filter_orders', label: null },
+        { id: 'b', source: 'transform:filter_orders', target: 'serve:orders_api', label: null },
+        { id: 'c', source: 'serve:orders_api', target: 'target:warehouse', label: null },
       ],
     })
 

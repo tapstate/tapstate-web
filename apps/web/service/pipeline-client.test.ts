@@ -16,7 +16,7 @@ const pipeline = {
         id: 'source:orders->transform:normalize',
         source: 'source:orders',
         target: 'transform:normalize',
-        alias: null,
+        label: null,
       },
     ],
   },
