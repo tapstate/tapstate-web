@@ -459,6 +459,93 @@
       "endpoint": "Endpoint",
       "method": "GET",
       "responsePreview": "Response preview"
+    },
+    "workspace": {
+      "skipToCanvas": "Skip to Pipeline canvas",
+      "loading": "Loading Pipeline canvas",
+      "back": "Pipelines",
+      "layout": {
+        "saving": "Saving layout",
+        "saved": "Layout saved",
+        "error": "Layout not saved"
+      },
+      "error": {
+        "title": "We couldn't load this Pipeline."
+      },
+      "actions": {
+        "retry": "Retry"
+      },
+      "tabs": {
+        "label": "Pipeline workspace panels",
+        "runtime": "Runtime",
+        "metrics": "Metrics",
+        "logs": "Logs",
+        "api": "API access"
+      },
+      "nodeLibrary": {
+        "label": "Pipeline node library",
+        "title": "Node library",
+        "readOnly": "Read-only catalog",
+        "hide": "Hide node library",
+        "show": "Show node library",
+        "source": "Source",
+        "sourceDescription": "Read from a source",
+        "transform": "Transform",
+        "transformDescription": "Process an incoming record",
+        "view": "View",
+        "viewDescription": "Expose a derived view",
+        "serve": "Serve",
+        "serveDescription": "Deliver a Pipeline output",
+        "mutationPending": "Node changes become available when typed DAG saving is ready."
+      },
+      "nodeDescriptions": {
+        "defaultDetail": "Pipeline step",
+        "source": "Read from {{detail}}",
+        "target": "Deliver to {{detail}}",
+        "transform": "{{detail}} transformation",
+        "view": "Expose {{detail}}",
+        "serve": "Serve {{detail}}"
+      },
+      "handles": {
+        "input": "Input for {{node}}",
+        "output": "Output for {{node}}"
+      },
+      "inspector": {
+        "eyebrow": "Configuration",
+        "emptyTitle": "Select a node",
+        "emptyBody": "Select a node on the canvas to inspect its Pipeline configuration.",
+        "type": "Type",
+        "identifier": "Identifier",
+        "detail": "Detail",
+        "noDetail": "No additional detail"
+      },
+      "runtime": {
+        "eyebrow": "Operations",
+        "loading": "Loading observation",
+        "state": "State",
+        "offsets": "Source offsets",
+        "emptyMetrics": "No metrics have been published for this Pipeline.",
+        "emptyLogs": "No log lines have been captured on this node.",
+        "unavailableTitle": "Observation unavailable",
+        "unavailableBody": "This Pipeline has not published runtime observation yet.",
+        "errorTitle": "We couldn't load this observation.",
+        "errorBody": "Check the control plane and try again.",
+        "states": {
+          "NEW": "New",
+          "RUNNING": "Running",
+          "PAUSED": "Paused",
+          "STOPPED": "Stopped",
+          "COMPLETED": "Completed",
+          "FAILED": "Failed"
+        }
+      },
+      "apiAccess": {
+        "emptyTitle": "No API surface in this Pipeline",
+        "emptyBody": "Add a serve step before an API can be published.",
+        "pendingTitle": "API publication is not configured",
+        "pendingBody": "Serve outputs are present, but this Pipeline does not expose a published endpoint yet.",
+        "serveDetail": "Serve output"
+      }
     }
   },
   "explorations": {

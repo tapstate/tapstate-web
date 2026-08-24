@@ -37,7 +37,7 @@ describe('pipelineDagToFlow', () => {
     ])
     expect(graph.edges).toEqual([
       expect.objectContaining({
-        type: 'bezier',
+        type: 'pipeline',
         source: 'source:orders',
         target: 'transform:filter_orders',
       }),
@@ -70,6 +70,30 @@ describe('pipelineDagToFlow', () => {
       { x: 360, y: 96 },
       { x: 640, y: 96 },
       { x: 920, y: 96 },
+    ])
+  })
+
+  it('carries a semantic edge label into the canvas edge data without adding layout data', () => {
+    const graph = pipelineDagToFlow({
+      nodes: [
+        { id: 'source:orders', type: 'source', label: 'orders', detail: null },
+        { id: 'view:open_orders', type: 'view', label: 'open_orders', detail: null },
+      ],
+      edges: [
+        {
+          id: 'source:orders->view:open_orders',
+          source: 'source:orders',
+          target: 'view:open_orders',
+          label: 'open_orders',
+        },
+      ],
+    })
+
+    expect(graph.edges).toEqual([
+      expect.objectContaining({
+        type: 'pipeline',
+        data: { label: 'open_orders' },
+      }),
     ])
   })
 })

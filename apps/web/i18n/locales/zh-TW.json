@@ -459,6 +459,93 @@
       "endpoint": "端點",
       "method": "GET",
       "responsePreview": "回應預覽"
+    },
+    "workspace": {
+      "skipToCanvas": "跳至 Pipeline 畫布",
+      "loading": "正在載入 Pipeline 畫布",
+      "back": "Pipelines",
+      "layout": {
+        "saving": "正在儲存版面配置",
+        "saved": "版面配置已儲存",
+        "error": "版面配置未儲存"
+      },
+      "error": {
+        "title": "無法載入此 Pipeline。"
+      },
+      "actions": {
+        "retry": "重試"
+      },
+      "tabs": {
+        "label": "Pipeline 工作區面板",
+        "runtime": "執行狀態",
+        "metrics": "指標",
+        "logs": "日誌",
+        "api": "API 存取"
+      },
+      "nodeLibrary": {
+        "label": "Pipeline 節點庫",
+        "title": "節點庫",
+        "readOnly": "唯讀目錄",
+        "hide": "隱藏節點庫",
+        "show": "顯示節點庫",
+        "source": "Source",
+        "sourceDescription": "從 Source 讀取資料",
+        "transform": "Transform",
+        "transformDescription": "處理輸入記錄",
+        "view": "View",
+        "viewDescription": "公開衍生視圖",
+        "serve": "Serve",
+        "serveDescription": "交付 Pipeline 輸出",
+        "mutationPending": "Typed DAG 儲存就緒後即可修改節點。"
+      },
+      "nodeDescriptions": {
+        "defaultDetail": "Pipeline 步驟",
+        "source": "從 {{detail}} 讀取",
+        "target": "交付至 {{detail}}",
+        "transform": "{{detail}} 轉換",
+        "view": "公開 {{detail}}",
+        "serve": "交付 {{detail}}"
+      },
+      "handles": {
+        "input": "{{node}} 的輸入連接埠",
+        "output": "{{node}} 的輸出連接埠"
+      },
+      "inspector": {
+        "eyebrow": "設定",
+        "emptyTitle": "選擇一個節點",
+        "emptyBody": "在畫布上選擇節點以檢查它的 Pipeline 設定。",
+        "type": "類型",
+        "identifier": "識別碼",
+        "detail": "詳情",
+        "noDetail": "沒有額外詳情"
+      },
+      "runtime": {
+        "eyebrow": "執行資訊",
+        "loading": "正在載入觀測資料",
+        "state": "狀態",
+        "offsets": "Source 位點",
+        "emptyMetrics": "此 Pipeline 尚未發布指標。",
+        "emptyLogs": "此節點尚未擷取日誌。",
+        "unavailableTitle": "觀測資料無法使用",
+        "unavailableBody": "此 Pipeline 尚未發布執行時觀測資料。",
+        "errorTitle": "無法載入此觀測資料。",
+        "errorBody": "請檢查控制平面後重試。",
+        "states": {
+          "NEW": "新增",
+          "RUNNING": "執行中",
+          "PAUSED": "已暫停",
+          "STOPPED": "已停止",
+          "COMPLETED": "已完成",
+          "FAILED": "失敗"
+        }
+      },
+      "apiAccess": {
+        "emptyTitle": "此 Pipeline 沒有 API 介面",
+        "emptyBody": "需要新增 Serve 步驟後才能發布 API。",
+        "pendingTitle": "尚未設定 API 發布",
+        "pendingBody": "已偵測到 Serve 輸出，但此 Pipeline 尚未公開已發布端點。",
+        "serveDetail": "Serve 輸出"
+      }
     }
   },
   "explorations": {

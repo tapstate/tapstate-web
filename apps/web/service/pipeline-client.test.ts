@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest'
 
 import type { ApiFetcher } from './source-client'
 
-import { getPipeline, getPipelineLayout, listPipelines, savePipelineLayout } from './pipeline-client'
+import {
+  getPipeline,
+  getPipelineLayout,
+  getPipelineLogs,
+  getPipelineMetrics,
+  getPipelineStatus,
+  listPipelines,
+  savePipelineLayout,
+} from './pipeline-client'
 
 const pipeline = {
   id: 'orders_to_warehouse',
@@ -27,6 +35,22 @@ const layout = {
   pipelineId: 'orders_to_warehouse',
   nodes: { 'source:orders': { x: 64, y: 80 } },
   viewport: { x: 0, y: 0, zoom: 1 },
+} as const
+
+const status = {
+  pipelineId: 'orders_to_warehouse',
+  state: 'RUNNING',
+} as const
+
+const metrics = {
+  pipelineId: 'orders_to_warehouse',
+  metrics: { recordsProcessed: 187 },
+  perTableOffset: { orders: 'mysql-bin.000001:482' },
+} as const
+
+const logs = {
+  pipelineId: 'orders_to_warehouse',
+  lines: [{ timestampMillis: 1_724_500_800_123, level: 'INFO', message: 'Pipeline started' }],
 } as const
 
 function jsonResponse(body: unknown, status = 200) {
@@ -82,20 +106,60 @@ describe('Pipeline client', () => {
     ).resolves.toEqual(layout)
 
     expect(writeRequests[0].method).toBe('PUT')
-    expect(new URL(writeRequests[0].url).pathname).toBe(
-      '/api/pipelines/orders_to_warehouse/layout',
-    )
+    expect(new URL(writeRequests[0].url).pathname).toBe('/api/pipelines/orders_to_warehouse/layout')
     await expect(writeRequests[0].json()).resolves.toEqual({
       nodes: layout.nodes,
       viewport: layout.viewport,
     })
   })
 
+  it('reads runtime observations from their independent HTTP faces', async () => {
+    const statusRequests: Request[] = []
+    const metricsRequests: Request[] = []
+    const logRequests: Request[] = []
+
+    await expect(
+      getPipelineStatus('orders/warehouse', fetcherFor(jsonResponse(status), statusRequests)),
+    ).resolves.toEqual(status)
+    await expect(
+      getPipelineMetrics('orders/warehouse', fetcherFor(jsonResponse(metrics), metricsRequests)),
+    ).resolves.toEqual(metrics)
+    await expect(
+      getPipelineLogs('orders/warehouse', fetcherFor(jsonResponse(logs), logRequests)),
+    ).resolves.toEqual(logs)
+
+    expect(new URL(statusRequests[0].url).pathname).toBe('/api/pipelines/orders%2Fwarehouse/status')
+    expect(new URL(metricsRequests[0].url).pathname).toBe(
+      '/api/pipelines/orders%2Fwarehouse/metrics',
+    )
+    expect(new URL(logRequests[0].url).pathname).toBe('/api/pipelines/orders%2Fwarehouse/logs')
+    expect(new URL(logRequests[0].url).searchParams.get('limit')).toBe('30')
+  })
+
   it('rejects malformed DAG and layout responses', async () => {
-    await expect(getPipeline(pipeline.id, fetcherFor(jsonResponse({ id: pipeline.id })))).rejects.toMatchObject({
+    await expect(
+      getPipeline(pipeline.id, fetcherFor(jsonResponse({ id: pipeline.id }))),
+    ).rejects.toMatchObject({
       kind: 'protocol',
     })
-    await expect(getPipelineLayout(pipeline.id, fetcherFor(jsonResponse({ pipelineId: pipeline.id })))).rejects.toMatchObject({
+    await expect(
+      getPipelineLayout(pipeline.id, fetcherFor(jsonResponse({ pipelineId: pipeline.id }))),
+    ).rejects.toMatchObject({
+      kind: 'protocol',
+    })
+    await expect(
+      getPipelineStatus(pipeline.id, fetcherFor(jsonResponse({ pipelineId: pipeline.id }))),
+    ).rejects.toMatchObject({
+      kind: 'protocol',
+    })
+    await expect(
+      getPipelineMetrics(pipeline.id, fetcherFor(jsonResponse({ pipelineId: pipeline.id }))),
+    ).rejects.toMatchObject({
+      kind: 'protocol',
+    })
+    await expect(
+      getPipelineLogs(pipeline.id, fetcherFor(jsonResponse({ pipelineId: pipeline.id }))),
+    ).rejects.toMatchObject({
       kind: 'protocol',
     })
   })

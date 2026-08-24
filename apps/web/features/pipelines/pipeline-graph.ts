@@ -15,8 +15,10 @@ export interface FlowEdge {
   id: string
   source: string
   target: string
-  type: 'bezier'
-  label?: string
+  type: 'pipeline'
+  data?: {
+    label?: string
+  }
 }
 
 export interface FlowGraph {
@@ -59,8 +61,8 @@ export function pipelineDagToFlow(
       id: edge.id,
       source: edge.source,
       target: edge.target,
-      type: 'bezier',
-      ...(edge.label ? { label: edge.label } : {}),
+      type: 'pipeline',
+      ...(edge.label ? { data: { label: edge.label } } : {}),
     })),
     viewport: layout?.viewport ?? null,
   }

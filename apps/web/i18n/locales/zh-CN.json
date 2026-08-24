@@ -459,6 +459,93 @@
       "endpoint": "端点",
       "method": "GET",
       "responsePreview": "响应预览"
+    },
+    "workspace": {
+      "skipToCanvas": "跳到 Pipeline 画布",
+      "loading": "正在加载 Pipeline 画布",
+      "back": "Pipelines",
+      "layout": {
+        "saving": "正在保存布局",
+        "saved": "布局已保存",
+        "error": "布局未保存"
+      },
+      "error": {
+        "title": "无法加载此 Pipeline。"
+      },
+      "actions": {
+        "retry": "重试"
+      },
+      "tabs": {
+        "label": "Pipeline 工作区面板",
+        "runtime": "运行状态",
+        "metrics": "指标",
+        "logs": "日志",
+        "api": "API 访问"
+      },
+      "nodeLibrary": {
+        "label": "Pipeline 节点库",
+        "title": "节点库",
+        "readOnly": "只读目录",
+        "hide": "隐藏节点库",
+        "show": "显示节点库",
+        "source": "Source",
+        "sourceDescription": "从 Source 读取数据",
+        "transform": "Transform",
+        "transformDescription": "处理输入记录",
+        "view": "View",
+        "viewDescription": "暴露派生视图",
+        "serve": "Serve",
+        "serveDescription": "交付 Pipeline 输出",
+        "mutationPending": "Typed DAG 保存就绪后可以修改节点。"
+      },
+      "nodeDescriptions": {
+        "defaultDetail": "Pipeline 步骤",
+        "source": "从 {{detail}} 读取",
+        "target": "交付到 {{detail}}",
+        "transform": "{{detail}} 转换",
+        "view": "暴露 {{detail}}",
+        "serve": "交付 {{detail}}"
+      },
+      "handles": {
+        "input": "{{node}} 的输入端口",
+        "output": "{{node}} 的输出端口"
+      },
+      "inspector": {
+        "eyebrow": "配置",
+        "emptyTitle": "选择一个节点",
+        "emptyBody": "在画布上选择一个节点以检查它的 Pipeline 配置。",
+        "type": "类型",
+        "identifier": "标识符",
+        "detail": "详情",
+        "noDetail": "没有额外详情"
+      },
+      "runtime": {
+        "eyebrow": "运行信息",
+        "loading": "正在加载观测数据",
+        "state": "状态",
+        "offsets": "Source 位点",
+        "emptyMetrics": "此 Pipeline 尚未发布指标。",
+        "emptyLogs": "此节点尚未捕获日志。",
+        "unavailableTitle": "观测数据不可用",
+        "unavailableBody": "此 Pipeline 还没有发布运行时观测数据。",
+        "errorTitle": "无法加载此观测数据。",
+        "errorBody": "请检查控制平面后重试。",
+        "states": {
+          "NEW": "新建",
+          "RUNNING": "运行中",
+          "PAUSED": "已暂停",
+          "STOPPED": "已停止",
+          "COMPLETED": "已完成",
+          "FAILED": "失败"
+        }
+      },
+      "apiAccess": {
+        "emptyTitle": "此 Pipeline 没有 API 面",
+        "emptyBody": "需要添加 Serve 步骤后才能发布 API。",
+        "pendingTitle": "尚未配置 API 发布",
+        "pendingBody": "已检测到 Serve 输出，但此 Pipeline 还没有公开已发布端点。",
+        "serveDetail": "Serve 输出"
+      }
     }
   },
   "explorations": {

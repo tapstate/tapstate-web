@@ -27,6 +27,37 @@ export interface PipelineView {
   contentHash: string
 }
 
+export type PipelineRuntimeState = 'NEW' | 'RUNNING' | 'PAUSED' | 'STOPPED' | 'COMPLETED' | 'FAILED'
+
+export interface PipelineStatusFailure {
+  code: string
+  params: Record<string, unknown>
+  message: string
+}
+
+export interface PipelineStatus {
+  pipelineId: string
+  state: PipelineRuntimeState
+  failure?: PipelineStatusFailure
+}
+
+export interface PipelineMetrics {
+  pipelineId: string
+  metrics: Record<string, number>
+  perTableOffset?: Record<string, string>
+}
+
+export interface PipelineLogLine {
+  timestampMillis: number
+  level: string
+  message: string
+}
+
+export interface PipelineLogs {
+  pipelineId: string
+  lines: PipelineLogLine[]
+}
+
 export interface PipelineLayoutPosition {
   x: number
   y: number
@@ -89,6 +120,61 @@ function isDagEdge(value: unknown): value is PipelineDagEdge {
     typeof value.source === 'string' &&
     typeof value.target === 'string' &&
     (value.label === null || typeof value.label === 'string')
+  )
+}
+
+function isPipelineStatusFailure(value: unknown): value is PipelineStatusFailure {
+  return (
+    isRecord(value) &&
+    typeof value.code === 'string' &&
+    isRecord(value.params) &&
+    typeof value.message === 'string'
+  )
+}
+
+function isPipelineStatus(value: unknown): value is PipelineStatus {
+  return (
+    isRecord(value) &&
+    typeof value.pipelineId === 'string' &&
+    ['NEW', 'RUNNING', 'PAUSED', 'STOPPED', 'COMPLETED', 'FAILED'].includes(
+      value.state as string,
+    ) &&
+    (value.failure === undefined || isPipelineStatusFailure(value.failure))
+  )
+}
+
+function isNumberMap(value: unknown): value is Record<string, number> {
+  return isRecord(value) && Object.values(value).every((item) => typeof item === 'number')
+}
+
+function isStringMap(value: unknown): value is Record<string, string> {
+  return isRecord(value) && Object.values(value).every((item) => typeof item === 'string')
+}
+
+function isPipelineMetrics(value: unknown): value is PipelineMetrics {
+  return (
+    isRecord(value) &&
+    typeof value.pipelineId === 'string' &&
+    isNumberMap(value.metrics) &&
+    (value.perTableOffset === undefined || isStringMap(value.perTableOffset))
+  )
+}
+
+function isPipelineLogLine(value: unknown): value is PipelineLogLine {
+  return (
+    isRecord(value) &&
+    typeof value.timestampMillis === 'number' &&
+    typeof value.level === 'string' &&
+    typeof value.message === 'string'
+  )
+}
+
+function isPipelineLogs(value: unknown): value is PipelineLogs {
+  return (
+    isRecord(value) &&
+    typeof value.pipelineId === 'string' &&
+    Array.isArray(value.lines) &&
+    value.lines.every(isPipelineLogLine)
   )
 }
 
@@ -157,6 +243,39 @@ export async function listPipelines(fetcher: ApiFetcher = fetch): Promise<Pipeli
     throw new PipelineClientError('protocol', 'Tapstate returned an invalid Pipeline list.')
   }
   return payload.items
+}
+
+export async function getPipelineStatus(
+  id: string,
+  fetcher: ApiFetcher = fetch,
+): Promise<PipelineStatus> {
+  const payload = await request(`/pipelines/${encodeURIComponent(id)}/status`, fetcher)
+  if (!isPipelineStatus(payload)) {
+    throw new PipelineClientError('protocol', 'Tapstate returned an invalid Pipeline status.')
+  }
+  return payload
+}
+
+export async function getPipelineMetrics(
+  id: string,
+  fetcher: ApiFetcher = fetch,
+): Promise<PipelineMetrics> {
+  const payload = await request(`/pipelines/${encodeURIComponent(id)}/metrics`, fetcher)
+  if (!isPipelineMetrics(payload)) {
+    throw new PipelineClientError('protocol', 'Tapstate returned invalid Pipeline metrics.')
+  }
+  return payload
+}
+
+export async function getPipelineLogs(
+  id: string,
+  fetcher: ApiFetcher = fetch,
+): Promise<PipelineLogs> {
+  const payload = await request(`/pipelines/${encodeURIComponent(id)}/logs?limit=30`, fetcher)
+  if (!isPipelineLogs(payload)) {
+    throw new PipelineClientError('protocol', 'Tapstate returned invalid Pipeline logs.')
+  }
+  return payload
 }
 
 export async function getPipelineLayout(
