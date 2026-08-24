@@ -12,7 +12,12 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import type { ConnectorDetail, ConnectorSummary, SourceView } from '@/service/source-client'
+import type {
+  ConnectionTestReport,
+  ConnectorDetail,
+  ConnectorSummary,
+  SourceView,
+} from '@/service/source-client'
 
 import { ConnectorIcon } from '@/components/connector-icon'
 import { Button } from '@/components/ui/button'
@@ -23,9 +28,11 @@ import {
   getConnector,
   listConnectors,
   SourceClientError,
+  testConnection,
 } from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
 
+import { ConnectionTestResultDialog } from './connection-test-result'
 import { ConnectorFormily } from './connector-formily'
 import {
   connectorSpecConnectionSchema,
@@ -46,6 +53,13 @@ function errorMessage(error: unknown, t: ReturnType<typeof useTranslation>['t'])
   if (error.kind === 'network') return t('sources.create.errors.network')
   if (error.code === 'source.already-exists') return t('sources.create.errors.exists')
   return t('sources.create.errors.server')
+}
+
+function testErrorMessage(error: unknown, t: ReturnType<typeof useTranslation>['t']) {
+  if (!(error instanceof SourceClientError)) return t('sources.test.errors.unknown')
+  if (error.kind === 'network') return t('sources.test.errors.network')
+  if (error.kind === 'protocol') return t('sources.test.errors.protocol')
+  return t('sources.test.errors.server')
 }
 
 function RequestError({ message }: { message: string }) {
@@ -78,6 +92,9 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
   const [loadingConnector, setLoadingConnector] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [requestError, setRequestError] = useState('')
+  const [testing, setTesting] = useState(false)
+  const [testReport, setTestReport] = useState<ConnectionTestReport | null>(null)
+  const [testError, setTestError] = useState('')
   const connectorButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
   useEffect(() => {
@@ -92,6 +109,8 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
     setConfig({})
     setFieldErrors({})
     setRequestError('')
+    setTestReport(null)
+    setTestError('')
     if (connectors.length === 0) {
       setLoadingConnectors(true)
       listConnectors(apiFetch)
@@ -108,6 +127,8 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
     setConfig({})
     setFieldErrors({})
     setRequestError('')
+    setTestReport(null)
+    setTestError('')
     if (!connectorId || step !== 'configure') return
 
     setLoadingConnector(true)
@@ -118,8 +139,12 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
           return
         }
         try {
-          const nextSchema = connectorSpecConnectionSchema(detail.spec.text, currentLocale)
-          const initialValues = connectorSpecInitialValues(detail.spec.text)
+          const nextSchema = connectorSpecConnectionSchema(
+            detail.spec.text,
+            currentLocale,
+            detail.id,
+          )
+          const initialValues = connectorSpecInitialValues(detail.spec.text, detail.id)
           setSchema(nextSchema)
           setConfig({ ...createInitialConfig(detail.config), ...initialValues })
         } catch {
@@ -133,16 +158,15 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
       .finally(() => setLoadingConnector(false))
   }, [apiFetch, connectorId, currentLocale, step, t])
 
-  async function submit() {
+  function connectionDraft() {
     const nextErrors: Record<string, string> = {}
-    setRequestError('')
 
     if (!sourceId.trim()) nextErrors.id = t('sources.create.validation.required')
     else if (sourceId.includes('.')) nextErrors.id = t('sources.create.validation.id')
     if (!connectorId) nextErrors.connector = t('sources.create.validation.required')
     if (Object.keys(nextErrors).length > 0 || connector === null || schema === null) {
       setFieldErrors(nextErrors)
-      return
+      return null
     }
 
     const result = buildSourceConfig(connector.config, config)
@@ -150,16 +174,24 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
       nextErrors[name] = t(`sources.create.validation.${code}`)
     if (Object.keys(nextErrors).length > 0) {
       setFieldErrors(nextErrors)
-      return
+      return null
     }
+
+    return { id: sourceId.trim(), connectorId, settings: result.config }
+  }
+
+  async function submit() {
+    setRequestError('')
+    const draft = connectionDraft()
+    if (!draft) return
 
     setSubmitting(true)
     try {
       const created = await createSource(
         {
-          id: sourceId.trim(),
-          connector: connectorId,
-          config: result.config,
+          id: draft.id,
+          connector: draft.connectorId,
+          config: draft.settings,
           ...(sourceMode ? { mode: sourceMode } : {}),
         },
         apiFetch,
@@ -173,8 +205,24 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
     }
   }
 
+  async function runConnectionTest() {
+    setTestError('')
+    setTestReport(null)
+    const draft = connectionDraft()
+    if (!draft) return
+
+    setTesting(true)
+    try {
+      setTestReport(await testConnection(draft, apiFetch))
+    } catch (error) {
+      setTestError(testErrorMessage(error, t))
+    } finally {
+      setTesting(false)
+    }
+  }
+
   function handleOpenChange(nextOpen: boolean) {
-    if (submitting && !nextOpen) return
+    if ((submitting || testing) && !nextOpen) return
     onOpenChange(nextOpen)
   }
 
@@ -182,17 +230,21 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
     setConnectorId(id)
     setFieldErrors((current) => ({ ...current, connector: '' }))
     setRequestError('')
+    setTestReport(null)
+    setTestError('')
     setStep('configure')
   }
 
   function chooseAnotherConnector() {
-    if (submitting) return
+    if (submitting || testing) return
     const previousConnectorId = connectorId
     setConnectorId('')
     setConnector(null)
     setSchema(null)
     setConfig({})
     setRequestError('')
+    setTestReport(null)
+    setTestError('')
     setStep('select')
     requestAnimationFrame(() => connectorButtonRefs.current[previousConnectorId]?.focus())
   }
@@ -211,7 +263,7 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        closeDisabled={submitting}
+        closeDisabled={submitting || testing}
         closeLabel={t('ask.actions.close')}
         className="bg-background border-border flex h-[90vh] max-h-[800px] w-full max-w-[1100px] flex-col gap-0 overflow-hidden rounded-2xl border p-0 shadow-2xl ring-0 sm:max-w-[1100px]"
       >
@@ -261,9 +313,11 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
                   >
                     {visibleConnectors.map((item) => (
                       <div key={item.id} role="listitem">
-                        <button
-                          className="bg-background text-foreground focus-visible:ring-ring flex h-16 w-full items-center gap-3 rounded-xl px-4 text-left shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-px hover:shadow-[0_8px_20px_-4px_rgba(0,0,0,0.08)] focus-visible:z-10 focus-visible:ring-2 focus-visible:outline-none active:translate-y-0"
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="lg"
+                          className="focus-visible:ring-ring h-16 w-full justify-start rounded-xl px-4 text-left shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-px hover:shadow-[0_8px_20px_-4px_rgba(0,0,0,0.08)] focus-visible:z-10 focus-visible:ring-2 focus-visible:outline-none active:translate-y-0"
                           ref={(element) => {
                             connectorButtonRefs.current[item.id] = element
                           }}
@@ -283,7 +337,7 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
                             className="text-muted-foreground size-4 shrink-0"
                             aria-hidden="true"
                           />
-                        </button>
+                        </Button>
                       </div>
                     ))}
                   </div>
@@ -304,7 +358,7 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
                 <Button
                   variant="ghost"
                   type="button"
-                  disabled={submitting}
+                  disabled={submitting || testing}
                   aria-label={t('sources.create.chooseAnother')}
                   className="size-11 shrink-0 p-0 sm:size-9"
                   onClick={chooseAnotherConnector}
@@ -328,7 +382,7 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
             </DialogHeader>
 
             <div className="flex min-h-0 flex-1 overflow-hidden">
-              <div className="bg-muted/20 flex min-w-0 flex-1 flex-col">
+              <div className="flex min-w-0 flex-1 flex-col">
                 <div className="flex-1 overflow-y-auto">
                   <section className="mx-auto grid w-full max-w-3xl gap-6 p-6 lg:p-8">
                     {requestError && <RequestError message={requestError} />}
@@ -345,10 +399,13 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
                           <span className="source-field__hint">{t('sources.create.idHint')}</span>
                           <Input
                             value={sourceId}
+                            disabled={submitting || testing}
                             aria-invalid={Boolean(fieldErrors.id)}
                             onChange={(event) => {
                               setSourceId(event.target.value)
                               setFieldErrors((current) => ({ ...current, id: '' }))
+                              setTestReport(null)
+                              setTestError('')
                             }}
                           />
                           {fieldErrors.id ? (
@@ -369,20 +426,26 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
                               {connector.modes.map((mode) => {
                                 const selected = sourceMode === mode
                                 return (
-                                  <button
+                                  <Button
                                     key={mode}
                                     type="button"
+                                    variant={selected ? 'secondary' : 'ghost'}
+                                    size="sm"
                                     aria-pressed={selected}
-                                    disabled={submitting}
-                                    className={`h-11 shrink-0 rounded-md px-5 text-[13px] font-medium whitespace-nowrap transition-all duration-200 sm:h-8 sm:px-3 ${
+                                    disabled={submitting || testing}
+                                    className={`h-11 shrink-0 rounded-md px-5 text-[13px] font-medium sm:h-8 sm:px-3 ${
                                       selected
                                         ? 'bg-background text-foreground shadow-sm'
                                         : 'text-muted-foreground hover:text-foreground'
                                     }`}
-                                    onClick={() => setSourceMode(mode)}
+                                    onClick={() => {
+                                      setSourceMode(mode)
+                                      setTestReport(null)
+                                      setTestError('')
+                                    }}
                                   >
                                     {mode}
-                                  </button>
+                                  </Button>
                                 )
                               })}
                             </div>
@@ -395,8 +458,12 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
                           resetKey={`${connector.id}:${connector.spec.contentHash}`}
                           initialValues={config}
                           errors={fieldErrors}
-                          disabled={submitting}
-                          onValuesChange={setConfig}
+                          disabled={submitting || testing}
+                          onValuesChange={(values) => {
+                            setConfig(values)
+                            setTestReport(null)
+                            setTestError('')
+                          }}
                         />
                       </>
                     ) : null}
@@ -408,15 +475,25 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
                     <Button
                       variant="outline"
                       type="button"
-                      disabled={submitting}
+                      disabled={submitting || testing}
                       className="h-11 px-[22px] sm:h-9 sm:px-4"
                       onClick={() => onOpenChange(false)}
                     >
                       {t('sources.create.cancel')}
                     </Button>
                     <Button
+                      variant="outline"
                       type="button"
-                      disabled={connector === null || schema === null || submitting}
+                      disabled={connector === null || schema === null || submitting || testing}
+                      className="h-11 px-[22px] sm:h-9 sm:px-4"
+                      onClick={() => void runConnectionTest()}
+                    >
+                      {testing && <LoaderCircle className="size-4 animate-spin" />}
+                      {testing ? t('sources.test.testing') : t('sources.test.action')}
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={connector === null || schema === null || submitting || testing}
                       className="h-11 px-[22px] sm:h-9 sm:px-4"
                       onClick={() => void submit()}
                     >
@@ -458,6 +535,16 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
             </div>
           </>
         )}
+        <ConnectionTestResultDialog
+          report={testReport}
+          error={testError}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) {
+              setTestReport(null)
+              setTestError('')
+            }
+          }}
+        />
       </DialogContent>
     </Dialog>
   )

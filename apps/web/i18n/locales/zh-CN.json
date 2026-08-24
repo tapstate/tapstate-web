@@ -37,9 +37,12 @@
   "common": {
     "actions": "操作",
     "back": "返回",
+    "close": "关闭",
     "create": "创建",
     "expand": "展开",
     "more": "更多操作",
+    "remove": "移除",
+    "skipToContent": "跳转到画布",
     "separator": "/"
   },
   "auth": {
@@ -127,7 +130,28 @@
       "create": "创建数据源",
       "refresh": "刷新数据源",
       "sync": "同步配置",
-      "test": "测试连接"
+      "test": "测试连接",
+      "refreshSchema": "刷新 Schema"
+    },
+    "test": {
+      "title": "连接测试",
+      "description": "结果基于当前数据源配置。",
+      "action": "测试连接",
+      "testing": "正在测试连接",
+      "passed": "连接测试通过",
+      "failed": "连接测试失败",
+      "reenterSecrets": "测试此草稿前，请重新输入已配置的密钥。",
+      "status": {
+        "passed": "通过",
+        "warning": "警告",
+        "failed": "失败"
+      },
+      "errors": {
+        "network": "无法连接控制面，请检查后端连接后重试。",
+        "protocol": "控制面返回了无效的连接测试结果，请重试。",
+        "server": "控制面无法测试此连接。",
+        "unknown": "无法测试此连接，请重试。"
+      }
     },
     "empty": {
       "title": "还没有数据源",
@@ -297,6 +321,7 @@
       "body": "这会删除 Source 投影。Pipeline 引用必须单独处理。",
       "cancel": "取消",
       "confirm": "删除数据源",
+      "success": "已删除数据源 {{id}}",
       "errors": {
         "inUse": "此数据源仍被以下 Pipeline 引用：",
         "server": "无法删除数据源，请刷新后重试。"
@@ -310,6 +335,29 @@
       "quarantine": "隔离",
       "rows": "行数",
       "size": "大小"
+    },
+    "schema": {
+      "discoveredAt": "发现于 {{date}}",
+      "fieldName": "字段",
+      "fieldType": "类型",
+      "fieldsCount": "{{count}} 个字段",
+      "indexes": "索引",
+      "loadError": "无法加载 Schema，请重试。",
+      "loading": "正在加载 Schema",
+      "networkError": "无法连接控制面，请重试刷新 Schema。",
+      "noFields": "此表没有返回字段。",
+      "none": "无",
+      "notDiscovered": "还没有发现 Schema。",
+      "primaryKey": "主键",
+      "protocolError": "控制面返回了无效的 Schema 结果，请重试。",
+      "refreshing": "正在刷新 Schema",
+      "refreshSuccess": "已刷新 {{id}} 的 Schema",
+      "unique": "唯一",
+      "unknownType": "未知"
+    },
+    "tableDetail": {
+      "noSchema": "表 Schema 不可用",
+      "noSchemaBody": "请刷新数据源 Schema 以加载此表的字段。"
     },
     "status": {
       "connected": "已连接",

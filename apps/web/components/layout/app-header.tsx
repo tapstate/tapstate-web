@@ -1,7 +1,10 @@
-import type { AppLocale } from '@/i18n'
 import { useNavigate } from '@tanstack/react-router'
 import { Bell, Languages, LogOut, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+
+import type { AppLocale } from '@/i18n'
+
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,25 +31,30 @@ export function AppHeader() {
   }
 
   return (
-    <header className="app-header">
-      <div className="app-header__context" />
-
-      <div className="app-header__actions">
-        <button type="button" className="app-header__ask" onClick={() => setAskTapstateOpen(true)}>
+    <header className="app-sidebar__footer">
+      <div className="app-sidebar__actions">
+        <Button
+          type="button"
+          variant="ghost"
+          className="app-sidebar__ask"
+          onClick={() => setAskTapstateOpen(true)}
+        >
           <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
           <span>{t('ask.launch')}</span>
           <kbd>{t('app.shortcuts.ask')}</kbd>
-        </button>
+        </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button
+            <Button
               type="button"
-              className="app-header__icon-button"
+              variant="ghost"
+              size="icon-sm"
+              className="app-sidebar__icon-button"
               aria-label={t('app.language')}
             >
               <Languages className="h-4 w-4" aria-hidden="true" />
-            </button>
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-36">
             {SUPPORTED_LOCALES.map((locale) => (
@@ -65,25 +73,29 @@ export function AppHeader() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <button
+        <Button
           type="button"
-          className="app-header__icon-button"
+          variant="ghost"
+          size="icon-sm"
+          className="app-sidebar__icon-button"
           aria-label={t('app.notifications')}
         >
           <Bell className="h-4 w-4" aria-hidden="true" />
-        </button>
+        </Button>
 
-        <button
+        <Button
           type="button"
-          className="app-header__icon-button"
+          variant="ghost"
+          size="icon-sm"
+          className="app-sidebar__icon-button"
           aria-label={t('app.logout')}
           title={t('app.logout')}
           onClick={logout}
         >
           <LogOut className="h-4 w-4" aria-hidden="true" />
-        </button>
+        </Button>
 
-        <div className="app-header__avatar" aria-label={t('app.user.avatar')}>
+        <div className="app-sidebar__avatar" aria-label={t('app.user.avatar')}>
           {t('app.user.initial')}
         </div>
       </div>

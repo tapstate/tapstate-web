@@ -37,9 +37,12 @@
   "common": {
     "actions": "操作",
     "back": "返回",
+    "close": "關閉",
     "create": "建立",
     "expand": "展開",
     "more": "更多操作",
+    "remove": "移除",
+    "skipToContent": "跳至畫布",
     "separator": "/"
   },
   "auth": {
@@ -127,7 +130,28 @@
       "create": "建立資料來源",
       "refresh": "重新整理資料來源",
       "sync": "同步設定",
-      "test": "測試連線"
+      "test": "測試連線",
+      "refreshSchema": "重新整理 Schema"
+    },
+    "test": {
+      "title": "連線測試",
+      "description": "結果以目前資料來源設定為準。",
+      "action": "測試連線",
+      "testing": "正在測試連線",
+      "passed": "連線測試通過",
+      "failed": "連線測試失敗",
+      "reenterSecrets": "測試此草稿前，請重新輸入已設定的密鑰。",
+      "status": {
+        "passed": "通過",
+        "warning": "警告",
+        "failed": "失敗"
+      },
+      "errors": {
+        "network": "無法連接控制面，請檢查後端連線後重試。",
+        "protocol": "控制面回傳了無效的連線測試結果，請重試。",
+        "server": "控制面無法測試此連線。",
+        "unknown": "無法測試此連線，請重試。"
+      }
     },
     "empty": {
       "title": "尚未建立資料來源",
@@ -297,6 +321,7 @@
       "body": "這會刪除 Source 投影。Pipeline 引用必須另外處理。",
       "cancel": "取消",
       "confirm": "刪除資料來源",
+      "success": "已刪除資料來源 {{id}}",
       "errors": {
         "inUse": "此資料來源仍被以下 Pipeline 引用：",
         "server": "無法刪除資料來源，請重新整理後重試。"
@@ -310,6 +335,29 @@
       "quarantine": "隔離",
       "rows": "列數",
       "size": "大小"
+    },
+    "schema": {
+      "discoveredAt": "發現於 {{date}}",
+      "fieldName": "欄位",
+      "fieldType": "類型",
+      "fieldsCount": "{{count}} 個欄位",
+      "indexes": "索引",
+      "loadError": "無法載入 Schema，請重試。",
+      "loading": "正在載入 Schema",
+      "networkError": "無法連接控制面，請重試重新整理 Schema。",
+      "noFields": "此資料表沒有回傳欄位。",
+      "none": "無",
+      "notDiscovered": "尚未發現 Schema。",
+      "primaryKey": "主鍵",
+      "protocolError": "控制面回傳了無效的 Schema 結果，請重試。",
+      "refreshing": "正在重新整理 Schema",
+      "refreshSuccess": "已重新整理 {{id}} 的 Schema",
+      "unique": "唯一",
+      "unknownType": "未知"
+    },
+    "tableDetail": {
+      "noSchema": "資料表 Schema 不可用",
+      "noSchemaBody": "請重新整理資料來源 Schema 以載入此資料表的欄位。"
     },
     "status": {
       "connected": "已連接",

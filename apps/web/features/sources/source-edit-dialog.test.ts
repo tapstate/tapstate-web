@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest'
 
 import type { ConnectorConfigField } from '@/service/source-client'
 
-import { buildSourceEditConfig, serializeSourceSrs } from './source-edit-dialog'
+import {
+  buildSourceTestSettings,
+  buildSourceEditConfig,
+  retainedSecretNames,
+  serializeSourceSrs,
+} from './source-edit-dialog'
 
 describe('SourceEditDialog source payload helpers', () => {
   const fields: ConnectorConfigField[] = [
@@ -54,6 +59,47 @@ describe('SourceEditDialog source payload helpers', () => {
       config: { host: 'db.local', password: 'replacement' },
       clearSecrets: [],
       errors: {},
+    })
+  })
+
+  it('identifies only write-only secrets that must be re-entered before testing', () => {
+    expect(
+      retainedSecretNames({
+        password: { action: 'keep', value: '' },
+        apiToken: { action: 'replace', value: 'replacement' },
+        tlsKey: { action: 'clear', value: '' },
+      }),
+    ).toEqual(['password'])
+  })
+
+  it('retains existing secrets for testing until a replacement or clear action changes them', () => {
+    const keep = buildSourceEditConfig(
+      fields,
+      { host: 'db.local' },
+      { password: { action: 'keep', value: '' } },
+    )
+    expect(buildSourceTestSettings({ host: 'db.saved', password: 'saved-secret' }, keep)).toEqual({
+      host: 'db.local',
+      password: 'saved-secret',
+    })
+
+    const replace = buildSourceEditConfig(
+      fields,
+      { host: 'db.local' },
+      { password: { action: 'replace', value: 'new-secret' } },
+    )
+    expect(buildSourceTestSettings({ password: 'saved-secret' }, replace)).toEqual({
+      password: 'new-secret',
+      host: 'db.local',
+    })
+
+    const clear = buildSourceEditConfig(
+      fields,
+      { host: 'db.local' },
+      { password: { action: 'clear', value: '' } },
+    )
+    expect(buildSourceTestSettings({ password: 'saved-secret' }, clear)).toEqual({
+      host: 'db.local',
     })
   })
 

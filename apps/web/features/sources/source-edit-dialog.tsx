@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type {
+  ConnectionTestReport,
   ConnectorDetail,
   JsonValue,
   SourceDraft,
@@ -18,9 +19,16 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { getConnector, getSource, SourceClientError, updateSource } from '@/service/source-client'
+import {
+  getConnector,
+  getSource,
+  SourceClientError,
+  testConnection,
+  updateSource,
+} from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
 
+import { ConnectionTestResultDialog } from './connection-test-result'
 import { ConnectorFormily, type SecretDraft } from './connector-formily'
 import {
   connectorSpecConnectionSchema,
@@ -43,6 +51,13 @@ function errorMessage(error: unknown, t: ReturnType<typeof useTranslation>['t'])
   if (error.code === 'source.version-conflict') return t('sources.edit.errors.conflict.body')
   if (error.code === 'source.precondition-required') return t('sources.edit.errors.precondition')
   return t('sources.edit.errors.server')
+}
+
+function testErrorMessage(error: unknown, t: ReturnType<typeof useTranslation>['t']) {
+  if (!(error instanceof SourceClientError)) return t('sources.test.errors.unknown')
+  if (error.kind === 'network') return t('sources.test.errors.network')
+  if (error.kind === 'protocol') return t('sources.test.errors.protocol')
+  return t('sources.test.errors.server')
 }
 
 function metadataText(source: SourceView) {
@@ -95,17 +110,30 @@ export function buildSourceEditConfig(
 ) {
   const clearSecrets: string[] = []
   const secretValues: Record<string, JsonValue> = {}
-  const retainedRequiredSecrets: string[] = []
   for (const [name, draft] of Object.entries(secretDrafts)) {
     if (draft.action === 'clear') clearSecrets.push(name)
-    if (draft.action === 'keep') retainedRequiredSecrets.push(name)
     if (draft.action === 'replace' && draft.value) secretValues[name] = draft.value
   }
 
   return {
-    ...buildSourceConfig(fields, { ...config, ...secretValues }, retainedRequiredSecrets),
+    ...buildSourceConfig(fields, { ...config, ...secretValues }, retainedSecretNames(secretDrafts)),
     clearSecrets,
   }
+}
+
+export function retainedSecretNames(secretDrafts: Record<string, SecretDraft>) {
+  return Object.entries(secretDrafts)
+    .filter(([, draft]) => draft.action === 'keep')
+    .map(([name]) => name)
+}
+
+export function buildSourceTestSettings(
+  currentConfig: Record<string, JsonValue>,
+  sourceConfigValues: ReturnType<typeof buildSourceEditConfig>,
+) {
+  const settings = { ...currentConfig, ...sourceConfigValues.config }
+  for (const name of sourceConfigValues.clearSecrets) delete settings[name]
+  return settings
 }
 
 function RequestError({ message }: { message: string }) {
@@ -146,6 +174,9 @@ export function SourceEditDialog({
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testReport, setTestReport] = useState<ConnectionTestReport | null>(null)
+  const [testError, setTestError] = useState('')
 
   function sourceConfig(sourceToEdit: SourceView, detail = connector) {
     if (!detail?.spec.text) return { ...sourceToEdit.config }
@@ -171,6 +202,8 @@ export function SourceEditDialog({
     setSrs(srsValue(nextSource))
     setFieldErrors({})
     setRequestError('')
+    setTestReport(null)
+    setTestError('')
     setConflict(false)
     setSecretDrafts(
       Object.fromEntries(
@@ -197,8 +230,12 @@ export function SourceEditDialog({
         }
 
         try {
-          const nextSchema = connectorSpecConnectionSchema(detail.spec.text, currentLocale)
-          const initialValues = connectorSpecInitialValues(detail.spec.text)
+          const nextSchema = connectorSpecConnectionSchema(
+            detail.spec.text,
+            currentLocale,
+            detail.id,
+          )
+          const initialValues = connectorSpecInitialValues(detail.spec.text, detail.id)
           setConnector(detail)
           setSchema(nextSchema)
           setMode((current) => current || detail.modes[0] || '')
@@ -296,13 +333,47 @@ export function SourceEditDialog({
     }
   }
 
+  async function runConnectionTest() {
+    if (!connector || !schema) return
+
+    setTestError('')
+    setTestReport(null)
+
+    const nextErrors: Record<string, string> = {}
+    const sourceConfigValues = buildSourceEditConfig(connector.config, config, secretDrafts)
+    for (const [name, code] of Object.entries(sourceConfigValues.errors))
+      nextErrors[name] = t(`sources.edit.validation.${code}`)
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors)
+      return
+    }
+
+    setTesting(true)
+    try {
+      setTestReport(
+        await testConnection(
+          {
+            id: currentSource.id,
+            connectorId: currentSource.connector,
+            settings: buildSourceTestSettings(currentSource.config, sourceConfigValues),
+          },
+          apiFetch,
+        ),
+      )
+    } catch (error) {
+      setTestError(testErrorMessage(error, t))
+    } finally {
+      setTesting(false)
+    }
+  }
+
   return (
     <Dialog
       open={open}
-      onOpenChange={(nextOpen) => (!submitting ? onOpenChange(nextOpen) : undefined)}
+      onOpenChange={(nextOpen) => (!submitting && !testing ? onOpenChange(nextOpen) : undefined)}
     >
       <DialogContent
-        closeDisabled={submitting}
+        closeDisabled={submitting || testing}
         closeLabel={t('ask.actions.close')}
         className="bg-background border-border flex h-[90vh] max-h-[800px] w-full max-w-[1100px] flex-col gap-0 overflow-hidden rounded-2xl border p-0 shadow-2xl ring-0 sm:max-w-[1100px]"
       >
@@ -313,7 +384,7 @@ export function SourceEditDialog({
         </DialogHeader>
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          <div className="bg-muted/20 flex min-w-0 flex-1 flex-col">
+          <div className="flex min-w-0 flex-1 flex-col">
             <div className="min-h-0 flex-1 overflow-y-auto">
               <section className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6 lg:p-8">
                 {requestError && <RequestError message={requestError} />}
@@ -331,7 +402,7 @@ export function SourceEditDialog({
                         variant="outline"
                         size="sm"
                         type="button"
-                        disabled={refreshing}
+                        disabled={refreshing || testing}
                         onClick={() => void refreshLatest(true)}
                       >
                         <RefreshCw className={refreshing ? 'animate-spin' : undefined} />
@@ -341,7 +412,7 @@ export function SourceEditDialog({
                         variant="ghost"
                         size="sm"
                         type="button"
-                        disabled={refreshing}
+                        disabled={refreshing || testing}
                         onClick={() => void refreshLatest(false)}
                       >
                         <RefreshCw className={refreshing ? 'animate-spin' : undefined} />
@@ -392,13 +463,17 @@ export function SourceEditDialog({
                                 variant="ghost"
                                 size="sm"
                                 aria-pressed={selected}
-                                disabled={submitting}
+                                disabled={submitting || testing}
                                 className={
                                   selected
                                     ? 'bg-background text-foreground hover:bg-background shadow-sm'
                                     : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                                 }
-                                onClick={() => setMode(item)}
+                                onClick={() => {
+                                  setMode(item)
+                                  setTestReport(null)
+                                  setTestError('')
+                                }}
                               >
                                 {item}
                               </Button>
@@ -416,11 +491,17 @@ export function SourceEditDialog({
                       configuredSecrets={currentSource.configuredSecrets}
                       secretDrafts={secretDrafts}
                       errors={fieldErrors}
-                      disabled={submitting}
-                      onValuesChange={setConfig}
-                      onSecretChange={(name, draft) =>
+                      disabled={submitting || testing}
+                      onValuesChange={(values) => {
+                        setConfig(values)
+                        setTestReport(null)
+                        setTestError('')
+                      }}
+                      onSecretChange={(name, draft) => {
                         setSecretDrafts((current) => ({ ...current, [name]: draft }))
-                      }
+                        setTestReport(null)
+                        setTestError('')
+                      }}
                     />
                   </>
                 ) : null}
@@ -435,7 +516,7 @@ export function SourceEditDialog({
                   <Textarea
                     rows={4}
                     value={metadata}
-                    disabled={submitting}
+                    disabled={submitting || testing}
                     aria-invalid={Boolean(fieldErrors.metadata)}
                     className="min-h-24 font-mono text-[12px]"
                     onChange={(event) => setMetadata(event.target.value)}
@@ -454,7 +535,11 @@ export function SourceEditDialog({
                   >
                     {t('sources.edit.tables')}
                   </h3>
-                  <TableSelectionEditor value={tables} disabled={submitting} onChange={setTables} />
+                  <TableSelectionEditor
+                    value={tables}
+                    disabled={submitting || testing}
+                    onChange={setTables}
+                  />
                 </section>
 
                 <section className="flex flex-col gap-4" aria-labelledby="source-srs-heading">
@@ -467,7 +552,7 @@ export function SourceEditDialog({
                     </span>
                     <Input
                       value={srs.key}
-                      disabled={submitting}
+                      disabled={submitting || testing}
                       onChange={(event) =>
                         setSrs((current) => ({ ...current, key: event.target.value }))
                       }
@@ -479,7 +564,7 @@ export function SourceEditDialog({
                     </span>
                     <Input
                       value={srs.retention}
-                      disabled={submitting}
+                      disabled={submitting || testing}
                       onChange={(event) =>
                         setSrs((current) => ({ ...current, retention: event.target.value }))
                       }
@@ -491,7 +576,7 @@ export function SourceEditDialog({
                     </span>
                     <Input
                       value={srs.schemaEvolution}
-                      disabled={submitting}
+                      disabled={submitting || testing}
                       onChange={(event) =>
                         setSrs((current) => ({ ...current, schemaEvolution: event.target.value }))
                       }
@@ -501,7 +586,7 @@ export function SourceEditDialog({
                     <label className="text-foreground flex items-center gap-2">
                       <Checkbox
                         checked={srs.queryable}
-                        disabled={submitting}
+                        disabled={submitting || testing}
                         onCheckedChange={(checked) =>
                           setSrs((current) => ({ ...current, queryable: Boolean(checked) }))
                         }
@@ -511,7 +596,7 @@ export function SourceEditDialog({
                     <label className="text-foreground flex items-center gap-2">
                       <Checkbox
                         checked={srs.enabled}
-                        disabled={submitting}
+                        disabled={submitting || testing}
                         onCheckedChange={(checked) =>
                           setSrs((current) => ({ ...current, enabled: Boolean(checked) }))
                         }
@@ -528,14 +613,23 @@ export function SourceEditDialog({
                 <Button
                   variant="outline"
                   type="button"
-                  disabled={submitting}
+                  disabled={submitting || testing}
                   onClick={() => onOpenChange(false)}
                 >
                   {t('sources.edit.cancel')}
                 </Button>
                 <Button
                   type="button"
-                  disabled={submitting || loading || !connector || !schema}
+                  variant="outline"
+                  disabled={submitting || testing || loading || !connector || !schema}
+                  onClick={() => void runConnectionTest()}
+                >
+                  {testing && <LoaderCircle className="size-3.5 animate-spin" />}
+                  {testing ? t('sources.test.testing') : t('sources.test.action')}
+                </Button>
+                <Button
+                  type="button"
+                  disabled={submitting || testing || loading || !connector || !schema}
                   onClick={() => void submit()}
                 >
                   {submitting && <LoaderCircle className="size-3.5 animate-spin" />}
@@ -559,6 +653,16 @@ export function SourceEditDialog({
             </div>
           </aside>
         </div>
+        <ConnectionTestResultDialog
+          report={testReport}
+          error={testError}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) {
+              setTestReport(null)
+              setTestError('')
+            }
+          }}
+        />
       </DialogContent>
     </Dialog>
   )

@@ -1,8 +1,12 @@
 import type { ComponentType, SVGProps } from 'react'
+
 import { Link, useRouterState } from '@tanstack/react-router'
 import { Database, GitMerge, MessageSquareText, Terminal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+
 import { cn } from '@/lib/utils'
+
+import { AppHeader } from './app-header'
 
 interface NavigationItem {
   labelKey: string
@@ -21,8 +25,8 @@ export function AppSidebar() {
   const { t } = useTranslation()
 
   return (
-    <aside className="app-sidebar">
-      <div className="app-sidebar__brand">
+    <aside className="app-sidebar bg-transparent">
+      <div className="app-sidebar__brand mt-2">
         <div className="app-sidebar__mark" aria-hidden="true">
           <Terminal className="h-3 w-3 text-white" />
         </div>
@@ -47,6 +51,8 @@ export function AppSidebar() {
           )
         })}
       </nav>
+
+      <AppHeader />
     </aside>
   )
 }

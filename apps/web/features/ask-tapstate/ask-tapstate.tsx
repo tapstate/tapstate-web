@@ -1,4 +1,5 @@
 import type { ComponentType, SVGProps } from 'react'
+
 import { useNavigate } from '@tanstack/react-router'
 import {
   ArrowUp,
@@ -17,6 +18,8 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useUiStore } from '@/stores/ui-store'
 
@@ -180,25 +183,34 @@ export function AskTapstate() {
             {t('ask.newChat')}
           </h3>
           <div className="flex items-center gap-1 text-gray-400">
-            <button
-              className="rounded-md p-1.5 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="text-gray-400 hover:text-gray-600"
               aria-label={t('ask.actions.minimize')}
             >
               <Minimize2 className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
-            <button
-              className="rounded-md p-1.5 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="text-gray-400 hover:text-gray-600"
               aria-label={t('ask.actions.maximize')}
             >
               <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
-            <button
-              className="rounded-md p-1.5 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="text-gray-400 hover:text-gray-600"
               aria-label={t('ask.actions.close')}
               onClick={() => setOpen(false)}
             >
               <X className="h-4 w-4" aria-hidden="true" />
-            </button>
+            </Button>
           </div>
         </header>
 
@@ -208,7 +220,7 @@ export function AskTapstate() {
               <div key={message.id} className="flex flex-col gap-1">
                 {message.role === 'user' ? (
                   <div className="flex justify-end">
-                    <div className="max-w-[85%] break-words rounded-2xl rounded-tr-sm bg-gray-100 px-3 py-2 text-[13px] text-gray-900">
+                    <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-gray-100 px-3 py-2 text-[13px] break-words text-gray-900">
                       {message.content}
                     </div>
                   </div>
@@ -229,7 +241,7 @@ export function AskTapstate() {
                           ))}
                         </div>
                       ) : (
-                        <div className="whitespace-pre-wrap leading-normal">
+                        <div className="leading-normal whitespace-pre-wrap">
                           {parseMessageContent(message.content).map((segment, index) =>
                             segment.type === 'text' ? (
                               <span key={`${message.id}-${index}`}>{segment.content}</span>
@@ -251,7 +263,7 @@ export function AskTapstate() {
                                   </span>
                                 </div>
                                 <div className="overflow-x-auto">
-                                  <table className="w-full whitespace-nowrap text-left text-[11px]">
+                                  <table className="w-full text-left text-[11px] whitespace-nowrap">
                                     <thead className="bg-white text-gray-500">
                                       <tr>
                                         {previewColumns.map((column) => (
@@ -281,10 +293,13 @@ export function AskTapstate() {
                                 </div>
                               </div>
                             ) : (
-                              <button
+                              <Button
                                 key={`${message.id}-${index}`}
+                                type="button"
+                                variant="ghost"
+                                size="xs"
                                 className={cn(
-                                  'mx-0.5 inline-flex cursor-pointer items-center gap-1 rounded border px-1.5 py-0.5 align-baseline font-mono text-[12px] transition-all hover:shadow-sm',
+                                  'mx-0.5 h-auto cursor-pointer rounded border px-1.5 py-0.5 align-baseline font-mono text-[12px] hover:shadow-sm',
                                   segment.resourceType === 'DataSource'
                                     ? 'border-gray-200 bg-gray-100 text-gray-800 hover:bg-gray-200'
                                     : 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100',
@@ -297,7 +312,7 @@ export function AskTapstate() {
                                   <Table className="h-3 w-3" aria-hidden="true" />
                                 )}
                                 {segment.name}
-                              </button>
+                              </Button>
                             ),
                           )}
                           {message.isStreaming && (
@@ -327,14 +342,17 @@ export function AskTapstate() {
               {promptChips.map((prompt) => {
                 const Icon = prompt.icon
                 return (
-                  <button
+                  <Button
                     key={prompt.labelKey}
-                    className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[12px] font-medium text-gray-700 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50"
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-auto rounded-full border-gray-200 bg-white px-3 py-1.5 text-[12px] font-medium text-gray-700 shadow-sm hover:border-gray-300 hover:bg-gray-50"
                     onClick={() => setInputText(t(prompt.promptKey))}
                   >
                     <Icon className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />
                     {t(prompt.labelKey)}
-                  </button>
+                  </Button>
                 )
               })}
             </div>
@@ -358,26 +376,36 @@ export function AskTapstate() {
             />
 
             <div className="flex items-center justify-between bg-white px-2 py-1.5">
-              <button className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] font-medium text-gray-600 transition-colors hover:bg-gray-100">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-auto px-2 py-1 text-[12px] font-medium text-gray-600"
+              >
                 <Box className="h-3.5 w-3.5" aria-hidden="true" />
                 {t('ask.skills')}
                 <ChevronDown className="h-3 w-3" aria-hidden="true" />
-              </button>
+              </Button>
               <div className="flex items-center gap-1">
-                <button
-                  className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-gray-400 hover:text-gray-600"
                   aria-label={t('ask.actions.attach')}
                 >
                   <Paperclip className="h-3.5 w-3.5" aria-hidden="true" />
-                </button>
-                <button
-                  className="ml-1 flex h-7 w-7 items-center justify-center rounded-md bg-gray-900 text-white transition-colors hover:bg-gray-800 disabled:opacity-50 disabled:hover:bg-gray-900"
+                </Button>
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  className="ml-1"
                   disabled={isSimulating || !inputText.trim()}
                   aria-label={t('ask.actions.send')}
                   onClick={() => void sendMessage()}
                 >
                   <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
-                </button>
+                </Button>
               </div>
             </div>
           </div>

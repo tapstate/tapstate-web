@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 
 import type { SourceView } from '@/service/source-client'
 
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -85,23 +86,25 @@ export function SourceDeleteDialog({
           </div>
         )}
         <DialogFooter>
-          <button
+          <Button
             type="button"
+            variant="outline"
             disabled={submitting}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-[13px] font-medium text-gray-700"
+            className="h-auto px-3 py-1.5 text-[13px] font-medium"
             onClick={() => onOpenChange(false)}
           >
             {t('sources.delete.cancel')}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="destructive"
             disabled={submitting}
-            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-1.5 text-[13px] font-medium text-white disabled:opacity-50"
+            className="h-auto px-3 py-1.5 text-[13px] font-medium"
             onClick={() => void confirm()}
           >
             {submitting && <LoaderCircle className="h-3.5 w-3.5 animate-spin" />}
             {t('sources.delete.confirm')}
-          </button>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

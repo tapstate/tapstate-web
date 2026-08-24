@@ -132,6 +132,59 @@ export interface SourceEnvelope {
   etag: string
 }
 
+export type ConnectionTestOutcome = 'PASSED' | 'FAILED'
+export type ConnectionTestCheckStatus = 'PASSED' | 'WARNING' | 'FAILED'
+
+export interface ConnectionTestCheck {
+  name: string
+  status: ConnectionTestCheckStatus
+  message?: string | null
+  reason?: string | null
+  solution?: string | null
+  connectorErrorCode?: string | null
+}
+
+export interface ConnectionTestReport {
+  connectionId: string
+  connectorId: string
+  outcome: ConnectionTestOutcome
+  checks: ConnectionTestCheck[]
+  testedAt: number
+}
+
+export interface ConnectionTestRequest {
+  id: string
+  connectorId: string
+  settings: Record<string, JsonValue>
+}
+
+export interface SourceSchemaField {
+  name: string
+  type: string | null
+}
+
+export interface SourceSchemaIndex {
+  name: string
+  fields: string[]
+  unique: boolean
+}
+
+export interface SourceSchemaTable {
+  name: string
+  fields: SourceSchemaField[]
+  primaryKey: string[]
+  indexes: SourceSchemaIndex[]
+}
+
+export interface SourceSchemaReport {
+  connectionId: string
+  connectorId: string
+  tables: SourceSchemaTable[]
+  discoveredAt: number
+}
+
+export type SourceSchemaRequest = ConnectionTestRequest
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -199,6 +252,76 @@ function isSourceView(value: unknown): value is SourceView {
     (value.experimental === undefined ||
       value.experimental === null ||
       isRecord(value.experimental))
+  )
+}
+
+function optionalString(value: unknown) {
+  return value === undefined || value === null || typeof value === 'string'
+}
+
+function isConnectionTestCheck(value: unknown): value is ConnectionTestCheck {
+  return (
+    isRecord(value) &&
+    typeof value.name === 'string' &&
+    (value.status === 'PASSED' || value.status === 'WARNING' || value.status === 'FAILED') &&
+    optionalString(value.message) &&
+    optionalString(value.reason) &&
+    optionalString(value.solution) &&
+    optionalString(value.connectorErrorCode)
+  )
+}
+
+function isConnectionTestReport(value: unknown): value is ConnectionTestReport {
+  return (
+    isRecord(value) &&
+    typeof value.connectionId === 'string' &&
+    typeof value.connectorId === 'string' &&
+    (value.outcome === 'PASSED' || value.outcome === 'FAILED') &&
+    Array.isArray(value.checks) &&
+    value.checks.every(isConnectionTestCheck) &&
+    typeof value.testedAt === 'number'
+  )
+}
+
+function isSourceSchemaField(value: unknown): value is SourceSchemaField {
+  return (
+    isRecord(value) &&
+    typeof value.name === 'string' &&
+    (value.type === null || typeof value.type === 'string')
+  )
+}
+
+function isSourceSchemaIndex(value: unknown): value is SourceSchemaIndex {
+  return (
+    isRecord(value) &&
+    typeof value.name === 'string' &&
+    Array.isArray(value.fields) &&
+    value.fields.every((field) => typeof field === 'string') &&
+    typeof value.unique === 'boolean'
+  )
+}
+
+function isSourceSchemaTable(value: unknown): value is SourceSchemaTable {
+  return (
+    isRecord(value) &&
+    typeof value.name === 'string' &&
+    Array.isArray(value.fields) &&
+    value.fields.every(isSourceSchemaField) &&
+    Array.isArray(value.primaryKey) &&
+    value.primaryKey.every((field) => typeof field === 'string') &&
+    Array.isArray(value.indexes) &&
+    value.indexes.every(isSourceSchemaIndex)
+  )
+}
+
+function isSourceSchemaReport(value: unknown): value is SourceSchemaReport {
+  return (
+    isRecord(value) &&
+    typeof value.connectionId === 'string' &&
+    typeof value.connectorId === 'string' &&
+    Array.isArray(value.tables) &&
+    value.tables.every(isSourceSchemaTable) &&
+    typeof value.discoveredAt === 'number'
   )
 }
 
@@ -294,6 +417,52 @@ export async function getSource(id: string, fetcher: ApiFetcher = fetch): Promis
   if (!isSourceView(payload) || payload.id !== id || !quotedHash(etag))
     throw new SourceClientError('protocol', 'the source detail response is malformed')
   return { source: payload, etag }
+}
+
+export async function testConnection(
+  request: ConnectionTestRequest,
+  fetcher: ApiFetcher = fetch,
+): Promise<ConnectionTestReport> {
+  const { payload } = await requestJson('/connections:test', fetcher, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  })
+  if (
+    !isConnectionTestReport(payload) ||
+    payload.connectionId !== request.id ||
+    payload.connectorId !== request.connectorId
+  )
+    throw new SourceClientError('protocol', 'the connection test response is malformed')
+  return payload
+}
+
+export async function discoverSourceSchema(
+  request: SourceSchemaRequest,
+  fetcher: ApiFetcher = fetch,
+): Promise<SourceSchemaReport> {
+  const { payload } = await requestJson('/connections:discover-schema', fetcher, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  })
+  if (
+    !isSourceSchemaReport(payload) ||
+    payload.connectionId !== request.id ||
+    payload.connectorId !== request.connectorId
+  )
+    throw new SourceClientError('protocol', 'the source schema response is malformed')
+  return payload
+}
+
+export async function getSourceSchema(
+  id: string,
+  fetcher: ApiFetcher = fetch,
+): Promise<SourceSchemaReport> {
+  const { payload } = await requestJson(`/connections/${encodeURIComponent(id)}/schema`, fetcher)
+  if (!isSourceSchemaReport(payload) || payload.connectionId !== id)
+    throw new SourceClientError('protocol', 'the source schema response is malformed')
+  return payload
 }
 
 function requireIfMatch(id: string, etag: string) {

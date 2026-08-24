@@ -3,11 +3,14 @@ import { describe, expect, it } from 'vitest'
 import {
   createSource,
   deleteSource,
+  discoverSourceSchema,
   getConnector,
   getSource,
+  getSourceSchema,
   listConnectors,
   listSources,
   SourceClientError,
+  testConnection,
   updateSource,
   type ApiFetcher,
   type SourceDraft,
@@ -159,6 +162,146 @@ describe('source client', () => {
     )
     expect(updated.source).toEqual(updatedSource)
     expect(requests[1].headers.get('If-Match')).toBe(created.etag)
+  })
+
+  it('posts a connection draft and returns its structured test report', async () => {
+    const requests: Request[] = []
+    const report = {
+      connectionId: 'orders',
+      connectorId: 'mysql',
+      outcome: 'PASSED' as const,
+      checks: [
+        {
+          name: 'connection',
+          status: 'PASSED' as const,
+          message: 'Connected',
+          reason: null,
+          solution: null,
+          connectorErrorCode: null,
+        },
+      ],
+      testedAt: 1_754_800_000_000,
+    }
+
+    await expect(
+      testConnection(
+        {
+          id: 'orders',
+          connectorId: 'mysql',
+          settings: { host: 'db.internal', password: 'write-only' },
+        },
+        fetcherFor(jsonResponse(report), requests),
+      ),
+    ).resolves.toEqual(report)
+
+    expect(requests).toHaveLength(1)
+    expect(requests[0].method).toBe('POST')
+    expect(new URL(requests[0].url).pathname).toBe('/api/connections:test')
+    expect(requests[0].headers.get('Content-Type')).toBe('application/json')
+    await expect(requests[0].json()).resolves.toEqual({
+      id: 'orders',
+      connectorId: 'mysql',
+      settings: { host: 'db.internal', password: 'write-only' },
+    })
+  })
+
+  it('rejects a malformed or mismatched connection test report', async () => {
+    await expect(
+      testConnection(
+        { id: 'orders', connectorId: 'mysql', settings: { host: 'db.internal' } },
+        fetcherFor(
+          jsonResponse({
+            connectionId: 'another-source',
+            connectorId: 'mysql',
+            outcome: 'PASSED',
+            checks: [],
+            testedAt: 1_754_800_000_000,
+          }),
+        ),
+      ),
+    ).rejects.toMatchObject({ kind: 'protocol' })
+
+    await expect(
+      testConnection(
+        { id: 'orders', connectorId: 'mysql', settings: { host: 'db.internal' } },
+        fetcherFor(
+          jsonResponse({
+            connectionId: 'orders',
+            connectorId: 'mysql',
+            outcome: 'PASSED',
+            checks: [{ name: 'connection', status: 'UNKNOWN' }],
+            testedAt: 1_754_800_000_000,
+          }),
+        ),
+      ),
+    ).rejects.toMatchObject({ kind: 'protocol' })
+  })
+
+  it('discovers and reads a strict source schema report', async () => {
+    const report = {
+      connectionId: 'orders',
+      connectorId: 'mysql',
+      discoveredAt: 1_754_800_000_000,
+      tables: [
+        {
+          name: 'orders',
+          fields: [
+            { name: 'id', type: 'BIGINT' },
+            { name: 'email', type: 'VARCHAR' },
+          ],
+          primaryKey: ['id'],
+          indexes: [{ name: 'idx_orders_id', fields: ['id'], unique: true }],
+        },
+      ],
+    }
+    const requests: Request[] = []
+    const request = {
+      id: 'orders',
+      connectorId: 'mysql',
+      settings: { host: 'db.internal', password: 'write-only' },
+    }
+
+    await expect(
+      discoverSourceSchema(request, fetcherFor(jsonResponse(report), requests)),
+    ).resolves.toEqual(report)
+    expect(new URL(requests[0].url).pathname).toBe('/api/connections:discover-schema')
+    await expect(requests[0].json()).resolves.toEqual(request)
+
+    await expect(
+      getSourceSchema('orders', fetcherFor(jsonResponse(report, 200, `"${source.contentHash}"`))),
+    ).resolves.toEqual(report)
+  })
+
+  it('rejects malformed or mismatched source schema reports', async () => {
+    await expect(
+      discoverSourceSchema(
+        { id: 'orders', connectorId: 'mysql', settings: {} },
+        fetcherFor(
+          jsonResponse({
+            connectionId: 'another-source',
+            connectorId: 'mysql',
+            discoveredAt: 1_754_800_000_000,
+            tables: [],
+          }),
+        ),
+      ),
+    ).rejects.toMatchObject({ kind: 'protocol' })
+
+    await expect(
+      getSourceSchema(
+        'orders',
+        fetcherFor(
+          jsonResponse({
+            connectionId: 'orders',
+            connectorId: 'mysql',
+            discoveredAt: 1_754_800_000_000,
+            tables: [
+              { name: 'orders', fields: [{ name: 'id', type: 42 }], primaryKey: [], indexes: [] },
+            ],
+          }),
+        ),
+      ),
+    ).rejects.toMatchObject({ kind: 'protocol' })
   })
 
   it('omits secret values unless the caller explicitly clears them', async () => {

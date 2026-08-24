@@ -6,15 +6,17 @@ import type { ConnectorDetail, ConnectorSummary, SourceView } from '@/service/so
 
 import { i18n } from '@/i18n/index'
 
-const { getConnector, listConnectors } = vi.hoisted(() => ({
+const { getConnector, listConnectors, testConnection } = vi.hoisted(() => ({
   getConnector: vi.fn(),
   listConnectors: vi.fn(),
+  testConnection: vi.fn(),
 }))
 
 vi.mock('@/service/source-client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/service/source-client')>()),
   getConnector,
   listConnectors,
+  testConnection,
 }))
 
 import { SourceCreateDialog } from './source-create-dialog'
@@ -105,6 +107,16 @@ function connectorSearchField() {
   return document.body.querySelector<HTMLInputElement>('input[aria-label="Search connectors"]')
 }
 
+function fieldInput(label: string) {
+  return document.body.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)
+}
+
+function changeInput(input: HTMLInputElement, value: string) {
+  const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+  valueSetter?.call(input, value)
+  input.dispatchEvent(new Event('input', { bubbles: true }))
+}
+
 function hasClasses(element: Element | null | undefined, ...classes: string[]) {
   return Boolean(element && classes.every((className) => element.classList.contains(className)))
 }
@@ -113,6 +125,13 @@ beforeEach(async () => {
   await i18n.changeLanguage('en')
   listConnectors.mockResolvedValue([mysql, mongodb])
   getConnector.mockResolvedValue(detail)
+  testConnection.mockResolvedValue({
+    connectionId: 'orders',
+    connectorId: 'mysql',
+    outcome: 'PASSED',
+    checks: [{ name: 'connection', status: 'PASSED', message: 'Connected' }],
+    testedAt: 1_754_800_000_000,
+  })
 })
 
 afterEach(async () => {
@@ -331,5 +350,57 @@ describe('SourceCreateDialog', () => {
 
     await vi.waitFor(() => expect(document.body.textContent).toContain('主机地址'))
     expect(document.body.textContent).not.toContain('English host')
+  })
+
+  it('tests the same validated draft that will be used to create a Source', async () => {
+    host = document.createElement('div')
+    document.body.append(host)
+    root = createRoot(host)
+
+    await act(async () => {
+      root?.render(
+        <SourceCreateDialog
+          open
+          onOpenChange={() => undefined}
+          onCreated={(_source: SourceView) => undefined}
+        />,
+      )
+    })
+    await vi.waitFor(() => expect(connectorCard()).toBeDefined())
+
+    await act(async () => connectorCard()?.click())
+    await vi.waitFor(() => expect(fieldInput('Spec host')).toBeDefined())
+
+    const sourceIdInput = dialogContent()?.querySelector<HTMLInputElement>(
+      'label.source-field input',
+    )
+    const hostInput = fieldInput('Spec host')
+    expect(sourceIdInput).toBeDefined()
+    expect(hostInput).toBeDefined()
+
+    await act(async () => {
+      changeInput(sourceIdInput!, 'orders')
+      changeInput(hostInput!, 'db.internal')
+    })
+
+    const testButton = [...document.body.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Test connection',
+    )
+    expect(testButton).toBeDefined()
+
+    await act(async () => testButton?.click())
+
+    await vi.waitFor(() => {
+      expect(testConnection).toHaveBeenCalledWith(
+        {
+          id: 'orders',
+          connectorId: 'mysql',
+          settings: { host: 'db.internal' },
+        },
+        expect.any(Function),
+      )
+      expect(document.body.textContent).toContain('Connection test passed')
+      expect(document.body.textContent).toContain('Connected')
+    })
   })
 })

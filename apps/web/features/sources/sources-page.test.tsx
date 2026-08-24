@@ -4,30 +4,60 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { SourceEnvelope, SourceView } from '@/service/source-client'
+import {
+  SourceClientError,
+  type ConnectorSummary,
+  type SourceEnvelope,
+  type SourceView,
+} from '@/service/source-client'
 
-const { getSource, listSources, registerCreated, registerEdited, triggerCreated, triggerEdited } =
-  vi.hoisted(() => {
-    let onCreated: ((source: SourceView) => void) | undefined
-    let onSaved: ((result: SourceEnvelope) => void) | undefined
-    return {
-      getSource: vi.fn(),
-      listSources: vi.fn(),
-      registerCreated: (callback: (source: SourceView) => void) => {
-        onCreated = callback
-      },
-      registerEdited: (callback: (result: SourceEnvelope) => void) => {
-        onSaved = callback
-      },
-      triggerCreated: (source: SourceView) => onCreated?.(source),
-      triggerEdited: (result: SourceEnvelope) => onSaved?.(result),
-    }
-  })
+const {
+  discoverSourceSchema,
+  getSource,
+  getSourceSchema,
+  listConnectors,
+  listSources,
+  testConnection,
+  registerCreated,
+  registerEdited,
+  registerDeleted,
+  triggerCreated,
+  triggerEdited,
+  triggerDeleted,
+} = vi.hoisted(() => {
+  let onCreated: ((source: SourceView) => void) | undefined
+  let onSaved: ((result: SourceEnvelope) => void) | undefined
+  let onDeleted: (() => void) | undefined
+  return {
+    discoverSourceSchema: vi.fn(),
+    getSource: vi.fn(),
+    getSourceSchema: vi.fn(),
+    listConnectors: vi.fn(),
+    listSources: vi.fn(),
+    testConnection: vi.fn(),
+    registerCreated: (callback: (source: SourceView) => void) => {
+      onCreated = callback
+    },
+    registerEdited: (callback: (result: SourceEnvelope) => void) => {
+      onSaved = callback
+    },
+    registerDeleted: (callback: () => void) => {
+      onDeleted = callback
+    },
+    triggerCreated: (source: SourceView) => onCreated?.(source),
+    triggerEdited: (result: SourceEnvelope) => onSaved?.(result),
+    triggerDeleted: () => onDeleted?.(),
+  }
+})
 
 vi.mock('@/service/source-client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/service/source-client')>()),
+  discoverSourceSchema,
   getSource,
+  getSourceSchema,
+  listConnectors,
   listSources,
+  testConnection,
 }))
 
 vi.mock('./source-create-dialog', () => ({
@@ -49,6 +79,22 @@ vi.mock('./source-edit-dialog', () => ({
   }) => {
     registerEdited(onSaved)
     return <div data-testid="source-edit-dialog">{`${source.id}:${etag}`}</div>
+  },
+}))
+
+vi.mock('./source-delete-dialog', () => ({
+  SourceDeleteDialog: ({
+    open,
+    source,
+    onDeleted,
+  }: {
+    open: boolean
+    source: SourceView
+    onDeleted: () => void
+  }) => {
+    if (!open) return null
+    registerDeleted(onDeleted)
+    return <div data-testid="source-delete-dialog">{`Delete ${source.id}?`}</div>
   },
 }))
 
@@ -77,12 +123,55 @@ const source: SourceView = {
   contentHash: 'a'.repeat(64),
 }
 
+const mysqlConnector: ConnectorSummary = {
+  id: 'mysql',
+  name: 'MySQL',
+  icon: 'icons/mysql.png',
+  group: 'database',
+  modes: ['snapshot'],
+  discovery: 'catalog',
+  sink: false,
+  pushOut: false,
+  origin: 'registered',
+}
+
+const schemaReport = {
+  connectionId: 'orders',
+  connectorId: 'mysql',
+  discoveredAt: 1_754_800_000_000,
+  tables: [
+    {
+      name: 'orders',
+      fields: [
+        { name: 'id', type: 'BIGINT' },
+        { name: 'email', type: 'VARCHAR' },
+      ],
+      primaryKey: ['id'],
+      indexes: [],
+    },
+  ],
+}
+
+const testReport = {
+  connectionId: 'orders',
+  connectorId: 'mysql',
+  outcome: 'PASSED' as const,
+  checks: [{ name: 'connection', status: 'PASSED' as const, message: 'reachable' }],
+  testedAt: 1_754_800_000_000,
+}
+
 let root: Root | undefined
 let container: HTMLDivElement | undefined
 
 function buttonWithText(text: string) {
   return [...(container?.querySelectorAll('button') ?? [])].find(
     (button) => button.textContent?.trim() === text,
+  )
+}
+
+function buttonWithLabel(text: string) {
+  return [...(container?.querySelectorAll('button') ?? [])].find((button) =>
+    button.getAttribute('aria-label')?.includes(text),
   )
 }
 
@@ -93,8 +182,12 @@ async function waitForPage(assertion: () => void | Promise<void>) {
 }
 
 beforeEach(() => {
+  listConnectors.mockResolvedValue([mysqlConnector])
   listSources.mockResolvedValue([source])
   getSource.mockResolvedValue({ source, etag: `"${source.contentHash}"` })
+  getSourceSchema.mockResolvedValue(schemaReport)
+  discoverSourceSchema.mockResolvedValue(schemaReport)
+  testConnection.mockResolvedValue(testReport)
 })
 
 afterEach(async () => {
@@ -106,6 +199,32 @@ afterEach(async () => {
 })
 
 describe('SourcesPage', () => {
+  it('renders the registered connector icon in source lists', async () => {
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <SourcesPage />
+        </QueryClientProvider>,
+      )
+    })
+
+    await waitForPage(() =>
+      expect(container?.querySelector('.connector-icon__image')).not.toBeNull(),
+    )
+    expect(
+      [...(container?.querySelectorAll('.connector-icon__image') ?? [])].map((image) =>
+        image.getAttribute('src'),
+      ),
+    ).toEqual(['/connector-icons/mysql', '/connector-icons/mysql'])
+  })
+
   it('keeps the selected source in the master-detail workbench without inventing observations', async () => {
     container = document.createElement('div')
     document.body.append(container)
@@ -126,6 +245,7 @@ describe('SourcesPage', () => {
     })
 
     await act(async () => buttonWithText('orders')?.click())
+    await waitForPage(() => expect(container?.textContent).toContain('Discovered'))
 
     expect(container.textContent).toContain('Tables in orders')
     expect(container.textContent).toContain('1 configured secrets')
@@ -138,8 +258,192 @@ describe('SourcesPage', () => {
     expect(tableRow).toBeDefined()
     await act(async () => (tableRow as HTMLElement).click())
 
-    expect(container.textContent).toContain('Data observation unavailable')
+    expect(container.textContent).toContain('id')
+    expect(container.textContent).toContain('BIGINT')
+    expect(container.textContent).toContain('email')
+    expect(container.textContent).toContain('VARCHAR')
     expect(container.textContent).not.toContain('preview')
+  })
+
+  it('tests a source from the list with the persisted config', async () => {
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <SourcesPage />
+        </QueryClientProvider>,
+      )
+    })
+    await waitForPage(() => expect(buttonWithLabel('Test connection orders')).toBeDefined())
+
+    await act(async () => buttonWithLabel('Test connection orders')?.click())
+
+    await waitForPage(() => expect(document.body.textContent).toContain('Connection test passed'))
+    expect(testConnection).toHaveBeenCalledWith(
+      { id: 'orders', connectorId: 'mysql', settings: source.config },
+      expect.any(Function),
+    )
+  })
+
+  it('tests the selected source from the detail header with the persisted config', async () => {
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <SourcesPage />
+        </QueryClientProvider>,
+      )
+    })
+    await waitForPage(() => expect(buttonWithText('orders')).toBeDefined())
+    await act(async () => buttonWithText('orders')?.click())
+    await waitForPage(() => expect(buttonWithText('Test connection')).toBeDefined())
+
+    await act(async () => buttonWithText('Test connection')?.click())
+
+    await waitForPage(() => expect(document.body.textContent).toContain('Connection test passed'))
+    expect(testConnection).toHaveBeenCalledWith(
+      { id: 'orders', connectorId: 'mysql', settings: source.config },
+      expect.any(Function),
+    )
+  })
+
+  it('opens deletion from the source detail and removes the source from the query cache only after confirmation', async () => {
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <SourcesPage />
+        </QueryClientProvider>,
+      )
+    })
+    await waitForPage(() => expect(buttonWithText('orders')).toBeDefined())
+    await act(async () => buttonWithText('orders')?.click())
+    await waitForPage(() => expect(buttonWithText('Delete source')).toBeDefined())
+
+    await act(async () => buttonWithText('Delete source')?.click())
+    await waitForPage(() => expect(container?.textContent).toContain('Delete orders?'))
+    expect(container?.textContent).toContain('orders')
+
+    await act(async () => triggerDeleted())
+    await waitForPage(() => expect(container?.textContent).not.toContain('Delete orders?'))
+    expect(container?.textContent).not.toContain('Tables in orders')
+    expect(queryClient.getQueryData<SourceView[]>(['sources'])).toEqual([])
+  })
+
+  it('keeps the test action disabled while a source test is pending', async () => {
+    let resolveTest: ((report: typeof testReport) => void) | undefined
+    testConnection.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveTest = resolve
+        }),
+    )
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <SourcesPage />
+        </QueryClientProvider>,
+      )
+    })
+    await waitForPage(() => expect(buttonWithLabel('Test connection orders')).toBeDefined())
+
+    await act(async () => buttonWithLabel('Test connection orders')?.click())
+    await waitForPage(() => expect(buttonWithLabel('Test connection orders')?.disabled).toBe(true))
+
+    await act(async () => resolveTest?.(testReport))
+  })
+
+  it('refreshes schema and shows the discovered fields in table detail', async () => {
+    getSourceSchema.mockRejectedValueOnce(
+      new SourceClientError('server', 'not discovered', null, 404),
+    )
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <SourcesPage />
+        </QueryClientProvider>,
+      )
+    })
+    await waitForPage(() => expect(buttonWithText('orders')).toBeDefined())
+    await act(async () => buttonWithText('orders')?.click())
+    await waitForPage(() =>
+      expect(container?.textContent).toContain('Schema has not been discovered yet.'),
+    )
+
+    await act(async () => buttonWithText('Refresh schema')?.click())
+    await waitForPage(() => expect(container?.textContent).toContain('Discovered'))
+    expect(discoverSourceSchema).toHaveBeenCalledWith(
+      { id: 'orders', connectorId: 'mysql', settings: source.config },
+      expect.any(Function),
+    )
+
+    const tableRow = [...(container?.querySelectorAll('tbody tr') ?? [])].find((row) =>
+      row.textContent?.includes('orders'),
+    )
+    await act(async () => (tableRow as HTMLElement).click())
+    expect(container.textContent).toContain('id')
+    expect(container.textContent).toContain('BIGINT')
+    expect(container.textContent).toContain('email')
+    expect(container.textContent).toContain('VARCHAR')
+  })
+
+  it('shows a retry action when schema discovery fails', async () => {
+    discoverSourceSchema.mockRejectedValueOnce(new SourceClientError('server', 'offline'))
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <SourcesPage />
+        </QueryClientProvider>,
+      )
+    })
+    await waitForPage(() => expect(buttonWithText('orders')).toBeDefined())
+    await act(async () => buttonWithText('orders')?.click())
+    await waitForPage(() => expect(buttonWithText('Refresh schema')).toBeDefined())
+    await act(async () => buttonWithText('Refresh schema')?.click())
+
+    await waitForPage(() => {
+      expect(container?.textContent).toContain('The schema could not be loaded. Try again.')
+      expect(buttonWithText('Retry')).toBeDefined()
+    })
   })
 
   it('shows creation success as a transient message without adding a page block', async () => {

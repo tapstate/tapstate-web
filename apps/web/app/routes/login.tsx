@@ -1,12 +1,15 @@
-import type { AppLocale } from '@/i18n'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowRight, CircleAlert, Eye, EyeOff, LoaderCircle } from 'lucide-react'
 import { useEffect, useMemo, useState, type SyntheticEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+
+import type { AppLocale } from '@/i18n'
+
+import { Button } from '@/components/ui/button'
 import { SUPPORTED_LOCALES } from '@/i18n'
+import { cn } from '@/lib/utils'
 import { AuthClientError, login } from '@/service/auth-client'
 import { useAuthStore } from '@/stores/auth-store'
-import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/login')({
   component: LoginRouteComponent,
@@ -128,7 +131,7 @@ function LoginRouteComponent() {
     >
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
         <div
-          className="absolute right-[0%] top-[-10%] h-[70%] w-[60%] animate-pulse rounded-full bg-gradient-to-bl from-indigo-300/40 via-purple-200/30 to-transparent opacity-80 blur-[140px]"
+          className="absolute top-[-10%] right-[0%] h-[70%] w-[60%] animate-pulse rounded-full bg-gradient-to-bl from-indigo-300/40 via-purple-200/30 to-transparent opacity-80 blur-[140px]"
           style={{ animationDuration: '8s' }}
         />
         <div
@@ -138,15 +141,17 @@ function LoginRouteComponent() {
       </div>
 
       <fieldset
-        className="absolute right-6 top-6 z-20 flex items-center rounded-xl border border-white/70 bg-white/70 p-1 shadow-sm backdrop-blur-xl"
+        className="absolute top-6 right-6 z-20 flex items-center rounded-xl border border-white/70 bg-white/70 p-1 shadow-sm backdrop-blur-xl"
         aria-label={t('app.language')}
       >
         {SUPPORTED_LOCALES.map((option) => (
-          <button
+          <Button
             key={option}
             type="button"
+            variant="ghost"
+            size="sm"
             className={cn(
-              'flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-[11px] font-semibold text-gray-500 transition-colors hover:bg-white hover:text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400',
+              'h-8 min-w-8 px-2 text-[11px] font-semibold text-gray-500 hover:bg-white hover:text-gray-900',
               i18n.language === option &&
                 'bg-gray-900 text-white shadow-sm hover:bg-gray-900 hover:text-white',
             )}
@@ -155,7 +160,7 @@ function LoginRouteComponent() {
             onClick={() => void i18n.changeLanguage(option)}
           >
             {localeBadge(option)}
-          </button>
+          </Button>
         ))}
       </fieldset>
 
@@ -167,7 +172,7 @@ function LoginRouteComponent() {
             <div className="mb-10 flex items-center gap-2">
               <div className="flex items-center gap-2">
                 <div className="flex h-6 w-6 items-center justify-center rounded-[4px] bg-gray-900">
-                  <span className="select-none text-[11px] font-bold leading-none text-white">
+                  <span className="text-[11px] leading-none font-bold text-white select-none">
                     {t('app.brand').slice(0, 1)}
                   </span>
                 </div>
@@ -198,7 +203,7 @@ function LoginRouteComponent() {
                   type="text"
                   autoComplete="username"
                   placeholder={t('auth.login.usernamePlaceholder')}
-                  className="h-10 w-full rounded-lg border border-gray-200/80 bg-white/60 px-3 text-[14px] backdrop-blur-sm transition-all placeholder:text-gray-400 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                  className="h-10 w-full rounded-lg border border-gray-200/80 bg-white/60 px-3 text-[14px] backdrop-blur-sm transition-all placeholder:text-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none"
                   aria-invalid={Boolean(fieldErrors.username)}
                   aria-describedby="login-username-error"
                   disabled={isSubmitting}
@@ -233,7 +238,7 @@ function LoginRouteComponent() {
                     autoComplete="current-password"
                     placeholder={t('auth.login.passwordPlaceholder')}
                     className={cn(
-                      'h-10 w-full rounded-lg border border-gray-200/80 bg-white/60 px-3 pr-10 text-[14px] backdrop-blur-sm transition-all placeholder:text-gray-400 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400',
+                      'h-10 w-full rounded-lg border border-gray-200/80 bg-white/60 px-3 pr-10 text-[14px] backdrop-blur-sm transition-all placeholder:text-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-400 focus:outline-none',
                       !showPassword && 'font-mono tracking-widest',
                     )}
                     aria-invalid={Boolean(fieldErrors.password)}
@@ -244,9 +249,11 @@ function LoginRouteComponent() {
                       clearFormErrors()
                     }}
                   />
-                  <button
+                  <Button
                     type="button"
-                    className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="absolute top-1/2 right-2 -translate-y-1/2 text-gray-500 hover:text-gray-800"
                     aria-label={
                       showPassword ? t('auth.login.passwordHide') : t('auth.login.passwordShow')
                     }
@@ -261,7 +268,7 @@ function LoginRouteComponent() {
                     ) : (
                       <Eye size={16} aria-hidden="true" />
                     )}
-                  </button>
+                  </Button>
                 </div>
                 {fieldErrors.password && (
                   <span
@@ -284,9 +291,9 @@ function LoginRouteComponent() {
                 </div>
               )}
 
-              <button
+              <Button
                 type="submit"
-                className="group mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-gray-900 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
+                className="group mt-2 h-10 w-full text-[13px] font-medium shadow-sm"
                 disabled={!canSubmit}
               >
                 <span>{isSubmitting ? t('auth.login.submitting') : t('auth.login.submit')}</span>
@@ -301,7 +308,7 @@ function LoginRouteComponent() {
                     aria-hidden="true"
                   />
                 )}
-              </button>
+              </Button>
             </form>
           </div>
         </div>

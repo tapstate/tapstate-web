@@ -66,13 +66,50 @@ function messagesForLocale(spec: JsonRecord, locale: string) {
   return {}
 }
 
-function connectionSchema(text: string, locale: string): JsonRecord {
-  const { connection, spec } = parseConnectionSchema(text)
-  return resolveSchemaMessages(connection, messagesForLocale(spec, locale)) as JsonRecord
+const MONGODB_PRESENTATION_FIELD_NAMES = new Set(['isUrlTips1', 'isUrlTips2', 'uriTips'])
+
+function isMongoDbConnector(connectorId: string | undefined) {
+  return connectorId?.trim().toLocaleLowerCase() === 'mongodb'
 }
 
-export function connectorSpecConnectionSchema(text: string, locale: string): ISchema {
-  return connectionSchema(text, locale) as ISchema
+function withoutMongoDbPresentationFields(node: JsonRecord): JsonRecord {
+  const properties = asRecord(node.properties)
+  if (properties === null) return node
+
+  const nextProperties = Object.fromEntries(
+    Object.entries(properties)
+      .filter(([name]) => !MONGODB_PRESENTATION_FIELD_NAMES.has(name))
+      .map(([name, value]) => {
+        const property = asRecord(value)
+        return [name, property === null ? value : withoutMongoDbPresentationFields(property)]
+      }),
+  )
+  const required = Array.isArray(node.required)
+    ? node.required.filter(
+        (name): name is string =>
+          typeof name === 'string' && !MONGODB_PRESENTATION_FIELD_NAMES.has(name),
+      )
+    : node.required
+
+  return {
+    ...node,
+    properties: nextProperties,
+    ...(required === undefined ? {} : { required }),
+  }
+}
+
+function connectionSchema(text: string, locale: string, connectorId?: string): JsonRecord {
+  const { connection, spec } = parseConnectionSchema(text)
+  const resolved = resolveSchemaMessages(connection, messagesForLocale(spec, locale)) as JsonRecord
+  return isMongoDbConnector(connectorId) ? withoutMongoDbPresentationFields(resolved) : resolved
+}
+
+export function connectorSpecConnectionSchema(
+  text: string,
+  locale: string,
+  connectorId?: string,
+): ISchema {
+  return connectionSchema(text, locale, connectorId) as ISchema
 }
 
 function isJsonValue(value: unknown): value is JsonValue {
@@ -97,8 +134,12 @@ function readDefaults(node: JsonRecord, values: SourceConfigState) {
   }
 }
 
-export function connectorSpecInitialValues(text: string): SourceConfigState {
+export function connectorSpecInitialValues(text: string, connectorId?: string): SourceConfigState {
   const values: SourceConfigState = {}
-  readDefaults(parseConnectionSchema(text).connection, values)
+  const connection = parseConnectionSchema(text).connection
+  readDefaults(
+    isMongoDbConnector(connectorId) ? withoutMongoDbPresentationFields(connection) : connection,
+    values,
+  )
   return values
 }

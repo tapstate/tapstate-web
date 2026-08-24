@@ -13,6 +13,7 @@ import type { ConnectorConfigField, JsonValue } from '@/service/source-client'
 
 import { FormilyAntdProvider } from '@/components/formily/formily-antd-provider'
 import { FormilySegmentedRadioGroup } from '@/components/formily/formily-segmented-radio'
+import { Button } from '@/components/ui/button'
 
 import type { SourceConfigState } from './source-form'
 
@@ -82,35 +83,41 @@ function ConfiguredSecretInputBase({
         suffix={
           <div className="flex items-center gap-0.5">
             {replacing && (
-              <button
+              <Button
                 type="button"
-                className="text-muted-foreground hover:bg-muted hover:text-foreground inline-flex size-7 items-center justify-center rounded-md transition-colors"
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground hover:text-foreground"
                 aria-label={visible ? t('sources.edit.secretHide') : t('sources.edit.secretShow')}
                 onClick={() => setVisible((current) => !current)}
               >
                 {visible ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-              </button>
+              </Button>
             )}
             {!replacing && !cleared && (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-sm"
                 disabled={disabled}
-                className="text-muted-foreground hover:bg-muted hover:text-foreground inline-flex size-7 items-center justify-center rounded-md transition-colors"
+                className="text-muted-foreground hover:text-foreground"
                 aria-label={t('sources.edit.secretReplace')}
                 onClick={() => updateSecretDraft({ action: 'replace', value: '' })}
               >
                 <Pencil className="size-3.5" />
-              </button>
+              </Button>
             )}
             {!requiredSecret && (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-sm"
                 disabled={disabled}
-                className={`inline-flex size-7 items-center justify-center rounded-md transition-colors ${
+                className={
                   cleared
                     ? 'text-destructive'
                     : 'text-muted-foreground hover:bg-destructive/10 hover:text-destructive'
-                }`}
+                }
                 aria-label={cleared ? t('sources.edit.secretKeep') : t('sources.edit.secretClear')}
                 onClick={() =>
                   updateSecretDraft(
@@ -119,7 +126,7 @@ function ConfiguredSecretInputBase({
                 }
               >
                 <Trash2 className="size-3.5" />
-              </button>
+              </Button>
             )}
           </div>
         }

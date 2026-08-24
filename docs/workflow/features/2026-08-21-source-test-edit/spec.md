@@ -1,6 +1,6 @@
-# Source edit and connection test
+# Source test, edit, and schema discovery
 
-> 状态：In Progress
+> 状态：Implemented
 > 日期：2026-08-21
 > Owner：Codex
 > Feature folder：docs/workflow/features/2026-08-21-source-test-edit/
@@ -15,127 +15,112 @@
 
 > Source 的创建有了，还要测试/编辑
 
-补充：后端 `id` 是 Source 的全局唯一标识符，不能在 UI 中伪装成普通“Name”。创建时需说明它创建后不可修改，编辑时保持可见但只读。
+> 添加 source 的测试功能
 
-补充：创建 Source 的连接器选择恢复多列展示。选择区使用 `bg-gray-50/40`，使纯白卡片与底层产生可感知但低对比的材料差；卡片无边框并使用弥散阴影，hover 仅上移 1px 并加深阴影。该非语义灰色是用户明确指定的局部视觉例外。
+补充的既有产品决定：
 
-补充：连接器搜索框是选择页的固定布局区域，不随当前目录中连接器数量变化而隐藏。
+- Source 的后端 `id` 是全局唯一标识符，UI 使用“Source ID”，创建后不可修改。
+- 创建连接器使用固定搜索区与多列选择卡片；局部使用用户指定的 `bg-gray-50/40` 浅底色、无边框白色卡片、弱弥散阴影和 1px hover 上移。
+- `ConnectorIcon` 不添加背景、边框或装饰容器。
 
 ### 背景与上下文
 
-创建弹窗已经可用。仓库已有带 ETag 和 secret 保留策略的编辑对话框及 `PUT /api/sources/:id` client，但 Source 页面没有编辑入口。详情工具栏的 Test action 目前为 disabled 占位。
+Source create 与 edit 都是大型配置弹窗，用户在保存前需要验证当前草稿能否连接。后端已提供同步测试合同：`POST /api/connections:test`，输入为 `{ id, connectorId, settings }`，返回结构化的连接检查报告。`FAILED` 是业务测试结果，不应当被当成请求异常。
 
-检索当前 Web client、feature 文档与仓库 API 合同后，没有发现可调用的 Source connection test endpoint，也没有定义测试请求应该使用已保存配置还是未保存草稿。不能以猜测的路径或 payload 替代后端合同。
-
-### 假设
-
-- 编辑仍通过 `GET /api/sources/:id` 获取带 quoted ETag 的最新 Source，再通过 `PUT /api/sources/:id` 保存。
-- 连接测试需要后端提供明确的 endpoint、返回结构和 secret 处理规则后才能实现。
-- 已配置的 secret 在编辑时仍为 write-only，保持、替换、清除的现有语义不变。
-
-### 未决问题
-
-- 后端用于连接测试的 HTTP method、path、request body、success payload 和 error code。
-- 测试的对象是已保存 Source，还是编辑表单内尚未保存的 draft。
+编辑态的已配置 secret 是 write-only。编辑表单不能读取密码原值，但 Source 列表 / 详情可以使用后端已经保存的 `config` 发起测试；编辑草稿测试时，未修改的 secret 复用当前 Source config，用户新输入的 secret 覆盖旧值，明确清空的 secret 从测试 settings 中移除。
 
 ## 2. Decomposition
 
 ### 目标
 
-- 在 Source 详情操作栏接入 Edit。
-- 打开编辑前加载最新 Source 和 ETag，避免列表投影缺少并发控制信息。
-- 编辑保存后同步更新 Source 列表、编辑缓存和选中详情。
-- 为连接测试保留已知接口缺口与完整 UI 状态设计，待合同确认后实现。
+- 在创建与编辑配置弹窗的 footer 提供“Test connection”。
+- 在 Source 列表行和 Source 详情提供“Test connection”，使用已保存的 Source config。
+- 测试和保存共享同一份草稿校验与 settings 生成逻辑。
+- 将结构化 PASSED / FAILED 检查结果展示在独立、紧凑的结果 dialog 中，不改变大型配置弹窗的布局。
+- 对网络、协议或控制面请求错误提供不泄露配置的通用错误反馈。
+- 提供 `discover-schema` 操作，刷新 Source schema，并在表详情的 Columns tab 展示 fields、类型、主键和索引。
 
 ### 非目标
 
-- 不猜测或新增未确认的后端 test endpoint。
-- 不改变 Source id 或 connector，但应准确以“Source ID” / “数据源 ID”展示其全局唯一、创建后不可修改的语义。
-- 不变更 connector schema 或 Formily runtime。
-- 不把连接器选择退回高噪声的单列表格行，且不为图标增加背景或边框容器。
-- 不实现同步、数据预览或运行时观测。
+- 不创建或修改 Source 作为测试的副作用。
+- 不展示 settings、password 或其他 secret。
+- 不新增路由、依赖、同步、预览或运行时观测能力；schema 读取复用现有 Source workbench。
 
 ### 用户路径
 
-1. 用户在 Source 工作台选择一个 Source。
-2. 用户点击 Edit，页面获取最新 Source 与 ETag 后打开编辑对话框。
-3. 用户修改配置并保存，成功后详情和列表立即使用服务端返回的 SourceView。
-4. 后端提供测试合同后，用户可在详情工具栏触发 Test connection，并看到按钮级 pending 与轻量结果反馈。
-
-### 影响面
-
-- IA / 路由：无新增路由，沿用 Source master-detail workbench。
-- 状态管理：TanStack Query 负责单 Source detail 和 list cache。
-- 数据 / API：编辑使用已有 get/update client。连接测试暂缺 API 合同。
-- 权限：沿用认证 `apiFetch`。
-- i18n：补齐 `Source ID` 标题、创建说明和 ID 专属校验 / 冲突文案，且同步 `en`、`zh-CN`、`zh-TW`。
-- 错误处理：详情加载失败保持在工具栏 action 区附近，不把页面误显示为 editable。
+1. 用户打开 Create source，选择连接器并填写 Source ID 与配置。
+2. 用户点击 Test connection，复用创建校验后向测试接口提交草稿，不创建 Source。
+3. 用户在独立结果 dialog 中查看通过、失败检查，或请求层错误，然后回到仍保留的配置草稿继续修改。
+4. 用户在 Source 列表或详情点击测试时，使用已保存 config；用户编辑 Source 时，未修改密码沿用已有 config，修改密码使用新值覆盖后测试。
+5. 用户在详情点击 Refresh schema，成功后选择表即可查看 fields schema；未发现、加载失败和刷新失败均有明确反馈与重试入口。
 
 ### 备选方案
 
-| 方案                              | 优点                                 | 风险                                | 结论   |
-| --------------------------------- | ------------------------------------ | ----------------------------------- | ------ |
-| 在点击 Edit 后拉取 detail 和 ETag | 并发保存正确，不依赖 list projection | 多一次读取                          | 采用   |
-| 从 list projection 直接构造编辑器 | 实现少                               | 缺 ETag，可能覆盖远端修改           | 不采用 |
-| 猜测 `POST /sources/:id/test`     | 看似快速                             | 请求语义、secret 与错误处理不可验证 | 不采用 |
+| 方案                            | 优点                                   | 风险                          | 结论   |
+| ------------------------------- | -------------------------------------- | ----------------------------- | ------ |
+| Create / Edit footer 中测试草稿 | 验证结果对应即将保存的配置，用户路径短 | 需处理 write-only secret      | 采用   |
+| Source detail 上测试已保存配置  | 不用打开编辑器                         | 依赖后端返回的完整测试 config | 采用   |
+| 在大型配置 dialog 内嵌结果卡    | 少一层 dialog                          | 挤占表单且干扰继续编辑        | 不采用 |
 
 ## 3. Prototype Gate
 
 - [x] 需要 prototype，见：./prototype.md
-- [ ] 不需要 prototype，原因：N/A
 
-## 4. UI / IA Sketch
+## 4. 状态矩阵
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│ Source name · connector                         Test   Edit   │
-├──────────────────────────────────────────────────────────────┤
-│ tables / current Source projection                            │
-└──────────────────────────────────────────────────────────────┘
+| 状态                               | 页面表现                                                    | 用户可做什么               |
+| ---------------------------------- | ----------------------------------------------------------- | -------------------------- |
+| Validation rejection               | 保留字段级错误，不发送测试请求                              | 修正字段后重试             |
+| Testing                            | footer 固定操作位显示 pending，关闭、返回、字段和操作均禁用 | 等待                       |
+| PASSED                             | 独立结果 dialog 显示通过结果                                | 关闭结果并继续编辑或保存   |
+| FAILED                             | 独立结果 dialog 列出失败或 warning 检查                     | 关闭结果并修正配置         |
+| Request / protocol / network error | 独立结果 dialog 显示安全的通用错误                          | 关闭结果并重试             |
+| Saved / retained secret            | 复用已保存 config，不在 UI 暴露原值；新输入值覆盖旧值       | 继续测试或修改配置         |
+| Schema unavailable / failure       | 显示未发现或通用错误，并提供 retry / Refresh schema         | 重试发现或继续查看已配置表 |
 
-Edit dialog
-┌──────────────────────────────────────────────────────────────┐
-│ Source name · connector                                  ×   │
-├──────────────────────────────────────┬───────────────────────┤
-│ configuration form, vertically stacked│ existing setup help   │
-│ metadata, tables, SRS                 │                       │
-├──────────────────────────────────────┴───────────────────────┤
-│                                         Cancel       Save    │
-└──────────────────────────────────────────────────────────────┘
+## 5. i18n 范围
+
+新增的测试操作、pending、报告标题、检查状态、请求错误、Schema 状态、字段和索引文案均通过 i18next 提供，并同步 `en`、`zh-CN`、`zh-TW`。
+
+## 6. 数据与接口
+
+```ts
+POST /api/connections:test
+
+{ id, connectorId, settings }
+
+{
+  connectionId: string
+  connectorId: string
+  outcome: 'PASSED' | 'FAILED'
+  checks: Array<{
+    name: string
+    status: 'PASSED' | 'WARNING' | 'FAILED'
+    message?: string | null
+    reason?: string | null
+    solution?: string | null
+    connectorErrorCode?: string | null
+  }>
+  testedAt: number
+}
 ```
 
-## 5. 状态矩阵
+返回 report 的 connectorId 或 connectionId 不符合请求、或 report 结构不合法时，client 以 `SourceClientError('protocol')` 处理。
 
-| 状态                 | 页面表现                                     | 用户可做什么     | 文案 key                         |
-| -------------------- | -------------------------------------------- | ---------------- | -------------------------------- |
-| Edit loading         | Edit button 固定尺寸 spinner，其他详情不跳动 | 等待             | `sources.create.loadingSchema`   |
-| Edit load error      | 工具栏附近的轻量 error，可重试 Edit          | 重试             | `sources.edit.errors.*`          |
-| Edit ready           | 可关闭的配置 dialog                          | 编辑、取消、保存 | `sources.edit.*`                 |
-| Validation           | 字段级错误                                   | 修正后保存       | `sources.edit.validation.*`      |
-| Submitting           | 保存按钮固定尺寸 pending，关闭禁用           | 等待             | `sources.edit.submitting`        |
-| Conflict             | 保留草稿，提供 reload / keep draft           | 恢复或重试       | `sources.edit.errors.conflict.*` |
-| Test pending         | 待后端合同实现                               | 等待             | future `sources.test.*`          |
-| Test success / error | 待后端合同实现                               | 重试或编辑       | future `sources.test.*`          |
+## 7. 验收标准
 
-## 6. i18n 范围
+- [x] Create 和 Edit 均能在不保存的情况下测试当前草稿。
+- [x] Source 列表行和 Source 详情均能用已保存 config 测试连接。
+- [x] 测试复用与保存一致的字段校验和配置转换。
+- [x] 结构化通过、失败和请求错误均有可关闭的结果反馈，且不暴露配置或 secret。
+- [x] 编辑中未修改的 password 复用已有 config，修改值覆盖已有 config，清空值不会残留到测试 settings。
+- [x] Refresh schema 调用 `POST /api/connections:discover-schema`，并将成功结果用于表详情 fields 展示。
+- [x] Schema 未发现、请求失败和刷新失败均可理解并可重试。
+- [x] 表详情默认进入 Columns tab，并展示字段名、类型、主键和索引信息。
+- [x] 测试期间弹窗中的可变操作均禁用，防止草稿和返回报告不一致。
+- [x] `en`、`zh-CN`、`zh-TW` key 一致，focused tests、typecheck、build、scoped format 与 diff 检查通过。
 
-本阶段补充 `sources.create.idLabel`、`sources.create.idHint`、ID 专属校验 / 冲突文案和 `sources.edit.idLabel`，均同步 `en`、`zh-CN`、`zh-TW`。连接测试合同落地时必须同步新增其对应 key。
+## 8. 风险与后续
 
-## 7. 数据与接口
-
-- 是否需要新接口：编辑否。连接测试是，当前仓库未定义。
-- 是否使用 mock：编辑组件测试 mock 已有 `getSource` / `updateSource` contract。
-- 错误码 / 错误文案：编辑复用 `source.version-conflict`、`source.precondition-required` 和网络错误。测试错误码待 API 合同。
-
-## 8. 验收标准
-
-- [x] Source detail 的 Edit 入口可获取最新 Source detail 和 ETag 后打开编辑器。
-- [x] 保存后 Source list、detail cache 和选中详情均更新为服务端返回值。
-- [x] 编辑加载中、加载错误、validation、submitting、conflict 状态稳定且可用。
-- [x] 不产生猜测的连接测试请求，测试接口缺口有明确记录。
-- [ ] 相关组件测试、typecheck、i18n check、格式和 diff 检查通过，等待 authenticated UI inspection。
-
-## 9. 风险
-
-- 既有未接入编辑对话框的布局早于最新 Source create/Formily 规范，接入前需评估并避免暴露已被拒绝的双列表单布局。
-- 测试 endpoint 一旦决定使用 draft，需要明确 write-only secret 如何传递且绝不能泄露至页面或日志。
+- 物理 375px 浏览器视口尚未在当前自动化绑定中完成复核，作为 UI follow-up；桌面认证会话已验证。
+- 测试报告字段按现有 API 合同验证；后端扩大报告模型时需同步扩展 client guard 和结果 UI。

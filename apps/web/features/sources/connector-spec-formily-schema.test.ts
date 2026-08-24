@@ -149,6 +149,37 @@ describe('connector spec Formily schema', () => {
     expect(schema).toMatchObject({ properties: { host: { title: expectedTitle } } })
   })
 
+  it('omits MongoDB URI presentation fields and their defaults', () => {
+    const mongoSpec = JSON.stringify({
+      configOptions: {
+        connection: {
+          type: 'object',
+          required: ['uri', 'isUrlTips1', 'uriTips'],
+          properties: {
+            uri: { type: 'string', 'x-component': 'Input' },
+            isUrlTips1: { type: 'boolean', default: true, 'x-component': 'Switch' },
+            isUrlTips2: { type: 'boolean', default: true, 'x-component': 'Switch' },
+            uriTips: { type: 'string', default: 'tip', 'x-component': 'Input' },
+          },
+        },
+      },
+    })
+
+    const mongoSchema = connectorSpecConnectionSchema(mongoSpec, 'en', 'mongodb')
+
+    expect(mongoSchema).toMatchObject({
+      required: ['uri'],
+      properties: { uri: { type: 'string' } },
+    })
+    expect(mongoSchema.properties).not.toHaveProperty('isUrlTips1')
+    expect(mongoSchema.properties).not.toHaveProperty('isUrlTips2')
+    expect(mongoSchema.properties).not.toHaveProperty('uriTips')
+    expect(connectorSpecConnectionSchema(mongoSpec, 'en', 'mysql')).toMatchObject({
+      properties: { isUrlTips1: { type: 'boolean' }, isUrlTips2: { type: 'boolean' } },
+    })
+    expect(connectorSpecInitialValues(mongoSpec, 'mongodb')).toEqual({})
+  })
+
   it('uses defaults declared in the raw spec and rejects malformed source text', () => {
     expect(connectorSpecInitialValues(specText)).toEqual({ host: 'localhost', port: 3306 })
     expect(() => connectorSpecConnectionSchema('{', 'en')).toThrow('invalid JSON')
