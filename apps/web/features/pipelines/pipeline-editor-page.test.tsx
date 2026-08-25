@@ -167,6 +167,9 @@ describe('PipelineEditorPage', () => {
     expect(elementWithText('a', 'Logs')?.getAttribute('href')).toBe(
       '/pipelines/orders_to_warehouse/edit/logs',
     )
+    expect(elementWithText('a', 'Build')?.className).toContain(
+      'pipeline-workspace__nav-link--active',
+    )
   })
 
   it('keeps navigation as a docked workspace aside with a 4px inset that can collapse and expand', async () => {

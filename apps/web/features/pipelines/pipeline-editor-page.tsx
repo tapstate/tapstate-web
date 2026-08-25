@@ -173,7 +173,7 @@ function WorkspaceNavLink({
 }) {
   const isActive = section === activeSection
   const className = cn(
-    'pipeline-workspace__nav-link flex h-10 items-center gap-2.5 rounded-lg px-3 text-[13px] font-semibold transition-[background-color,color,transform] focus-visible:ring-3 focus-visible:ring-[var(--pipeline-selection-ring)] focus-visible:outline-none active:scale-95 max-sm:justify-center max-sm:px-0',
+    'pipeline-workspace__nav-link flex h-10 items-center gap-2.5 rounded-lg px-3 text-[13px] font-semibold transition-[background-color,border-color,box-shadow,color,transform] focus-visible:ring-3 focus-visible:ring-[var(--pipeline-selection-ring)] focus-visible:outline-none active:scale-95 max-sm:justify-center max-sm:px-0',
     isActive && 'pipeline-workspace__nav-link--active',
   )
   const commonProps = {
