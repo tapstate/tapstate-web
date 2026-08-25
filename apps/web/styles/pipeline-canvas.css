@@ -122,21 +122,28 @@
 }
 
 .pipeline-canvas__connector-icon .connector-icon__image--backdrop {
-  inset: -0.25rem;
+  top: 50%;
+  left: 50%;
+  right: auto;
+  bottom: auto;
   z-index: 0;
-  width: auto;
-  height: auto;
+  width: calc(100% + 0.5rem);
+  height: calc(100% + 0.5rem);
   opacity: var(--pipeline-connector-icon-backdrop-opacity);
   filter: blur(5px) saturate(1.16);
-  transform: scale(1.12);
+  transform: translate(-50%, -50%) scale(1.12);
 }
 
 .pipeline-canvas__connector-icon .connector-icon__image--foreground {
-  inset: 0.25rem;
+  top: 50%;
+  left: 50%;
+  right: auto;
+  bottom: auto;
   z-index: 2;
-  width: auto;
-  height: auto;
+  width: calc(100% - 0.5rem);
+  height: calc(100% - 0.5rem);
   border-radius: 0.25rem;
+  transform: translate(-50%, -50%);
 }
 
 .pipeline-canvas__node-kind {

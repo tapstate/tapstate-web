@@ -55,6 +55,8 @@ describe('ConnectorIcon', () => {
     expect(images).toHaveLength(2)
     expect(images[0]?.className).toContain('connector-icon__image--backdrop')
     expect(images[1]?.className).toContain('connector-icon__image--foreground')
+    expect(images[0]?.className).toContain('connector-icon__image')
+    expect(images[1]?.className).toContain('connector-icon__image')
   })
 
   it('shows a monogram fallback when the direct image cannot load', async () => {
