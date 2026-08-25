@@ -17,7 +17,7 @@
 
 ### Context
 
-The existing editor already reads the backend semantic DAG and persists independent canvas geometry. Its nodes and panels are functionally correct but do not yet form a coherent canvas workspace, and runtime observation has no entry from the editor.
+The existing editor already reads the backend semantic DAG and persists independent canvas geometry. Its nodes and panels are functionally correct but do not yet form a coherent canvas workspace. Runtime observation needs its own page-level navigation rather than competing with the canvas as an in-place panel.
 
 ### Assumptions
 
@@ -35,11 +35,11 @@ The existing editor already reads the backend semantic DAG and persists independ
 
 ### Goals
 
-- Make the editor a full-bleed, borderless canvas workspace with floating contextual controls and a back path.
+- Make the editor a workspace with a floating left navigation panel, a full-bleed borderless canvas for Orchestrate, and floating contextual controls only within that canvas.
 - Render each semantic node as a compact card with type icon, name, and one-line description.
 - Use custom horizontal handles and a custom Bezier edge suitable for a left-to-right DAG.
-- Give operators honest in-editor access to status, metrics, and recent logs.
-- Reserve an API access panel that reflects the graph's serve nodes without claiming an unpublished endpoint exists.
+- Give operators page-level access to Logs and Monitoring from the workspace navigation.
+- Add an API access page that reflects the graph's serve nodes without claiming an unpublished endpoint exists.
 
 ### Non-goals
 
@@ -49,16 +49,16 @@ The existing editor already reads the backend semantic DAG and persists independ
 
 ### User path
 
-1. Open a Pipeline from the resource list and return with the top-left back control.
-2. Pan, zoom, fit the graph, inspect a selected node, and move a node to improve persistent reading layout.
-3. Open Runtime, Metrics, Logs, or API access from the floating controls.
+1. Open a Pipeline from the resource list and return from the workspace's left-side back control.
+2. Use Orchestrate to pan, zoom, fit the graph, inspect a selected node, and move a node to improve persistent reading layout.
+3. Use left-side navigation to open API access, Logs, or Monitoring as distinct routes.
 4. See server errors and unavailable observations as explicit states with retry.
 
 ### Impact
 
 - Layout and editor interaction: `pipeline-canvas.tsx` and `pipeline-editor-page.tsx`.
 - Data: typed read-only clients for status, metrics, and logs.
-- State: server data stays in TanStack Query; canvas selection and active panel remain local state.
+- State: server data stays in TanStack Query; canvas selection and navigation-panel collapse state remain local state.
 - i18n: all shipped editor labels must exist in `en`, `zh-CN`, and `zh-TW`.
 
 ### Options
@@ -81,22 +81,23 @@ The existing editor already reads the backend semantic DAG and persists independ
 | Graph error | Focused error state with retry | Retry graph and layout reads | `pipelines.workspace.error` |
 | Runtime loading | Stable inspector body | Wait | `pipelines.runtime.loading` |
 | Runtime unavailable | Honest unavailable explanation and retry | Retry the selected read | `pipelines.runtime.unavailable` |
-| Runtime success | State, metrics, or recent lines | Switch contextual panel | `pipelines.runtime.*` |
-| API unavailable | No endpoint is claimed | Inspect serve nodes | `pipelines.apiAccess.unavailable` |
+| Monitoring success | State and metrics | Refresh automatically and retry if needed | `pipelines.workspace.runtime.*` |
+| Logs success | Recent server log lines | Refresh automatically and retry if needed | `pipelines.workspace.runtime.*` |
+| API unavailable | No endpoint is claimed | Inspect serve nodes | `pipelines.workspace.apiAccess.*` |
 
 ## 5. Data and API boundary
 
 - Read only: `GET /api/pipelines/{id}/status`, `/metrics`, and `/logs?limit=30`.
 - Existing layout save remains `PUT /api/pipelines/{id}/layout`.
-- The API access panel derives only the number of `serve` nodes from `PipelineView.dag`; it does not infer a public URL.
+- The API access page derives only the `serve` nodes from `PipelineView.dag`; it does not infer a public URL.
 
 ## 6. Acceptance criteria
 
-- [ ] The editor remains a full-viewport canvas without the application shell or a permanent sidebar.
+- [ ] The workspace has a floating left-side panel for route navigation, with an upper-right expand and collapse control. Only Orchestrate renders the full-viewport canvas.
 - [ ] Every node shows an icon, a readable name, and a one-line description with source and target nodes using Source semantics.
 - [ ] Edges use custom Bezier geometry and custom, accessible left/right handles.
-- [ ] Runtime status, metrics, and logs use the real HTTP read faces and distinguish unavailable data from successful data.
-- [ ] The API panel does not expose a fabricated endpoint or publish action.
+- [ ] Monitoring and Logs use the real HTTP read faces after their route opens and distinguish unavailable data from successful data.
+- [ ] The API page does not expose a fabricated endpoint or publish action.
 - [ ] Tests, typecheck, locale validation, production build, and desktop plus narrow viewport checks are recorded.
 
 ## 7. Risks

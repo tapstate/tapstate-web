@@ -21,7 +21,16 @@ const {
 }))
 
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ children, ...props }: React.ComponentProps<'a'>) => <a {...props}>{children}</a>,
+  Link: ({
+    children,
+    params,
+    to,
+    ...props
+  }: React.ComponentProps<'a'> & { params?: { pipelineId?: string }; to: string }) => (
+    <a {...props} href={to.replace('$pipelineId', params?.pipelineId ?? '')}>
+      {children}
+    </a>
+  ),
 }))
 
 vi.mock('@/service/pipeline-client', () => ({
@@ -67,7 +76,7 @@ vi.mock('./pipeline-canvas', () => ({
   ),
 }))
 
-import { PipelineEditorPage } from './pipeline-editor-page'
+import { PipelineEditorPage, PipelineWorkspacePage } from './pipeline-editor-page'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
@@ -80,7 +89,7 @@ function elementWithText(selector: string, text: string) {
   )
 }
 
-async function renderPage() {
+async function renderPage(section: 'orchestrate' | 'api' | 'logs' | 'monitoring' = 'orchestrate') {
   container = document.createElement('div')
   document.body.append(container)
   root = createRoot(container)
@@ -89,7 +98,11 @@ async function renderPage() {
   await act(async () => {
     root?.render(
       <QueryClientProvider client={queryClient}>
-        <PipelineEditorPage pipelineId="orders_to_warehouse" />
+        {section === 'orchestrate' ? (
+          <PipelineEditorPage pipelineId="orders_to_warehouse" />
+        ) : (
+          <PipelineWorkspacePage pipelineId="orders_to_warehouse" section={section} />
+        )}
       </QueryClientProvider>,
     )
   })
@@ -138,29 +151,64 @@ afterEach(async () => {
 })
 
 describe('PipelineEditorPage', () => {
-  it('loads runtime data only when the operator opens the runtime panel', async () => {
+  it('keeps the canvas in the Orchestrate route and exposes separate workspace navigation', async () => {
     await renderPage()
 
     await vi.waitFor(() =>
       expect(document.querySelector('[data-testid="pipeline-canvas"]')).not.toBeNull(),
     )
     expect(getPipelineStatus).not.toHaveBeenCalled()
-
-    await act(async () => elementWithText('button', 'Runtime')?.click())
-
-    await vi.waitFor(() => expect(container?.textContent).toContain('Running'))
-    expect(getPipelineStatus).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function))
-    expect(getPipelineMetrics).not.toHaveBeenCalled()
-    expect(getPipelineLogs).not.toHaveBeenCalled()
+    expect(elementWithText('a', 'Orchestrate')?.getAttribute('href')).toBe(
+      '/pipelines/orders_to_warehouse/edit',
+    )
+    expect(elementWithText('a', 'Monitoring')?.getAttribute('href')).toBe(
+      '/pipelines/orders_to_warehouse/edit/monitoring',
+    )
+    expect(elementWithText('a', 'Logs')?.getAttribute('href')).toBe(
+      '/pipelines/orders_to_warehouse/edit/logs',
+    )
   })
 
-  it('shows serve nodes as unpublished API access rather than fabricating an endpoint', async () => {
+  it('keeps navigation as a floating canvas panel that can collapse and expand', async () => {
     await renderPage()
 
     await vi.waitFor(() =>
       expect(document.querySelector('[data-testid="pipeline-canvas"]')).not.toBeNull(),
     )
-    await act(async () => elementWithText('button', 'API access')?.click())
+    const navigation = document.querySelector<HTMLElement>('[data-testid="workspace-navigation"]')
+    expect(navigation?.dataset.collapsed).toBe('false')
+
+    await act(async () =>
+      document.querySelector<HTMLElement>('[aria-label="Collapse workspace navigation"]')?.click(),
+    )
+    await vi.waitFor(() => expect(navigation?.dataset.collapsed).toBe('true'))
+
+    await act(async () =>
+      document.querySelector<HTMLElement>('[aria-label="Expand workspace navigation"]')?.click(),
+    )
+    await vi.waitFor(() => expect(navigation?.dataset.collapsed).toBe('false'))
+  })
+
+  it('loads status and metrics after navigating to Monitoring', async () => {
+    await renderPage('monitoring')
+
+    await vi.waitFor(() => expect(container?.textContent).toContain('Running'))
+    expect(getPipelineStatus).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function))
+    expect(getPipelineMetrics).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function))
+    expect(getPipelineLogs).not.toHaveBeenCalled()
+  })
+
+  it('loads logs only after navigating to Logs', async () => {
+    await renderPage('logs')
+
+    await vi.waitFor(() => expect(container?.textContent).toContain('No log lines'))
+    expect(getPipelineLogs).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function))
+    expect(getPipelineStatus).not.toHaveBeenCalled()
+    expect(getPipelineMetrics).not.toHaveBeenCalled()
+  })
+
+  it('shows serve nodes as unpublished API access rather than fabricating an endpoint', async () => {
+    await renderPage('api')
 
     await vi.waitFor(() =>
       expect(container?.textContent).toContain('API publication is not configured'),
@@ -175,7 +223,6 @@ describe('PipelineEditorPage', () => {
     await vi.waitFor(() =>
       expect(document.querySelector('[data-testid="pipeline-canvas"]')).not.toBeNull(),
     )
-    await act(async () => elementWithText('button', 'Metrics')?.click())
     await act(async () =>
       document.querySelector<HTMLElement>('[data-testid="pipeline-canvas"]')?.click(),
     )

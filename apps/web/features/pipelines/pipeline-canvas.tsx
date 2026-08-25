@@ -90,52 +90,52 @@ function CanvasNodeCard({ data, selected }: NodeProps<CanvasNode>) {
   return (
     <div
       className={cn(
-        'group relative w-60 rounded-[14px] border bg-white p-2.5 shadow-[0_5px_16px_rgba(15,23,42,0.08)] transition-[border-color,box-shadow,transform] duration-150 motion-reduce:transition-none',
-        selected
-          ? 'border-blue-500 shadow-[0_10px_26px_rgba(37,99,235,0.18)]'
-          : 'border-slate-200 hover:border-slate-300 hover:shadow-[0_8px_22px_rgba(15,23,42,0.12)]',
+        'relative w-60 rounded-2xl p-px transition-[background-color,box-shadow] duration-150 motion-reduce:transition-none',
+        selected ? 'bg-[#528bff] shadow-[0_8px_20px_rgba(37,99,235,0.14)]' : 'bg-transparent',
       )}
     >
-      <Handle
-        id="input"
-        type="target"
-        position={Position.Left}
-        isConnectable={false}
-        className={cn(
-          '!top-[1.15rem] !-left-2 !size-4 !rounded-none !border-0 !bg-transparent !outline-none before:absolute before:top-1/2 before:left-1.5 before:h-2 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-slate-300 before:transition-[background-color,transform] group-hover:before:scale-y-125 group-hover:before:bg-slate-500',
-          selected && 'before:bg-blue-500',
-        )}
-        aria-label={t('pipelines.workspace.handles.input', { node: data.label })}
-      />
-      <div className="flex items-start gap-2.5">
-        <span
+      <div className="group relative overflow-visible rounded-[15px] border border-slate-200 bg-white pb-2 shadow-[0_1px_2px_rgba(15,23,42,0.08)] transition-[border-color,box-shadow] duration-150 hover:border-slate-300 hover:shadow-[0_8px_18px_rgba(15,23,42,0.12)] motion-reduce:transition-none">
+        <Handle
+          id="input"
+          type="target"
+          position={Position.Left}
+          isConnectable={false}
           className={cn(
-            'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset',
-            nodeTone(data.nodeType),
+            '!top-4 !-left-2 !size-4 !rounded-none !border-0 !bg-transparent !outline-none before:absolute before:top-1/2 before:left-1.5 before:h-2 before:w-0.5 before:-translate-y-1/2 before:bg-slate-300 before:transition-[background-color,transform] group-hover:before:scale-y-125 group-hover:before:bg-slate-500',
+            selected && 'before:bg-[#528bff]',
           )}
-        >
-          <NodeIcon nodeType={data.nodeType} detail={data.detail} />
-        </span>
-        <span className="min-w-0 pt-0.5">
-          <span className="block truncate text-[13px] leading-4 font-semibold text-slate-800">
+          aria-label={t('pipelines.workspace.handles.input', { node: data.label })}
+        />
+        <div className="flex min-w-0 items-center gap-2 px-3 pt-3 pb-2">
+          <span
+            className={cn(
+              'flex size-5 shrink-0 items-center justify-center rounded-md ring-1 ring-inset',
+              nodeTone(data.nodeType),
+            )}
+          >
+            <NodeIcon nodeType={data.nodeType} detail={data.detail} />
+          </span>
+          <span className="min-w-0 truncate text-[12px] leading-4 font-semibold text-slate-800">
             {data.label}
           </span>
-          <span className="mt-1 block truncate text-[11px] leading-4 text-slate-500">
+        </div>
+        <div className="mx-2 min-h-8 rounded-md bg-slate-50 px-2 py-1.5">
+          <span className="block truncate text-[11px] leading-4 text-slate-500">
             {t(descriptionKey, { detail })}
           </span>
-        </span>
+        </div>
+        <Handle
+          id="output"
+          type="source"
+          position={Position.Right}
+          isConnectable={false}
+          className={cn(
+            '!top-4 !-right-2 !size-4 !rounded-none !border-0 !bg-transparent !outline-none before:absolute before:top-1/2 before:right-1.5 before:h-2 before:w-0.5 before:-translate-y-1/2 before:bg-slate-300 before:transition-[background-color,transform] group-hover:before:scale-y-125 group-hover:before:bg-slate-500',
+            selected && 'before:bg-[#528bff]',
+          )}
+          aria-label={t('pipelines.workspace.handles.output', { node: data.label })}
+        />
       </div>
-      <Handle
-        id="output"
-        type="source"
-        position={Position.Right}
-        isConnectable={false}
-        className={cn(
-          '!top-[1.15rem] !-right-2 !size-4 !rounded-none !border-0 !bg-transparent !outline-none before:absolute before:top-1/2 before:right-1.5 before:h-2 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-slate-300 before:transition-[background-color,transform] group-hover:before:scale-y-125 group-hover:before:bg-slate-500',
-          selected && 'before:bg-blue-500',
-        )}
-        aria-label={t('pipelines.workspace.handles.output', { node: data.label })}
-      />
     </div>
   )
 }
@@ -167,14 +167,14 @@ function PipelineEdge({
         path={edgePath}
         markerEnd={markerEnd}
         style={{
-          stroke: selected ? '#2563eb' : '#9aa9bd',
-          strokeWidth: selected ? 2.25 : 1.8,
+          stroke: selected ? '#528bff' : '#c8d2e0',
+          strokeWidth: selected ? 2.25 : 2,
         }}
       />
       {data?.label && (
         <EdgeLabelRenderer>
           <div
-            className="pointer-events-none absolute rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] leading-3 font-medium text-slate-500 shadow-[0_2px_6px_rgba(15,23,42,0.08)]"
+            className="pointer-events-none absolute rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] leading-3 font-medium text-slate-500 shadow-[0_1px_3px_rgba(15,23,42,0.1)]"
             style={{
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
             }}
@@ -267,13 +267,13 @@ export function PipelineCanvas({
       className="bg-[#f8faff]"
       proOptions={{ hideAttribution: true }}
     >
-      <Background color="#d8e1ee" gap={20} size={1} />
+      <Background color="#c6d3e3" gap={16} size={1.25} />
       <Controls
         showInteractive={false}
-        className="!bottom-5 !left-5 !overflow-hidden !rounded-[14px] !border !border-slate-200 !bg-white !shadow-[0_8px_22px_rgba(15,23,42,0.12)] max-md:!hidden"
+        className="!bottom-5 !left-5 !overflow-hidden !rounded-xl !border !border-slate-200 !bg-white !shadow-[0_6px_18px_rgba(15,23,42,0.1)] max-md:!hidden"
       />
       <MiniMap
-        className="!right-5 !bottom-5 !rounded-[14px] !border !border-slate-200 !bg-white !shadow-[0_8px_22px_rgba(15,23,42,0.12)] max-md:!hidden"
+        className="!right-5 !bottom-5 !rounded-xl !border !border-slate-200 !bg-white !shadow-[0_6px_18px_rgba(15,23,42,0.1)] max-md:!hidden"
         maskColor="rgba(248,250,255,0.76)"
         nodeColor="#7b8ba4"
         pannable

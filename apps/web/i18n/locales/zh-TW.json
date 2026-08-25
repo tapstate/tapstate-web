@@ -475,6 +475,16 @@
       "actions": {
         "retry": "重試"
       },
+      "navigation": {
+        "label": "Pipeline 工作區導覽",
+        "workspace": "Pipeline",
+        "orchestrate": "編排",
+        "api": "API 存取",
+        "logs": "日誌",
+        "monitoring": "監控",
+        "collapse": "收合工作區導覽",
+        "expand": "展開工作區導覽"
+      },
       "tabs": {
         "label": "Pipeline 工作區面板",
         "runtime": "執行狀態",

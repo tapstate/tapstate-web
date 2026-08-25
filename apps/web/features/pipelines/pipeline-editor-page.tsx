@@ -8,13 +8,15 @@ import {
   Database,
   Gauge,
   LibraryBig,
+  PanelLeftClose,
+  PanelLeftOpen,
   PanelsTopLeft,
   Radio,
   ScrollText,
   Sparkles,
   Workflow,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
@@ -26,14 +28,13 @@ import {
   getPipelineStatus,
   savePipelineLayout,
   PipelineClientError,
-  type PipelineDag,
   type PipelineLayout,
 } from '@/service/pipeline-client'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { PipelineCanvas, type PipelineCanvasSelection } from './pipeline-canvas'
 
-type WorkspacePanel = 'node' | 'runtime' | 'metrics' | 'logs' | 'api'
+export type PipelineWorkspaceSection = 'orchestrate' | 'api' | 'logs' | 'monitoring'
 
 const paletteItems = [
   {
@@ -66,27 +67,22 @@ const paletteItems = [
   },
 ]
 
-const workspaceTabs = [
-  { id: 'runtime', labelKey: 'pipelines.workspace.tabs.runtime', icon: Activity },
-  { id: 'metrics', labelKey: 'pipelines.workspace.tabs.metrics', icon: Gauge },
-  { id: 'logs', labelKey: 'pipelines.workspace.tabs.logs', icon: ScrollText },
-  { id: 'api', labelKey: 'pipelines.workspace.tabs.api', icon: Braces },
+const workspaceNavigation = [
+  {
+    section: 'orchestrate',
+    labelKey: 'pipelines.workspace.navigation.orchestrate',
+    icon: Workflow,
+  },
+  { section: 'api', labelKey: 'pipelines.workspace.navigation.api', icon: Braces },
+  { section: 'logs', labelKey: 'pipelines.workspace.navigation.logs', icon: ScrollText },
+  { section: 'monitoring', labelKey: 'pipelines.workspace.navigation.monitoring', icon: Gauge },
 ] as const
-
-function isObservationPanel(panel: WorkspacePanel) {
-  return panel === 'runtime' || panel === 'metrics' || panel === 'logs'
-}
-
-function panelTitle(panel: WorkspacePanel, selection: PipelineCanvasSelection | null) {
-  if (panel === 'node') return selection?.label ?? 'pipelines.workspace.inspector.emptyTitle'
-  return `pipelines.workspace.tabs.${panel}`
-}
 
 function QueryIssue({ unavailable, onRetry }: { unavailable: boolean; onRetry: () => void }) {
   const { t } = useTranslation()
 
   return (
-    <div className="flex min-h-36 flex-col items-start justify-center gap-2 px-4 py-5">
+    <div className="flex min-h-36 flex-col items-start justify-center gap-2 px-5 py-6">
       <p className="text-[13px] font-semibold text-slate-800">
         {t(
           unavailable
@@ -94,7 +90,7 @@ function QueryIssue({ unavailable, onRetry }: { unavailable: boolean; onRetry: (
             : 'pipelines.workspace.runtime.errorTitle',
         )}
       </p>
-      <p className="max-w-[30ch] text-[12px] leading-5 text-slate-500">
+      <p className="max-w-[34ch] text-[12px] leading-5 text-slate-500">
         {t(
           unavailable
             ? 'pipelines.workspace.runtime.unavailableBody'
@@ -115,7 +111,7 @@ function QueryIssue({ unavailable, onRetry }: { unavailable: boolean; onRetry: (
 function LoadingPanel() {
   const { t } = useTranslation()
   return (
-    <div className="flex min-h-36 items-center px-4 py-5 text-[12px] text-slate-500">
+    <div className="flex min-h-36 items-center px-5 py-6 text-[12px] text-slate-500">
       {t('pipelines.workspace.runtime.loading')}
     </div>
   )
@@ -160,215 +156,160 @@ function NodeInspector({ selection }: { selection: PipelineCanvasSelection | nul
   )
 }
 
-function RuntimePanel({
+function WorkspaceNavLink({
   pipelineId,
-  panel,
-  dag,
+  section,
+  activeSection,
+  children,
 }: {
   pipelineId: string
-  panel: WorkspacePanel
-  dag: PipelineDag
+  section: PipelineWorkspaceSection
+  activeSection: PipelineWorkspaceSection
+  children: ReactNode
 }) {
-  const { i18n, t } = useTranslation()
-  const apiFetch = useAuthStore((state) => state.apiFetch)
-  const runtime = useQuery({
-    queryKey: ['pipelines', pipelineId, 'status'],
-    queryFn: () => getPipelineStatus(pipelineId, apiFetch),
-    enabled: panel === 'runtime',
-    refetchInterval: panel === 'runtime' ? 5_000 : false,
-    retry: false,
-  })
-  const metrics = useQuery({
-    queryKey: ['pipelines', pipelineId, 'metrics'],
-    queryFn: () => getPipelineMetrics(pipelineId, apiFetch),
-    enabled: panel === 'metrics',
-    refetchInterval: panel === 'metrics' ? 5_000 : false,
-    retry: false,
-  })
-  const logs = useQuery({
-    queryKey: ['pipelines', pipelineId, 'logs'],
-    queryFn: () => getPipelineLogs(pipelineId, apiFetch),
-    enabled: panel === 'logs',
-    refetchInterval: panel === 'logs' ? 5_000 : false,
-    retry: false,
-  })
-
-  if (panel === 'runtime') {
-    if (runtime.isLoading) return <LoadingPanel />
-    if (runtime.isError) {
-      return (
-        <QueryIssue
-          unavailable={runtime.error instanceof PipelineClientError && runtime.error.status === 404}
-          onRetry={() => void runtime.refetch()}
-        />
-      )
-    }
-    if (!runtime.data) return null
-
-    return (
-      <div className="divide-y divide-slate-100">
-        <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-          <span className="text-[12px] text-slate-500">
-            {t('pipelines.workspace.runtime.state')}
-          </span>
-          <span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
-            {t(`pipelines.workspace.runtime.states.${runtime.data.state}`)}
-          </span>
-        </div>
-        {runtime.data.failure && (
-          <div className="px-4 py-3.5">
-            <p className="text-[11px] font-semibold text-rose-700">{runtime.data.failure.code}</p>
-            <p className="mt-1 text-[12px] leading-5 text-slate-600">
-              {runtime.data.failure.message}
-            </p>
-          </div>
-        )}
-      </div>
-    )
+  const isActive = section === activeSection
+  const className = cn(
+    'flex h-10 items-center gap-2.5 rounded-lg px-3 text-[13px] font-semibold transition-[background-color,color,transform] hover:bg-slate-100 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-sm:justify-center max-sm:px-0',
+    isActive ? 'bg-[#eef4ff] text-[#2563eb]' : 'text-slate-600 hover:text-slate-900',
+  )
+  const commonProps = {
+    className,
+    'aria-current': isActive ? ('page' as const) : undefined,
   }
 
-  if (panel === 'metrics') {
-    if (metrics.isLoading) return <LoadingPanel />
-    if (metrics.isError) {
-      return (
-        <QueryIssue
-          unavailable={metrics.error instanceof PipelineClientError && metrics.error.status === 404}
-          onRetry={() => void metrics.refetch()}
-        />
-      )
-    }
-    if (!metrics.data) return null
-
-    const metricEntries = Object.entries(metrics.data.metrics)
-    const offsetEntries = Object.entries(metrics.data.perTableOffset ?? {})
+  if (section === 'api') {
     return (
-      <div className="divide-y divide-slate-100">
-        {metricEntries.length === 0 && (
-          <p className="px-4 py-5 text-[12px] leading-5 text-slate-500">
-            {t('pipelines.workspace.runtime.emptyMetrics')}
-          </p>
-        )}
-        {metricEntries.map(([metric, value]) => (
-          <div key={metric} className="flex items-center justify-between gap-4 px-4 py-3">
-            <span className="min-w-0 truncate text-[12px] text-slate-500" title={metric}>
-              {metric}
-            </span>
-            <span className="shrink-0 font-mono text-[12px] font-semibold text-slate-700">
-              {new Intl.NumberFormat(i18n.language).format(value)}
-            </span>
-          </div>
-        ))}
-        {offsetEntries.length > 0 && (
-          <div>
-            <p className="px-4 pt-3 text-[11px] font-semibold tracking-[0.08em] text-slate-400 uppercase">
-              {t('pipelines.workspace.runtime.offsets')}
-            </p>
-            {offsetEntries.map(([table, offset]) => (
-              <div key={table} className="grid grid-cols-[1fr_auto] gap-3 px-4 py-2.5">
-                <span className="min-w-0 truncate text-[12px] text-slate-500" title={table}>
-                  {table}
-                </span>
-                <span
-                  className="max-w-36 truncate font-mono text-[11px] text-slate-600"
-                  title={offset}
-                >
-                  {offset}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <Link to="/pipelines/$pipelineId/edit/api" params={{ pipelineId }} {...commonProps}>
+        {children}
+      </Link>
     )
   }
-
-  if (panel === 'logs') {
-    if (logs.isLoading) return <LoadingPanel />
-    if (logs.isError) {
-      return <QueryIssue unavailable={false} onRetry={() => void logs.refetch()} />
-    }
-    if (!logs.data) return null
-    if (logs.data.lines.length === 0) {
-      return (
-        <p className="px-4 py-5 text-[12px] leading-5 text-slate-500">
-          {t('pipelines.workspace.runtime.emptyLogs')}
-        </p>
-      )
-    }
-
+  if (section === 'logs') {
     return (
-      <ol className="divide-y divide-slate-100">
-        {logs.data.lines.map((line, index) => (
-          <li key={`${line.timestampMillis}-${index}`} className="px-4 py-3">
-            <div className="flex items-center gap-2 text-[10px] font-medium text-slate-400">
-              <time dateTime={new Date(line.timestampMillis).toISOString()}>
-                {new Intl.DateTimeFormat(i18n.language, {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                }).format(line.timestampMillis)}
-              </time>
-              <span className="rounded bg-slate-100 px-1 py-0.5 text-slate-600">{line.level}</span>
-            </div>
-            <p className="mt-1.5 font-mono text-[11px] leading-5 break-words text-slate-600">
-              {line.message}
-            </p>
-          </li>
-        ))}
-      </ol>
+      <Link to="/pipelines/$pipelineId/edit/logs" params={{ pipelineId }} {...commonProps}>
+        {children}
+      </Link>
     )
   }
-
-  const serveNodes = dag.nodes.filter((node) => node.type === 'serve')
-  if (serveNodes.length === 0) {
+  if (section === 'monitoring') {
     return (
-      <div className="px-4 py-5">
-        <p className="text-[13px] font-semibold text-slate-800">
-          {t('pipelines.workspace.apiAccess.emptyTitle')}
-        </p>
-        <p className="mt-1.5 text-[12px] leading-5 text-slate-500">
-          {t('pipelines.workspace.apiAccess.emptyBody')}
-        </p>
-      </div>
+      <Link to="/pipelines/$pipelineId/edit/monitoring" params={{ pipelineId }} {...commonProps}>
+        {children}
+      </Link>
     )
   }
-
   return (
-    <div>
-      <div className="px-4 py-4">
-        <p className="text-[13px] font-semibold text-slate-800">
-          {t('pipelines.workspace.apiAccess.pendingTitle')}
-        </p>
-        <p className="mt-1.5 text-[12px] leading-5 text-slate-500">
-          {t('pipelines.workspace.apiAccess.pendingBody')}
-        </p>
-      </div>
-      <ul className="divide-y divide-slate-100 border-t border-slate-100">
-        {serveNodes.map((node) => (
-          <li key={node.id} className="flex items-center gap-2.5 px-4 py-3">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
-              <Radio className="size-3.5" aria-hidden="true" />
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate text-[12px] font-semibold text-slate-700">
-                {node.label}
-              </span>
-              <span className="mt-0.5 block truncate text-[11px] text-slate-500">
-                {node.detail ?? t('pipelines.workspace.apiAccess.serveDetail')}
-              </span>
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <Link to="/pipelines/$pipelineId/edit" params={{ pipelineId }} {...commonProps}>
+      {children}
+    </Link>
   )
 }
 
-export function PipelineEditorPage({ pipelineId }: { pipelineId: string }) {
+function PipelineWorkspaceNav({
+  pipelineId,
+  activeSection,
+  collapsed,
+  onCollapsedChange,
+}: {
+  pipelineId: string
+  activeSection: PipelineWorkspaceSection
+  collapsed: boolean
+  onCollapsedChange: (collapsed: boolean) => void
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <aside
+      className={cn(
+        'absolute top-5 bottom-5 left-5 z-30 flex overflow-hidden rounded-xl border border-slate-200 bg-[#fcfdff] shadow-[0_12px_30px_rgba(15,23,42,0.12)] transition-[width,padding] duration-150 motion-reduce:transition-none',
+        collapsed ? 'w-12 px-1 py-2' : 'w-60 px-3 py-3 max-md:w-52',
+      )}
+      data-testid="workspace-navigation"
+      data-collapsed={collapsed}
+    >
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div
+          className={cn('flex h-10 items-center', collapsed ? 'justify-center' : 'justify-between')}
+        >
+          <Link
+            to="/pipelines"
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-700 transition-[background-color,transform] hover:bg-slate-100 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95"
+            aria-label={t('pipelines.workspace.back')}
+          >
+            <ChevronLeft className="size-4" aria-hidden="true" />
+          </Link>
+          {!collapsed && (
+            <button
+              type="button"
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-[background-color,color,transform] hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95"
+              aria-label={t('pipelines.workspace.navigation.collapse')}
+              onClick={() => onCollapsedChange(true)}
+            >
+              <PanelLeftClose className="size-4" aria-hidden="true" />
+            </button>
+          )}
+        </div>
+
+        {collapsed && (
+          <button
+            type="button"
+            className="mt-1 inline-flex size-10 shrink-0 items-center justify-center self-center rounded-lg text-slate-400 transition-[background-color,color,transform] hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95"
+            aria-label={t('pipelines.workspace.navigation.expand')}
+            onClick={() => onCollapsedChange(false)}
+          >
+            <PanelLeftOpen className="size-4" aria-hidden="true" />
+          </button>
+        )}
+
+        <div
+          className={cn('mt-5 flex items-center gap-2.5 px-2', collapsed && 'justify-center px-0')}
+        >
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#eaf2ff] text-[#2563eb]">
+            <Workflow className="size-4" aria-hidden="true" />
+          </span>
+          {!collapsed && (
+            <span className="min-w-0">
+              <span className="block truncate text-[13px] font-semibold text-slate-800">
+                {pipelineId}
+              </span>
+              <span className="mt-0.5 block text-[10px] font-semibold tracking-[0.08em] text-slate-400 uppercase">
+                {t('pipelines.workspace.navigation.workspace')}
+              </span>
+            </span>
+          )}
+        </div>
+
+        <nav className="mt-7 space-y-1" aria-label={t('pipelines.workspace.navigation.label')}>
+          {workspaceNavigation.map((item) => {
+            const Icon = item.icon
+            return (
+              <WorkspaceNavLink
+                key={item.section}
+                pipelineId={pipelineId}
+                section={item.section}
+                activeSection={activeSection}
+              >
+                <Icon className="size-4 shrink-0" aria-hidden="true" />
+                <span className={cn(collapsed && 'sr-only')}>{t(item.labelKey)}</span>
+              </WorkspaceNavLink>
+            )
+          })}
+        </nav>
+      </div>
+    </aside>
+  )
+}
+
+function PipelineOrchestrationPage({
+  pipelineId,
+  navigationCollapsed,
+}: {
+  pipelineId: string
+  navigationCollapsed: boolean
+}) {
   const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const [selection, setSelection] = useState<PipelineCanvasSelection | null>(null)
-  const [activePanel, setActivePanel] = useState<WorkspacePanel>('node')
   const [isNodePanelOpen, setIsNodePanelOpen] = useState(true)
   const latestLayout = useRef<Pick<PipelineLayout, 'nodes' | 'viewport'> | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -406,7 +347,7 @@ export function PipelineEditorPage({ pipelineId }: { pipelineId: string }) {
   const layoutStatus = saveLayout.isPending ? 'saving' : saveLayout.isError ? 'error' : 'saved'
 
   return (
-    <main className="relative h-dvh min-h-0 overflow-hidden bg-[#f8faff] text-slate-900">
+    <section className="absolute inset-0 overflow-hidden bg-[#f8faff]">
       <a
         href="#pipeline-canvas"
         className="absolute top-3 left-3 z-50 rounded-lg bg-slate-950 px-3 py-2 text-sm text-white focus:not-sr-only"
@@ -442,87 +383,39 @@ export function PipelineEditorPage({ pipelineId }: { pipelineId: string }) {
             dag={pipeline.data.dag}
             layout={layout.data}
             onLayoutChange={scheduleLayoutSave}
-            onSelectionChange={(next) => {
-              setSelection(next)
-              if (next) setActivePanel('node')
-            }}
+            onSelectionChange={setSelection}
           />
         )}
       </section>
 
-      <div className="absolute top-5 left-5 z-20 flex h-10 max-w-[calc(100vw-2.5rem)] items-center rounded-[14px] border border-slate-200 bg-white px-1.5 shadow-[0_8px_22px_rgba(15,23,42,0.12)]">
-        <Link
-          to="/pipelines"
-          className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-[13px] font-semibold text-slate-700 transition-[background-color,transform] hover:bg-slate-100 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95"
-        >
-          <ChevronLeft className="size-4" aria-hidden="true" />
-          <span>{t('pipelines.workspace.back')}</span>
-        </Link>
-        <span className="mx-1 h-4 w-px bg-slate-200" aria-hidden="true" />
-        <span className="hidden max-w-56 truncate px-1 text-[12px] font-medium text-slate-500 sm:block">
-          {pipelineId}
-        </span>
-        <span className="mx-1 hidden h-4 w-px bg-slate-200 sm:block" aria-hidden="true" />
-        <span className="inline-flex items-center gap-1.5 px-1 text-[11px] font-medium text-slate-500">
-          <span
-            className={cn(
-              'size-1.5 rounded-full',
-              layoutStatus === 'saving'
-                ? 'bg-amber-400'
-                : layoutStatus === 'error'
-                  ? 'bg-rose-500'
-                  : 'bg-emerald-500',
-            )}
-            aria-hidden="true"
-          />
-          <span className="hidden sm:inline">
-            {t(`pipelines.workspace.layout.${layoutStatus}`)}
-          </span>
-        </span>
+      <div className="pointer-events-none absolute top-5 right-5 z-20 flex h-8 items-center rounded-lg border border-slate-200 bg-white/95 px-2.5 text-[11px] font-medium text-slate-500 shadow-[0_2px_8px_rgba(15,23,42,0.08)] max-sm:top-3 max-sm:right-3">
+        <span
+          className={cn(
+            'mr-1.5 size-1.5 rounded-full',
+            layoutStatus === 'saving'
+              ? 'bg-amber-400'
+              : layoutStatus === 'error'
+                ? 'bg-rose-500'
+                : 'bg-emerald-500',
+          )}
+          aria-hidden="true"
+        />
+        {t(`pipelines.workspace.layout.${layoutStatus}`)}
       </div>
 
       <div
-        className="absolute top-5 right-5 z-20 flex h-10 max-w-[calc(100vw-2.5rem)] items-center rounded-[14px] border border-slate-200 bg-white p-1 shadow-[0_8px_22px_rgba(15,23,42,0.12)]"
-        role="tablist"
-        aria-label={t('pipelines.workspace.tabs.label')}
-      >
-        {workspaceTabs.map((tab) => {
-          const Icon = tab.icon
-          const isActive = activePanel === tab.id
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              aria-label={t(tab.labelKey)}
-              className={cn(
-                'inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-[12px] font-semibold transition-[background-color,color,transform] focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-sm:size-8 max-sm:justify-center max-sm:px-0',
-                isActive
-                  ? 'bg-slate-900 text-white'
-                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800',
-              )}
-              onClick={() => setActivePanel(tab.id)}
-            >
-              <Icon className="size-3.5" aria-hidden="true" />
-              <span className="max-sm:sr-only">{t(tab.labelKey)}</span>
-            </button>
-          )
-        })}
-      </div>
-
-      <aside
         className={cn(
-          'absolute top-20 left-5 z-20 w-64 overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.12)] transition-[opacity,transform] duration-200 motion-reduce:transition-none max-md:top-16 max-md:left-3 max-md:w-[min(16rem,calc(100vw-1.5rem))]',
+          'absolute top-5 z-20 w-60 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.1)] transition-[opacity,transform,left] duration-150 motion-reduce:transition-none max-sm:top-3 max-sm:w-[min(15rem,calc(100vw-5.75rem))]',
           isNodePanelOpen
             ? 'translate-x-0 opacity-100'
             : 'pointer-events-none -translate-x-3 opacity-0',
+          navigationCollapsed ? 'left-20 max-sm:left-16' : 'left-[17rem] max-md:left-[16.5rem]',
         )}
         aria-label={t('pipelines.workspace.nodeLibrary.label')}
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-3.5 py-3">
           <div className="flex items-center gap-2">
-            <span className="flex size-6 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+            <span className="flex size-6 items-center justify-center rounded-md bg-blue-50 text-blue-600">
               <LibraryBig className="size-3.5" aria-hidden="true" />
             </span>
             <div>
@@ -536,7 +429,7 @@ export function PipelineEditorPage({ pipelineId }: { pipelineId: string }) {
           </div>
           <button
             type="button"
-            className="inline-flex size-8 items-center justify-center rounded-lg text-slate-400 transition-[background-color,color,transform] hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-md:size-10"
+            className="inline-flex size-8 items-center justify-center rounded-lg text-slate-400 transition-[background-color,color,transform] hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-sm:size-10"
             aria-label={t('pipelines.workspace.nodeLibrary.hide')}
             onClick={() => setIsNodePanelOpen(false)}
           >
@@ -571,12 +464,15 @@ export function PipelineEditorPage({ pipelineId }: { pipelineId: string }) {
         <p className="border-t border-slate-100 px-3.5 py-2.5 text-[11px] leading-4 text-slate-500">
           {t('pipelines.workspace.nodeLibrary.mutationPending')}
         </p>
-      </aside>
+      </div>
 
       {!isNodePanelOpen && (
         <button
           type="button"
-          className="absolute top-20 left-5 z-20 flex size-10 items-center justify-center rounded-[14px] border border-slate-200 bg-white text-slate-600 shadow-[0_8px_22px_rgba(15,23,42,0.12)] transition-[background-color,transform] hover:bg-slate-100 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-md:top-16 max-md:left-3 max-md:size-11"
+          className={cn(
+            'absolute top-5 z-20 flex size-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-[0_8px_20px_rgba(15,23,42,0.1)] transition-[background-color,transform,left] hover:bg-slate-100 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-sm:top-3 max-sm:size-11',
+            navigationCollapsed ? 'left-20 max-sm:left-16' : 'left-[17rem] max-md:left-[16.5rem]',
+          )}
           aria-label={t('pipelines.workspace.nodeLibrary.show')}
           onClick={() => setIsNodePanelOpen(true)}
         >
@@ -584,32 +480,298 @@ export function PipelineEditorPage({ pipelineId }: { pipelineId: string }) {
         </button>
       )}
 
-      <aside
-        className="absolute top-20 right-5 z-20 max-h-[calc(100dvh-7rem)] w-[min(20rem,calc(100vw-2.5rem))] overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.12)] max-md:top-auto max-md:right-3 max-md:bottom-3 max-md:left-3 max-md:max-h-[min(22rem,calc(100dvh-5rem))] max-md:w-auto"
-        aria-live={isObservationPanel(activePanel) ? 'polite' : undefined}
-      >
+      <aside className="absolute top-5 right-5 z-20 max-h-[calc(100dvh-3rem)] w-[min(20rem,calc(100%-2.5rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.1)] max-sm:top-auto max-sm:right-3 max-sm:bottom-3 max-sm:left-16 max-sm:max-h-[min(22rem,calc(100dvh-5rem))] max-sm:w-auto">
         <div className="border-b border-slate-100 px-4 py-3.5">
           <p className="text-[11px] font-semibold tracking-[0.08em] text-slate-400 uppercase">
-            {t(
-              activePanel === 'node'
-                ? 'pipelines.workspace.inspector.eyebrow'
-                : 'pipelines.workspace.runtime.eyebrow',
-            )}
+            {t('pipelines.workspace.inspector.eyebrow')}
           </p>
           <h2 className="mt-1 truncate text-[14px] font-semibold text-slate-800">
-            {activePanel === 'node' && selection
-              ? selection.label
-              : t(panelTitle(activePanel, selection))}
+            {selection?.label ?? t('pipelines.workspace.inspector.emptyTitle')}
           </h2>
         </div>
-        <div className="max-h-[calc(100dvh-12rem)] overflow-y-auto max-md:max-h-[min(16rem,calc(100dvh-9rem))]">
-          {activePanel === 'node' ? (
-            <NodeInspector selection={selection} />
-          ) : pipeline.data ? (
-            <RuntimePanel pipelineId={pipelineId} panel={activePanel} dag={pipeline.data.dag} />
-          ) : null}
+        <div className="max-h-[calc(100dvh-12rem)] overflow-y-auto max-sm:max-h-[min(16rem,calc(100dvh-9rem))]">
+          <NodeInspector selection={selection} />
         </div>
       </aside>
+    </section>
+  )
+}
+
+function WorkspacePageFrame({
+  section,
+  pipelineId,
+  navigationCollapsed,
+  children,
+}: {
+  section: Exclude<PipelineWorkspaceSection, 'orchestrate'>
+  pipelineId: string
+  navigationCollapsed: boolean
+  children: ReactNode
+}) {
+  const { t } = useTranslation()
+  const item = workspaceNavigation.find((navigation) => navigation.section === section)
+  const Icon = item?.icon ?? Activity
+
+  return (
+    <section className="absolute inset-0 overflow-y-auto bg-[#f8faff]">
+      <div
+        className={cn(
+          'mx-auto w-full max-w-5xl py-10 pr-8 pl-[18rem] max-md:pr-6 max-sm:pr-4 max-sm:pl-20',
+          navigationCollapsed && 'pl-24',
+        )}
+      >
+        <div className="flex items-start gap-3 border-b border-slate-200 pb-6">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-[#2563eb] shadow-[0_1px_3px_rgba(15,23,42,0.1)]">
+            <Icon className="size-4" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold tracking-[0.08em] text-slate-400 uppercase">
+              {pipelineId}
+            </p>
+            <h1 className="mt-1 text-lg font-semibold tracking-tight text-slate-900">
+              {t(item?.labelKey ?? 'pipelines.workspace.navigation.orchestrate')}
+            </h1>
+          </div>
+        </div>
+        {children}
+      </div>
+    </section>
+  )
+}
+
+function MonitoringPage({ pipelineId }: { pipelineId: string }) {
+  const { i18n, t } = useTranslation()
+  const apiFetch = useAuthStore((state) => state.apiFetch)
+  const status = useQuery({
+    queryKey: ['pipelines', pipelineId, 'status'],
+    queryFn: () => getPipelineStatus(pipelineId, apiFetch),
+    retry: false,
+    refetchInterval: 5_000,
+  })
+  const metrics = useQuery({
+    queryKey: ['pipelines', pipelineId, 'metrics'],
+    queryFn: () => getPipelineMetrics(pipelineId, apiFetch),
+    retry: false,
+    refetchInterval: 5_000,
+  })
+
+  if (status.isLoading || metrics.isLoading) return <LoadingPanel />
+  if (status.isError || metrics.isError) {
+    const issue = status.isError ? status : metrics
+    return (
+      <QueryIssue
+        unavailable={issue.error instanceof PipelineClientError && issue.error.status === 404}
+        onRetry={() => {
+          void status.refetch()
+          void metrics.refetch()
+        }}
+      />
+    )
+  }
+
+  const metricEntries = Object.entries(metrics.data?.metrics ?? {})
+  const offsetEntries = Object.entries(metrics.data?.perTableOffset ?? {})
+  return (
+    <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.1)]">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+        <span className="text-[12px] text-slate-500">{t('pipelines.workspace.runtime.state')}</span>
+        {status.data && (
+          <span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
+            {t(`pipelines.workspace.runtime.states.${status.data.state}`)}
+          </span>
+        )}
+      </div>
+      {status.data?.failure && (
+        <div className="border-b border-slate-100 px-5 py-4">
+          <p className="text-[11px] font-semibold text-rose-700">{status.data.failure.code}</p>
+          <p className="mt-1 text-[12px] leading-5 text-slate-600">{status.data.failure.message}</p>
+        </div>
+      )}
+      <div className="divide-y divide-slate-100">
+        {metricEntries.length === 0 && (
+          <p className="px-5 py-6 text-[12px] leading-5 text-slate-500">
+            {t('pipelines.workspace.runtime.emptyMetrics')}
+          </p>
+        )}
+        {metricEntries.map(([metric, value]) => (
+          <div key={metric} className="flex items-center justify-between gap-4 px-5 py-3">
+            <span className="min-w-0 truncate text-[12px] text-slate-500" title={metric}>
+              {metric}
+            </span>
+            <span className="shrink-0 font-mono text-[12px] font-semibold text-slate-700">
+              {new Intl.NumberFormat(i18n.language).format(value)}
+            </span>
+          </div>
+        ))}
+      </div>
+      {offsetEntries.length > 0 && (
+        <div className="border-t border-slate-100 px-5 py-4">
+          <p className="text-[11px] font-semibold tracking-[0.08em] text-slate-400 uppercase">
+            {t('pipelines.workspace.runtime.offsets')}
+          </p>
+          <dl className="mt-2 divide-y divide-slate-100">
+            {offsetEntries.map(([table, offset]) => (
+              <div key={table} className="grid grid-cols-[1fr_auto] gap-3 py-2.5">
+                <dt className="min-w-0 truncate text-[12px] text-slate-500" title={table}>
+                  {table}
+                </dt>
+                <dd
+                  className="max-w-56 truncate font-mono text-[11px] text-slate-600"
+                  title={offset}
+                >
+                  {offset}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function LogsPage({ pipelineId }: { pipelineId: string }) {
+  const { i18n, t } = useTranslation()
+  const apiFetch = useAuthStore((state) => state.apiFetch)
+  const logs = useQuery({
+    queryKey: ['pipelines', pipelineId, 'logs'],
+    queryFn: () => getPipelineLogs(pipelineId, apiFetch),
+    retry: false,
+    refetchInterval: 5_000,
+  })
+
+  if (logs.isLoading) return <LoadingPanel />
+  if (logs.isError) return <QueryIssue unavailable={false} onRetry={() => void logs.refetch()} />
+  if (!logs.data) return null
+  if (logs.data.lines.length === 0) {
+    return (
+      <p className="mt-6 text-[12px] leading-5 text-slate-500">
+        {t('pipelines.workspace.runtime.emptyLogs')}
+      </p>
+    )
+  }
+
+  return (
+    <ol className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.1)]">
+      {logs.data.lines.map((line, index) => (
+        <li
+          key={`${line.timestampMillis}-${index}`}
+          className="border-b border-slate-100 px-5 py-4 last:border-b-0"
+        >
+          <div className="flex items-center gap-2 text-[10px] font-medium text-slate-400">
+            <time dateTime={new Date(line.timestampMillis).toISOString()}>
+              {new Intl.DateTimeFormat(i18n.language, {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+              }).format(line.timestampMillis)}
+            </time>
+            <span className="rounded bg-slate-100 px-1 py-0.5 text-slate-600">{line.level}</span>
+          </div>
+          <p className="mt-1.5 font-mono text-[11px] leading-5 break-words text-slate-600">
+            {line.message}
+          </p>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+function ApiAccessPage({ pipelineId }: { pipelineId: string }) {
+  const { t } = useTranslation()
+  const apiFetch = useAuthStore((state) => state.apiFetch)
+  const pipeline = useQuery({
+    queryKey: ['pipelines', pipelineId],
+    queryFn: () => getPipeline(pipelineId, apiFetch),
+  })
+
+  if (pipeline.isLoading) return <LoadingPanel />
+  if (pipeline.isError) {
+    return <QueryIssue unavailable={false} onRetry={() => void pipeline.refetch()} />
+  }
+
+  const serveNodes = pipeline.data?.dag.nodes.filter((node) => node.type === 'serve') ?? []
+  if (serveNodes.length === 0) {
+    return (
+      <div className="mt-6">
+        <p className="text-[13px] font-semibold text-slate-800">
+          {t('pipelines.workspace.apiAccess.emptyTitle')}
+        </p>
+        <p className="mt-1.5 max-w-[48ch] text-[12px] leading-5 text-slate-500">
+          {t('pipelines.workspace.apiAccess.emptyBody')}
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.1)]">
+      <div className="px-5 py-4">
+        <p className="text-[13px] font-semibold text-slate-800">
+          {t('pipelines.workspace.apiAccess.pendingTitle')}
+        </p>
+        <p className="mt-1.5 max-w-[48ch] text-[12px] leading-5 text-slate-500">
+          {t('pipelines.workspace.apiAccess.pendingBody')}
+        </p>
+      </div>
+      <ul className="divide-y divide-slate-100 border-t border-slate-100">
+        {serveNodes.map((node) => (
+          <li key={node.id} className="flex items-center gap-2.5 px-5 py-3.5">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
+              <Radio className="size-3.5" aria-hidden="true" />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-[12px] font-semibold text-slate-700">
+                {node.label}
+              </span>
+              <span className="mt-0.5 block truncate text-[11px] text-slate-500">
+                {node.detail ?? t('pipelines.workspace.apiAccess.serveDetail')}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+export function PipelineWorkspacePage({
+  pipelineId,
+  section,
+}: {
+  pipelineId: string
+  section: PipelineWorkspaceSection
+}) {
+  const [navigationCollapsed, setNavigationCollapsed] = useState(false)
+
+  return (
+    <main className="relative h-dvh min-h-0 overflow-hidden bg-[#f8faff] text-slate-900">
+      {section === 'orchestrate' ? (
+        <PipelineOrchestrationPage
+          pipelineId={pipelineId}
+          navigationCollapsed={navigationCollapsed}
+        />
+      ) : (
+        <WorkspacePageFrame
+          pipelineId={pipelineId}
+          section={section}
+          navigationCollapsed={navigationCollapsed}
+        >
+          {section === 'monitoring' && <MonitoringPage pipelineId={pipelineId} />}
+          {section === 'logs' && <LogsPage pipelineId={pipelineId} />}
+          {section === 'api' && <ApiAccessPage pipelineId={pipelineId} />}
+        </WorkspacePageFrame>
+      )}
+      <PipelineWorkspaceNav
+        pipelineId={pipelineId}
+        activeSection={section}
+        collapsed={navigationCollapsed}
+        onCollapsedChange={setNavigationCollapsed}
+      />
     </main>
   )
+}
+
+export function PipelineEditorPage({ pipelineId }: { pipelineId: string }) {
+  return <PipelineWorkspacePage pipelineId={pipelineId} section="orchestrate" />
 }

@@ -1,12 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
-
-import { PipelineEditorPage } from '@/features/pipelines/pipeline-editor-page'
+import { createFileRoute, Outlet } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/_pipeline-editor/pipelines/$pipelineId/edit')({
-  component: PipelineEditorRouteComponent,
+  component: PipelineEditorLayoutRouteComponent,
 })
 
-function PipelineEditorRouteComponent() {
-  const { pipelineId } = Route.useParams()
-  return <PipelineEditorPage pipelineId={pipelineId} />
+function PipelineEditorLayoutRouteComponent() {
+  return <Outlet />
 }

@@ -475,6 +475,16 @@
       "actions": {
         "retry": "Retry"
       },
+      "navigation": {
+        "label": "Pipeline workspace navigation",
+        "workspace": "Pipeline",
+        "orchestrate": "Orchestrate",
+        "api": "API access",
+        "logs": "Logs",
+        "monitoring": "Monitoring",
+        "collapse": "Collapse workspace navigation",
+        "expand": "Expand workspace navigation"
+      },
       "tabs": {
         "label": "Pipeline workspace panels",
         "runtime": "Runtime",
