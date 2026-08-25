@@ -1,5 +1,7 @@
 import type { PipelineDag, PipelineLayout } from '@/service/pipeline-client'
 
+import type { PipelineNodeConnector } from './pipeline-canvas-types'
+
 export interface FlowNode {
   id: string
   type: string
@@ -8,6 +10,7 @@ export interface FlowNode {
     label: string
     detail: string | null
     nodeType: string
+    connector: PipelineNodeConnector | null
     hasInput: boolean
     hasOutput: boolean
   }
@@ -35,6 +38,7 @@ const ROW_GAP = 152
 export function pipelineDagToFlow(
   dag: PipelineDag,
   layout?: Pick<PipelineLayout, 'nodes' | 'viewport'> | null,
+  connectorsBySourceId: ReadonlyMap<string, PipelineNodeConnector> = new Map(),
 ): FlowGraph {
   const columns = columnsFor(dag)
   const positions = positionsFor(dag, columns)
@@ -50,6 +54,10 @@ export function pipelineDagToFlow(
         label: node.label,
         detail: node.detail,
         nodeType: node.type,
+        connector:
+          (node.type === 'source' || node.type === 'target') && node.detail
+            ? (connectorsBySourceId.get(node.detail) ?? null)
+            : null,
         hasInput: incoming.has(node.id),
         hasOutput: outgoing.has(node.id),
       },

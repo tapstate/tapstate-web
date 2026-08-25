@@ -124,4 +124,49 @@ describe('pipelineDagToFlow', () => {
     ])
     expect(graph.edges[0]).not.toHaveProperty('data')
   })
+
+  it('attaches the real connector metadata to source and target nodes', () => {
+    const graph = pipelineDagToFlow(
+      {
+        nodes: [
+          {
+            id: 'source:mysql_source:Player',
+            type: 'source',
+            label: 'Player',
+            detail: 'mysql_source',
+          },
+          {
+            id: 'target:mongodb_target:Player',
+            type: 'target',
+            label: 'Player',
+            detail: 'mongodb_target',
+          },
+        ],
+        edges: [
+          {
+            id: 'source:mysql_source:Player->target:mongodb_target:Player',
+            source: 'source:mysql_source:Player',
+            target: 'target:mongodb_target:Player',
+            label: null,
+          },
+        ],
+      },
+      null,
+      new Map([
+        ['mysql_source', { id: 'mysql', name: 'MySQL', icon: 'icons/mysql.png' }],
+        ['mongodb_target', { id: 'mongodb', name: 'MongoDB', icon: 'icons/mongodb.png' }],
+      ]),
+    )
+
+    expect(graph.nodes.map((node) => ({ id: node.id, connector: node.data.connector }))).toEqual([
+      {
+        id: 'source:mysql_source:Player',
+        connector: { id: 'mysql', name: 'MySQL', icon: 'icons/mysql.png' },
+      },
+      {
+        id: 'target:mongodb_target:Player',
+        connector: { id: 'mongodb', name: 'MongoDB', icon: 'icons/mongodb.png' },
+      },
+    ])
+  })
 })

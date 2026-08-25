@@ -16,7 +16,7 @@ import {
   Sparkles,
   Workflow,
 } from 'lucide-react'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
@@ -30,9 +30,13 @@ import {
   PipelineClientError,
   type PipelineLayout,
 } from '@/service/pipeline-client'
+import { listConnectors, listSources } from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
 
-import { PipelineCanvas, type PipelineCanvasSelection } from './pipeline-canvas'
+import type { PipelineCanvasSelection } from './pipeline-canvas-types'
+
+import { PipelineCanvas } from './pipeline-canvas'
+import { pipelineNodeConnectors } from './pipeline-node-connectors'
 
 export type PipelineWorkspaceSection = 'orchestrate' | 'api' | 'logs' | 'monitoring'
 
@@ -327,6 +331,14 @@ function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
     queryKey: ['pipelines', pipelineId, 'layout'],
     queryFn: () => getPipelineLayout(pipelineId, apiFetch),
   })
+  const sources = useQuery({
+    queryKey: ['sources'],
+    queryFn: () => listSources(apiFetch),
+  })
+  const connectors = useQuery({
+    queryKey: ['connectors'],
+    queryFn: () => listConnectors(apiFetch),
+  })
   const saveLayout = useMutation({
     mutationFn: (next: Pick<PipelineLayout, 'nodes' | 'viewport'>) =>
       savePipelineLayout(pipelineId, next, apiFetch),
@@ -350,6 +362,10 @@ function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
   const isLoading = pipeline.isLoading || layout.isLoading
   const error = pipeline.isError || layout.isError
   const layoutStatus = saveLayout.isPending ? 'saving' : saveLayout.isError ? 'error' : 'saved'
+  const connectorsBySourceId = useMemo(
+    () => pipelineNodeConnectors(sources.data ?? [], connectors.data ?? []),
+    [connectors.data, sources.data],
+  )
 
   return (
     <section className="relative h-full min-w-0 flex-1 overflow-hidden bg-[#f8faff]">
@@ -387,6 +403,7 @@ function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
           <PipelineCanvas
             dag={pipeline.data.dag}
             layout={layout.data}
+            connectorsBySourceId={connectorsBySourceId}
             onLayoutChange={scheduleLayoutSave}
             onSelectionChange={setSelection}
           />
