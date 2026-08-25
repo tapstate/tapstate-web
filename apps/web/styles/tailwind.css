@@ -177,6 +177,8 @@
     --pipeline-kind-serve-text: #047857;
     --pipeline-kind-transform-surface: #f1f5f9;
     --pipeline-kind-transform-text: #475569;
+    --pipeline-connector-icon-surface: rgb(255 255 255 / 25%);
+    --pipeline-connector-icon-shadow: 0 1px 1px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 2%);
   }
 
   .dark {
@@ -254,6 +256,8 @@
     --pipeline-kind-serve-text: oklch(0.84 0.09 158);
     --pipeline-kind-transform-surface: oklch(0.29 0.012 255);
     --pipeline-kind-transform-text: oklch(0.8 0.014 255);
+    --pipeline-connector-icon-surface: rgb(255 255 255 / 6%);
+    --pipeline-connector-icon-shadow: 0 1px 1px rgb(0 0 0 / 20%), 0 1px 3px rgb(0 0 0 / 12%);
   }
 
   html,
