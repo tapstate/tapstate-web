@@ -6,6 +6,7 @@ interface ConnectorIconProps {
   iconPath?: string | null
   size?: number
   className?: string
+  withBackdropLayer?: boolean
 }
 
 function monogram(name: string) {
@@ -20,6 +21,7 @@ export function ConnectorIcon({
   iconPath,
   size = 36,
   className,
+  withBackdropLayer = false,
 }: ConnectorIconProps) {
   const [failed, setFailed] = useState(false)
   const src = iconPath
@@ -38,17 +40,40 @@ export function ConnectorIcon({
       data-fallback={src === null || failed ? monogram(name) : undefined}
       aria-hidden="true"
     >
-      {src !== null && !failed && (
-        <img
-          className="connector-icon__image"
-          src={src}
-          alt=""
-          width={size}
-          height={size}
-          loading="lazy"
-          onError={() => setFailed(true)}
-        />
-      )}
+      {src !== null &&
+        !failed &&
+        (withBackdropLayer ? (
+          <>
+            <img
+              className="connector-icon__image connector-icon__image--backdrop"
+              src={src}
+              alt=""
+              width={size}
+              height={size}
+              loading="lazy"
+              onError={() => setFailed(true)}
+            />
+            <img
+              className="connector-icon__image connector-icon__image--foreground"
+              src={src}
+              alt=""
+              width={size}
+              height={size}
+              loading="lazy"
+              onError={() => setFailed(true)}
+            />
+          </>
+        ) : (
+          <img
+            className="connector-icon__image"
+            src={src}
+            alt=""
+            width={size}
+            height={size}
+            loading="lazy"
+            onError={() => setFailed(true)}
+          />
+        ))}
     </span>
   )
 }

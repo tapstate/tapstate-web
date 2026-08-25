@@ -50,6 +50,7 @@ function NodeLeadingIcon({ data }: { data: CanvasNodeData }) {
         iconPath={data.connector.icon}
         size={24}
         className="pipeline-canvas__connector-icon"
+        withBackdropLayer
       />
     )
   }

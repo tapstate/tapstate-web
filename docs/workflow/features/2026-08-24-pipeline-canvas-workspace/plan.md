@@ -52,7 +52,7 @@
 - Red: focused component cases require route-specific reads, working route links, and the collapse or expand state.
 - Green: place operator reads in dedicated route pages, keep canvas selection and layout saving local to Build, and keep panel geometry as local UI state.
 - Level: 3 because this spans routes, visual structure, read contracts, and production build output.
-- Visual scan: verify hierarchy through whitespace, typography, semantic tone, and visible dots. Do not use gradients, glass surfaces, nested cards, simulated metrics, or unsupported control affordances.
+- Visual scan: verify hierarchy through whitespace, typography, semantic tone, and visible dots. Do not use gradients, nested cards, simulated metrics, or unsupported control affordances. The 24px connector icon shell is the approved localized translucent surface.
 
 ## 5. Progress log
 
@@ -64,6 +64,7 @@
 | 2026-08-25 | Codex | 97%      | Corrected node handles to use the card midline, removed Bezier endpoint offsets, centered automatic fan-in layout, and made the node library and inspector contextual rather than initial overlays.                                                              | Run authenticated desktop and narrow viewport review | Local preview requires an authenticated session         |
 | 2026-08-25 | Codex | 97%      | User confirmed the need for a neutral `#f2f4f7` canvas and maintainable theme architecture. The approved direction moves all canvas visual values into dedicated light and dark semantic tokens and CSS recipes.                                                 | Implement the tokenized canvas styling               | None                                                    |
 | 2026-08-25 | Codex | 98%      | Added root and dark Pipeline tokens, a dedicated canvas stylesheet, and token-backed React Flow, node, edge, aside, loading, and canvas-overlay styling. All Pipeline `#f8faff` literals are removed.                                                            | Authenticated desktop and narrow viewport review     | Both available local browser sessions redirect to login |
+| 2026-08-25 | Codex | 99%      | Added a Pipeline-only two-layer connector image treatment: blurred image backdrop, sharp foreground mark, tokenized translucent shell, and light/dark elevation values. Dot contrast now derives from semantic text tokens rather than a fixed color.            | Authenticated desktop and narrow viewport review     | Both available local browser sessions redirect to login |
 
 ## 6. Review checklist
 
@@ -91,6 +92,9 @@
 | 2026-08-25 | `pnpm --filter web i18n:check`                                                   | Passed                       | Locale keys match across all three locales                                              |
 | 2026-08-25 | `pnpm --filter web build`                                                        | Passed                       | Existing chunk-size warning remains                                                     |
 | 2026-08-25 | Scoped `oxfmt --check`                                                           | Passed                       | Token, canvas recipe, Pipeline component, and feature files pass formatting             |
+| 2026-08-25 | `pnpm --filter web test -- connector-icon.test.tsx`                              | Passed                       | 19 files / 93 tests, including the two-image Pipeline icon layer contract               |
+| 2026-08-25 | `pnpm --filter web typecheck` and `pnpm --filter web build`                      | Passed                       | Existing chunk-size warning remains                                                     |
+| 2026-08-25 | Scoped `oxfmt --check` and `git diff --check`                                    | Passed                       | Layered icon components, tokens, recipes, and feature records are clean                 |
 | 2026-08-25 | `pnpm lint`                                                                      | Blocked by existing baseline | 30 pre-existing formatting mismatches outside this change; scoped formatting is clean   |
 | 2026-08-25 | `pnpm lint`                                                                      | Blocked by existing baseline | 26 pre-existing formatting mismatches outside this change; scoped formatting is clean   |
 | 2026-08-25 | Desktop and narrow viewport                                                      | Pending                      | Both available local browser sessions redirect to the sign-in page                      |

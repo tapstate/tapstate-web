@@ -39,6 +39,24 @@ describe('ConnectorIcon', () => {
     expect(icon?.classList.contains('isolate')).toBe(true)
   })
 
+  it('can render a blurred image backdrop behind the primary connector mark', async () => {
+    await act(async () => {
+      root?.render(
+        <ConnectorIcon
+          connectorId="mysql"
+          name="MySQL"
+          iconPath="icons/mysql.png"
+          withBackdropLayer
+        />,
+      )
+    })
+
+    const images = [...(host?.querySelectorAll('img') ?? [])]
+    expect(images).toHaveLength(2)
+    expect(images[0]?.className).toContain('connector-icon__image--backdrop')
+    expect(images[1]?.className).toContain('connector-icon__image--foreground')
+  })
+
   it('shows a monogram fallback when the direct image cannot load', async () => {
     await act(async () => {
       root?.render(<ConnectorIcon connectorId="mysql" name="MySQL" iconPath="icons/mysql.png" />)
