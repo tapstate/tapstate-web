@@ -231,13 +231,23 @@ function PipelineWorkspaceNav({
         <div
           className={cn('flex h-10 items-center', collapsed ? 'justify-center' : 'justify-between')}
         >
-          <Link
-            to="/pipelines"
-            className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-700 transition-[background-color,transform] hover:bg-slate-100 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95"
-            aria-label={t('pipelines.workspace.back')}
-          >
-            <ChevronLeft className="size-4" aria-hidden="true" />
-          </Link>
+          <div className="flex min-w-0 items-center gap-1">
+            <Link
+              to="/pipelines"
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-700 transition-[background-color,transform] hover:bg-slate-100 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95"
+              aria-label={t('pipelines.workspace.back')}
+            >
+              <ChevronLeft className="size-4" aria-hidden="true" />
+            </Link>
+            {!collapsed && (
+              <span
+                className="min-w-0 truncate text-[13px] font-semibold text-slate-800"
+                data-testid="workspace-navigation-title"
+              >
+                {t('nav.pipelines')}
+              </span>
+            )}
+          </div>
           {!collapsed && (
             <button
               type="button"
