@@ -189,6 +189,17 @@ describe('PipelineEditorPage', () => {
     await vi.waitFor(() => expect(navigation?.dataset.collapsed).toBe('false'))
   })
 
+  it('keeps secondary canvas panels out of the initial reading path', async () => {
+    await renderPage()
+
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="pipeline-canvas"]')).not.toBeNull(),
+    )
+
+    expect(document.querySelector('[aria-label="Show node library"]')).not.toBeNull()
+    expect(container?.textContent).not.toContain('Select a node')
+  })
+
   it('loads status and metrics after navigating to Monitoring', async () => {
     await renderPage('monitoring')
 

@@ -51,6 +51,8 @@ interface CanvasNodeData extends Record<string, unknown> {
   label: string
   detail: string | null
   nodeType: string
+  hasInput: boolean
+  hasOutput: boolean
 }
 
 interface CanvasEdgeData extends Record<string, unknown> {
@@ -90,52 +92,52 @@ function CanvasNodeCard({ data, selected }: NodeProps<CanvasNode>) {
   return (
     <div
       className={cn(
-        'relative w-60 rounded-2xl p-px transition-[background-color,box-shadow] duration-150 motion-reduce:transition-none',
-        selected ? 'bg-[#528bff] shadow-[0_8px_20px_rgba(37,99,235,0.14)]' : 'bg-transparent',
+        'group relative w-56 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.08)] transition-[border-color,box-shadow] duration-150 hover:border-slate-300 hover:shadow-[0_8px_18px_rgba(15,23,42,0.12)] motion-reduce:transition-none',
+        selected && 'border-[#528bff] ring-2 ring-[#528bff]/25',
       )}
     >
-      <div className="group relative overflow-visible rounded-[15px] border border-slate-200 bg-white pb-2 shadow-[0_1px_2px_rgba(15,23,42,0.08)] transition-[border-color,box-shadow] duration-150 hover:border-slate-300 hover:shadow-[0_8px_18px_rgba(15,23,42,0.12)] motion-reduce:transition-none">
+      {data.hasInput && (
         <Handle
           id="input"
           type="target"
           position={Position.Left}
           isConnectable={false}
           className={cn(
-            '!top-4 !-left-2 !size-4 !rounded-none !border-0 !bg-transparent !outline-none before:absolute before:top-1/2 before:left-1.5 before:h-2 before:w-0.5 before:-translate-y-1/2 before:bg-slate-300 before:transition-[background-color,transform] group-hover:before:scale-y-125 group-hover:before:bg-slate-500',
+            '!top-1/2 !-left-2 !size-4 !rounded-none !border-0 !bg-transparent !outline-none before:absolute before:top-1/2 before:left-1.5 before:h-3 before:w-0.5 before:-translate-y-1/2 before:bg-slate-300 before:transition-[background-color,transform] group-hover:before:scale-y-125 group-hover:before:bg-slate-500',
             selected && 'before:bg-[#528bff]',
           )}
           aria-label={t('pipelines.workspace.handles.input', { node: data.label })}
         />
-        <div className="flex min-w-0 items-center gap-2 px-3 pt-3 pb-2">
-          <span
-            className={cn(
-              'flex size-5 shrink-0 items-center justify-center rounded-md ring-1 ring-inset',
-              nodeTone(data.nodeType),
-            )}
-          >
-            <NodeIcon nodeType={data.nodeType} detail={data.detail} />
-          </span>
-          <span className="min-w-0 truncate text-[12px] leading-4 font-semibold text-slate-800">
-            {data.label}
-          </span>
-        </div>
-        <div className="mx-2 min-h-8 rounded-md bg-slate-50 px-2 py-1.5">
-          <span className="block truncate text-[11px] leading-4 text-slate-500">
-            {t(descriptionKey, { detail })}
-          </span>
-        </div>
+      )}
+      <div className="flex min-w-0 items-center gap-2">
+        <span
+          className={cn(
+            'flex size-6 shrink-0 items-center justify-center rounded-md ring-1 ring-inset',
+            nodeTone(data.nodeType),
+          )}
+        >
+          <NodeIcon nodeType={data.nodeType} detail={data.detail} />
+        </span>
+        <span className="min-w-0 truncate text-[13px] leading-5 font-semibold text-slate-800">
+          {data.label}
+        </span>
+      </div>
+      <p className="mt-2 min-h-5 truncate px-0.5 text-[11px] leading-5 text-slate-500">
+        {t(descriptionKey, { detail })}
+      </p>
+      {data.hasOutput && (
         <Handle
           id="output"
           type="source"
           position={Position.Right}
           isConnectable={false}
           className={cn(
-            '!top-4 !-right-2 !size-4 !rounded-none !border-0 !bg-transparent !outline-none before:absolute before:top-1/2 before:right-1.5 before:h-2 before:w-0.5 before:-translate-y-1/2 before:bg-slate-300 before:transition-[background-color,transform] group-hover:before:scale-y-125 group-hover:before:bg-slate-500',
+            '!top-1/2 !-right-2 !size-4 !rounded-none !border-0 !bg-transparent !outline-none before:absolute before:top-1/2 before:right-1.5 before:h-3 before:w-0.5 before:-translate-y-1/2 before:bg-slate-300 before:transition-[background-color,transform] group-hover:before:scale-y-125 group-hover:before:bg-slate-500',
             selected && 'before:bg-[#528bff]',
           )}
           aria-label={t('pipelines.workspace.handles.output', { node: data.label })}
         />
-      </div>
+      )}
     </div>
   )
 }
@@ -151,13 +153,13 @@ function PipelineEdge({
   targetY,
 }: EdgeProps<CanvasEdge>) {
   const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX: sourceX - 8,
+    sourceX,
     sourceY,
     sourcePosition: Position.Right,
-    targetX: targetX + 8,
+    targetX,
     targetY,
     targetPosition: Position.Left,
-    curvature: 0.16,
+    curvature: 0.22,
   })
 
   return (
@@ -167,8 +169,8 @@ function PipelineEdge({
         path={edgePath}
         markerEnd={markerEnd}
         style={{
-          stroke: selected ? '#528bff' : '#c8d2e0',
-          strokeWidth: selected ? 2.25 : 2,
+          stroke: selected ? '#528bff' : '#cbd5e1',
+          strokeWidth: selected ? 2.25 : 1.75,
         }}
       />
       {data?.label && (
@@ -239,7 +241,7 @@ export function PipelineCanvas({
       edgeTypes={edgeTypes}
       defaultViewport={graph.viewport ?? undefined}
       fitView={!graph.viewport}
-      fitViewOptions={{ padding: 0.24, maxZoom: 1 }}
+      fitViewOptions={{ padding: 0.36, maxZoom: 0.92 }}
       minZoom={0.2}
       maxZoom={1.6}
       onNodesChange={onNodesChange}
@@ -267,10 +269,10 @@ export function PipelineCanvas({
       className="bg-[#f8faff]"
       proOptions={{ hideAttribution: true }}
     >
-      <Background color="#c6d3e3" gap={16} size={1.25} />
+      <Background color="#bdcce0" gap={18} size={1.15} />
       <Controls
         showInteractive={false}
-        className="!bottom-5 !left-5 !overflow-hidden !rounded-xl !border !border-slate-200 !bg-white !shadow-[0_6px_18px_rgba(15,23,42,0.1)] max-md:!hidden"
+        className="!bottom-5 !left-[17rem] !overflow-hidden !rounded-xl !border !border-slate-200 !bg-white !shadow-[0_6px_18px_rgba(15,23,42,0.1)] max-md:!left-16 max-md:!hidden"
       />
       <MiniMap
         className="!right-5 !bottom-5 !rounded-xl !border !border-slate-200 !bg-white !shadow-[0_6px_18px_rgba(15,23,42,0.1)] max-md:!hidden"

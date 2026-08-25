@@ -18,7 +18,7 @@
 | Criterion | Result | Evidence |
 | --- | --- | --- |
 | Floating navigation and canvas ownership | Passed in focused component coverage | Build keeps the full canvas. API access, Logs, and Monitoring have dedicated routes in a left overlay panel. A header-right icon collapses and expands that panel without changing canvas width. |
-| Custom node cards, handles, Bezier paths, and dot field | Passed in graph and source coverage | Semantic edges map to the custom `pipeline` edge type. Cards render type icon, name, description space, short-line handles, muted Bezier paths, and a blue-gray 16px dot field. |
+| Custom node cards, handles, Bezier paths, and dot field | Passed in graph and source coverage | Semantic edges map to the custom `pipeline` edge type. Cards render type icon, name, description space, card-midline handles, muted Bezier paths without endpoint offsets, and a blue-gray 18px dot field. The automatic layout centers a fan-in node on its incoming source group. |
 | Honest status, metrics, logs, and API access pages | Passed in component coverage | Monitoring reads status and metrics only after its route opens. Logs reads only its log endpoint. Serve nodes remain unpublished and no URL or publish action is emitted. |
 | Locale, test, type, and build checks | Passed | 18 test files and 87 tests, typecheck, locale validation, and build pass. |
 | Desktop and narrow viewport review | Pending | |
@@ -31,7 +31,9 @@
 | `pnpm --filter web typecheck` | Passed | |
 | `pnpm --filter web i18n:check` | Passed | Locale keys match |
 | `pnpm --filter web build` | Passed | Existing chunk-size warning remains |
-| Scoped `oxfmt --check` | Pending | Run after the documentation update |
+| `pnpm --filter web test -- pipeline-graph.test.ts pipeline-editor-page.test.tsx` | Passed | 18 files, 89 tests, including the fan-in and contextual-panel regressions |
+| Scoped `oxfmt --check` | Passed | Modified Pipeline files and feature records |
+| `pnpm lint` | Blocked by existing baseline | 30 pre-existing formatting mismatches outside this change; no unrelated formatter output was written |
 | Desktop viewport | Pending | Requires authenticated local session |
 | Narrow viewport | Pending | Requires authenticated local session |
 

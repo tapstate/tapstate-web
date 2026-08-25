@@ -1,8 +1,8 @@
 # Pipeline canvas workspace plan
 
 > Status: In Progress
-> Progress: 94%
-> Current step: Record authenticated desktop and narrow viewport review for the corrected overlay navigation and node treatment
+> Progress: 97%
+> Current step: Record authenticated desktop and narrow viewport review for the corrected canvas geometry and overlay treatment
 > Next step: Run the workspace in an authenticated local browser session
 > Date: 2026-08-25
 > Owner: Codex
@@ -35,7 +35,7 @@
 | --- | --- | --- | --- | --- |
 | 1 | Done | Inspect the supplied reference, public workflow implementation, current editor, static DAG, and runtime contracts | Source review recorded in progress log | Visual techniques only, no copied product identity |
 | 2 | Done | Add strict client cases for status, metrics, and logs | Focused Vitest | HTTP reads remain independent from `PipelineView` |
-| 3 | Done | Implement compact node cards, selection shell, short-line handles, custom Bezier edges, and visible dot background | Focused Vitest, typecheck | No semantic graph mutation affordance |
+| 3 | Done | Implement compact node cards, centered short-line handles, custom Bezier edges, and visible dot background | Focused Vitest, typecheck | No semantic graph mutation affordance. The corrective pass removes endpoint offsets and aligns fan-in nodes with their input group. |
 | 4 | Done | Add route pages for API access, Logs, and Monitoring | Focused component test, generated route tree, typecheck | Queries begin only after their route opens |
 | 5 | Done | Make workspace navigation a floating left canvas panel with upper-right collapse and expand affordances | Focused component test, typecheck | Canvas width never changes when the panel expands or collapses |
 | 6 | Done | Add translated navigation and operation page states | i18n check | API access remains availability only |
@@ -55,6 +55,7 @@
 | 2026-08-24 | Codex | 15% | Inspected current editor, supplied visual reference, source patterns, and backend runtime JSON contracts | Add red client tests | Authenticated visual session still unavailable |
 | 2026-08-24 | Codex | 85% | Added strict observation clients, custom canvas cards, handles, Bezier edges, floating runtime/API panels, translations, and component coverage. | Correct workspace information architecture | Browser access is not available in this session |
 | 2026-08-25 | Codex | 94% | Replaced runtime tabs with dedicated routes. Added a floating left navigation panel with an upper-right collapse control, adjusted overlay geometry, increased dot-field contrast, tightened node cards, handles, and edges, and updated focused behavior cases. | Run authenticated desktop and narrow viewport review | Browser access is not available in this session |
+| 2026-08-25 | Codex | 97% | Corrected node handles to use the card midline, removed Bezier endpoint offsets, centered automatic fan-in layout, and made the node library and inspector contextual rather than initial overlays. | Run authenticated desktop and narrow viewport review | Local preview requires an authenticated session |
 
 ## 6. Review checklist
 
@@ -74,7 +75,9 @@
 | 2026-08-25 | `pnpm --filter web typecheck` | Passed | |
 | 2026-08-25 | `pnpm --filter web i18n:check` | Passed | Locale keys match across all three locales |
 | 2026-08-25 | `pnpm --filter web build` | Passed | Existing chunk-size warning remains |
-| 2026-08-25 | Scoped `oxfmt --check` | Pending | Run after documentation update |
+| 2026-08-25 | `pnpm --filter web test -- pipeline-graph.test.ts pipeline-editor-page.test.tsx` | Passed | 18 files, 89 tests, including initial panel visibility and fan-in alignment regressions |
+| 2026-08-25 | Scoped `oxfmt --check` | Passed | All five modified Pipeline files and feature records pass formatting |
+| 2026-08-25 | `pnpm lint` | Blocked by existing baseline | 30 pre-existing formatting mismatches outside this change; scoped formatting is clean |
 | 2026-08-25 | Desktop and narrow viewport | Pending | Requires authenticated local browser access |
 
 ## 8. Risks and rollback

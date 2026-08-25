@@ -73,6 +73,32 @@ describe('pipelineDagToFlow', () => {
     ])
   })
 
+  it('centers a fan-in node on its incoming source group', () => {
+    const graph = pipelineDagToFlow({
+      nodes: [
+        { id: 'source:accounts', type: 'source', label: 'accounts', detail: null },
+        { id: 'source:orders', type: 'source', label: 'orders', detail: null },
+        { id: 'source:payments', type: 'source', label: 'payments', detail: null },
+        { id: 'transform:combine', type: 'transform', label: 'combine', detail: 'union' },
+        { id: 'serve:combined', type: 'serve', label: 'combined', detail: null },
+      ],
+      edges: [
+        { id: 'a', source: 'source:accounts', target: 'transform:combine', label: null },
+        { id: 'b', source: 'source:orders', target: 'transform:combine', label: null },
+        { id: 'c', source: 'source:payments', target: 'transform:combine', label: null },
+        { id: 'd', source: 'transform:combine', target: 'serve:combined', label: null },
+      ],
+    })
+
+    expect(graph.nodes.map((node) => ({ id: node.id, position: node.position }))).toEqual([
+      { id: 'source:accounts', position: { x: 80, y: 96 } },
+      { id: 'source:orders', position: { x: 80, y: 248 } },
+      { id: 'source:payments', position: { x: 80, y: 400 } },
+      { id: 'transform:combine', position: { x: 360, y: 248 } },
+      { id: 'serve:combined', position: { x: 640, y: 248 } },
+    ])
+  })
+
   it('carries a semantic edge label into the canvas edge data without adding layout data', () => {
     const graph = pipelineDagToFlow({
       nodes: [

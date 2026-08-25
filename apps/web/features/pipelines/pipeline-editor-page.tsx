@@ -310,7 +310,7 @@ function PipelineOrchestrationPage({
   const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const [selection, setSelection] = useState<PipelineCanvasSelection | null>(null)
-  const [isNodePanelOpen, setIsNodePanelOpen] = useState(true)
+  const [isNodePanelOpen, setIsNodePanelOpen] = useState(false)
   const latestLayout = useRef<Pick<PipelineLayout, 'nodes' | 'viewport'> | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -350,7 +350,7 @@ function PipelineOrchestrationPage({
     <section className="absolute inset-0 overflow-hidden bg-[#f8faff]">
       <a
         href="#pipeline-canvas"
-        className="absolute top-3 left-3 z-50 rounded-lg bg-slate-950 px-3 py-2 text-sm text-white focus:not-sr-only"
+        className="sr-only absolute top-3 left-3 z-50 rounded-lg bg-slate-950 px-3 py-2 text-sm text-white focus:not-sr-only"
       >
         {t('pipelines.workspace.skipToCanvas')}
       </a>
@@ -388,7 +388,7 @@ function PipelineOrchestrationPage({
         )}
       </section>
 
-      <div className="pointer-events-none absolute top-5 right-5 z-20 flex h-8 items-center rounded-lg border border-slate-200 bg-white/95 px-2.5 text-[11px] font-medium text-slate-500 shadow-[0_2px_8px_rgba(15,23,42,0.08)] max-sm:top-3 max-sm:right-3">
+      <div className="pointer-events-none absolute bottom-5 left-1/2 z-20 flex h-8 -translate-x-1/2 items-center rounded-lg border border-slate-200 bg-white/95 px-2.5 text-[11px] font-medium text-slate-500 shadow-[0_2px_8px_rgba(15,23,42,0.08)] max-sm:bottom-3">
         <span
           className={cn(
             'mr-1.5 size-1.5 rounded-full',
@@ -403,68 +403,67 @@ function PipelineOrchestrationPage({
         {t(`pipelines.workspace.layout.${layoutStatus}`)}
       </div>
 
-      <div
-        className={cn(
-          'absolute top-5 z-20 w-60 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.1)] transition-[opacity,transform,left] duration-150 motion-reduce:transition-none max-sm:top-3 max-sm:w-[min(15rem,calc(100vw-5.75rem))]',
-          isNodePanelOpen
-            ? 'translate-x-0 opacity-100'
-            : 'pointer-events-none -translate-x-3 opacity-0',
-          navigationCollapsed ? 'left-20 max-sm:left-16' : 'left-[17rem] max-md:left-[16.5rem]',
-        )}
-        aria-label={t('pipelines.workspace.nodeLibrary.label')}
-      >
-        <div className="flex items-center justify-between border-b border-slate-100 px-3.5 py-3">
-          <div className="flex items-center gap-2">
-            <span className="flex size-6 items-center justify-center rounded-md bg-blue-50 text-blue-600">
-              <LibraryBig className="size-3.5" aria-hidden="true" />
-            </span>
-            <div>
-              <h1 className="text-[13px] font-semibold text-slate-800">
-                {t('pipelines.workspace.nodeLibrary.title')}
-              </h1>
-              <p className="mt-0.5 text-[10px] font-medium text-slate-400">
-                {t('pipelines.workspace.nodeLibrary.readOnly')}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="inline-flex size-8 items-center justify-center rounded-lg text-slate-400 transition-[background-color,color,transform] hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-sm:size-10"
-            aria-label={t('pipelines.workspace.nodeLibrary.hide')}
-            onClick={() => setIsNodePanelOpen(false)}
-          >
-            <ChevronLeft className="size-4" aria-hidden="true" />
-          </button>
-        </div>
-        <div className="space-y-0.5 p-2">
-          {paletteItems.map((item) => {
-            const Icon = item.icon
-            return (
-              <div key={item.id} className="flex items-center gap-2.5 rounded-lg px-2 py-2">
-                <span
-                  className={cn(
-                    'flex size-8 shrink-0 items-center justify-center rounded-lg',
-                    item.tone,
-                  )}
-                >
-                  <Icon className="size-4" aria-hidden="true" />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-[12px] font-semibold text-slate-700">
-                    {t(item.labelKey)}
-                  </span>
-                  <span className="mt-0.5 block truncate text-[11px] text-slate-500">
-                    {t(item.descriptionKey)}
-                  </span>
-                </span>
+      {isNodePanelOpen && (
+        <div
+          className={cn(
+            'absolute top-5 z-20 w-60 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.1)] motion-reduce:transition-none max-sm:top-3 max-sm:w-[min(15rem,calc(100vw-5.75rem))]',
+            navigationCollapsed ? 'left-20 max-sm:left-16' : 'left-[17rem] max-md:left-[16.5rem]',
+          )}
+          aria-label={t('pipelines.workspace.nodeLibrary.label')}
+        >
+          <div className="flex items-center justify-between border-b border-slate-100 px-3.5 py-3">
+            <div className="flex items-center gap-2">
+              <span className="flex size-6 items-center justify-center rounded-md bg-blue-50 text-blue-600">
+                <LibraryBig className="size-3.5" aria-hidden="true" />
+              </span>
+              <div>
+                <h1 className="text-[13px] font-semibold text-slate-800">
+                  {t('pipelines.workspace.nodeLibrary.title')}
+                </h1>
+                <p className="mt-0.5 text-[10px] font-medium text-slate-400">
+                  {t('pipelines.workspace.nodeLibrary.readOnly')}
+                </p>
               </div>
-            )
-          })}
+            </div>
+            <button
+              type="button"
+              className="inline-flex size-8 items-center justify-center rounded-lg text-slate-400 transition-[background-color,color,transform] hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-sm:size-10"
+              aria-label={t('pipelines.workspace.nodeLibrary.hide')}
+              onClick={() => setIsNodePanelOpen(false)}
+            >
+              <ChevronLeft className="size-4" aria-hidden="true" />
+            </button>
+          </div>
+          <div className="space-y-0.5 p-2">
+            {paletteItems.map((item) => {
+              const Icon = item.icon
+              return (
+                <div key={item.id} className="flex items-center gap-2.5 rounded-lg px-2 py-2">
+                  <span
+                    className={cn(
+                      'flex size-8 shrink-0 items-center justify-center rounded-lg',
+                      item.tone,
+                    )}
+                  >
+                    <Icon className="size-4" aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[12px] font-semibold text-slate-700">
+                      {t(item.labelKey)}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[11px] text-slate-500">
+                      {t(item.descriptionKey)}
+                    </span>
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+          <p className="border-t border-slate-100 px-3.5 py-2.5 text-[11px] leading-4 text-slate-500">
+            {t('pipelines.workspace.nodeLibrary.mutationPending')}
+          </p>
         </div>
-        <p className="border-t border-slate-100 px-3.5 py-2.5 text-[11px] leading-4 text-slate-500">
-          {t('pipelines.workspace.nodeLibrary.mutationPending')}
-        </p>
-      </div>
+      )}
 
       {!isNodePanelOpen && (
         <button
@@ -480,19 +479,21 @@ function PipelineOrchestrationPage({
         </button>
       )}
 
-      <aside className="absolute top-5 right-5 z-20 max-h-[calc(100dvh-3rem)] w-[min(20rem,calc(100%-2.5rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.1)] max-sm:top-auto max-sm:right-3 max-sm:bottom-3 max-sm:left-16 max-sm:max-h-[min(22rem,calc(100dvh-5rem))] max-sm:w-auto">
-        <div className="border-b border-slate-100 px-4 py-3.5">
-          <p className="text-[11px] font-semibold tracking-[0.08em] text-slate-400 uppercase">
-            {t('pipelines.workspace.inspector.eyebrow')}
-          </p>
-          <h2 className="mt-1 truncate text-[14px] font-semibold text-slate-800">
-            {selection?.label ?? t('pipelines.workspace.inspector.emptyTitle')}
-          </h2>
-        </div>
-        <div className="max-h-[calc(100dvh-12rem)] overflow-y-auto max-sm:max-h-[min(16rem,calc(100dvh-9rem))]">
-          <NodeInspector selection={selection} />
-        </div>
-      </aside>
+      {selection && (
+        <aside className="absolute top-5 right-5 z-20 max-h-[calc(100dvh-3rem)] w-[min(20rem,calc(100%-2.5rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.1)] max-sm:top-auto max-sm:right-3 max-sm:bottom-3 max-sm:left-16 max-sm:max-h-[min(22rem,calc(100dvh-5rem))] max-sm:w-auto">
+          <div className="border-b border-slate-100 px-4 py-3.5">
+            <p className="text-[11px] font-semibold tracking-[0.08em] text-slate-400 uppercase">
+              {t('pipelines.workspace.inspector.eyebrow')}
+            </p>
+            <h2 className="mt-1 truncate text-[14px] font-semibold text-slate-800">
+              {selection?.label ?? t('pipelines.workspace.inspector.emptyTitle')}
+            </h2>
+          </div>
+          <div className="max-h-[calc(100dvh-12rem)] overflow-y-auto max-sm:max-h-[min(16rem,calc(100dvh-9rem))]">
+            <NodeInspector selection={selection} />
+          </div>
+        </aside>
+      )}
     </section>
   )
 }
