@@ -147,7 +147,7 @@
 
     /* Pipeline workspace semantic theme. */
     --pipeline-canvas-bg: #f2f4f7;
-    --pipeline-grid-dot: color-mix(in oklab, #94a3b8 42%, transparent);
+    --pipeline-grid-dot: #81818a;
     --pipeline-surface: #ffffff;
     --pipeline-surface-subtle: #f8fafc;
     --pipeline-border: color-mix(in oklab, #cbd5e1 82%, transparent);
