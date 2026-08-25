@@ -4,14 +4,13 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { getPipelineStatus, listPipelines, listSources } = vi.hoisted(() => ({
-  getPipelineStatus: vi.fn(),
+const { listPipelines, listSources } = vi.hoisted(() => ({
   listPipelines: vi.fn(),
   listSources: vi.fn(),
 }))
 
 vi.mock('@/service/source-client', () => ({ listSources }))
-vi.mock('@/service/pipeline-client', () => ({ getPipelineStatus, listPipelines }))
+vi.mock('@/service/pipeline-client', () => ({ listPipelines }))
 
 vi.mock('@/stores/auth-store', () => ({
   useAuthStore: <T,>(selector: (state: { apiFetch: typeof fetch }) => T) =>
@@ -62,22 +61,18 @@ async function openCreationMenu() {
 
 beforeEach(() => {
   listSources.mockResolvedValue([{ id: 'orders' }])
-  getPipelineStatus.mockImplementation(async (pipelineId: string) => ({
-    pipelineId,
-    state: pipelineId === 'orders_to_warehouse' ? 'RUNNING' : 'PAUSED',
-  }))
   listPipelines.mockResolvedValue([
     {
       id: 'orders_to_warehouse',
-      kind: 'pipeline',
-      canonicalForm: 'kind: pipeline\nid: orders_to_warehouse\n',
+      dag: { nodes: [], edges: [] },
       contentHash: 'a'.repeat(64),
+      status: { pipelineId: 'orders_to_warehouse', state: 'RUNNING' },
     },
     {
       id: 'customer_360',
-      kind: 'pipeline',
-      canonicalForm: 'kind: pipeline\nid: customer_360\n',
+      dag: { nodes: [], edges: [] },
       contentHash: 'b'.repeat(64),
+      status: { pipelineId: 'customer_360', state: 'PAUSED' },
     },
   ])
 })
@@ -120,12 +115,26 @@ describe('PipelinesPage', () => {
   })
 
   it('shows an unavailable state when a Pipeline has no runtime observation', async () => {
-    getPipelineStatus.mockRejectedValueOnce(new Error('observation not published'))
+    listPipelines.mockResolvedValueOnce([
+      {
+        id: 'orders_to_warehouse',
+        dag: { nodes: [], edges: [] },
+        contentHash: 'a'.repeat(64),
+        status: null,
+      },
+      {
+        id: 'customer_360',
+        dag: { nodes: [], edges: [] },
+        contentHash: 'b'.repeat(64),
+        status: { pipelineId: 'customer_360', state: 'PAUSED' },
+      },
+    ])
 
     await renderPage()
 
     await vi.waitFor(() => expect(container?.textContent).toContain('Unavailable'))
     expect(container?.textContent).toContain('Paused')
+    expect(listPipelines).toHaveBeenCalledTimes(1)
   })
 
   it('keeps the existing wizard creation path available beside the DAG editor', async () => {

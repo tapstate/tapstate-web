@@ -1,6 +1,6 @@
 import type { ComponentType, SVGProps } from 'react'
 
-import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
   ChevronDown,
   ChevronRight,
@@ -25,10 +25,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import {
-  getPipelineStatus,
   listPipelines,
   type PipelineRuntimeState,
-  type PipelineStatus,
   type PipelineView,
 } from '@/service/pipeline-client'
 import { useAuthStore } from '@/stores/auth-store'
@@ -46,15 +44,6 @@ export function PipelinesPage() {
     queryFn: () => listPipelines(apiFetch),
   })
   const pipelines = pipelinesQuery.data ?? []
-  const pipelineStatusQueries = useQueries({
-    queries: pipelines.map((pipeline) => ({
-      queryKey: ['pipelines', pipeline.id, 'status'],
-      queryFn: () => getPipelineStatus(pipeline.id, apiFetch),
-      enabled: pipelinesQuery.isSuccess,
-      refetchInterval: 5_000,
-      retry: false,
-    })),
-  })
   const selectedPipeline = useMemo(
     () => pipelines.find((pipeline) => pipeline.id === selectedId) ?? null,
     [pipelines, selectedId],
@@ -221,7 +210,7 @@ export function PipelinesPage() {
             ) : pipelines.length === 0 ? (
               <PipelineListState message={t('pipelines.states.empty')} />
             ) : (
-              <PipelineTable pipelines={pipelines} statusQueries={pipelineStatusQueries} />
+              <PipelineTable pipelines={pipelines} />
             )}
           </div>
         </main>
@@ -257,13 +246,7 @@ function PipelineListState({ message, action }: { message: string; action?: Reac
   )
 }
 
-function PipelineTable({
-  pipelines,
-  statusQueries,
-}: {
-  pipelines: PipelineView[]
-  statusQueries: Array<UseQueryResult<PipelineStatus>>
-}) {
+function PipelineTable({ pipelines }: { pipelines: PipelineView[] }) {
   const { t } = useTranslation()
 
   return (
@@ -283,7 +266,7 @@ function PipelineTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100/70">
-            {pipelines.map((pipeline, index) => (
+            {pipelines.map((pipeline) => (
               <tr
                 key={pipeline.id}
                 className="group transition-colors focus-within:bg-gray-50/70 hover:bg-gray-50/70"
@@ -318,7 +301,7 @@ function PipelineTable({
                   </code>
                 </td>
                 <td className="px-4 py-3">
-                  <PipelineStatusCell query={statusQueries[index]} />
+                  <PipelineStatusCell status={pipeline.status?.state} />
                 </td>
               </tr>
             ))}
@@ -338,22 +321,10 @@ const pipelineStatusClasses: Record<PipelineRuntimeState, string> = {
   FAILED: 'pipeline-list__status--failed',
 }
 
-function PipelineStatusCell({ query }: { query?: UseQueryResult<PipelineStatus> }) {
+function PipelineStatusCell({ status }: { status?: PipelineRuntimeState }) {
   const { t } = useTranslation()
 
-  if (!query || query.isPending) {
-    return (
-      <span
-        className="pipeline-list__status pipeline-list__status--pending"
-        aria-label={t('pipelines.status.loading')}
-      >
-        <span className="pipeline-list__status-dot" aria-hidden="true" />
-        {t('pipelines.status.loading')}
-      </span>
-    )
-  }
-
-  if (query.isError || !query.data) {
+  if (!status) {
     return (
       <span className="pipeline-list__status pipeline-list__status--unavailable">
         <span className="pipeline-list__status-dot" aria-hidden="true" />
@@ -362,11 +333,10 @@ function PipelineStatusCell({ query }: { query?: UseQueryResult<PipelineStatus> 
     )
   }
 
-  const state = query.data.state
   return (
-    <span className={cn('pipeline-list__status', pipelineStatusClasses[state])}>
+    <span className={cn('pipeline-list__status', pipelineStatusClasses[status])}>
       <span className="pipeline-list__status-dot" aria-hidden="true" />
-      {t(['pipelines.workspace.runtime.states', state].join('.'))}
+      {t(['pipelines.workspace.runtime.states', status].join('.'))}
     </span>
   )
 }

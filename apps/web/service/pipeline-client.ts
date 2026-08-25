@@ -25,6 +25,7 @@ export interface PipelineView {
   id: string
   dag: PipelineDag
   contentHash: string
+  status?: PipelineStatus | null
 }
 
 export type PipelineRuntimeState = 'NEW' | 'RUNNING' | 'PAUSED' | 'STOPPED' | 'COMPLETED' | 'FAILED'
@@ -32,7 +33,7 @@ export type PipelineRuntimeState = 'NEW' | 'RUNNING' | 'PAUSED' | 'STOPPED' | 'C
 export interface PipelineStatusFailure {
   code: string
   params: Record<string, unknown>
-  message: string
+  message?: string
 }
 
 export interface PipelineStatus {
@@ -187,7 +188,8 @@ function isPipelineView(value: unknown): value is PipelineView {
     value.dag.nodes.every(isDagNode) &&
     Array.isArray(value.dag.edges) &&
     value.dag.edges.every(isDagEdge) &&
-    typeof value.contentHash === 'string'
+    typeof value.contentHash === 'string' &&
+    (value.status === undefined || value.status === null || isPipelineStatus(value.status))
   )
 }
 
