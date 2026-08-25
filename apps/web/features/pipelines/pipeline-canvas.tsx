@@ -3,7 +3,6 @@ import {
   Background,
   BaseEdge,
   Controls,
-  EdgeLabelRenderer,
   getBezierPath,
   Handle,
   MiniMap,
@@ -55,12 +54,8 @@ interface CanvasNodeData extends Record<string, unknown> {
   hasOutput: boolean
 }
 
-interface CanvasEdgeData extends Record<string, unknown> {
-  label?: string
-}
-
 type CanvasNode = Node<CanvasNodeData>
-type CanvasEdge = Edge<CanvasEdgeData, 'pipeline'>
+type CanvasEdge = Edge<Record<string, never>, 'pipeline'>
 
 function NodeIcon({ nodeType, detail }: Pick<CanvasNodeData, 'nodeType' | 'detail'>) {
   if (nodeType === 'source') return <Database className="size-4" aria-hidden="true" />
@@ -144,7 +139,6 @@ function CanvasNodeCard({ data, selected }: NodeProps<CanvasNode>) {
 
 function PipelineEdge({
   id,
-  data,
   markerEnd,
   selected,
   sourceX,
@@ -152,7 +146,7 @@ function PipelineEdge({
   targetX,
   targetY,
 }: EdgeProps<CanvasEdge>) {
-  const [edgePath, labelX, labelY] = getBezierPath({
+  const [edgePath] = getBezierPath({
     sourceX,
     sourceY,
     sourcePosition: Position.Right,
@@ -173,18 +167,6 @@ function PipelineEdge({
           strokeWidth: selected ? 2.25 : 1.75,
         }}
       />
-      {data?.label && (
-        <EdgeLabelRenderer>
-          <div
-            className="pointer-events-none absolute rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] leading-3 font-medium text-slate-500 shadow-[0_1px_3px_rgba(15,23,42,0.1)]"
-            style={{
-              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-            }}
-          >
-            {data.label}
-          </div>
-        </EdgeLabelRenderer>
-      )}
     </>
   )
 }

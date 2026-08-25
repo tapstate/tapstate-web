@@ -99,7 +99,7 @@ describe('pipelineDagToFlow', () => {
     ])
   })
 
-  it('carries a semantic edge label into the canvas edge data without adding layout data', () => {
+  it('does not carry semantic edge labels into the canvas rendering data', () => {
     const graph = pipelineDagToFlow({
       nodes: [
         { id: 'source:orders', type: 'source', label: 'orders', detail: null },
@@ -118,8 +118,10 @@ describe('pipelineDagToFlow', () => {
     expect(graph.edges).toEqual([
       expect.objectContaining({
         type: 'pipeline',
-        data: { label: 'open_orders' },
+        source: 'source:orders',
+        target: 'view:open_orders',
       }),
     ])
+    expect(graph.edges[0]).not.toHaveProperty('data')
   })
 })
