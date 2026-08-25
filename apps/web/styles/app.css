@@ -1,3 +1,5 @@
+@import './pipeline-canvas.css' layer(components);
+
 @layer components {
   .route-fade-enter-active,
   .route-fade-leave-active {

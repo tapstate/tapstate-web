@@ -177,11 +177,14 @@ describe('PipelineEditorPage', () => {
     )
     const navigation = document.querySelector<HTMLElement>('[data-testid="workspace-navigation"]')
     expect(navigation?.dataset.collapsed).toBe('false')
+    expect(navigation?.className).toContain('pipeline-workspace__navigation')
     expect(navigation?.className).toContain('relative')
     expect(navigation?.className).not.toContain('absolute')
     expect(navigation?.className).toContain('p-1')
     expect(navigation?.parentElement?.className).toContain('flex')
-    expect(navigation?.firstElementChild?.className).toContain('bg-white')
+    expect(navigation?.firstElementChild?.className).toContain(
+      'pipeline-workspace__navigation-panel',
+    )
     const navigationTitle = document.querySelector('[data-testid="workspace-navigation-title"]')
     expect(navigationTitle?.textContent).toBe('Pipelines')
     expect(navigationTitle?.closest('a')?.getAttribute('href')).toBe('/pipelines')

@@ -173,8 +173,8 @@ function WorkspaceNavLink({
 }) {
   const isActive = section === activeSection
   const className = cn(
-    'flex h-10 items-center gap-2.5 rounded-lg px-3 text-[13px] font-semibold transition-[background-color,color,transform] hover:bg-slate-100 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-sm:justify-center max-sm:px-0',
-    isActive ? 'bg-[#eef4ff] text-[#2563eb]' : 'text-slate-600 hover:text-slate-900',
+    'pipeline-workspace__nav-link flex h-10 items-center gap-2.5 rounded-lg px-3 text-[13px] font-semibold transition-[background-color,color,transform] focus-visible:ring-3 focus-visible:ring-[var(--pipeline-selection-ring)] focus-visible:outline-none active:scale-95 max-sm:justify-center max-sm:px-0',
+    isActive && 'pipeline-workspace__nav-link--active',
   )
   const commonProps = {
     className,
@@ -225,13 +225,13 @@ function PipelineWorkspaceNav({
   return (
     <aside
       className={cn(
-        'relative flex h-full shrink-0 overflow-hidden bg-[#f8faff] p-1 transition-[width] duration-150 motion-reduce:transition-none',
+        'pipeline-workspace__navigation relative flex h-full shrink-0 overflow-hidden p-1 transition-[width] duration-150 motion-reduce:transition-none',
         collapsed ? 'w-14' : 'w-62 max-md:w-52',
       )}
       data-testid="workspace-navigation"
       data-collapsed={collapsed}
     >
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg bg-white px-3 py-3">
+      <div className="pipeline-workspace__navigation-panel flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg px-3 py-3">
         <div
           className={cn('flex h-10 items-center', collapsed ? 'justify-center' : 'justify-between')}
         >
@@ -368,7 +368,7 @@ function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
   )
 
   return (
-    <section className="relative h-full min-w-0 flex-1 overflow-hidden bg-[#f8faff]">
+    <section className="pipeline-canvas-surface relative h-full min-w-0 flex-1 overflow-hidden">
       <a
         href="#pipeline-canvas"
         className="sr-only absolute top-3 left-3 z-50 rounded-lg bg-slate-950 px-3 py-2 text-sm text-white focus:not-sr-only"
@@ -378,12 +378,12 @@ function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
 
       <section id="pipeline-canvas" className="absolute inset-0 min-h-0">
         {isLoading && (
-          <div className="flex h-full items-center justify-center bg-[#f8faff] text-sm font-medium text-slate-500">
+          <div className="pipeline-canvas-state flex h-full items-center justify-center text-sm font-medium text-slate-500">
             {t('pipelines.workspace.loading')}
           </div>
         )}
         {error && (
-          <div className="flex h-full flex-col items-center justify-center gap-3 bg-[#f8faff] px-6 text-center">
+          <div className="pipeline-canvas-state flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
             <p className="text-sm font-semibold text-slate-800">
               {t('pipelines.workspace.error.title')}
             </p>
@@ -410,7 +410,7 @@ function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
         )}
       </section>
 
-      <div className="pointer-events-none absolute bottom-5 left-1/2 z-20 flex h-8 -translate-x-1/2 items-center rounded-lg border border-slate-200 bg-white/95 px-2.5 text-[11px] font-medium text-slate-500 shadow-[0_2px_8px_rgba(15,23,42,0.08)] max-sm:bottom-3">
+      <div className="pipeline-canvas__status pointer-events-none absolute bottom-5 left-1/2 z-20 flex h-8 -translate-x-1/2 items-center rounded-lg border px-2.5 text-[11px] font-medium max-sm:bottom-3">
         <span
           className={cn(
             'mr-1.5 size-1.5 rounded-full',
@@ -427,7 +427,7 @@ function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
 
       {isNodePanelOpen && (
         <div
-          className="absolute top-5 left-5 z-20 w-60 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.1)] motion-reduce:transition-none max-sm:top-3 max-sm:left-3 max-sm:w-[min(15rem,calc(100vw-5.75rem))]"
+          className="pipeline-canvas__panel absolute top-5 left-5 z-20 w-60 overflow-hidden rounded-xl border motion-reduce:transition-none max-sm:top-3 max-sm:left-3 max-sm:w-[min(15rem,calc(100vw-5.75rem))]"
           aria-label={t('pipelines.workspace.nodeLibrary.label')}
         >
           <div className="flex items-center justify-between border-b border-slate-100 px-3.5 py-3">
@@ -487,7 +487,7 @@ function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
       {!isNodePanelOpen && (
         <button
           type="button"
-          className="absolute top-5 left-5 z-20 flex size-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-[0_8px_20px_rgba(15,23,42,0.1)] transition-[background-color,transform] hover:bg-slate-100 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-sm:top-3 max-sm:left-3 max-sm:size-11"
+          className="pipeline-canvas__panel-trigger absolute top-5 left-5 z-20 flex size-10 items-center justify-center rounded-xl border transition-[background-color,transform] focus-visible:ring-3 focus-visible:ring-[var(--pipeline-selection-ring)] focus-visible:outline-none active:scale-95 max-sm:top-3 max-sm:left-3 max-sm:size-11"
           aria-label={t('pipelines.workspace.nodeLibrary.show')}
           onClick={() => setIsNodePanelOpen(true)}
         >
@@ -496,7 +496,7 @@ function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
       )}
 
       {selection && (
-        <aside className="absolute top-5 right-5 z-20 max-h-[calc(100dvh-3rem)] w-[min(20rem,calc(100%-2.5rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.1)] max-sm:top-auto max-sm:right-3 max-sm:bottom-3 max-sm:left-16 max-sm:max-h-[min(22rem,calc(100dvh-5rem))] max-sm:w-auto">
+        <aside className="pipeline-canvas__panel absolute top-5 right-5 z-20 max-h-[calc(100dvh-3rem)] w-[min(20rem,calc(100%-2.5rem))] overflow-hidden rounded-xl border max-sm:top-auto max-sm:right-3 max-sm:bottom-3 max-sm:left-16 max-sm:max-h-[min(22rem,calc(100dvh-5rem))] max-sm:w-auto">
           <div className="border-b border-slate-100 px-4 py-3.5">
             <p className="text-[11px] font-semibold tracking-[0.08em] text-slate-400 uppercase">
               {t('pipelines.workspace.inspector.eyebrow')}
@@ -528,7 +528,7 @@ function WorkspacePageFrame({
   const Icon = item?.icon ?? Activity
 
   return (
-    <section className="relative min-w-0 flex-1 overflow-y-auto bg-[#f8faff]">
+    <section className="pipeline-canvas-surface relative min-w-0 flex-1 overflow-y-auto">
       <div className="mx-auto w-full max-w-5xl px-8 py-10 max-md:px-6 max-sm:px-4">
         <div className="flex items-start gap-3 border-b border-slate-200 pb-6">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-[#2563eb] shadow-[0_1px_3px_rgba(15,23,42,0.1)]">
@@ -755,7 +755,7 @@ export function PipelineWorkspacePage({
   const [navigationCollapsed, setNavigationCollapsed] = useState(false)
 
   return (
-    <main className="flex h-dvh min-h-0 overflow-hidden bg-[#f8faff] text-slate-900">
+    <main className="pipeline-workspace flex h-dvh min-h-0 overflow-hidden">
       <PipelineWorkspaceNav
         pipelineId={pipelineId}
         activeSection={section}

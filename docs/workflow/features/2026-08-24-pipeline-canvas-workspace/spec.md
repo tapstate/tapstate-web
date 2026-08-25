@@ -35,7 +35,8 @@ The existing editor already reads the backend semantic DAG and persists independ
 
 ### Goals
 
-- Make the editor a workspace with a floating left navigation panel, a full-bleed borderless canvas for Build, and floating contextual controls only within that canvas.
+- Make the editor a workspace with a docked left `<aside>` that keeps a 4px canvas inset and white inner surface. Build keeps a full-bleed borderless canvas; only canvas-local controls float above it.
+- Give the Pipeline workspace an isolated semantic theme contract so canvas, graph, panels, controls, and connections have one light and one dark value set rather than component-local colors.
 - Render each semantic node as a compact card with type icon, name, and one-line description.
 - Use custom horizontal handles and a custom Bezier edge suitable for a left-to-right DAG.
 - Give operators page-level access to Logs and Monitoring from the workspace navigation.
@@ -46,6 +47,7 @@ The existing editor already reads the backend semantic DAG and persists independ
 - No YAML parsing or browser-local Pipeline persistence.
 - No semantic DAG mutations, drag-to-connect, edge insertion, undo history, lifecycle commands, or collaboration controls.
 - No fabricated runtime values, API URLs, publish controls, or test-run controls.
+- No product-wide dark-mode release or theme picker in this scope.
 
 ### User path
 
@@ -60,14 +62,15 @@ The existing editor already reads the backend semantic DAG and persists independ
 - Data: typed read-only clients for status, metrics, and logs.
 - State: server data stays in TanStack Query; canvas selection and navigation-panel collapse state remain local state.
 - i18n: all shipped editor labels must exist in `en`, `zh-CN`, and `zh-TW`.
+- Styling: Pipeline theme values live in `tailwind.css`; Pipeline component recipes live in a dedicated stylesheet imported through `app.css`.
 
 ### Options
 
-| Option | Benefit | Risk | Decision |
-| --- | --- | --- | --- |
-| Custom React Flow node and edge types | Precise node and connection hierarchy without changing the semantic graph | Requires focused canvas tests | Use |
-| Default React Flow nodes and edges | Faster initial implementation | Does not meet the requested hierarchy or connection detail | Do not use |
-| Toolbar-only runtime navigation | Small surface | Hides current data and makes operator context indirect | Do not use |
+| Option                                | Benefit                                                                   | Risk                                                       | Decision   |
+| ------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------- | ---------- |
+| Custom React Flow node and edge types | Precise node and connection hierarchy without changing the semantic graph | Requires focused canvas tests                              | Use        |
+| Default React Flow nodes and edges    | Faster initial implementation                                             | Does not meet the requested hierarchy or connection detail | Do not use |
+| Toolbar-only runtime navigation       | Small surface                                                             | Hides current data and makes operator context indirect     | Do not use |
 
 ## 3. Prototype gate
 
@@ -75,15 +78,15 @@ The existing editor already reads the backend semantic DAG and persists independ
 
 ## 4. State matrix
 
-| State | Presentation | Available action | i18n scope |
-| --- | --- | --- | --- |
-| Graph loading | Centered canvas loading state | Wait | `pipelines.workspace.loading` |
-| Graph error | Focused error state with retry | Retry graph and layout reads | `pipelines.workspace.error` |
-| Runtime loading | Stable inspector body | Wait | `pipelines.runtime.loading` |
-| Runtime unavailable | Honest unavailable explanation and retry | Retry the selected read | `pipelines.runtime.unavailable` |
-| Monitoring success | State and metrics | Refresh automatically and retry if needed | `pipelines.workspace.runtime.*` |
-| Logs success | Recent server log lines | Refresh automatically and retry if needed | `pipelines.workspace.runtime.*` |
-| API unavailable | No endpoint is claimed | Inspect serve nodes | `pipelines.workspace.apiAccess.*` |
+| State               | Presentation                             | Available action                          | i18n scope                        |
+| ------------------- | ---------------------------------------- | ----------------------------------------- | --------------------------------- |
+| Graph loading       | Centered canvas loading state            | Wait                                      | `pipelines.workspace.loading`     |
+| Graph error         | Focused error state with retry           | Retry graph and layout reads              | `pipelines.workspace.error`       |
+| Runtime loading     | Stable inspector body                    | Wait                                      | `pipelines.runtime.loading`       |
+| Runtime unavailable | Honest unavailable explanation and retry | Retry the selected read                   | `pipelines.runtime.unavailable`   |
+| Monitoring success  | State and metrics                        | Refresh automatically and retry if needed | `pipelines.workspace.runtime.*`   |
+| Logs success        | Recent server log lines                  | Refresh automatically and retry if needed | `pipelines.workspace.runtime.*`   |
+| API unavailable     | No endpoint is claimed                   | Inspect serve nodes                       | `pipelines.workspace.apiAccess.*` |
 
 ## 5. Data and API boundary
 
@@ -93,9 +96,10 @@ The existing editor already reads the backend semantic DAG and persists independ
 
 ## 6. Acceptance criteria
 
-- [ ] The workspace has a floating left-side panel for route navigation, with an upper-right expand and collapse control. Only Build renders the full-viewport canvas.
+- [ ] The workspace has a docked left-side navigation `<aside>` with a 4px inset, white inner surface, and upper-right expand and collapse control. Only Build renders the full-viewport canvas.
 - [ ] Every node shows an icon, a readable name, and a one-line description with source and target nodes using Source semantics.
 - [ ] Edges use custom Bezier geometry and custom, accessible left/right handles.
+- [ ] Canvas, graph cards, edges, handles, controls, minimap, and canvas overlays consume Pipeline semantic tokens with both light and dark values. No canvas visual literal is embedded in React components.
 - [ ] Monitoring and Logs use the real HTTP read faces after their route opens and distinguish unavailable data from successful data.
 - [ ] The API page does not expose a fabricated endpoint or publish action.
 - [ ] Tests, typecheck, locale validation, production build, and desktop plus narrow viewport checks are recorded.

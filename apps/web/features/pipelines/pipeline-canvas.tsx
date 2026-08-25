@@ -106,18 +106,18 @@ export function PipelineCanvas({
         setNodes(nextNodes)
         onLayoutChange(toLayout(nextNodes, viewport))
       }}
-      className="bg-[#f8faff]"
+      className="pipeline-canvas"
       proOptions={{ hideAttribution: true }}
     >
-      <Background color="#bdcce0" gap={18} size={1.15} />
+      <Background color="var(--pipeline-grid-dot)" gap={18} size={1.15} />
       <Controls
         showInteractive={false}
-        className="!bottom-5 !left-5 !overflow-hidden !rounded-xl !border !border-slate-200 !bg-white !shadow-[0_6px_18px_rgba(15,23,42,0.1)] max-md:!hidden"
+        className="pipeline-canvas__controls !bottom-5 !left-5 max-md:!hidden"
       />
       <MiniMap
-        className="!right-5 !bottom-5 !rounded-xl !border !border-slate-200 !bg-white !shadow-[0_6px_18px_rgba(15,23,42,0.1)] max-md:!hidden"
-        maskColor="rgba(248,250,255,0.76)"
-        nodeColor="#7b8ba4"
+        className="pipeline-canvas__minimap !right-5 !bottom-5 max-md:!hidden"
+        maskColor="var(--pipeline-minimap-mask)"
+        nodeColor="var(--pipeline-minimap-node)"
         pannable
         zoomable
       />

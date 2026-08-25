@@ -34,11 +34,11 @@ function fallbackIcon({ nodeType, detail }: Pick<CanvasNodeData, 'nodeType' | 'd
 }
 
 function nodeTone(nodeType: string) {
-  if (nodeType === 'source') return 'bg-sky-50 text-sky-700 ring-sky-200'
-  if (nodeType === 'target') return 'bg-amber-50 text-amber-700 ring-amber-200'
-  if (nodeType === 'view') return 'bg-violet-50 text-violet-700 ring-violet-200'
-  if (nodeType === 'serve') return 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-  return 'bg-slate-100 text-slate-700 ring-slate-200'
+  if (nodeType === 'source') return 'pipeline-canvas__node-kind--source'
+  if (nodeType === 'target') return 'pipeline-canvas__node-kind--target'
+  if (nodeType === 'view') return 'pipeline-canvas__node-kind--view'
+  if (nodeType === 'serve') return 'pipeline-canvas__node-kind--serve'
+  return 'pipeline-canvas__node-kind--transform'
 }
 
 function NodeLeadingIcon({ data }: { data: CanvasNodeData }) {
@@ -49,7 +49,7 @@ function NodeLeadingIcon({ data }: { data: CanvasNodeData }) {
         name={data.connector.name}
         iconPath={data.connector.icon}
         size={24}
-        className="rounded-md bg-white ring-1 ring-slate-200 ring-inset"
+        className="pipeline-canvas__connector-icon"
       />
     )
   }
@@ -57,7 +57,7 @@ function NodeLeadingIcon({ data }: { data: CanvasNodeData }) {
   return (
     <span
       className={cn(
-        'flex size-6 shrink-0 items-center justify-center rounded-md ring-1 ring-inset',
+        'pipeline-canvas__node-kind flex size-6 shrink-0 items-center justify-center rounded-md',
         nodeTone(data.nodeType),
       )}
     >
@@ -75,8 +75,8 @@ export function PipelineNode({ data, selected }: NodeProps<CanvasNode>) {
   return (
     <div
       className={cn(
-        'group relative w-56 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.08)] transition-[border-color,box-shadow] duration-150 hover:border-slate-300 hover:shadow-[0_8px_18px_rgba(15,23,42,0.12)] motion-reduce:transition-none',
-        selected && 'border-[#528bff] ring-2 ring-[#528bff]/25',
+        'pipeline-canvas__node group relative w-56 px-3 py-3 motion-reduce:transition-none',
+        selected && 'pipeline-canvas__node--selected',
       )}
     >
       {data.hasInput && (
@@ -85,20 +85,17 @@ export function PipelineNode({ data, selected }: NodeProps<CanvasNode>) {
           type="target"
           position={Position.Left}
           isConnectable={false}
-          className={cn(
-            '!top-1/2 !-left-2 !size-4 !rounded-none !border-0 !bg-transparent !outline-none before:absolute before:top-1/2 before:left-1.5 before:h-3 before:w-0.5 before:-translate-y-1/2 before:bg-slate-300 before:transition-[background-color,transform] group-hover:before:scale-y-125 group-hover:before:bg-slate-500',
-            selected && 'before:bg-[#528bff]',
-          )}
+          className={cn('pipeline-canvas__handle pipeline-canvas__handle--input')}
           aria-label={t('pipelines.workspace.handles.input', { node: data.label })}
         />
       )}
       <div className="flex min-w-0 items-center gap-2">
         <NodeLeadingIcon data={data} />
-        <span className="min-w-0 truncate text-[13px] leading-5 font-semibold text-slate-800">
+        <span className="pipeline-canvas__node-title min-w-0 truncate text-[13px] leading-5 font-semibold">
           {data.label}
         </span>
       </div>
-      <p className="mt-2 min-h-5 truncate px-0.5 text-[11px] leading-5 text-slate-500">
+      <p className="pipeline-canvas__node-description mt-2 min-h-5 truncate px-0.5 text-[11px] leading-5">
         {t(descriptionKey, { detail })}
       </p>
       {data.hasOutput && (
@@ -107,10 +104,7 @@ export function PipelineNode({ data, selected }: NodeProps<CanvasNode>) {
           type="source"
           position={Position.Right}
           isConnectable={false}
-          className={cn(
-            '!top-1/2 !-right-2 !size-4 !rounded-none !border-0 !bg-transparent !outline-none before:absolute before:top-1/2 before:right-1.5 before:h-3 before:w-0.5 before:-translate-y-1/2 before:bg-slate-300 before:transition-[background-color,transform] group-hover:before:scale-y-125 group-hover:before:bg-slate-500',
-            selected && 'before:bg-[#528bff]',
-          )}
+          className={cn('pipeline-canvas__handle pipeline-canvas__handle--output')}
           aria-label={t('pipelines.workspace.handles.output', { node: data.label })}
         />
       )}

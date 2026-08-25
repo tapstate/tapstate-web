@@ -1,9 +1,9 @@
 # Pipeline canvas workspace plan
 
 > Status: In Progress
-> Progress: 97%
-> Current step: Record authenticated desktop and narrow viewport review for the corrected canvas geometry and overlay treatment
-> Next step: Run the workspace in an authenticated local browser session
+> Progress: 98%
+> Current step: Record an authenticated rendered desktop and narrow-viewport review of the tokenized canvas
+> Next step: Review the Pipeline editor in a signed-in local browser session
 > Date: 2026-08-25
 > Owner: Codex
 > Feature folder: `docs/workflow/features/2026-08-24-pipeline-canvas-workspace/`
@@ -14,7 +14,7 @@
 ## 1. Scope check
 
 - Spec confirmed: yes, with original user input retained in [./spec.md](./spec.md).
-- Prototype confirmed: yes, a full-bleed Build canvas, floating navigation, and floating canvas-only surfaces.
+- Prototype confirmed: yes, a full-bleed Build canvas, docked navigation, and floating canvas-only surfaces.
 - Non-goals confirmed: semantic DAG writes and API publication controls remain outside this implementation.
 - New dependency: no. The existing `@xyflow/react` dependency provides the required primitives.
 - Contract impact: read-only additions consume the existing status, metrics, and logs endpoints.
@@ -23,7 +23,12 @@
 
 - `apps/web/features/pipelines/pipeline-canvas.tsx`
 - `apps/web/features/pipelines/pipeline-editor-page.tsx`
+- `apps/web/features/pipelines/pipeline-node.tsx`
+- `apps/web/features/pipelines/pipeline-edge.tsx`
 - `apps/web/features/pipelines/pipeline-editor-page.test.tsx`
+- `apps/web/styles/tailwind.css`
+- `apps/web/styles/app.css`
+- `apps/web/styles/pipeline-canvas.css`
 - `apps/web/app/routes/_pipeline-editor.pipelines.$pipelineId.edit*.tsx`
 - `apps/web/app/routeTree.gen.ts`
 - all three locale files
@@ -31,15 +36,16 @@
 
 ## 3. Implementation steps
 
-| Step | Status | Change | Verification | Notes |
-| --- | --- | --- | --- | --- |
-| 1 | Done | Inspect the supplied reference, public workflow implementation, current editor, static DAG, and runtime contracts | Source review recorded in progress log | Visual techniques only, no copied product identity |
-| 2 | Done | Add strict client cases for status, metrics, and logs | Focused Vitest | HTTP reads remain independent from `PipelineView` |
-| 3 | Done | Implement compact node cards, centered short-line handles, custom Bezier edges, and visible dot background | Focused Vitest, typecheck | No semantic graph mutation affordance. The corrective pass removes endpoint offsets and aligns fan-in nodes with their input group. |
-| 4 | Done | Add route pages for API access, Logs, and Monitoring | Focused component test, generated route tree, typecheck | Queries begin only after their route opens |
-| 5 | Done | Make workspace navigation a floating left canvas panel with upper-right collapse and expand affordances | Focused component test, typecheck | Canvas width never changes when the panel expands or collapses |
-| 6 | Done | Add translated navigation and operation page states | i18n check | API access remains availability only |
-| 7 | In Progress | Run test, type, i18n, build, and viewport checks | Recorded in acceptance | Authenticated visual review needs a local session |
+| Step | Status      | Change                                                                                                                                                        | Verification                                            | Notes                                                                                                                               |
+| ---- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Done        | Inspect the supplied reference, public workflow implementation, current editor, static DAG, and runtime contracts                                             | Source review recorded in progress log                  | Visual techniques only, no copied product identity                                                                                  |
+| 2    | Done        | Add strict client cases for status, metrics, and logs                                                                                                         | Focused Vitest                                          | HTTP reads remain independent from `PipelineView`                                                                                   |
+| 3    | Done        | Implement compact node cards, centered short-line handles, custom Bezier edges, and visible dot background                                                    | Focused Vitest, typecheck                               | No semantic graph mutation affordance. The corrective pass removes endpoint offsets and aligns fan-in nodes with their input group. |
+| 4    | Done        | Add route pages for API access, Logs, and Monitoring                                                                                                          | Focused component test, generated route tree, typecheck | Queries begin only after their route opens                                                                                          |
+| 5    | Done        | Make workspace navigation a docked left aside with upper-right collapse and expand affordances                                                                | Focused component test, typecheck                       | Canvas width never changes when the aside expands or collapses                                                                      |
+| 6    | Done        | Add translated navigation and operation page states                                                                                                           | i18n check                                              | API access remains availability only                                                                                                |
+| 7    | In Progress | Run test, type, i18n, build, and viewport checks                                                                                                              | Recorded in acceptance                                  | Authenticated visual review needs a local session                                                                                   |
+| 8    | Done        | Define Pipeline light and dark semantic values, move React Flow and graph recipes to a dedicated stylesheet, and remove canvas color literals from components | Focused test, typecheck, build                          | No dark-mode control is introduced                                                                                                  |
 
 ## 4. TDD and verification strategy
 
@@ -50,12 +56,14 @@
 
 ## 5. Progress log
 
-| Time | Actor | Progress | Completed | Next | Blocker |
-| --- | --- | --- | --- | --- | --- |
-| 2026-08-24 | Codex | 15% | Inspected current editor, supplied visual reference, source patterns, and backend runtime JSON contracts | Add red client tests | Authenticated visual session still unavailable |
-| 2026-08-24 | Codex | 85% | Added strict observation clients, custom canvas cards, handles, Bezier edges, floating runtime/API panels, translations, and component coverage. | Correct workspace information architecture | Browser access is not available in this session |
-| 2026-08-25 | Codex | 94% | Replaced runtime tabs with dedicated routes. Added a floating left navigation panel with an upper-right collapse control, adjusted overlay geometry, increased dot-field contrast, tightened node cards, handles, and edges, and updated focused behavior cases. | Run authenticated desktop and narrow viewport review | Browser access is not available in this session |
-| 2026-08-25 | Codex | 97% | Corrected node handles to use the card midline, removed Bezier endpoint offsets, centered automatic fan-in layout, and made the node library and inspector contextual rather than initial overlays. | Run authenticated desktop and narrow viewport review | Local preview requires an authenticated session |
+| Time       | Actor | Progress | Completed                                                                                                                                                                                                                                                        | Next                                                 | Blocker                                                 |
+| ---------- | ----- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------- |
+| 2026-08-24 | Codex | 15%      | Inspected current editor, supplied visual reference, source patterns, and backend runtime JSON contracts                                                                                                                                                         | Add red client tests                                 | Authenticated visual session still unavailable          |
+| 2026-08-24 | Codex | 85%      | Added strict observation clients, custom canvas cards, handles, Bezier edges, floating runtime/API panels, translations, and component coverage.                                                                                                                 | Correct workspace information architecture           | Browser access is not available in this session         |
+| 2026-08-25 | Codex | 94%      | Replaced runtime tabs with dedicated routes. Added a floating left navigation panel with an upper-right collapse control, adjusted overlay geometry, increased dot-field contrast, tightened node cards, handles, and edges, and updated focused behavior cases. | Run authenticated desktop and narrow viewport review | Browser access is not available in this session         |
+| 2026-08-25 | Codex | 97%      | Corrected node handles to use the card midline, removed Bezier endpoint offsets, centered automatic fan-in layout, and made the node library and inspector contextual rather than initial overlays.                                                              | Run authenticated desktop and narrow viewport review | Local preview requires an authenticated session         |
+| 2026-08-25 | Codex | 97%      | User confirmed the need for a neutral `#f2f4f7` canvas and maintainable theme architecture. The approved direction moves all canvas visual values into dedicated light and dark semantic tokens and CSS recipes.                                                 | Implement the tokenized canvas styling               | None                                                    |
+| 2026-08-25 | Codex | 98%      | Added root and dark Pipeline tokens, a dedicated canvas stylesheet, and token-backed React Flow, node, edge, aside, loading, and canvas-overlay styling. All Pipeline `#f8faff` literals are removed.                                                            | Authenticated desktop and narrow viewport review     | Both available local browser sessions redirect to login |
 
 ## 6. Review checklist
 
@@ -63,22 +71,29 @@
 - [x] Does not add semantic DAG writes, fake values, or fake API publication.
 - [x] Uses translated user-visible text in all locales.
 - [x] Covers loading, unavailable, error, and success states.
-- [x] Keeps the navigation panel, node library, and inspector as canvas overlays.
+- [x] Keeps navigation as a docked aside and node library plus inspector as canvas overlays.
 - [x] Keeps clear focus states and 44px narrow-screen targets where a control collapses to an icon.
+- [x] Keeps canvas visual values in semantic theme tokens and component recipes instead of React component literals.
 - [ ] Records automated and viewport verification results.
 
 ## 7. Verification record
 
-| Time | Check | Result | Notes |
-| --- | --- | --- | --- |
-| 2026-08-25 | `pnpm --filter web test -- pipeline-editor-page.test.tsx` | Passed | 18 files, 87 tests |
-| 2026-08-25 | `pnpm --filter web typecheck` | Passed | |
-| 2026-08-25 | `pnpm --filter web i18n:check` | Passed | Locale keys match across all three locales |
-| 2026-08-25 | `pnpm --filter web build` | Passed | Existing chunk-size warning remains |
-| 2026-08-25 | `pnpm --filter web test -- pipeline-graph.test.ts pipeline-editor-page.test.tsx` | Passed | 18 files, 89 tests, including initial panel visibility and fan-in alignment regressions |
-| 2026-08-25 | Scoped `oxfmt --check` | Passed | All five modified Pipeline files and feature records pass formatting |
-| 2026-08-25 | `pnpm lint` | Blocked by existing baseline | 30 pre-existing formatting mismatches outside this change; scoped formatting is clean |
-| 2026-08-25 | Desktop and narrow viewport | Pending | Requires authenticated local browser access |
+| Time       | Check                                                                            | Result                       | Notes                                                                                   |
+| ---------- | -------------------------------------------------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------- |
+| 2026-08-25 | `pnpm --filter web test -- pipeline-editor-page.test.tsx`                        | Passed                       | 18 files, 87 tests                                                                      |
+| 2026-08-25 | `pnpm --filter web typecheck`                                                    | Passed                       |                                                                                         |
+| 2026-08-25 | `pnpm --filter web i18n:check`                                                   | Passed                       | Locale keys match across all three locales                                              |
+| 2026-08-25 | `pnpm --filter web build`                                                        | Passed                       | Existing chunk-size warning remains                                                     |
+| 2026-08-25 | `pnpm --filter web test -- pipeline-graph.test.ts pipeline-editor-page.test.tsx` | Passed                       | 18 files, 89 tests, including initial panel visibility and fan-in alignment regressions |
+| 2026-08-25 | Scoped `oxfmt --check`                                                           | Passed                       | All five modified Pipeline files and feature records pass formatting                    |
+| 2026-08-25 | `pnpm --filter web test -- pipeline-editor-page.test.tsx`                        | Passed                       | 19 files / 92 tests; confirms docked aside structure after semantic class extraction    |
+| 2026-08-25 | `pnpm --filter web typecheck`                                                    | Passed                       |                                                                                         |
+| 2026-08-25 | `pnpm --filter web i18n:check`                                                   | Passed                       | Locale keys match across all three locales                                              |
+| 2026-08-25 | `pnpm --filter web build`                                                        | Passed                       | Existing chunk-size warning remains                                                     |
+| 2026-08-25 | Scoped `oxfmt --check`                                                           | Passed                       | Token, canvas recipe, Pipeline component, and feature files pass formatting             |
+| 2026-08-25 | `pnpm lint`                                                                      | Blocked by existing baseline | 30 pre-existing formatting mismatches outside this change; scoped formatting is clean   |
+| 2026-08-25 | `pnpm lint`                                                                      | Blocked by existing baseline | 26 pre-existing formatting mismatches outside this change; scoped formatting is clean   |
+| 2026-08-25 | Desktop and narrow viewport                                                      | Pending                      | Both available local browser sessions redirect to the sign-in page                      |
 
 ## 8. Risks and rollback
 

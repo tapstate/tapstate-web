@@ -28,7 +28,7 @@ export function PipelineEdge({
       path={edgePath}
       markerEnd={markerEnd}
       style={{
-        stroke: selected ? '#528bff' : '#cbd5e1',
+        stroke: selected ? 'var(--pipeline-selection)' : 'var(--pipeline-edge)',
         strokeWidth: selected ? 2.25 : 1.75,
       }}
     />

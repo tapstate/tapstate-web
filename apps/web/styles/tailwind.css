@@ -144,6 +144,39 @@
     --icon-n3: var(--muted-foreground);
     --icon-n1-hover: var(--accent);
     --info-fill: #eff6ff;
+
+    /* Pipeline workspace semantic theme. */
+    --pipeline-canvas-bg: #f2f4f7;
+    --pipeline-grid-dot: color-mix(in oklab, #94a3b8 42%, transparent);
+    --pipeline-surface: #ffffff;
+    --pipeline-surface-subtle: #f8fafc;
+    --pipeline-border: color-mix(in oklab, #cbd5e1 82%, transparent);
+    --pipeline-border-strong: #cbd5e1;
+    --pipeline-text: #1e293b;
+    --pipeline-text-muted: #64748b;
+    --pipeline-text-subtle: #94a3b8;
+    --pipeline-selection: #528bff;
+    --pipeline-selection-ring: color-mix(in srgb, #528bff 24%, transparent);
+    --pipeline-edge: #cbd5e1;
+    --pipeline-handle: #cbd5e1;
+    --pipeline-handle-hover: #94a3b8;
+    --pipeline-control-surface: #ffffff;
+    --pipeline-control-icon: #64748b;
+    --pipeline-minimap-node: #7b8ba4;
+    --pipeline-minimap-mask: color-mix(in srgb, #f2f4f7 76%, transparent);
+    --pipeline-shadow-node: 0 1px 2px rgba(15, 23, 42, 0.08);
+    --pipeline-shadow-node-hover: 0 8px 18px rgba(15, 23, 42, 0.12);
+    --pipeline-shadow-panel: 0 10px 24px rgba(15, 23, 42, 0.1);
+    --pipeline-kind-source-surface: #f0f9ff;
+    --pipeline-kind-source-text: #0369a1;
+    --pipeline-kind-target-surface: #fffbeb;
+    --pipeline-kind-target-text: #b45309;
+    --pipeline-kind-view-surface: #f5f3ff;
+    --pipeline-kind-view-text: #6d28d9;
+    --pipeline-kind-serve-surface: #ecfdf5;
+    --pipeline-kind-serve-text: #047857;
+    --pipeline-kind-transform-surface: #f1f5f9;
+    --pipeline-kind-transform-text: #475569;
   }
 
   .dark {
@@ -189,6 +222,38 @@
     --code-number: oklch(0.72 0 0);
     --selection: oklch(0.922 0 0);
     --selection-foreground: oklch(0.205 0 0);
+
+    --pipeline-canvas-bg: oklch(0.19 0.012 255);
+    --pipeline-grid-dot: color-mix(in oklab, #94a3b8 32%, transparent);
+    --pipeline-surface: oklch(0.245 0.014 255);
+    --pipeline-surface-subtle: oklch(0.22 0.013 255);
+    --pipeline-border: color-mix(in srgb, white 12%, transparent);
+    --pipeline-border-strong: color-mix(in srgb, white 18%, transparent);
+    --pipeline-text: oklch(0.93 0.008 255);
+    --pipeline-text-muted: oklch(0.74 0.014 255);
+    --pipeline-text-subtle: oklch(0.62 0.014 255);
+    --pipeline-selection: oklch(0.72 0.16 255);
+    --pipeline-selection-ring: color-mix(in srgb, oklch(0.72 0.16 255) 28%, transparent);
+    --pipeline-edge: color-mix(in srgb, #94a3b8 58%, transparent);
+    --pipeline-handle: color-mix(in srgb, #cbd5e1 56%, transparent);
+    --pipeline-handle-hover: #cbd5e1;
+    --pipeline-control-surface: oklch(0.275 0.014 255);
+    --pipeline-control-icon: oklch(0.77 0.014 255);
+    --pipeline-minimap-node: oklch(0.66 0.025 255);
+    --pipeline-minimap-mask: color-mix(in srgb, oklch(0.19 0.012 255) 74%, transparent);
+    --pipeline-shadow-node: none;
+    --pipeline-shadow-node-hover: none;
+    --pipeline-shadow-panel: none;
+    --pipeline-kind-source-surface: oklch(0.29 0.05 230);
+    --pipeline-kind-source-text: oklch(0.82 0.09 230);
+    --pipeline-kind-target-surface: oklch(0.3 0.045 72);
+    --pipeline-kind-target-text: oklch(0.85 0.1 72);
+    --pipeline-kind-view-surface: oklch(0.29 0.05 300);
+    --pipeline-kind-view-text: oklch(0.83 0.1 300);
+    --pipeline-kind-serve-surface: oklch(0.3 0.045 158);
+    --pipeline-kind-serve-text: oklch(0.84 0.09 158);
+    --pipeline-kind-transform-surface: oklch(0.29 0.012 255);
+    --pipeline-kind-transform-text: oklch(0.8 0.014 255);
   }
 
   html,
