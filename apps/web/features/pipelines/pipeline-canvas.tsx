@@ -254,7 +254,7 @@ export function PipelineCanvas({
       <Background color="#bdcce0" gap={18} size={1.15} />
       <Controls
         showInteractive={false}
-        className="!bottom-5 !left-[17rem] !overflow-hidden !rounded-xl !border !border-slate-200 !bg-white !shadow-[0_6px_18px_rgba(15,23,42,0.1)] max-md:!left-16 max-md:!hidden"
+        className="!bottom-5 !left-5 !overflow-hidden !rounded-xl !border !border-slate-200 !bg-white !shadow-[0_6px_18px_rgba(15,23,42,0.1)] max-md:!hidden"
       />
       <MiniMap
         className="!right-5 !bottom-5 !rounded-xl !border !border-slate-200 !bg-white !shadow-[0_6px_18px_rgba(15,23,42,0.1)] max-md:!hidden"

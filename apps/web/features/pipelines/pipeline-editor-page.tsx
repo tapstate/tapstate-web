@@ -221,13 +221,13 @@ function PipelineWorkspaceNav({
   return (
     <aside
       className={cn(
-        'absolute top-5 bottom-5 left-5 z-30 flex overflow-hidden rounded-xl border border-slate-200 bg-[#fcfdff] shadow-[0_12px_30px_rgba(15,23,42,0.12)] transition-[width,padding] duration-150 motion-reduce:transition-none',
-        collapsed ? 'w-12 px-1 py-2' : 'w-60 px-3 py-3 max-md:w-52',
+        'relative flex h-full shrink-0 overflow-hidden bg-[#f8faff] p-1 transition-[width] duration-150 motion-reduce:transition-none',
+        collapsed ? 'w-14' : 'w-62 max-md:w-52',
       )}
       data-testid="workspace-navigation"
       data-collapsed={collapsed}
     >
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg bg-[#fcfdff] px-3 py-3">
         <div
           className={cn('flex h-10 items-center', collapsed ? 'justify-center' : 'justify-between')}
         >
@@ -300,13 +300,7 @@ function PipelineWorkspaceNav({
   )
 }
 
-function PipelineOrchestrationPage({
-  pipelineId,
-  navigationCollapsed,
-}: {
-  pipelineId: string
-  navigationCollapsed: boolean
-}) {
+function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
   const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const [selection, setSelection] = useState<PipelineCanvasSelection | null>(null)
@@ -347,7 +341,7 @@ function PipelineOrchestrationPage({
   const layoutStatus = saveLayout.isPending ? 'saving' : saveLayout.isError ? 'error' : 'saved'
 
   return (
-    <section className="absolute inset-0 overflow-hidden bg-[#f8faff]">
+    <section className="relative h-full min-w-0 flex-1 overflow-hidden bg-[#f8faff]">
       <a
         href="#pipeline-canvas"
         className="sr-only absolute top-3 left-3 z-50 rounded-lg bg-slate-950 px-3 py-2 text-sm text-white focus:not-sr-only"
@@ -405,10 +399,7 @@ function PipelineOrchestrationPage({
 
       {isNodePanelOpen && (
         <div
-          className={cn(
-            'absolute top-5 z-20 w-60 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.1)] motion-reduce:transition-none max-sm:top-3 max-sm:w-[min(15rem,calc(100vw-5.75rem))]',
-            navigationCollapsed ? 'left-20 max-sm:left-16' : 'left-[17rem] max-md:left-[16.5rem]',
-          )}
+          className="absolute top-5 left-5 z-20 w-60 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.1)] motion-reduce:transition-none max-sm:top-3 max-sm:left-3 max-sm:w-[min(15rem,calc(100vw-5.75rem))]"
           aria-label={t('pipelines.workspace.nodeLibrary.label')}
         >
           <div className="flex items-center justify-between border-b border-slate-100 px-3.5 py-3">
@@ -468,10 +459,7 @@ function PipelineOrchestrationPage({
       {!isNodePanelOpen && (
         <button
           type="button"
-          className={cn(
-            'absolute top-5 z-20 flex size-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-[0_8px_20px_rgba(15,23,42,0.1)] transition-[background-color,transform,left] hover:bg-slate-100 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-sm:top-3 max-sm:size-11',
-            navigationCollapsed ? 'left-20 max-sm:left-16' : 'left-[17rem] max-md:left-[16.5rem]',
-          )}
+          className="absolute top-5 left-5 z-20 flex size-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-[0_8px_20px_rgba(15,23,42,0.1)] transition-[background-color,transform] hover:bg-slate-100 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-sm:top-3 max-sm:left-3 max-sm:size-11"
           aria-label={t('pipelines.workspace.nodeLibrary.show')}
           onClick={() => setIsNodePanelOpen(true)}
         >
@@ -501,12 +489,10 @@ function PipelineOrchestrationPage({
 function WorkspacePageFrame({
   section,
   pipelineId,
-  navigationCollapsed,
   children,
 }: {
   section: Exclude<PipelineWorkspaceSection, 'orchestrate'>
   pipelineId: string
-  navigationCollapsed: boolean
   children: ReactNode
 }) {
   const { t } = useTranslation()
@@ -514,13 +500,8 @@ function WorkspacePageFrame({
   const Icon = item?.icon ?? Activity
 
   return (
-    <section className="absolute inset-0 overflow-y-auto bg-[#f8faff]">
-      <div
-        className={cn(
-          'mx-auto w-full max-w-5xl py-10 pr-8 pl-[18rem] max-md:pr-6 max-sm:pr-4 max-sm:pl-20',
-          navigationCollapsed && 'pl-24',
-        )}
-      >
+    <section className="relative min-w-0 flex-1 overflow-y-auto bg-[#f8faff]">
+      <div className="mx-auto w-full max-w-5xl px-8 py-10 max-md:px-6 max-sm:px-4">
         <div className="flex items-start gap-3 border-b border-slate-200 pb-6">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-[#2563eb] shadow-[0_1px_3px_rgba(15,23,42,0.1)]">
             <Icon className="size-4" aria-hidden="true" />
@@ -746,29 +727,22 @@ export function PipelineWorkspacePage({
   const [navigationCollapsed, setNavigationCollapsed] = useState(false)
 
   return (
-    <main className="relative h-dvh min-h-0 overflow-hidden bg-[#f8faff] text-slate-900">
-      {section === 'orchestrate' ? (
-        <PipelineOrchestrationPage
-          pipelineId={pipelineId}
-          navigationCollapsed={navigationCollapsed}
-        />
-      ) : (
-        <WorkspacePageFrame
-          pipelineId={pipelineId}
-          section={section}
-          navigationCollapsed={navigationCollapsed}
-        >
-          {section === 'monitoring' && <MonitoringPage pipelineId={pipelineId} />}
-          {section === 'logs' && <LogsPage pipelineId={pipelineId} />}
-          {section === 'api' && <ApiAccessPage pipelineId={pipelineId} />}
-        </WorkspacePageFrame>
-      )}
+    <main className="flex h-dvh min-h-0 overflow-hidden bg-[#f8faff] text-slate-900">
       <PipelineWorkspaceNav
         pipelineId={pipelineId}
         activeSection={section}
         collapsed={navigationCollapsed}
         onCollapsedChange={setNavigationCollapsed}
       />
+      {section === 'orchestrate' ? (
+        <PipelineOrchestrationPage pipelineId={pipelineId} />
+      ) : (
+        <WorkspacePageFrame pipelineId={pipelineId} section={section}>
+          {section === 'monitoring' && <MonitoringPage pipelineId={pipelineId} />}
+          {section === 'logs' && <LogsPage pipelineId={pipelineId} />}
+          {section === 'api' && <ApiAccessPage pipelineId={pipelineId} />}
+        </WorkspacePageFrame>
+      )}
     </main>
   )
 }

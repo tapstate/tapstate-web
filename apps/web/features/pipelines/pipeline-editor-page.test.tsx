@@ -169,7 +169,7 @@ describe('PipelineEditorPage', () => {
     )
   })
 
-  it('keeps navigation as a floating canvas panel that can collapse and expand', async () => {
+  it('keeps navigation as a docked workspace aside with a 4px inset that can collapse and expand', async () => {
     await renderPage()
 
     await vi.waitFor(() =>
@@ -177,6 +177,10 @@ describe('PipelineEditorPage', () => {
     )
     const navigation = document.querySelector<HTMLElement>('[data-testid="workspace-navigation"]')
     expect(navigation?.dataset.collapsed).toBe('false')
+    expect(navigation?.className).toContain('relative')
+    expect(navigation?.className).not.toContain('absolute')
+    expect(navigation?.className).toContain('p-1')
+    expect(navigation?.parentElement?.className).toContain('flex')
 
     await act(async () =>
       document.querySelector<HTMLElement>('[aria-label="Collapse workspace navigation"]')?.click(),
