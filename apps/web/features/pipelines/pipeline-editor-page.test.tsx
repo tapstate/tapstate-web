@@ -182,9 +182,9 @@ describe('PipelineEditorPage', () => {
     expect(navigation?.className).toContain('p-1')
     expect(navigation?.parentElement?.className).toContain('flex')
     expect(navigation?.firstElementChild?.className).toContain('bg-white')
-    expect(document.querySelector('[data-testid="workspace-navigation-title"]')?.textContent).toBe(
-      'Pipelines',
-    )
+    const navigationTitle = document.querySelector('[data-testid="workspace-navigation-title"]')
+    expect(navigationTitle?.textContent).toBe('Pipelines')
+    expect(navigationTitle?.closest('a')?.getAttribute('href')).toBe('/pipelines')
 
     await act(async () =>
       document.querySelector<HTMLElement>('[aria-label="Collapse workspace navigation"]')?.click(),
