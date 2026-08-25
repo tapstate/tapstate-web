@@ -9,7 +9,7 @@
 
 ## 1. Visual thesis
 
-This is a precision operator workspace: a quiet cool-white dot field, a floating left context panel, and compact white graph cards. Orchestrate makes the graph the primary object. Only graph controls float over the canvas, while runtime material belongs to its own navigable pages.
+This is a precision operator workspace: a quiet cool-white dot field, a floating left context panel, and compact white graph cards. Build makes the graph the primary object. Only graph controls float over the canvas, while runtime material belongs to its own navigable pages.
 
 The radius scale is `6px`, `10px`, `12px`, and pill. Navigation rows and compact controls use 10px. Canvas panels and graph cards use 12px or 15px where the node shell needs a selection inset. Depth is limited to panels and graph nodes, using a single restrained shadow rather than nested borders.
 
@@ -19,7 +19,7 @@ The radius scale is `6px`, `10px`, `12px`, and pill. Navigation rows and compact
 ┌───────────────────────────────────────────────────────────────────────────┐
 │ [←] [pipeline id] [collapse]  [Node library]              [layout saved] │
 │ ┌──────────────────────┐                                                    │
-│ │ ▣ Orchestrate         │       ┌ source ┐  ┌ transform ┐                  │
+│ │ ▣ Build               │       ┌ source ┐  ┌ transform ┐                  │
 │ │ ⟨⟩ API access         │       │ icon name│  │ icon name  │                │
 │ │ ▤ Logs                │       │ detail   │  │ detail     │                │
 │ │ ◌ Monitoring          │       └──────────┘  └────────────┘                │
@@ -31,7 +31,7 @@ The radius scale is `6px`, `10px`, `12px`, and pill. Navigation rows and compact
 ## 3. Fidelity boundary
 
 - Source reference: the supplied screenshot and inspected public workflow-source patterns.
-- Preserve: full-bleed graph interaction inside Orchestrate, a light dot field, compact semantic node cards, horizontal handle placement, Bezier routing, and floating canvas-only context surfaces.
+- Preserve: full-bleed graph interaction inside Build, a light dot field, compact semantic node cards, horizontal handle placement, Bezier routing, and floating canvas-only context surfaces.
 - Adapt: Tapstate semantic tokens, Lucide icons, read-only DAG semantics, and existing layout persistence.
 - Exclude: brand assets, external product copy, fake test runs, fake API publication, collaboration, comments, edge insertion, and node mutation actions.
 
@@ -78,4 +78,4 @@ The radius scale is `6px`, `10px`, `12px`, and pill. Navigation rows and compact
 
 | Date | Reviewer | Decision | Notes |
 | --- | --- | --- | --- |
-| 2026-08-25 | User direction | Revised | Orchestrate owns the canvas. API access, Logs, and Monitoring are left-navigation routes inside a collapsible floating panel. |
+| 2026-08-25 | User direction | Revised | Build owns the canvas. API access, Logs, and Monitoring are left-navigation routes inside a collapsible floating panel. |

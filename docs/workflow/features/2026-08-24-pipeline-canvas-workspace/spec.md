@@ -35,7 +35,7 @@ The existing editor already reads the backend semantic DAG and persists independ
 
 ### Goals
 
-- Make the editor a workspace with a floating left navigation panel, a full-bleed borderless canvas for Orchestrate, and floating contextual controls only within that canvas.
+- Make the editor a workspace with a floating left navigation panel, a full-bleed borderless canvas for Build, and floating contextual controls only within that canvas.
 - Render each semantic node as a compact card with type icon, name, and one-line description.
 - Use custom horizontal handles and a custom Bezier edge suitable for a left-to-right DAG.
 - Give operators page-level access to Logs and Monitoring from the workspace navigation.
@@ -50,7 +50,7 @@ The existing editor already reads the backend semantic DAG and persists independ
 ### User path
 
 1. Open a Pipeline from the resource list and return from the workspace's left-side back control.
-2. Use Orchestrate to pan, zoom, fit the graph, inspect a selected node, and move a node to improve persistent reading layout.
+2. Use Build to pan, zoom, fit the graph, inspect a selected node, and move a node to improve persistent reading layout.
 3. Use left-side navigation to open API access, Logs, or Monitoring as distinct routes.
 4. See server errors and unavailable observations as explicit states with retry.
 
@@ -93,7 +93,7 @@ The existing editor already reads the backend semantic DAG and persists independ
 
 ## 6. Acceptance criteria
 
-- [ ] The workspace has a floating left-side panel for route navigation, with an upper-right expand and collapse control. Only Orchestrate renders the full-viewport canvas.
+- [ ] The workspace has a floating left-side panel for route navigation, with an upper-right expand and collapse control. Only Build renders the full-viewport canvas.
 - [ ] Every node shows an icon, a readable name, and a one-line description with source and target nodes using Source semantics.
 - [ ] Edges use custom Bezier geometry and custom, accessible left/right handles.
 - [ ] Monitoring and Logs use the real HTTP read faces after their route opens and distinguish unavailable data from successful data.

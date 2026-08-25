@@ -14,7 +14,7 @@
 ## 1. Scope check
 
 - Spec confirmed: yes, with original user input retained in [./spec.md](./spec.md).
-- Prototype confirmed: yes, a full-bleed Orchestrate canvas, floating navigation, and floating canvas-only surfaces.
+- Prototype confirmed: yes, a full-bleed Build canvas, floating navigation, and floating canvas-only surfaces.
 - Non-goals confirmed: semantic DAG writes and API publication controls remain outside this implementation.
 - New dependency: no. The existing `@xyflow/react` dependency provides the required primitives.
 - Contract impact: read-only additions consume the existing status, metrics, and logs endpoints.
@@ -44,7 +44,7 @@
 ## 4. TDD and verification strategy
 
 - Red: focused component cases require route-specific reads, working route links, and the collapse or expand state.
-- Green: place operator reads in dedicated route pages, keep canvas selection and layout saving local to Orchestrate, and keep panel geometry as local UI state.
+- Green: place operator reads in dedicated route pages, keep canvas selection and layout saving local to Build, and keep panel geometry as local UI state.
 - Level: 3 because this spans routes, visual structure, read contracts, and production build output.
 - Visual scan: verify hierarchy through whitespace, typography, semantic tone, and visible dots. Do not use gradients, glass surfaces, nested cards, simulated metrics, or unsupported control affordances.
 

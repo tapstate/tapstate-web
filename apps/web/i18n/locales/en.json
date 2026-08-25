@@ -478,7 +478,7 @@
       "navigation": {
         "label": "Pipeline workspace navigation",
         "workspace": "Pipeline",
-        "orchestrate": "Orchestrate",
+        "orchestrate": "Build",
         "api": "API access",
         "logs": "Logs",
         "monitoring": "Monitoring",

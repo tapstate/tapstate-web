@@ -17,7 +17,7 @@
 
 | Criterion | Result | Evidence |
 | --- | --- | --- |
-| Floating navigation and canvas ownership | Passed in focused component coverage | Orchestrate keeps the full canvas. API access, Logs, and Monitoring have dedicated routes in a left overlay panel. A header-right icon collapses and expands that panel without changing canvas width. |
+| Floating navigation and canvas ownership | Passed in focused component coverage | Build keeps the full canvas. API access, Logs, and Monitoring have dedicated routes in a left overlay panel. A header-right icon collapses and expands that panel without changing canvas width. |
 | Custom node cards, handles, Bezier paths, and dot field | Passed in graph and source coverage | Semantic edges map to the custom `pipeline` edge type. Cards render type icon, name, description space, short-line handles, muted Bezier paths, and a blue-gray 16px dot field. |
 | Honest status, metrics, logs, and API access pages | Passed in component coverage | Monitoring reads status and metrics only after its route opens. Logs reads only its log endpoint. Serve nodes remain unpublished and no URL or publish action is emitted. |
 | Locale, test, type, and build checks | Passed | 18 test files and 87 tests, typecheck, locale validation, and build pass. |

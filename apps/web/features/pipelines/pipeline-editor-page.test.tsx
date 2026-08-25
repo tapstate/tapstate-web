@@ -151,14 +151,14 @@ afterEach(async () => {
 })
 
 describe('PipelineEditorPage', () => {
-  it('keeps the canvas in the Orchestrate route and exposes separate workspace navigation', async () => {
+  it('keeps the canvas in the Build route and exposes separate workspace navigation', async () => {
     await renderPage()
 
     await vi.waitFor(() =>
       expect(document.querySelector('[data-testid="pipeline-canvas"]')).not.toBeNull(),
     )
     expect(getPipelineStatus).not.toHaveBeenCalled()
-    expect(elementWithText('a', 'Orchestrate')?.getAttribute('href')).toBe(
+    expect(elementWithText('a', 'Build')?.getAttribute('href')).toBe(
       '/pipelines/orders_to_warehouse/edit',
     )
     expect(elementWithText('a', 'Monitoring')?.getAttribute('href')).toBe(
