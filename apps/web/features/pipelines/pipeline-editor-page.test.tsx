@@ -181,6 +181,7 @@ describe('PipelineEditorPage', () => {
     expect(navigation?.className).not.toContain('absolute')
     expect(navigation?.className).toContain('p-1')
     expect(navigation?.parentElement?.className).toContain('flex')
+    expect(navigation?.firstElementChild?.className).toContain('bg-white')
 
     await act(async () =>
       document.querySelector<HTMLElement>('[aria-label="Collapse workspace navigation"]')?.click(),

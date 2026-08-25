@@ -227,7 +227,7 @@ function PipelineWorkspaceNav({
       data-testid="workspace-navigation"
       data-collapsed={collapsed}
     >
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg bg-[#fcfdff] px-3 py-3">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg bg-white px-3 py-3">
         <div
           className={cn('flex h-10 items-center', collapsed ? 'justify-center' : 'justify-between')}
         >
