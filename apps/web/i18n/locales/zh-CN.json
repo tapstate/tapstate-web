@@ -424,9 +424,11 @@
     },
     "status": {
       "error": "错误",
+      "loading": "加载中",
       "paused": "已暂停",
       "ready": "就绪",
-      "running": "运行中"
+      "running": "运行中",
+      "unavailable": "不可用"
     },
     "modified": {
       "twoHoursAgo": "2 小时前"

@@ -424,9 +424,11 @@
     },
     "status": {
       "error": "Error",
+      "loading": "Loading",
       "paused": "Paused",
       "ready": "Ready",
-      "running": "Running"
+      "running": "Running",
+      "unavailable": "Unavailable"
     },
     "modified": {
       "twoHoursAgo": "2 hours ago"

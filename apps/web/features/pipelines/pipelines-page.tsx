@@ -1,6 +1,6 @@
 import type { ComponentType, SVGProps } from 'react'
 
-import { useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query'
 import {
   ChevronDown,
   ChevronRight,
@@ -24,7 +24,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { listPipelines, type PipelineView } from '@/service/pipeline-client'
+import {
+  getPipelineStatus,
+  listPipelines,
+  type PipelineRuntimeState,
+  type PipelineStatus,
+  type PipelineView,
+} from '@/service/pipeline-client'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { TreeItem } from './tree-item'
@@ -40,6 +46,15 @@ export function PipelinesPage() {
     queryFn: () => listPipelines(apiFetch),
   })
   const pipelines = pipelinesQuery.data ?? []
+  const pipelineStatusQueries = useQueries({
+    queries: pipelines.map((pipeline) => ({
+      queryKey: ['pipelines', pipeline.id, 'status'],
+      queryFn: () => getPipelineStatus(pipeline.id, apiFetch),
+      enabled: pipelinesQuery.isSuccess,
+      refetchInterval: 5_000,
+      retry: false,
+    })),
+  })
   const selectedPipeline = useMemo(
     () => pipelines.find((pipeline) => pipeline.id === selectedId) ?? null,
     [pipelines, selectedId],
@@ -206,7 +221,7 @@ export function PipelinesPage() {
             ) : pipelines.length === 0 ? (
               <PipelineListState message={t('pipelines.states.empty')} />
             ) : (
-              <PipelineTable pipelines={pipelines} />
+              <PipelineTable pipelines={pipelines} statusQueries={pipelineStatusQueries} />
             )}
           </div>
         </main>
@@ -242,7 +257,13 @@ function PipelineListState({ message, action }: { message: string; action?: Reac
   )
 }
 
-function PipelineTable({ pipelines }: { pipelines: PipelineView[] }) {
+function PipelineTable({
+  pipelines,
+  statusQueries,
+}: {
+  pipelines: PipelineView[]
+  statusQueries: Array<UseQueryResult<PipelineStatus>>
+}) {
   const { t } = useTranslation()
 
   return (
@@ -258,10 +279,11 @@ function PipelineTable({ pipelines }: { pipelines: PipelineView[] }) {
               <th className="hidden px-4 py-3 font-medium md:table-cell">
                 {t('pipelines.table.version')}
               </th>
+              <th className="px-4 py-3 font-medium">{t('pipelines.table.status')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100/70">
-            {pipelines.map((pipeline) => (
+            {pipelines.map((pipeline, index) => (
               <tr
                 key={pipeline.id}
                 className="group transition-colors focus-within:bg-gray-50/70 hover:bg-gray-50/70"
@@ -295,11 +317,56 @@ function PipelineTable({ pipelines }: { pipelines: PipelineView[] }) {
                     {pipeline.contentHash.slice(0, 12)}
                   </code>
                 </td>
+                <td className="px-4 py-3">
+                  <PipelineStatusCell query={statusQueries[index]} />
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
     </div>
+  )
+}
+
+const pipelineStatusClasses: Record<PipelineRuntimeState, string> = {
+  NEW: 'pipeline-list__status--new',
+  RUNNING: 'pipeline-list__status--running',
+  PAUSED: 'pipeline-list__status--paused',
+  STOPPED: 'pipeline-list__status--stopped',
+  COMPLETED: 'pipeline-list__status--completed',
+  FAILED: 'pipeline-list__status--failed',
+}
+
+function PipelineStatusCell({ query }: { query?: UseQueryResult<PipelineStatus> }) {
+  const { t } = useTranslation()
+
+  if (!query || query.isPending) {
+    return (
+      <span
+        className="pipeline-list__status pipeline-list__status--pending"
+        aria-label={t('pipelines.status.loading')}
+      >
+        <span className="pipeline-list__status-dot" aria-hidden="true" />
+        {t('pipelines.status.loading')}
+      </span>
+    )
+  }
+
+  if (query.isError || !query.data) {
+    return (
+      <span className="pipeline-list__status pipeline-list__status--unavailable">
+        <span className="pipeline-list__status-dot" aria-hidden="true" />
+        {t('pipelines.status.unavailable')}
+      </span>
+    )
+  }
+
+  const state = query.data.state
+  return (
+    <span className={cn('pipeline-list__status', pipelineStatusClasses[state])}>
+      <span className="pipeline-list__status-dot" aria-hidden="true" />
+      {t(['pipelines.workspace.runtime.states', state].join('.'))}
+    </span>
   )
 }

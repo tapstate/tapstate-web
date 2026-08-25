@@ -4,13 +4,14 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { listPipelines, listSources } = vi.hoisted(() => ({
+const { getPipelineStatus, listPipelines, listSources } = vi.hoisted(() => ({
+  getPipelineStatus: vi.fn(),
   listPipelines: vi.fn(),
   listSources: vi.fn(),
 }))
 
 vi.mock('@/service/source-client', () => ({ listSources }))
-vi.mock('@/service/pipeline-client', () => ({ listPipelines }))
+vi.mock('@/service/pipeline-client', () => ({ getPipelineStatus, listPipelines }))
 
 vi.mock('@/stores/auth-store', () => ({
   useAuthStore: <T,>(selector: (state: { apiFetch: typeof fetch }) => T) =>
@@ -61,6 +62,10 @@ async function openCreationMenu() {
 
 beforeEach(() => {
   listSources.mockResolvedValue([{ id: 'orders' }])
+  getPipelineStatus.mockImplementation(async (pipelineId: string) => ({
+    pipelineId,
+    state: pipelineId === 'orders_to_warehouse' ? 'RUNNING' : 'PAUSED',
+  }))
   listPipelines.mockResolvedValue([
     {
       id: 'orders_to_warehouse',
@@ -93,6 +98,8 @@ describe('PipelinesPage', () => {
 
     expect(container?.textContent).toContain('All Pipelines')
     expect(container?.textContent).toContain('customer_360')
+    expect(container?.textContent).toContain('Running')
+    expect(container?.textContent).toContain('Paused')
     expect(container?.textContent).not.toContain('User Data Sync')
     expect(container?.textContent).not.toContain('2 hours ago')
     expect(listPipelines).toHaveBeenCalledTimes(1)
@@ -110,6 +117,15 @@ describe('PipelinesPage', () => {
       'Actions',
     )
     expect(elementWithText('a', 'Edit')).toBeUndefined()
+  })
+
+  it('shows an unavailable state when a Pipeline has no runtime observation', async () => {
+    getPipelineStatus.mockRejectedValueOnce(new Error('observation not published'))
+
+    await renderPage()
+
+    await vi.waitFor(() => expect(container?.textContent).toContain('Unavailable'))
+    expect(container?.textContent).toContain('Paused')
   })
 
   it('keeps the existing wizard creation path available beside the DAG editor', async () => {

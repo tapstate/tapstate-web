@@ -424,9 +424,11 @@
     },
     "status": {
       "error": "錯誤",
+      "loading": "載入中",
       "paused": "已暫停",
       "ready": "就緒",
-      "running": "運行中"
+      "running": "運行中",
+      "unavailable": "無法使用"
     },
     "modified": {
       "twoHoursAgo": "2 小時前"
