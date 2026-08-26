@@ -58,10 +58,7 @@
 }
 
 .pipeline-workspace__nav-link {
-  position: relative;
-  border: 1px solid transparent;
   color: var(--pipeline-text-muted);
-  isolation: isolate;
 }
 
 .pipeline-workspace__nav-link:hover {
@@ -70,9 +67,7 @@
 }
 
 .pipeline-workspace__nav-link--active {
-  border-color: var(--pipeline-border);
-  background: var(--pipeline-surface-subtle);
-  box-shadow: none;
+  background: color-mix(in srgb, var(--pipeline-selection) 10%, transparent);
   color: var(--pipeline-selection);
 }
 
