@@ -57,6 +57,15 @@ vi.mock('./pipeline-canvas', () => ({
       label: string
       detail: string | null
       nodeType: string
+      configuration?: {
+        kind: 'transform'
+        nodeId: string
+        stepId: string
+        transformType: string
+        from: string[]
+        options: null
+        body: { expr: string }
+      } | null
     }) => void
   }) => (
     <button
@@ -68,6 +77,15 @@ vi.mock('./pipeline-canvas', () => ({
           label: 'normalize',
           detail: 'map',
           nodeType: 'transform',
+          configuration: {
+            kind: 'transform',
+            nodeId: 'transform:normalize',
+            stepId: 'normalize',
+            transformType: 'map',
+            from: ['orders'],
+            options: null,
+            body: { expr: '' },
+          },
         })
       }
     >

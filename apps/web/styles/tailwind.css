@@ -163,8 +163,25 @@
     --pipeline-nav-glass-highlight: rgb(255 255 255 / 78%);
     --pipeline-nav-glass-shadow: 0 8px 18px color-mix(in srgb, #528bff 16%, transparent);
     --pipeline-edge: #cbd5e1;
+    --pipeline-edge-invalid: #ef4444;
+    --pipeline-node-padding-block: 0.75rem;
+    --pipeline-node-header-height: 2rem;
+    --pipeline-node-border-width: 1px;
+    --pipeline-handle-hit-size-inline: 1rem;
+    --pipeline-handle-hit-size-block: 2rem;
+    --pipeline-handle-header-offset: calc(
+      var(--pipeline-node-padding-block) + var(--pipeline-node-header-height) / 2
+    );
+    --pipeline-handle-visual-size-inline: 0.125rem;
+    --pipeline-handle-visual-size-block: 0.75rem;
     --pipeline-handle: #cbd5e1;
     --pipeline-handle-hover: #94a3b8;
+    --pipeline-handle-border: #cbd5e1;
+    --pipeline-handle-hover-border: #94a3b8;
+    --pipeline-handle-highlight: rgb(255 255 255 / 72%);
+    --pipeline-handle-highlight-hover: rgb(255 255 255 / 86%);
+    --pipeline-handle-shadow: rgb(15 23 42 / 14%);
+    --pipeline-handle-shadow-hover: rgb(15 23 42 / 20%);
     --pipeline-control-surface: #ffffff;
     --pipeline-control-icon: #64748b;
     --pipeline-minimap-node: #7b8ba4;
@@ -257,8 +274,25 @@
     --pipeline-nav-glass-shadow: 0 8px 18px
       color-mix(in srgb, oklch(0.72 0.16 255) 20%, transparent);
     --pipeline-edge: color-mix(in srgb, #94a3b8 58%, transparent);
+    --pipeline-edge-invalid: oklch(0.72 0.18 25);
+    --pipeline-node-padding-block: 0.75rem;
+    --pipeline-node-header-height: 2rem;
+    --pipeline-node-border-width: 1px;
+    --pipeline-handle-hit-size-inline: 1rem;
+    --pipeline-handle-hit-size-block: 2rem;
+    --pipeline-handle-header-offset: calc(
+      var(--pipeline-node-padding-block) + var(--pipeline-node-header-height) / 2
+    );
+    --pipeline-handle-visual-size-inline: 0.125rem;
+    --pipeline-handle-visual-size-block: 0.75rem;
     --pipeline-handle: color-mix(in srgb, #cbd5e1 56%, transparent);
     --pipeline-handle-hover: #cbd5e1;
+    --pipeline-handle-border: color-mix(in srgb, #cbd5e1 68%, transparent);
+    --pipeline-handle-hover-border: #cbd5e1;
+    --pipeline-handle-highlight: rgb(255 255 255 / 18%);
+    --pipeline-handle-highlight-hover: rgb(255 255 255 / 32%);
+    --pipeline-handle-shadow: rgb(0 0 0 / 28%);
+    --pipeline-handle-shadow-hover: rgb(0 0 0 / 44%);
     --pipeline-control-surface: oklch(0.275 0.014 255);
     --pipeline-control-icon: oklch(0.77 0.014 255);
     --pipeline-minimap-node: oklch(0.66 0.025 255);

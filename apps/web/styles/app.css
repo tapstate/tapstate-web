@@ -2,6 +2,51 @@
 @import './pipeline-list.css' layer(components);
 
 @layer components {
+  .connector-icon {
+    position: relative;
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    overflow: hidden;
+    isolation: isolate;
+    vertical-align: middle;
+  }
+
+  .connector-icon::before {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    color: var(--app-text-muted);
+    content: attr(data-fallback);
+    font-size: 0.62em;
+    font-weight: 700;
+    line-height: 1;
+    pointer-events: none;
+    text-align: center;
+  }
+
+  .connector-icon__image {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    z-index: 2;
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    object-position: center;
+    transform: translate(-50%, -50%);
+  }
+
+  .connector-icon__image--backdrop {
+    z-index: 0;
+  }
+
+  .connector-icon__image--foreground {
+    z-index: 2;
+  }
+
   .route-fade-enter-active,
   .route-fade-leave-active {
     transition:

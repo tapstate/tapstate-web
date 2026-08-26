@@ -21,8 +21,71 @@ export interface PipelineDag {
   edges: PipelineDagEdge[]
 }
 
+export interface PipelineMetadata {
+  labels: Record<string, string>
+  description: string | null
+}
+
+export interface PipelineSourceSummary {
+  id: string
+  metadata: PipelineMetadata | null
+  connector: string
+}
+
+export type PipelineJsonObject = Record<string, unknown>
+
+/** The post-normalization transform step returned by PipelineView. */
+export interface PipelineTransformStep extends PipelineJsonObject {
+  id: string
+  from: unknown
+  type?: string
+  use?: string
+  options?: PipelineJsonObject | null
+  experimental?: PipelineJsonObject | null
+  expr?: string
+  fields?: PipelineJsonObject
+  engine?: string
+  sql?: string
+  script?: string
+  primary_key?: string | null
+  order?: string | null
+  entries_in_memory?: number | null
+  max_elements_per_document?: number | null
+  root?: PipelineJsonObject | null
+}
+
+export interface PipelineViewBlock extends PipelineJsonObject {
+  id?: string | null
+  use?: string | null
+  from?: unknown
+}
+
+export interface PipelineServeBlock extends PipelineJsonObject {
+  id?: string | null
+  use?: string | null
+  from?: unknown
+  sync?: PipelineJsonObject[] | null
+  push?: PipelineJsonObject[] | null
+}
+
+export interface PipelineSettings extends PipelineJsonObject {
+  errorPolicy?: string | null
+  batchSize?: number | null
+  parallelism?: number | null
+  schedule?: string | null
+  readMode?: string | null
+  startFrom?: string | null
+}
+
 export interface PipelineView {
   id: string
+  metadata?: PipelineMetadata | null
+  sources?: PipelineSourceSummary[]
+  transforms?: PipelineTransformStep[] | null
+  view?: PipelineViewBlock | null
+  serve?: PipelineServeBlock | null
+  settings?: PipelineSettings | null
+  experimental?: PipelineJsonObject | null
   dag: PipelineDag
   contentHash: string
   status?: PipelineStatus | null
@@ -124,6 +187,32 @@ function isDagEdge(value: unknown): value is PipelineDagEdge {
   )
 }
 
+function isMetadata(value: unknown): value is PipelineMetadata {
+  return (
+    isRecord(value) &&
+    isRecord(value.labels) &&
+    Object.values(value.labels).every((item) => typeof item === 'string') &&
+    (value.description === null || typeof value.description === 'string')
+  )
+}
+
+function isSourceSummary(value: unknown): value is PipelineSourceSummary {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    (value.metadata === null || isMetadata(value.metadata)) &&
+    typeof value.connector === 'string'
+  )
+}
+
+function isJsonObject(value: unknown): value is PipelineJsonObject {
+  return isRecord(value)
+}
+
+function isTransformStep(value: unknown): value is PipelineTransformStep {
+  return isRecord(value) && typeof value.id === 'string' && 'from' in value
+}
+
 function isPipelineStatusFailure(value: unknown): value is PipelineStatusFailure {
   return (
     isRecord(value) &&
@@ -191,6 +280,18 @@ function isPipelineView(value: unknown): value is PipelineView {
     Array.isArray(value.dag.edges) &&
     value.dag.edges.every(isDagEdge) &&
     typeof value.contentHash === 'string' &&
+    (value.metadata === undefined || value.metadata === null || isMetadata(value.metadata)) &&
+    (value.sources === undefined ||
+      (Array.isArray(value.sources) && value.sources.every(isSourceSummary))) &&
+    (value.transforms === undefined ||
+      value.transforms === null ||
+      (Array.isArray(value.transforms) && value.transforms.every(isTransformStep))) &&
+    (value.view === undefined || value.view === null || isJsonObject(value.view)) &&
+    (value.serve === undefined || value.serve === null || isJsonObject(value.serve)) &&
+    (value.settings === undefined || value.settings === null || isJsonObject(value.settings)) &&
+    (value.experimental === undefined ||
+      value.experimental === null ||
+      isJsonObject(value.experimental)) &&
     (value.status === undefined || value.status === null || isPipelineStatus(value.status))
   )
 }

@@ -27,6 +27,7 @@ export function PipelineEdge({
       id={id}
       path={edgePath}
       markerEnd={markerEnd}
+      interactionWidth={24}
       style={{
         stroke: selected ? 'var(--pipeline-selection)' : 'var(--pipeline-edge)',
         strokeWidth: selected ? 2.25 : 1.75,

@@ -1,9 +1,13 @@
 import '@xyflow/react/dist/style.css'
 import {
+  addEdge,
   Background,
+  ConnectionLineType,
   Controls,
   MiniMap,
   ReactFlow,
+  type Connection,
+  type EdgeChange,
   type EdgeTypes,
   type NodeTypes,
   useEdgesState,
@@ -19,7 +23,10 @@ import type {
   PipelineCanvasSelection,
   PipelineNodeConnector,
 } from './pipeline-canvas-types'
+import type { PipelineNodeConfiguration } from './pipeline-node-model'
 
+import { PipelineConnectionLine } from './pipeline-connection-line'
+import { isPipelineConnectionValid } from './pipeline-connections'
 import { PipelineEdge } from './pipeline-edge'
 import { pipelineDagToFlow } from './pipeline-graph'
 import { PipelineNode } from './pipeline-node'
@@ -50,18 +57,20 @@ export function PipelineCanvas({
   dag,
   layout,
   connectorsBySourceId,
+  configurations,
   onLayoutChange,
   onSelectionChange,
 }: {
   dag: PipelineDag
   layout: PipelineLayout | null
   connectorsBySourceId: ReadonlyMap<string, PipelineNodeConnector>
+  configurations: ReadonlyMap<string, PipelineNodeConfiguration>
   onLayoutChange: (next: Pick<PipelineLayout, 'nodes' | 'viewport'>) => void
   onSelectionChange: (selection: PipelineCanvasSelection | null) => void
 }) {
   const graph = useMemo(
-    () => pipelineDagToFlow(dag, layout, connectorsBySourceId),
-    [connectorsBySourceId, dag, layout],
+    () => pipelineDagToFlow(dag, layout, connectorsBySourceId, configurations),
+    [configurations, connectorsBySourceId, dag, layout],
   )
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>(graph.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState<CanvasEdge>(graph.edges)
@@ -73,25 +82,68 @@ export function PipelineCanvas({
     setViewport(graph.viewport)
   }, [graph, setEdges, setNodes])
 
+  useEffect(() => {
+    setNodes((currentNodes) => {
+      let changed = false
+      const incoming = new Set(edges.map((edge) => edge.target))
+      const outgoing = new Set(edges.map((edge) => edge.source))
+      const nextNodes = currentNodes.map((node) => {
+        const hasInput = incoming.has(node.id)
+        const hasOutput = outgoing.has(node.id)
+        if (node.data.hasInput === hasInput && node.data.hasOutput === hasOutput) return node
+        changed = true
+        return { ...node, data: { ...node.data, hasInput, hasOutput } }
+      })
+      return changed ? nextNodes : currentNodes
+    })
+  }, [edges, setNodes])
+
+  function handleEdgesChange(changes: EdgeChange<CanvasEdge>[]) {
+    onEdgesChange(changes)
+  }
+
+  function isValidConnection(connection: Connection | CanvasEdge) {
+    return isPipelineConnectionValid(connection, nodes, edges)
+  }
+
+  function handleConnect(connection: Connection) {
+    if (!isValidConnection(connection) || !connection.source || !connection.target) return
+    setEdges((currentEdges) =>
+      addEdge(
+        {
+          ...connection,
+          id: `edge:${connection.source}:${connection.target}`,
+          type: 'pipeline',
+        },
+        currentEdges,
+      ),
+    )
+  }
+
   return (
     <ReactFlow
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
+      connectionLineComponent={PipelineConnectionLine}
+      connectionLineType={ConnectionLineType.Bezier}
       defaultViewport={graph.viewport ?? undefined}
       fitView={!graph.viewport}
       fitViewOptions={{ padding: 0.36, maxZoom: 0.92 }}
       minZoom={0.2}
       maxZoom={1.6}
       onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
+      onEdgesChange={handleEdgesChange}
+      onConnect={handleConnect}
+      isValidConnection={isValidConnection}
       onNodeClick={(_, node) =>
         onSelectionChange({
           id: node.id,
           label: node.data.label,
           detail: node.data.detail,
           nodeType: node.data.nodeType,
+          configuration: node.data.configuration,
         })
       }
       onPaneClick={() => onSelectionChange(null)}

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { PipelineDag } from '@/service/pipeline-client'
 
-import { pipelineDagToFlow } from './pipeline-graph'
+import { normalizePipelineDag, pipelineDagToFlow } from './pipeline-graph'
 
 describe('pipelineDagToFlow', () => {
   it('uses persisted positions without putting geometry in the semantic DAG', () => {
@@ -69,7 +69,17 @@ describe('pipelineDagToFlow', () => {
       { x: 80, y: 96 },
       { x: 360, y: 96 },
       { x: 640, y: 96 },
-      { x: 920, y: 96 },
+    ])
+    expect(graph.nodes.map((node) => node.id)).not.toContain('serve:orders_api')
+    expect(graph.edges).toEqual([
+      expect.objectContaining({
+        source: 'source:orders',
+        target: 'transform:filter_orders',
+      }),
+      expect.objectContaining({
+        source: 'transform:filter_orders',
+        target: 'target:warehouse',
+      }),
     ])
   })
 
@@ -95,7 +105,44 @@ describe('pipelineDagToFlow', () => {
       { id: 'source:orders', position: { x: 80, y: 248 } },
       { id: 'source:payments', position: { x: 80, y: 400 } },
       { id: 'transform:combine', position: { x: 360, y: 248 } },
-      { id: 'serve:combined', position: { x: 640, y: 248 } },
+    ])
+  })
+
+  it('normalizes legacy serve hops without creating dangling edges', () => {
+    const normalized = normalizePipelineDag({
+      nodes: [
+        { id: 'source:orders', type: 'source', label: 'orders', detail: null },
+        { id: 'serve:orders_api', type: 'serve', label: 'orders_api', detail: null },
+      ],
+      edges: [{ id: 'a', source: 'source:orders', target: 'serve:orders_api', label: 'ignored' }],
+    })
+
+    expect(normalized.nodes.map((node) => node.id)).toEqual(['source:orders'])
+    expect(normalized.edges).toEqual([])
+  })
+
+  it('folds a chain of serve containers and deduplicates parallel target pairs', () => {
+    const normalized = normalizePipelineDag({
+      nodes: [
+        { id: 'source:a', type: 'source', label: 'a', detail: null },
+        { id: 'serve:first', type: 'serve', label: 'first', detail: null },
+        { id: 'serve:second', type: 'serve', label: 'second', detail: null },
+        { id: 'target:a', type: 'target', label: 'a', detail: null },
+        { id: 'target:b', type: 'target', label: 'b', detail: null },
+      ],
+      edges: [
+        { id: 'in', source: 'source:a', target: 'serve:first', label: null },
+        { id: 'hop', source: 'serve:first', target: 'serve:second', label: null },
+        { id: 'out-a', source: 'serve:second', target: 'target:a', label: 'a' },
+        { id: 'out-a-duplicate', source: 'serve:second', target: 'target:a', label: 'duplicate' },
+        { id: 'out-b', source: 'serve:second', target: 'target:b', label: 'b' },
+      ],
+    })
+
+    expect(normalized.nodes.map((node) => node.type)).toEqual(['source', 'target', 'target'])
+    expect(normalized.edges).toEqual([
+      expect.objectContaining({ source: 'source:a', target: 'target:a', label: null }),
+      expect.objectContaining({ source: 'source:a', target: 'target:b', label: null }),
     ])
   })
 
@@ -166,6 +213,49 @@ describe('pipelineDagToFlow', () => {
       {
         id: 'target:mongodb_target:Player',
         connector: { id: 'mongodb', name: 'MongoDB', icon: 'icons/mongodb.png' },
+      },
+    ])
+  })
+
+  it('keeps potential ports on nodes even when the semantic DAG has no edge yet', () => {
+    const graph = pipelineDagToFlow({
+      nodes: [
+        { id: 'source:orders', type: 'source', label: 'orders', detail: null },
+        { id: 'transform:normalize', type: 'transform', label: 'normalize', detail: 'map' },
+        { id: 'target:warehouse', type: 'target', label: 'warehouse', detail: null },
+      ],
+      edges: [],
+    })
+
+    expect(
+      graph.nodes.map((node) => ({
+        id: node.id,
+        hasInput: node.data.hasInput,
+        hasOutput: node.data.hasOutput,
+        showInput: node.data.showInput,
+        showOutput: node.data.showOutput,
+      })),
+    ).toEqual([
+      {
+        id: 'source:orders',
+        hasInput: false,
+        hasOutput: false,
+        showInput: false,
+        showOutput: true,
+      },
+      {
+        id: 'transform:normalize',
+        hasInput: false,
+        hasOutput: false,
+        showInput: true,
+        showOutput: true,
+      },
+      {
+        id: 'target:warehouse',
+        hasInput: false,
+        hasOutput: false,
+        showInput: true,
+        showOutput: false,
       },
     ])
   })

@@ -19,6 +19,8 @@ import {
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import type { PipelineJsonObject } from '@/service/pipeline-client'
+
 import { cn } from '@/lib/utils'
 import {
   getPipeline,
@@ -34,9 +36,72 @@ import { listConnectors, listSources } from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
 
 import type { PipelineCanvasSelection } from './pipeline-canvas-types'
+import type {
+  PipelineNodeConfiguration,
+  PipelineNodeConfigurationChange,
+} from './pipeline-node-model'
+import type { PipelineSchemaOption } from './pipeline-node-schema'
 
 import { PipelineCanvas } from './pipeline-canvas'
+import { PipelineNodeConfigPanel } from './pipeline-node-config-panel'
 import { pipelineNodeConnectors } from './pipeline-node-connectors'
+import { pipelineNodeConfigurations } from './pipeline-node-model'
+
+function isJsonObject(value: unknown): value is PipelineJsonObject {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function applyConfigurationChange(
+  configuration: PipelineNodeConfiguration,
+  change: PipelineNodeConfigurationChange,
+): PipelineNodeConfiguration | null {
+  if (configuration.nodeId !== change.nodeId || configuration.kind !== change.kind) return null
+
+  if (configuration.kind === 'source') {
+    return {
+      ...configuration,
+      sourceId:
+        typeof change.values.sourceId === 'string'
+          ? change.values.sourceId
+          : configuration.sourceId,
+      table: typeof change.values.table === 'string' ? change.values.table : configuration.table,
+      filter:
+        typeof change.values.filter === 'string' ? change.values.filter : configuration.filter,
+    }
+  }
+
+  if (configuration.kind === 'target') {
+    return {
+      ...configuration,
+      sourceId:
+        typeof change.values.sourceId === 'string'
+          ? change.values.sourceId
+          : configuration.sourceId,
+      table: typeof change.values.table === 'string' ? change.values.table : configuration.table,
+      writeMode:
+        typeof change.values.writeMode === 'string'
+          ? change.values.writeMode
+          : configuration.writeMode,
+    }
+  }
+
+  if (configuration.kind === 'transform') {
+    const { from, options, ...body } = change.values
+    return {
+      ...configuration,
+      from: from === undefined ? configuration.from : from,
+      options:
+        options === undefined ? configuration.options : isJsonObject(options) ? options : null,
+      body: { ...configuration.body, ...body },
+    }
+  }
+
+  return {
+    ...configuration,
+    from: change.values.from === undefined ? configuration.from : change.values.from,
+    body: { ...configuration.body, ...change.values },
+  }
+}
 
 export type PipelineWorkspaceSection = 'orchestrate' | 'api' | 'logs' | 'monitoring'
 
@@ -46,28 +111,28 @@ const paletteItems = [
     labelKey: 'pipelines.workspace.nodeLibrary.source',
     descriptionKey: 'pipelines.workspace.nodeLibrary.sourceDescription',
     icon: Database,
-    tone: 'text-sky-700 bg-sky-50',
+    tone: 'pipeline-workspace__palette-tone--source',
   },
   {
     id: 'transform',
     labelKey: 'pipelines.workspace.nodeLibrary.transform',
     descriptionKey: 'pipelines.workspace.nodeLibrary.transformDescription',
     icon: Workflow,
-    tone: 'text-slate-700 bg-slate-100',
+    tone: 'pipeline-workspace__palette-tone--transform',
   },
   {
     id: 'view',
     labelKey: 'pipelines.workspace.nodeLibrary.view',
     descriptionKey: 'pipelines.workspace.nodeLibrary.viewDescription',
     icon: PanelsTopLeft,
-    tone: 'text-violet-700 bg-violet-50',
+    tone: 'pipeline-workspace__palette-tone--view',
   },
   {
     id: 'serve',
     labelKey: 'pipelines.workspace.nodeLibrary.serve',
     descriptionKey: 'pipelines.workspace.nodeLibrary.serveDescription',
     icon: Sparkles,
-    tone: 'text-emerald-700 bg-emerald-50',
+    tone: 'pipeline-workspace__palette-tone--serve',
   },
 ]
 
@@ -118,45 +183,6 @@ function LoadingPanel() {
     <div className="flex min-h-36 items-center px-5 py-6 text-[12px] text-slate-500">
       {t('pipelines.workspace.runtime.loading')}
     </div>
-  )
-}
-
-function NodeInspector({ selection }: { selection: PipelineCanvasSelection | null }) {
-  const { t } = useTranslation()
-
-  if (!selection) {
-    return (
-      <div className="flex min-h-36 items-center px-4 py-5 text-[12px] leading-5 text-slate-500">
-        {t('pipelines.workspace.inspector.emptyBody')}
-      </div>
-    )
-  }
-
-  return (
-    <dl className="divide-y divide-slate-100">
-      <div className="grid grid-cols-[6.5rem_1fr] gap-3 px-4 py-3">
-        <dt className="text-[11px] font-medium text-slate-400">
-          {t('pipelines.workspace.inspector.type')}
-        </dt>
-        <dd className="min-w-0 truncate text-[12px] font-medium text-slate-700">
-          {selection.nodeType}
-        </dd>
-      </div>
-      <div className="grid grid-cols-[6.5rem_1fr] gap-3 px-4 py-3">
-        <dt className="text-[11px] font-medium text-slate-400">
-          {t('pipelines.workspace.inspector.identifier')}
-        </dt>
-        <dd className="min-w-0 truncate font-mono text-[11px] text-slate-600">{selection.id}</dd>
-      </div>
-      <div className="grid grid-cols-[6.5rem_1fr] gap-3 px-4 py-3">
-        <dt className="text-[11px] font-medium text-slate-400">
-          {t('pipelines.workspace.inspector.detail')}
-        </dt>
-        <dd className="min-w-0 text-[12px] leading-5 break-words text-slate-600">
-          {selection.detail ?? t('pipelines.workspace.inspector.noDetail')}
-        </dd>
-      </div>
-    </dl>
   )
 }
 
@@ -279,7 +305,7 @@ function PipelineWorkspaceNav({
         <div
           className={cn('mt-5 flex items-center gap-2.5 px-2', collapsed && 'justify-center px-0')}
         >
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#eaf2ff] text-[#2563eb]">
+          <span className="pipeline-workspace__identity-mark flex size-8 shrink-0 items-center justify-center rounded-lg">
             <Workflow className="size-4" aria-hidden="true" />
           </span>
           {!collapsed && (
@@ -319,6 +345,9 @@ function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
   const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const [selection, setSelection] = useState<PipelineCanvasSelection | null>(null)
+  const [configurationOverrides, setConfigurationOverrides] = useState<
+    Map<string, PipelineNodeConfiguration>
+  >(new Map())
   const [isNodePanelOpen, setIsNodePanelOpen] = useState(false)
   const latestLayout = useRef<Pick<PipelineLayout, 'nodes' | 'viewport'> | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -351,6 +380,11 @@ function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
     [],
   )
 
+  useEffect(() => {
+    setConfigurationOverrides(new Map())
+    setSelection(null)
+  }, [pipeline.data?.contentHash])
+
   function scheduleLayoutSave(next: Pick<PipelineLayout, 'nodes' | 'viewport'>) {
     latestLayout.current = next
     if (saveTimer.current) clearTimeout(saveTimer.current)
@@ -366,6 +400,49 @@ function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
     () => pipelineNodeConnectors(sources.data ?? [], connectors.data ?? []),
     [connectors.data, sources.data],
   )
+  const configurations = useMemo(() => {
+    const base = pipeline.data
+      ? pipelineNodeConfigurations(pipeline.data)
+      : new Map<string, PipelineNodeConfiguration>()
+    const merged = new Map(base)
+    configurationOverrides.forEach((configuration, nodeId) => merged.set(nodeId, configuration))
+    return merged
+  }, [configurationOverrides, pipeline.data])
+  const sourceOptions = useMemo<PipelineSchemaOption[]>(
+    () =>
+      (sources.data ?? []).map((source) => ({
+        label: source.id,
+        value: source.id,
+      })),
+    [sources.data],
+  )
+  const tableOptionsBySourceId = useMemo(() => {
+    const options = new Map<string, PipelineSchemaOption[]>()
+    for (const source of sources.data ?? []) {
+      const tables = (source.tables ?? [])
+        .map((table) => table.name ?? table.pattern)
+        .filter((name): name is string => Boolean(name))
+        .map((name) => ({ label: name, value: name }))
+      if (tables.length > 0) options.set(source.id, tables)
+    }
+    return options
+  }, [sources.data])
+  const selectedTableOptions = useMemo(() => {
+    const configuration = selection?.configuration
+    if (configuration?.kind !== 'source' && configuration?.kind !== 'target') return undefined
+    return tableOptionsBySourceId.get(configuration.sourceId)
+  }, [selection?.configuration, tableOptionsBySourceId])
+
+  function handleConfigurationChange(change: PipelineNodeConfigurationChange) {
+    const current = configurations.get(change.nodeId)
+    if (!current) return
+    const next = applyConfigurationChange(current, change)
+    if (!next) return
+    setConfigurationOverrides((previous) => new Map(previous).set(change.nodeId, next))
+    setSelection((previous) =>
+      previous && previous.id === change.nodeId ? { ...previous, configuration: next } : previous,
+    )
+  }
 
   return (
     <section className="pipeline-canvas-surface relative h-full min-w-0 flex-1 overflow-hidden">
@@ -404,6 +481,7 @@ function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
             dag={pipeline.data.dag}
             layout={layout.data}
             connectorsBySourceId={connectorsBySourceId}
+            configurations={configurations}
             onLayoutChange={scheduleLayoutSave}
             onSelectionChange={setSelection}
           />
@@ -497,17 +575,13 @@ function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
 
       {selection && (
         <aside className="pipeline-canvas__panel absolute top-5 right-5 z-20 max-h-[calc(100dvh-3rem)] w-[min(20rem,calc(100%-2.5rem))] overflow-hidden rounded-xl border max-sm:top-auto max-sm:right-3 max-sm:bottom-3 max-sm:left-16 max-sm:max-h-[min(22rem,calc(100dvh-5rem))] max-sm:w-auto">
-          <div className="border-b border-slate-100 px-4 py-3.5">
-            <p className="text-[11px] font-semibold tracking-[0.08em] text-slate-400 uppercase">
-              {t('pipelines.workspace.inspector.eyebrow')}
-            </p>
-            <h2 className="mt-1 truncate text-[14px] font-semibold text-slate-800">
-              {selection?.label ?? t('pipelines.workspace.inspector.emptyTitle')}
-            </h2>
-          </div>
-          <div className="max-h-[calc(100dvh-12rem)] overflow-y-auto max-sm:max-h-[min(16rem,calc(100dvh-9rem))]">
-            <NodeInspector selection={selection} />
-          </div>
+          <PipelineNodeConfigPanel
+            selection={selection}
+            onClose={() => setSelection(null)}
+            onConfigurationChange={handleConfigurationChange}
+            sourceOptions={sourceOptions}
+            tableOptions={selectedTableOptions}
+          />
         </aside>
       )}
     </section>
@@ -531,7 +605,7 @@ function WorkspacePageFrame({
     <section className="pipeline-canvas-surface relative min-w-0 flex-1 overflow-y-auto">
       <div className="mx-auto w-full max-w-5xl px-8 py-10 max-md:px-6 max-sm:px-4">
         <div className="flex items-start gap-3 border-b border-slate-200 pb-6">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-[#2563eb] shadow-[0_1px_3px_rgba(15,23,42,0.1)]">
+          <span className="pipeline-workspace__section-mark flex size-9 shrink-0 items-center justify-center rounded-lg">
             <Icon className="size-4" aria-hidden="true" />
           </span>
           <div className="min-w-0">
@@ -700,7 +774,17 @@ function ApiAccessPage({ pipelineId }: { pipelineId: string }) {
     return <QueryIssue unavailable={false} onRetry={() => void pipeline.refetch()} />
   }
 
-  const serveNodes = pipeline.data?.dag.nodes.filter((node) => node.type === 'serve') ?? []
+  const serveNodes = pipeline.data?.serve
+    ? [
+        {
+          id: pipeline.data.serve.id ?? 'serve',
+          label: pipeline.data.serve.id ?? pipelineId,
+          detail: typeof pipeline.data.serve.from === 'string' ? pipeline.data.serve.from : null,
+        },
+      ]
+    : (pipeline.data?.dag.nodes
+        .filter((node) => node.type === 'serve')
+        .map((node) => ({ id: node.id, label: node.label, detail: node.detail })) ?? [])
   if (serveNodes.length === 0) {
     return (
       <div className="mt-6">
