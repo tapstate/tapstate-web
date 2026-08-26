@@ -79,6 +79,40 @@ describe('Pipeline client', () => {
     expect(pipeline.dag.nodes[0]).not.toHaveProperty('position')
   })
 
+  it('accepts failed pipeline status projections without a rendered message', async () => {
+    const failedPipeline = {
+      ...pipeline,
+      id: 'failed_pipeline',
+      status: {
+        pipelineId: 'failed_pipeline',
+        state: 'FAILED',
+        failure: {
+          code: 'engine.job-failed',
+          params: { cause: 'sink refused' },
+        },
+      },
+    } as const
+
+    await expect(
+      listPipelines(fetcherFor(jsonResponse({ items: [failedPipeline] }))),
+    ).resolves.toEqual([failedPipeline])
+  })
+
+  it('accepts healthy pipeline status projections with a null failure', async () => {
+    const runningPipeline = {
+      ...pipeline,
+      status: {
+        pipelineId: pipeline.id,
+        state: 'RUNNING',
+        failure: null,
+      },
+    } as const
+
+    await expect(
+      listPipelines(fetcherFor(jsonResponse({ items: [runningPipeline] }))),
+    ).resolves.toEqual([runningPipeline])
+  })
+
   it('encodes an individual Pipeline id when loading its semantic graph', async () => {
     const requests: Request[] = []
 

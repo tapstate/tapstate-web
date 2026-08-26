@@ -39,7 +39,7 @@ export interface PipelineStatusFailure {
 export interface PipelineStatus {
   pipelineId: string
   state: PipelineRuntimeState
-  failure?: PipelineStatusFailure
+  failure?: PipelineStatusFailure | null
 }
 
 export interface PipelineMetrics {
@@ -129,7 +129,7 @@ function isPipelineStatusFailure(value: unknown): value is PipelineStatusFailure
     isRecord(value) &&
     typeof value.code === 'string' &&
     isRecord(value.params) &&
-    typeof value.message === 'string'
+    (value.message === undefined || typeof value.message === 'string')
   )
 }
 
@@ -140,7 +140,9 @@ function isPipelineStatus(value: unknown): value is PipelineStatus {
     ['NEW', 'RUNNING', 'PAUSED', 'STOPPED', 'COMPLETED', 'FAILED'].includes(
       value.state as string,
     ) &&
-    (value.failure === undefined || isPipelineStatusFailure(value.failure))
+    (value.failure === undefined ||
+      value.failure === null ||
+      isPipelineStatusFailure(value.failure))
   )
 }
 
