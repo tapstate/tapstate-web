@@ -39,7 +39,7 @@ Tapstate Web 的 UI 以 shadcn 的语义 token、Radix 可达性交互和 Tailwi
 | 线框       | `--border` / `--input` / `--ring`            | border、form border、focus ring               |
 | 侧栏       | `--sidebar-*`                                | app sidebar 和 sidebar item 状态              |
 
-新增颜色时先判断是否能归入上表语义。不能归入时，先在 feature spec 里说明原因，再新增 token。
+新增颜色时先判断是否能归入上表语义。不能归入时，先在 PR 或变更说明中记录原因，再新增 token。
 
 ## 4. 圆角与密度
 
@@ -102,7 +102,7 @@ Tapstate Web 的 UI 以 shadcn 的语义 token、Radix 可达性交互和 Tailwi
 ## 7. 验收检查
 
 - 是否使用 shadcn 语义 token，而不是新增硬编码色值。
-- 新增或修改的 variant、颜色、圆角、高度、padding、图标是否有设计系统、既有局部模式或 feature prototype 依据。
+- 新增或修改的 variant、颜色、圆角、高度、padding、图标是否有设计系统或既有局部模式依据。
 - Button / form control / select trigger 是否保持 `var(--radius)` 默认圆角。
 - Dropdown / select / list / tree item hover 是否使用 `--accent`。
 - Focus visible、disabled、invalid、loading、empty、error、success 是否都有可用表现。
@@ -111,7 +111,7 @@ Tapstate Web 的 UI 以 shadcn 的语义 token、Radix 可达性交互和 Tailwi
 
 ## 8. 前端工程架构
 
-本节是实现规范，不是建议清单。新页面、新组件和重构必须遵循这些边界；如果需求确实需要突破，必须在 feature 的 `spec.md` 和 `plan.md` 中写明理由、影响面和回滚方式。
+本节是实现规范，不是建议清单。新页面、新组件和重构必须遵循这些边界；如果需求确实需要突破，必须在 PR 或变更说明中写明理由、影响面和回滚方式。
 
 ### 8.1 规范优先级
 
@@ -119,7 +119,7 @@ Tapstate Web 的 UI 以 shadcn 的语义 token、Radix 可达性交互和 Tailwi
 
 1. 后端 API / 数据模型合同和产品交互决策。
 2. 本 Design System 的 token、架构和可达性规则。
-3. feature 的 `spec.md`、`prototype.md`、`plan.md`。
+3. 已确认的产品 / 设计决策与 PR 变更说明。
 4. 局部实现偏好。
 
 局部实现不能通过复制一套颜色、间距、状态或组件变体来绕过上层规范。
@@ -292,7 +292,7 @@ React Flow 只作为画布基础设施，业务语义由 Pipeline feature 定义
 - 不能只用颜色表达状态；状态徽标、节点错误和运行状态同时提供文本、图标或可访问名称。
 - 侧栏、画布、列表和配置面板在窄视口下必须有明确的收缩、滚动或堆叠策略；页面级不能出现横向溢出。
 - 文本、图标、handle 和边在默认主题下满足可读和可辨识要求；禁用态仍可辨认。
-- 需要浮动 panel 时，panel 的层级、遮挡关系、点击外部关闭和移动端行为必须在 prototype 中说明。
+- 需要浮动 panel 时，panel 的层级、遮挡关系、点击外部关闭和移动端行为必须在 PR 或变更说明中明确。
 
 ### 8.10 测试与质量门禁
 
@@ -320,7 +320,6 @@ React Flow 只作为画布基础设施，业务语义由 Pipeline feature 定义
 
 一个 UI 变更只有在以下条件都满足时才算完成：
 
-- 需求、原型、实现计划和验收记录位于对应 feature 目录。
 - 路由、feature、service、store 和 shared component 的依赖方向符合本规范。
 - API 原始数据已通过 adapter 进入 view model；没有在 JSX 中解析 DSL、拼装错误或复制 server state。
 - 新样式使用语义 token，selector 有明确 owner 和 scope，没有重复的全局修补规则。
@@ -339,4 +338,4 @@ React Flow 只作为画布基础设施，业务语义由 Pipeline feature 定义
 - 组件在 loading、empty、error、success、disabled、validation、submitting 下如何表现？
 - 失败请求、ETag 冲突、权限错误和键盘操作是否都有明确路径？
 - 如果这是画布变更，节点坐标、handle、edge 和 viewport 哪些会保存，哪些不会？
-- 本次改动是否引入了新的 token、依赖、全局样式或跨 feature 耦合？如果有，spec / plan 是否记录了原因和回滚方式？
+- 本次改动是否引入了新的 token、依赖、全局样式或跨 feature 耦合？如果有，PR 或变更说明是否记录了原因和回滚方式？

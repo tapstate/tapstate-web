@@ -9,9 +9,8 @@
 
 ## How to Use
 
-- 本文是产品 IA 参考，不是每个 feature 的执行计划。
-- 新需求的具体拆解放在 `docs/workflow/features/YYYY-MM-DD-slug/spec.md`。
-- 只有当某个 feature 的 IA 结论稳定、会长期影响导航或产品对象边界时，才回写本文。
+- 本文是产品 IA 参考，不是具体需求的实现计划。
+- 新需求先在 issue、PR 或讨论中明确范围；只有当 IA 结论稳定、会长期影响导航或产品对象边界时，才回写本文。
 
 ## 0. 为什么先做 IA
 

@@ -1,5 +1,6 @@
-@import './pipeline-canvas.css' layer(components);
-@import './pipeline-list.css' layer(components);
+@import './pipelines/pipeline-canvas.css' layer(components);
+@import './pipelines/pipeline-list.css' layer(components);
+@import './pipelines/pipeline-logs.css' layer(components);
 
 @layer components {
   .connector-icon {

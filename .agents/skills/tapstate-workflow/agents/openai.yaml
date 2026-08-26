@@ -1,4 +1,0 @@
-interface:
-  display_name: 'Tapstate Workflow'
-  short_description: 'Apply Tapstate workflow to frontend work'
-  default_prompt: 'Use $tapstate-workflow to turn this Tapstate Web request into a spec, plan, implementation, and acceptance record.'

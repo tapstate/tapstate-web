@@ -13,7 +13,7 @@ paths:
 - 用户可见文案必须通过 i18next / react-i18next，不在 JSX 里写裸字符串。
 - 新增 locale key 时同步 `en`、`zh-CN`、`zh-TW`。
 - 页面必须考虑 loading、empty、error、success 四态。
-- 非微小 UI 变更必须先有 feature 文件夹内的 `spec.md` 需求拆解和 `prototype.md` 原型，再按同目录 `plan.md` 实现。
+- 较大 UI 变更应先在聊天、issue 或 PR 中明确范围、关键状态和验证方式。
 - React 19 + TanStack Router File Routes 是默认页面模型；Vite 负责开发、预览和打包。
 - shadcn/ui 风格组件和 Radix primitives 是默认 UI 基座；优先组合现有组件，不新增重型 UI 依赖。
 - Select / Dropdown / Menu 使用 `apps/web/components/ui/*` 的 shadcn-compatible primitives，不在业务页使用原生 `<select>` 或手写 floating dropdown。

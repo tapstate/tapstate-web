@@ -510,14 +510,6 @@
         "serveDescription": "Deliver a Pipeline output",
         "mutationPending": "Node changes become available when typed DAG saving is ready."
       },
-      "nodeDescriptions": {
-        "defaultDetail": "Pipeline step",
-        "source": "Read from {{detail}}",
-        "target": "Deliver to {{detail}}",
-        "transform": "{{detail}} transformation",
-        "view": "Expose {{detail}}",
-        "serve": "Serve {{detail}}"
-      },
       "handles": {
         "input": "Input for {{node}}",
         "output": "Output for {{node}}"
@@ -539,8 +531,11 @@
         "targetSource": "Target source",
         "targetTable": "Target table",
         "writeMode": "Write mode",
+        "description": "Description",
+        "descriptionPlaceholder": "Add a description",
         "localDraft": "This panel is a local draft until typed DAG saving is enabled.",
         "close": "Close configuration",
+        "resizePanel": "Resize configuration panel",
         "viewReadOnly": "Views are derived from the Pipeline definition and cannot be edited here."
       },
       "transform": {
@@ -642,6 +637,30 @@
         "offsets": "Source offsets",
         "emptyMetrics": "No metrics have been published for this Pipeline.",
         "emptyLogs": "No log lines have been captured on this node.",
+        "logs": {
+          "loading": "Loading log tail",
+          "tail": "Showing the latest log lines captured on this node. Filters apply only to this returned tail.",
+          "active": "Refreshing every 5 seconds",
+          "paused": "Updates paused",
+          "lastRefreshed": "Last refreshed {{time}}",
+          "refresh": "Refresh",
+          "refreshAria": "Refresh logs",
+          "pause": "Pause updates",
+          "pauseAria": "Pause automatic log refresh",
+          "resume": "Resume updates",
+          "resumeAria": "Resume automatic log refresh",
+          "search": "Search this log tail",
+          "allLevels": "All levels",
+          "timestamp": "Time",
+          "level": "Level",
+          "message": "Message",
+          "emptyTitle": "No log lines",
+          "emptyBody": "No log lines have been captured on this node yet.",
+          "filteredEmptyTitle": "No matching log lines",
+          "filteredEmptyBody": "Adjust the filters to inspect the returned log tail.",
+          "errorTitle": "We couldn't load logs",
+          "errorBody": "Check the control plane and try again."
+        },
         "unavailableTitle": "Observation unavailable",
         "unavailableBody": "This Pipeline has not published runtime observation yet.",
         "errorTitle": "We couldn't load this observation.",

@@ -164,24 +164,11 @@
     --pipeline-nav-glass-shadow: 0 8px 18px color-mix(in srgb, #528bff 16%, transparent);
     --pipeline-edge: #cbd5e1;
     --pipeline-edge-invalid: #ef4444;
-    --pipeline-node-padding-block: 0.75rem;
-    --pipeline-node-header-height: 2rem;
     --pipeline-node-border-width: 1px;
     --pipeline-handle-hit-size-inline: 1rem;
-    --pipeline-handle-hit-size-block: 2rem;
-    --pipeline-handle-header-offset: calc(
-      var(--pipeline-node-padding-block) + var(--pipeline-node-header-height) / 2
-    );
-    --pipeline-handle-visual-size-inline: 0.125rem;
-    --pipeline-handle-visual-size-block: 0.75rem;
-    --pipeline-handle: #cbd5e1;
-    --pipeline-handle-hover: #94a3b8;
-    --pipeline-handle-border: #cbd5e1;
-    --pipeline-handle-hover-border: #94a3b8;
-    --pipeline-handle-highlight: rgb(255 255 255 / 72%);
-    --pipeline-handle-highlight-hover: rgb(255 255 255 / 86%);
-    --pipeline-handle-shadow: rgb(15 23 42 / 14%);
-    --pipeline-handle-shadow-hover: rgb(15 23 42 / 20%);
+    --pipeline-handle-hit-size-block: 1rem;
+    --pipeline-handle-header-offset: 1rem;
+    --pipeline-handle-accent: #085afc;
     --pipeline-control-surface: #ffffff;
     --pipeline-control-icon: #64748b;
     --pipeline-minimap-node: #7b8ba4;
@@ -189,6 +176,10 @@
     --pipeline-shadow-node: 0 1px 2px rgba(15, 23, 42, 0.08);
     --pipeline-shadow-node-hover: 0 8px 18px rgba(15, 23, 42, 0.12);
     --pipeline-shadow-panel: 0 10px 24px rgba(15, 23, 42, 0.1);
+    --pipeline-shadow-node-panel:
+      0 4px 6px -2px rgb(16 24 40 / 3%), 0 12px 16px -4px rgb(16 24 40 / 8%);
+    --pipeline-node-panel-border: rgb(16 24 40 / 8%);
+    --pipeline-node-panel-resize-handle: rgb(16 24 40 / 20%);
     --pipeline-kind-source-surface: #f0f9ff;
     --pipeline-kind-source-text: #0369a1;
     --pipeline-kind-target-surface: #fffbeb;
@@ -202,6 +193,12 @@
     --pipeline-status-running-text: #15803d;
     --pipeline-status-paused-text: #b45309;
     --pipeline-status-failed-text: #be123c;
+    --pipeline-log-info-surface: #f1f5f9;
+    --pipeline-log-info-text: #475569;
+    --pipeline-log-warn-surface: #fffbeb;
+    --pipeline-log-warn-text: #b45309;
+    --pipeline-log-error-surface: #fff1f2;
+    --pipeline-log-error-text: #be123c;
     --pipeline-status-stopped-text: #64748b;
     --pipeline-status-completed-text: #4338ca;
     --pipeline-status-new-text: #0369a1;
@@ -275,24 +272,11 @@
       color-mix(in srgb, oklch(0.72 0.16 255) 20%, transparent);
     --pipeline-edge: color-mix(in srgb, #94a3b8 58%, transparent);
     --pipeline-edge-invalid: oklch(0.72 0.18 25);
-    --pipeline-node-padding-block: 0.75rem;
-    --pipeline-node-header-height: 2rem;
     --pipeline-node-border-width: 1px;
     --pipeline-handle-hit-size-inline: 1rem;
-    --pipeline-handle-hit-size-block: 2rem;
-    --pipeline-handle-header-offset: calc(
-      var(--pipeline-node-padding-block) + var(--pipeline-node-header-height) / 2
-    );
-    --pipeline-handle-visual-size-inline: 0.125rem;
-    --pipeline-handle-visual-size-block: 0.75rem;
-    --pipeline-handle: color-mix(in srgb, #cbd5e1 56%, transparent);
-    --pipeline-handle-hover: #cbd5e1;
-    --pipeline-handle-border: color-mix(in srgb, #cbd5e1 68%, transparent);
-    --pipeline-handle-hover-border: #cbd5e1;
-    --pipeline-handle-highlight: rgb(255 255 255 / 18%);
-    --pipeline-handle-highlight-hover: rgb(255 255 255 / 32%);
-    --pipeline-handle-shadow: rgb(0 0 0 / 28%);
-    --pipeline-handle-shadow-hover: rgb(0 0 0 / 44%);
+    --pipeline-handle-hit-size-block: 1rem;
+    --pipeline-handle-header-offset: 1rem;
+    --pipeline-handle-accent: #085afc;
     --pipeline-control-surface: oklch(0.275 0.014 255);
     --pipeline-control-icon: oklch(0.77 0.014 255);
     --pipeline-minimap-node: oklch(0.66 0.025 255);
@@ -300,6 +284,9 @@
     --pipeline-shadow-node: none;
     --pipeline-shadow-node-hover: none;
     --pipeline-shadow-panel: none;
+    --pipeline-shadow-node-panel: none;
+    --pipeline-node-panel-border: color-mix(in srgb, white 12%, transparent);
+    --pipeline-node-panel-resize-handle: color-mix(in srgb, white 32%, transparent);
     --pipeline-kind-source-surface: oklch(0.29 0.05 230);
     --pipeline-kind-source-text: oklch(0.82 0.09 230);
     --pipeline-kind-target-surface: oklch(0.3 0.045 72);
@@ -313,6 +300,12 @@
     --pipeline-status-running-text: oklch(0.78 0.15 155);
     --pipeline-status-paused-text: oklch(0.82 0.13 80);
     --pipeline-status-failed-text: oklch(0.78 0.16 15);
+    --pipeline-log-info-surface: oklch(0.29 0.012 255);
+    --pipeline-log-info-text: oklch(0.8 0.014 255);
+    --pipeline-log-warn-surface: oklch(0.3 0.045 72);
+    --pipeline-log-warn-text: oklch(0.85 0.1 72);
+    --pipeline-log-error-surface: oklch(0.3 0.05 15);
+    --pipeline-log-error-text: oklch(0.84 0.11 15);
     --pipeline-status-stopped-text: oklch(0.74 0.014 255);
     --pipeline-status-completed-text: oklch(0.8 0.14 285);
     --pipeline-status-new-text: oklch(0.8 0.12 230);

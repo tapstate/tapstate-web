@@ -510,14 +510,6 @@
         "serveDescription": "交付 Pipeline 输出",
         "mutationPending": "Typed DAG 保存就绪后可以修改节点。"
       },
-      "nodeDescriptions": {
-        "defaultDetail": "Pipeline 步骤",
-        "source": "从 {{detail}} 读取",
-        "target": "交付到 {{detail}}",
-        "transform": "{{detail}} 转换",
-        "view": "暴露 {{detail}}",
-        "serve": "交付 {{detail}}"
-      },
       "handles": {
         "input": "{{node}} 的输入端口",
         "output": "{{node}} 的输出端口"
@@ -539,8 +531,11 @@
         "targetSource": "目标 Source",
         "targetTable": "目标表",
         "writeMode": "写入模式",
+        "description": "描述",
+        "descriptionPlaceholder": "添加描述",
         "localDraft": "启用 typed DAG 保存前，此面板中的修改仅作为本地草稿。",
         "close": "关闭配置",
+        "resizePanel": "调整配置面板宽度",
         "viewReadOnly": "View 由 Pipeline 定义派生，暂不能在此编辑。"
       },
       "transform": {
@@ -624,6 +619,30 @@
         "offsets": "Source 位点",
         "emptyMetrics": "此 Pipeline 尚未发布指标。",
         "emptyLogs": "此节点尚未捕获日志。",
+        "logs": {
+          "loading": "正在加载日志尾部",
+          "tail": "显示此节点当前捕获的最新日志。筛选只作用于这批已返回的日志。",
+          "active": "每 5 秒刷新一次",
+          "paused": "已暂停更新",
+          "lastRefreshed": "最近刷新于 {{time}}",
+          "refresh": "刷新",
+          "refreshAria": "刷新日志",
+          "pause": "暂停更新",
+          "pauseAria": "暂停日志自动刷新",
+          "resume": "恢复更新",
+          "resumeAria": "恢复日志自动刷新",
+          "search": "搜索当前日志尾部",
+          "allLevels": "全部级别",
+          "timestamp": "时间",
+          "level": "级别",
+          "message": "消息",
+          "emptyTitle": "暂无日志",
+          "emptyBody": "此节点暂未捕获日志。",
+          "filteredEmptyTitle": "没有匹配的日志",
+          "filteredEmptyBody": "请调整筛选条件以查看已返回的日志尾部。",
+          "errorTitle": "无法加载日志",
+          "errorBody": "请检查控制平面后重试。"
+        },
         "unavailableTitle": "观测数据不可用",
         "unavailableBody": "此 Pipeline 还没有发布运行时观测数据。",
         "errorTitle": "无法加载此观测数据。",

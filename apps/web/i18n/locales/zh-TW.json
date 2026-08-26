@@ -510,14 +510,6 @@
         "serveDescription": "交付 Pipeline 輸出",
         "mutationPending": "Typed DAG 儲存就緒後即可修改節點。"
       },
-      "nodeDescriptions": {
-        "defaultDetail": "Pipeline 步驟",
-        "source": "從 {{detail}} 讀取",
-        "target": "交付至 {{detail}}",
-        "transform": "{{detail}} 轉換",
-        "view": "公開 {{detail}}",
-        "serve": "交付 {{detail}}"
-      },
       "handles": {
         "input": "{{node}} 的輸入連接埠",
         "output": "{{node}} 的輸出連接埠"
@@ -539,8 +531,11 @@
         "targetSource": "目標 Source",
         "targetTable": "目標資料表",
         "writeMode": "寫入模式",
+        "description": "描述",
+        "descriptionPlaceholder": "新增描述",
         "localDraft": "啟用 typed DAG 儲存前，此面板中的變更僅作為本機草稿。",
         "close": "關閉設定",
+        "resizePanel": "調整設定面板寬度",
         "viewReadOnly": "View 由 Pipeline 定義衍生，目前無法在此編輯。"
       },
       "transform": {
@@ -624,6 +619,30 @@
         "offsets": "Source 位點",
         "emptyMetrics": "此 Pipeline 尚未發布指標。",
         "emptyLogs": "此節點尚未擷取日誌。",
+        "logs": {
+          "loading": "正在載入日誌尾端",
+          "tail": "顯示此節點目前擷取的最新日誌。篩選只作用於這批已傳回的日誌。",
+          "active": "每 5 秒重新整理一次",
+          "paused": "已暫停更新",
+          "lastRefreshed": "最近重新整理於 {{time}}",
+          "refresh": "重新整理",
+          "refreshAria": "重新整理日誌",
+          "pause": "暫停更新",
+          "pauseAria": "暫停日誌自動重新整理",
+          "resume": "恢復更新",
+          "resumeAria": "恢復日誌自動重新整理",
+          "search": "搜尋目前日誌尾端",
+          "allLevels": "全部等級",
+          "timestamp": "時間",
+          "level": "等級",
+          "message": "訊息",
+          "emptyTitle": "暫無日誌",
+          "emptyBody": "此節點暫未擷取日誌。",
+          "filteredEmptyTitle": "沒有符合的日誌",
+          "filteredEmptyBody": "請調整篩選條件以查看已傳回的日誌尾端。",
+          "errorTitle": "無法載入日誌",
+          "errorBody": "請檢查控制平面後重試。"
+        },
         "unavailableTitle": "觀測資料無法使用",
         "unavailableBody": "此 Pipeline 尚未發布執行時觀測資料。",
         "errorTitle": "無法載入此觀測資料。",

@@ -40,7 +40,7 @@
 - 表单控件、按钮、Select trigger 默认圆角使用 shadcn `rounded-lg` / `var(--radius)` / 10px。
 - Select / Dropdown / Menu 必须优先使用 `apps/web/components/ui/*` 的 shadcn-compatible primitives；不要使用原生 `<select>` 或业务页内手写 floating dropdown。
 - Motion 动效要克制，优先 opacity / translate / scale 等低干扰过渡；不要用动效改变信息层级或操作路径。
-- 新增 UI 先复用 `components/ui` 或现有 feature 组件；新增 production UI 依赖必须写进 feature spec 和 plan。
+- 新增 UI 先复用 `components/ui` 或现有 feature 组件；新增 production UI 依赖必须在 PR 或变更说明中写明理由。
 
 ## Vite / TanStack Router 边界
 
@@ -48,7 +48,7 @@
 - TanStack Router 负责 SPA 路由。路由源码按 File Route 形态维护在 `apps/web/app/routes/`。
 - `@tanstack/router-plugin` 在 Vite 中生成 `apps/web/app/routeTree.gen.ts`；业务代码不得恢复手写 route tree。
 - `apps/web/app/router.tsx` 保留为 router instance 入口，负责 `createRouter({ routeTree })` 和 `@tanstack/react-router` 类型注册；File Routes 生成的是 route tree，不替代 router instance。
-- 当前应用按 SPA/client-first 方式实现；不要引入 Server Actions、API Routes、Edge Runtime 或后端 BFF，除非先更新 spec / prototype / plan。
+- 当前应用按 SPA/client-first 方式实现；不要引入 Server Actions、API Routes、Edge Runtime 或后端 BFF，除非先完成架构评审并更新本文件。
 - 每次变更路由或 Vite 配置时，运行 `pnpm typecheck`、`pnpm build`，必要时启动 `pnpm dev` 做路由 smoke check。
 
 ## 验证命令

@@ -10,23 +10,19 @@ Tapstate 前端这条线的独立工作区，也是企业级 Web 应用本体。
 - **memory 仓不追踪本目录**（见 `memory/.gitignore` 的 `/tapstate-web/`）。跟 `memory/tapstate/` 同等待遇：嵌套工作区，不进 memory 版本控制。
 - 本目录是独立 git 仓。文档与代码都进它自己的版本控制。
 - **两层规则**：全局底座是 `memory/AGENTS.md`（walk-up 自动加载，前端同样生效）；前端专属约束叠在本目录的 `AGENTS.md`、`CLAUDE.md`、`.agents/skills/`、`.claude/rules/`、`docs/` 与配置里（oxlint / i18next / tsconfig）。
-- 与 memory 的关系：本目录是**消费方**——依据 `memory/research/legacy-feature-inventory.md` 与 `memory/reference/canonical-form.md` 做设计；该回 memory 的 ADR / plan / progress 不沉淀在这。
+- 与 memory 的关系：本目录是**消费方**——依据 `memory/research/legacy-feature-inventory.md` 与 `memory/reference/canonical-form.md` 做设计；memory 侧的决策和进度记录不沉淀在这。
 
 ## 目录结构
 
 ```text
 tapstate-web/
-├── docs/                              产品、工程与 agent 流程文档
+├── docs/                              产品与工程文档
 │   ├── README.md                          文档地图
 │   ├── product/
 │   │   └── information-architecture.md    顶层 IA / 菜单设计
-│   ├── engineering/
+│   └── engineering/
 │   │   ├── design-system.md               shadcn 对齐的设计系统规范
 │   │   └── tech-stack.md                  技术栈登记 + 未决雷达
-│   └── workflow/
-│       ├── README.md                      agent 研发流程与阶段门禁
-│       ├── templates/                     spec / prototype / plan / acceptance 模板
-│       └── features/                      每个需求一个 feature 文件夹
 ├── AGENTS.md                          Codex / agent 项目规则
 ├── CLAUDE.md                          Claude Code 项目入口
 ├── .agents/                           Codex repo-scoped skills
@@ -70,16 +66,14 @@ pnpm lint         # oxlint diagnostics + repo-wide format check
 
 依赖版本以各 `package.json` 的 `^` 范围为准；lockfile 以实际 install 为准。
 
-## Agent 智能研发流程
+## Agent 工作约定
 
-本仓库已内置 Codex / Claude Code 共享协作规则：
+本仓库使用一套 Codex / Claude Code 共享规则：
 
 - Codex 读取 `AGENTS.md`。
 - Claude Code 读取 `CLAUDE.md`，并通过 `@AGENTS.md` 导入同一套规则。
-- 主流程：需求输入 → 需求拆解 / spec → 原型 / prototype → 实现计划 / plan → 实现 → 审查 → 验收 / acceptance。
-- 每个非微小需求使用一个 feature 文件夹：`docs/workflow/features/YYYY-MM-DD-slug/`。
-- 最小闭环：`spec.md` → `plan.md` → `acceptance.md`；UI / IA / 路由 / 复杂交互再补 `prototype.md`。
-- 流程说明见 `docs/workflow/README.md`，模板见 `docs/workflow/templates/`。
+- 项目处于早期阶段，默认直接按范围实现；较大改动在聊天、issue 或 PR 中记录范围、风险与验证结果。
+- UI 改动必须遵循 `UI_DESIGN_GUIDELINES.md` 和 `docs/engineering/design-system.md`。
 
 ## 国际化（i18n）
 
