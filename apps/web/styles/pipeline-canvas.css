@@ -22,7 +22,7 @@
 }
 
 .pipeline-workspace__identity-mark {
-  background: var(--pipeline-nav-glass-surface-strong);
+  background: var(--pipeline-surface-subtle);
 }
 
 .pipeline-workspace__section-mark {
@@ -70,19 +70,9 @@
 }
 
 .pipeline-workspace__nav-link--active {
-  border-color: var(--pipeline-nav-glass-border);
-  background: linear-gradient(
-    135deg,
-    var(--pipeline-nav-glass-surface-strong),
-    var(--pipeline-nav-glass-surface) 56%,
-    var(--pipeline-nav-glass-surface-strong)
-  );
-  -webkit-backdrop-filter: blur(5px) saturate(1.15);
-  backdrop-filter: blur(5px) saturate(1.15);
-  box-shadow:
-    inset 0 1px 0 var(--pipeline-nav-glass-highlight),
-    var(--pipeline-nav-glass-shadow),
-    0 0 0 1px var(--pipeline-selection-ring);
+  border-color: var(--pipeline-border);
+  background: var(--pipeline-surface-subtle);
+  box-shadow: none;
   color: var(--pipeline-selection);
 }
 
