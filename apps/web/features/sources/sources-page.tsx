@@ -703,15 +703,21 @@ export function SourcesPage() {
             <div className="flex h-full min-h-0 flex-col">
               <div className="shrink-0 border-b border-gray-100/70 bg-white px-4 pt-4 md:px-6">
                 <div className="flex items-center justify-between gap-3">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-auto justify-start px-0 font-medium text-gray-500 hover:text-gray-900"
-                    onClick={() => setSelectedTableId(null)}
-                  >
-                    <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-                    <span className="truncate">{selectedSource.name}</span>
-                  </Button>
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-8 min-w-0 justify-start rounded-md px-2 font-medium text-gray-500 hover:text-gray-900"
+                      onClick={() => setSelectedTableId(null)}
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+                      <span className="truncate">{selectedSource.name}</span>
+                    </Button>
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-gray-300" aria-hidden="true" />
+                    <span className="min-w-0 truncate text-sm font-semibold text-gray-900">
+                      {selectedTable.name}
+                    </span>
+                  </div>
                   <Button
                     type="button"
                     variant="ghost"
@@ -730,7 +736,7 @@ export function SourcesPage() {
                       type="button"
                       variant="ghost"
                       className={cn(
-                        'relative top-px h-auto shrink-0 rounded-none px-0 pb-2.5',
+                        'relative top-px h-auto shrink-0 rounded-none border-x-0 border-t-0 border-b-2 px-0 pb-2.5',
                         activeTab === tab.value
                           ? 'border-gray-900 text-gray-900'
                           : 'border-transparent text-gray-500 hover:text-gray-700',

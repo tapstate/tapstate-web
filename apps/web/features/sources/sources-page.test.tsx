@@ -263,6 +263,13 @@ describe('SourcesPage', () => {
     expect(container.textContent).toContain('email')
     expect(container.textContent).toContain('VARCHAR')
     expect(container.textContent).not.toContain('preview')
+
+    const tableDetailHeader = container.querySelector('main > div > div')
+    expect(tableDetailHeader?.textContent).toContain('orders')
+    expect(tableDetailHeader?.textContent).toContain('orders')
+    const columnsTab = buttonWithText('Columns')
+    expect(columnsTab?.className).toContain('border-b-2')
+    expect(columnsTab?.className).toContain('border-x-0')
   })
 
   it('tests a source from the list with the persisted config', async () => {
