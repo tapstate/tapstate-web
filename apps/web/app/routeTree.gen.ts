@@ -17,6 +17,9 @@ import { Route as AuthenticatedExplorationsRouteImport } from './routes/_authent
 import { Route as AuthenticatedPipelinesRouteImport } from './routes/_authenticated.pipelines'
 import { Route as AuthenticatedSourcesRouteImport } from './routes/_authenticated.sources'
 import { Route as AuthenticatedSourcesIndexRouteImport } from './routes/_authenticated.sources.index'
+import { Route as AuthenticatedSourcesSourceIdRouteImport } from './routes/_authenticated.sources.$sourceId'
+import { Route as AuthenticatedSourcesSourceIdIndexRouteImport } from './routes/_authenticated.sources.$sourceId.index'
+import { Route as AuthenticatedSourcesSourceIdTableNameRouteImport } from './routes/_authenticated.sources.$sourceId.$tableName'
 import { Route as PipelineEditorPipelinesPipelineIdEditRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit'
 import { Route as PipelineEditorPipelinesPipelineIdEditIndexRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit.index'
 import { Route as PipelineEditorPipelinesPipelineIdEditApiRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit.api'
@@ -63,6 +66,24 @@ const AuthenticatedSourcesIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedSourcesRoute,
   } as any)
+const AuthenticatedSourcesSourceIdRoute =
+  AuthenticatedSourcesSourceIdRouteImport.update({
+    id: '/$sourceId',
+    path: '/$sourceId',
+    getParentRoute: () => AuthenticatedSourcesRoute,
+  } as any)
+const AuthenticatedSourcesSourceIdIndexRoute =
+  AuthenticatedSourcesSourceIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedSourcesSourceIdRoute,
+  } as any)
+const AuthenticatedSourcesSourceIdTableNameRoute =
+  AuthenticatedSourcesSourceIdTableNameRouteImport.update({
+    id: '/$tableName',
+    path: '/$tableName',
+    getParentRoute: () => AuthenticatedSourcesSourceIdRoute,
+  } as any)
 const PipelineEditorPipelinesPipelineIdEditRoute =
   PipelineEditorPipelinesPipelineIdEditRouteImport.update({
     id: '/pipelines/$pipelineId/edit',
@@ -100,8 +121,11 @@ export interface FileRoutesByFullPath {
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
   '/sources': typeof AuthenticatedSourcesRouteWithChildren
+  '/sources/$sourceId': typeof AuthenticatedSourcesSourceIdRouteWithChildren
   '/sources/': typeof AuthenticatedSourcesIndexRoute
+  '/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
   '/pipelines/$pipelineId/edit': typeof PipelineEditorPipelinesPipelineIdEditRouteWithChildren
+  '/sources/$sourceId/': typeof AuthenticatedSourcesSourceIdIndexRoute
   '/pipelines/$pipelineId/edit/api': typeof PipelineEditorPipelinesPipelineIdEditApiRoute
   '/pipelines/$pipelineId/edit/logs': typeof PipelineEditorPipelinesPipelineIdEditLogsRoute
   '/pipelines/$pipelineId/edit/monitoring': typeof PipelineEditorPipelinesPipelineIdEditMonitoringRoute
@@ -113,6 +137,8 @@ export interface FileRoutesByTo {
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
   '/sources': typeof AuthenticatedSourcesIndexRoute
+  '/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
+  '/sources/$sourceId': typeof AuthenticatedSourcesSourceIdIndexRoute
   '/pipelines/$pipelineId/edit/api': typeof PipelineEditorPipelinesPipelineIdEditApiRoute
   '/pipelines/$pipelineId/edit/logs': typeof PipelineEditorPipelinesPipelineIdEditLogsRoute
   '/pipelines/$pipelineId/edit/monitoring': typeof PipelineEditorPipelinesPipelineIdEditMonitoringRoute
@@ -127,8 +153,11 @@ export interface FileRoutesById {
   '/_authenticated/explorations': typeof AuthenticatedExplorationsRoute
   '/_authenticated/pipelines': typeof AuthenticatedPipelinesRoute
   '/_authenticated/sources': typeof AuthenticatedSourcesRouteWithChildren
+  '/_authenticated/sources/$sourceId': typeof AuthenticatedSourcesSourceIdRouteWithChildren
   '/_authenticated/sources/': typeof AuthenticatedSourcesIndexRoute
+  '/_authenticated/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
   '/_pipeline-editor/pipelines/$pipelineId/edit': typeof PipelineEditorPipelinesPipelineIdEditRouteWithChildren
+  '/_authenticated/sources/$sourceId/': typeof AuthenticatedSourcesSourceIdIndexRoute
   '/_pipeline-editor/pipelines/$pipelineId/edit/api': typeof PipelineEditorPipelinesPipelineIdEditApiRoute
   '/_pipeline-editor/pipelines/$pipelineId/edit/logs': typeof PipelineEditorPipelinesPipelineIdEditLogsRoute
   '/_pipeline-editor/pipelines/$pipelineId/edit/monitoring': typeof PipelineEditorPipelinesPipelineIdEditMonitoringRoute
@@ -142,8 +171,11 @@ export interface FileRouteTypes {
     | '/explorations'
     | '/pipelines'
     | '/sources'
+    | '/sources/$sourceId'
     | '/sources/'
+    | '/sources/$sourceId/$tableName'
     | '/pipelines/$pipelineId/edit'
+    | '/sources/$sourceId/'
     | '/pipelines/$pipelineId/edit/api'
     | '/pipelines/$pipelineId/edit/logs'
     | '/pipelines/$pipelineId/edit/monitoring'
@@ -155,6 +187,8 @@ export interface FileRouteTypes {
     | '/explorations'
     | '/pipelines'
     | '/sources'
+    | '/sources/$sourceId/$tableName'
+    | '/sources/$sourceId'
     | '/pipelines/$pipelineId/edit/api'
     | '/pipelines/$pipelineId/edit/logs'
     | '/pipelines/$pipelineId/edit/monitoring'
@@ -168,8 +202,11 @@ export interface FileRouteTypes {
     | '/_authenticated/explorations'
     | '/_authenticated/pipelines'
     | '/_authenticated/sources'
+    | '/_authenticated/sources/$sourceId'
     | '/_authenticated/sources/'
+    | '/_authenticated/sources/$sourceId/$tableName'
     | '/_pipeline-editor/pipelines/$pipelineId/edit'
+    | '/_authenticated/sources/$sourceId/'
     | '/_pipeline-editor/pipelines/$pipelineId/edit/api'
     | '/_pipeline-editor/pipelines/$pipelineId/edit/logs'
     | '/_pipeline-editor/pipelines/$pipelineId/edit/monitoring'
@@ -241,6 +278,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSourcesIndexRouteImport
       parentRoute: typeof AuthenticatedSourcesRoute
     }
+    '/_authenticated/sources/$sourceId': {
+      id: '/_authenticated/sources/$sourceId'
+      path: '/$sourceId'
+      fullPath: '/sources/$sourceId'
+      preLoaderRoute: typeof AuthenticatedSourcesSourceIdRouteImport
+      parentRoute: typeof AuthenticatedSourcesRoute
+    }
+    '/_authenticated/sources/$sourceId/': {
+      id: '/_authenticated/sources/$sourceId/'
+      path: '/'
+      fullPath: '/sources/$sourceId/'
+      preLoaderRoute: typeof AuthenticatedSourcesSourceIdIndexRouteImport
+      parentRoute: typeof AuthenticatedSourcesSourceIdRoute
+    }
+    '/_authenticated/sources/$sourceId/$tableName': {
+      id: '/_authenticated/sources/$sourceId/$tableName'
+      path: '/$tableName'
+      fullPath: '/sources/$sourceId/$tableName'
+      preLoaderRoute: typeof AuthenticatedSourcesSourceIdTableNameRouteImport
+      parentRoute: typeof AuthenticatedSourcesSourceIdRoute
+    }
     '/_pipeline-editor/pipelines/$pipelineId/edit': {
       id: '/_pipeline-editor/pipelines/$pipelineId/edit'
       path: '/pipelines/$pipelineId/edit'
@@ -279,11 +337,32 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedSourcesSourceIdRouteChildren {
+  AuthenticatedSourcesSourceIdTableNameRoute: typeof AuthenticatedSourcesSourceIdTableNameRoute
+  AuthenticatedSourcesSourceIdIndexRoute: typeof AuthenticatedSourcesSourceIdIndexRoute
+}
+
+const AuthenticatedSourcesSourceIdRouteChildren: AuthenticatedSourcesSourceIdRouteChildren =
+  {
+    AuthenticatedSourcesSourceIdTableNameRoute:
+      AuthenticatedSourcesSourceIdTableNameRoute,
+    AuthenticatedSourcesSourceIdIndexRoute:
+      AuthenticatedSourcesSourceIdIndexRoute,
+  }
+
+const AuthenticatedSourcesSourceIdRouteWithChildren =
+  AuthenticatedSourcesSourceIdRoute._addFileChildren(
+    AuthenticatedSourcesSourceIdRouteChildren,
+  )
+
 interface AuthenticatedSourcesRouteChildren {
+  AuthenticatedSourcesSourceIdRoute: typeof AuthenticatedSourcesSourceIdRouteWithChildren
   AuthenticatedSourcesIndexRoute: typeof AuthenticatedSourcesIndexRoute
 }
 
 const AuthenticatedSourcesRouteChildren: AuthenticatedSourcesRouteChildren = {
+  AuthenticatedSourcesSourceIdRoute:
+    AuthenticatedSourcesSourceIdRouteWithChildren,
   AuthenticatedSourcesIndexRoute: AuthenticatedSourcesIndexRoute,
 }
 

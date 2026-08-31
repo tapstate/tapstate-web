@@ -61,7 +61,18 @@ import { SourceCreateDialog } from './source-create-dialog'
 import { SourceDeleteDialog } from './source-delete-dialog'
 import { SourceEditDialog } from './source-edit-dialog'
 
-type SourceTab = 'data' | 'columns' | 'settings' | 'lineage' | 'log'
+export type SourceTab = 'data' | 'columns' | 'settings' | 'lineage' | 'log'
+
+export interface SourcesPageRoute {
+  sourceId?: string
+  tableName?: string
+  tab?: SourceTab
+}
+
+interface SourcesPageProps {
+  route?: SourcesPageRoute
+  onNavigate?: (route: SourcesPageRoute) => void
+}
 
 interface SourceTable {
   id: string
@@ -128,14 +139,14 @@ function schemaErrorMessage(error: unknown, t: ReturnType<typeof useTranslation>
   return t('sources.schema.loadError')
 }
 
-export function SourcesPage() {
+export function SourcesPage({ route, onNavigate }: SourcesPageProps = {}) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const [searchText, setSearchText] = useState('')
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null)
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<SourceTab>('data')
+  const [activeTabState, setActiveTabState] = useState<SourceTab>('data')
   const [createOpen, setCreateOpen] = useState(false)
   const [editingSourceId, setEditingSourceId] = useState<string | null>(null)
   const [deletingSource, setDeletingSource] = useState<Source | null>(null)
@@ -237,26 +248,54 @@ export function SourcesPage() {
   const selectedConfiguredTable = selectedSource?.tables.find(
     (table) => table.id === selectedTableId,
   )
-  const selectedTable =
-    visibleTables.find((table) => table.id === selectedTableId) ??
-    visibleTables.find((table) => table.name === selectedConfiguredTable?.name) ??
-    null
+  const routeTable = route?.tableName
+    ? (visibleTables.find((table) => table.name === route.tableName) ?? null)
+    : null
+  const selectedTable = route
+    ? routeTable
+    : (visibleTables.find((table) => table.id === selectedTableId) ??
+      visibleTables.find((table) => table.name === selectedConfiguredTable?.name) ??
+      null)
   const selectedSchemaTable = selectedTable
     ? (sourceSchemaQuery.data?.tables.find((table) => table.name === selectedTable.name) ?? null)
     : null
+  const activeTab = route ? (route.tab ?? (route.tableName ? 'columns' : 'data')) : activeTabState
   const activeTabLabel = t(
     tabs.find((tab) => tab.value === activeTab)?.labelKey ?? 'sources.tabs.data',
   )
 
+  useEffect(() => {
+    if (!route) return
+    setSelectedSourceId(route.sourceId ?? null)
+    setSelectedTableId(null)
+    setActiveTabState(route.tab ?? (route.tableName ? 'columns' : 'data'))
+  }, [route?.sourceId, route?.tableName, route?.tab])
+
   function selectSource(source: Source | null) {
+    if (onNavigate) {
+      onNavigate(source ? { sourceId: source.id } : {})
+      return
+    }
     setSelectedSourceId(source?.id ?? null)
     setSelectedTableId(null)
-    setActiveTab('data')
+    setActiveTabState('data')
   }
 
   function selectTable(table: SourceTable) {
+    if (onNavigate && selectedSource) {
+      onNavigate({ sourceId: selectedSource.id, tableName: table.name, tab: 'columns' })
+      return
+    }
     setSelectedTableId(table.id)
-    setActiveTab('columns')
+    setActiveTabState('columns')
+  }
+
+  function selectTab(tab: SourceTab) {
+    if (onNavigate && selectedSource && selectedTable) {
+      onNavigate({ sourceId: selectedSource.id, tableName: selectedTable.name, tab })
+      return
+    }
+    setActiveTabState(tab)
   }
 
   async function runSourceTest(source: SourceView) {
@@ -300,8 +339,12 @@ export function SourcesPage() {
         left.id.localeCompare(right.id),
       ),
     )
-    setSelectedSourceId(created.id)
-    setSelectedTableId(null)
+    if (onNavigate) {
+      onNavigate({ sourceId: created.id })
+    } else {
+      setSelectedSourceId(created.id)
+      setSelectedTableId(null)
+    }
     setSuccessMessage(t('sources.create.success', { id: created.id }))
   }
 
@@ -312,8 +355,12 @@ export function SourcesPage() {
       ),
     )
     queryClient.setQueryData<SourceEnvelope>(['source', result.source.id], result)
-    setSelectedSourceId(result.source.id)
-    setSelectedTableId(null)
+    if (onNavigate) {
+      onNavigate({ sourceId: result.source.id })
+    } else {
+      setSelectedSourceId(result.source.id)
+      setSelectedTableId(null)
+    }
     setEditingSourceId(null)
     setSuccessMessage(t('sources.edit.success', { id: result.source.id }))
   }
@@ -708,12 +755,21 @@ export function SourcesPage() {
                       type="button"
                       variant="ghost"
                       className="h-8 min-w-0 justify-start rounded-md px-2 font-medium text-gray-500 hover:text-gray-900"
-                      onClick={() => setSelectedTableId(null)}
+                      onClick={() => {
+                        if (onNavigate && selectedSource) {
+                          onNavigate({ sourceId: selectedSource.id })
+                        } else {
+                          setSelectedTableId(null)
+                        }
+                      }}
                     >
                       <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
                       <span className="truncate">{selectedSource.name}</span>
                     </Button>
-                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-gray-300" aria-hidden="true" />
+                    <ChevronRight
+                      className="h-3.5 w-3.5 shrink-0 text-gray-300"
+                      aria-hidden="true"
+                    />
                     <span className="min-w-0 truncate text-sm font-semibold text-gray-900">
                       {selectedTable.name}
                     </span>
@@ -741,7 +797,7 @@ export function SourcesPage() {
                           ? 'border-gray-900 text-gray-900'
                           : 'border-transparent text-gray-500 hover:text-gray-700',
                       )}
-                      onClick={() => setActiveTab(tab.value)}
+                      onClick={() => selectTab(tab.value)}
                     >
                       {t(tab.labelKey)}
                     </Button>
