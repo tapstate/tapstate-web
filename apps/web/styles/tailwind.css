@@ -157,6 +157,11 @@
     --pipeline-text-subtle: #94a3b8;
     --pipeline-selection: #528bff;
     --pipeline-selection-ring: color-mix(in srgb, #528bff 24%, transparent);
+    --pipeline-selector-surface: #ffffff;
+    --pipeline-selector-border: color-mix(in oklab, #cbd5e1 86%, transparent);
+    --pipeline-selector-hover: #f6f8fb;
+    --pipeline-selector-muted: #64748b;
+    --pipeline-selector-section: #f8fafc;
     --pipeline-nav-glass-surface: color-mix(in srgb, #528bff 10%, transparent);
     --pipeline-nav-glass-surface-strong: color-mix(in srgb, #528bff 18%, transparent);
     --pipeline-nav-glass-border: color-mix(in srgb, #528bff 24%, #ffffff 62%);
@@ -264,6 +269,11 @@
     --pipeline-text-subtle: oklch(0.62 0.014 255);
     --pipeline-selection: oklch(0.72 0.16 255);
     --pipeline-selection-ring: color-mix(in srgb, oklch(0.72 0.16 255) 28%, transparent);
+    --pipeline-selector-surface: oklch(0.245 0.014 255);
+    --pipeline-selector-border: color-mix(in srgb, white 12%, transparent);
+    --pipeline-selector-hover: oklch(0.285 0.014 255);
+    --pipeline-selector-muted: oklch(0.74 0.014 255);
+    --pipeline-selector-section: oklch(0.22 0.013 255);
     --pipeline-nav-glass-surface: color-mix(in srgb, oklch(0.72 0.16 255) 14%, transparent);
     --pipeline-nav-glass-surface-strong: color-mix(in srgb, oklch(0.72 0.16 255) 22%, transparent);
     --pipeline-nav-glass-border: color-mix(in srgb, oklch(0.72 0.16 255) 32%, white 18%);

@@ -86,6 +86,57 @@ Tapstate Web 的 UI 以 shadcn 的语义 token、Radix 可达性交互和 Tailwi
 - Header、footer、body 间距稳定；loading/submitting 不能造成按钮跳动。
 - 关闭、提交、取消等控件必须有 disabled/submitting 状态。
 
+### 5.1 资源生命周期动作与 mutation 反馈
+
+资源列表是高密度操作台，不是营销页面。生命周期交互遵循以下规则：
+
+| 场景          | 规则                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------ |
+| 高频主操作    | 与状态 badge 保持同一操作槽，但收进稳定尺寸的 overflow menu；菜单项保留明确图标、文字和键盘导航。               |
+| 低频扩展动作  | 继续进入同一 overflow menu，例如复制、删除或更多上下文操作；不要额外撑宽表格列。                                |
+| 状态几何      | 状态和动作槽保持固定高度与最小宽度；pending 只替换图标，不改变行高。                                               |
+| 中断性操作    | Stop 等会中断运行的动作必须通过 Alert Dialog 二次确认。                                                            |
+| mutation 失败 | 使用脱离表格文档流的 transient feedback surface，带 live region 与明确关闭动作；禁止把错误文案塞进 `td` 或按钮旁。 |
+| 成功反馈      | 以服务端 projection 的精确刷新为准，不额外堆叠成功 toast。                                                         |
+| 视觉层级      | 列表只保留一层克制 elevation；禁止渐变、玻璃效果和泛滥阴影。                                                       |
+
+生命周期菜单的颜色表达动作语义，而不是结果预判：Start 使用默认操作语义，Stop 使用低饱和 destructive variant。触发器只保留一个稳定的更多按钮尺寸，pending 时仅替换图标，不改变表格几何。操作失败不通过改变按钮颜色或撑高表格行来解释，而由独立反馈面承载。
+
+### 5.2 现代工作台视觉质量基线
+
+工作台的高级感来自秩序、节制和响应速度，而不是视觉特效。列表、资源浏览器和运行态页面必须遵守以下基线：
+
+| 维度 | 必须遵守的规则 |
+| --- | --- |
+| 信息层级 | 用字重、留白、divider 和语义色区分主次；不要用装饰卡片、渐变或多层背景制造层级。 |
+| 表格几何 | 列宽、行高和状态/操作槽必须稳定。资源名称截断并提供完整 `title`，不能挤压状态或更多操作。 |
+| 操作层级 | 每行只暴露资源名称这一主入口；运行、停止、重试等上下文动作收进固定尺寸的 icon-only overflow trigger。 |
+| 表面深度 | 页面和表格使用一层可辨认的 border；shadow 只用于 dropdown、dialog、toast 等真实浮层。 |
+| 颜色系统 | 业务页面只消费 semantic token 或 feature-scoped token；禁止在 JSX 里散落灰阶、品牌蓝、状态发光和 `#...` 背景色。 |
+| 反馈模型 | 列表 mutation 反馈脱离行布局，success 依赖服务端刷新，error 使用带关闭动作的 transient surface。 |
+| 可达性 | 所有 icon-only trigger 提供 `aria-label` 和 keyboard-visible focus；hover 不是唯一的信息载体。 |
+| 窄屏行为 | 列内次要信息可隐藏，表格容器可以局部横向滚动；页面本身不得因长资源名或操作菜单产生横向溢出。 |
+
+实现顺序应先确定内容优先级和固定布局槽，再补齐 hover、focus、loading 和 error 状态。不得以玻璃、泛滥阴影或复杂动画替代这些基础规则。
+
+### 5.3 外部设计系统基线
+
+本规范吸收成熟产品和开源设计系统中可验证、可复用的基础约束；外部实现只作为基线，不直接复制其品牌视觉：
+
+| 来源 | 采用的基线 | 在 Tapstate Web 的落地 |
+| --- | --- | --- |
+| [Vercel Web Interface Guidelines](https://vercel.com/design/guidelines) | content-first、键盘可达、明确的 focus-visible、稳定的交互反馈 | 页面先服务资源定位和操作；所有 icon-only 控件有标签和可见焦点；loading 不改变几何尺寸 |
+| [shadcn/ui](https://github.com/shadcn-ui/ui) | semantic token、可组合 primitive、低噪声 surface | 颜色、边框、背景和 ring 通过语义 token；feature 只增加局部语义变量 |
+| [Radix Themes](https://github.com/radix-ui/themes) | 可达性、密度、状态和层级的组合约束 | Dropdown、Dialog、Tooltip 使用成熟 primitive；hover 不是唯一状态表达 |
+| [Apple Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/) | 层级克制、直接操作、反馈及时、动效服务于状态变化 | 普通 surface 不使用装饰阴影；浮层才表达 elevation；过渡只描述状态变化 |
+
+由此得到四条工程化结论：
+
+1. 先建立内容层级和布局槽，再添加颜色、阴影和动效。
+2. 普通页面、表格、explorer 和 header 通过背景差异与 divider 建立层级；shadow 只属于真实浮层。
+3. 交互状态必须有稳定的尺寸合同：pending、disabled、error 和 success 不得推动相邻内容。
+4. 每条视觉规则都必须能映射到 semantic token、组件状态或可测试的响应式约束。
+
 ## 6. 状态规范
 
 | 状态                    | 规范                                                   |

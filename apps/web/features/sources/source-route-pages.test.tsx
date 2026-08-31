@@ -22,7 +22,9 @@ vi.mock('./sources-page', () => ({
   },
 }))
 
-import { SourceTableDetailRoutePage, SourcesCatalogRoutePage } from './source-route-pages'
+import { SourceDetailPage } from './pages/source-detail-page'
+import { SourceTableDetailPage } from './pages/source-table-detail-page'
+import { SourcesCatalogPage } from './pages/sources-catalog-page'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
@@ -47,7 +49,7 @@ function renderRoute(component: ReactNode) {
 
 describe('source route pages', () => {
   it('navigates from the catalog to a source detail route', () => {
-    renderRoute(<SourcesCatalogRoutePage />)
+    renderRoute(<SourcesCatalogPage />)
 
     act(() => routeState.props?.onNavigate({ sourceId: 'orders' }))
 
@@ -58,7 +60,7 @@ describe('source route pages', () => {
   })
 
   it('navigates between a source, table, and tab route', () => {
-    renderRoute(<SourcesCatalogRoutePage />)
+    renderRoute(<SourcesCatalogPage />)
 
     act(() => routeState.props?.onNavigate({ sourceId: 'orders', tableName: 'orders' }))
     expect(routeState.navigate).toHaveBeenCalledWith({
@@ -88,12 +90,18 @@ describe('source route pages', () => {
   })
 
   it('hydrates the table view from route params and search', () => {
-    renderRoute(<SourceTableDetailRoutePage />)
+    renderRoute(<SourceTableDetailPage />)
 
     expect(routeState.props?.route).toEqual({
       sourceId: 'orders',
       tableName: 'orders',
       tab: 'columns',
     })
+  })
+
+  it('hydrates the Source detail page from the route parameter', () => {
+    renderRoute(<SourceDetailPage />)
+
+    expect(routeState.props?.route).toEqual({ sourceId: 'orders' })
   })
 })

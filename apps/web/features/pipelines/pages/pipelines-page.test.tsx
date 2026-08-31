@@ -4,17 +4,23 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { listPipelines, listSources } = vi.hoisted(() => ({
+const { apiFetch, listPipelines, listSources, runPipeline, stopPipeline } = vi.hoisted(() => ({
+  apiFetch: vi.fn(),
   listPipelines: vi.fn(),
   listSources: vi.fn(),
+  runPipeline: vi.fn(),
+  stopPipeline: vi.fn(),
 }))
 
 vi.mock('@/service/source-client', () => ({ listSources }))
-vi.mock('@/service/pipelines/pipeline-client', () => ({ listPipelines }))
+vi.mock('@/service/pipelines/pipeline-client', () => ({
+  listPipelines,
+  runPipeline,
+  stopPipeline,
+}))
 
 vi.mock('@/stores/auth-store', () => ({
-  useAuthStore: <T,>(selector: (state: { apiFetch: typeof fetch }) => T) =>
-    selector({ apiFetch: vi.fn() as unknown as typeof fetch }),
+  useAuthStore: <T,>(selector: (state: { apiFetch: typeof fetch }) => T) => selector({ apiFetch }),
 }))
 
 vi.mock('../components/canvas/pipeline-canvas', () => ({
@@ -53,10 +59,8 @@ async function renderPage() {
       </QueryClientProvider>,
     )
   })
-}
 
-async function openCreationMenu() {
-  await act(async () => elementWithText('button', 'Create')?.click())
+  return queryClient
 }
 
 beforeEach(() => {
@@ -74,7 +78,28 @@ beforeEach(() => {
       contentHash: 'b'.repeat(64),
       status: { pipelineId: 'customer_360', state: 'PAUSED' },
     },
+    {
+      id: 'failed_import',
+      dag: { nodes: [], edges: [] },
+      contentHash: 'c'.repeat(64),
+      status: { pipelineId: 'failed_import', state: 'FAILED' },
+    },
+    {
+      id: 'new_import',
+      dag: { nodes: [], edges: [] },
+      contentHash: 'd'.repeat(64),
+      status: { pipelineId: 'new_import', state: 'NEW' },
+    },
+    {
+      id: 'offline_import',
+      dag: { nodes: [], edges: [] },
+      contentHash: 'e'.repeat(64),
+      status: null,
+    },
   ])
+  runPipeline.mockResolvedValue({})
+  stopPipeline.mockResolvedValue({})
+  apiFetch.mockResolvedValue({ ok: true })
 })
 
 afterEach(async () => {
@@ -100,14 +125,18 @@ describe('PipelinesPage', () => {
     expect(listPipelines).toHaveBeenCalledTimes(1)
     expect(document.querySelector('[data-testid="pipeline-canvas"]')).toBeNull()
 
-    await openCreationMenu()
-    expect(elementWithText('[role="menuitem"]', 'Build with DAG Designer')).toBeDefined()
-    expect(elementWithText('a', 'Build with DAG Designer')).toBeUndefined()
+    expect(elementWithText('button', 'Create')).toBeDefined()
     expect(
       document
         .querySelector<HTMLAnchorElement>('a[href="/pipelines/orders_to_warehouse/edit"]')
         ?.getAttribute('href'),
     ).toBe('/pipelines/orders_to_warehouse/edit')
+    expect(document.querySelector('table')?.className).toContain('pipeline-list__table')
+    expect(
+      document
+        .querySelector<HTMLSpanElement>('a[href="/pipelines/orders_to_warehouse/edit"] span[title]')
+        ?.getAttribute('title'),
+    ).toBe('orders_to_warehouse')
     expect([...document.querySelectorAll('th')].map((header) => header.textContent)).not.toContain(
       'Actions',
     )
@@ -137,15 +166,159 @@ describe('PipelinesPage', () => {
     expect(listPipelines).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps the existing wizard creation path available beside the DAG editor', async () => {
-    await renderPage()
+  it('keeps lifecycle controls in a compact menu, starts startable Pipelines, and refreshes projections', async () => {
+    const queryClient = await renderPage()
+    const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries')
 
-    await openCreationMenu()
-    await act(async () => elementWithText('[role="menuitem"]', 'Build with Wizard')?.click())
+    await vi.waitFor(() => expect(container?.textContent).toContain('failed_import'))
+
+    const lifecycleTrigger = document.querySelector<HTMLButtonElement>(
+      '[aria-label="Pipeline lifecycle actions for failed_import"]',
+    )
+    expect(lifecycleTrigger).not.toBeNull()
+    expect(lifecycleTrigger?.className).toContain('pipeline-list__lifecycle-trigger')
+    expect(document.querySelector('[aria-label="Start failed_import"]')).toBeNull()
+    expect(document.querySelector('[aria-label="Start offline_import"]')).toBeNull()
+
+    await act(async () => lifecycleTrigger?.click())
+    expect(elementWithText('[role="menuitem"]', 'Stop')).toBeDefined()
+    expect(elementWithText('[role="menuitem"]', 'Copy pipeline ID')).toBeDefined()
+    expect(elementWithText('[role="menuitem"]', 'Delete')).toBeDefined()
+
+    await act(async () => document.body.click())
+    const startTrigger = document.querySelector<HTMLButtonElement>(
+      '[aria-label="Pipeline lifecycle actions for new_import"]',
+    )
+    await act(async () => startTrigger?.click())
+    expect(elementWithText('[role="menuitem"]', 'Start')).toBeDefined()
+    await act(async () => elementWithText('[role="menuitem"]', 'Start')?.click())
 
     await vi.waitFor(() =>
-      expect(document.querySelector('[data-testid="wizard-builder"]')).not.toBeNull(),
+      expect(runPipeline).toHaveBeenCalledWith('new_import', expect.anything()),
     )
+    await vi.waitFor(() => expect(listPipelines).toHaveBeenCalledTimes(2))
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['pipelines'] })
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['pipelines', 'new_import'] })
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['pipelines', 'new_import', 'status'],
+    })
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['pipelines', 'new_import', 'metrics'],
+    })
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['pipelines', 'new_import', 'logs'],
+    })
+  })
+
+  it('refreshes a stale lifecycle state and surfaces the server transition reason', async () => {
+    runPipeline.mockRejectedValueOnce({
+      code: 'lifecycle.illegal-transition',
+      params: { from: 'RUNNING', verb: 'start' },
+      message: 'Cannot start a pipeline in state RUNNING.',
+    })
+    await renderPage()
+    await vi.waitFor(() => expect(container?.textContent).toContain('new_import'))
+
+    const lifecycleTrigger = document.querySelector<HTMLButtonElement>(
+      '[aria-label="Pipeline lifecycle actions for new_import"]',
+    )
+    await act(async () => lifecycleTrigger?.click())
+    await act(async () => elementWithText('[role="menuitem"]', 'Start')?.click())
+
+    await vi.waitFor(() =>
+      expect(container?.textContent).toContain('Cannot start a pipeline in state RUNNING.'),
+    )
+    await vi.waitFor(() => expect(listPipelines).toHaveBeenCalledTimes(2))
+    expect(container?.querySelector('td [role="alert"]')).toBeNull()
+  })
+
+  it('confirms deletion and sends the current Pipeline content hash as If-Match', async () => {
+    await renderPage()
+    await vi.waitFor(() => expect(container?.textContent).toContain('failed_import'))
+
+    const lifecycleTrigger = document.querySelector<HTMLButtonElement>(
+      '[aria-label="Pipeline lifecycle actions for failed_import"]',
+    )
+    await act(async () => lifecycleTrigger?.click())
+    await act(async () => elementWithText('[role="menuitem"]', 'Delete')?.click())
+
+    await vi.waitFor(() => expect(document.body.textContent).toContain('Delete failed_import?'))
+    await act(async () => elementWithText('button', 'Delete Pipeline')?.click())
+
+    await vi.waitFor(() =>
+      expect(apiFetch).toHaveBeenCalledWith('/api/artifacts/failed_import', {
+        method: 'DELETE',
+        headers: { 'If-Match': `"${'c'.repeat(64)}"` },
+      }),
+    )
+  })
+
+  it('confirms stop before interrupting a running Pipeline', async () => {
+    await renderPage()
+    await vi.waitFor(() => expect(container?.textContent).toContain('orders_to_warehouse'))
+
+    const lifecycleTrigger = document.querySelector<HTMLButtonElement>(
+      '[aria-label="Pipeline lifecycle actions for orders_to_warehouse"]',
+    )
+    expect(lifecycleTrigger).not.toBeNull()
+    await act(async () => lifecycleTrigger?.click())
+    await act(async () => elementWithText('[role="menuitem"]', 'Stop')?.click())
+
+    await vi.waitFor(() => expect(document.body.textContent).toContain('Stop orders_to_warehouse?'))
+    expect(stopPipeline).not.toHaveBeenCalled()
+
+    await act(async () => elementWithText('button', 'Stop Pipeline')?.click())
+    await vi.waitFor(() =>
+      expect(stopPipeline).toHaveBeenCalledWith('orders_to_warehouse', expect.anything()),
+    )
+  })
+
+  it('shows lifecycle request failures in a fixed feedback surface', async () => {
+    runPipeline.mockRejectedValueOnce(new Error('offline'))
+    await renderPage()
+    await vi.waitFor(() => expect(container?.textContent).toContain('new_import'))
+
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="Pipeline lifecycle actions for new_import"]',
+        )
+        ?.click(),
+    )
+    await act(async () => elementWithText('[role="menuitem"]', 'Start')?.click())
+
+    await vi.waitFor(() =>
+      expect(container?.textContent).toContain('Pipeline could not be started.'),
+    )
+    const alert = container?.querySelector('[role="alert"]')
+    expect(alert).not.toBeNull()
+    expect(alert?.className).toContain('pipeline-mutation-feedback')
+    expect(alert?.className).toContain('fixed')
+    expect(container?.querySelector('td [role="alert"]')).toBeNull()
+    expect(container?.querySelector('.pipeline-list__lifecycle-error')).toBeNull()
+  })
+
+  it('opens creation in a controlled full-screen dialog without changing the list route', async () => {
+    await renderPage()
+    const initialPath = window.location.pathname
+
+    const createButton = elementWithText('button', 'Create')
+    expect(createButton).toBeDefined()
+
+    await act(async () => createButton?.click())
+
+    await vi.waitFor(() => {
+      expect(document.querySelector('[data-testid="pipeline-creation-dialog"]')).not.toBeNull()
+    })
+    expect(document.body.textContent).toContain('Create a pipeline')
+    expect(window.location.pathname).toBe(initialPath)
+
+    const closeButton = document.querySelector<HTMLButtonElement>(
+      'button[aria-label="Close create pipeline"]',
+    )
+    expect(closeButton).not.toBeNull()
+    await act(async () => closeButton?.click())
+    expect(document.querySelector('[data-testid="pipeline-creation-dialog"]')).toBeNull()
   })
 
   it('keeps a selected Pipeline in the Explorer instead of presenting a local draft as its editor', async () => {

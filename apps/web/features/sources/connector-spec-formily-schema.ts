@@ -1,6 +1,6 @@
 import type { ISchema } from '@formily/json-schema'
 
-import type { JsonValue } from '@/service/source-client'
+import type { ConnectorConfigField, JsonValue } from '@/service/source-client'
 
 import type { SourceConfigState } from './source-form'
 
@@ -72,6 +72,45 @@ function isMongoDbConnector(connectorId: string | undefined) {
   return connectorId?.trim().toLocaleLowerCase() === 'mongodb'
 }
 
+function isMysqlConnector(connectorId: string | undefined) {
+  return connectorId?.trim().toLocaleLowerCase() === 'mysql'
+}
+
+function finiteNumber(value: unknown) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
+  if (typeof value !== 'string' || value.trim() === '') return undefined
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+/**
+ * A few connector specs predate the typed catalog contract. MySQL's top-level
+ * port is one of those fields: it is declared as a string while rendered by
+ * InputNumber. Keep this compatibility rule at the spec boundary so both the
+ * Formily schema and its defaults agree on the value type.
+ */
+function withConnectorSpecificSchema(node: JsonRecord, connectorId?: string): JsonRecord {
+  if (!isMysqlConnector(connectorId)) return node
+
+  const properties = asRecord(node.properties)
+  const port = asRecord(properties?.port)
+  if (properties === null || port === null) return node
+
+  const defaultPort = finiteNumber(port.default)
+  return {
+    ...node,
+    properties: {
+      ...properties,
+      port: {
+        ...port,
+        type: 'number',
+        ...(defaultPort === undefined ? {} : { default: defaultPort }),
+      },
+    },
+  }
+}
+
 function withoutMongoDbPresentationFields(node: JsonRecord): JsonRecord {
   const properties = asRecord(node.properties)
   if (properties === null) return node
@@ -101,7 +140,8 @@ function withoutMongoDbPresentationFields(node: JsonRecord): JsonRecord {
 function connectionSchema(text: string, locale: string, connectorId?: string): JsonRecord {
   const { connection, spec } = parseConnectionSchema(text)
   const resolved = resolveSchemaMessages(connection, messagesForLocale(spec, locale)) as JsonRecord
-  return isMongoDbConnector(connectorId) ? withoutMongoDbPresentationFields(resolved) : resolved
+  const normalized = withConnectorSpecificSchema(resolved, connectorId)
+  return isMongoDbConnector(connectorId) ? withoutMongoDbPresentationFields(normalized) : normalized
 }
 
 export function connectorSpecConnectionSchema(
@@ -138,8 +178,38 @@ export function connectorSpecInitialValues(text: string, connectorId?: string): 
   const values: SourceConfigState = {}
   const connection = parseConnectionSchema(text).connection
   readDefaults(
-    isMongoDbConnector(connectorId) ? withoutMongoDbPresentationFields(connection) : connection,
+    isMongoDbConnector(connectorId)
+      ? withoutMongoDbPresentationFields(withConnectorSpecificSchema(connection, connectorId))
+      : withConnectorSpecificSchema(connection, connectorId),
     values,
   )
   return values
+}
+
+/**
+ * Align catalog field metadata with connector-specific spec fixes. This is
+ * intentionally narrow: only the MySQL connection port is corrected, while
+ * unrelated connectors keep the catalog-declared type.
+ */
+export function normalizeConnectorConfigFields(
+  connectorId: string | undefined,
+  fields: readonly ConnectorConfigField[],
+): ConnectorConfigField[] {
+  if (!isMysqlConnector(connectorId)) return [...fields]
+
+  return fields.map((field) =>
+    field.name === 'port' ? { ...field, type: 'number' as const } : field,
+  )
+}
+
+export function normalizeConnectorConfigValues(
+  connectorId: string | undefined,
+  values: Record<string, unknown>,
+): SourceConfigState {
+  const normalized = { ...values } as SourceConfigState
+  if (!isMysqlConnector(connectorId) || !Object.hasOwn(values, 'port')) return normalized
+
+  const port = finiteNumber(values.port)
+  if (port !== undefined) normalized.port = port
+  return normalized
 }

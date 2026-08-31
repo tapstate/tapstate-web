@@ -1,11 +1,15 @@
 import type { PipelineDag, PipelineLayout } from '@/service/pipelines/pipeline-client'
 
 import type { PipelineNodeConfiguration } from '../../model/pipeline-node-model'
-import type { PipelineNodeConnector } from './pipeline-canvas-types'
+import type {
+  PipelineHandleDirection,
+  PipelineNodeConnector,
+  PipelineScreenPosition,
+} from './pipeline-canvas-types'
 
 export interface FlowNode {
   id: string
-  type: string
+  type?: string
   position: { x: number; y: number }
   data: {
     label: string
@@ -18,6 +22,10 @@ export interface FlowNode {
     showInput: boolean
     showOutput: boolean
     configuration: PipelineNodeConfiguration | null
+    onRequestAdd?: (
+      direction: PipelineHandleDirection,
+      screenPosition?: PipelineScreenPosition,
+    ) => void
   }
 }
 
@@ -25,13 +33,34 @@ export interface FlowEdge {
   id: string
   source: string
   target: string
-  type: 'pipeline'
+  type?: 'pipeline'
 }
 
 export interface FlowGraph {
   nodes: FlowNode[]
   edges: FlowEdge[]
   viewport: PipelineLayout['viewport']
+}
+
+export function flowToPipelineDag(
+  nodes: readonly FlowNode[],
+  edges: readonly FlowEdge[],
+): PipelineDag {
+  return {
+    nodes: nodes.map((node) => ({
+      id: node.id,
+      type: node.data.nodeType as PipelineDag['nodes'][number]['type'],
+      label: node.data.label,
+      detail: node.data.detail,
+      description: node.data.description || null,
+    })),
+    edges: edges.map((edge) => ({
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+      label: null,
+    })),
+  }
 }
 
 /**
@@ -137,7 +166,9 @@ export function pipelineDagToFlow(
         hasInput: incoming.has(node.id),
         hasOutput: outgoing.has(node.id),
         showInput: nodeTypeAllowsInput(node.type),
-        showOutput: nodeTypeAllowsOutput(node.type),
+        // Every node keeps a right-side source handle so a newly inserted
+        // node can be continued immediately from the canvas.
+        showOutput: true,
         configuration: configurations.get(node.id) ?? null,
       },
     }
@@ -157,10 +188,6 @@ export function pipelineDagToFlow(
 
 function nodeTypeAllowsInput(type: string) {
   return type !== 'source'
-}
-
-function nodeTypeAllowsOutput(type: string) {
-  return type !== 'target'
 }
 
 function positionsFor(dag: PipelineDag, columns: Map<string, number>) {

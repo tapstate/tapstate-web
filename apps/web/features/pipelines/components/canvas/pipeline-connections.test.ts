@@ -52,7 +52,7 @@ const nodes = [
       hasInput: false,
       hasOutput: false,
       showInput: true,
-      showOutput: false,
+      showOutput: true,
       configuration: null,
     },
   },
@@ -106,7 +106,7 @@ describe('isPipelineConnectionValid', () => {
     ).toBe(false)
     expect(
       isPipelineConnectionValid(connection('target:warehouse', 'transform:filter'), nodes, []),
-    ).toBe(false)
+    ).toBe(true)
     expect(
       isPipelineConnectionValid(connection('source:orders', 'transform:filter'), nodes, [
         edge('source:orders', 'transform:filter'),

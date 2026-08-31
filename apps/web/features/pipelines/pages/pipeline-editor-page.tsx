@@ -2,157 +2,69 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
   Activity,
+  AlertCircle,
   Braces,
   ChevronLeft,
-  CirclePlus,
-  Database,
   Gauge,
-  LibraryBig,
   PanelLeftClose,
   PanelLeftOpen,
-  PanelsTopLeft,
   Radio,
   ScrollText,
-  Sparkles,
   Workflow,
 } from 'lucide-react'
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type KeyboardEvent as ReactKeyboardEvent,
-  type PointerEvent as ReactPointerEvent,
-  type ReactNode,
-} from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-
-import type { PipelineJsonObject } from '@/service/pipelines/pipeline-client'
 
 import { cn } from '@/lib/utils'
 import {
+  createPipeline,
   getPipeline,
   getPipelineLayout,
-  getPipelineMetrics,
-  getPipelineStatus,
+  runPipeline,
   savePipelineLayout,
-  PipelineClientError,
+  updatePipeline,
   type PipelineLayout,
+  type PipelineView,
 } from '@/service/pipelines/pipeline-client'
-import { listConnectors, listSources } from '@/service/source-client'
+import { getSourceSchema, listConnectors, listSources } from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
 
 import type { PipelineCanvasSelection } from '../components/canvas/pipeline-canvas-types'
-import type { PipelineSchemaOption } from '../components/node-config/pipeline-node-schema'
+import type {
+  PipelineSchemaOption,
+  PipelineTableLoader,
+} from '../components/node-config/pipeline-data-node-schema'
+import type {
+  PipelineNodeChoice,
+  PipelineNodeInsertionContext,
+} from '../components/node-library/pipeline-node-library-types'
 import type {
   PipelineNodeConfiguration,
   PipelineNodeConfigurationChange,
 } from '../model/pipeline-node-model'
 
-import { PipelineCanvas } from '../components/canvas/pipeline-canvas'
-import { PipelineNodeConfigPanel } from '../components/node-config/pipeline-node-config-panel'
 import { PipelineLogsPage } from '../logs/pipeline-logs-page'
+import { clearStagedPipelineDraft, type StagedPipelineDraft } from '../model/pipeline-draft-session'
+import {
+  addPipelineNode,
+  buildPipelineMutation,
+  createPipelineGraphDraft,
+  updatePipelineNodeConfiguration,
+  validatePipelineGraph,
+  type PipelineGraphDiagnostic,
+  type PipelineGraphDraft,
+} from '../model/pipeline-graph-edit'
 import { pipelineNodeConnectors } from '../model/pipeline-node-connectors'
-import { pipelineNodeConfigurations } from '../model/pipeline-node-model'
-
-function isJsonObject(value: unknown): value is PipelineJsonObject {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function applyConfigurationChange(
-  configuration: PipelineNodeConfiguration,
-  change: PipelineNodeConfigurationChange,
-): PipelineNodeConfiguration | null {
-  if (configuration.nodeId !== change.nodeId || configuration.kind !== change.kind) return null
-
-  if (configuration.kind === 'source') {
-    return {
-      ...configuration,
-      sourceId:
-        typeof change.values.sourceId === 'string'
-          ? change.values.sourceId
-          : configuration.sourceId,
-      table: typeof change.values.table === 'string' ? change.values.table : configuration.table,
-      filter:
-        typeof change.values.filter === 'string' ? change.values.filter : configuration.filter,
-    }
-  }
-
-  if (configuration.kind === 'target') {
-    return {
-      ...configuration,
-      sourceId:
-        typeof change.values.sourceId === 'string'
-          ? change.values.sourceId
-          : configuration.sourceId,
-      table: typeof change.values.table === 'string' ? change.values.table : configuration.table,
-      writeMode:
-        typeof change.values.writeMode === 'string'
-          ? change.values.writeMode
-          : configuration.writeMode,
-    }
-  }
-
-  if (configuration.kind === 'transform') {
-    const { from, options, ...body } = change.values
-    return {
-      ...configuration,
-      from: from === undefined ? configuration.from : from,
-      options:
-        options === undefined ? configuration.options : isJsonObject(options) ? options : null,
-      body: { ...configuration.body, ...body },
-    }
-  }
-
-  return {
-    ...configuration,
-    from: change.values.from === undefined ? configuration.from : change.values.from,
-    body: { ...configuration.body, ...change.values },
-  }
-}
+import { PipelineMonitoringPage } from '../monitoring/pipeline-monitoring-page'
+import { PipelineWorkflowWithInnerContext } from '../workflow-app'
 
 export type PipelineWorkspaceSection = 'orchestrate' | 'api' | 'logs' | 'monitoring'
 
 const NODE_PANEL_DEFAULT_WIDTH = 400
-const NODE_PANEL_MIN_WIDTH = 320
-const NODE_PANEL_MAX_WIDTH = 560
-const NODE_PANEL_RESIZE_STEP = 16
 
-function clampNodePanelWidth(width: number) {
-  return Math.min(NODE_PANEL_MAX_WIDTH, Math.max(NODE_PANEL_MIN_WIDTH, width))
+function asQuotedEtag(hash: string) {
+  return hash.startsWith('"') && hash.endsWith('"') ? hash : `"${hash}"`
 }
-
-const paletteItems = [
-  {
-    id: 'source',
-    labelKey: 'pipelines.workspace.nodeLibrary.source',
-    descriptionKey: 'pipelines.workspace.nodeLibrary.sourceDescription',
-    icon: Database,
-    tone: 'pipeline-workspace__palette-tone--source',
-  },
-  {
-    id: 'transform',
-    labelKey: 'pipelines.workspace.nodeLibrary.transform',
-    descriptionKey: 'pipelines.workspace.nodeLibrary.transformDescription',
-    icon: Workflow,
-    tone: 'pipeline-workspace__palette-tone--transform',
-  },
-  {
-    id: 'view',
-    labelKey: 'pipelines.workspace.nodeLibrary.view',
-    descriptionKey: 'pipelines.workspace.nodeLibrary.viewDescription',
-    icon: PanelsTopLeft,
-    tone: 'pipeline-workspace__palette-tone--view',
-  },
-  {
-    id: 'serve',
-    labelKey: 'pipelines.workspace.nodeLibrary.serve',
-    descriptionKey: 'pipelines.workspace.nodeLibrary.serveDescription',
-    icon: Sparkles,
-    tone: 'pipeline-workspace__palette-tone--serve',
-  },
-]
 
 const workspaceNavigation = [
   {
@@ -217,7 +129,7 @@ function WorkspaceNavLink({
 }) {
   const isActive = section === activeSection
   const className = cn(
-    'pipeline-workspace__nav-link flex h-10 items-center gap-2.5 rounded-lg px-3 text-[13px] font-semibold transition-[background-color,border-color,box-shadow,color,transform] focus-visible:ring-3 focus-visible:ring-[var(--pipeline-selection-ring)] focus-visible:outline-none active:scale-95 max-sm:justify-center max-sm:px-0',
+    'pipeline-workspace__nav-link flex h-full min-w-0 flex-1 items-center gap-2.5 rounded-lg px-3 text-[13px] font-semibold transition-[background-color,border-color,box-shadow,color,transform] focus-visible:ring-3 focus-visible:ring-[var(--pipeline-selection-ring)] focus-visible:outline-none active:scale-95 max-sm:justify-center max-sm:px-0',
     isActive && 'pipeline-workspace__nav-link--active',
   )
   const commonProps = {
@@ -269,7 +181,7 @@ function PipelineWorkspaceNav({
   return (
     <aside
       className={cn(
-        'pipeline-workspace__navigation relative flex h-full shrink-0 overflow-hidden p-1 transition-[width] duration-150 motion-reduce:transition-none',
+        'pipeline-workspace__navigation relative flex h-full shrink-0 overflow-hidden transition-[width] duration-150 motion-reduce:transition-none',
         collapsed ? 'w-14' : 'w-62 max-md:w-52',
       )}
       data-testid="workspace-navigation"
@@ -342,15 +254,22 @@ function PipelineWorkspaceNav({
           {workspaceNavigation.map((item) => {
             const Icon = item.icon
             return (
-              <WorkspaceNavLink
+              <div
                 key={item.section}
-                pipelineId={pipelineId}
-                section={item.section}
-                activeSection={activeSection}
+                className={cn(
+                  'pipeline-workspace__nav-row flex h-10 items-center gap-1 rounded-lg',
+                  item.section === activeSection && 'pipeline-workspace__nav-row--active',
+                )}
               >
-                <Icon className="size-4 shrink-0" aria-hidden="true" />
-                <span className={cn(collapsed && 'sr-only')}>{t(item.labelKey)}</span>
-              </WorkspaceNavLink>
+                <WorkspaceNavLink
+                  pipelineId={pipelineId}
+                  section={item.section}
+                  activeSection={activeSection}
+                >
+                  <Icon className="size-4 shrink-0" aria-hidden="true" />
+                  <span className={cn(collapsed && 'sr-only')}>{t(item.labelKey)}</span>
+                </WorkspaceNavLink>
+              </div>
             )
           })}
         </nav>
@@ -359,28 +278,56 @@ function PipelineWorkspaceNav({
   )
 }
 
-function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
+function PipelineOrchestrationPage({
+  pipelineId,
+  stagedDraft,
+}: {
+  pipelineId: string
+  stagedDraft: StagedPipelineDraft | null
+}) {
   const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const [selection, setSelection] = useState<PipelineCanvasSelection | null>(null)
-  const [configurationOverrides, setConfigurationOverrides] = useState<
-    Map<string, PipelineNodeConfiguration>
-  >(new Map())
-  const [descriptionOverrides, setDescriptionOverrides] = useState<Map<string, string>>(new Map())
-  const [isNodePanelOpen, setIsNodePanelOpen] = useState(false)
+  const [draft, setDraft] = useState<PipelineGraphDraft | null>(null)
+  const [isDirty, setIsDirty] = useState(false)
+  const [diagnostics, setDiagnostics] = useState<PipelineGraphDiagnostic[]>([])
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [layoutDraft, setLayoutDraft] = useState<Pick<PipelineLayout, 'nodes' | 'viewport'> | null>(
+    null,
+  )
   const [nodePanelWidth, setNodePanelWidth] = useState(NODE_PANEL_DEFAULT_WIDTH)
-  const [isNodePanelResizing, setIsNodePanelResizing] = useState(false)
+  const [surfaceWidth, setSurfaceWidth] = useState(0)
+  const surfaceRef = useRef<HTMLElement>(null)
   const latestLayout = useRef<Pick<PipelineLayout, 'nodes' | 'viewport'> | null>(null)
+  const draftRef = useRef<PipelineGraphDraft | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const nodePanelResizeRef = useRef<{ startX: number; startWidth: number } | null>(null)
+  const [isNewPipeline, setIsNewPipeline] = useState(stagedDraft !== null)
+  const stagedPipeline = useMemo<PipelineView | null>(() => {
+    if (!stagedDraft) return null
+    return {
+      id: stagedDraft.id,
+      metadata: { labels: {}, description: stagedDraft.description || null },
+      sources: [],
+      transforms: [],
+      view: null,
+      serve: null,
+      settings: null,
+      experimental: null,
+      dag: { nodes: [], edges: [] },
+      contentHash: 'draft',
+      status: null,
+    }
+  }, [stagedDraft])
 
   const pipeline = useQuery({
     queryKey: ['pipelines', pipelineId],
     queryFn: () => getPipeline(pipelineId, apiFetch),
+    enabled: !isNewPipeline,
   })
   const layout = useQuery({
     queryKey: ['pipelines', pipelineId, 'layout'],
     queryFn: () => getPipelineLayout(pipelineId, apiFetch),
+    enabled: !isNewPipeline,
   })
   const sources = useQuery({
     queryKey: ['sources'],
@@ -394,6 +341,30 @@ function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
     mutationFn: (next: Pick<PipelineLayout, 'nodes' | 'viewport'>) =>
       savePipelineLayout(pipelineId, next, apiFetch),
   })
+  const savePipeline = useMutation({
+    mutationFn: async (currentDraft: PipelineGraphDraft) => {
+      const mutation = buildPipelineMutation(currentDraft)
+      const result = isNewPipeline
+        ? await createPipeline(mutation, apiFetch)
+        : await updatePipeline(
+            pipelineId,
+            mutation,
+            asQuotedEtag(currentDraft.pipeline.contentHash),
+            apiFetch,
+          )
+      const layoutSave = latestLayout.current
+        ? await saveLayout.mutateAsync(latestLayout.current)
+        : null
+      return { ...result, layout: layoutSave }
+    },
+  })
+  const run = useMutation({
+    mutationFn: () => {
+      return runPipeline(pipelineId, apiFetch)
+    },
+  })
+  const pipelineData = isNewPipeline ? stagedPipeline : pipeline.data
+  const layoutData = isNewPipeline ? { pipelineId, nodes: {}, viewport: null } : layout.data
 
   useEffect(
     () => () => {
@@ -403,34 +374,69 @@ function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
   )
 
   useEffect(() => {
-    setConfigurationOverrides(new Map())
-    setDescriptionOverrides(new Map())
+    const surface = surfaceRef.current
+    if (!surface) return
+
+    const updateSurfaceWidth = (width: number) => {
+      if (width > 0) setSurfaceWidth((current) => (current === width ? current : width))
+    }
+
+    updateSurfaceWidth(surface.getBoundingClientRect().width)
+    if (typeof ResizeObserver === 'undefined') return
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (!entry) return
+      updateSurfaceWidth(entry.contentRect.width)
+    })
+    observer.observe(surface)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!pipelineData) return
+    const nextDraft = createPipelineGraphDraft(pipelineData)
+    draftRef.current = nextDraft
+    setDraft(nextDraft)
+    setIsDirty(false)
+    setDiagnostics([])
+    setActionError(null)
     setSelection(null)
-  }, [pipeline.data?.contentHash])
+  }, [pipelineData?.contentHash])
+
+  useEffect(() => {
+    if (!layoutData) return
+    setLayoutDraft(
+      (current) => current ?? { nodes: layoutData.nodes, viewport: layoutData.viewport },
+    )
+  }, [layoutData])
 
   function scheduleLayoutSave(next: Pick<PipelineLayout, 'nodes' | 'viewport'>) {
     latestLayout.current = next
+    setLayoutDraft(next)
+    if (isNewPipeline) return
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
       if (latestLayout.current) saveLayout.mutate(latestLayout.current)
     }, 420)
   }
 
-  const isLoading = pipeline.isLoading || layout.isLoading
-  const error = pipeline.isError || layout.isError
-  const layoutStatus = saveLayout.isPending ? 'saving' : saveLayout.isError ? 'error' : 'saved'
+  const isLoading = isNewPipeline ? false : pipeline.isLoading || layout.isLoading
+  const error = isNewPipeline ? false : pipeline.isError || layout.isError
   const connectorsBySourceId = useMemo(
     () => pipelineNodeConnectors(sources.data ?? [], connectors.data ?? []),
     [connectors.data, sources.data],
   )
-  const configurations = useMemo(() => {
-    const base = pipeline.data
-      ? pipelineNodeConfigurations(pipeline.data)
-      : new Map<string, PipelineNodeConfiguration>()
-    const merged = new Map(base)
-    configurationOverrides.forEach((configuration, nodeId) => merged.set(nodeId, configuration))
-    return merged
-  }, [configurationOverrides, pipeline.data])
+  const configurations = draft?.configurations ?? new Map<string, PipelineNodeConfiguration>()
+  const descriptions = draft?.descriptions ?? new Map<string, string>()
+  const canvasLayout = useMemo<PipelineLayout | null>(() => {
+    if (!layoutData) return null
+    return {
+      ...layoutData,
+      ...layoutDraft,
+      nodes: { ...layoutData.nodes, ...layoutDraft?.nodes },
+    }
+  }, [layoutData, layoutDraft])
   const sourceOptions = useMemo<PipelineSchemaOption[]>(
     () =>
       (sources.data ?? []).map((source) => ({
@@ -455,64 +461,148 @@ function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
     if (configuration?.kind !== 'source' && configuration?.kind !== 'target') return undefined
     return tableOptionsBySourceId.get(configuration.sourceId)
   }, [selection?.configuration, tableOptionsBySourceId])
+  const loadPipelineTables = useCallback<PipelineTableLoader>(
+    async (sourceId) => {
+      const cached = tableOptionsBySourceId.get(sourceId)
+      if (cached?.length) return cached
+
+      const report = await getSourceSchema(sourceId, apiFetch)
+      return report.tables.map((table) => ({ label: table.name, value: table.name }))
+    },
+    [apiFetch, tableOptionsBySourceId],
+  )
+  const availableCanvasWidth = useMemo(() => {
+    if (!surfaceWidth) return undefined
+    return Math.max(surfaceWidth - (selection ? nodePanelWidth : 0), 400)
+  }, [nodePanelWidth, selection, surfaceWidth])
 
   function handleConfigurationChange(change: PipelineNodeConfigurationChange) {
-    const current = configurations.get(change.nodeId)
+    const current = draftRef.current
     if (!current) return
-    const next = applyConfigurationChange(current, change)
-    if (!next) return
-    setConfigurationOverrides((previous) => new Map(previous).set(change.nodeId, next))
+    const next = updatePipelineNodeConfiguration(current, change)
+    draftRef.current = next
+    setDraft(next)
+    const nextConfiguration = next.configurations.get(change.nodeId) ?? null
     setSelection((previous) =>
-      previous && previous.id === change.nodeId ? { ...previous, configuration: next } : previous,
+      previous && previous.id === change.nodeId
+        ? {
+            ...previous,
+            label:
+              next.dag.nodes.find((node) => node.id === change.nodeId)?.label ?? previous.label,
+            detail:
+              next.dag.nodes.find((node) => node.id === change.nodeId)?.detail ?? previous.detail,
+            configuration: nextConfiguration,
+          }
+        : previous,
     )
+    setIsDirty(true)
   }
 
   function handleDescriptionChange(description: string) {
     if (!selection) return
-    setDescriptionOverrides((previous) => new Map(previous).set(selection.id, description))
-    setSelection((previous) => (previous ? { ...previous, description } : previous))
-  }
-
-  function handleNodePanelResizeStart(event: ReactPointerEvent<HTMLDivElement>) {
-    if (event.pointerType === 'mouse' && event.button !== 0) return
-    event.preventDefault()
-    event.currentTarget.setPointerCapture?.(event.pointerId)
-    nodePanelResizeRef.current = { startX: event.clientX, startWidth: nodePanelWidth }
-    setIsNodePanelResizing(true)
-  }
-
-  function handleNodePanelResizeMove(event: ReactPointerEvent<HTMLDivElement>) {
-    const resize = nodePanelResizeRef.current
-    if (!resize) return
-    setNodePanelWidth(clampNodePanelWidth(resize.startWidth + resize.startX - event.clientX))
-  }
-
-  function handleNodePanelResizeEnd(event: ReactPointerEvent<HTMLDivElement>) {
-    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
-      event.currentTarget.releasePointerCapture?.(event.pointerId)
+    const current = draftRef.current
+    if (!current) return
+    const descriptions = new Map(current.descriptions).set(selection.id, description)
+    const next = {
+      ...current,
+      descriptions,
+      dag: {
+        ...current.dag,
+        nodes: current.dag.nodes.map((node) =>
+          node.id === selection.id ? { ...node, description } : node,
+        ),
+      },
     }
-    nodePanelResizeRef.current = null
-    setIsNodePanelResizing(false)
+    draftRef.current = next
+    setDraft(next)
+    setSelection((previous) => (previous ? { ...previous, description } : previous))
+    setIsDirty(true)
   }
 
-  function handleNodePanelResizeKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
-    const nextWidth =
-      event.key === 'ArrowLeft'
-        ? nodePanelWidth + NODE_PANEL_RESIZE_STEP
-        : event.key === 'ArrowRight'
-          ? nodePanelWidth - NODE_PANEL_RESIZE_STEP
-          : event.key === 'Home'
-            ? NODE_PANEL_MIN_WIDTH
-            : event.key === 'End'
-              ? NODE_PANEL_MAX_WIDTH
-              : null
-    if (nextWidth === null) return
-    event.preventDefault()
-    setNodePanelWidth(clampNodePanelWidth(nextWidth))
+  function handleChooseNode(choice: PipelineNodeChoice, insertion: PipelineNodeInsertionContext) {
+    const current = draftRef.current
+    if (!current) return
+    const currentLayout = latestLayout.current ?? layoutData
+    const result = addPipelineNode(
+      current,
+      choice,
+      insertion.position,
+      insertion.connectFrom ?? undefined,
+      insertion.connectTo ?? undefined,
+      insertion.insertEdge,
+    )
+    draftRef.current = result.draft
+    setDraft(result.draft)
+    const node = result.draft.dag.nodes.find((candidate) => candidate.id === result.nodeId)
+    if (node) {
+      setSelection({
+        id: node.id,
+        label: node.label,
+        detail: node.detail,
+        description: node.description ?? '',
+        nodeType: node.type,
+        connector: null,
+        configuration: result.draft.configurations.get(node.id) ?? null,
+      })
+    }
+    if (result.position) {
+      scheduleLayoutSave({
+        nodes: { ...currentLayout?.nodes, [result.nodeId]: result.position },
+        viewport: currentLayout?.viewport ?? null,
+      })
+    }
+    setIsDirty(true)
+  }
+
+  async function handleSave(): Promise<boolean> {
+    if (!draft || savePipeline.isPending) return false
+    const nextDiagnostics = validatePipelineGraph(
+      draft,
+      sources.data?.map((source) => source.id),
+    )
+    setDiagnostics(nextDiagnostics)
+    setActionError(null)
+    if (nextDiagnostics.length > 0) return false
+    try {
+      const result = await savePipeline.mutateAsync(draft)
+      const nextDraft = createPipelineGraphDraft(result.pipeline)
+      draftRef.current = nextDraft
+      setDraft(nextDraft)
+      setIsDirty(false)
+      setDiagnostics([])
+      if (isNewPipeline) {
+        clearStagedPipelineDraft(pipelineId)
+        setIsNewPipeline(false)
+      }
+      latestLayout.current = null
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+      await pipeline.refetch()
+      return true
+    } catch (error) {
+      setActionError(
+        error instanceof Error ? error.message : t('pipelines.workspace.actions.saveFailed'),
+      )
+      return false
+    }
+  }
+
+  async function handleRun() {
+    if (isDirty && !(await handleSave())) return
+    try {
+      setActionError(null)
+      await run.mutateAsync()
+    } catch (error) {
+      setActionError(
+        error instanceof Error ? error.message : t('pipelines.workspace.actions.runFailed'),
+      )
+    }
   }
 
   return (
-    <section className="pipeline-canvas-surface relative h-full min-w-0 flex-1 overflow-hidden">
+    <section
+      ref={surfaceRef}
+      className="pipeline-canvas-surface relative h-full min-w-0 flex-1 overflow-hidden"
+    >
       <a
         href="#pipeline-canvas"
         className="sr-only absolute top-3 left-3 z-50 rounded-lg bg-slate-950 px-3 py-2 text-sm text-white focus:not-sr-only"
@@ -535,147 +625,89 @@ function PipelineOrchestrationPage({ pipelineId }: { pipelineId: string }) {
               type="button"
               className="h-10 rounded-lg bg-slate-900 px-4 text-sm font-medium text-white transition-[background-color,transform] hover:bg-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95"
               onClick={() => {
-                void pipeline.refetch()
-                void layout.refetch()
+                if (!isNewPipeline) {
+                  void pipeline.refetch()
+                  void layout.refetch()
+                }
               }}
             >
               {t('pipelines.workspace.actions.retry')}
             </button>
           </div>
         )}
-        {pipeline.data && layout.data && (
-          <PipelineCanvas
-            dag={pipeline.data.dag}
-            layout={layout.data}
-            connectorsBySourceId={connectorsBySourceId}
-            configurations={configurations}
-            descriptions={descriptionOverrides}
-            onLayoutChange={scheduleLayoutSave}
-            onSelectionChange={setSelection}
+        {draft && canvasLayout && (
+          <PipelineWorkflowWithInnerContext
+            canvas={{
+              dag: draft.dag,
+              layout: canvasLayout,
+              connectorsBySourceId,
+              configurations,
+              descriptions,
+              onLayoutChange: scheduleLayoutSave,
+              onGraphChange: (nextDag) => {
+                const current = draftRef.current
+                if (!current) return
+                const next = { ...current, dag: nextDag }
+                draftRef.current = next
+                setDraft(next)
+                setIsDirty(true)
+              },
+              sources: sources.data,
+              connectors: connectors.data,
+              sourceState: sources.isPending ? 'loading' : sources.isError ? 'error' : 'success',
+              onAddNode: handleChooseNode,
+              onSelectionChange: setSelection,
+              availableWidth: availableCanvasWidth,
+            }}
+            header={{
+              isDirty,
+              isSaving: savePipeline.isPending,
+              isRunning: run.isPending,
+              onSave: () => void handleSave(),
+              onRun: () => void handleRun(),
+            }}
+            panel={{
+              selection,
+              width: nodePanelWidth,
+              onWidthChange: setNodePanelWidth,
+              onClose: () => setSelection(null),
+              onConfigurationChange: handleConfigurationChange,
+              onDescriptionChange: handleDescriptionChange,
+              sourceOptions,
+              tableOptions: selectedTableOptions,
+              loadTables: loadPipelineTables,
+            }}
           />
         )}
       </section>
 
-      <div className="pipeline-canvas__status pointer-events-none absolute bottom-5 left-1/2 z-20 flex h-8 -translate-x-1/2 items-center rounded-lg border px-2.5 text-[11px] font-medium max-sm:bottom-3">
-        <span
-          className={cn(
-            'mr-1.5 size-1.5 rounded-full',
-            layoutStatus === 'saving'
-              ? 'bg-amber-400'
-              : layoutStatus === 'error'
-                ? 'bg-rose-500'
-                : 'bg-emerald-500',
-          )}
-          aria-hidden="true"
-        />
-        {t(`pipelines.workspace.layout.${layoutStatus}`)}
-      </div>
-
-      {isNodePanelOpen && (
+      {(diagnostics.length > 0 || actionError) && (
         <div
-          className="pipeline-canvas__panel absolute top-5 left-5 z-20 w-60 overflow-hidden rounded-xl border motion-reduce:transition-none max-sm:top-3 max-sm:left-3 max-sm:w-[min(15rem,calc(100vw-5.75rem))]"
-          aria-label={t('pipelines.workspace.nodeLibrary.label')}
+          className="pipeline-canvas__alerts absolute top-20 right-5 z-30 flex max-w-[min(26rem,calc(100vw-2rem))] flex-col gap-2"
+          role="alert"
         >
-          <div className="flex items-center justify-between border-b border-slate-100 px-3.5 py-3">
-            <div className="flex items-center gap-2">
-              <span className="flex size-6 items-center justify-center rounded-md bg-blue-50 text-blue-600">
-                <LibraryBig className="size-3.5" aria-hidden="true" />
-              </span>
-              <div>
-                <h1 className="text-[13px] font-semibold text-slate-800">
-                  {t('pipelines.workspace.nodeLibrary.title')}
-                </h1>
-                <p className="mt-0.5 text-[10px] font-medium text-slate-400">
-                  {t('pipelines.workspace.nodeLibrary.readOnly')}
-                </p>
-              </div>
+          {actionError && (
+            <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] font-medium text-rose-700 shadow-sm">
+              <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+              <span>{actionError}</span>
             </div>
-            <button
-              type="button"
-              className="inline-flex size-8 items-center justify-center rounded-lg text-slate-400 transition-[background-color,color,transform] hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-sm:size-10"
-              aria-label={t('pipelines.workspace.nodeLibrary.hide')}
-              onClick={() => setIsNodePanelOpen(false)}
-            >
-              <ChevronLeft className="size-4" aria-hidden="true" />
-            </button>
-          </div>
-          <div className="space-y-0.5 p-2">
-            {paletteItems.map((item) => {
-              const Icon = item.icon
-              return (
-                <div key={item.id} className="flex items-center gap-2.5 rounded-lg px-2 py-2">
-                  <span
-                    className={cn(
-                      'flex size-8 shrink-0 items-center justify-center rounded-lg',
-                      item.tone,
-                    )}
-                  >
-                    <Icon className="size-4" aria-hidden="true" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-[12px] font-semibold text-slate-700">
-                      {t(item.labelKey)}
-                    </span>
-                    <span className="mt-0.5 block truncate text-[11px] text-slate-500">
-                      {t(item.descriptionKey)}
-                    </span>
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-          <p className="border-t border-slate-100 px-3.5 py-2.5 text-[11px] leading-4 text-slate-500">
-            {t('pipelines.workspace.nodeLibrary.mutationPending')}
-          </p>
+          )}
+          {diagnostics.length > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] font-medium text-amber-800 shadow-sm">
+              <div className="mb-1 flex items-center gap-2">
+                <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
+                <span>{t('pipelines.workspace.diagnostics.title')}</span>
+              </div>
+              <ul className="space-y-0.5 pl-5">
+                {diagnostics.slice(0, 4).map((diagnostic, index) => (
+                  <li key={`${diagnostic.code}-${diagnostic.nodeIds.join('-')}-${index}`}>
+                    {t(diagnostic.messageKey)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
-      )}
-
-      {!isNodePanelOpen && (
-        <button
-          type="button"
-          className="pipeline-canvas__panel-trigger absolute top-5 left-5 z-20 flex size-10 items-center justify-center rounded-xl border transition-[background-color,transform] focus-visible:ring-3 focus-visible:ring-[var(--pipeline-selection-ring)] focus-visible:outline-none active:scale-95 max-sm:top-3 max-sm:left-3 max-sm:size-11"
-          aria-label={t('pipelines.workspace.nodeLibrary.show')}
-          onClick={() => setIsNodePanelOpen(true)}
-        >
-          <CirclePlus className="size-4" aria-hidden="true" />
-        </button>
-      )}
-
-      {selection && (
-        <aside
-          className="pipeline-canvas__node-panel absolute top-3 right-0 bottom-3 z-20 flex flex-col max-sm:top-auto max-sm:right-3 max-sm:bottom-3 max-sm:left-3 max-sm:max-h-[min(30rem,calc(100dvh-5rem))]"
-          data-workflow-right-panel
-          style={{ '--pipeline-node-panel-width': `${nodePanelWidth}px` } as CSSProperties}
-        >
-          <div
-            className="pipeline-canvas__node-panel-resize-handle"
-            data-resizing={isNodePanelResizing ? 'true' : undefined}
-            role="separator"
-            aria-label={t('pipelines.workspace.config.resizePanel')}
-            aria-orientation="vertical"
-            aria-valuemin={NODE_PANEL_MIN_WIDTH}
-            aria-valuemax={NODE_PANEL_MAX_WIDTH}
-            aria-valuenow={nodePanelWidth}
-            tabIndex={0}
-            onKeyDown={handleNodePanelResizeKeyDown}
-            onPointerDown={handleNodePanelResizeStart}
-            onPointerMove={handleNodePanelResizeMove}
-            onPointerUp={handleNodePanelResizeEnd}
-            onPointerCancel={handleNodePanelResizeEnd}
-          >
-            <span aria-hidden="true" />
-          </div>
-          <div className="pipeline-canvas__node-panel-surface">
-            <PipelineNodeConfigPanel
-              selection={selection}
-              onClose={() => setSelection(null)}
-              onConfigurationChange={handleConfigurationChange}
-              onDescriptionChange={handleDescriptionChange}
-              sourceOptions={sourceOptions}
-              tableOptions={selectedTableOptions}
-            />
-          </div>
-        </aside>
       )}
     </section>
   )
@@ -685,125 +717,44 @@ function WorkspacePageFrame({
   section,
   pipelineId,
   children,
+  showHeading = true,
 }: {
   section: Exclude<PipelineWorkspaceSection, 'orchestrate'>
   pipelineId: string
   children: ReactNode
+  showHeading?: boolean
 }) {
   const { t } = useTranslation()
   const item = workspaceNavigation.find((navigation) => navigation.section === section)
   const Icon = item?.icon ?? Activity
 
   return (
-    <section className="pipeline-canvas-surface relative min-w-0 flex-1 overflow-y-auto">
-      <div className="mx-auto w-full max-w-5xl px-8 py-10 max-md:px-6 max-sm:px-4">
-        <div className="flex items-start gap-3 border-b border-slate-200 pb-6">
-          <span className="pipeline-workspace__section-mark flex size-9 shrink-0 items-center justify-center rounded-lg">
-            <Icon className="size-4" aria-hidden="true" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold tracking-[0.08em] text-slate-400 uppercase">
-              {pipelineId}
-            </p>
-            <h1 className="mt-1 text-lg font-semibold tracking-tight text-slate-900">
-              {t(item?.labelKey ?? 'pipelines.workspace.navigation.orchestrate')}
-            </h1>
+    <section
+      className={cn(
+        'pipeline-workspace__main pipeline-canvas-surface relative min-w-0 flex-1 overflow-y-auto',
+        `pipeline-workspace__main--${section}`,
+      )}
+      data-testid="workspace-main"
+    >
+      <div className="pipeline-workspace__main-content w-full">
+        {showHeading && (
+          <div className="flex items-start gap-3 border-b border-slate-200 pb-6">
+            <span className="pipeline-workspace__section-mark flex size-9 shrink-0 items-center justify-center rounded-lg">
+              <Icon className="size-4" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold tracking-[0.08em] text-slate-400 uppercase">
+                {pipelineId}
+              </p>
+              <h1 className="mt-1 text-lg font-semibold tracking-tight text-slate-900">
+                {t(item?.labelKey ?? 'pipelines.workspace.navigation.orchestrate')}
+              </h1>
+            </div>
           </div>
-        </div>
+        )}
         {children}
       </div>
     </section>
-  )
-}
-
-function MonitoringPage({ pipelineId }: { pipelineId: string }) {
-  const { i18n, t } = useTranslation()
-  const apiFetch = useAuthStore((state) => state.apiFetch)
-  const status = useQuery({
-    queryKey: ['pipelines', pipelineId, 'status'],
-    queryFn: () => getPipelineStatus(pipelineId, apiFetch),
-    retry: false,
-    refetchInterval: 5_000,
-  })
-  const metrics = useQuery({
-    queryKey: ['pipelines', pipelineId, 'metrics'],
-    queryFn: () => getPipelineMetrics(pipelineId, apiFetch),
-    retry: false,
-    refetchInterval: 5_000,
-  })
-
-  if (status.isLoading || metrics.isLoading) return <LoadingPanel />
-  if (status.isError || metrics.isError) {
-    const issue = status.isError ? status : metrics
-    return (
-      <QueryIssue
-        unavailable={issue.error instanceof PipelineClientError && issue.error.status === 404}
-        onRetry={() => {
-          void status.refetch()
-          void metrics.refetch()
-        }}
-      />
-    )
-  }
-
-  const metricEntries = Object.entries(metrics.data?.metrics ?? {})
-  const offsetEntries = Object.entries(metrics.data?.perTableOffset ?? {})
-  return (
-    <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.1)]">
-      <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
-        <span className="text-[12px] text-slate-500">{t('pipelines.workspace.runtime.state')}</span>
-        {status.data && (
-          <span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
-            {t(`pipelines.workspace.runtime.states.${status.data.state}`)}
-          </span>
-        )}
-      </div>
-      {status.data?.failure && (
-        <div className="border-b border-slate-100 px-5 py-4">
-          <p className="text-[11px] font-semibold text-rose-700">{status.data.failure.code}</p>
-          <p className="mt-1 text-[12px] leading-5 text-slate-600">{status.data.failure.message}</p>
-        </div>
-      )}
-      <div className="divide-y divide-slate-100">
-        {metricEntries.length === 0 && (
-          <p className="px-5 py-6 text-[12px] leading-5 text-slate-500">
-            {t('pipelines.workspace.runtime.emptyMetrics')}
-          </p>
-        )}
-        {metricEntries.map(([metric, value]) => (
-          <div key={metric} className="flex items-center justify-between gap-4 px-5 py-3">
-            <span className="min-w-0 truncate text-[12px] text-slate-500" title={metric}>
-              {metric}
-            </span>
-            <span className="shrink-0 font-mono text-[12px] font-semibold text-slate-700">
-              {new Intl.NumberFormat(i18n.language).format(value)}
-            </span>
-          </div>
-        ))}
-      </div>
-      {offsetEntries.length > 0 && (
-        <div className="border-t border-slate-100 px-5 py-4">
-          <p className="text-[11px] font-semibold tracking-[0.08em] text-slate-400 uppercase">
-            {t('pipelines.workspace.runtime.offsets')}
-          </p>
-          <dl className="mt-2 divide-y divide-slate-100">
-            {offsetEntries.map(([table, offset]) => (
-              <div key={table} className="grid grid-cols-[1fr_auto] gap-3 py-2.5">
-                <dt className="min-w-0 truncate text-[12px] text-slate-500" title={table}>
-                  {table}
-                </dt>
-                <dd
-                  className="max-w-56 truncate font-mono text-[11px] text-slate-600"
-                  title={offset}
-                >
-                  {offset}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      )}
-    </div>
   )
 }
 
@@ -878,14 +829,19 @@ function ApiAccessPage({ pipelineId }: { pipelineId: string }) {
 export function PipelineWorkspacePage({
   pipelineId,
   section,
+  stagedDraft = null,
 }: {
   pipelineId: string
   section: PipelineWorkspaceSection
+  stagedDraft?: StagedPipelineDraft | null
 }) {
   const [navigationCollapsed, setNavigationCollapsed] = useState(false)
 
   return (
-    <main className="pipeline-workspace flex h-dvh min-h-0 overflow-hidden">
+    <main
+      className="pipeline-workspace flex h-dvh min-h-0 gap-1 overflow-hidden p-1"
+      data-testid="pipeline-workspace"
+    >
       <PipelineWorkspaceNav
         pipelineId={pipelineId}
         activeSection={section}
@@ -893,10 +849,14 @@ export function PipelineWorkspacePage({
         onCollapsedChange={setNavigationCollapsed}
       />
       {section === 'orchestrate' ? (
-        <PipelineOrchestrationPage pipelineId={pipelineId} />
+        <PipelineOrchestrationPage pipelineId={pipelineId} stagedDraft={stagedDraft} />
       ) : (
-        <WorkspacePageFrame pipelineId={pipelineId} section={section}>
-          {section === 'monitoring' && <MonitoringPage pipelineId={pipelineId} />}
+        <WorkspacePageFrame
+          pipelineId={pipelineId}
+          section={section}
+          showHeading={section !== 'logs'}
+        >
+          {section === 'monitoring' && <PipelineMonitoringPage pipelineId={pipelineId} />}
           {section === 'logs' && <PipelineLogsPage pipelineId={pipelineId} />}
           {section === 'api' && <ApiAccessPage pipelineId={pipelineId} />}
         </WorkspacePageFrame>
@@ -905,6 +865,18 @@ export function PipelineWorkspacePage({
   )
 }
 
-export function PipelineEditorPage({ pipelineId }: { pipelineId: string }) {
-  return <PipelineWorkspacePage pipelineId={pipelineId} section="orchestrate" />
+export function PipelineEditorPage({
+  pipelineId,
+  stagedDraft = null,
+}: {
+  pipelineId: string
+  stagedDraft?: StagedPipelineDraft | null
+}) {
+  return (
+    <PipelineWorkspacePage
+      pipelineId={pipelineId}
+      section="orchestrate"
+      stagedDraft={stagedDraft}
+    />
+  )
 }

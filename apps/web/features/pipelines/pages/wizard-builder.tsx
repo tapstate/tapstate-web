@@ -30,7 +30,15 @@ const fields = [
   'JOB',
 ]
 
-export function WizardBuilder({ onBack }: { onBack: () => void }) {
+export function WizardBuilder({
+  onBack,
+  pipelineId,
+  description,
+}: {
+  onBack: () => void
+  pipelineId?: string
+  description?: string
+}) {
   const { t } = useTranslation()
 
   return (
@@ -47,9 +55,16 @@ export function WizardBuilder({ onBack }: { onBack: () => void }) {
           <ChevronLeft className="h-4 w-4" aria-hidden="true" />
         </Button>
         <div className="flex min-w-0 items-center gap-2">
-          <h1 className="truncate text-[14px] font-semibold text-gray-900">{t('wizard.title')}</h1>
+          <h1 className="truncate text-[14px] font-semibold text-gray-900">
+            {pipelineId || t('wizard.title')}
+          </h1>
           <Edit2 className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
         </div>
+        {description && (
+          <span className="ml-auto hidden max-w-[18rem] truncate text-[12px] text-gray-500 md:block">
+            {description}
+          </span>
+        )}
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4 lg:flex-row">

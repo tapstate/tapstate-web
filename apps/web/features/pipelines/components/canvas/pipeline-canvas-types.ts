@@ -2,6 +2,13 @@ import type { Edge, Node } from '@xyflow/react'
 
 import type { PipelineNodeConfiguration } from '../../model/pipeline-node-model'
 
+export type PipelineHandleDirection = 'input' | 'output'
+
+export interface PipelineScreenPosition {
+  x: number
+  y: number
+}
+
 export interface PipelineCanvasSelection {
   id: string
   label: string
@@ -29,7 +36,16 @@ export interface CanvasNodeData extends Record<string, unknown> {
   showInput: boolean
   showOutput: boolean
   configuration: PipelineNodeConfiguration | null
+  /** Requests insertion on one side of this node. */
+  onRequestAdd?: (
+    direction: PipelineHandleDirection,
+    screenPosition?: PipelineScreenPosition,
+  ) => void
 }
 
 export type CanvasNode = Node<CanvasNodeData>
-export type CanvasEdge = Edge<Record<string, never>, 'pipeline'>
+export interface PipelineCanvasEdgeData extends Record<string, unknown> {
+  onRequestInsert?: (screenPosition: { x: number; y: number }) => void
+}
+
+export type CanvasEdge = Edge<PipelineCanvasEdgeData, 'pipeline'>

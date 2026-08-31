@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { PipelineHandle } from './pipeline-handle'
 
@@ -25,14 +25,23 @@ afterEach(async () => {
   container = undefined
 })
 
-function renderHandle(direction: 'input' | 'output') {
+function renderHandle(
+  direction: 'input' | 'output',
+  options: {
+    connected?: boolean
+    onRequestAdd?: (
+      direction: 'input' | 'output',
+      position: { x: number; y: number },
+    ) => void
+  } = {},
+) {
   container = document.createElement('div')
   document.body.append(container)
   root = createRoot(container)
   act(() =>
     root?.render(
       <ReactFlowProvider>
-        <PipelineHandle direction={direction} nodeLabel="orders" />
+        <PipelineHandle direction={direction} nodeLabel="orders" {...options} />
       </ReactFlowProvider>,
     ),
   )
@@ -43,14 +52,15 @@ describe('PipelineHandle', () => {
   it('keeps handle geometry aligned with React Flow edge endpoints', () => {
     expect(pipelineCanvasStyles.match(/transform: none !important;/g)).toHaveLength(3)
     expect(pipelineCanvasStyles).toContain(
-      'left: calc(-1 * var(--pipeline-node-border-width)) !important;',
+      '-0.5 * var(--pipeline-handle-hit-size-inline) - var(--pipeline-node-border-width)',
     )
     expect(pipelineCanvasStyles).toContain(
-      'right: calc(-1 * var(--pipeline-node-border-width)) !important;',
+      '-0.5 * var(--pipeline-handle-hit-size-inline) - var(--pipeline-node-border-width)',
     )
     expect(pipelineCanvasStyles).toContain('.pipeline-canvas .pipeline-canvas__handle::after')
-    expect(pipelineCanvasStyles).toContain('left: -0.125rem;')
-    expect(pipelineCanvasStyles).toContain('right: -0.125rem;')
+    expect(pipelineCanvasStyles).toContain('left: 6px;')
+    expect(pipelineCanvasStyles).toContain('right: 6px;')
+    expect(pipelineCanvasStyles).toContain('.pipeline-canvas__handle-add')
     expect(pipelineCanvasStyles).toContain('display: block !important;')
     expect(pipelineCanvasStyles).toContain(
       'transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1) !important;',
@@ -84,6 +94,32 @@ describe('PipelineHandle', () => {
     expect(handle?.classList.contains('pipeline-canvas__handle--output')).toBe(true)
     expect(handle?.getAttribute('data-handle-direction')).toBe('output')
     expect(handle?.querySelector('.pipeline-canvas__port')).toBeNull()
+  })
+
+  it('uses the unconnected source handle add trigger', () => {
+    const onRequestAdd = vi.fn()
+    const host = renderHandle('output', { onRequestAdd })
+    const handle = host.querySelector<HTMLElement>('[data-handle-role="output"]')
+
+    expect(handle?.dataset.pipelineAdd).toBe('true')
+    expect(handle?.querySelector('.pipeline-canvas__handle-add')).not.toBeNull()
+
+    const addButton = handle?.querySelector<HTMLButtonElement>('.pipeline-canvas__handle-add')
+    act(() =>
+      addButton?.dispatchEvent(
+        new MouseEvent('click', { bubbles: true, clientX: 324, clientY: 178 }),
+      ),
+    )
+
+    expect(onRequestAdd).toHaveBeenCalledWith('output', { x: 324, y: 178 })
+  })
+
+  it('does not turn a connected output into an add-node trigger', () => {
+    const host = renderHandle('output', { connected: true, onRequestAdd: vi.fn() })
+    const handle = host.querySelector<HTMLElement>('[data-handle-role="output"]')
+
+    expect(handle?.dataset.pipelineAdd).toBeUndefined()
+    expect(handle?.querySelector('.pipeline-canvas__handle-add')).toBeNull()
   })
 
   it('exposes connection state without changing the handle structure', () => {

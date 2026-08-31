@@ -23,6 +23,5 @@ export function isPipelineConnectionValid(
   if (!sourceNode || !targetNode || !sourceNode.data.showOutput || !targetNode.data.showInput) {
     return false
   }
-
   return !edges.some((edge) => edge.source === source && edge.target === target)
 }

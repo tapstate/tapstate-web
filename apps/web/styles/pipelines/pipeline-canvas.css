@@ -1,18 +1,47 @@
-.pipeline-workspace,
-.pipeline-workspace__navigation,
 .pipeline-canvas-surface,
 .pipeline-canvas-state,
 .pipeline-canvas {
   background: var(--pipeline-canvas-bg);
 }
 
+.pipeline-workflow-container {
+  background: var(--pipeline-canvas-bg);
+}
+
 .pipeline-workspace {
+  --pipeline-workspace-gutter: 0.25rem;
+  --pipeline-workspace-panel-radius: 0.5rem;
+
+  background: var(--pipeline-canvas-bg);
   color: var(--pipeline-text);
 }
 
 .pipeline-workspace__navigation-panel {
   background: var(--pipeline-surface);
   color: var(--pipeline-text);
+}
+
+.pipeline-workspace__main {
+  border-radius: var(--pipeline-workspace-panel-radius);
+  background: var(--pipeline-surface);
+  color: var(--pipeline-text);
+}
+
+.pipeline-workspace__main-content {
+  min-height: 100%;
+  padding: 1.5rem 1.75rem;
+}
+
+@media (max-width: 768px) {
+  .pipeline-workspace__main-content {
+    padding: 1.25rem 1.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .pipeline-workspace__main-content {
+    padding: 1rem;
+  }
 }
 
 .pipeline-workspace__identity-mark,
@@ -27,51 +56,28 @@
 
 .pipeline-workspace__section-mark {
   background: var(--pipeline-surface);
-  box-shadow: var(--pipeline-shadow-node);
-}
-
-.pipeline-workspace__palette-tone--source,
-.pipeline-workspace__palette-tone--transform,
-.pipeline-workspace__palette-tone--view,
-.pipeline-workspace__palette-tone--serve {
-  border: 1px solid var(--pipeline-border);
-}
-
-.pipeline-workspace__palette-tone--source {
-  background: var(--pipeline-kind-source-surface);
-  color: var(--pipeline-kind-source-text);
-}
-
-.pipeline-workspace__palette-tone--transform {
-  background: var(--pipeline-kind-transform-surface);
-  color: var(--pipeline-kind-transform-text);
-}
-
-.pipeline-workspace__palette-tone--view {
-  background: var(--pipeline-kind-view-surface);
-  color: var(--pipeline-kind-view-text);
-}
-
-.pipeline-workspace__palette-tone--serve {
-  background: var(--pipeline-kind-serve-surface);
-  color: var(--pipeline-kind-serve-text);
 }
 
 .pipeline-workspace__nav-link {
   color: var(--pipeline-text-muted);
 }
 
-.pipeline-workspace__nav-link:hover {
+.pipeline-workspace__nav-row:hover {
   background: var(--pipeline-surface-subtle);
+}
+
+.pipeline-workspace__nav-link:hover {
   color: var(--pipeline-text);
 }
 
-.pipeline-workspace__nav-link--active {
+.pipeline-workspace__nav-row--active {
   background: color-mix(in srgb, var(--pipeline-selection) 10%, transparent);
+}
+
+.pipeline-workspace__nav-link--active {
   color: var(--pipeline-selection);
 }
 
-.pipeline-canvas .react-flow__controls,
 .pipeline-canvas__minimap {
   overflow: hidden;
   border: 1px solid var(--pipeline-border) !important;
@@ -80,40 +86,200 @@
   box-shadow: var(--pipeline-shadow-panel) !important;
 }
 
-.pipeline-canvas .react-flow__controls button {
-  border-bottom-color: var(--pipeline-border) !important;
-  background: transparent !important;
-  color: var(--pipeline-control-icon) !important;
+.pipeline-workflow-header {
+  position: absolute;
+  top: 1.75rem;
+  left: 0;
+  z-index: 10;
+  display: flex;
+  width: 100%;
+  height: 0;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.75rem;
 }
 
-@media (hover: hover) {
-  .pipeline-canvas .react-flow__controls button:hover {
-    background: var(--pipeline-surface-subtle) !important;
-  }
+.pipeline-workflow-header__actions {
+  margin-left: auto;
+  border-color: color-mix(in srgb, var(--pipeline-border) 92%, white);
+  background: color-mix(in srgb, var(--pipeline-surface) 92%, transparent);
+  box-shadow: var(--pipeline-shadow-panel);
+  pointer-events: auto;
 }
 
-.pipeline-canvas__status,
-.pipeline-canvas__panel,
-.pipeline-canvas__panel-trigger {
-  border-color: var(--pipeline-border);
-  background: var(--pipeline-surface);
-  color: var(--pipeline-text);
+.pipeline-canvas__tool-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  display: flex;
+  width: 3rem;
+  align-items: center;
+  justify-content: center;
+  height: calc(100% - 4.5rem);
+  padding: 0.25rem 0.25rem 0.25rem 0.5rem;
+}
+
+.pipeline-canvas__operator {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 0 0.25rem;
+}
+
+.pipeline-canvas__operator-row {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+  padding: 0.25rem 0.25rem 0.5rem;
+}
+
+.pipeline-canvas__operator-viewport {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: auto;
+}
+
+.pipeline-canvas__minimap--operator {
+  right: 0 !important;
+  bottom: calc(100% + 0.5rem) !important;
+  margin: 0 !important;
+  pointer-events: auto;
+}
+
+.pipeline-canvas__viewport-toolbar {
+  display: flex;
+  min-height: 2.25rem;
+  align-items: center;
+  gap: 0.125rem;
+  border: 0.5px solid var(--pipeline-border);
+  border-radius: 0.625rem;
+  background: var(--pipeline-control-surface);
+  padding: 0.125rem;
+  color: var(--pipeline-control-icon);
   box-shadow: var(--pipeline-shadow-panel);
 }
 
-.pipeline-canvas__status {
-  color: var(--pipeline-text-muted);
+.pipeline-canvas__viewport-button {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 0;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: inherit;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
 }
 
-.pipeline-canvas__panel-trigger:hover {
-  background: var(--pipeline-surface-subtle);
+.pipeline-canvas__viewport-button:hover {
+  background: color-mix(in srgb, var(--pipeline-selection) 12%, transparent);
+  color: var(--pipeline-selection);
+}
+
+.pipeline-canvas__viewport-button:active {
+  transform: scale(0.94);
+}
+
+.pipeline-canvas__viewport-button:focus-visible {
+  outline: 2px solid var(--pipeline-selection);
+  outline-offset: 1px;
+}
+
+.pipeline-canvas__tool-bar {
+  display: flex;
+  width: 2.375rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  border: 0.5px solid var(--pipeline-border);
+  border-radius: 0.625rem;
+  background: var(--pipeline-control-surface);
+  padding: 0.125rem;
+  color: var(--pipeline-control-icon);
+  box-shadow: var(--pipeline-shadow-panel);
+}
+
+.pipeline-canvas__tool-button {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 0;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: inherit;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.pipeline-canvas__tool-button:hover,
+.pipeline-canvas__tool-button[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--pipeline-selection) 12%, transparent);
+  color: var(--pipeline-selection);
+}
+
+.pipeline-canvas__tool-button:active {
+  transform: scale(0.94);
+}
+
+.pipeline-canvas__tool-button:focus-visible {
+  outline: 2px solid var(--pipeline-selection);
+  outline-offset: 1px;
+}
+
+.pipeline-canvas__tool-divider {
+  width: 0.875rem;
+  height: 1px;
+  margin: 0.25rem 0;
+  background: var(--pipeline-border);
+}
+
+@media (max-width: 640px) {
+  .pipeline-canvas__tool-layer {
+    top: auto;
+    bottom: 1rem;
+    left: 1rem;
+    width: auto;
+    height: auto;
+    padding: 0;
+  }
+
+  .pipeline-canvas__tool-bar {
+    width: auto;
+    flex-direction: row;
+  }
+
+  .pipeline-canvas__tool-divider {
+    width: 1px;
+    height: 0.875rem;
+    margin: 0 0.25rem;
+  }
 }
 
 .pipeline-canvas__node-panel {
+  top: 3.5rem;
   width: min(var(--pipeline-node-panel-width), calc(100% - 1.5rem));
   border: 0;
   background: transparent;
   box-shadow: none;
+}
+
+@media (max-width: 640px) {
+  .pipeline-canvas__node-panel {
+    top: auto;
+  }
 }
 
 .pipeline-canvas__node-panel-resize-handle {
@@ -333,18 +499,37 @@
   z-index: 1 !important;
 }
 
+/* React Flow adds its own .react-flow__handle geometry and paint rules.
+ * Keep the semantic handle as an invisible hit target until it is connected;
+ * the visual state is rendered by the scoped pseudo-element below. */
+.pipeline-canvas .react-flow__handle.pipeline-canvas__handle {
+  position: absolute !important;
+  width: var(--pipeline-handle-hit-size-inline) !important;
+  height: var(--pipeline-handle-hit-size-block) !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
 .pipeline-canvas .pipeline-canvas__node .pipeline-canvas__handle--input {
   top: var(--pipeline-handle-header-offset) !important;
   right: auto !important;
   bottom: auto !important;
-  left: calc(-1 * var(--pipeline-node-border-width)) !important;
+  left: calc(
+    -0.5 * var(--pipeline-handle-hit-size-inline) - var(--pipeline-node-border-width)
+  ) !important;
   cursor: grab !important;
   transform: none !important;
 }
 
 .pipeline-canvas .pipeline-canvas__node .pipeline-canvas__handle--output {
   top: var(--pipeline-handle-header-offset) !important;
-  right: calc(-1 * var(--pipeline-node-border-width)) !important;
+  right: calc(
+    -0.5 * var(--pipeline-handle-hit-size-inline) - var(--pipeline-node-border-width)
+  ) !important;
   bottom: auto !important;
   left: auto !important;
   transform: none !important;
@@ -358,17 +543,108 @@
   border-radius: 0;
   background: var(--pipeline-handle-accent);
   content: '';
-  opacity: 1;
+  /* Keep React Flow's hit area invisible until the handle has a semantic
+   * visual state. The handle itself remains interactive for edge dragging. */
+  opacity: 0;
   transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
 }
 
+.pipeline-canvas .pipeline-canvas__handle[data-handle-connected='true']::after {
+  opacity: 1;
+}
+
 .pipeline-canvas .pipeline-canvas__handle--input::after {
-  left: -0.125rem;
+  left: 6px;
 }
 
 .pipeline-canvas .pipeline-canvas__handle--output::after {
-  right: -0.125rem;
+  right: 6px;
+}
+
+.pipeline-canvas .pipeline-canvas__handle[data-pipeline-add='true']::after {
+  opacity: 0;
+}
+
+.pipeline-canvas .pipeline-canvas__handle-add {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: 1.25rem;
+  height: 1.25rem;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pipeline-handle-accent);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--pipeline-handle-accent) 32%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--pipeline-handle-accent) 20%, white);
+  color: white;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1;
+  opacity: 0;
+  padding: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transform: translate(-50%, -50%) scale(0.82);
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease,
+    background-color 150ms ease;
+}
+
+.pipeline-canvas
+  .pipeline-canvas__node--selected
+  .pipeline-canvas__handle[data-pipeline-add='true']
+  .pipeline-canvas__handle-add,
+.pipeline-canvas
+  .pipeline-canvas__node:hover
+  .pipeline-canvas__handle[data-pipeline-add='true']
+  .pipeline-canvas__handle-add,
+.pipeline-canvas
+  .pipeline-canvas__handle[data-pipeline-add='true']:hover
+  .pipeline-canvas__handle-add {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.pipeline-canvas
+  .pipeline-canvas__handle[data-pipeline-add='true']:hover
+  .pipeline-canvas__handle-add {
+  background: color-mix(in srgb, var(--pipeline-handle-accent) 88%, black);
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
+.pipeline-canvas__edge-hit {
+  cursor: pointer;
+  pointer-events: stroke;
+}
+
+.pipeline-canvas__edge-selector {
+  position: absolute;
+  z-index: 3;
+  transition: opacity 150ms ease;
+}
+
+.pipeline-canvas__edge-add {
+  display: grid;
+  width: 1.25rem;
+  height: 1.25rem;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pipeline-selection);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--pipeline-selection) 32%, transparent);
+  color: white;
+  cursor: pointer;
+  transition: transform 150ms ease;
+}
+
+.pipeline-canvas__edge-add:hover {
+  transform: scale(1.5);
 }
 
 .pipeline-canvas .pipeline-canvas__node .pipeline-canvas__handle.connectingfrom::after,

@@ -65,7 +65,9 @@ const AuthenticatedSourcesIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedSourcesRoute,
-  } as any)
+  } as any).lazy(() =>
+    import('./routes/_authenticated.sources.index.lazy').then((d) => d.Route),
+  )
 const AuthenticatedSourcesSourceIdRoute =
   AuthenticatedSourcesSourceIdRouteImport.update({
     id: '/$sourceId',
@@ -77,13 +79,21 @@ const AuthenticatedSourcesSourceIdIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedSourcesSourceIdRoute,
-  } as any)
+  } as any).lazy(() =>
+    import('./routes/_authenticated.sources.$sourceId.index.lazy').then(
+      (d) => d.Route,
+    ),
+  )
 const AuthenticatedSourcesSourceIdTableNameRoute =
   AuthenticatedSourcesSourceIdTableNameRouteImport.update({
     id: '/$tableName',
     path: '/$tableName',
     getParentRoute: () => AuthenticatedSourcesSourceIdRoute,
-  } as any)
+  } as any).lazy(() =>
+    import('./routes/_authenticated.sources.$sourceId.$tableName.lazy').then(
+      (d) => d.Route,
+    ),
+  )
 const PipelineEditorPipelinesPipelineIdEditRoute =
   PipelineEditorPipelinesPipelineIdEditRouteImport.update({
     id: '/pipelines/$pipelineId/edit',

@@ -1,6 +1,9 @@
 @import './pipelines/pipeline-canvas.css' layer(components);
 @import './pipelines/pipeline-list.css' layer(components);
 @import './pipelines/pipeline-logs.css' layer(components);
+@import './pipelines/pipeline-monitoring.css' layer(components);
+@import './pipelines/pipeline-node-selector.css' layer(components);
+@import './pipelines/pipeline-create.css' layer(components);
 
 @layer components {
   .connector-icon {

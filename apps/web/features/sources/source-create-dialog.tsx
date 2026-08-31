@@ -37,6 +37,8 @@ import { ConnectorFormily } from './connector-formily'
 import {
   connectorSpecConnectionSchema,
   connectorSpecInitialValues,
+  normalizeConnectorConfigFields,
+  normalizeConnectorConfigValues,
 } from './connector-spec-formily-schema'
 import { buildSourceConfig, createInitialConfig, type SourceConfigState } from './source-form'
 
@@ -139,19 +141,23 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
           return
         }
         try {
+          const normalizedFields = normalizeConnectorConfigFields(detail.id, detail.config)
           const nextSchema = connectorSpecConnectionSchema(
             detail.spec.text,
             currentLocale,
             detail.id,
           )
-          const initialValues = connectorSpecInitialValues(detail.spec.text, detail.id)
+          const initialValues = normalizeConnectorConfigValues(
+            detail.id,
+            connectorSpecInitialValues(detail.spec.text, detail.id),
+          )
           setSchema(nextSchema)
-          setConfig({ ...createInitialConfig(detail.config), ...initialValues })
+          setConfig({ ...createInitialConfig(normalizedFields), ...initialValues })
+          setConnector({ ...detail, config: normalizedFields })
         } catch {
           setRequestError(t('sources.create.errors.specInvalid'))
           return
         }
-        setConnector(detail)
         setSourceMode(detail.modes[0] ?? '')
       })
       .catch((error) => setRequestError(errorMessage(error, t)))

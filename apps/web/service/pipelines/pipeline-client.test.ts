@@ -3,13 +3,17 @@ import { describe, expect, it } from 'vitest'
 import type { ApiFetcher } from '../source-client'
 
 import {
+  createPipeline,
   getPipeline,
   getPipelineLayout,
   getPipelineLogs,
   getPipelineMetrics,
   getPipelineStatus,
   listPipelines,
+  runPipeline,
   savePipelineLayout,
+  stopPipeline,
+  updatePipeline,
 } from './pipeline-client'
 
 const pipeline = {
@@ -68,6 +72,48 @@ function fetcherFor(response: Response, seen: Request[] = []): ApiFetcher {
 }
 
 describe('Pipeline client', () => {
+  it('creates a blank Pipeline draft with the POST mutation contract', async () => {
+    const requests: Request[] = []
+    const blankPipeline = {
+      ...pipeline,
+      dag: { nodes: [], edges: [] },
+      sources: [],
+      transforms: [],
+      view: null,
+      serve: null,
+    }
+
+    await expect(
+      createPipeline(
+        {
+          id: pipeline.id,
+          metadata: { labels: {}, description: 'draft' },
+          sources: [],
+          transforms: [],
+          view: null,
+          serve: null,
+          settings: null,
+          experimental: null,
+        },
+        fetcherFor(
+          new Response(JSON.stringify(blankPipeline), {
+            status: 201,
+            headers: { 'Content-Type': 'application/json', ETag: `"${pipeline.contentHash}"` },
+          }),
+          requests,
+        ),
+      ),
+    ).resolves.toMatchObject({ pipeline: blankPipeline, etag: `"${pipeline.contentHash}"` })
+
+    expect(requests[0].method).toBe('POST')
+    expect(new URL(requests[0].url).pathname).toBe('/api/pipelines')
+    await expect(requests[0].json()).resolves.toMatchObject({
+      id: pipeline.id,
+      sources: [],
+      transforms: [],
+    })
+  })
+
   it('reads the backend semantic DAG without adding canvas geometry to PipelineView', async () => {
     const requests: Request[] = []
 
@@ -121,6 +167,51 @@ describe('Pipeline client', () => {
     ).resolves.toEqual(pipeline)
 
     expect(new URL(requests[0].url).pathname).toBe('/api/pipelines/orders%2Fwarehouse')
+  })
+
+  it('encodes Pipeline ids for start and stop lifecycle operations', async () => {
+    const startRequests: Request[] = []
+    const stopRequests: Request[] = []
+
+    await runPipeline('orders/warehouse', fetcherFor(jsonResponse({}), startRequests))
+    await stopPipeline('orders/warehouse', fetcherFor(jsonResponse({}), stopRequests))
+
+    expect(new URL(startRequests[0].url).pathname).toBe('/api/pipelines/orders%2Fwarehouse:start')
+    expect(startRequests[0].method).toBe('POST')
+    expect(new URL(stopRequests[0].url).pathname).toBe('/api/pipelines/orders%2Fwarehouse:stop')
+    expect(stopRequests[0].method).toBe('POST')
+  })
+
+  it('uses the conditional PUT mutation contract and surfaces server validation text', async () => {
+    const requests: Request[] = []
+    const mutation = {
+      id: pipeline.id,
+      sources: ['mysql'],
+      transforms: [],
+    }
+
+    await expect(
+      updatePipeline(
+        pipeline.id,
+        mutation,
+        `"${pipeline.contentHash}"`,
+        fetcherFor(
+          jsonResponse(
+            { code: 'pipeline.validation', params: {}, message: 'Select an existing Source.' },
+            422,
+          ),
+          requests,
+        ),
+      ),
+    ).rejects.toMatchObject({
+      status: 422,
+      code: 'pipeline.validation',
+      message: 'Select an existing Source.',
+    })
+
+    expect(requests[0].method).toBe('PUT')
+    expect(new URL(requests[0].url).pathname).toBe('/api/pipelines/orders_to_warehouse')
+    expect(requests[0].headers.get('If-Match')).toBe(`"${pipeline.contentHash}"`)
   })
 
   it('loads and saves independent canvas layout through the layout endpoint', async () => {

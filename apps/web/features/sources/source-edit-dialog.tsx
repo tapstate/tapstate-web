@@ -33,6 +33,8 @@ import { ConnectorFormily, type SecretDraft } from './connector-formily'
 import {
   connectorSpecConnectionSchema,
   connectorSpecInitialValues,
+  normalizeConnectorConfigFields,
+  normalizeConnectorConfigValues,
 } from './connector-spec-formily-schema'
 import { buildSourceConfig, createInitialConfig, type SourceConfigState } from './source-form'
 import { TableSelectionEditor } from './table-selection-editor'
@@ -230,19 +232,23 @@ export function SourceEditDialog({
         }
 
         try {
+          const normalizedFields = normalizeConnectorConfigFields(detail.id, detail.config)
           const nextSchema = connectorSpecConnectionSchema(
             detail.spec.text,
             currentLocale,
             detail.id,
           )
-          const initialValues = connectorSpecInitialValues(detail.spec.text, detail.id)
-          setConnector(detail)
+          const initialValues = normalizeConnectorConfigValues(
+            detail.id,
+            connectorSpecInitialValues(detail.spec.text, detail.id),
+          )
+          setConnector({ ...detail, config: normalizedFields })
           setSchema(nextSchema)
           setMode((current) => current || detail.modes[0] || '')
           setConfig({
-            ...createInitialConfig(detail.config),
+            ...createInitialConfig(normalizedFields),
             ...initialValues,
-            ...source.config,
+            ...normalizeConnectorConfigValues(detail.id, source.config),
           })
         } catch {
           setRequestError(t('sources.create.errors.specUnavailable'))

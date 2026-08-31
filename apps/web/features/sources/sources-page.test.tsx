@@ -267,9 +267,44 @@ describe('SourcesPage', () => {
     const tableDetailHeader = container.querySelector('main > div > div')
     expect(tableDetailHeader?.textContent).toContain('orders')
     expect(tableDetailHeader?.textContent).toContain('orders')
+    expect(buttonWithLabel('Expand')).toBeUndefined()
     const columnsTab = buttonWithText('Columns')
-    expect(columnsTab?.className).toContain('border-b-2')
-    expect(columnsTab?.className).toContain('border-x-0')
+    expect(columnsTab?.getAttribute('data-active')).toBe('true')
+    expect(columnsTab?.className).toContain('hover:bg-transparent')
+  })
+
+  it('derives the table detail and tab selection directly from the route', async () => {
+    const onNavigate = vi.fn()
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <SourcesPage
+            route={{ sourceId: 'orders', tableName: 'orders', tab: 'columns' }}
+            onNavigate={onNavigate}
+          />
+        </QueryClientProvider>,
+      )
+    })
+
+    await waitForPage(() => {
+      expect(container?.textContent).toContain('BIGINT')
+      expect(container?.textContent).toContain('VARCHAR')
+    })
+
+    await act(async () => buttonWithText('Lineage')?.click())
+
+    expect(onNavigate).toHaveBeenCalledWith({
+      sourceId: 'orders',
+      tableName: 'orders',
+      tab: 'lineage',
+    })
   })
 
   it('tests a source from the list with the persisted config', async () => {

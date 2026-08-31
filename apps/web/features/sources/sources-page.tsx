@@ -13,7 +13,6 @@ import {
   GitMerge,
   ListFilter,
   LoaderCircle,
-  Maximize2,
   Plus,
   RefreshCw,
   Search,
@@ -36,6 +35,7 @@ import type {
 
 import { ConnectorIcon } from '@/components/connector-icon'
 import { Button } from '@/components/ui/button'
+import { RouteTabs } from '@/components/ui/route-tabs'
 import {
   Select,
   SelectContent,
@@ -236,7 +236,9 @@ export function SourcesPage({ route, onNavigate }: SourcesPageProps = {}) {
       )
     : sources
 
-  const selectedSource = sources.find((source) => source.id === selectedSourceId) ?? null
+  const selectedSource = route
+    ? (sources.find((source) => source.id === route.sourceId) ?? null)
+    : (sources.find((source) => source.id === selectedSourceId) ?? null)
   const sourceSchemaQuery = useQuery({
     queryKey: ['source-schema', selectedSource?.id],
     enabled: selectedSource !== null,
@@ -263,13 +265,6 @@ export function SourcesPage({ route, onNavigate }: SourcesPageProps = {}) {
   const activeTabLabel = t(
     tabs.find((tab) => tab.value === activeTab)?.labelKey ?? 'sources.tabs.data',
   )
-
-  useEffect(() => {
-    if (!route) return
-    setSelectedSourceId(route.sourceId ?? null)
-    setSelectedTableId(null)
-    setActiveTabState(route.tab ?? (route.tableName ? 'columns' : 'data'))
-  }, [route?.sourceId, route?.tableName, route?.tab])
 
   function selectSource(source: Source | null) {
     if (onNavigate) {
@@ -372,7 +367,7 @@ export function SourcesPage({ route, onNavigate }: SourcesPageProps = {}) {
     queryClient.removeQueries({ queryKey: ['source', source.id] })
     queryClient.removeQueries({ queryKey: ['source-schema', source.id] })
     setDeletingSource(null)
-    if (selectedSourceId === source.id) selectSource(null)
+    if (selectedSource?.id === source.id) selectSource(null)
     setSuccessMessage(t('sources.delete.success', { id: source.id }))
   }
 
@@ -748,62 +743,19 @@ export function SourcesPage({ route, onNavigate }: SourcesPageProps = {}) {
             </>
           ) : selectedSource && selectedTable ? (
             <div className="flex h-full min-h-0 flex-col">
-              <div className="shrink-0 border-b border-gray-100/70 bg-white px-4 pt-4 md:px-6">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-1.5">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="h-8 min-w-0 justify-start rounded-md px-2 font-medium text-gray-500 hover:text-gray-900"
-                      onClick={() => {
-                        if (onNavigate && selectedSource) {
-                          onNavigate({ sourceId: selectedSource.id })
-                        } else {
-                          setSelectedTableId(null)
-                        }
-                      }}
-                    >
-                      <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-                      <span className="truncate">{selectedSource.name}</span>
-                    </Button>
-                    <ChevronRight
-                      className="h-3.5 w-3.5 shrink-0 text-gray-300"
-                      aria-hidden="true"
-                    />
-                    <span className="min-w-0 truncate text-sm font-semibold text-gray-900">
-                      {selectedTable.name}
-                    </span>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    disabled
-                    className="cursor-not-allowed text-gray-300"
-                    aria-label={t('common.expand')}
-                  >
-                    <Maximize2 className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                </div>
-                <div className="mt-4 flex items-center gap-5 overflow-x-auto text-[13px] font-medium">
-                  {tabs.map((tab) => (
-                    <Button
-                      key={tab.value}
-                      type="button"
-                      variant="ghost"
-                      className={cn(
-                        'relative top-px h-auto shrink-0 rounded-none border-x-0 border-t-0 border-b-2 px-0 pb-2.5',
-                        activeTab === tab.value
-                          ? 'border-gray-900 text-gray-900'
-                          : 'border-transparent text-gray-500 hover:text-gray-700',
-                      )}
-                      onClick={() => selectTab(tab.value)}
-                    >
-                      {t(tab.labelKey)}
-                    </Button>
-                  ))}
-                </div>
-              </div>
+              <SourceTableDetailHeader
+                sourceName={selectedSource.name}
+                tableName={selectedTable.name}
+                activeTab={activeTab}
+                onBack={() => {
+                  if (onNavigate) {
+                    onNavigate({ sourceId: selectedSource.id })
+                  } else {
+                    setSelectedTableId(null)
+                  }
+                }}
+                onSelectTab={selectTab}
+              />
               <div className="flex min-h-0 flex-1 flex-col bg-white lg:flex-row">
                 <div className="min-w-0 flex-1 overflow-auto">
                   {activeTab === 'columns' ? (
@@ -877,6 +829,49 @@ export function SourcesPage({ route, onNavigate }: SourcesPageProps = {}) {
         />
       )}
     </section>
+  )
+}
+
+function SourceTableDetailHeader({
+  sourceName,
+  tableName,
+  activeTab,
+  onBack,
+  onSelectTab,
+}: {
+  sourceName: string
+  tableName: string
+  activeTab: SourceTab
+  onBack: () => void
+  onSelectTab: (tab: SourceTab) => void
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <div className="shrink-0 border-b border-gray-100/70 bg-white px-4 pt-4 md:px-6">
+      <nav className="flex min-w-0 items-center gap-1.5 text-sm" aria-label={t('sources.title')}>
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-8 max-w-[45%] min-w-0 justify-start rounded-md px-2 font-medium text-gray-500 hover:text-gray-900"
+          onClick={onBack}
+        >
+          <ArrowLeft className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="truncate">{sourceName}</span>
+        </Button>
+        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-gray-300" aria-hidden="true" />
+        <span className="min-w-0 truncate font-semibold text-gray-900" title={tableName}>
+          {tableName}
+        </span>
+      </nav>
+      <RouteTabs
+        aria-label={t('sources.tabs.label')}
+        className="mt-3"
+        items={tabs.map((tab) => ({ value: tab.value, label: t(tab.labelKey) }))}
+        value={activeTab}
+        onValueChange={onSelectTab}
+      />
+    </div>
   )
 }
 

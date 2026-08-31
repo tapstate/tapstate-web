@@ -92,6 +92,18 @@ export interface PipelineView {
   status?: PipelineStatus | null
 }
 
+/** Structured write payload; layout and DAG geometry intentionally stay out of this contract. */
+export interface PipelineMutation {
+  id: string
+  metadata?: PipelineMetadata | null
+  sources: string[]
+  transforms: PipelineTransformStep[]
+  view?: PipelineViewBlock | null
+  serve?: PipelineServeBlock | null
+  settings?: PipelineSettings | null
+  experimental?: PipelineJsonObject | null
+}
+
 export type PipelineRuntimeState = 'NEW' | 'RUNNING' | 'PAUSED' | 'STOPPED' | 'COMPLETED' | 'FAILED'
 
 export interface PipelineStatusFailure {
@@ -145,6 +157,8 @@ export class PipelineClientError extends Error {
     readonly kind: 'network' | 'server' | 'protocol',
     message: string,
     readonly status: number | null = null,
+    readonly code: string | null = null,
+    readonly params: Record<string, unknown> = {},
   ) {
     super(message)
     this.name = 'PipelineClientError'
@@ -153,6 +167,13 @@ export class PipelineClientError extends Error {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function responseMessage(payload: unknown, fallback: string) {
+  if (isRecord(payload) && typeof payload.message === 'string' && payload.message.trim()) {
+    return payload.message
+  }
+  return fallback
 }
 
 function isPosition(value: unknown): value is PipelineLayoutPosition {
@@ -323,10 +344,14 @@ async function request(path: string, fetcher: ApiFetcher, init?: RequestInit): P
 
   const payload = response.status === 204 ? null : await response.json().catch(() => null)
   if (!response.ok) {
+    const code = isRecord(payload) && typeof payload.code === 'string' ? payload.code : null
+    const params = isRecord(payload) && isRecord(payload.params) ? payload.params : {}
     throw new PipelineClientError(
       'server',
-      'Tapstate refused the Pipeline request.',
+      responseMessage(payload, 'Tapstate refused the Pipeline request.'),
       response.status,
+      code,
+      params,
     )
   }
   if (payload === null)
@@ -336,6 +361,97 @@ async function request(path: string, fetcher: ApiFetcher, init?: RequestInit): P
       response.status,
     )
   return payload
+}
+
+function quotedHash(value: string | null): value is `"${string}"` {
+  return value !== null && /^"[0-9a-f]{64}"$/.test(value)
+}
+
+async function requestMutation(
+  path: string,
+  body: PipelineMutation,
+  fetcher: ApiFetcher,
+  init: RequestInit,
+): Promise<{ pipeline: PipelineView; etag: string }> {
+  let response: Response
+  try {
+    response = await fetcher(`/api${path}`, {
+      ...init,
+      headers: { 'content-type': 'application/json', ...init.headers },
+      body: JSON.stringify(body),
+    })
+  } catch (error) {
+    throw new PipelineClientError(
+      'network',
+      error instanceof Error ? error.message : 'Pipeline request failed.',
+    )
+  }
+  const payload = response.status === 204 ? null : await response.json().catch(() => null)
+  if (!response.ok) {
+    const code = isRecord(payload) && typeof payload.code === 'string' ? payload.code : null
+    const params = isRecord(payload) && isRecord(payload.params) ? payload.params : {}
+    throw new PipelineClientError(
+      'server',
+      responseMessage(payload, 'Tapstate refused the Pipeline mutation.'),
+      response.status,
+      code,
+      params,
+    )
+  }
+  const etag = response.headers.get('ETag')
+  if (!isPipelineView(payload) || !quotedHash(etag)) {
+    throw new PipelineClientError(
+      'protocol',
+      'Tapstate returned an invalid Pipeline mutation response.',
+      response.status,
+    )
+  }
+  return { pipeline: payload, etag }
+}
+
+export async function updatePipeline(
+  id: string,
+  mutation: PipelineMutation,
+  etag: string,
+  fetcher: ApiFetcher = fetch,
+): Promise<{ pipeline: PipelineView; etag: string }> {
+  if (!quotedHash(etag)) {
+    throw new PipelineClientError(
+      'protocol',
+      'Pipeline mutations require a quoted content hash.',
+      428,
+      'pipeline.precondition-required',
+      { id },
+    )
+  }
+  if (mutation.id !== id) {
+    throw new PipelineClientError(
+      'protocol',
+      'Pipeline mutation id does not match the route.',
+      400,
+      'pipeline.id-mismatch',
+      { id, bodyId: mutation.id },
+    )
+  }
+  return requestMutation(`/pipelines/${encodeURIComponent(id)}`, mutation, fetcher, {
+    method: 'PUT',
+    headers: { 'If-Match': etag },
+  })
+}
+
+export async function createPipeline(
+  mutation: PipelineMutation,
+  fetcher: ApiFetcher = fetch,
+): Promise<{ pipeline: PipelineView; etag: string }> {
+  return requestMutation('/pipelines', mutation, fetcher, { method: 'POST' })
+}
+
+export async function runPipeline(id: string, fetcher: ApiFetcher = fetch): Promise<unknown> {
+  return request(`/pipelines/${encodeURIComponent(id)}:start`, fetcher, { method: 'POST' })
+}
+
+export async function stopPipeline(id: string, fetcher: ApiFetcher = fetch): Promise<unknown> {
+  return request(`/pipelines/${encodeURIComponent(id)}:stop`, fetcher, { method: 'POST' })
 }
 
 export async function getPipeline(id: string, fetcher: ApiFetcher = fetch): Promise<PipelineView> {

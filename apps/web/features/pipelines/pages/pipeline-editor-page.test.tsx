@@ -10,14 +10,22 @@ const {
   getPipelineLogs,
   getPipelineMetrics,
   getPipelineStatus,
+  runPipeline,
   savePipelineLayout,
+  updatePipeline,
+  listConnectors,
+  listSources,
 } = vi.hoisted(() => ({
   getPipeline: vi.fn(),
   getPipelineLayout: vi.fn(),
   getPipelineLogs: vi.fn(),
   getPipelineMetrics: vi.fn(),
   getPipelineStatus: vi.fn(),
+  runPipeline: vi.fn(),
   savePipelineLayout: vi.fn(),
+  updatePipeline: vi.fn(),
+  listConnectors: vi.fn(),
+  listSources: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -39,8 +47,15 @@ vi.mock('@/service/pipelines/pipeline-client', () => ({
   getPipelineLogs,
   getPipelineMetrics,
   getPipelineStatus,
+  runPipeline,
   savePipelineLayout,
+  updatePipeline,
   PipelineClientError: class PipelineClientError extends Error {},
+}))
+
+vi.mock('@/service/source-client', () => ({
+  listConnectors,
+  listSources,
 }))
 
 vi.mock('@/stores/auth-store', () => ({
@@ -48,9 +63,10 @@ vi.mock('@/stores/auth-store', () => ({
     selector({ apiFetch: vi.fn() as unknown as typeof fetch }),
 }))
 
-vi.mock('../components/canvas/pipeline-canvas', () => ({
-  PipelineCanvas: ({
+vi.mock('../components/canvas/pipeline-canvas', () => {
+  const MockPipelineCanvas = ({
     onSelectionChange,
+    onRequestNodeSelector,
   }: {
     onSelectionChange: (selection: {
       id: string
@@ -69,32 +85,102 @@ vi.mock('../components/canvas/pipeline-canvas', () => ({
         body: { expr: string }
       } | null
     }) => void
+    onRequestNodeSelector?: (context: {
+      position: { x: number; y: number }
+      screenPosition?: { x: number; y: number }
+      connectFrom: string | null
+    }) => void
   }) => (
-    <button
-      type="button"
-      data-testid="pipeline-canvas"
-      onClick={() =>
-        onSelectionChange({
-          id: 'transform:normalize',
-          label: 'normalize',
-          detail: 'map',
-          description: '',
-          nodeType: 'transform',
-          connector: null,
-          configuration: {
+    <div>
+      <button
+        type="button"
+        data-testid="pipeline-canvas"
+        onClick={() =>
+          onSelectionChange({
+            id: 'transform:normalize',
+            label: 'normalize',
+            detail: 'map',
+            description: '',
+            nodeType: 'transform',
+            connector: null,
+            configuration: {
+              kind: 'transform',
+              nodeId: 'transform:normalize',
+              stepId: 'normalize',
+              transformType: 'map',
+              from: ['orders'],
+              options: null,
+              body: { expr: '' },
+            },
+          })
+        }
+      >
+        Canvas
+      </button>
+      <button
+        type="button"
+        data-testid="add-transform"
+        onClick={() =>
+          onRequestNodeSelector?.({
+            position: { x: 120, y: 80 },
+            screenPosition: { x: 320, y: 180 },
+            connectFrom: null,
+          })
+        }
+      >
+        Add transform
+      </button>
+      <button
+        type="button"
+        data-testid="request-add"
+        onClick={() =>
+          onRequestNodeSelector?.({
+            position: { x: 420, y: 180 },
+            screenPosition: { x: 620, y: 280 },
+            connectFrom: 'source:mysql:orders',
+          })
+        }
+      >
+        Request add
+      </button>
+    </div>
+  )
+
+  return {
+    PipelineCanvas: MockPipelineCanvas,
+    PipelineCanvasContent: MockPipelineCanvas,
+  }
+})
+
+vi.mock('../components/node-config/pipeline-node-config-panel', () => ({
+  PipelineNodeConfigPanel: ({
+    selection,
+    onConfigurationChange,
+  }: {
+    selection: { label: string; detail: string | null; id: string; configuration?: unknown }
+    onConfigurationChange?: (change: {
+      nodeId: string
+      kind: 'transform'
+      values: Record<string, unknown>
+    }) => void
+  }) => (
+    <aside data-workflow-right-panel>
+      <h2>{selection.label}</h2>
+      <p>{selection.detail}</p>
+      <button
+        type="button"
+        data-testid="change-node-config"
+        onClick={() =>
+          onConfigurationChange?.({
+            nodeId: selection.id,
             kind: 'transform',
-            nodeId: 'transform:normalize',
-            stepId: 'normalize',
-            transformType: 'map',
-            from: ['orders'],
-            options: null,
-            body: { expr: '' },
-          },
-        })
-      }
-    >
-      Canvas
-    </button>
+            values: { expr: 'updated-expression' },
+          })
+        }
+      >
+        Change config
+      </button>
+    </aside>
   ),
 }))
 
@@ -133,16 +219,26 @@ async function renderPage(section: 'orchestrate' | 'api' | 'logs' | 'monitoring'
 beforeEach(() => {
   getPipeline.mockResolvedValue({
     id: 'orders_to_warehouse',
+    sources: [{ id: 'mysql', metadata: null, connector: 'mysql' }],
+    transforms: [{ id: 'normalize', type: 'map', from: 'orders', expr: 'original-expression' }],
+    serve: { id: 'orders_api', from: 'normalize', sync: [] },
     contentHash: 'a'.repeat(64),
     dag: {
       nodes: [
-        { id: 'source:orders', type: 'source', label: 'orders', detail: 'mysql' },
+        { id: 'source:mysql:orders', type: 'source', label: 'orders', detail: 'mysql' },
+        { id: 'transform:normalize', type: 'transform', label: 'normalize', detail: 'map' },
         { id: 'serve:orders_api', type: 'serve', label: 'orders_api', detail: null },
       ],
       edges: [
         {
-          id: 'source:orders->serve:orders_api',
-          source: 'source:orders',
+          id: 'source:mysql:orders->transform:normalize',
+          source: 'source:mysql:orders',
+          target: 'transform:normalize',
+          label: null,
+        },
+        {
+          id: 'transform:normalize->serve:orders_api',
+          source: 'transform:normalize',
           target: 'serve:orders_api',
           label: null,
         },
@@ -162,6 +258,38 @@ beforeEach(() => {
     nodes: {},
     viewport: null,
   })
+  updatePipeline.mockResolvedValue({
+    pipeline: {
+      id: 'orders_to_warehouse',
+      sources: [{ id: 'mysql', metadata: null, connector: 'mysql' }],
+      transforms: [{ id: 'normalize', type: 'map', from: 'orders', expr: 'updated-expression' }],
+      serve: { id: 'orders_api', from: 'normalize', sync: [] },
+      contentHash: 'b'.repeat(64),
+      dag: {
+        nodes: [
+          { id: 'source:mysql:orders', type: 'source', label: 'orders', detail: 'mysql' },
+          { id: 'transform:normalize', type: 'transform', label: 'normalize', detail: 'map' },
+        ],
+        edges: [
+          {
+            id: 'source:mysql:orders->transform:normalize',
+            source: 'source:mysql:orders',
+            target: 'transform:normalize',
+            label: null,
+          },
+        ],
+      },
+    },
+    etag: `"${'b'.repeat(64)}"`,
+  })
+  listSources.mockResolvedValue([
+    {
+      id: 'mysql_feynman',
+      connector: 'mysql',
+      tables: [{ name: 'Player', pattern: null }],
+    },
+  ])
+  listConnectors.mockResolvedValue([{ id: 'mysql', name: 'MySQL', icon: '/connectors/mysql.svg' }])
 })
 
 afterEach(async () => {
@@ -194,7 +322,7 @@ describe('PipelineEditorPage', () => {
     )
   })
 
-  it('keeps navigation as a docked workspace aside with a 4px inset that can collapse and expand', async () => {
+  it('keeps navigation as a docked workspace aside inside the 4px workspace gutter', async () => {
     await renderPage()
 
     await vi.waitFor(() =>
@@ -205,8 +333,10 @@ describe('PipelineEditorPage', () => {
     expect(navigation?.className).toContain('pipeline-workspace__navigation')
     expect(navigation?.className).toContain('relative')
     expect(navigation?.className).not.toContain('absolute')
-    expect(navigation?.className).toContain('p-1')
+    expect(navigation?.className).not.toContain('p-1')
     expect(navigation?.parentElement?.className).toContain('flex')
+    expect(navigation?.parentElement?.className).toContain('gap-1')
+    expect(navigation?.parentElement?.className).toContain('p-1')
     expect(navigation?.firstElementChild?.className).toContain(
       'pipeline-workspace__navigation-panel',
     )
@@ -232,8 +362,76 @@ describe('PipelineEditorPage', () => {
       expect(document.querySelector('[data-testid="pipeline-canvas"]')).not.toBeNull(),
     )
 
-    expect(document.querySelector('[aria-label="Show node library"]')).not.toBeNull()
+    expect(document.querySelector('[aria-label="Add node"]')).not.toBeNull()
     expect(container?.textContent).not.toContain('Select a node')
+  })
+
+  it('keeps workspace actions, inspector, and canvas controls in separate layers', async () => {
+    await renderPage()
+
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="pipeline-canvas"]')).not.toBeNull(),
+    )
+
+    expect(document.querySelector('[data-workflow-header]')).not.toBeNull()
+    expect(document.querySelector('.pipeline-canvas__top-overlay')).toBeNull()
+    expect(document.querySelector('.pipeline-canvas__operator')).not.toBeNull()
+
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-testid="pipeline-canvas"]')?.click(),
+    )
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-workflow-right-panel]')).not.toBeNull(),
+    )
+  })
+
+  it('opens the shared node selector from Build navigation and inserts a selected Source table', async () => {
+    await renderPage()
+
+    await vi.waitFor(() => expect(document.querySelector('[aria-label="Add node"]')).not.toBeNull())
+    await act(async () => document.querySelector<HTMLElement>('[aria-label="Add node"]')?.click())
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull()
+
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-node-selector-source="mysql_feynman"]')?.click(),
+    )
+    await act(async () =>
+      document
+        .querySelector<HTMLElement>('[data-node-selector-table="mysql_feynman:Player"]')
+        ?.click(),
+    )
+
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
+    const saveButton = elementWithText('button', 'Save')
+    expect(saveButton?.hasAttribute('disabled')).toBe(false)
+    await act(async () => saveButton?.click())
+    await vi.waitFor(() => expect(updatePipeline).toHaveBeenCalledTimes(1))
+    expect(updatePipeline.mock.calls[0]?.[1]).toMatchObject({
+      sources: expect.arrayContaining(['mysql_feynman']),
+    })
+  })
+
+  it('inserts a transform connected from an unconnected node output', async () => {
+    await renderPage()
+
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="request-add"]')).not.toBeNull(),
+    )
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-testid="request-add"]')?.click(),
+    )
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-node-choice="transform:filter"]')?.click(),
+    )
+
+    const saveButton = elementWithText('button', 'Save')
+    await act(async () => saveButton?.click())
+    await vi.waitFor(() => expect(updatePipeline).toHaveBeenCalledTimes(1))
+    expect(updatePipeline.mock.calls[0]?.[1]).toMatchObject({
+      transforms: expect.arrayContaining([
+        expect.objectContaining({ id: 'filter_1', type: 'filter', from: 'mysql.orders' }),
+      ]),
+    })
   })
 
   it('loads status and metrics after navigating to Monitoring', async () => {
@@ -252,6 +450,25 @@ describe('PipelineEditorPage', () => {
     expect(getPipelineLogs).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function))
     expect(getPipelineStatus).not.toHaveBeenCalled()
     expect(getPipelineMetrics).not.toHaveBeenCalled()
+  })
+
+  it('gives the Logs route one page heading owned by the logs content', async () => {
+    await renderPage('logs')
+
+    await vi.waitFor(() => expect(container?.textContent).toContain('Pipeline logs'))
+    const workspace = document.querySelector<HTMLElement>('[data-testid="pipeline-workspace"]')
+    const main = document.querySelector<HTMLElement>('[data-testid="workspace-main"]')
+    const headings = [...(container?.querySelectorAll('h1') ?? [])]
+    expect(headings).toHaveLength(1)
+    expect(headings[0]?.textContent).toBe('Pipeline logs')
+    expect(workspace?.className).toContain('gap-1')
+    expect(workspace?.className).toContain('p-1')
+    expect(main?.className).toContain('pipeline-workspace__main')
+    expect(main?.className).toContain('pipeline-workspace__main--logs')
+    expect(main?.className).toContain('flex-1')
+    expect(container?.textContent).toContain(
+      'Inspect the latest runtime log lines captured for this Pipeline.',
+    )
   })
 
   it('shows serve nodes as unpublished API access rather than fabricating an endpoint', async () => {
@@ -279,6 +496,35 @@ describe('PipelineEditorPage', () => {
     )
     expect(container?.textContent).toContain('normalize')
     expect(container?.textContent).toContain('map')
+  })
+
+  it('includes edited node configuration in the save mutation and clears dirty state', async () => {
+    await renderPage()
+
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="pipeline-canvas"]')).not.toBeNull(),
+    )
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-testid="pipeline-canvas"]')?.click(),
+    )
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="change-node-config"]')).not.toBeNull(),
+    )
+
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-testid="change-node-config"]')?.click(),
+    )
+    const saveButton = elementWithText('button', 'Save')
+    expect(saveButton?.hasAttribute('disabled')).toBe(false)
+
+    await act(async () => saveButton?.click())
+    await vi.waitFor(() => expect(updatePipeline).toHaveBeenCalledTimes(1))
+    expect(updatePipeline.mock.calls[0]?.[1]).toMatchObject({
+      transforms: [expect.objectContaining({ id: 'normalize', expr: 'updated-expression' })],
+    })
+    await vi.waitFor(() =>
+      expect(elementWithText('button', 'Save')?.hasAttribute('disabled')).toBe(true),
+    )
   })
 
   it('resizes the node configuration panel with pointer and keyboard input', async () => {

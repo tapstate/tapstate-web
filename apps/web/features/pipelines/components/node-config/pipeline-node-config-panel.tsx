@@ -35,7 +35,8 @@ import {
   createPipelineDataNodeSchema,
   type PipelineFormilySchema,
   type PipelineSchemaOption,
-} from './pipeline-node-schema'
+  type PipelineTableLoader,
+} from './pipeline-data-node-schema'
 
 type FormValues = Record<string, unknown>
 
@@ -63,6 +64,7 @@ function localizedDataSchema(
   options: {
     sourceOptions?: readonly PipelineSchemaOption[]
     tableOptions?: readonly PipelineSchemaOption[]
+    loadTables?: PipelineTableLoader
   } = {},
 ) {
   const labels: Record<string, string> =
@@ -70,19 +72,18 @@ function localizedDataSchema(
       ? {
           sourceId: t('pipelines.workspace.config.source'),
           table: t('pipelines.workspace.config.table'),
-          connector: t('pipelines.workspace.config.connector'),
           filter: t('pipelines.workspace.config.filter'),
         }
       : {
           sourceId: t('pipelines.workspace.config.targetSource'),
           table: t('pipelines.workspace.config.targetTable'),
-          connector: t('pipelines.workspace.config.connector'),
           writeMode: t('pipelines.workspace.config.writeMode'),
         }
   const schema = createPipelineDataNodeSchema(kind, {
     labels,
     sourceOptions: options.sourceOptions,
     tableOptions: options.tableOptions,
+    loadTables: options.loadTables,
   })
   const properties = Object.fromEntries(
     Object.entries(schema.properties ?? {}).map(([name, property]) => [
@@ -107,7 +108,6 @@ function dataNodeValues(
   return {
     sourceId: configuration.sourceId,
     table: configuration.table,
-    connector: configuration.connectorId ?? '',
     filter: configuration.kind === 'source' ? (configuration.filter ?? '') : undefined,
     writeMode: configuration.kind === 'target' ? configuration.writeMode : undefined,
   }
@@ -117,11 +117,13 @@ function DataNodeForm({
   configuration,
   sourceOptions,
   tableOptions,
+  loadTables,
   onChange,
 }: {
   configuration: Extract<PipelineNodeConfiguration, { kind: 'source' | 'target' }>
   sourceOptions?: readonly PipelineSchemaOption[]
   tableOptions?: readonly PipelineSchemaOption[]
+  loadTables?: PipelineTableLoader
   onChange?: (values: FormValues) => void
 }) {
   const { t } = useTranslation()
@@ -135,14 +137,12 @@ function DataNodeForm({
       if (synchronizing.current) return
       setValues(nextValues)
 
-      // Connector is a read-only projection field and is not part of the editable payload.
-      const { connector: _connector, ...editableValues } = nextValues
-      onChange?.(editableValues)
+      onChange?.(nextValues)
     },
   })
   const schema = useMemo(
-    () => localizedDataSchema(configuration.kind, t, { sourceOptions, tableOptions }),
-    [configuration.kind, sourceOptions, tableOptions, t],
+    () => localizedDataSchema(configuration.kind, t, { sourceOptions, tableOptions, loadTables }),
+    [configuration.kind, loadTables, sourceOptions, tableOptions, t],
   )
 
   useEffect(() => {
@@ -189,6 +189,7 @@ export function PipelineNodeConfigPanel({
   onDescriptionChange,
   sourceOptions,
   tableOptions,
+  loadTables,
 }: {
   selection: PipelineCanvasSelection
   onClose: () => void
@@ -196,6 +197,7 @@ export function PipelineNodeConfigPanel({
   onDescriptionChange?: (description: string) => void
   sourceOptions?: readonly PipelineSchemaOption[]
   tableOptions?: readonly PipelineSchemaOption[]
+  loadTables?: PipelineTableLoader
 }) {
   const { t } = useTranslation()
   const configuration = selection.configuration
@@ -262,6 +264,7 @@ export function PipelineNodeConfigPanel({
             configuration={configuration}
             sourceOptions={sourceOptions}
             tableOptions={tableOptions}
+            loadTables={loadTables}
             onChange={emit}
           />
         ) : null}

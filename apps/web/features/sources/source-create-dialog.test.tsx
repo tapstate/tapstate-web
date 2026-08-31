@@ -60,6 +60,16 @@ const detail: ConnectorDetail = {
       options: [],
       visibleWhen: null,
     },
+    {
+      name: 'port',
+      type: 'string',
+      label: 'Port',
+      required: true,
+      defaultValue: '3306',
+      secret: false,
+      options: [],
+      visibleWhen: null,
+    },
   ],
   spec: {
     contentHash: 'a'.repeat(64),
@@ -74,6 +84,14 @@ const detail: ConnectorDetail = {
               required: true,
               'x-decorator': 'FormItem',
               'x-component': 'Input',
+            },
+            port: {
+              type: 'string',
+              title: 'Spec port',
+              default: '3306',
+              required: true,
+              'x-decorator': 'FormItem',
+              'x-component': 'InputNumber',
             },
           },
         },
@@ -395,7 +413,7 @@ describe('SourceCreateDialog', () => {
         {
           id: 'orders',
           connectorId: 'mysql',
-          settings: { host: 'db.internal' },
+          settings: { host: 'db.internal', port: 3306 },
         },
         expect.any(Function),
       )

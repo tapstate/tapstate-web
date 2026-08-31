@@ -1,28 +1,11 @@
-import type { ComponentType, SVGProps } from 'react'
-
 import { useQuery } from '@tanstack/react-query'
-import {
-  ChevronDown,
-  ChevronRight,
-  Database,
-  GitMerge,
-  LayoutTemplate,
-  Network,
-  Plus,
-  Sparkles,
-} from 'lucide-react'
+import { GitMerge, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import type { ApiFetcher } from '@/service/source-client'
+
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import {
   listPipelines,
@@ -31,17 +14,32 @@ import {
 } from '@/service/pipelines/pipeline-client'
 import { useAuthStore } from '@/stores/auth-store'
 
+import { PipelineCreationDialog } from '../components/create/pipeline-creation-dialog'
 import { TreeItem } from '../components/navigation/tree-item'
-import { WizardBuilder } from './wizard-builder'
+import {
+  PipelineLifecycleMenu,
+  type PipelineLifecycleAction,
+} from '../components/pipeline-lifecycle-menu'
+import { PipelineMutationFeedback } from '../components/pipeline-mutation-feedback'
 
 export function PipelinesPage() {
   const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [creationMode, setCreationMode] = useState<'wizard' | null>(null)
+  const [isCreationDialogOpen, setIsCreationDialogOpen] = useState(false)
+  const [lifecycleFeedback, setLifecycleFeedback] = useState<{
+    pipelineId: string
+    action: PipelineLifecycleAction
+    message?: string
+  } | null>(null)
   const pipelinesQuery = useQuery({
     queryKey: ['pipelines'],
     queryFn: () => listPipelines(apiFetch),
+    // Runtime state is mutable outside this screen. Keep lifecycle actions
+    // aligned with the control plane instead of allowing a stale Start action
+    // to remain visible after another worker has already started the Pipeline.
+    refetchInterval: 5000,
+    refetchIntervalInBackground: false,
   })
   const pipelines = pipelinesQuery.data ?? []
   const selectedPipeline = useMemo(
@@ -49,102 +47,20 @@ export function PipelinesPage() {
     [pipelines, selectedId],
   )
 
-  const createModes: Array<{
-    value: 'wizard' | 'sql' | 'dag' | 'ai'
-    labelKey: string
-    descriptionKey: string
-    icon: ComponentType<SVGProps<SVGSVGElement>>
-    iconClass: string
-  }> = [
-    {
-      value: 'wizard',
-      labelKey: 'pipelines.createMenu.wizard',
-      descriptionKey: 'pipelines.createMenu.wizardDescription',
-      icon: LayoutTemplate,
-      iconClass: 'bg-gray-100 text-gray-600 group-hover:bg-gray-200',
-    },
-    {
-      value: 'sql',
-      labelKey: 'pipelines.createMenu.sql',
-      descriptionKey: 'pipelines.createMenu.sqlDescription',
-      icon: Database,
-      iconClass: 'bg-blue-50 text-blue-600 group-hover:bg-blue-100',
-    },
-    {
-      value: 'dag',
-      labelKey: 'pipelines.createMenu.dag',
-      descriptionKey: 'pipelines.createMenu.dagDescription',
-      icon: Network,
-      iconClass: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100',
-    },
-    {
-      value: 'ai',
-      labelKey: 'pipelines.createMenu.ai',
-      descriptionKey: 'pipelines.createMenu.aiDescription',
-      icon: Sparkles,
-      iconClass: 'bg-purple-50 text-purple-600 group-hover:bg-purple-100',
-    },
-  ]
-
-  if (creationMode === 'wizard') return <WizardBuilder onBack={() => setCreationMode(null)} />
   return (
     <section className="flex h-full w-full flex-col overflow-hidden bg-white">
       <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-gray-100/70 px-4 md:px-6">
         <h1 className="min-w-0 truncate text-[15px] font-semibold text-gray-900">
           {t('pipelines.title')}
         </h1>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button type="button" className="shrink-0 px-3 text-[13px] font-medium shadow-sm">
-              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-              {t('common.create')}
-              <ChevronDown className="-mr-1 ml-0.5 h-3.5 w-3.5 opacity-70" aria-hidden="true" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            className="w-72 border-gray-200/70 p-1.5 shadow-[0_12px_40px_rgba(15,23,42,0.12)]"
-          >
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>{t('pipelines.createMenu.title')}</DropdownMenuLabel>
-              {createModes.map((mode) => {
-                const Icon = mode.icon
-                const item = (
-                  <>
-                    <span
-                      className={cn(
-                        'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors',
-                        mode.iconClass,
-                      )}
-                    >
-                      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-[13px] font-medium text-gray-900">
-                        {t(mode.labelKey)}
-                      </span>
-                      <span className="block text-[11px] text-gray-500">
-                        {t(mode.descriptionKey)}
-                      </span>
-                    </span>
-                  </>
-                )
-                return (
-                  <DropdownMenuItem
-                    key={mode.labelKey}
-                    className="group items-start gap-3 px-3 py-2"
-                    disabled={mode.value === 'dag'}
-                    onClick={() => {
-                      if (mode.value === 'wizard') setCreationMode(mode.value)
-                    }}
-                  >
-                    {item}
-                  </DropdownMenuItem>
-                )
-              })}
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button
+          type="button"
+          className="shrink-0 px-3 text-[13px] font-medium shadow-sm"
+          onClick={() => setIsCreationDialogOpen(true)}
+        >
+          <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+          {t('common.create')}
+        </Button>
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col bg-white md:flex-row">
@@ -210,13 +126,40 @@ export function PipelinesPage() {
             ) : pipelines.length === 0 ? (
               <PipelineListState message={t('pipelines.states.empty')} />
             ) : (
-              <PipelineTable pipelines={pipelines} />
+              <PipelineTable
+                pipelines={pipelines}
+                apiFetch={apiFetch}
+                onMutationError={(pipelineId, action, error) => {
+                  const message = serverErrorMessage(error)
+                  setLifecycleFeedback({ pipelineId, action, message })
+                }}
+                onMutationStart={() => setLifecycleFeedback(null)}
+              />
             )}
           </div>
         </main>
       </div>
+      {lifecycleFeedback && (
+        <PipelineMutationFeedback
+          pipelineId={lifecycleFeedback.pipelineId}
+          action={lifecycleFeedback.action}
+          message={lifecycleFeedback.message}
+          onDismiss={() => setLifecycleFeedback(null)}
+        />
+      )}
+      {isCreationDialogOpen && (
+        <PipelineCreationDialog open onClose={() => setIsCreationDialogOpen(false)} />
+      )}
     </section>
   )
+}
+
+function serverErrorMessage(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null || Array.isArray(error)) return undefined
+  const candidate = error as { code?: unknown; message?: unknown }
+  return typeof candidate.code === 'string' && typeof candidate.message === 'string'
+    ? candidate.message
+    : undefined
 }
 
 function PipelineHeader({ pipeline }: { pipeline: PipelineView }) {
@@ -246,79 +189,95 @@ function PipelineListState({ message, action }: { message: string; action?: Reac
   )
 }
 
-function PipelineTable({ pipelines }: { pipelines: PipelineView[] }) {
+function PipelineTable({
+  pipelines,
+  apiFetch,
+  onMutationError,
+  onMutationStart,
+}: {
+  pipelines: PipelineView[]
+  apiFetch: ApiFetcher
+  onMutationError: (pipelineId: string, action: PipelineLifecycleAction, error?: unknown) => void
+  onMutationStart: () => void
+}) {
   const { t } = useTranslation()
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200/70">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-[13px]">
-          <thead className="border-b border-gray-200/70 bg-gray-50/70 text-gray-500">
-            <tr>
-              <th className="px-4 py-3 font-medium">{t('pipelines.table.resourceName')}</th>
-              <th className="hidden px-4 py-3 font-medium sm:table-cell">
-                {t('pipelines.table.type')}
-              </th>
-              <th className="hidden px-4 py-3 font-medium md:table-cell">
-                {t('pipelines.table.version')}
-              </th>
-              <th className="px-4 py-3 font-medium">{t('pipelines.table.status')}</th>
+    <div className="overflow-x-auto">
+      <table className="pipeline-list__table w-full border-collapse text-left text-[13px]">
+        <thead className="border-b border-gray-100 bg-transparent text-[11px] font-semibold tracking-wider text-gray-500 uppercase">
+          <tr>
+            <th className="px-4 py-3 font-semibold">{t('pipelines.table.resourceName')}</th>
+            <th className="hidden px-4 py-3 font-semibold sm:table-cell">
+              {t('pipelines.table.type')}
+            </th>
+            <th className="hidden px-4 py-3 font-semibold md:table-cell">
+              {t('pipelines.table.version')}
+            </th>
+            <th className="px-4 py-3 font-semibold">{t('pipelines.table.status')}</th>
+            <th className="w-20 px-4 py-3" aria-hidden="true" />
+          </tr>
+        </thead>
+        <tbody>
+          {pipelines.map((pipeline) => (
+            <tr
+              key={pipeline.id}
+              className="group relative border-b border-gray-100/60 transition-colors focus-within:bg-gray-50/50 hover:bg-gray-50/50"
+            >
+              <td className="px-4 py-3">
+                <a
+                  className="inline-flex min-h-9 max-w-full items-center gap-2.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                  href={`/pipelines/${encodeURIComponent(pipeline.id)}/edit`}
+                  aria-label={t('pipelines.actions.editPipeline', { id: pipeline.id })}
+                >
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                    <GitMerge className="h-3.5 w-3.5 text-blue-500" aria-hidden="true" />
+                  </span>
+                  <span
+                    className="min-w-0 text-[13px] font-medium break-words text-gray-900"
+                    title={pipeline.id}
+                  >
+                    {pipeline.id}
+                  </span>
+                </a>
+              </td>
+              <td className="hidden px-4 py-3 text-[13px] text-gray-500 sm:table-cell">
+                {t('pipelines.type.pipeline')}
+              </td>
+              <td className="hidden px-4 py-3 md:table-cell">
+                <code className="font-mono text-[12px] text-gray-400" title={pipeline.contentHash}>
+                  {pipeline.contentHash.slice(0, 12)}
+                </code>
+              </td>
+              <td className="px-4 py-3">
+                <PipelineStatusCell status={pipeline.status?.state} />
+              </td>
+              <td className="relative w-20 px-4 py-3">
+                <PipelineLifecycleMenu
+                  pipelineId={pipeline.id}
+                  status={pipeline.status?.state}
+                  contentHash={pipeline.contentHash}
+                  apiFetch={apiFetch}
+                  onMutationStart={onMutationStart}
+                  onMutationError={(action, error) => onMutationError(pipeline.id, action, error)}
+                />
+              </td>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100/70">
-            {pipelines.map((pipeline) => (
-              <tr
-                key={pipeline.id}
-                className="group transition-colors focus-within:bg-gray-50/70 hover:bg-gray-50/70"
-              >
-                <td className="px-4 py-2.5">
-                  <a
-                    className="inline-flex min-h-9 max-w-full items-center gap-2.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-                    href={`/pipelines/${encodeURIComponent(pipeline.id)}/edit`}
-                    aria-label={t('pipelines.actions.editPipeline', { id: pipeline.id })}
-                  >
-                    <div className="flex h-6 w-6 items-center justify-center rounded-lg border border-gray-200/70 bg-gray-50">
-                      <GitMerge className="h-3.5 w-3.5 text-blue-500" aria-hidden="true" />
-                    </div>
-                    <span className="min-w-0 font-medium break-words text-gray-900">
-                      {pipeline.id}
-                    </span>
-                    <ChevronRight
-                      className="h-3.5 w-3.5 shrink-0 text-gray-400 transition-all md:-translate-x-1 md:opacity-0 md:group-focus-within:translate-x-0 md:group-focus-within:opacity-100 md:group-hover:translate-x-0 md:group-hover:opacity-100"
-                      aria-hidden="true"
-                    />
-                  </a>
-                </td>
-                <td className="hidden px-4 py-3 text-gray-500 sm:table-cell">
-                  {t('pipelines.type.pipeline')}
-                </td>
-                <td className="hidden px-4 py-3 md:table-cell">
-                  <code
-                    className="font-mono text-[12px] text-gray-500"
-                    title={pipeline.contentHash}
-                  >
-                    {pipeline.contentHash.slice(0, 12)}
-                  </code>
-                </td>
-                <td className="px-4 py-3">
-                  <PipelineStatusCell status={pipeline.status?.state} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }
 
 const pipelineStatusClasses: Record<PipelineRuntimeState, string> = {
-  NEW: 'pipeline-list__status--new',
-  RUNNING: 'pipeline-list__status--running',
-  PAUSED: 'pipeline-list__status--paused',
-  STOPPED: 'pipeline-list__status--stopped',
-  COMPLETED: 'pipeline-list__status--completed',
-  FAILED: 'pipeline-list__status--failed',
+  NEW: 'pipeline-list__status--new text-sky-700 bg-sky-50/80 border-sky-200/50',
+  RUNNING: 'pipeline-list__status--running text-blue-700 bg-blue-50/80 border-blue-200/50',
+  PAUSED: 'pipeline-list__status--paused text-slate-600 bg-slate-100 border-slate-200',
+  STOPPED: 'pipeline-list__status--stopped text-slate-600 bg-slate-100 border-slate-200',
+  COMPLETED:
+    'pipeline-list__status--completed text-emerald-700 bg-emerald-50/80 border-emerald-200/50',
+  FAILED: 'pipeline-list__status--failed text-rose-700 bg-rose-50/80 border-rose-200/50',
 }
 
 function PipelineStatusCell({ status }: { status?: PipelineRuntimeState }) {
@@ -326,7 +285,7 @@ function PipelineStatusCell({ status }: { status?: PipelineRuntimeState }) {
 
   if (!status) {
     return (
-      <span className="pipeline-list__status pipeline-list__status--unavailable">
+      <span className="pipeline-list__status pipeline-list__status--unavailable border-gray-200 bg-gray-50 text-gray-500">
         <span className="pipeline-list__status-dot" aria-hidden="true" />
         {t('pipelines.status.unavailable')}
       </span>
@@ -334,7 +293,12 @@ function PipelineStatusCell({ status }: { status?: PipelineRuntimeState }) {
   }
 
   return (
-    <span className={cn('pipeline-list__status', pipelineStatusClasses[status])}>
+    <span
+      className={cn(
+        'pipeline-list__status inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[12px] leading-5 font-medium',
+        pipelineStatusClasses[status],
+      )}
+    >
       <span className="pipeline-list__status-dot" aria-hidden="true" />
       {t(['pipelines.workspace.runtime.states', status].join('.'))}
     </span>

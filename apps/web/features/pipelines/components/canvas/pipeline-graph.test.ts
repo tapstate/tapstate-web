@@ -281,7 +281,7 @@ describe('pipelineDagToFlow', () => {
         hasInput: false,
         hasOutput: false,
         showInput: true,
-        showOutput: false,
+        showOutput: true,
       },
     ])
   })

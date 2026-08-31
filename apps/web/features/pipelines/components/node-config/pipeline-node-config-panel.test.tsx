@@ -1,10 +1,10 @@
 import '@/i18n/index'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { PipelineCanvasSelection } from '../canvas/pipeline-canvas-types'
-import type { PipelineSchemaOption } from './pipeline-node-schema'
+import type { PipelineSchemaOption, PipelineTableLoader } from './pipeline-data-node-schema'
 
 import { PipelineNodeConfigPanel } from './pipeline-node-config-panel'
 
@@ -39,6 +39,7 @@ async function renderPanel(
   options: {
     sourceOptions?: readonly PipelineSchemaOption[]
     tableOptions?: readonly PipelineSchemaOption[]
+    loadTables?: PipelineTableLoader
   } = {},
   onDescriptionChange?: (description: string) => void,
 ) {
@@ -54,6 +55,7 @@ async function renderPanel(
         onDescriptionChange={onDescriptionChange}
         sourceOptions={options.sourceOptions}
         tableOptions={options.tableOptions}
+        loadTables={options.loadTables}
       />,
     )
   })
@@ -78,18 +80,14 @@ const sourceSelection: PipelineCanvasSelection = {
 }
 
 describe('PipelineNodeConfigPanel', () => {
-  it('renders Source configuration through Formily and keeps connector read-only', async () => {
+  it('renders Source configuration without connector metadata', async () => {
     const host = await renderPanel(sourceSelection)
 
     expect(host.textContent).toContain('Source')
     expect(host.textContent).toContain('Table')
-    expect(host.textContent).toContain('Connector')
+    expect(host.textContent).not.toContain('Connector')
     expect(host.textContent).toContain('Table filter')
-
-    const connector = [...host.querySelectorAll<HTMLInputElement>('input')].find(
-      (input) => input.value === 'mysql',
-    )
-    expect(connector?.disabled).toBe(true)
+    expect(host.querySelector('[role="combobox"]')).not.toBeNull()
   })
 
   it('renders Target configuration with the write mode selector', async () => {
@@ -123,6 +121,17 @@ describe('PipelineNodeConfigPanel', () => {
     expect(host.querySelectorAll('[role="combobox"]')).toHaveLength(2)
     expect(host.textContent).toContain('MySQL source')
     expect(host.textContent).toContain('Player')
+  })
+
+  it('loads a source table catalog through Formily x-reactions', async () => {
+    const loadTables = vi.fn(async () => [{ label: 'Player', value: 'Player' }])
+    await renderPanel(sourceSelection, undefined, { loadTables })
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(loadTables).toHaveBeenCalledWith('mysql_feynman')
   })
 
   it('edits the node description in the panel header', async () => {

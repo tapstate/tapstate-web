@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
+import type { ConnectorConfigField } from '@/service/source-client'
+
 import {
   connectorSpecConnectionSchema,
   connectorSpecInitialValues,
+  normalizeConnectorConfigFields,
+  normalizeConnectorConfigValues,
 } from './connector-spec-formily-schema'
 
 const specText = JSON.stringify({
@@ -186,5 +190,45 @@ describe('connector spec Formily schema', () => {
     expect(() =>
       connectorSpecConnectionSchema(JSON.stringify({ configOptions: {} }), 'en'),
     ).toThrow('configOptions.connection')
+  })
+
+  it('normalizes the legacy MySQL port schema and values at the connector boundary', () => {
+    const mysqlSpec = JSON.stringify({
+      configOptions: {
+        connection: {
+          type: 'object',
+          properties: {
+            port: {
+              type: 'string',
+              default: '3306',
+              'x-component': 'InputNumber',
+            },
+          },
+        },
+      },
+    })
+    const mysqlFields: ConnectorConfigField[] = [
+      {
+        name: 'port',
+        type: 'string',
+        label: 'Port',
+        required: true,
+        defaultValue: '3306',
+        secret: false,
+        options: [],
+        visibleWhen: null,
+      },
+    ]
+
+    expect(connectorSpecConnectionSchema(mysqlSpec, 'en', 'mysql')).toMatchObject({
+      properties: { port: { type: 'number', default: 3306, 'x-component': 'InputNumber' } },
+    })
+    expect(connectorSpecInitialValues(mysqlSpec, 'mysql')).toEqual({ port: 3306 })
+    expect(normalizeConnectorConfigFields('mysql', mysqlFields)[0]).toMatchObject({
+      name: 'port',
+      type: 'number',
+    })
+    expect(normalizeConnectorConfigValues('mysql', { port: '3307' })).toEqual({ port: 3307 })
+    expect(normalizeConnectorConfigValues('postgres', { port: '3307' })).toEqual({ port: '3307' })
   })
 })

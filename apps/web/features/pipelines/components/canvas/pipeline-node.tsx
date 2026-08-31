@@ -20,7 +20,17 @@ export function PipelineNode({ data, selected }: NodeProps<CanvasNode>) {
     >
       <div className="pipeline-canvas__node-surface">
         {data.showInput && (
-          <PipelineHandle direction="input" nodeLabel={data.label} connected={data.hasInput} />
+          <PipelineHandle
+            direction="input"
+            nodeLabel={data.label}
+            connected={data.hasInput}
+            onRequestAdd={
+              data.onRequestAdd
+                ? (handleDirection, screenPosition) => data.onRequestAdd?.(handleDirection, screenPosition)
+                : undefined
+            }
+            isConnectable
+          />
         )}
         <div className="pipeline-canvas__node-header flex min-w-0 items-center gap-2 rounded-t-2xl px-3 pt-3 pb-2">
           <PipelineNodeIcon data={data} />
@@ -34,7 +44,20 @@ export function PipelineNode({ data, selected }: NodeProps<CanvasNode>) {
           </p>
         )}
         {data.showOutput && (
-          <PipelineHandle direction="output" nodeLabel={data.label} connected={data.hasOutput} />
+          <PipelineHandle
+            direction="output"
+            nodeLabel={data.label}
+            connected={data.hasOutput}
+            // Keep every node's output port interactive. A target can be
+            // extended in the editor before its eventual role is resolved;
+            // the graph validator handles semantic constraints separately.
+            isConnectable
+            onRequestAdd={
+              data.onRequestAdd
+                ? (handleDirection, screenPosition) => data.onRequestAdd?.(handleDirection, screenPosition)
+                : undefined
+            }
+          />
         )}
       </div>
     </div>

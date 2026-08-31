@@ -5,39 +5,24 @@ import { useTranslation } from 'react-i18next'
 
 import type { TransformEditorProps } from './types'
 
-import { FilterEditor } from './filter-editor'
-import { JoinEditor } from './join-editor'
-import { JsEditor } from './js-editor'
-import { MapEditor } from './map-editor'
-import { NestEditor } from './nest-editor'
+import { getPipelineTransformDefinition } from './registry'
 import { TransformEditorShell } from './transform-editor-shell'
-import { UnionEditor } from './union-editor'
 
 export function TransformEditor({ config, onChange }: TransformEditorProps) {
   const { t } = useTranslation()
-  switch (config.transformType) {
-    case 'filter':
-      return <FilterEditor config={config} onChange={onChange} />
-    case 'map':
-      return <MapEditor config={config} onChange={onChange} />
-    case 'join':
-      return <JoinEditor config={config} onChange={onChange} />
-    case 'union':
-      return <UnionEditor config={config} onChange={onChange} />
-    case 'nest':
-      return <NestEditor config={config} onChange={onChange} />
-    case 'js':
-      return <JsEditor config={config} onChange={onChange} />
-    default:
-      return (
-        <UnknownTransformEditor
-          config={config}
-          onChange={onChange}
-          title={config.transformType}
-          description={t('pipelines.workspace.transform.customDescription')}
-        />
-      )
+  const definition = getPipelineTransformDefinition(config.transformType)
+  if (definition) {
+    const Editor = definition.editor
+    return <Editor config={config} onChange={onChange} />
   }
+  return (
+    <UnknownTransformEditor
+      config={config}
+      onChange={onChange}
+      title={config.transformType}
+      description={t('pipelines.workspace.transform.customDescription')}
+    />
+  )
 }
 
 function UnknownTransformEditor({
