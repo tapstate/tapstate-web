@@ -33,6 +33,8 @@ export interface CanvasNodeData extends Record<string, unknown> {
   connector: PipelineNodeConnector | null
   hasInput: boolean
   hasOutput: boolean
+  canAddInput?: boolean
+  canAddOutput?: boolean
   showInput: boolean
   showOutput: boolean
   configuration: PipelineNodeConfiguration | null
@@ -41,6 +43,7 @@ export interface CanvasNodeData extends Record<string, unknown> {
     direction: PipelineHandleDirection,
     screenPosition?: PipelineScreenPosition,
   ) => void
+  onRequestDelete?: () => void
 }
 
 export type CanvasNode = Node<CanvasNodeData>

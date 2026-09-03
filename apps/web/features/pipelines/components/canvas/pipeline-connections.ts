@@ -1,6 +1,10 @@
 import type { Connection } from '@xyflow/react'
 
+import type { PipelineDagNode } from '@/service/pipelines/pipeline-client'
+
 import type { CanvasEdge, CanvasNode } from './pipeline-canvas-types'
+
+import { isPipelineDagEdgeValid } from '../../model/pipeline-node-rules'
 
 /** Validates a user-created connection against the editor's directional port contract. */
 export function isPipelineConnectionValid(
@@ -23,5 +27,17 @@ export function isPipelineConnectionValid(
   if (!sourceNode || !targetNode || !sourceNode.data.showOutput || !targetNode.data.showInput) {
     return false
   }
-  return !edges.some((edge) => edge.source === source && edge.target === target)
+  return isPipelineDagEdgeValid(
+    {
+      id: sourceNode.id,
+      type: sourceNode.data.nodeType as PipelineDagNode['type'],
+      detail: sourceNode.data.detail,
+    },
+    {
+      id: targetNode.id,
+      type: targetNode.data.nodeType as PipelineDagNode['type'],
+      detail: targetNode.data.detail,
+    },
+    edges,
+  )
 }

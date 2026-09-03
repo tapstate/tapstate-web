@@ -34,7 +34,7 @@ describe('pipelineDataNodeSchema', () => {
     expect(schema.properties?.filter?.default).toBe('')
   })
 
-  it('turns catalog-backed identity fields into selects', () => {
+  it('keeps Source tables catalog-backed while Target tables support catalog choices and new names', () => {
     const schema = createPipelineDataNodeSchema('target', {
       sourceOptions: [{ label: 'Warehouse', value: 'warehouse' }],
       tableOptions: [{ label: 'player', value: 'player' }],
@@ -42,8 +42,18 @@ describe('pipelineDataNodeSchema', () => {
 
     expect(schema.properties?.sourceId?.['x-component']).toBe('Select')
     expect(schema.properties?.sourceId?.enum).toEqual([{ label: 'Warehouse', value: 'warehouse' }])
-    expect(schema.properties?.table?.['x-component']).toBe('Select')
-    expect(schema.properties?.table?.enum).toEqual([{ label: 'player', value: 'player' }])
+    expect(schema.properties?.table?.['x-component']).toBe('PipelineTableAutocomplete')
+    expect(schema.properties?.table?.['x-component-props']).toMatchObject({
+      allowClear: true,
+      options: [{ label: 'player', value: 'player' }],
+    })
+
+    const sourceSchema = createPipelineDataNodeSchema('source', {
+      sourceOptions: [{ label: 'Warehouse', value: 'warehouse' }],
+      tableOptions: [{ label: 'player', value: 'player' }],
+    })
+    expect(sourceSchema.properties?.table?.['x-component']).toBe('Select')
+    expect(sourceSchema.properties?.table?.enum).toEqual([{ label: 'player', value: 'player' }])
   })
 
   it('refreshes the table catalog through an async x-reaction', async () => {

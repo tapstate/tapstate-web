@@ -527,6 +527,11 @@
         "retry": "重試",
         "toolbar": "Pipeline 操作",
         "canvasTools": "畫布工具",
+        "nodeToolbar": {
+          "label": "{{node}} 操作",
+          "more": "{{node}} 更多操作",
+          "delete": "刪除 {{node}}"
+        },
         "pointerMode": "選取模式",
         "handMode": "拖動畫布",
         "fitCanvas": "適應 Pipeline",
@@ -536,11 +541,14 @@
         "run": "執行",
         "running": "執行中…",
         "saveFailed": "Pipeline 變更儲存失敗。",
-        "runFailed": "Pipeline 啟動失敗。"
+        "runFailed": "Pipeline 啟動失敗。",
+        "draftSaveUnavailable": "請先新增並連接至少一個 Source，再儲存這個新 Pipeline。",
+        "draftRunUnavailable": "請先儲存這個新 Pipeline，再執行它。"
       },
       "diagnostics": {
         "title": "儲存前請修正以下問題",
         "danglingEdge": "連線指向不存在的節點。",
+        "invalidEdge": "這條連線不符合節點的輸入或輸出規則。",
         "cycle": "圖中存在循環依賴。",
         "isolatedNode": "儲存前請將此節點連接到 Pipeline。",
         "missingConfiguration": "儲存前請完成此節點設定。",
@@ -561,6 +569,7 @@
         "title": "新增節點",
         "searchPlaceholder": "搜尋節點",
         "close": "關閉節點選擇器",
+        "insertOnEdge": "在此連線中插入節點",
         "sources": "Source",
         "processing": "處理",
         "output": "輸出",
@@ -607,7 +616,11 @@
       },
       "handles": {
         "input": "{{node}} 的輸入連接埠",
-        "output": "{{node}} 的輸出連接埠"
+        "output": "{{node}} 的輸出連接埠",
+        "click": "點擊",
+        "clickDescription": "新增節點",
+        "drag": "拖動",
+        "dragDescription": "連接節點"
       },
       "inspector": {
         "eyebrow": "設定",
@@ -625,6 +638,8 @@
         "filter": "資料表篩選器",
         "targetSource": "目標 Source",
         "targetTable": "目標資料表",
+        "targetTablePlaceholder": "選擇或輸入資料表名稱",
+        "noTableOptions": "沒有符合的現有資料表，你可以輸入新的名稱。",
         "writeMode": "寫入模式",
         "description": "描述",
         "descriptionPlaceholder": "新增描述",

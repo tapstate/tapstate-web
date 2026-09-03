@@ -37,6 +37,7 @@ import {
   type PipelineSchemaOption,
   type PipelineTableLoader,
 } from './pipeline-data-node-schema'
+import { PipelineTableAutocomplete } from './pipeline-table-autocomplete'
 
 type FormValues = Record<string, unknown>
 
@@ -56,6 +57,17 @@ const formilyComponents: FormilyComponentMap = {
     }),
   ),
   Select: AntdFormily.Select,
+  PipelineTableAutocomplete: connect(
+    PipelineTableAutocomplete,
+    mapProps((props, field) => {
+      const connectedField = field as Field | undefined
+      return {
+        ...props,
+        value: typeof connectedField?.value === 'string' ? connectedField.value : '',
+        onChange: (value: string) => connectedField?.onInput(value),
+      }
+    }),
+  ),
 }
 
 function localizedDataSchema(

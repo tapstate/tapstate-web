@@ -7,6 +7,11 @@ import type {
   PipelineScreenPosition,
 } from './pipeline-canvas-types'
 
+import {
+  canPipelineNodeAcceptInput,
+  canPipelineNodeEmitOutput,
+} from '../../model/pipeline-node-rules'
+
 export interface FlowNode {
   id: string
   type?: string
@@ -19,6 +24,8 @@ export interface FlowNode {
     connector: PipelineNodeConnector | null
     hasInput: boolean
     hasOutput: boolean
+    canAddInput?: boolean
+    canAddOutput?: boolean
     showInput: boolean
     showOutput: boolean
     configuration: PipelineNodeConfiguration | null
@@ -26,6 +33,7 @@ export interface FlowNode {
       direction: PipelineHandleDirection,
       screenPosition?: PipelineScreenPosition,
     ) => void
+    onRequestDelete?: () => void
   }
 }
 
@@ -165,10 +173,12 @@ export function pipelineDagToFlow(
             : null,
         hasInput: incoming.has(node.id),
         hasOutput: outgoing.has(node.id),
+        canAddInput:
+          nodeTypeAllowsInput(node.type) && canPipelineNodeAcceptInput(node, normalizedDag.edges),
+        canAddOutput:
+          nodeTypeAllowsOutput(node.type) && canPipelineNodeEmitOutput(node, normalizedDag.edges),
         showInput: nodeTypeAllowsInput(node.type),
-        // Every node keeps a right-side source handle so a newly inserted
-        // node can be continued immediately from the canvas.
-        showOutput: true,
+        showOutput: nodeTypeAllowsOutput(node.type),
         configuration: configurations.get(node.id) ?? null,
       },
     }
@@ -188,6 +198,10 @@ export function pipelineDagToFlow(
 
 function nodeTypeAllowsInput(type: string) {
   return type !== 'source'
+}
+
+function nodeTypeAllowsOutput(type: string) {
+  return type !== 'target'
 }
 
 function positionsFor(dag: PipelineDag, columns: Map<string, number>) {

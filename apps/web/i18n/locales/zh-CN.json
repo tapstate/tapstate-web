@@ -527,6 +527,11 @@
         "retry": "重试",
         "toolbar": "Pipeline 操作",
         "canvasTools": "画布工具",
+        "nodeToolbar": {
+          "label": "{{node}} 操作",
+          "more": "{{node}} 更多操作",
+          "delete": "删除 {{node}}"
+        },
         "pointerMode": "选择模式",
         "handMode": "拖动画布",
         "fitCanvas": "适应 Pipeline",
@@ -543,6 +548,7 @@
       "diagnostics": {
         "title": "保存前请修复以下问题",
         "danglingEdge": "连线指向了不存在的节点。",
+        "invalidEdge": "这条连线不符合节点的输入或输出规则。",
         "cycle": "图中存在循环依赖。",
         "isolatedNode": "保存前请将此节点连接到 Pipeline。",
         "missingConfiguration": "保存前请完成此节点配置。",
@@ -563,6 +569,7 @@
         "title": "添加节点",
         "searchPlaceholder": "搜索节点",
         "close": "关闭节点选择器",
+        "insertOnEdge": "在此连接中插入节点",
         "sources": "Source",
         "processing": "处理",
         "output": "输出",
@@ -609,7 +616,11 @@
       },
       "handles": {
         "input": "{{node}} 的输入端口",
-        "output": "{{node}} 的输出端口"
+        "output": "{{node}} 的输出端口",
+        "click": "点击",
+        "clickDescription": "添加节点",
+        "drag": "拖拽",
+        "dragDescription": "连接节点"
       },
       "inspector": {
         "eyebrow": "配置",
@@ -627,6 +638,8 @@
         "filter": "表过滤器",
         "targetSource": "目标 Source",
         "targetTable": "目标表",
+        "targetTablePlaceholder": "选择或输入表名",
+        "noTableOptions": "没有匹配的已有表，你可以输入新表名。",
         "writeMode": "写入模式",
         "description": "描述",
         "descriptionPlaceholder": "添加描述",

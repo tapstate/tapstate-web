@@ -15,6 +15,7 @@ import type {
 
 import { normalizePipelineDag } from '../components/canvas/pipeline-graph'
 import { pipelineNodeConfigurations } from './pipeline-node-model'
+import { isPipelineDagEdgeValid } from './pipeline-node-rules'
 
 export interface PipelineGraphDraft {
   pipeline: PipelineView
@@ -26,6 +27,7 @@ export interface PipelineGraphDraft {
 export type PipelineGraphDiagnosticCode =
   | 'cycle'
   | 'dangling-edge'
+  | 'invalid-edge'
   | 'isolated-node'
   | 'missing-configuration'
   | 'invalid-source-reference'
@@ -195,14 +197,6 @@ export function addPipelineNode(
   const targetNode = connectTo
     ? draft.dag.nodes.find((candidate) => candidate.id === connectTo)
     : undefined
-  const canConnectFrom = Boolean(
-    sourceNode &&
-    !draft.dag.edges.some((edge) => edge.source === connectFrom && edge.target === nodeId),
-  )
-  const canConnectTo = Boolean(
-    targetNode &&
-    !draft.dag.edges.some((edge) => edge.source === nodeId && edge.target === connectTo),
-  )
   const edgeToReplace = edgeToInsert
     ? draft.dag.edges.find(
         (edge) =>
@@ -215,23 +209,49 @@ export function addPipelineNode(
     !edgeToReplace && isIntermediateChoice(choice)
       ? edgeForDirectionalInsertion(draft.dag.edges, connectFrom, connectTo)
       : undefined
-  const edgeToRewrite = edgeToReplace ?? automaticEdgeToReplace
+  const candidateEdgeToRewrite = edgeToReplace ?? automaticEdgeToReplace
+  const rewriteSourceNode = candidateEdgeToRewrite
+    ? draft.dag.nodes.find((candidate) => candidate.id === candidateEdgeToRewrite.source)
+    : sourceNode
+  const rewriteTargetNode = candidateEdgeToRewrite
+    ? draft.dag.nodes.find((candidate) => candidate.id === candidateEdgeToRewrite.target)
+    : targetNode
+  const rewriteEdges = candidateEdgeToRewrite
+    ? draft.dag.edges.filter((edge) => edge.id !== candidateEdgeToRewrite.id)
+    : draft.dag.edges
+  const canRewrite = Boolean(
+    candidateEdgeToRewrite &&
+    rewriteSourceNode &&
+    rewriteTargetNode &&
+    isPipelineDagEdgeValid(rewriteSourceNode, node, rewriteEdges) &&
+    isPipelineDagEdgeValid(node, rewriteTargetNode, rewriteEdges),
+  )
+  const edgeToRewrite = canRewrite ? candidateEdgeToRewrite : undefined
+  const canConnectFrom = Boolean(
+    sourceNode && isPipelineDagEdgeValid(sourceNode, node, draft.dag.edges),
+  )
+  const canConnectTo = Boolean(
+    targetNode && isPipelineDagEdgeValid(node, targetNode, draft.dag.edges),
+  )
   const edges = edgeToRewrite
-    ? [
-        ...draft.dag.edges.filter((edge) => edge.id !== edgeToRewrite.id),
-        {
-          id: `edge:${edgeToRewrite.source}:${nodeId}`,
-          source: edgeToRewrite.source,
-          target: nodeId,
-          label: null,
-        },
-        {
-          id: `edge:${nodeId}:${edgeToRewrite.target}`,
-          source: nodeId,
-          target: edgeToRewrite.target,
-          label: null,
-        },
-      ]
+    ? draft.dag.edges.flatMap((edge) =>
+        edge.id === edgeToRewrite.id
+          ? [
+              {
+                id: `edge:${edgeToRewrite.source}:${nodeId}`,
+                source: edgeToRewrite.source,
+                target: nodeId,
+                label: null,
+              },
+              {
+                id: `edge:${nodeId}:${edgeToRewrite.target}`,
+                source: nodeId,
+                target: edgeToRewrite.target,
+                label: null,
+              },
+            ]
+          : [edge],
+      )
     : [
         ...draft.dag.edges,
         ...(canConnectFrom
@@ -391,13 +411,26 @@ export function validatePipelineGraph(
   const incoming = new Map<string, number>()
   const outgoing = new Map<string, number>()
   for (const edge of draft.dag.edges) {
-    if (!nodes.has(edge.source) || !nodes.has(edge.target)) {
+    const sourceNode = nodes.get(edge.source)
+    const targetNode = nodes.get(edge.target)
+    if (!sourceNode || !targetNode) {
       diagnostics.push({
         code: 'dangling-edge',
         nodeIds: [edge.source, edge.target],
         messageKey: 'pipelines.workspace.diagnostics.danglingEdge',
       })
       continue
+    }
+    if (
+      !isPipelineDagEdgeValid(sourceNode, targetNode, draft.dag.edges, {
+        ignoreEdgeId: edge.id,
+      })
+    ) {
+      diagnostics.push({
+        code: 'invalid-edge',
+        nodeIds: [edge.source, edge.target],
+        messageKey: 'pipelines.workspace.diagnostics.invalidEdge',
+      })
     }
     incoming.set(edge.target, (incoming.get(edge.target) ?? 0) + 1)
     outgoing.set(edge.source, (outgoing.get(edge.source) ?? 0) + 1)
@@ -569,11 +602,15 @@ export function buildPipelineMutation(draft: PipelineGraphDraft): PipelineMutati
       const sourceTable =
         serveSourceTable ??
         tableFromTargetUpstream(config.nodeId, nodeById, draft.dag.edges, draft.configurations)
+      const originalTargetTable = tableFromTargetNodeId(config.nodeId)
       const existing = existingSync.find(
         (item) =>
           isRecord(item) &&
           item.source === config.sourceId &&
-          targetTable(item, sourceTable) === config.table,
+          (targetTable(item, sourceTable) === config.table ||
+            targetTable(item, sourceTable) === originalTargetTable ||
+            targetTable(item, originalTargetTable) === config.table ||
+            targetTable(item, originalTargetTable) === originalTargetTable),
       )
       const existingId =
         isRecord(existing) && typeof existing.id === 'string'
@@ -625,6 +662,11 @@ function tableFromReference(value: unknown): string | null {
   if (typeof value !== 'string' || value.length === 0) return null
   const separator = value.lastIndexOf('.')
   return separator >= 0 ? value.slice(separator + 1) : value
+}
+
+function tableFromTargetNodeId(nodeId: string) {
+  const [, , ...parts] = nodeId.split(':')
+  return parts.join(':') || null
 }
 
 function tableFromTargetUpstream(

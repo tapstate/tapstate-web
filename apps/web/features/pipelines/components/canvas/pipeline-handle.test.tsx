@@ -29,10 +29,8 @@ function renderHandle(
   direction: 'input' | 'output',
   options: {
     connected?: boolean
-    onRequestAdd?: (
-      direction: 'input' | 'output',
-      position: { x: number; y: number },
-    ) => void
+    canAdd?: boolean
+    onRequestAdd?: (direction: 'input' | 'output', position: { x: number; y: number }) => void
   } = {},
 ) {
   container = document.createElement('div')
@@ -50,27 +48,9 @@ function renderHandle(
 
 describe('PipelineHandle', () => {
   it('keeps handle geometry aligned with React Flow edge endpoints', () => {
-    expect(pipelineCanvasStyles.match(/transform: none !important;/g)).toHaveLength(3)
-    expect(pipelineCanvasStyles).toContain(
-      '-0.5 * var(--pipeline-handle-hit-size-inline) - var(--pipeline-node-border-width)',
-    )
-    expect(pipelineCanvasStyles).toContain(
-      '-0.5 * var(--pipeline-handle-hit-size-inline) - var(--pipeline-node-border-width)',
-    )
-    expect(pipelineCanvasStyles).toContain('.pipeline-canvas .pipeline-canvas__handle::after')
-    expect(pipelineCanvasStyles).toContain('left: 6px;')
-    expect(pipelineCanvasStyles).toContain('right: 6px;')
-    expect(pipelineCanvasStyles).toContain('.pipeline-canvas__handle-add')
-    expect(pipelineCanvasStyles).toContain('display: block !important;')
-    expect(pipelineCanvasStyles).toContain(
-      'transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1) !important;',
-    )
-    expect(pipelineCanvasStyles).toContain('transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);')
-    expect(pipelineCanvasStyles).toContain('cursor: grab !important;')
-    expect(pipelineCanvasStyles).toContain('z-index: 1 !important;')
+    expect(pipelineCanvasStyles).not.toContain('.pipeline-canvas__handle')
+    expect(pipelineCanvasStyles).not.toContain('transform: none !important;')
     expect(pipelineCanvasStyles).not.toContain('pipeline-canvas__port')
-    expect(pipelineCanvasStyles).not.toContain('translate3d(-50%, -50%, 0) !important')
-    expect(pipelineCanvasStyles).not.toContain('translate3d(50%, -50%, 0) !important')
   })
 
   it('uses the handle as the stable hit target and visual anchor', () => {
@@ -78,6 +58,14 @@ describe('PipelineHandle', () => {
     const handle = host.querySelector('[data-handle-role="input"]')
 
     expect(handle?.classList.contains('pipeline-canvas__handle--input')).toBe(true)
+    expect(handle?.classList.contains('react-flow__handle-left')).toBe(true)
+    expect(handle?.classList.contains('top-4!')).toBe(true)
+    expect(handle?.classList.contains('-left-[9px]!')).toBe(true)
+    expect(handle?.classList.contains('translate-y-0!')).toBe(true)
+    expect(handle?.classList.contains('size-4!')).toBe(true)
+    expect(handle?.classList.contains('border-none!')).toBe(true)
+    expect(handle?.classList.contains('bg-transparent!')).toBe(true)
+    expect(handle?.classList.contains('transform-none!')).toBe(true)
     expect(handle?.classList.contains('nodrag')).toBe(true)
     expect(handle?.classList.contains('nopan')).toBe(true)
     expect(handle?.getAttribute('data-handle-direction')).toBe('input')
@@ -92,6 +80,10 @@ describe('PipelineHandle', () => {
     const handle = host.querySelector('[data-handle-role="output"]')
 
     expect(handle?.classList.contains('pipeline-canvas__handle--output')).toBe(true)
+    expect(handle?.classList.contains('react-flow__handle-right')).toBe(true)
+    expect(handle?.classList.contains('top-4!')).toBe(true)
+    expect(handle?.classList.contains('-right-[9px]!')).toBe(true)
+    expect(handle?.classList.contains('translate-y-0!')).toBe(true)
     expect(handle?.getAttribute('data-handle-direction')).toBe('output')
     expect(handle?.querySelector('.pipeline-canvas__port')).toBeNull()
   })
@@ -102,9 +94,22 @@ describe('PipelineHandle', () => {
     const handle = host.querySelector<HTMLElement>('[data-handle-role="output"]')
 
     expect(handle?.dataset.pipelineAdd).toBe('true')
-    expect(handle?.querySelector('.pipeline-canvas__handle-add')).not.toBeNull()
+    expect(handle?.querySelector('[data-handle-add="true"]')).not.toBeNull()
+    expect(handle?.querySelector('[data-handle-add="true"]')?.className).toContain(
+      'group-hover:opacity-100',
+    )
+    expect(handle?.textContent).toContain('Click')
+    expect(handle?.textContent).toContain('Drag')
 
-    const addButton = handle?.querySelector<HTMLButtonElement>('.pipeline-canvas__handle-add')
+    const tooltip = handle?.querySelector('[data-pipeline-handle-tooltip="true"]')
+    expect(tooltip?.className).toContain('border-pipeline-panel-border')
+    expect(tooltip?.className).toContain('bg-pipeline-tooltip-bg')
+    expect(tooltip?.className).toContain('border-[0.5px]')
+
+    const addButton = handle?.querySelector<HTMLButtonElement>('[data-handle-add="true"]')
+    expect(addButton?.tagName).toBe('BUTTON')
+    expect(addButton?.classList.contains('size-4')).toBe(true)
+    expect(addButton?.classList.contains('z-10')).toBe(true)
     act(() =>
       addButton?.dispatchEvent(
         new MouseEvent('click', { bubbles: true, clientX: 324, clientY: 178 }),
@@ -114,12 +119,23 @@ describe('PipelineHandle', () => {
     expect(onRequestAdd).toHaveBeenCalledWith('output', { x: 324, y: 178 })
   })
 
-  it('does not turn a connected output into an add-node trigger', () => {
-    const host = renderHandle('output', { connected: true, onRequestAdd: vi.fn() })
+  it('keeps a connected handle connectable while hiding its insert trigger', () => {
+    const onRequestAdd = vi.fn()
+    const host = renderHandle('output', { connected: true, onRequestAdd })
     const handle = host.querySelector<HTMLElement>('[data-handle-role="output"]')
 
     expect(handle?.dataset.pipelineAdd).toBeUndefined()
-    expect(handle?.querySelector('.pipeline-canvas__handle-add')).toBeNull()
+    expect(handle?.dataset.handleConnectable).toBe('true')
+    expect(handle?.querySelector('[data-handle-add="true"]')).toBeNull()
+  })
+
+  it('shows both the insert trigger and blue bar for an addable connected source', () => {
+    const host = renderHandle('output', { connected: true, canAdd: true, onRequestAdd: vi.fn() })
+    const handle = host.querySelector<HTMLElement>('[data-handle-role="output"]')
+
+    expect(handle?.dataset.pipelineAdd).toBe('true')
+    expect(handle?.classList.contains('after:opacity-100')).toBe(true)
+    expect(handle?.querySelector('[data-handle-add="true"]')).not.toBeNull()
   })
 
   it('exposes connection state without changing the handle structure', () => {

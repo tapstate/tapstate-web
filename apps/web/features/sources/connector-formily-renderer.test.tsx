@@ -122,8 +122,8 @@ describe('ConnectorFormily', () => {
     expect(formilyAntdPrefixCls).toBe('tap-formily')
     expect(formilyAntdTheme.token).toMatchObject({
       borderRadius: 10,
-      colorBgContainer: 'var(--background)',
-      colorBorder: 'var(--border)',
+      colorBgContainer: 'var(--pipeline-surface-subtle)',
+      colorBorder: 'transparent',
       colorPrimary: 'var(--primary)',
       colorText: 'var(--foreground)',
       controlOutline: 'color-mix(in oklch, var(--ring) 20%, transparent)',

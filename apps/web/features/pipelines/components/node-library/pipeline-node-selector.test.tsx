@@ -70,7 +70,7 @@ async function renderSelector(
 }
 
 describe('PipelineNodeSelector', () => {
-  it('expands a Source and returns a preconfigured downstream target choice', async () => {
+  it('expands a Source and returns a catalog-backed Source choice', async () => {
     const { onChoose } = await renderSelector()
 
     expect(document.querySelector('[role="dialog"]')).not.toBeNull()
@@ -84,7 +84,7 @@ describe('PipelineNodeSelector', () => {
     )
 
     expect(onChoose).toHaveBeenCalledWith({
-      kind: 'target',
+      kind: 'source',
       sourceId: 'mysql_feynman',
       table: 'Player',
       connectorId: 'mysql',
@@ -119,6 +119,16 @@ describe('PipelineNodeSelector', () => {
     )
 
     expect(onChoose).toHaveBeenCalledWith({ kind: 'transform', transformType: 'join' })
+  })
+
+  it('creates an unconfigured Target only from the explicit Target entry', async () => {
+    const { onChoose } = await renderSelector()
+
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-node-choice="target"]')?.click(),
+    )
+
+    expect(onChoose).toHaveBeenCalledWith({ kind: 'target' })
   })
 
   it('closes on Escape and resets the search term on the next open', async () => {

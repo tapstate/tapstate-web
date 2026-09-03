@@ -29,7 +29,10 @@ import {
 import { getSourceSchema, listConnectors, listSources } from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
 
-import type { PipelineCanvasSelection } from '../components/canvas/pipeline-canvas-types'
+import type {
+  PipelineCanvasSelection,
+  PipelineNodeConnector,
+} from '../components/canvas/pipeline-canvas-types'
 import type {
   PipelineSchemaOption,
   PipelineTableLoader,
@@ -61,6 +64,81 @@ import { PipelineWorkflowWithInnerContext } from '../workflow-app'
 export type PipelineWorkspaceSection = 'orchestrate' | 'api' | 'logs' | 'monitoring'
 
 const NODE_PANEL_DEFAULT_WIDTH = 400
+
+function connectorForConfiguration(
+  configuration: PipelineNodeConfiguration | null,
+  connectorsBySourceId: ReadonlyMap<string, PipelineNodeConnector>,
+) {
+  if (configuration?.kind !== 'source' && configuration?.kind !== 'target') return null
+  return connectorsBySourceId.get(configuration.sourceId) ?? null
+}
+
+function synchronizeSelection(
+  selection: PipelineCanvasSelection,
+  draft: PipelineGraphDraft | null,
+  connectorsBySourceId: ReadonlyMap<string, PipelineNodeConnector>,
+): PipelineCanvasSelection | null {
+  if (!draft) return null
+  const node = draft.dag.nodes.find((candidate) => candidate.id === selection.id)
+  if (!node) return null
+
+  const configuration = draft.configurations.get(node.id) ?? null
+  return {
+    ...selection,
+    label: node.label,
+    detail: node.detail,
+    description: draft.descriptions.get(node.id) ?? node.description ?? '',
+    nodeType: node.type,
+    connector: connectorForConfiguration(configuration, connectorsBySourceId),
+    configuration,
+  }
+}
+
+function selectionsEqual(left: PipelineCanvasSelection, right: PipelineCanvasSelection) {
+  return (
+    left.id === right.id &&
+    left.label === right.label &&
+    left.detail === right.detail &&
+    left.description === right.description &&
+    left.nodeType === right.nodeType &&
+    left.connector === right.connector &&
+    left.configuration === right.configuration
+  )
+}
+
+function synchronizeCurrentSelection(
+  selection: PipelineCanvasSelection | null,
+  draft: PipelineGraphDraft,
+  connectorsBySourceId: ReadonlyMap<string, PipelineNodeConnector>,
+) {
+  if (!selection) return selection
+  const synchronized = synchronizeSelection(selection, draft, connectorsBySourceId)
+  return synchronized && selectionsEqual(selection, synchronized) ? selection : synchronized
+}
+
+function synchronizeConfiguredNodeIdentity(
+  draft: PipelineGraphDraft,
+  nodeId: string,
+): PipelineGraphDraft {
+  const configuration = draft.configurations.get(nodeId)
+  if (configuration?.kind !== 'source' && configuration?.kind !== 'target') return draft
+
+  return {
+    ...draft,
+    dag: {
+      ...draft.dag,
+      nodes: draft.dag.nodes.map((node) =>
+        node.id === nodeId
+          ? {
+              ...node,
+              label: configuration.table || node.label,
+              detail: configuration.sourceId || null,
+            }
+          : node,
+      ),
+    },
+  }
+}
 
 function asQuotedEtag(hash: string) {
   return hash.startsWith('"') && hash.endsWith('"') ? hash : `"${hash}"`
@@ -476,25 +554,35 @@ function PipelineOrchestrationPage({
     return Math.max(surfaceWidth - (selection ? nodePanelWidth : 0), 400)
   }, [nodePanelWidth, selection, surfaceWidth])
 
+  useEffect(() => {
+    setSelection((current) => {
+      if (!current) return current
+      const synchronized = synchronizeSelection(current, draft, connectorsBySourceId)
+      if (!synchronized) return null
+      return selectionsEqual(current, synchronized) ? current : synchronized
+    })
+  }, [connectorsBySourceId, draft])
+
+  function handleSelectionChange(nextSelection: PipelineCanvasSelection | null) {
+    if (!nextSelection) {
+      setSelection(null)
+      return
+    }
+    setSelection(
+      synchronizeSelection(nextSelection, draftRef.current, connectorsBySourceId) ?? nextSelection,
+    )
+  }
+
   function handleConfigurationChange(change: PipelineNodeConfigurationChange) {
     const current = draftRef.current
     if (!current) return
-    const next = updatePipelineNodeConfiguration(current, change)
+    const next = synchronizeConfiguredNodeIdentity(
+      updatePipelineNodeConfiguration(current, change),
+      change.nodeId,
+    )
     draftRef.current = next
     setDraft(next)
-    const nextConfiguration = next.configurations.get(change.nodeId) ?? null
-    setSelection((previous) =>
-      previous && previous.id === change.nodeId
-        ? {
-            ...previous,
-            label:
-              next.dag.nodes.find((node) => node.id === change.nodeId)?.label ?? previous.label,
-            detail:
-              next.dag.nodes.find((node) => node.id === change.nodeId)?.detail ?? previous.detail,
-            configuration: nextConfiguration,
-          }
-        : previous,
-    )
+    setSelection((previous) => synchronizeCurrentSelection(previous, next, connectorsBySourceId))
     setIsDirty(true)
   }
 
@@ -535,14 +623,15 @@ function PipelineOrchestrationPage({
     setDraft(result.draft)
     const node = result.draft.dag.nodes.find((candidate) => candidate.id === result.nodeId)
     if (node) {
+      const configuration = result.draft.configurations.get(node.id) ?? null
       setSelection({
         id: node.id,
         label: node.label,
         detail: node.detail,
         description: node.description ?? '',
         nodeType: node.type,
-        connector: null,
-        configuration: result.draft.configurations.get(node.id) ?? null,
+        connector: connectorForConfiguration(configuration, connectorsBySourceId),
+        configuration,
       })
     }
     if (result.position) {
@@ -647,16 +736,26 @@ function PipelineOrchestrationPage({
               onGraphChange: (nextDag) => {
                 const current = draftRef.current
                 if (!current) return
-                const next = { ...current, dag: nextDag }
+                const nodeIds = new Set(nextDag.nodes.map((node) => node.id))
+                const configurations = new Map(
+                  Array.from(current.configurations).filter(([nodeId]) => nodeIds.has(nodeId)),
+                )
+                const descriptions = new Map(
+                  Array.from(current.descriptions).filter(([nodeId]) => nodeIds.has(nodeId)),
+                )
+                const next = { ...current, dag: nextDag, configurations, descriptions }
                 draftRef.current = next
                 setDraft(next)
+                setSelection((previous) =>
+                  synchronizeCurrentSelection(previous, next, connectorsBySourceId),
+                )
                 setIsDirty(true)
               },
               sources: sources.data,
               connectors: connectors.data,
               sourceState: sources.isPending ? 'loading' : sources.isError ? 'error' : 'success',
               onAddNode: handleChooseNode,
-              onSelectionChange: setSelection,
+              onSelectionChange: handleSelectionChange,
               availableWidth: availableCanvasWidth,
             }}
             header={{

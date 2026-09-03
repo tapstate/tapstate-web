@@ -112,6 +112,47 @@ describe('PipelineNodeConfigPanel', () => {
     expect(host.querySelector('[role="combobox"]')).not.toBeNull()
   })
 
+  it('allows a Target table to be selected from the catalog or entered as a new name', async () => {
+    const changes: Array<{ kind: string; values: Record<string, unknown> }> = []
+    const targetSelection: PipelineCanvasSelection = {
+      ...sourceSelection,
+      id: 'target:warehouse:player_archive',
+      label: 'player_archive',
+      nodeType: 'target',
+      configuration: {
+        kind: 'target',
+        nodeId: 'target:warehouse:player_archive',
+        sourceId: 'warehouse',
+        table: 'player_archive',
+        connectorId: 'mysql',
+        writeMode: 'upsert',
+      },
+    }
+    const host = await renderPanel(
+      targetSelection,
+      (change) => changes.push({ kind: change.kind, values: change.values }),
+      {
+        tableOptions: [
+          { label: 'player', value: 'player' },
+          { label: 'orders', value: 'orders' },
+        ],
+      },
+    )
+
+    const table = host.querySelector<HTMLInputElement>('input[role="combobox"]')
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+    await act(async () => {
+      setter?.call(table, 'player_archive_v2')
+      table?.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+
+    expect(table?.value).toBe('player_archive_v2')
+    expect(changes.at(-1)).toMatchObject({
+      kind: 'target',
+      values: { table: 'player_archive_v2' },
+    })
+  })
+
   it('uses catalog selectors for source and table when options are available', async () => {
     const host = await renderPanel(sourceSelection, undefined, {
       sourceOptions: [{ label: 'MySQL source', value: 'mysql_feynman' }],

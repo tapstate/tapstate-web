@@ -59,10 +59,10 @@ function inputOrSelect(title: string, options?: readonly PipelineSchemaOption[])
   return field
 }
 
-/** Tables always use a catalog-backed Select. An empty catalog stays selectable once loaded. */
+/** Source tables use a catalog-backed Select. An empty catalog stays selectable once loaded. */
 const tableRequestTokens = new WeakMap<Field, number>()
 
-function tableSelect(
+function sourceTableSelect(
   title: string,
   options?: readonly PipelineSchemaOption[],
   loadTables?: PipelineTableLoader,
@@ -138,6 +138,19 @@ function tableSelect(
   return field
 }
 
+function targetTableAutocomplete(title: string, options?: readonly PipelineSchemaOption[]) {
+  return {
+    type: 'string',
+    title,
+    'x-component': 'PipelineTableAutocomplete',
+    'x-component-props': {
+      allowClear: true,
+      options: [...(options ?? [])],
+    },
+    ...verticalItem,
+  } satisfies PipelineFormilySchema
+}
+
 export function createPipelineDataNodeSchema(
   kind: PipelineDataNodeKind,
   options: PipelineDataNodeSchemaOptions = {},
@@ -145,7 +158,10 @@ export function createPipelineDataNodeSchema(
   const labels = { ...defaultLabels[kind], ...options.labels }
   const identityFields = {
     sourceId: inputOrSelect(labels.sourceId, options.sourceOptions),
-    table: tableSelect(labels.table, options.tableOptions, options.loadTables),
+    table:
+      kind === 'source'
+        ? sourceTableSelect(labels.table, options.tableOptions, options.loadTables)
+        : targetTableAutocomplete(labels.table, options.tableOptions),
   }
 
   if (kind === 'source') {

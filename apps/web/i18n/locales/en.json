@@ -527,6 +527,11 @@
         "retry": "Retry",
         "toolbar": "Pipeline actions",
         "canvasTools": "Canvas tools",
+        "nodeToolbar": {
+          "label": "Actions for {{node}}",
+          "more": "More actions for {{node}}",
+          "delete": "Delete {{node}}"
+        },
         "pointerMode": "Select mode",
         "handMode": "Pan mode",
         "fitCanvas": "Fit Pipeline",
@@ -543,6 +548,7 @@
       "diagnostics": {
         "title": "Fix these issues before saving",
         "danglingEdge": "A connection points to a missing node.",
+        "invalidEdge": "This connection violates the node input or output rules.",
         "cycle": "The graph contains a cycle.",
         "isolatedNode": "Connect this node to the Pipeline before saving.",
         "missingConfiguration": "Complete this node's configuration before saving.",
@@ -563,6 +569,7 @@
         "title": "Add node",
         "searchPlaceholder": "Search nodes",
         "close": "Close node selector",
+        "insertOnEdge": "Insert a node on this connection",
         "sources": "Sources",
         "processing": "Transform",
         "output": "Output",
@@ -609,7 +616,11 @@
       },
       "handles": {
         "input": "Input for {{node}}",
-        "output": "Output for {{node}}"
+        "output": "Output for {{node}}",
+        "click": "Click",
+        "clickDescription": "to add",
+        "drag": "Drag",
+        "dragDescription": "to connect"
       },
       "inspector": {
         "eyebrow": "Configuration",
@@ -627,6 +638,8 @@
         "filter": "Table filter",
         "targetSource": "Target source",
         "targetTable": "Target table",
+        "targetTablePlaceholder": "Select or enter a table name",
+        "noTableOptions": "No existing tables match. You can enter a new name.",
         "writeMode": "Write mode",
         "description": "Description",
         "descriptionPlaceholder": "Add a description",

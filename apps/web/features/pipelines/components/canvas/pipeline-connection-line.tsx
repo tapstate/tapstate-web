@@ -1,6 +1,6 @@
-import { BaseEdge, getBezierPath, type ConnectionLineComponentProps, Position } from '@xyflow/react'
+import { getBezierPath, Position, type ConnectionLineComponentProps } from '@xyflow/react'
 
-/** Keeps the in-progress connection visually consistent with persisted edges. */
+/** Mirrors Dify's lightweight connection preview and endpoint marker. */
 export function PipelineConnectionLine({
   fromX,
   fromY,
@@ -8,7 +8,6 @@ export function PipelineConnectionLine({
   toY,
   fromPosition,
   toPosition,
-  connectionStatus,
 }: ConnectionLineComponentProps) {
   const [path] = getBezierPath({
     sourceX: fromX,
@@ -17,22 +16,13 @@ export function PipelineConnectionLine({
     targetX: toX,
     targetY: toY,
     targetPosition: toPosition ?? Position.Left,
-    curvature: 0.22,
+    curvature: 0.16,
   })
 
   return (
-    <BaseEdge
-      id="pipeline-connection-preview"
-      path={path}
-      interactionWidth={24}
-      style={{
-        stroke:
-          connectionStatus === 'invalid'
-            ? 'var(--pipeline-edge-invalid)'
-            : 'var(--pipeline-selection)',
-        strokeWidth: 2,
-        strokeDasharray: connectionStatus === 'invalid' ? '4 4' : undefined,
-      }}
-    />
+    <g>
+      <path fill="none" stroke="var(--pipeline-edge-preview)" strokeWidth={2} d={path} />
+      <rect x={toX} y={toY - 4} width={2} height={8} fill="var(--pipeline-edge-preview-target)" />
+    </g>
   )
 }

@@ -106,7 +106,7 @@ describe('isPipelineConnectionValid', () => {
     ).toBe(false)
     expect(
       isPipelineConnectionValid(connection('target:warehouse', 'transform:filter'), nodes, []),
-    ).toBe(true)
+    ).toBe(false)
     expect(
       isPipelineConnectionValid(connection('source:orders', 'transform:filter'), nodes, [
         edge('source:orders', 'transform:filter'),

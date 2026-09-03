@@ -1,8 +1,13 @@
 import '@/i18n/index'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act } from 'react'
+import { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type {
+  PipelineNodeChoice,
+  PipelineNodeInsertionContext,
+} from '../components/node-library/pipeline-node-library-types'
 
 const {
   getPipeline,
@@ -66,7 +71,7 @@ vi.mock('@/stores/auth-store', () => ({
 vi.mock('../components/canvas/pipeline-canvas', () => {
   const MockPipelineCanvas = ({
     onSelectionChange,
-    onRequestNodeSelector,
+    onAddNode,
   }: {
     onSelectionChange: (selection: {
       id: string
@@ -85,66 +90,133 @@ vi.mock('../components/canvas/pipeline-canvas', () => {
         body: { expr: string }
       } | null
     }) => void
-    onRequestNodeSelector?: (context: {
-      position: { x: number; y: number }
-      screenPosition?: { x: number; y: number }
-      connectFrom: string | null
-    }) => void
-  }) => (
-    <div>
-      <button
-        type="button"
-        data-testid="pipeline-canvas"
-        onClick={() =>
-          onSelectionChange({
-            id: 'transform:normalize',
-            label: 'normalize',
-            detail: 'map',
-            description: '',
-            nodeType: 'transform',
-            connector: null,
-            configuration: {
-              kind: 'transform',
-              nodeId: 'transform:normalize',
-              stepId: 'normalize',
-              transformType: 'map',
-              from: ['orders'],
-              options: null,
-              body: { expr: '' },
-            },
-          })
-        }
-      >
-        Canvas
-      </button>
-      <button
-        type="button"
-        data-testid="add-transform"
-        onClick={() =>
-          onRequestNodeSelector?.({
-            position: { x: 120, y: 80 },
-            screenPosition: { x: 320, y: 180 },
-            connectFrom: null,
-          })
-        }
-      >
-        Add transform
-      </button>
-      <button
-        type="button"
-        data-testid="request-add"
-        onClick={() =>
-          onRequestNodeSelector?.({
-            position: { x: 420, y: 180 },
-            screenPosition: { x: 620, y: 280 },
-            connectFrom: 'source:mysql:orders',
-          })
-        }
-      >
-        Request add
-      </button>
-    </div>
-  )
+    onAddNode: (choice: PipelineNodeChoice, context: PipelineNodeInsertionContext) => void
+  }) => {
+    const [nodeSelectorOpen, setNodeSelectorOpen] = useState(false)
+    const [sourceExpanded, setSourceExpanded] = useState(false)
+    const [insertion, setInsertion] = useState<PipelineNodeInsertionContext>({
+      position: { x: 120, y: 80 },
+      connectFrom: null,
+      connectTo: null,
+    })
+
+    const openSelector = (context: PipelineNodeInsertionContext) => {
+      setInsertion(context)
+      setNodeSelectorOpen(true)
+    }
+
+    const chooseNode = (choice: PipelineNodeChoice) => {
+      onAddNode(choice, insertion)
+      setNodeSelectorOpen(false)
+      setSourceExpanded(false)
+    }
+
+    return (
+      <div>
+        <button
+          type="button"
+          data-testid="pipeline-canvas"
+          onClick={() =>
+            onSelectionChange({
+              id: 'transform:normalize',
+              label: 'normalize',
+              detail: 'map',
+              description: '',
+              nodeType: 'transform',
+              connector: null,
+              configuration: {
+                kind: 'transform',
+                nodeId: 'transform:normalize',
+                stepId: 'normalize',
+                transformType: 'map',
+                from: ['orders'],
+                options: null,
+                body: { expr: '' },
+              },
+            })
+          }
+        >
+          Canvas
+        </button>
+        <button
+          type="button"
+          aria-label="Add node"
+          onClick={() =>
+            openSelector({
+              position: { x: 120, y: 80 },
+              connectFrom: null,
+              connectTo: null,
+            })
+          }
+        >
+          Add node
+        </button>
+        <div className="pipeline-canvas__operator" />
+        <button
+          type="button"
+          data-testid="add-transform"
+          onClick={() =>
+            openSelector({
+              position: { x: 120, y: 80 },
+              screenPosition: { x: 320, y: 180 },
+              connectFrom: null,
+              connectTo: null,
+            })
+          }
+        >
+          Add transform
+        </button>
+        <button
+          type="button"
+          data-testid="request-add"
+          onClick={() =>
+            openSelector({
+              position: { x: 420, y: 180 },
+              screenPosition: { x: 620, y: 280 },
+              connectFrom: 'source:mysql:orders',
+              connectTo: null,
+            })
+          }
+        >
+          Request add
+        </button>
+        {nodeSelectorOpen && (
+          <div role="dialog" aria-label="Node selector">
+            <button
+              type="button"
+              data-node-selector-source="mysql_feynman"
+              onClick={() => setSourceExpanded(true)}
+            >
+              mysql_feynman
+            </button>
+            {sourceExpanded && (
+              <button
+                type="button"
+                data-node-selector-table="mysql_feynman:Player"
+                onClick={() =>
+                  chooseNode({
+                    kind: 'source',
+                    sourceId: 'mysql_feynman',
+                    table: 'Player',
+                    connectorId: 'mysql',
+                  })
+                }
+              >
+                Player
+              </button>
+            )}
+            <button
+              type="button"
+              data-node-choice="transform:filter"
+              onClick={() => chooseNode({ kind: 'transform', transformType: 'filter' })}
+            >
+              Filter
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return {
     PipelineCanvas: MockPipelineCanvas,

@@ -290,4 +290,29 @@ describe('pipeline graph edit model', () => {
     expect('dag' in mutation).toBe(false)
     expect(mutation.serve?.from).toBe('joined')
   })
+
+  it('keeps an existing serve sync id when a target table is renamed', () => {
+    const draft = createPipelineGraphDraft({
+      ...view,
+      serve: {
+        id: 'serve',
+        from: 'joined',
+        sync: [{ id: 'orders_out', source: 'mongo', from: 'orders' }],
+      },
+    })
+    const changed = updatePipelineNodeConfiguration(draft, {
+      nodeId: 'target:mongo:orders',
+      kind: 'target',
+      values: { table: 'orders_archive' },
+    })
+
+    const mutation = buildPipelineMutation(changed)
+    expect(mutation.serve?.sync).toEqual([
+      expect.objectContaining({
+        id: 'orders_out',
+        source: 'mongo',
+        rename: { map: { joined: 'orders_archive' } },
+      }),
+    ])
+  })
 })

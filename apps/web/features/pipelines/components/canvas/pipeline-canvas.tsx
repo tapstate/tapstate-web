@@ -33,6 +33,10 @@ import type {
   PipelineNodeConnector,
 } from './pipeline-canvas-types'
 
+import {
+  canPipelineNodeAcceptInput,
+  canPipelineNodeEmitOutput,
+} from '../../model/pipeline-node-rules'
 import { PipelineNodeSelector } from '../node-library/pipeline-node-selector'
 import { PipelineCanvasOperator } from './pipeline-canvas-operator'
 import { PipelineCanvasToolbar } from './pipeline-canvas-toolbar'
@@ -97,12 +101,39 @@ export function PipelineCanvasContent({
   const openNodeSelector = useCallback((context: PipelineNodeInsertionContext) => {
     setNodeInsertion(context)
   }, [])
+  const [nodes, setNodes] = useNodesState<CanvasNode>([])
+  const [edges, setEdges] = useEdgesState<CanvasEdge>([])
+  const [viewport, setViewport] = useState<PipelineLayout['viewport']>(null)
+  const [interactionMode, setInteractionMode] = useState<'pointer' | 'hand'>('hand')
+  const nodesRef = useRef(nodes)
+  const edgesRef = useRef(edges)
+  const preserveSelectionOnPaneClickRef = useRef(false)
+  const { screenToFlowPosition } = useReactFlow()
+
+  const handleDeleteNode = useCallback(
+    (nodeId: string) => {
+      const nextNodes = nodesRef.current.filter((node) => node.id !== nodeId)
+      if (nextNodes.length === nodesRef.current.length) return
+      const nextEdges = edgesRef.current.filter(
+        (edge) => edge.source !== nodeId && edge.target !== nodeId,
+      )
+      nodesRef.current = nextNodes
+      edgesRef.current = nextEdges
+      setNodes(nextNodes)
+      setEdges(nextEdges)
+      onGraphChange(flowToPipelineDag(nextNodes, nextEdges))
+      onSelectionChange(null)
+    },
+    [onGraphChange, onSelectionChange, setEdges, setNodes],
+  )
+
   const graph = useMemo(() => {
     const base = pipelineDagToFlow(dag, layout, connectorsBySourceId, configurations, descriptions)
     return {
       ...base,
       nodes: base.nodes.map((flowNode) => ({
         ...flowNode,
+        selected: nodesRef.current.find((node) => node.id === flowNode.id)?.selected ?? false,
         data: {
           ...flowNode.data,
           onRequestAdd: (
@@ -120,6 +151,7 @@ export function PipelineCanvasContent({
               connectTo: isInput ? nodeId : null,
             })
           },
+          onRequestDelete: () => handleDeleteNode(flowNode.id),
         },
       })),
       edges: base.edges.map((edge) => ({
@@ -145,14 +177,15 @@ export function PipelineCanvasContent({
         },
       })),
     }
-  }, [configurations, connectorsBySourceId, dag, descriptions, layout, openNodeSelector])
-  const [nodes, setNodes] = useNodesState<CanvasNode>(graph.nodes)
-  const [edges, setEdges] = useEdgesState<CanvasEdge>(graph.edges)
-  const [viewport, setViewport] = useState<PipelineLayout['viewport']>(graph.viewport)
-  const [interactionMode, setInteractionMode] = useState<'pointer' | 'hand'>('hand')
-  const nodesRef = useRef(nodes)
-  const edgesRef = useRef(edges)
-  const { screenToFlowPosition } = useReactFlow()
+  }, [
+    configurations,
+    connectorsBySourceId,
+    dag,
+    descriptions,
+    handleDeleteNode,
+    layout,
+    openNodeSelector,
+  ])
 
   useEffect(() => {
     nodesRef.current = nodes
@@ -176,9 +209,24 @@ export function PipelineCanvasContent({
       const nextNodes = currentNodes.map((node) => {
         const hasInput = incoming.has(node.id)
         const hasOutput = outgoing.has(node.id)
-        if (node.data.hasInput === hasInput && node.data.hasOutput === hasOutput) return node
+        const ruleNode = {
+          id: node.id,
+          type: node.data.nodeType as PipelineDag['nodes'][number]['type'],
+          detail: node.data.detail,
+        }
+        const canAddInput =
+          node.data.showInput && canPipelineNodeAcceptInput(ruleNode, edgesRef.current)
+        const canAddOutput =
+          node.data.showOutput && canPipelineNodeEmitOutput(ruleNode, edgesRef.current)
+        if (
+          node.data.hasInput === hasInput &&
+          node.data.hasOutput === hasOutput &&
+          node.data.canAddInput === canAddInput &&
+          node.data.canAddOutput === canAddOutput
+        )
+          return node
         changed = true
-        return { ...node, data: { ...node.data, hasInput, hasOutput } }
+        return { ...node, data: { ...node.data, hasInput, hasOutput, canAddInput, canAddOutput } }
       })
       return changed ? nextNodes : currentNodes
     })
@@ -186,10 +234,27 @@ export function PipelineCanvasContent({
 
   function handleNodesChange(changes: NodeChange<CanvasNode>[]) {
     setNodes((currentNodes) => {
+      const isPaneDeselection =
+        preserveSelectionOnPaneClickRef.current &&
+        changes.length > 0 &&
+        changes.every((change) => change.type === 'select' && !change.selected)
+      if (isPaneDeselection) {
+        preserveSelectionOnPaneClickRef.current = false
+        return currentNodes
+      }
       const nextNodes = applyNodeChanges(changes, currentNodes) as CanvasNode[]
       nodesRef.current = nextNodes
-      if (changes.some((change) => change.type === 'remove')) {
-        onGraphChange(flowToPipelineDag(nextNodes, edgesRef.current))
+      const removedNodeIds = new Set(
+        changes.filter((change) => change.type === 'remove').map((change) => change.id),
+      )
+      if (removedNodeIds.size > 0) {
+        const nextEdges = edgesRef.current.filter(
+          (edge) => !removedNodeIds.has(edge.source) && !removedNodeIds.has(edge.target),
+        )
+        edgesRef.current = nextEdges
+        setEdges(nextEdges)
+        onGraphChange(flowToPipelineDag(nextNodes, nextEdges))
+        onSelectionChange(null)
       }
       return nextNodes
     })
@@ -277,7 +342,12 @@ export function PipelineCanvasContent({
             configuration: node.data.configuration,
           })
         }
-        onPaneClick={() => onSelectionChange(null)}
+        onPaneClick={() => {
+          preserveSelectionOnPaneClickRef.current = true
+          queueMicrotask(() => {
+            preserveSelectionOnPaneClickRef.current = false
+          })
+        }}
         onMoveEnd={(_, nextViewport) => {
           setViewport(nextViewport)
           onLayoutChange(toLayout(nodesRef.current, nextViewport))

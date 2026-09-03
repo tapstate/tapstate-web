@@ -157,13 +157,9 @@ export function PipelineNodeSelector({
     }
   }
 
-  function selectSource(source: SourceView, table: string) {
+  function selectSourceTable(source: SourceView, table: string) {
     onChoose({
-      // A catalog Source selected from the add-node surface is a downstream
-      // sync destination. Its output table starts with the upstream name and
-      // can later be changed in the target inspector, which is serialized as
-      // serve.sync.rename.
-      kind: 'target',
+      kind: 'source',
       sourceId: source.id,
       table,
       connectorId: source.connector || null,
@@ -224,71 +220,76 @@ export function PipelineNodeSelector({
               {t('pipelines.workspace.nodeSelector.emptySources')}
             </p>
           )}
-          {matchingSources.map((source) => {
-            const tables = (source.tables ?? [])
-              .map((table) => table.name ?? table.pattern)
-              .filter((table): table is string => Boolean(table))
-              .filter(
-                (table) =>
-                  !query ||
-                  normalized(table).includes(normalized(query)) ||
-                  normalized(source.id).includes(normalized(query)),
-              )
-            const connector = connectorsById.get(source.connector)
-            const expanded = expandedSourceId === source.id
-            return (
-              <div key={source.id} className="pipeline-node-selector__source">
-                <button
-                  type="button"
-                  data-node-selector-source={source.id}
-                  className="pipeline-node-selector__source-trigger"
-                  aria-expanded={expanded}
-                  onClick={() =>
-                    setExpandedSourceId((current) => (current === source.id ? null : source.id))
-                  }
-                >
-                  {expanded ? (
-                    <ChevronDown className="size-3.5" />
-                  ) : (
-                    <ChevronRight className="size-3.5" />
-                  )}
-                  <ConnectorIcon
-                    connectorId={connector?.id ?? source.connector}
-                    name={connector?.name ?? source.connector}
-                    iconPath={connector?.icon}
-                    size={24}
-                    className="pipeline-node-selector__connector-icon"
-                    withBackdropLayer
-                  />
-                  <span className="min-w-0 flex-1 truncate text-left">{source.id}</span>
-                  <span className="pipeline-node-selector__count">{tables.length}</span>
-                </button>
-                {expanded && (
-                  <div
-                    className="pipeline-node-selector__tables"
-                    aria-label={t('pipelines.workspace.nodeSelector.sourceTables')}
+          <div
+            className="pipeline-node-selector__source-list"
+            aria-label={t('pipelines.workspace.nodeSelector.sources')}
+          >
+            {matchingSources.map((source) => {
+              const tables = (source.tables ?? [])
+                .map((table) => table.name ?? table.pattern)
+                .filter((table): table is string => Boolean(table))
+                .filter(
+                  (table) =>
+                    !query ||
+                    normalized(table).includes(normalized(query)) ||
+                    normalized(source.id).includes(normalized(query)),
+                )
+              const connector = connectorsById.get(source.connector)
+              const expanded = expandedSourceId === source.id
+              return (
+                <div key={source.id} className="pipeline-node-selector__source">
+                  <button
+                    type="button"
+                    data-node-selector-source={source.id}
+                    className="pipeline-node-selector__source-trigger"
+                    aria-expanded={expanded}
+                    onClick={() =>
+                      setExpandedSourceId((current) => (current === source.id ? null : source.id))
+                    }
                   >
-                    {tables.map((table) => (
-                      <button
-                        key={table}
-                        type="button"
-                        data-node-selector-table={`${source.id}:${table}`}
-                        className="pipeline-node-selector__table"
-                        onClick={() => selectSource(source, table)}
-                      >
-                        {table}
-                      </button>
-                    ))}
-                    {tables.length === 0 && (
-                      <p className="pipeline-node-selector__status">
-                        {t('pipelines.workspace.nodeSelector.emptySources')}
-                      </p>
+                    {expanded ? (
+                      <ChevronDown className="size-3.5" aria-hidden="true" />
+                    ) : (
+                      <ChevronRight className="size-3.5" aria-hidden="true" />
                     )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
+                    <ConnectorIcon
+                      connectorId={connector?.id ?? source.connector}
+                      name={connector?.name ?? source.connector}
+                      iconPath={connector?.icon}
+                      size={24}
+                      className="pipeline-node-selector__connector-icon"
+                      withBackdropLayer
+                    />
+                    <span className="min-w-0 flex-1 truncate text-left">{source.id}</span>
+                    <span className="pipeline-node-selector__count">{tables.length}</span>
+                  </button>
+                  {expanded && (
+                    <div
+                      className="pipeline-node-selector__tables"
+                      aria-label={t('pipelines.workspace.nodeSelector.sourceTables')}
+                    >
+                      {tables.map((table) => (
+                        <button
+                          key={table}
+                          type="button"
+                          data-node-selector-table={`${source.id}:${table}`}
+                          className="pipeline-node-selector__table"
+                          onClick={() => selectSourceTable(source, table)}
+                        >
+                          {table}
+                        </button>
+                      ))}
+                      {tables.length === 0 && (
+                        <p className="pipeline-node-selector__status">
+                          {t('pipelines.workspace.nodeSelector.emptySources')}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </section>
 
         {(['processing', 'output'] as const).map((section) => {

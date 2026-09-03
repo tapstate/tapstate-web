@@ -1,6 +1,14 @@
 .pipeline-canvas-surface,
 .pipeline-canvas-state,
 .pipeline-canvas {
+  --xy-node-boxshadow-selected: none;
+}
+
+.pipeline-canvas .react-flow__node.selectable.selected {
+  box-shadow: none !important;
+}
+
+.pipeline-canvas {
   background: var(--pipeline-canvas-bg);
 }
 
@@ -342,47 +350,6 @@
   box-shadow: var(--pipeline-shadow-node-panel);
 }
 
-.pipeline-canvas__node {
-  display: flex;
-  border: 1px solid transparent;
-  border-radius: 1rem;
-  background: transparent;
-  color: var(--pipeline-text);
-  transition:
-    border-color 150ms ease,
-    box-shadow 150ms ease;
-}
-
-.pipeline-canvas__node-surface {
-  position: relative;
-  width: 100%;
-  padding-bottom: 0.25rem;
-  border: 1px solid transparent;
-  border-radius: 0.9375rem;
-  background: var(--pipeline-surface);
-  box-shadow: var(--pipeline-shadow-node);
-  transition: box-shadow 150ms ease;
-}
-
-.pipeline-canvas__node-header {
-  min-height: 2.75rem;
-}
-
-@media (hover: hover) {
-  .pipeline-canvas__node:hover .pipeline-canvas__node-surface {
-    box-shadow: var(--pipeline-shadow-node-hover);
-  }
-}
-
-.pipeline-canvas__node--selected {
-  border-color: var(--pipeline-selection);
-  box-shadow: none;
-}
-
-.pipeline-canvas__node-title {
-  color: var(--pipeline-text);
-}
-
 .pipeline-canvas__node-icon {
   position: relative;
   display: grid;
@@ -390,10 +357,6 @@
   height: 1.5rem;
   flex: 0 0 1.5rem;
   place-items: center;
-}
-
-.pipeline-canvas__node-description {
-  color: var(--pipeline-text-muted);
 }
 
 .pipeline-canvas__connector-icon {
@@ -477,188 +440,6 @@
 .pipeline-canvas__node-kind--transform {
   background: var(--pipeline-kind-transform-surface);
   color: var(--pipeline-kind-transform-text);
-}
-
-.pipeline-canvas .pipeline-canvas__node .pipeline-canvas__handle {
-  position: absolute !important;
-  top: var(--pipeline-handle-header-offset) !important;
-  right: auto !important;
-  bottom: auto !important;
-  left: auto !important;
-  margin: 0 !important;
-  display: block !important;
-  width: var(--pipeline-handle-hit-size-inline) !important;
-  height: var(--pipeline-handle-hit-size-block) !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  outline: 0 !important;
-  cursor: crosshair !important;
-  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-  transform: none !important;
-  z-index: 1 !important;
-}
-
-/* React Flow adds its own .react-flow__handle geometry and paint rules.
- * Keep the semantic handle as an invisible hit target until it is connected;
- * the visual state is rendered by the scoped pseudo-element below. */
-.pipeline-canvas .react-flow__handle.pipeline-canvas__handle {
-  position: absolute !important;
-  width: var(--pipeline-handle-hit-size-inline) !important;
-  height: var(--pipeline-handle-hit-size-block) !important;
-  margin: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  transform: none !important;
-}
-
-.pipeline-canvas .pipeline-canvas__node .pipeline-canvas__handle--input {
-  top: var(--pipeline-handle-header-offset) !important;
-  right: auto !important;
-  bottom: auto !important;
-  left: calc(
-    -0.5 * var(--pipeline-handle-hit-size-inline) - var(--pipeline-node-border-width)
-  ) !important;
-  cursor: grab !important;
-  transform: none !important;
-}
-
-.pipeline-canvas .pipeline-canvas__node .pipeline-canvas__handle--output {
-  top: var(--pipeline-handle-header-offset) !important;
-  right: calc(
-    -0.5 * var(--pipeline-handle-hit-size-inline) - var(--pipeline-node-border-width)
-  ) !important;
-  bottom: auto !important;
-  left: auto !important;
-  transform: none !important;
-}
-
-.pipeline-canvas .pipeline-canvas__handle::after {
-  position: absolute;
-  top: 0.25rem;
-  width: 0.125rem;
-  height: 0.5rem;
-  border-radius: 0;
-  background: var(--pipeline-handle-accent);
-  content: '';
-  /* Keep React Flow's hit area invisible until the handle has a semantic
-   * visual state. The handle itself remains interactive for edge dragging. */
-  opacity: 0;
-  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: none;
-}
-
-.pipeline-canvas .pipeline-canvas__handle[data-handle-connected='true']::after {
-  opacity: 1;
-}
-
-.pipeline-canvas .pipeline-canvas__handle--input::after {
-  left: 6px;
-}
-
-.pipeline-canvas .pipeline-canvas__handle--output::after {
-  right: 6px;
-}
-
-.pipeline-canvas .pipeline-canvas__handle[data-pipeline-add='true']::after {
-  opacity: 0;
-}
-
-.pipeline-canvas .pipeline-canvas__handle-add {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  display: grid;
-  width: 1.25rem;
-  height: 1.25rem;
-  place-items: center;
-  border: 0;
-  border-radius: 999px;
-  background: var(--pipeline-handle-accent);
-  box-shadow:
-    0 1px 2px color-mix(in srgb, var(--pipeline-handle-accent) 32%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--pipeline-handle-accent) 20%, white);
-  color: white;
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  font-size: 0.75rem;
-  font-weight: 500;
-  line-height: 1;
-  opacity: 0;
-  padding: 0;
-  pointer-events: none;
-  cursor: pointer;
-  transform: translate(-50%, -50%) scale(0.82);
-  transition:
-    opacity 150ms ease,
-    transform 150ms ease,
-    background-color 150ms ease;
-}
-
-.pipeline-canvas
-  .pipeline-canvas__node--selected
-  .pipeline-canvas__handle[data-pipeline-add='true']
-  .pipeline-canvas__handle-add,
-.pipeline-canvas
-  .pipeline-canvas__node:hover
-  .pipeline-canvas__handle[data-pipeline-add='true']
-  .pipeline-canvas__handle-add,
-.pipeline-canvas
-  .pipeline-canvas__handle[data-pipeline-add='true']:hover
-  .pipeline-canvas__handle-add {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-}
-
-.pipeline-canvas
-  .pipeline-canvas__handle[data-pipeline-add='true']:hover
-  .pipeline-canvas__handle-add {
-  background: color-mix(in srgb, var(--pipeline-handle-accent) 88%, black);
-  transform: translate(-50%, -50%) scale(1.08);
-}
-
-.pipeline-canvas__edge-hit {
-  cursor: pointer;
-  pointer-events: stroke;
-}
-
-.pipeline-canvas__edge-selector {
-  position: absolute;
-  z-index: 3;
-  transition: opacity 150ms ease;
-}
-
-.pipeline-canvas__edge-add {
-  display: grid;
-  width: 1.25rem;
-  height: 1.25rem;
-  place-items: center;
-  border: 0;
-  border-radius: 999px;
-  background: var(--pipeline-selection);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--pipeline-selection) 32%, transparent);
-  color: white;
-  cursor: pointer;
-  transition: transform 150ms ease;
-}
-
-.pipeline-canvas__edge-add:hover {
-  transform: scale(1.5);
-}
-
-.pipeline-canvas .pipeline-canvas__node .pipeline-canvas__handle.connectingfrom::after,
-.pipeline-canvas .pipeline-canvas__node .pipeline-canvas__handle.connecting::after,
-.pipeline-canvas .pipeline-canvas__node .pipeline-canvas__handle.valid::after,
-.pipeline-canvas .pipeline-canvas__node .pipeline-canvas__handle.connectable:hover::after,
-.pipeline-canvas .pipeline-canvas__node .pipeline-canvas__handle:focus-visible::after {
-  transform: scale(1.25);
-}
-
-@media (hover: hover) {
-  .pipeline-canvas .pipeline-canvas__node .pipeline-canvas__handle:hover::after {
-    transform: scale(1.25);
-  }
 }
 
 .pipeline-node-config__header {
@@ -760,6 +541,143 @@
 
 .pipeline-node-config__form {
   padding: 0.9rem 1rem 0;
+}
+
+.pipeline-node-config__form .tap-formily-formily-item {
+  margin-bottom: 0.875rem;
+}
+
+.pipeline-node-config__form .tap-formily-formily-item-label-content {
+  margin-bottom: 0.375rem;
+}
+
+.pipeline-node-config__form .tap-formily-formily-item-label-content label {
+  color: var(--pipeline-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+}
+
+.pipeline-node-config__form
+  :where(.tap-formily-input, .tap-formily-input-number, .tap-formily-select-selector) {
+  min-height: 2rem;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  background: var(--pipeline-surface-subtle);
+  color: var(--pipeline-text);
+  box-shadow: none;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.pipeline-node-config__form
+  :where(
+    .tap-formily-input:hover,
+    .tap-formily-input-number:hover,
+    .tap-formily-select:hover .tap-formily-select-selector
+  ) {
+  border-color: var(--pipeline-border-strong);
+  background: var(--pipeline-surface-subtle);
+}
+
+.pipeline-node-config__form
+  :where(
+    .tap-formily-input:focus,
+    .tap-formily-input-number:focus,
+    .tap-formily-select-focused .tap-formily-select-selector
+  ) {
+  border-color: var(--pipeline-selection) !important;
+  background: var(--pipeline-surface) !important;
+  box-shadow: 0 0 0 2px var(--pipeline-selection-ring) !important;
+}
+
+.pipeline-node-config__form .tap-formily-select-arrow {
+  color: var(--pipeline-text-subtle);
+}
+
+.pipeline-node-config__form .tap-formily-select-arrow .anticon {
+  font-size: 0.75rem;
+}
+
+.pipeline-node-config__form .tap-formily-formily-item-help,
+.pipeline-node-config__form .tap-formily-formily-item-explain {
+  color: var(--pipeline-status-failed-text);
+  font-size: 0.6875rem;
+  line-height: 1rem;
+}
+
+.pipeline-table-autocomplete {
+  width: 100%;
+}
+
+.pipeline-table-autocomplete .ant-select-selector {
+  height: 2rem !important;
+  border-color: var(--pipeline-border) !important;
+  border-radius: 0.5rem !important;
+  background: var(--pipeline-surface-subtle) !important;
+  box-shadow: none !important;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.pipeline-table-autocomplete:hover .ant-select-selector {
+  border-color: var(--pipeline-border-strong) !important;
+}
+
+.pipeline-table-autocomplete.ant-select-focused .ant-select-selector {
+  border-color: var(--pipeline-selection) !important;
+  box-shadow: 0 0 0 2px var(--pipeline-selection-ring) !important;
+}
+
+.pipeline-table-autocomplete .ant-select-selection-search-input,
+.pipeline-table-autocomplete .ant-select-selection-placeholder,
+.pipeline-table-autocomplete .ant-select-selection-item {
+  color: var(--pipeline-text) !important;
+  font-size: 0.75rem !important;
+}
+
+.pipeline-table-autocomplete .ant-select-selection-placeholder {
+  color: var(--pipeline-text-subtle) !important;
+}
+
+.pipeline-table-autocomplete .ant-select-arrow,
+.pipeline-table-autocomplete .ant-select-clear {
+  color: var(--pipeline-text-subtle);
+}
+
+.pipeline-table-autocomplete .ant-select-arrow svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.pipeline-table-autocomplete__popup {
+  overflow: hidden;
+  border: 1px solid var(--pipeline-border);
+  border-radius: 0.625rem;
+  background: var(--pipeline-control-surface);
+  box-shadow: var(--pipeline-shadow-panel);
+}
+
+.pipeline-table-autocomplete__popup .ant-select-item {
+  min-height: 2rem;
+  border-radius: 0.375rem;
+  color: var(--pipeline-text-muted);
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.pipeline-table-autocomplete__popup .ant-select-item-option-active {
+  background: var(--pipeline-surface-subtle);
+  color: var(--pipeline-text);
+}
+
+.pipeline-table-autocomplete__popup .ant-select-item-option-selected {
+  background: color-mix(in srgb, var(--pipeline-selection) 10%, transparent);
+  color: var(--pipeline-text);
+  font-weight: 500;
 }
 
 .pipeline-node-config__hint,
