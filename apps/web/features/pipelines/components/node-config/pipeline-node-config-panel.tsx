@@ -236,7 +236,7 @@ export function PipelineNodeConfigPanel({
   return (
     <>
       <div className="pipeline-node-config__header">
-        <div className="pipeline-node-config__title-row">
+        <div className="flex items-center px-4 pt-4 pb-1">
           <PipelineNodeIcon data={selection} />
           <div className="min-w-0 flex-1">
             <h2>{selection.label}</h2>
@@ -252,7 +252,7 @@ export function PipelineNodeConfigPanel({
             <X className="size-4" />
           </Button>
         </div>
-        <div className="px-2 py-2">
+        <div className="p-2">
           <div className="flex max-h-[3.75rem] overflow-y-auto rounded-lg bg-transparent px-2 py-[5px] leading-none">
             <Textarea
               aria-label={t('pipelines.workspace.config.description')}

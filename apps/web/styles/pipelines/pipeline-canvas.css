@@ -459,27 +459,19 @@
 
 .pipeline-node-config__header {
   display: block;
-  border-bottom: 1px solid var(--pipeline-border);
   flex: 0 0 auto;
   padding: 0;
 }
 
-.pipeline-node-config__title-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.25rem;
-  padding: 1rem 1rem 0.25rem;
-}
-
-.pipeline-node-config__title-row .pipeline-canvas__node-icon {
+.pipeline-node-config__header > .flex > .pipeline-canvas__node-icon {
   width: 1.5rem;
   height: 1.5rem;
   flex-basis: 1.5rem;
-  margin-top: 0.125rem;
+  margin-right: 0.25rem;
 }
 
-.pipeline-node-config__title-row .pipeline-canvas__connector-icon,
-.pipeline-node-config__title-row .pipeline-canvas__node-kind {
+.pipeline-node-config__header > .flex .pipeline-canvas__connector-icon,
+.pipeline-node-config__header > .flex .pipeline-canvas__node-kind {
   width: 1.5rem;
   height: 1.5rem;
 }
