@@ -385,6 +385,7 @@ describe('PipelineEditorPage', () => {
       ),
     )
     expect(getPipelineStatus).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function))
+    expect(elementWithText('span', 'PIPELINE')).toBeUndefined()
     expect(elementWithText('a', 'Build')?.getAttribute('href')).toBe(
       '/pipelines/orders_to_warehouse/edit',
     )

@@ -316,21 +316,18 @@ function PipelineWorkspaceNav({
         )}
 
         <div
-          className={cn('mt-5 flex items-center gap-2.5 px-2', collapsed && 'justify-center px-0')}
+          className={cn('mt-5 flex items-center gap-3 px-2', collapsed && 'justify-center px-0')}
         >
           <span className="pipeline-workspace__identity-mark flex size-8 shrink-0 items-center justify-center rounded-lg">
             <Workflow className="size-4" aria-hidden="true" />
           </span>
           {!collapsed && (
-            <span className="min-w-0">
-              <span className="block truncate text-[13px] font-semibold text-slate-800">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <span className="min-w-0 truncate text-[13px] leading-5 font-semibold text-slate-800">
                 {pipelineId}
               </span>
-              <PipelineStatusBadge status={status} className="mt-1" />
-              <span className="mt-0.5 block text-[10px] font-semibold tracking-[0.08em] text-slate-400 uppercase">
-                {t('pipelines.workspace.navigation.workspace')}
-              </span>
-            </span>
+              <PipelineStatusBadge status={status} />
+            </div>
           )}
         </div>
 

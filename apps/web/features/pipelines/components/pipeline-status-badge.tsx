@@ -27,7 +27,7 @@ export function PipelineStatusBadge({
     return (
       <span
         className={cn(
-          'pipeline-list__status pipeline-list__status--unavailable border-gray-200 bg-gray-50 text-gray-500',
+          'pipeline-list__status pipeline-list__status--unavailable h-6 shrink-0 rounded-md border-gray-200 bg-gray-50 px-2 text-[11px] leading-4 font-semibold text-gray-500',
           className,
         )}
         data-state="unavailable"
@@ -42,7 +42,7 @@ export function PipelineStatusBadge({
   return (
     <span
       className={cn(
-        'pipeline-list__status inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[12px] leading-5 font-medium',
+        'pipeline-list__status inline-flex h-6 shrink-0 items-center gap-1.5 rounded-md border px-2 text-[11px] leading-4 font-semibold tracking-[-0.01em]',
         pipelineStatusClasses[status],
         className,
       )}
