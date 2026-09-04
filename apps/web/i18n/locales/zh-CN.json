@@ -643,7 +643,6 @@
         "writeMode": "写入模式",
         "description": "描述",
         "descriptionPlaceholder": "添加描述",
-        "localDraft": "启用 typed DAG 保存前，此面板中的修改仅作为本地草稿。",
         "close": "关闭配置",
         "resizePanel": "调整配置面板宽度",
         "viewReadOnly": "View 由 Pipeline 定义派生，暂不能在此编辑。"

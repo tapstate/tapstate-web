@@ -180,7 +180,6 @@ function DataNodeForm({
           <FormilySchema form={form} schema={schema} components={formilyComponents} />
         </AntdFormily.FormLayout>
       </div>
-      <p className="pipeline-node-config__hint">{t('pipelines.workspace.config.localDraft')}</p>
       <span className="sr-only">{JSON.stringify(values)}</span>
     </FormilyAntdProvider>
   )

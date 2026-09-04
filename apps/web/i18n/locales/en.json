@@ -643,7 +643,6 @@
         "writeMode": "Write mode",
         "description": "Description",
         "descriptionPlaceholder": "Add a description",
-        "localDraft": "This panel is a local draft until typed DAG saving is enabled.",
         "close": "Close configuration",
         "resizePanel": "Resize configuration panel",
         "viewReadOnly": "Views are derived from the Pipeline definition and cannot be edited here."

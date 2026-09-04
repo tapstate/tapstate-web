@@ -665,17 +665,10 @@
   font-weight: 500;
 }
 
-.pipeline-node-config__hint,
 .pipeline-node-config__empty {
   color: var(--pipeline-text-muted);
   font-size: 0.7rem;
   line-height: 1.35rem;
-}
-
-.pipeline-node-config__hint {
-  border-top: 1px solid var(--pipeline-border);
-  margin-top: 0.5rem;
-  padding: 0.7rem 1rem 0.9rem;
 }
 
 .pipeline-node-config__empty {
