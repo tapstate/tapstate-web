@@ -14,6 +14,15 @@
 
 .pipeline-workflow-container {
   background: var(--pipeline-canvas-bg);
+  --pipeline-form-label: rgb(53 64 82);
+  --pipeline-form-fill: rgb(200 206 218 / 25%);
+  --pipeline-form-placeholder: rgb(16 24 40 / 30%);
+}
+
+.dark .pipeline-workflow-container {
+  --pipeline-form-label: var(--pipeline-text-muted);
+  --pipeline-form-fill: var(--pipeline-surface-subtle);
+  --pipeline-form-placeholder: color-mix(in srgb, var(--pipeline-text) 42%, transparent);
 }
 
 .pipeline-workspace {
@@ -137,6 +146,12 @@
   box-sizing: border-box;
   min-width: 0;
   padding: 0 0.25rem;
+}
+
+@media (min-width: 641px) {
+  .pipeline-canvas__operator {
+    right: calc(var(--pipeline-canvas-panel-width, 0px) + 0.25rem);
+  }
 }
 
 .pipeline-canvas__operator-row {
@@ -505,27 +520,42 @@
   margin-bottom: 1.25rem;
 }
 
+.pipeline-node-config__form
+  .tap-formily-item.tap-formily-item-layout-vertical
+  .tap-formily-item-label {
+  height: 1.5rem;
+  min-height: 1.5rem !important;
+  align-items: center;
+  box-sizing: border-box;
+  line-height: 1rem !important;
+  padding: 0 !important;
+}
+
 .pipeline-node-config__form .tap-formily-item-label-content {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0;
 }
 
 .pipeline-node-config__form .tap-formily-item .tap-formily-item-label-content label {
-  color: var(--pipeline-text-muted);
+  color: var(--pipeline-form-label);
   font-size: 0.8125rem;
   font-weight: 600;
-  line-height: 1.25rem;
+  line-height: 1rem;
   letter-spacing: 0.035em;
   text-transform: uppercase;
 }
 
+.pipeline-node-config__form .tap-formily-item-control {
+  margin-top: 0.25rem;
+}
+
 .pipeline-node-config__form
   :where(.tap-input, .tap-input-affix-wrapper, .tap-input-number, .tap-select) {
-  min-height: 2.375rem;
+  min-height: 2rem;
   border: 1px solid transparent;
   border-radius: 0.5rem;
-  background: var(--pipeline-surface-subtle);
-  color: var(--pipeline-text);
-  box-shadow: none;
+  background: var(--pipeline-form-fill) !important;
+  color: var(--pipeline-text) !important;
+  box-shadow: none !important;
   box-sizing: border-box;
   transition:
     background-color 150ms ease,

@@ -256,7 +256,7 @@ export function PipelineNodeConfigPanel({
           <div className="flex max-h-[3.75rem] overflow-y-auto rounded-lg bg-transparent px-2 py-[5px] leading-none">
             <Textarea
               aria-label={t('pipelines.workspace.config.description')}
-              className="max-h-[3.75rem] min-h-0! w-full resize-none! rounded-none! border-0! bg-transparent! p-0! text-xs! leading-[1.125rem]! text-[var(--pipeline-text)]! shadow-none! outline-none placeholder:text-[var(--pipeline-text-subtle)]! focus-visible:ring-0!"
+              className="max-h-[3.75rem] min-h-0! w-full resize-none! rounded-none! border-0! bg-transparent! p-0! text-xs! leading-[1.125rem]! text-[var(--pipeline-text)]! shadow-none! outline-none placeholder:text-[var(--pipeline-form-placeholder)]! focus-visible:ring-0!"
               placeholder={t('pipelines.workspace.config.descriptionPlaceholder')}
               ref={descriptionRef}
               rows={1}
