@@ -2,7 +2,7 @@ import type { PropsWithChildren } from 'react'
 
 import { ConfigProvider, type ThemeConfig } from 'antd'
 
-export const formilyAntdPrefixCls = 'tap-formily'
+export const formilyAntdPrefixCls = 'tap'
 
 export const formilyAntdTheme: ThemeConfig = {
   token: {

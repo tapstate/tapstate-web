@@ -490,44 +490,6 @@
   white-space: nowrap;
 }
 
-.pipeline-node-config__description {
-  width: 100%;
-  min-height: 0 !important;
-  max-height: 3.75rem;
-  resize: none !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  padding: 0 !important;
-  color: var(--pipeline-text) !important;
-  font-size: 0.75rem !important;
-  line-height: 1.125rem !important;
-  box-shadow: none !important;
-}
-
-.pipeline-node-config__description-editor {
-  padding: 0.5rem;
-}
-
-.pipeline-node-config__description-input {
-  display: flex;
-  max-height: 3.75rem;
-  overflow-y: auto;
-  border-radius: 0.5rem;
-  background: transparent;
-  padding: 0.3125rem 0.5rem;
-  line-height: 0;
-}
-
-.pipeline-node-config__description::placeholder {
-  color: var(--pipeline-text-subtle);
-}
-
-.pipeline-node-config__description:focus-visible {
-  box-shadow: none !important;
-  outline: none;
-}
-
 .pipeline-node-config__scroll {
   min-height: 0;
   flex: 1 1 auto;
@@ -539,33 +501,32 @@
   max-height: none;
 }
 
-.pipeline-node-config__form {
-  padding: 0.9rem 1rem 0;
+.pipeline-node-config__form .tap-formily-item {
+  margin-bottom: 1.25rem;
 }
 
-.pipeline-node-config__form .tap-formily-formily-item {
-  margin-bottom: 0.875rem;
+.pipeline-node-config__form .tap-formily-item-label-content {
+  margin-bottom: 0.5rem;
 }
 
-.pipeline-node-config__form .tap-formily-formily-item-label-content {
-  margin-bottom: 0.375rem;
-}
-
-.pipeline-node-config__form .tap-formily-formily-item-label-content label {
+.pipeline-node-config__form .tap-formily-item .tap-formily-item-label-content label {
   color: var(--pipeline-text-muted);
   font-size: 0.8125rem;
   font-weight: 600;
   line-height: 1.25rem;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
 }
 
 .pipeline-node-config__form
-  :where(.tap-formily-input, .tap-formily-input-number, .tap-formily-select-selector) {
-  min-height: 2rem;
+  :where(.tap-input, .tap-input-affix-wrapper, .tap-input-number, .tap-select) {
+  min-height: 2.375rem;
   border: 1px solid transparent;
   border-radius: 0.5rem;
   background: var(--pipeline-surface-subtle);
   color: var(--pipeline-text);
   box-shadow: none;
+  box-sizing: border-box;
   transition:
     background-color 150ms ease,
     border-color 150ms ease,
@@ -574,9 +535,10 @@
 
 .pipeline-node-config__form
   :where(
-    .tap-formily-input:hover,
-    .tap-formily-input-number:hover,
-    .tap-formily-select:hover .tap-formily-select-selector
+    .tap-input:hover,
+    .tap-input-affix-wrapper:hover,
+    .tap-input-number:hover,
+    .tap-select:hover
   ) {
   border-color: var(--pipeline-border-strong);
   background: var(--pipeline-surface-subtle);
@@ -584,25 +546,26 @@
 
 .pipeline-node-config__form
   :where(
-    .tap-formily-input:focus,
-    .tap-formily-input-number:focus,
-    .tap-formily-select-focused .tap-formily-select-selector
+    .tap-input:focus,
+    .tap-input-affix-wrapper:focus-within,
+    .tap-input-number:focus,
+    .tap-select-focused
   ) {
   border-color: var(--pipeline-selection) !important;
   background: var(--pipeline-surface) !important;
   box-shadow: 0 0 0 2px var(--pipeline-selection-ring) !important;
 }
 
-.pipeline-node-config__form .tap-formily-select-arrow {
+.pipeline-node-config__form .tap-select-arrow {
   color: var(--pipeline-text-subtle);
 }
 
-.pipeline-node-config__form .tap-formily-select-arrow .anticon {
+.pipeline-node-config__form .tap-select-arrow .anticon {
   font-size: 0.75rem;
 }
 
-.pipeline-node-config__form .tap-formily-formily-item-help,
-.pipeline-node-config__form .tap-formily-formily-item-explain {
+.pipeline-node-config__form .tap-formily-item-help,
+.pipeline-node-config__form .tap-formily-item-explain {
   color: var(--pipeline-status-failed-text);
   font-size: 0.6875rem;
   line-height: 1rem;
@@ -860,7 +823,7 @@
   font-weight: 650;
 }
 
-.pipeline-transform__condition :where(.tap-formily-input, .ant-input, .ant-select-selector),
+.pipeline-transform__condition :where(.tap-input, .ant-input, .ant-select-selector),
 .pipeline-transform__body :where(.ant-input, .ant-select-selector) {
   border-color: var(--pipeline-border);
   border-radius: 0.5rem;

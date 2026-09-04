@@ -175,7 +175,7 @@ function DataNodeForm({
 
   return (
     <FormilyAntdProvider>
-      <div className="pipeline-node-config__form">
+      <div className="pipeline-node-config__form px-4 pt-4">
         <AntdFormily.FormLayout layout="vertical">
           <FormilySchema form={form} schema={schema} components={formilyComponents} />
         </AntdFormily.FormLayout>
@@ -252,11 +252,11 @@ export function PipelineNodeConfigPanel({
             <X className="size-4" />
           </Button>
         </div>
-        <div className="pipeline-node-config__description-editor">
-          <div className="pipeline-node-config__description-input">
+        <div className="px-2 py-2">
+          <div className="flex max-h-[3.75rem] overflow-y-auto rounded-lg bg-transparent px-2 py-[5px] leading-none">
             <Textarea
               aria-label={t('pipelines.workspace.config.description')}
-              className="pipeline-node-config__description"
+              className="max-h-[3.75rem] min-h-0! w-full resize-none! rounded-none! border-0! bg-transparent! p-0! text-xs! leading-[1.125rem]! text-[var(--pipeline-text)]! shadow-none! outline-none placeholder:text-[var(--pipeline-text-subtle)]! focus-visible:ring-0!"
               placeholder={t('pipelines.workspace.config.descriptionPlaceholder')}
               ref={descriptionRef}
               rows={1}

@@ -119,7 +119,7 @@ function fieldControl(label: string) {
 
 describe('ConnectorFormily', () => {
   it('shares a generic shadcn-aligned provider with other Formily renderers', () => {
-    expect(formilyAntdPrefixCls).toBe('tap-formily')
+    expect(formilyAntdPrefixCls).toBe('tap')
     expect(formilyAntdTheme.token).toMatchObject({
       borderRadius: 10,
       colorBgContainer: 'var(--pipeline-surface-subtle)',
@@ -211,9 +211,7 @@ describe('ConnectorFormily', () => {
       )
     })
 
-    expect(
-      container.querySelector('.tap-formily-formily-layout.tap-formily-form-vertical'),
-    ).not.toBeNull()
+    expect(container.querySelector('.tap-formily-layout.tap-form-vertical')).not.toBeNull()
     expect(fieldControl('Adapter password')).toHaveProperty('type', 'password')
     expect(fieldControl('Adapter port')).toHaveProperty('value', '5432')
   })
