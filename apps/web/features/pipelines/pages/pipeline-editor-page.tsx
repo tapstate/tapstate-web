@@ -20,10 +20,12 @@ import {
   createPipeline,
   getPipeline,
   getPipelineLayout,
+  getPipelineStatus,
   runPipeline,
   savePipelineLayout,
   updatePipeline,
   type PipelineLayout,
+  type PipelineRuntimeState,
   type PipelineView,
 } from '@/service/pipelines/pipeline-client'
 import { getSourceSchema, listConnectors, listSources } from '@/service/source-client'
@@ -46,6 +48,7 @@ import type {
   PipelineNodeConfigurationChange,
 } from '../model/pipeline-node-model'
 
+import { PipelineStatusBadge } from '../components/pipeline-status-badge'
 import { PipelineLogsPage } from '../logs/pipeline-logs-page'
 import { clearStagedPipelineDraft, type StagedPipelineDraft } from '../model/pipeline-draft-session'
 import {
@@ -248,11 +251,13 @@ function PipelineWorkspaceNav({
   activeSection,
   collapsed,
   onCollapsedChange,
+  status,
 }: {
   pipelineId: string
   activeSection: PipelineWorkspaceSection
   collapsed: boolean
   onCollapsedChange: (collapsed: boolean) => void
+  status?: PipelineRuntimeState
 }) {
   const { t } = useTranslation()
 
@@ -321,6 +326,7 @@ function PipelineWorkspaceNav({
               <span className="block truncate text-[13px] font-semibold text-slate-800">
                 {pipelineId}
               </span>
+              <PipelineStatusBadge status={status} className="mt-1" />
               <span className="mt-0.5 block text-[10px] font-semibold tracking-[0.08em] text-slate-400 uppercase">
                 {t('pipelines.workspace.navigation.workspace')}
               </span>
@@ -935,6 +941,15 @@ export function PipelineWorkspacePage({
   stagedDraft?: StagedPipelineDraft | null
 }) {
   const [navigationCollapsed, setNavigationCollapsed] = useState(false)
+  const apiFetch = useAuthStore((state) => state.apiFetch)
+  const status = useQuery({
+    queryKey: ['pipelines', pipelineId, 'status'],
+    queryFn: () => getPipelineStatus(pipelineId, apiFetch),
+    enabled: stagedDraft === null,
+    retry: false,
+    refetchInterval: 5000,
+    refetchIntervalInBackground: false,
+  })
 
   return (
     <main
@@ -946,6 +961,7 @@ export function PipelineWorkspacePage({
         activeSection={section}
         collapsed={navigationCollapsed}
         onCollapsedChange={setNavigationCollapsed}
+        status={status.data?.state}
       />
       {section === 'orchestrate' ? (
         <PipelineOrchestrationPage pipelineId={pipelineId} stagedDraft={stagedDraft} />

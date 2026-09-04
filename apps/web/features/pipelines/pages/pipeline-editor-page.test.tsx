@@ -379,7 +379,12 @@ describe('PipelineEditorPage', () => {
     await vi.waitFor(() =>
       expect(document.querySelector('[data-testid="pipeline-canvas"]')).not.toBeNull(),
     )
-    expect(getPipelineStatus).not.toHaveBeenCalled()
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="pipeline-status"]')?.textContent).toContain(
+        'Running',
+      ),
+    )
+    expect(getPipelineStatus).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function))
     expect(elementWithText('a', 'Build')?.getAttribute('href')).toBe(
       '/pipelines/orders_to_warehouse/edit',
     )
@@ -520,7 +525,7 @@ describe('PipelineEditorPage', () => {
 
     await vi.waitFor(() => expect(container?.textContent).toContain('No log lines'))
     expect(getPipelineLogs).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function))
-    expect(getPipelineStatus).not.toHaveBeenCalled()
+    expect(getPipelineStatus).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function))
     expect(getPipelineMetrics).not.toHaveBeenCalled()
   })
 
