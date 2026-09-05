@@ -3,12 +3,8 @@ import { useEffect, useRef } from 'react'
 
 import { PipelineCanvasViewportToolbar } from './pipeline-canvas-viewport-toolbar'
 
-interface PipelineCanvasOperatorProps {
-  availableWidth?: number
-}
-
 /** Keeps the minimap and viewport controls in their own canvas layer. */
-export function PipelineCanvasOperator({ availableWidth }: PipelineCanvasOperatorProps) {
+export function PipelineCanvasOperator() {
   const operatorRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -50,12 +46,7 @@ export function PipelineCanvasOperator({ availableWidth }: PipelineCanvasOperato
   }, [])
 
   return (
-    <div
-      className="pipeline-canvas__operator pointer-events-none"
-      style={{ width: availableWidth ? `${availableWidth}px` : undefined }}
-      data-available-width={availableWidth ?? undefined}
-      ref={operatorRef}
-    >
+    <div className="pipeline-canvas__operator pointer-events-none" ref={operatorRef}>
       <div className="pipeline-canvas__operator-row">
         <div className="pipeline-canvas__operator-viewport">
           <MiniMap

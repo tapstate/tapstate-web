@@ -52,7 +52,7 @@ import { PipelineStatusBadge } from '../components/pipeline-status-badge'
 import { PipelineLogsPage } from '../logs/pipeline-logs-page'
 import { clearStagedPipelineDraft, type StagedPipelineDraft } from '../model/pipeline-draft-session'
 import {
-  addPipelineNode,
+  addPipelineNodes,
   buildPipelineMutation,
   createPipelineGraphDraft,
   updatePipelineNodeConfiguration,
@@ -61,12 +61,11 @@ import {
   type PipelineGraphDraft,
 } from '../model/pipeline-graph-edit'
 import { pipelineNodeConnectors } from '../model/pipeline-node-connectors'
+import { sourceTableSelections } from '../model/pipeline-node-model'
 import { PipelineMonitoringPage } from '../monitoring/pipeline-monitoring-page'
 import { PipelineWorkflowWithInnerContext } from '../workflow-app'
 
 export type PipelineWorkspaceSection = 'orchestrate' | 'api' | 'logs' | 'monitoring'
-
-const NODE_PANEL_DEFAULT_WIDTH = 400
 
 function connectorForConfiguration(
   configuration: PipelineNodeConfiguration | null,
@@ -134,13 +133,47 @@ function synchronizeConfiguredNodeIdentity(
         node.id === nodeId
           ? {
               ...node,
-              label: configuration.table || node.label,
+              label:
+                configuration.kind === 'source'
+                  ? sourceNodeLabel(configuration)
+                  : configuration.table || node.label,
               detail: configuration.sourceId || null,
             }
           : node,
       ),
     },
   }
+}
+
+function sourceNodeLabel(configuration: Extract<PipelineNodeConfiguration, { kind: 'source' }>) {
+  const tables = sourceTableSelections(configuration)
+  const first = tables[0]
+  if (!first) return 'Source'
+  const label =
+    first.tableKind === 'regex'
+      ? first.table.startsWith('/') && first.table.endsWith('/')
+        ? first.table
+        : `/${first.table}/`
+      : first.table
+  return tables.length > 1 ? `${label} +${tables.length - 1}` : label
+}
+
+function upstreamSourceTables(
+  draft: PipelineGraphDraft | null,
+  nodeId: string | undefined,
+): ReturnType<typeof sourceTableSelections> {
+  if (!draft || !nodeId) return []
+  const visited = new Set<string>()
+  const walk = (currentId: string): ReturnType<typeof sourceTableSelections> => {
+    if (visited.has(currentId)) return []
+    visited.add(currentId)
+    const configuration = draft.configurations.get(currentId)
+    if (configuration?.kind === 'source') return sourceTableSelections(configuration)
+    return draft.dag.edges
+      .filter((edge) => edge.target === currentId)
+      .flatMap((edge) => walk(edge.source))
+  }
+  return walk(nodeId)
 }
 
 function asQuotedEtag(hash: string) {
@@ -374,8 +407,6 @@ function PipelineOrchestrationPage({
   const [layoutDraft, setLayoutDraft] = useState<Pick<PipelineLayout, 'nodes' | 'viewport'> | null>(
     null,
   )
-  const [nodePanelWidth, setNodePanelWidth] = useState(NODE_PANEL_DEFAULT_WIDTH)
-  const [surfaceWidth, setSurfaceWidth] = useState(0)
   const surfaceRef = useRef<HTMLElement>(null)
   const latestLayout = useRef<Pick<PipelineLayout, 'nodes' | 'viewport'> | null>(null)
   const draftRef = useRef<PipelineGraphDraft | null>(null)
@@ -453,26 +484,6 @@ function PipelineOrchestrationPage({
   )
 
   useEffect(() => {
-    const surface = surfaceRef.current
-    if (!surface) return
-
-    const updateSurfaceWidth = (width: number) => {
-      if (width > 0) setSurfaceWidth((current) => (current === width ? current : width))
-    }
-
-    updateSurfaceWidth(surface.getBoundingClientRect().width)
-    if (typeof ResizeObserver === 'undefined') return
-
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0]
-      if (!entry) return
-      updateSurfaceWidth(entry.contentRect.width)
-    })
-    observer.observe(surface)
-    return () => observer.disconnect()
-  }, [])
-
-  useEffect(() => {
     if (!pipelineData) return
     const nextDraft = createPipelineGraphDraft(pipelineData)
     draftRef.current = nextDraft
@@ -524,7 +535,7 @@ function PipelineOrchestrationPage({
       })),
     [sources.data],
   )
-  const tableOptionsBySourceId = useMemo(() => {
+  const configuredTableOptionsBySourceId = useMemo(() => {
     const options = new Map<string, PipelineSchemaOption[]>()
     for (const source of sources.data ?? []) {
       const tables = (source.tables ?? [])
@@ -535,26 +546,23 @@ function PipelineOrchestrationPage({
     }
     return options
   }, [sources.data])
-  const selectedTableOptions = useMemo(() => {
+  const selectedTargetTableOptions = useMemo(() => {
     const configuration = selection?.configuration
-    if (configuration?.kind !== 'source' && configuration?.kind !== 'target') return undefined
-    return tableOptionsBySourceId.get(configuration.sourceId)
-  }, [selection?.configuration, tableOptionsBySourceId])
+    if (configuration?.kind !== 'target') return undefined
+    return configuredTableOptionsBySourceId.get(configuration.sourceId)
+  }, [configuredTableOptionsBySourceId, selection?.configuration])
+  const selectedTargetSourceTables = useMemo(
+    () =>
+      selection?.configuration?.kind === 'target' ? upstreamSourceTables(draft, selection.id) : [],
+    [draft, selection?.configuration?.kind, selection?.id],
+  )
   const loadPipelineTables = useCallback<PipelineTableLoader>(
     async (sourceId) => {
-      const cached = tableOptionsBySourceId.get(sourceId)
-      if (cached?.length) return cached
-
       const report = await getSourceSchema(sourceId, apiFetch)
       return report.tables.map((table) => ({ label: table.name, value: table.name }))
     },
-    [apiFetch, tableOptionsBySourceId],
+    [apiFetch],
   )
-  const availableCanvasWidth = useMemo(() => {
-    if (!surfaceWidth) return undefined
-    return Math.max(surfaceWidth - (selection ? nodePanelWidth : 0), 400)
-  }, [nodePanelWidth, selection, surfaceWidth])
-
   useEffect(() => {
     setSelection((current) => {
       if (!current) return current
@@ -609,12 +617,19 @@ function PipelineOrchestrationPage({
   }
 
   function handleChooseNode(choice: PipelineNodeChoice, insertion: PipelineNodeInsertionContext) {
+    handleChooseNodes([choice], insertion)
+  }
+
+  function handleChooseNodes(
+    choices: readonly PipelineNodeChoice[],
+    insertion: PipelineNodeInsertionContext,
+  ) {
     const current = draftRef.current
-    if (!current) return
+    if (!current || choices.length === 0) return
     const currentLayout = latestLayout.current ?? layoutData
-    const result = addPipelineNode(
+    const result = addPipelineNodes(
       current,
-      choice,
+      choices,
       insertion.position,
       insertion.connectFrom ?? undefined,
       insertion.connectTo ?? undefined,
@@ -622,7 +637,10 @@ function PipelineOrchestrationPage({
     )
     draftRef.current = result.draft
     setDraft(result.draft)
-    const node = result.draft.dag.nodes.find((candidate) => candidate.id === result.nodeId)
+    const selectedNodeId = result.nodeIds.at(-1)
+    const node = selectedNodeId
+      ? result.draft.dag.nodes.find((candidate) => candidate.id === selectedNodeId)
+      : undefined
     if (node) {
       const configuration = result.draft.configurations.get(node.id) ?? null
       setSelection({
@@ -635,9 +653,9 @@ function PipelineOrchestrationPage({
         configuration,
       })
     }
-    if (result.position) {
+    if (Object.keys(result.positions).length > 0) {
       scheduleLayoutSave({
-        nodes: { ...currentLayout?.nodes, [result.nodeId]: result.position },
+        nodes: { ...currentLayout?.nodes, ...result.positions },
         viewport: currentLayout?.viewport ?? null,
       })
     }
@@ -756,8 +774,9 @@ function PipelineOrchestrationPage({
               connectors: connectors.data,
               sourceState: sources.isPending ? 'loading' : sources.isError ? 'error' : 'success',
               onAddNode: handleChooseNode,
+              onAddNodes: handleChooseNodes,
+              loadTables: loadPipelineTables,
               onSelectionChange: handleSelectionChange,
-              availableWidth: availableCanvasWidth,
             }}
             header={{
               isDirty,
@@ -768,13 +787,12 @@ function PipelineOrchestrationPage({
             }}
             panel={{
               selection,
-              width: nodePanelWidth,
-              onWidthChange: setNodePanelWidth,
               onClose: () => setSelection(null),
               onConfigurationChange: handleConfigurationChange,
               onDescriptionChange: handleDescriptionChange,
               sourceOptions,
-              tableOptions: selectedTableOptions,
+              tableOptions: selectedTargetTableOptions,
+              upstreamSourceTables: selectedTargetSourceTables,
               loadTables: loadPipelineTables,
             }}
           />

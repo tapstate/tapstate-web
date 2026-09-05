@@ -268,8 +268,12 @@ describe('source client', () => {
     await expect(requests[0].json()).resolves.toEqual(request)
 
     await expect(
-      getSourceSchema('orders', fetcherFor(jsonResponse(report, 200, `"${source.contentHash}"`))),
+      getSourceSchema(
+        'orders',
+        fetcherFor(jsonResponse(report, 200, `"${source.contentHash}"`), requests),
+      ),
     ).resolves.toEqual(report)
+    expect(new URL(requests[1].url).pathname).toBe('/api/connections/orders/schema')
   })
 
   it('rejects malformed or mismatched source schema reports', async () => {

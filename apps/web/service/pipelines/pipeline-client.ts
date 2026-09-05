@@ -7,6 +7,8 @@ export interface PipelineDagNode {
   type: PipelineDagNodeType
   label: string
   detail: string | null
+  /** Target table names represented by one multi-table target node. */
+  tableRefs?: string[]
   description?: string | null
 }
 
@@ -196,6 +198,9 @@ function isDagNode(value: unknown): value is PipelineDagNode {
     ['source', 'transform', 'view', 'serve', 'target'].includes(value.type as string) &&
     typeof value.label === 'string' &&
     (value.detail === null || typeof value.detail === 'string') &&
+    (value.tableRefs === undefined ||
+      (Array.isArray(value.tableRefs) &&
+        value.tableRefs.every((item) => typeof item === 'string'))) &&
     (value.description === undefined ||
       value.description === null ||
       typeof value.description === 'string')

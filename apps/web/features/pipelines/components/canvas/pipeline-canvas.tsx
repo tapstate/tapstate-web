@@ -22,6 +22,7 @@ import type { PipelineDag, PipelineLayout } from '@/service/pipelines/pipeline-c
 import type { ConnectorSummary, SourceView } from '@/service/source-client'
 
 import type { PipelineNodeConfiguration } from '../../model/pipeline-node-model'
+import type { PipelineTableLoader } from '../node-config/pipeline-data-node-schema'
 import type {
   PipelineNodeChoice,
   PipelineNodeInsertionContext,
@@ -80,8 +81,9 @@ export function PipelineCanvasContent({
   connectors,
   sourceState,
   onAddNode,
+  onAddNodes,
+  loadTables,
   onSelectionChange,
-  availableWidth,
 }: {
   dag: PipelineDag
   layout: PipelineLayout | null
@@ -94,8 +96,12 @@ export function PipelineCanvasContent({
   connectors: ConnectorSummary[] | undefined
   sourceState: 'loading' | 'success' | 'error'
   onAddNode: (choice: PipelineNodeChoice, context: PipelineNodeInsertionContext) => void
+  onAddNodes?: (
+    choices: readonly PipelineNodeChoice[],
+    context: PipelineNodeInsertionContext,
+  ) => void
+  loadTables?: PipelineTableLoader
   onSelectionChange: (selection: PipelineCanvasSelection | null) => void
-  availableWidth?: number
 }) {
   const [nodeInsertion, setNodeInsertion] = useState<PipelineNodeInsertionContext | null>(null)
   const openNodeSelector = useCallback((context: PipelineNodeInsertionContext) => {
@@ -303,16 +309,23 @@ export function PipelineCanvasContent({
         sources={sources}
         connectors={connectors}
         sourceState={sourceState}
+        loadTables={loadTables}
         onChoose={(choice) => {
           if (!nodeInsertion) return
           onAddNode(choice, nodeInsertion)
+          setNodeInsertion(null)
+        }}
+        onChooseMany={(choices) => {
+          if (!nodeInsertion) return
+          if (onAddNodes) onAddNodes(choices, nodeInsertion)
+          else choices.forEach((choice) => onAddNode(choice, nodeInsertion))
           setNodeInsertion(null)
         }}
         onOpenChange={(open) => {
           if (!open) setNodeInsertion(null)
         }}
       />
-      <PipelineCanvasOperator availableWidth={availableWidth} />
+      <PipelineCanvasOperator />
       <ReactFlow
         nodes={nodes}
         edges={edges}

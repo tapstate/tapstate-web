@@ -4,6 +4,7 @@ import { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { PipelineTableLoader } from '../components/node-config/pipeline-data-node-schema'
 import type {
   PipelineNodeChoice,
   PipelineNodeInsertionContext,
@@ -15,6 +16,7 @@ const {
   getPipelineLogs,
   getPipelineMetrics,
   getPipelineStatus,
+  getSourceSchema,
   runPipeline,
   savePipelineLayout,
   updatePipeline,
@@ -26,6 +28,7 @@ const {
   getPipelineLogs: vi.fn(),
   getPipelineMetrics: vi.fn(),
   getPipelineStatus: vi.fn(),
+  getSourceSchema: vi.fn(),
   runPipeline: vi.fn(),
   savePipelineLayout: vi.fn(),
   updatePipeline: vi.fn(),
@@ -59,6 +62,7 @@ vi.mock('@/service/pipelines/pipeline-client', () => ({
 }))
 
 vi.mock('@/service/source-client', () => ({
+  getSourceSchema,
   listConnectors,
   listSources,
 }))
@@ -69,9 +73,12 @@ vi.mock('@/stores/auth-store', () => ({
 }))
 
 vi.mock('../components/canvas/pipeline-canvas', () => {
+  let canvasRenderCount = 0
+
   const MockPipelineCanvas = ({
     onSelectionChange,
     onAddNode,
+    loadTables,
   }: {
     onSelectionChange: (selection: {
       id: string
@@ -91,7 +98,9 @@ vi.mock('../components/canvas/pipeline-canvas', () => {
       } | null
     }) => void
     onAddNode: (choice: PipelineNodeChoice, context: PipelineNodeInsertionContext) => void
+    loadTables?: PipelineTableLoader
   }) => {
+    canvasRenderCount += 1
     const [nodeSelectorOpen, setNodeSelectorOpen] = useState(false)
     const [sourceExpanded, setSourceExpanded] = useState(false)
     const [insertion, setInsertion] = useState<PipelineNodeInsertionContext>({
@@ -112,7 +121,7 @@ vi.mock('../components/canvas/pipeline-canvas', () => {
     }
 
     return (
-      <div>
+      <div data-testid="pipeline-canvas-render-count" data-render-count={canvasRenderCount}>
         <button
           type="button"
           data-testid="pipeline-canvas"
@@ -150,6 +159,13 @@ vi.mock('../components/canvas/pipeline-canvas', () => {
           }
         >
           Add node
+        </button>
+        <button
+          type="button"
+          data-testid="load-source-schema"
+          onClick={() => void loadTables?.('mysql_feynman')}
+        >
+          Load source schema
         </button>
         <div className="pipeline-canvas__operator" />
         <button
@@ -361,6 +377,12 @@ beforeEach(() => {
       tables: [{ name: 'Player', pattern: null }],
     },
   ])
+  getSourceSchema.mockResolvedValue({
+    connectionId: 'mysql_feynman',
+    connectorId: 'mysql',
+    discoveredAt: 1_754_800_000_000,
+    tables: [{ name: 'Player', fields: [], primaryKey: [], indexes: [] }],
+  })
   listConnectors.mockResolvedValue([{ id: 'mysql', name: 'MySQL', icon: '/connectors/mysql.svg' }])
 })
 
@@ -487,6 +509,19 @@ describe('PipelineEditorPage', () => {
     expect(updatePipeline.mock.calls[0]?.[1]).toMatchObject({
       sources: expect.arrayContaining(['mysql_feynman']),
     })
+  })
+
+  it('loads Source table options from the connection schema endpoint', async () => {
+    await renderPage()
+
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="load-source-schema"]')).not.toBeNull(),
+    )
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-testid="load-source-schema"]')?.click(),
+    )
+
+    expect(getSourceSchema).toHaveBeenCalledWith('mysql_feynman', expect.any(Function))
   })
 
   it('inserts a transform connected from an unconnected node output', async () => {
@@ -617,6 +652,9 @@ describe('PipelineEditorPage', () => {
 
     await vi.waitFor(() => expect(document.querySelector('[role="separator"]')).not.toBeNull())
     const resizeHandle = document.querySelector<HTMLElement>('[role="separator"]')
+    const canvasRenderCount = document
+      .querySelector('[data-testid="pipeline-canvas-render-count"]')
+      ?.getAttribute('data-render-count')
     expect(resizeHandle?.getAttribute('aria-valuenow')).toBe('400')
 
     const createPointerEvent = (type: string, clientX: number) => {
@@ -636,6 +674,11 @@ describe('PipelineEditorPage', () => {
       resizeHandle?.dispatchEvent(createPointerEvent('pointerup', 800))
     })
     expect(resizeHandle?.getAttribute('aria-valuenow')).toBe('500')
+    expect(
+      document
+        .querySelector('[data-testid="pipeline-canvas-render-count"]')
+        ?.getAttribute('data-render-count'),
+    ).toBe(canvasRenderCount)
 
     await act(async () => {
       resizeHandle?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Home' }))

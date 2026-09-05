@@ -14,7 +14,12 @@ import type {
 } from './pipeline-node-model'
 
 import { normalizePipelineDag } from '../components/canvas/pipeline-graph'
-import { pipelineNodeConfigurations } from './pipeline-node-model'
+import {
+  pipelineNodeConfigurations,
+  sourceTableSelections,
+  type PipelineSourceTableSelection,
+  type PipelineTargetTableMapping,
+} from './pipeline-node-model'
 import { isPipelineDagEdgeValid } from './pipeline-node-rules'
 
 export interface PipelineGraphDraft {
@@ -47,12 +52,93 @@ function cloneDag(dag: PipelineDag): PipelineDag {
 }
 
 export function createPipelineGraphDraft(pipeline: PipelineView): PipelineGraphDraft {
-  const dag = cloneDag(pipeline.dag)
-  const configurations = pipelineNodeConfigurations({ ...pipeline, dag })
-  const descriptions = new Map(
-    dag.nodes.filter((node) => node.description).map((node) => [node.id, node.description ?? '']),
+  const rawDag = cloneDag(pipeline.dag)
+  const rawConfigurations = pipelineNodeConfigurations({ ...pipeline, dag: rawDag })
+  const rawDescriptions = new Map(
+    rawDag.nodes
+      .filter((node) => node.description)
+      .map((node) => [node.id, node.description ?? '']),
   )
-  return { pipeline, dag, configurations, descriptions }
+  return collapseSourceNodes(pipeline, rawDag, rawConfigurations, rawDescriptions)
+}
+
+function collapseSourceNodes(
+  pipeline: PipelineView,
+  dag: PipelineDag,
+  configurations: Map<string, PipelineNodeConfiguration>,
+  descriptions: Map<string, string>,
+): PipelineGraphDraft {
+  const sourceGroups = new Map<string, PipelineDagNode[]>()
+  for (const node of dag.nodes) {
+    if (node.type !== 'source') continue
+    const configuration = configurations.get(node.id)
+    if (configuration?.kind !== 'source') continue
+    const group = sourceGroups.get(configuration.sourceId) ?? []
+    group.push(node)
+    sourceGroups.set(configuration.sourceId, group)
+  }
+
+  let nextDag = dag
+  const nextConfigurations = new Map(configurations)
+  const nextDescriptions = new Map(descriptions)
+  for (const nodes of sourceGroups.values()) {
+    if (nodes.length < 2) continue
+    const primary = nodes[0]!
+    const sourceConfigurations = nodes
+      .map((node) => nextConfigurations.get(node.id))
+      .filter(
+        (configuration): configuration is Extract<PipelineNodeConfiguration, { kind: 'source' }> =>
+          configuration?.kind === 'source',
+      )
+    const tables = sourceConfigurations.flatMap((configuration) =>
+      sourceTableSelections(configuration),
+    )
+    const primaryConfiguration = sourceConfigurations[0]
+    if (!primaryConfiguration || tables.length === 0) continue
+    nextConfigurations.set(primary.id, {
+      ...primaryConfiguration,
+      tables,
+      table: tables[0]!.table,
+      ...(tables[0]!.tableKind === 'regex' ? { tableKind: 'regex' as const } : {}),
+    })
+    nextDag = {
+      nodes: nextDag.nodes
+        .filter((node) => !nodes.slice(1).some((removed) => removed.id === node.id))
+        .map((node) =>
+          node.id === primary.id
+            ? { ...node, label: sourceNodeLabel(tables), detail: primaryConfiguration.sourceId }
+            : node,
+        ),
+      edges: dedupeEdges(
+        nextDag.edges.map((edge) => ({
+          ...edge,
+          source: nodes.some((sourceNode) => sourceNode.id === edge.source)
+            ? primary.id
+            : edge.source,
+        })),
+      ),
+    }
+    for (const removed of nodes.slice(1)) {
+      nextConfigurations.delete(removed.id)
+      nextDescriptions.delete(removed.id)
+    }
+  }
+  return {
+    pipeline,
+    dag: nextDag,
+    configurations: nextConfigurations,
+    descriptions: nextDescriptions,
+  }
+}
+
+function dedupeEdges(edges: PipelineDagEdge[]) {
+  const seen = new Set<string>()
+  return edges.filter((edge) => {
+    const key = `${edge.source}:${edge.target}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 function nextDraftId(draft: PipelineGraphDraft, kind: PipelineDagNode['type']) {
@@ -86,13 +172,25 @@ function draftNodeForChoice(
 ): { node: PipelineDagNode; configuration: PipelineNodeConfiguration } {
   if (choice.kind === 'source') {
     const id = nextDraftId(draft, 'source')
+    const tables = choice.tables?.length
+      ? choice.tables.map((selection) => ({ ...selection }))
+      : [{ table: choice.table, ...(choice.tableKind ? { tableKind: choice.tableKind } : {}) }]
+    const primaryTable = tables[0]?.table ?? choice.table
     return {
-      node: { id, type: 'source', label: choice.table, detail: choice.sourceId, description: null },
+      node: {
+        id,
+        type: 'source',
+        label: sourceNodeLabel(tables),
+        detail: choice.sourceId,
+        description: null,
+      },
       configuration: {
         kind: 'source',
         nodeId: id,
         sourceId: choice.sourceId,
-        table: choice.table,
+        tables,
+        table: primaryTable,
+        ...(tables[0]?.tableKind === 'regex' ? { tableKind: 'regex' as const } : {}),
         connectorId: choice.connectorId,
       },
     }
@@ -163,6 +261,7 @@ export function addPipelineNode(
   position: { x: number; y: number } | null
   draft: PipelineGraphDraft
 }
+
 /** Directional overload: connect from the output and/or into the input. */
 export function addPipelineNode(
   draft: PipelineGraphDraft,
@@ -284,6 +383,66 @@ export function addPipelineNode(
   }
 }
 
+/**
+ * Inserts choices into the graph. Multiple Source choices from the same Source
+ * are intentionally folded into one node: the table set belongs to that node,
+ * not to a collection of visually duplicated Source nodes.
+ */
+export function addPipelineNodes(
+  draft: PipelineGraphDraft,
+  choices: readonly PipelineNodeChoice[],
+  position?: { x: number; y: number },
+  connectFrom?: string,
+  connectTo?: string,
+  insertEdge?: PipelineNodeInsertEdge,
+) {
+  const normalizedChoices = combineSourceChoices(choices)
+  let nextDraft = draft
+  const nodeIds: string[] = []
+  const positions: Record<string, { x: number; y: number }> = {}
+
+  normalizedChoices.forEach((choice, index) => {
+    const nextPosition = position
+    const result = addPipelineNode(
+      nextDraft,
+      choice,
+      nextPosition,
+      connectFrom,
+      connectTo,
+      index === 0 ? insertEdge : undefined,
+    )
+    nextDraft = result.draft
+    nodeIds.push(result.nodeId)
+    if (nextPosition) positions[result.nodeId] = nextPosition
+  })
+
+  return { draft: nextDraft, nodeIds, positions }
+}
+
+function combineSourceChoices(choices: readonly PipelineNodeChoice[]) {
+  const sourceChoices = choices.filter((choice) => choice.kind === 'source')
+  if (
+    choices.length <= 1 ||
+    sourceChoices.length !== choices.length ||
+    new Set(sourceChoices.map((choice) => choice.sourceId)).size !== 1
+  ) {
+    return choices
+  }
+
+  const first = sourceChoices[0]!
+  const tables = sourceChoices.flatMap((choice) =>
+    choice.tables?.length
+      ? choice.tables
+      : [{ table: choice.table, ...(choice.tableKind ? { tableKind: choice.tableKind } : {}) }],
+  )
+  return [
+    {
+      ...first,
+      tables,
+    },
+  ] satisfies PipelineNodeChoice[]
+}
+
 function isIntermediateChoice(choice: PipelineNodeChoice) {
   return choice.kind === 'transform' || choice.kind === 'view'
 }
@@ -355,20 +514,47 @@ function mergeConfiguration(
   configuration: PipelineNodeConfiguration,
   change: PipelineNodeConfigurationChange,
 ): PipelineNodeConfiguration {
-  if (configuration.kind === 'source')
+  if (configuration.kind === 'source') {
+    const nextSourceId = stringValue(change.values.sourceId, configuration.sourceId)
+    const nextTables = sourceTableSelectionsFromValue(change.values.tables)
+    const fallbackTable = stringValue(change.values.table, configuration.table)
+    const tables = nextTables.length
+      ? nextTables
+      : typeof change.values.tables === 'object'
+        ? []
+        : [
+            {
+              table: fallbackTable,
+              ...(typeof change.values.tableKind === 'string'
+                ? { tableKind: change.values.tableKind as 'literal' | 'regex' }
+                : isRegexReference(fallbackTable)
+                  ? { tableKind: 'regex' as const }
+                  : {}),
+            },
+          ]
     return {
       ...configuration,
-      sourceId: stringValue(change.values.sourceId, configuration.sourceId),
-      table: stringValue(change.values.table, configuration.table),
-      filter: stringValue(change.values.filter, configuration.filter ?? ''),
+      sourceId: nextSourceId,
+      tables,
+      table: tables[0]?.table ?? fallbackTable,
+      ...(tables[0]?.tableKind === 'regex' || isRegexReference(tables[0]?.table ?? '')
+        ? { tableKind: 'regex' as const }
+        : {}),
     }
-  if (configuration.kind === 'target')
+  }
+  if (configuration.kind === 'target') {
+    const tableMappings = Array.isArray(change.values.tableMappings)
+      ? targetMappingsFromValue(change.values.tableMappings)
+      : configuration.tableMappings
     return {
       ...configuration,
       sourceId: stringValue(change.values.sourceId, configuration.sourceId),
-      table: stringValue(change.values.table, configuration.table),
+      table:
+        tableMappings?.[0]?.targetTable ?? stringValue(change.values.table, configuration.table),
+      ...(Array.isArray(change.values.tableMappings) ? { tableMappings } : {}),
       writeMode: stringValue(change.values.writeMode, configuration.writeMode),
     }
+  }
   if (configuration.kind === 'transform') {
     const { from, options, ...body } = change.values
     return {
@@ -389,12 +575,48 @@ function mergeConfiguration(
 function stringValue(value: unknown, fallback: string): string {
   return typeof value === 'string' ? value : fallback
 }
+
+function sourceTableSelectionsFromValue(value: unknown): PipelineSourceTableSelection[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    if (typeof item === 'string' && item.length > 0) {
+      return [{ table: item, ...(isRegexReference(item) ? { tableKind: 'regex' as const } : {}) }]
+    }
+    if (!isRecord(item) || typeof item.table !== 'string' || item.table.length === 0) return []
+    return [
+      {
+        table: item.table,
+        ...(item.tableKind === 'regex' || isRegexReference(item.table)
+          ? { tableKind: 'regex' as const }
+          : {}),
+      },
+    ]
+  })
+}
+
+function targetMappingsFromValue(value: unknown): PipelineTargetTableMapping[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    if (!isRecord(item) || typeof item.sourceTable !== 'string') return []
+    if (typeof item.targetTable !== 'string') return []
+    return [{ sourceTable: item.sourceTable, targetTable: item.targetTable }]
+  })
+}
+
 function isRecord(value: unknown): value is PipelineJsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
+
+function sourceNodeLabel(tables: readonly PipelineSourceTableSelection[]) {
+  const first = tables[0]
+  if (!first) return 'Source'
+  const firstLabel = first.tableKind === 'regex' ? regexReference(first.table) : first.table
+  return tables.length > 1 ? `${firstLabel} +${tables.length - 1}` : firstLabel
+}
+
 function labelForConfiguration(configuration: PipelineNodeConfiguration, fallback: string) {
-  if (configuration.kind === 'source' || configuration.kind === 'target')
-    return configuration.table || fallback
+  if (configuration.kind === 'source') return sourceNodeLabel(sourceTableSelections(configuration))
+  if (configuration.kind === 'target') return configuration.table || fallback
   if (configuration.kind === 'transform') return configuration.stepId || fallback
   return configuration.viewId || fallback
 }
@@ -495,7 +717,8 @@ export function validatePipelineGraph(
     }
     if (
       (config.kind === 'source' || config.kind === 'target') &&
-      (!config.sourceId || !config.table)
+      (!config.sourceId ||
+        (config.kind === 'source' ? sourceTableSelections(config).length === 0 : !config.table))
     ) {
       diagnostics.push({
         code: 'missing-configuration',
@@ -599,24 +822,33 @@ export function buildPipelineMutation(draft: PipelineGraphDraft): PipelineMutati
       Boolean(config && config.kind === 'target' && config.sourceId && config.table),
     )
     .map((config) => {
+      const upstreamTables = sourceTablesFromTargetUpstream(
+        config.nodeId,
+        nodeById,
+        draft.dag.edges,
+        draft.configurations,
+      )
       const sourceTable =
+        upstreamTables[0] ??
         serveSourceTable ??
         tableFromTargetUpstream(config.nodeId, nodeById, draft.dag.edges, draft.configurations)
+      const mappings = targetMappingsForConfiguration(config, upstreamTables, sourceTable)
+      const primaryTargetTable = mappings[0]?.targetTable ?? config.table
       const originalTargetTable = tableFromTargetNodeId(config.nodeId)
       const existing = existingSync.find(
         (item) =>
           isRecord(item) &&
           item.source === config.sourceId &&
-          (targetTable(item, sourceTable) === config.table ||
+          (targetTable(item, sourceTable) === primaryTargetTable ||
             targetTable(item, sourceTable) === originalTargetTable ||
-            targetTable(item, originalTargetTable) === config.table ||
+            targetTable(item, originalTargetTable) === primaryTargetTable ||
             targetTable(item, originalTargetTable) === originalTargetTable),
       )
       const existingId =
         isRecord(existing) && typeof existing.id === 'string'
           ? existing.id
-          : `${config.sourceId}_${config.table}`
-      const rename = syncRename(existing, sourceTable, config.table)
+          : `${config.sourceId}_${primaryTargetTable}`
+      const rename = syncRenameMappings(existing, mappings)
       return {
         ...(isRecord(existing) ? existing : {}),
         id: existingId,
@@ -680,16 +912,67 @@ function tableFromTargetUpstream(
   return tableFromReference(referenceForNode(edge.source, nodeById, configurations))
 }
 
-function syncRename(
+function syncRenameMappings(
   existing: PipelineJsonObject | undefined,
-  sourceTable: string | null,
-  targetTableName: string,
+  mappings: readonly PipelineTargetTableMapping[],
 ) {
-  if (!sourceTable || !targetTableName || sourceTable === targetTableName) return undefined
   const previous = existing && isRecord(existing.rename) ? existing.rename : {}
   const map = isRecord(previous.map) ? { ...previous.map } : {}
-  map[sourceTable] = targetTableName
+  let changed = false
+  for (const mapping of mappings) {
+    if (
+      !mapping.sourceTable ||
+      !mapping.targetTable ||
+      mapping.sourceTable === mapping.targetTable
+    ) {
+      continue
+    }
+    map[mapping.sourceTable] = mapping.targetTable
+    changed = true
+  }
+  if (!changed) return undefined
   return { ...previous, map }
+}
+
+function sourceTablesFromTargetUpstream(
+  targetNodeId: string,
+  nodeById: ReadonlyMap<string, PipelineDagNode>,
+  edges: readonly PipelineDagEdge[],
+  configurations: ReadonlyMap<string, PipelineNodeConfiguration>,
+) {
+  const visited = new Set<string>()
+  const walk = (nodeId: string): string[] => {
+    if (visited.has(nodeId)) return []
+    visited.add(nodeId)
+    const upstream = configurations.get(nodeId)
+    if (upstream?.kind === 'source') {
+      return sourceTableSelections(upstream).map(({ table }) => table)
+    }
+    return edges
+      .filter((edge) => edge.target === nodeId)
+      .flatMap((edge) => {
+        const upstreamNode = nodeById.get(edge.source)
+        if (upstreamNode?.type === 'source') return walk(edge.source)
+        const reference = referenceForNode(edge.source, nodeById, configurations)
+        const table = reference ? tableFromReference(reference) : null
+        return table ? [table] : []
+      })
+  }
+  return [...new Set(walk(targetNodeId))]
+}
+
+function targetMappingsForConfiguration(
+  configuration: Extract<PipelineNodeConfiguration, { kind: 'target' }>,
+  upstreamTables: readonly string[],
+  fallbackSourceTable: string | null,
+) {
+  if (configuration.tableMappings?.length) return configuration.tableMappings
+  const sourceTables =
+    upstreamTables.length > 0 ? upstreamTables : fallbackSourceTable ? [fallbackSourceTable] : []
+  return sourceTables.map((sourceTable, index) => ({
+    sourceTable,
+    targetTable: index === 0 ? configuration.table : sourceTable,
+  }))
 }
 
 function applyRename(sourceTable: string, rename: PipelineJsonObject) {
@@ -715,9 +998,7 @@ function deriveFrom(
   nodeById: ReadonlyMap<string, PipelineDagNode>,
   configurations: ReadonlyMap<string, PipelineNodeConfiguration>,
 ) {
-  const refs = upstreamIds
-    .map((id) => referenceForNode(id, nodeById, configurations))
-    .filter(Boolean) as string[]
+  const refs = upstreamIds.flatMap((id) => referencesForNode(id, nodeById, configurations))
   if (refs.length === 0) return null
   if (
     configuration.kind === 'transform' &&
@@ -743,22 +1024,42 @@ function deriveOrConfiguredFrom(
   return derived ?? configuration.from ?? null
 }
 
-function referenceForNode(
+function referencesForNode(
   id: string,
   nodeById: ReadonlyMap<string, PipelineDagNode>,
   configurations: ReadonlyMap<string, PipelineNodeConfiguration>,
 ) {
   const node = nodeById.get(id)
   const configuration = configurations.get(id)
-  if (!node) return null
-  if (configuration?.kind === 'source' && configuration.sourceId && configuration.table) {
-    return `${configuration.sourceId}.${configuration.table}`
+  if (!node) return []
+  if (configuration?.kind === 'source' && configuration.sourceId) {
+    return sourceTableSelections(configuration).map((selection) =>
+      selection.tableKind === 'regex'
+        ? regexReference(selection.table)
+        : `${configuration.sourceId}.${selection.table}`,
+    )
   }
   if (node.type === 'transform')
-    return configuration?.kind === 'transform' ? configuration.stepId : node.label
+    return [configuration?.kind === 'transform' ? configuration.stepId : node.label]
   if (node.type === 'view')
-    return configuration?.kind === 'view' ? configuration.viewId : node.label
-  return node.label || null
+    return [configuration?.kind === 'view' ? configuration.viewId : node.label]
+  return node.label ? [node.label] : []
+}
+
+function referenceForNode(
+  id: string,
+  nodeById: ReadonlyMap<string, PipelineDagNode>,
+  configurations: ReadonlyMap<string, PipelineNodeConfiguration>,
+) {
+  return referencesForNode(id, nodeById, configurations)[0] ?? null
+}
+
+function isRegexReference(value: string) {
+  return value.length > 1 && value.startsWith('/') && value.endsWith('/')
+}
+
+function regexReference(value: string) {
+  return isRegexReference(value) ? value : `/${value}/`
 }
 
 function deriveServeFrom(targets: PipelineJsonObject[], draft: PipelineGraphDraft) {
@@ -768,8 +1069,20 @@ function deriveServeFrom(targets: PipelineJsonObject[], draft: PipelineGraphDraf
     .filter((node) => node.type === 'target')
     .map((targetNode) => {
       const edge = draft.dag.edges.find((candidate) => candidate.target === targetNode.id)
-      return edge ? referenceForNode(edge.source, nodeById, draft.configurations) : null
+      if (!edge) return null
+      const upstreamConfiguration = draft.configurations.get(edge.source)
+      if (upstreamConfiguration?.kind === 'source') {
+        const selections = sourceTableSelections(upstreamConfiguration)
+        if (selections.length > 1) {
+          return selections.map((selection) =>
+            selection.tableKind === 'regex'
+              ? regexReference(selection.table)
+              : `${upstreamConfiguration.sourceId}.${selection.table}`,
+          )
+        }
+      }
+      return referenceForNode(edge.source, nodeById, draft.configurations)
     })
-    .filter((value): value is string => Boolean(value))
+    .filter((value): value is string | string[] => Boolean(value))
   return refs[0] ?? ''
 }

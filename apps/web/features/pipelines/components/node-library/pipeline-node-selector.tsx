@@ -9,6 +9,9 @@ import {
   Filter,
   GitFork,
   GitMerge,
+  ListPlus,
+  Plus,
+  Regex,
   Search,
   SlidersHorizontal,
   X,
@@ -22,6 +25,10 @@ import { ConnectorIcon } from '@/components/connector-icon'
 import { cn } from '@/lib/utils'
 
 import type {
+  PipelineSchemaOption,
+  PipelineTableLoader,
+} from '../node-config/pipeline-data-node-schema'
+import type {
   PipelineNodeChoice,
   PipelineNodeInsertionContext,
   PipelineTransformType,
@@ -34,6 +41,8 @@ interface PipelineNodeSelectorProps {
   connectors: ConnectorSummary[] | undefined
   sourceState: 'loading' | 'success' | 'error'
   onChoose: (choice: PipelineNodeChoice) => void
+  onChooseMany?: (choices: readonly PipelineNodeChoice[]) => void
+  loadTables?: PipelineTableLoader
   onOpenChange: (open: boolean) => void
 }
 
@@ -43,6 +52,12 @@ interface DirectChoice {
   transformType?: PipelineTransformType
   icon: typeof Filter
   section: 'processing' | 'output'
+}
+
+interface SourceScopeEntry {
+  value: string
+  selectable: boolean
+  kind: 'literal' | 'regex'
 }
 
 const directChoices: DirectChoice[] = [
@@ -87,11 +102,18 @@ export function PipelineNodeSelector({
   connectors,
   sourceState,
   onChoose,
+  onChooseMany,
+  loadTables,
   onOpenChange,
 }: PipelineNodeSelectorProps) {
   const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const [expandedSourceId, setExpandedSourceId] = useState<string | null>(null)
+  const [discoveredTablesBySourceId, setDiscoveredTablesBySourceId] = useState<
+    Record<string, readonly PipelineSchemaOption[]>
+  >({})
+  const [loadingSourceId, setLoadingSourceId] = useState<string | null>(null)
+  const [sourceTableErrorId, setSourceTableErrorId] = useState<string | null>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
@@ -124,6 +146,33 @@ export function PipelineNodeSelector({
     }
   }, [onOpenChange, open])
 
+  useEffect(() => {
+    if (!open || !expandedSourceId || !loadTables) return
+    const source = (sources ?? []).find((candidate) => candidate.id === expandedSourceId)
+    if (!source || source.tables !== null || Object.hasOwn(discoveredTablesBySourceId, source.id)) {
+      return
+    }
+
+    let cancelled = false
+    setLoadingSourceId(source.id)
+    setSourceTableErrorId(null)
+    void loadTables(source.id)
+      .then((options) => {
+        if (cancelled) return
+        setDiscoveredTablesBySourceId((current) => ({ ...current, [source.id]: [...options] }))
+      })
+      .catch(() => {
+        if (!cancelled) setSourceTableErrorId(source.id)
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingSourceId((current) => (current === source.id ? null : current))
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [discoveredTablesBySourceId, expandedSourceId, loadTables, open, sources])
+
   const connectorsById = useMemo(
     () => new Map((connectors ?? []).map((item) => [item.id, item])),
     [connectors],
@@ -133,11 +182,18 @@ export function PipelineNodeSelector({
     return (sources ?? []).filter((source) => {
       if (!match) return true
       if (normalized(source.id).includes(match)) return true
+      if (
+        (discoveredTablesBySourceId[source.id] ?? []).some((table) =>
+          normalized(table.label).includes(match),
+        )
+      ) {
+        return true
+      }
       return (source.tables ?? []).some((table) =>
         normalized(table.name ?? table.pattern ?? '').includes(match),
       )
     })
-  }, [query, sources])
+  }, [discoveredTablesBySourceId, query, sources])
   const matchingChoices = useMemo(() => {
     const match = normalized(query)
     return directChoices.filter(
@@ -157,13 +213,35 @@ export function PipelineNodeSelector({
     }
   }
 
-  function selectSourceTable(source: SourceView, table: string) {
+  function selectSourceTable(
+    source: SourceView,
+    table: string,
+    tableKind: 'literal' | 'regex' = 'literal',
+  ) {
     onChoose({
       kind: 'source',
       sourceId: source.id,
       table,
+      ...(tableKind === 'regex' ? { tableKind } : {}),
       connectorId: source.connector || null,
     })
+  }
+
+  function selectAllSourceTables(source: SourceView, tables: readonly string[]) {
+    const choices = tables.map(
+      (table): PipelineNodeChoice => ({
+        kind: 'source',
+        sourceId: source.id,
+        table,
+        connectorId: source.connector || null,
+      }),
+    )
+    if (choices.length === 0) return
+    if (onChooseMany) {
+      onChooseMany(choices)
+      return
+    }
+    onChoose(choices[0])
   }
 
   return (
@@ -225,17 +303,58 @@ export function PipelineNodeSelector({
             aria-label={t('pipelines.workspace.nodeSelector.sources')}
           >
             {matchingSources.map((source) => {
-              const tables = (source.tables ?? [])
-                .map((table) => table.name ?? table.pattern)
-                .filter((table): table is string => Boolean(table))
-                .filter(
-                  (table) =>
-                    !query ||
-                    normalized(table).includes(normalized(query)) ||
-                    normalized(source.id).includes(normalized(query)),
-                )
-              const connector = connectorsById.get(source.connector)
+              const discoveredTables = discoveredTablesBySourceId[source.id] ?? []
+              const scopeEntries: SourceScopeEntry[] =
+                source.tables === null
+                  ? discoveredTables.map((table) => ({
+                      value: table.value,
+                      selectable: true,
+                      kind: 'literal' as const,
+                    }))
+                  : (source.tables ?? []).flatMap((table) => {
+                      const value = table.name ?? table.pattern
+                      return value
+                        ? [
+                            {
+                              value,
+                              selectable: Boolean(table.name),
+                              kind: table.name ? ('literal' as const) : ('regex' as const),
+                            },
+                          ]
+                        : []
+                    })
+              const literalTables = scopeEntries
+                .filter((entry) => entry.selectable)
+                .map((entry) => entry.value)
+              const scopedEntries = scopeEntries.filter(
+                (entry) =>
+                  !query ||
+                  normalized(entry.value).includes(normalized(query)) ||
+                  normalized(source.id).includes(normalized(query)),
+              )
+              const tables = scopedEntries.filter((entry) => entry.selectable)
               const expanded = expandedSourceId === source.id
+              const isDiscovering = loadingSourceId === source.id
+              const hasDiscoveryError = sourceTableErrorId === source.id
+              const connector = connectorsById.get(source.connector)
+              const scopeCount =
+                source.tables === null
+                  ? discoveredTables.length > 0
+                    ? discoveredTables.length
+                    : '∞'
+                  : scopeEntries.length
+              const scopeLabel =
+                source.tables === null
+                  ? isDiscovering
+                    ? t('pipelines.workspace.nodeSelector.discoveringSourceTables')
+                    : discoveredTables.length > 0
+                      ? t('pipelines.workspace.nodeSelector.discoveredSourceScope', {
+                          count: discoveredTables.length,
+                        })
+                      : t('pipelines.workspace.nodeSelector.openSourceScope')
+                  : t('pipelines.workspace.nodeSelector.configuredSourceScope', {
+                      count: scopeCount,
+                    })
               return (
                 <div key={source.id} className="pipeline-node-selector__source">
                   <button
@@ -261,29 +380,80 @@ export function PipelineNodeSelector({
                       withBackdropLayer
                     />
                     <span className="min-w-0 flex-1 truncate text-left">{source.id}</span>
-                    <span className="pipeline-node-selector__count">{tables.length}</span>
+                    <span className="pipeline-node-selector__count">{scopeCount}</span>
                   </button>
                   {expanded && (
                     <div
                       className="pipeline-node-selector__tables"
                       aria-label={t('pipelines.workspace.nodeSelector.sourceTables')}
                     >
-                      {tables.map((table) => (
-                        <button
-                          key={table}
-                          type="button"
-                          data-node-selector-table={`${source.id}:${table}`}
-                          className="pipeline-node-selector__table"
-                          onClick={() => selectSourceTable(source, table)}
-                        >
-                          {table}
-                        </button>
-                      ))}
-                      {tables.length === 0 && (
+                      <div className="flex items-center justify-between gap-3 border-b border-[var(--pipeline-selector-border)] px-2 py-1.5 text-[11px] leading-4 text-[var(--pipeline-selector-muted)]">
+                        <span className="min-w-0 truncate">{scopeLabel}</span>
+                        {onChooseMany && literalTables.length > 1 && (
+                          <button
+                            type="button"
+                            data-node-selector-add-all={source.id}
+                            className="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 font-semibold text-[var(--pipeline-selection)] transition-colors hover:bg-[var(--pipeline-actionbar-bg-accent)] focus-visible:ring-1 focus-visible:ring-[var(--pipeline-selection)] focus-visible:outline-none"
+                            onClick={() => selectAllSourceTables(source, literalTables)}
+                          >
+                            <ListPlus className="size-3.5" aria-hidden="true" />
+                            {t('pipelines.workspace.nodeSelector.addAllTables', {
+                              count: literalTables.length,
+                            })}
+                          </button>
+                        )}
+                      </div>
+                      {isDiscovering && (
                         <p className="pipeline-node-selector__status">
-                          {t('pipelines.workspace.nodeSelector.emptySources')}
+                          {t('pipelines.workspace.nodeSelector.loadingSourceTables')}
                         </p>
                       )}
+                      {hasDiscoveryError && (
+                        <p className="pipeline-node-selector__status pipeline-node-selector__status--error">
+                          {t('pipelines.workspace.nodeSelector.sourceTablesError')}
+                        </p>
+                      )}
+                      {scopedEntries.map((entry) =>
+                        entry.selectable ? (
+                          <button
+                            key={entry.value}
+                            type="button"
+                            data-node-selector-table={`${source.id}:${entry.value}`}
+                            className="pipeline-node-selector__table"
+                            onClick={() => selectSourceTable(source, entry.value, entry.kind)}
+                          >
+                            <Plus
+                              className="mr-1.5 size-3 text-[var(--pipeline-text-subtle)]"
+                              aria-hidden="true"
+                            />
+                            {entry.value}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            key={entry.value}
+                            className="flex w-full items-center gap-1.5 px-2 py-1.5 text-left text-xs text-[var(--pipeline-selector-muted)] transition-colors hover:bg-[var(--pipeline-actionbar-bg-accent)] hover:text-[var(--pipeline-text)] focus-visible:ring-1 focus-visible:ring-[var(--pipeline-selection)] focus-visible:outline-none"
+                            data-node-selector-scope-rule={entry.value}
+                            onClick={() => selectSourceTable(source, entry.value, entry.kind)}
+                          >
+                            <Regex className="size-3 shrink-0" aria-hidden="true" />
+                            <span className="min-w-0 truncate">{entry.value}</span>
+                            <span className="ml-auto shrink-0 text-[10px] tracking-wide uppercase opacity-70">
+                              {t('pipelines.workspace.nodeSelector.scopeRule')}
+                            </span>
+                          </button>
+                        ),
+                      )}
+                      {tables.length === 0 &&
+                        !isDiscovering &&
+                        !hasDiscoveryError &&
+                        scopedEntries.length === 0 && (
+                          <p className="pipeline-node-selector__status">
+                            {source.tables === null
+                              ? t('pipelines.workspace.nodeSelector.openSourceScope')
+                              : t('pipelines.workspace.nodeSelector.emptySources')}
+                          </p>
+                        )}
                     </div>
                   )}
                 </div>

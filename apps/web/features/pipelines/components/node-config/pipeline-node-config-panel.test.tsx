@@ -3,6 +3,9 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import type { SourceView } from '@/service/source-client'
+
+import type { PipelineSourceTableSelection } from '../../model/pipeline-node-model'
 import type { PipelineCanvasSelection } from '../canvas/pipeline-canvas-types'
 import type { PipelineSchemaOption, PipelineTableLoader } from './pipeline-data-node-schema'
 
@@ -40,6 +43,8 @@ async function renderPanel(
     sourceOptions?: readonly PipelineSchemaOption[]
     tableOptions?: readonly PipelineSchemaOption[]
     loadTables?: PipelineTableLoader
+    sources?: readonly SourceView[]
+    upstreamSourceTables?: readonly PipelineSourceTableSelection[]
   } = {},
   onDescriptionChange?: (description: string) => void,
 ) {
@@ -56,6 +61,8 @@ async function renderPanel(
         sourceOptions={options.sourceOptions}
         tableOptions={options.tableOptions}
         loadTables={options.loadTables}
+        sources={options.sources}
+        upstreamSourceTables={options.upstreamSourceTables}
       />,
     )
   })
@@ -75,9 +82,25 @@ const sourceSelection: PipelineCanvasSelection = {
     sourceId: 'mysql_feynman',
     table: 'Player',
     connectorId: 'mysql',
-    filter: '',
   },
 }
+
+const sourceView = {
+  id: 'mysql_feynman',
+  metadata: null,
+  connector: 'mysql',
+  config: {},
+  configuredSecrets: [],
+  mode: 'replication',
+  tables: [
+    { type: 'table', name: 'Player', pattern: null, filter: null, pk: null, options: null },
+    { type: 'table', name: 'Match', pattern: null, filter: null, pk: null, options: null },
+    { type: 'pattern', name: null, pattern: 'player_*', filter: null, pk: null, options: null },
+  ],
+  options: null,
+  srs: null,
+  contentHash: 'a'.repeat(64),
+} satisfies SourceView
 
 describe('PipelineNodeConfigPanel', () => {
   it('renders Source configuration without connector metadata', async () => {
@@ -86,8 +109,83 @@ describe('PipelineNodeConfigPanel', () => {
     expect(host.textContent).toContain('Source')
     expect(host.textContent).toContain('Table')
     expect(host.textContent).not.toContain('Connector')
-    expect(host.textContent).toContain('Table filter')
+    expect(host.textContent).not.toContain('Table filter')
     expect(host.querySelector('[role="combobox"]')).not.toBeNull()
+  })
+
+  it('renders the Source table scope as part of the Source schema', async () => {
+    const host = await renderPanel(sourceSelection, undefined, { sources: [sourceView] })
+
+    const scope = host.querySelector('[data-pipeline-source-scope]')
+    expect(scope).not.toBeNull()
+    expect(scope?.textContent).toContain('Source scope')
+    expect(scope?.textContent).toContain('Player')
+    expect(scope?.querySelector('[data-pipeline-source-scope-rule="player_*"]')).not.toBeNull()
+  })
+
+  it('keeps multiple selected tables on the same Source node', async () => {
+    const changes: Array<{ values: Record<string, unknown> }> = []
+    const host = await renderPanel(
+      sourceSelection,
+      (change) => changes.push({ values: change.values }),
+      {
+        tableOptions: [
+          { label: 'Player', value: 'Player' },
+          { label: 'Match', value: 'Match' },
+        ],
+        sources: [sourceView],
+      },
+    )
+
+    await act(async () =>
+      host
+        .querySelector<HTMLElement>('[data-pipeline-source-table-picker-mode="multiple"]')
+        ?.click(),
+    )
+    await act(async () => {
+      host
+        .querySelector<HTMLInputElement>('[data-pipeline-source-table-option="Match"] input')
+        ?.click()
+    })
+    await act(async () => {
+      host
+        .querySelector<HTMLInputElement>('[data-pipeline-source-table-option="player_*"] input')
+        ?.click()
+    })
+    expect(host.querySelector('[data-pipeline-source-table-picker-add]')).toBeNull()
+    expect(changes.at(-1)?.values).toMatchObject({
+      tables: ['Player', 'Match', '/player_*/'],
+    })
+  })
+
+  it('validates and adds a custom Source regex rule to the same node', async () => {
+    const changes: Array<{ values: Record<string, unknown> }> = []
+    const host = await renderPanel(
+      sourceSelection,
+      (change) => changes.push({ values: change.values }),
+      { sources: [sourceView] },
+    )
+
+    await act(async () =>
+      host
+        .querySelector<HTMLElement>('[data-pipeline-source-table-picker-mode="multiple"]')
+        ?.click(),
+    )
+    const pattern = host.querySelector<HTMLInputElement>(
+      '[data-pipeline-source-table-picker-pattern]',
+    )
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+    await act(async () => {
+      setter?.call(pattern, 'orders_.*')
+      pattern?.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await act(async () =>
+      host.querySelector<HTMLElement>('[data-pipeline-source-table-picker-add-pattern]')?.click(),
+    )
+
+    expect(changes.at(-1)?.values).toMatchObject({
+      tables: ['Player', '/orders_.*/'],
+    })
   })
 
   it('renders Target configuration with the write mode selector', async () => {
@@ -153,6 +251,53 @@ describe('PipelineNodeConfigPanel', () => {
     })
   })
 
+  it('shows one Target node with a mapping row for each upstream table', async () => {
+    const changes: Array<{ values: Record<string, unknown> }> = []
+    const targetSelection: PipelineCanvasSelection = {
+      ...sourceSelection,
+      id: 'target:warehouse:Player',
+      label: 'Player',
+      nodeType: 'target',
+      configuration: {
+        kind: 'target',
+        nodeId: 'target:warehouse:Player',
+        sourceId: 'warehouse',
+        table: 'Player',
+        connectorId: 'mysql',
+        writeMode: 'upsert',
+      },
+    }
+    const host = await renderPanel(
+      targetSelection,
+      (change) => changes.push({ values: change.values }),
+      {
+        upstreamSourceTables: [{ table: 'Player' }, { table: 'PlayerAddress' }],
+        tableOptions: [{ label: 'Player', value: 'Player' }],
+      },
+    )
+
+    expect(host.querySelectorAll('[data-pipeline-target-table-mapping]')).toHaveLength(2)
+    expect(
+      host.querySelector('[data-pipeline-target-table-mapping="PlayerAddress"]'),
+    ).not.toBeNull()
+
+    const table = host.querySelector<HTMLInputElement>(
+      '[aria-label="Target table for PlayerAddress"]',
+    )
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+    await act(async () => {
+      setter?.call(table, 'player_address_archive')
+      table?.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+
+    expect(changes.at(-1)?.values).toMatchObject({
+      tableMappings: [
+        { sourceTable: 'Player', targetTable: 'Player' },
+        { sourceTable: 'PlayerAddress', targetTable: 'player_address_archive' },
+      ],
+    })
+  })
+
   it('uses catalog selectors for source and table when options are available', async () => {
     const host = await renderPanel(sourceSelection, undefined, {
       sourceOptions: [{ label: 'MySQL source', value: 'mysql_feynman' }],
@@ -173,6 +318,27 @@ describe('PipelineNodeConfigPanel', () => {
     })
 
     expect(loadTables).toHaveBeenCalledWith('mysql_feynman')
+  })
+
+  it('uses the loaded source schema as the table catalog while retaining regex scope rules', async () => {
+    const loadTables = vi.fn(async () => [{ label: 'Player', value: 'Player' }])
+    const host = await renderPanel(sourceSelection, undefined, {
+      loadTables,
+      sources: [sourceView],
+    })
+
+    await act(async () =>
+      host
+        .querySelector<HTMLElement>('[data-pipeline-source-table-picker-mode="multiple"]')
+        ?.click(),
+    )
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(host.querySelector('[data-pipeline-source-table-option="Player"]')).not.toBeNull()
+    expect(host.querySelector('[data-pipeline-source-table-option="Match"]')).toBeNull()
+    expect(host.querySelector('[data-pipeline-source-table-option="player_*"]')).not.toBeNull()
   })
 
   it('edits the node description in the panel header', async () => {
@@ -221,25 +387,5 @@ describe('PipelineNodeConfigPanel', () => {
     expect(host.querySelector('input[aria-label="Target field"]')).not.toBeNull()
     expect(host.querySelector('input[aria-label="Source field or expression"]')).not.toBeNull()
     expect(host.textContent).not.toContain('Table filter')
-  })
-
-  it('emits local draft changes without replacing the selected node identity', async () => {
-    const changes: Array<{ nodeId: string; kind: string; values: Record<string, unknown> }> = []
-    const host = await renderPanel(sourceSelection, (change) => changes.push(change))
-    const filter = host.querySelector<HTMLTextAreaElement>(
-      'textarea:not([aria-label="Description"])',
-    )
-    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set
-
-    await act(async () => {
-      setter?.call(filter, 'id > 10')
-      filter?.dispatchEvent(new Event('change', { bubbles: true }))
-    })
-
-    expect(changes.at(-1)).toMatchObject({
-      nodeId: 'source:mysql_feynman:Player',
-      kind: 'source',
-      values: { filter: 'id > 10' },
-    })
   })
 })

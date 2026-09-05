@@ -20,8 +20,17 @@ const sources = [
     connector: 'mysql',
     tables: [
       { name: 'Player', pattern: null },
+      { name: 'Match', pattern: null },
       { name: null, pattern: 'player_*' },
     ],
+  },
+] as SourceView[]
+
+const openSource = [
+  {
+    id: 'postgres_open',
+    connector: 'postgres',
+    tables: null,
   },
 ] as SourceView[]
 
@@ -89,6 +98,93 @@ describe('PipelineNodeSelector', () => {
       table: 'Player',
       connectorId: 'mysql',
     })
+  })
+
+  it('offers all literal tables in a Source scope as one multi-table action', async () => {
+    const onChooseMany = vi.fn()
+    await renderSelector({ onChooseMany })
+
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-node-selector-source="mysql_feynman"]')?.click(),
+    )
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-node-selector-add-all="mysql_feynman"]')?.click(),
+    )
+
+    expect(onChooseMany).toHaveBeenCalledWith([
+      {
+        kind: 'source',
+        sourceId: 'mysql_feynman',
+        table: 'Player',
+        connectorId: 'mysql',
+      },
+      {
+        kind: 'source',
+        sourceId: 'mysql_feynman',
+        table: 'Match',
+        connectorId: 'mysql',
+      },
+    ])
+  })
+
+  it('offers Source patterns as dynamic references instead of concrete table nodes', async () => {
+    const { onChoose } = await renderSelector()
+
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-node-selector-source="mysql_feynman"]')?.click(),
+    )
+
+    expect(document.querySelector('[data-node-selector-scope-rule="player_*"]')).not.toBeNull()
+    expect(document.querySelector('[data-node-selector-table="mysql_feynman:player_*"]')).toBeNull()
+
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-node-selector-scope-rule="player_*"]')?.click(),
+    )
+
+    expect(onChoose).toHaveBeenCalledWith({
+      kind: 'source',
+      sourceId: 'mysql_feynman',
+      table: 'player_*',
+      tableKind: 'regex',
+      connectorId: 'mysql',
+    })
+  })
+
+  it('discovers tables for an open Source scope before offering the multi-table action', async () => {
+    const onChooseMany = vi.fn()
+    const loadTables = vi.fn(async () => [
+      { label: 'orders', value: 'orders' },
+      { label: 'customers', value: 'customers' },
+    ])
+    await renderSelector({ sources: openSource, onChooseMany, loadTables })
+
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-node-selector-source="postgres_open"]')?.click(),
+    )
+    await vi.waitFor(() => {
+      expect(
+        document.querySelector('[data-node-selector-table="postgres_open:orders"]'),
+      ).not.toBeNull()
+    })
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-node-selector-add-all="postgres_open"]')?.click(),
+    )
+
+    expect(loadTables).toHaveBeenCalledWith('postgres_open')
+    expect(onChooseMany).toHaveBeenCalledWith([
+      {
+        kind: 'source',
+        sourceId: 'postgres_open',
+        table: 'orders',
+        connectorId: 'postgres',
+      },
+      {
+        kind: 'source',
+        sourceId: 'postgres_open',
+        table: 'customers',
+        connectorId: 'postgres',
+      },
+    ])
   })
 
   it('keeps transform choices available when loading Sources failed', async () => {

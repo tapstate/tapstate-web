@@ -4,6 +4,7 @@ import type { PipelineView } from '@/service/pipelines/pipeline-client'
 
 import {
   addPipelineNode,
+  addPipelineNodes,
   buildPipelineMutation,
   createPipelineGraphDraft,
   removePipelineNode,
@@ -139,6 +140,7 @@ describe('pipeline graph edit model', () => {
       kind: 'source',
       nodeId: added.nodeId,
       sourceId: 'postgres',
+      tables: [{ table: 'payments' }],
       table: 'payments',
       connectorId: 'postgresql',
     })
@@ -147,6 +149,238 @@ describe('pipeline graph edit model', () => {
         (item) => item.code === 'invalid-source-reference',
       ),
     ).toBe(false)
+  })
+
+  it('folds a batch of source tables into one visible Source node', () => {
+    const draft = createPipelineGraphDraft(view)
+    const added = addPipelineNodes(
+      draft,
+      [
+        { kind: 'source', sourceId: 'postgres', table: 'payments', connectorId: 'postgresql' },
+        { kind: 'source', sourceId: 'postgres', table: 'customers', connectorId: 'postgresql' },
+      ],
+      { x: 240, y: 180 },
+    )
+
+    expect(added.nodeIds).toHaveLength(1)
+    expect(added.draft.dag.nodes.filter((node) => added.nodeIds.includes(node.id))).toHaveLength(1)
+    expect(added.positions[added.nodeIds[0]!]).toEqual({ x: 240, y: 180 })
+    expect(added.draft.configurations.get(added.nodeIds[0]!)).toMatchObject({
+      kind: 'source',
+      tables: [{ table: 'payments' }, { table: 'customers' }],
+    })
+  })
+
+  it('folds a persisted per-table DAG projection back into one Source node', () => {
+    const draft = createPipelineGraphDraft({
+      ...view,
+      sources: [{ id: 'mysql', metadata: null, connector: 'mysql' }],
+      transforms: null,
+      serve: { id: 'serve', from: 'mysql', sync: [{ id: 'orders_out', source: 'mongo' }] },
+      dag: {
+        nodes: [
+          { id: 'source:mysql:orders', type: 'source', label: 'orders', detail: 'mysql' },
+          { id: 'source:mysql:customers', type: 'source', label: 'customers', detail: 'mysql' },
+          { id: 'target:mongo:orders', type: 'target', label: 'orders', detail: 'mongo' },
+        ],
+        edges: [
+          {
+            id: 'orders-edge',
+            source: 'source:mysql:orders',
+            target: 'target:mongo:orders',
+            label: null,
+          },
+          {
+            id: 'customers-edge',
+            source: 'source:mysql:customers',
+            target: 'target:mongo:orders',
+            label: null,
+          },
+        ],
+      },
+    })
+
+    expect(draft.dag.nodes.filter((node) => node.type === 'source')).toHaveLength(1)
+    const source = [...draft.configurations.values()].find((item) => item.kind === 'source')
+    expect(source?.kind === 'source' ? source.tables : undefined).toEqual([
+      { table: 'orders' },
+      { table: 'customers' },
+    ])
+    expect(draft.dag.edges.filter((edge) => edge.target === 'target:mongo:orders')).toHaveLength(1)
+  })
+
+  it('keeps a Source regex as a dynamic reference instead of qualifying it as a literal table', () => {
+    const draft = createPipelineGraphDraft(view)
+    const added = addPipelineNode(
+      draft,
+      {
+        kind: 'source',
+        sourceId: 'mysql',
+        table: 'player_*',
+        tableKind: 'regex',
+        connectorId: 'mysql',
+      },
+      { x: 240, y: 180 },
+    )
+    const transform = addPipelineNode(
+      added.draft,
+      { kind: 'transform', transformType: 'filter' },
+      { x: 420, y: 180 },
+      added.nodeId,
+    )
+
+    expect(buildPipelineMutation(transform.draft).transforms?.at(-1)?.from).toBe('/player_*/')
+  })
+
+  it('serializes one multi-table Source node as multiple transform inputs', () => {
+    const draft = createPipelineGraphDraft({
+      ...view,
+      transforms: null,
+      serve: null,
+      dag: { nodes: [], edges: [] },
+    })
+    const source = addPipelineNode(
+      draft,
+      {
+        kind: 'source',
+        sourceId: 'postgres',
+        table: 'payments',
+        tables: [{ table: 'payments' }, { table: 'customers' }],
+        connectorId: 'postgresql',
+      },
+      { x: 240, y: 180 },
+    )
+    const transform = addPipelineNode(
+      source.draft,
+      { kind: 'transform', transformType: 'union' },
+      { x: 420, y: 180 },
+      source.nodeId,
+    )
+
+    expect(buildPipelineMutation(transform.draft).transforms?.[0]?.from).toEqual([
+      'postgres.payments',
+      'postgres.customers',
+    ])
+  })
+
+  it('serializes a direct multi-table Source node as one serve input list', () => {
+    const draft = createPipelineGraphDraft({
+      ...view,
+      transforms: null,
+      serve: null,
+      dag: { nodes: [], edges: [] },
+    })
+    const source = addPipelineNode(
+      draft,
+      {
+        kind: 'source',
+        sourceId: 'postgres',
+        table: 'payments',
+        tables: [{ table: 'payments' }, { table: 'customers' }],
+        connectorId: 'postgresql',
+      },
+      { x: 240, y: 180 },
+    )
+    const target = addPipelineNode(
+      source.draft,
+      { kind: 'target', sourceId: 'mongo', table: 'payments', connectorId: 'mongodb' },
+      { x: 520, y: 180 },
+      source.nodeId,
+    )
+    const changed = updatePipelineNodeConfiguration(target.draft, {
+      nodeId: target.nodeId,
+      kind: 'target',
+      values: {
+        tableMappings: [
+          { sourceTable: 'payments', targetTable: 'payments_archive' },
+          { sourceTable: 'customers', targetTable: 'customers_archive' },
+        ],
+      },
+    })
+
+    const mutation = buildPipelineMutation(changed)
+    expect(mutation.serve?.from).toEqual(['postgres.payments', 'postgres.customers'])
+    expect(mutation.serve?.sync).toEqual([
+      expect.objectContaining({
+        source: 'mongo',
+        rename: {
+          map: {
+            payments: 'payments_archive',
+            customers: 'customers_archive',
+          },
+        },
+      }),
+    ])
+  })
+
+  it('does not block a direct multi-table subset represented by explicit serve inputs', () => {
+    const draft = createPipelineGraphDraft({
+      ...view,
+      transforms: null,
+      serve: null,
+      dag: { nodes: [], edges: [] },
+    })
+    const source = addPipelineNode(
+      draft,
+      {
+        kind: 'source',
+        sourceId: 'mysql',
+        table: 'orders',
+        tables: [{ table: 'orders' }, { table: 'customers' }],
+        connectorId: 'mysql',
+      },
+      { x: 240, y: 180 },
+    )
+    const target = addPipelineNode(
+      source.draft,
+      { kind: 'target', sourceId: 'mongo', table: 'orders', connectorId: 'mongodb' },
+      { x: 520, y: 180 },
+      source.nodeId,
+    )
+    const diagnostics = validatePipelineGraph(target.draft, ['mysql', 'mongo'])
+    expect(diagnostics.some((diagnostic) => diagnostic.code === 'missing-configuration')).toBe(
+      false,
+    )
+    expect(buildPipelineMutation(target.draft).serve?.from).toEqual([
+      'mysql.orders',
+      'mysql.customers',
+    ])
+  })
+
+  it('moves multi-table wiring to a transform when one is inserted before the target', () => {
+    const draft = createPipelineGraphDraft({
+      ...view,
+      transforms: null,
+      serve: null,
+      dag: { nodes: [], edges: [] },
+    })
+    const source = addPipelineNode(
+      draft,
+      {
+        kind: 'source',
+        sourceId: 'mysql',
+        table: 'orders',
+        tables: [{ table: 'orders' }, { table: 'customers' }],
+        connectorId: 'mysql',
+      },
+      { x: 240, y: 180 },
+    )
+    const target = addPipelineNode(
+      source.draft,
+      { kind: 'target', sourceId: 'mongo', table: 'orders', connectorId: 'mongodb' },
+      { x: 520, y: 180 },
+      source.nodeId,
+    )
+    const transform = addPipelineNode(
+      target.draft,
+      { kind: 'transform', transformType: 'filter' },
+      { x: 380, y: 180 },
+      source.nodeId,
+    )
+
+    const mutation = buildPipelineMutation(transform.draft)
+    expect(mutation.transforms?.[0]?.from).toEqual(['mysql.orders', 'mysql.customers'])
+    expect(mutation.serve?.from).toBe('filter_1')
   })
 
   it('accepts a target Source resolved from the catalog even when it is not a declared input', () => {

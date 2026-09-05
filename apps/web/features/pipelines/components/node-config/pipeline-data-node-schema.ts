@@ -9,7 +9,7 @@ export type PipelineFormilySchema = ISchema & {
 export type PipelineDataNodeKind = 'source' | 'target'
 
 /** Fields that can be edited on a data node. Connector identity is projection metadata, not input. */
-export type PipelineDataNodeField = 'sourceId' | 'table' | 'filter' | 'writeMode'
+export type PipelineDataNodeField = 'sourceId' | 'table' | 'writeMode'
 
 export interface PipelineSchemaOption {
   label: string
@@ -35,13 +35,11 @@ const defaultLabels: Record<PipelineDataNodeKind, Record<PipelineDataNodeField, 
   source: {
     sourceId: 'Source',
     table: 'Table',
-    filter: 'Table filter',
     writeMode: 'Write mode',
   },
   target: {
     sourceId: 'Target source',
     table: 'Target table',
-    filter: 'Table filter',
     writeMode: 'Write mode',
   },
 }
@@ -68,10 +66,10 @@ function sourceTableSelect(
   loadTables?: PipelineTableLoader,
 ) {
   const field: PipelineFormilySchema = {
-    type: 'string',
+    type: 'array',
     title,
     'x-component': 'Select',
-    'x-component-props': { allowClear: false, showSearch: true },
+    'x-component-props': { allowClear: false, showSearch: true, mode: 'multiple' },
     enum: [...(options ?? [])],
     ...verticalItem,
   }
@@ -108,13 +106,17 @@ function sourceTableSelect(
 
           const normalizedOptions = [...nextOptions]
           tableField.setDataSource(normalizedOptions)
-          const currentTable = tableField.form.values.table
-          if (
-            typeof currentTable === 'string' &&
-            currentTable.length > 0 &&
-            !normalizedOptions.some((option) => option.value === currentTable)
-          ) {
-            tableField.form.setValuesIn('table', undefined)
+          const currentTables: unknown[] = Array.isArray(tableField.form.values.tables)
+            ? tableField.form.values.tables
+            : []
+          const nextTables = currentTables.filter(
+            (table) =>
+              typeof table !== 'string' ||
+              isRegexReference(table) ||
+              normalizedOptions.some((option) => option.value === table),
+          )
+          if (nextTables.length !== currentTables.length) {
+            tableField.form.setValuesIn('tables', nextTables)
           }
         })
         .catch(() => {
@@ -138,6 +140,10 @@ function sourceTableSelect(
   return field
 }
 
+function isRegexReference(value: string) {
+  return value.length > 1 && value.startsWith('/') && value.endsWith('/')
+}
+
 function targetTableAutocomplete(title: string, options?: readonly PipelineSchemaOption[]) {
   return {
     type: 'string',
@@ -158,26 +164,17 @@ export function createPipelineDataNodeSchema(
   const labels = { ...defaultLabels[kind], ...options.labels }
   const identityFields = {
     sourceId: inputOrSelect(labels.sourceId, options.sourceOptions),
-    table:
-      kind === 'source'
-        ? sourceTableSelect(labels.table, options.tableOptions, options.loadTables)
-        : targetTableAutocomplete(labels.table, options.tableOptions),
+    ...(kind === 'source'
+      ? { tables: sourceTableSelect(labels.table, options.tableOptions, options.loadTables) }
+      : { table: targetTableAutocomplete(labels.table, options.tableOptions) }),
   }
 
   if (kind === 'source') {
     return {
       type: 'object',
-      required: ['sourceId', 'table'],
+      required: ['sourceId', 'tables'],
       properties: {
         ...identityFields,
-        filter: {
-          type: 'string',
-          title: labels.filter,
-          default: '',
-          'x-component': 'TextArea',
-          'x-component-props': { autoSize: { minRows: 3, maxRows: 8 } },
-          ...verticalItem,
-        },
       },
     }
   }

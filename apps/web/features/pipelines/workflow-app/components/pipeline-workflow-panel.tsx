@@ -1,15 +1,21 @@
 import { useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import type { SourceView } from '@/service/source-client'
+
 import type { PipelineCanvasSelection } from '../../components/canvas/pipeline-canvas-types'
 import type {
   PipelineSchemaOption,
   PipelineTableLoader,
 } from '../../components/node-config/pipeline-data-node-schema'
-import type { PipelineNodeConfigurationChange } from '../../model/pipeline-node-model'
+import type {
+  PipelineNodeConfigurationChange,
+  PipelineSourceTableSelection,
+} from '../../model/pipeline-node-model'
 
 import { PipelineNodeConfigPanel } from '../../components/node-config/pipeline-node-config-panel'
 
+const NODE_PANEL_DEFAULT_WIDTH = 400
 const PANEL_MIN_WIDTH = 320
 const PANEL_MAX_WIDTH = 560
 const PANEL_RESIZE_STEP = 16
@@ -20,29 +26,30 @@ function clampPanelWidth(width: number) {
 
 export interface PipelineWorkflowPanelProps {
   selection: PipelineCanvasSelection
-  width: number
-  onWidthChange: (width: number) => void
   onClose: () => void
   onConfigurationChange: (change: PipelineNodeConfigurationChange) => void
   onDescriptionChange: (description: string) => void
   sourceOptions: readonly PipelineSchemaOption[]
   tableOptions?: readonly PipelineSchemaOption[]
   loadTables?: PipelineTableLoader
+  sources?: readonly SourceView[]
+  upstreamSourceTables?: readonly PipelineSourceTableSelection[]
 }
 
 /** Owns the resizable inspector shell; form rendering remains in the node-config feature. */
 export function PipelineWorkflowPanel({
   selection,
-  width,
-  onWidthChange,
   onClose,
   onConfigurationChange,
   onDescriptionChange,
   sourceOptions,
   tableOptions,
   loadTables,
+  sources,
+  upstreamSourceTables,
 }: PipelineWorkflowPanelProps) {
   const { t } = useTranslation()
+  const [width, setWidth] = useState(NODE_PANEL_DEFAULT_WIDTH)
   const [isResizing, setIsResizing] = useState(false)
   const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null)
 
@@ -57,7 +64,7 @@ export function PipelineWorkflowPanel({
   function handleResizeMove(event: PointerEvent<HTMLDivElement>) {
     const resize = resizeRef.current
     if (!resize) return
-    onWidthChange(clampPanelWidth(resize.startWidth + resize.startX - event.clientX))
+    setWidth(clampPanelWidth(resize.startWidth + resize.startX - event.clientX))
   }
 
   function handleResizeEnd(event: PointerEvent<HTMLDivElement>) {
@@ -81,7 +88,7 @@ export function PipelineWorkflowPanel({
               : null
     if (nextWidth === null) return
     event.preventDefault()
-    onWidthChange(clampPanelWidth(nextWidth))
+    setWidth(clampPanelWidth(nextWidth))
   }
 
   return (
@@ -117,6 +124,8 @@ export function PipelineWorkflowPanel({
           sourceOptions={sourceOptions}
           tableOptions={tableOptions}
           loadTables={loadTables}
+          sources={sources}
+          upstreamSourceTables={upstreamSourceTables}
         />
       </div>
     </aside>

@@ -1,10 +1,15 @@
 export type PipelineTransformType = 'filter' | 'map' | 'join' | 'union' | 'nest' | 'js'
 
+export type PipelineSourceTableKind = 'literal' | 'regex'
+
 export type PipelineNodeChoice =
   | {
       kind: 'source'
       sourceId: string
       table: string
+      /** Multiple table references still create one Source node. */
+      tables?: readonly { table: string; tableKind?: PipelineSourceTableKind }[]
+      tableKind?: PipelineSourceTableKind
       connectorId: string | null
     }
   | {

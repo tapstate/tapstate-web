@@ -5,13 +5,27 @@ import type {
   PipelineView,
 } from '@/service/pipelines/pipeline-client'
 
+import type { PipelineSourceTableKind } from '../components/node-library/pipeline-node-library-types'
+
 export interface PipelineSourceNodeConfiguration {
   kind: 'source'
   nodeId: string
   sourceId: string
+  /** The tables selected by this one Source node. `table` remains the legacy primary value. */
+  tables?: PipelineSourceTableSelection[]
   table: string
+  tableKind?: PipelineSourceTableKind
   connectorId: string | null
-  filter?: string
+}
+
+export interface PipelineSourceTableSelection {
+  table: string
+  tableKind?: PipelineSourceTableKind
+}
+
+export interface PipelineTargetTableMapping {
+  sourceTable: string
+  targetTable: string
 }
 
 export interface PipelineTargetNodeConfiguration {
@@ -19,8 +33,26 @@ export interface PipelineTargetNodeConfiguration {
   nodeId: string
   sourceId: string
   table: string
+  /** Present when one target node receives more than one upstream table. */
+  tableMappings?: PipelineTargetTableMapping[]
   connectorId: string | null
   writeMode: string
+}
+
+export function sourceTableSelections(
+  configuration: PipelineSourceNodeConfiguration,
+): PipelineSourceTableSelection[] {
+  if (configuration.tables && configuration.tables.length > 0) {
+    return configuration.tables.map((selection) => ({ ...selection }))
+  }
+  return configuration.table
+    ? [
+        {
+          table: configuration.table,
+          ...(configuration.tableKind ? { tableKind: configuration.tableKind } : {}),
+        },
+      ]
+    : []
 }
 
 export interface PipelineTransformNodeConfiguration {
@@ -110,6 +142,7 @@ export function pipelineNodeConfigurations(view: PipelineView) {
         nodeId: node.id,
         sourceId: parts.sourceId || node.detail || '',
         table: parts.table || node.label,
+        ...(isRegexReference(parts.table) ? { tableKind: 'regex' } : {}),
         connectorId:
           sourceById(view.sources, parts.sourceId || node.detail || '')?.connector ?? null,
       })
@@ -152,7 +185,50 @@ export function pipelineNodeConfigurations(view: PipelineView) {
       })
     }
   }
+  for (const node of view.dag.nodes) {
+    const configuration = configurations.get(node.id)
+    if (configuration?.kind !== 'target') continue
+    const sourceTables = sourceTablesUpstream(node.id, view.dag.edges, configurations)
+    if (sourceTables.length < 2) continue
+    const targetTables = Array.isArray(node.tableRefs) ? node.tableRefs : []
+    configurations.set(node.id, {
+      ...configuration,
+      tableMappings: sourceTables.map((sourceTable, index) => ({
+        sourceTable: displaySourceTable(sourceTable),
+        targetTable: targetTables[index] ?? sourceTable.table,
+      })),
+    })
+  }
   return configurations
+}
+
+/** Walks a persisted DAG back to the Source tables feeding one target node. */
+function sourceTablesUpstream(
+  targetNodeId: string,
+  edges: readonly { source: string; target: string }[],
+  configurations: ReadonlyMap<string, PipelineNodeConfiguration>,
+) {
+  const visited = new Set<string>()
+  const walk = (nodeId: string): PipelineSourceTableSelection[] => {
+    if (visited.has(nodeId)) return []
+    visited.add(nodeId)
+    const configuration = configurations.get(nodeId)
+    if (configuration?.kind === 'source') return sourceTableSelections(configuration)
+    if (configuration?.kind === 'transform') return [{ table: configuration.stepId }]
+    if (configuration?.kind === 'view') return [{ table: configuration.viewId }]
+    return edges.filter((edge) => edge.target === nodeId).flatMap((edge) => walk(edge.source))
+  }
+  return walk(targetNodeId)
+}
+
+function displaySourceTable(selection: PipelineSourceTableSelection) {
+  return selection.tableKind === 'regex' && !isRegexReference(selection.table)
+    ? `/${selection.table}/`
+    : selection.table
+}
+
+function isRegexReference(value: string) {
+  return value.length > 1 && value.startsWith('/') && value.endsWith('/')
 }
 
 function isRecord(value: unknown): value is PipelineJsonObject {

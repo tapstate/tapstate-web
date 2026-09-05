@@ -5,15 +5,12 @@ import { describe, expect, it, vi } from 'vitest'
 import { createPipelineDataNodeSchema, pipelineDataNodeSchema } from './pipeline-data-node-schema'
 
 describe('pipelineDataNodeSchema', () => {
-  it('requires source identity and table without leaking connector metadata', () => {
-    expect(pipelineDataNodeSchema.source.required).toEqual(['sourceId', 'table'])
+  it('requires source identity and table set without leaking connector metadata', () => {
+    expect(pipelineDataNodeSchema.source.required).toEqual(['sourceId', 'tables'])
     expect(pipelineDataNodeSchema.source.properties?.sourceId?.['x-component']).toBe('Input')
     expect(pipelineDataNodeSchema.source.properties?.connector).toBeUndefined()
-    expect(pipelineDataNodeSchema.source.properties?.table?.['x-component']).toBe('Select')
-    expect(pipelineDataNodeSchema.source.properties?.filter?.['x-component']).toBe('TextArea')
-    expect(pipelineDataNodeSchema.source.properties?.filter?.['x-component-props']).toMatchObject({
-      autoSize: { minRows: 3, maxRows: 8 },
-    })
+    expect(pipelineDataNodeSchema.source.properties?.tables?.['x-component']).toBe('Select')
+    expect(pipelineDataNodeSchema.source.properties?.filter).toBeUndefined()
   })
 
   it('requires target identity and exposes write behavior as a typed select', () => {
@@ -29,9 +26,9 @@ describe('pipelineDataNodeSchema', () => {
     const schema = createPipelineDataNodeSchema('source')
 
     expect(schema.properties?.sourceId?.['x-component']).toBe('Input')
-    expect(schema.properties?.table?.['x-component']).toBe('Select')
-    expect(schema.properties?.table?.enum).toEqual([])
-    expect(schema.properties?.filter?.default).toBe('')
+    expect(schema.properties?.tables?.['x-component']).toBe('Select')
+    expect(schema.properties?.tables?.enum).toEqual([])
+    expect(schema.properties?.filter).toBeUndefined()
   })
 
   it('keeps Source tables catalog-backed while Target tables support catalog choices and new names', () => {
@@ -52,8 +49,8 @@ describe('pipelineDataNodeSchema', () => {
       sourceOptions: [{ label: 'Warehouse', value: 'warehouse' }],
       tableOptions: [{ label: 'player', value: 'player' }],
     })
-    expect(sourceSchema.properties?.table?.['x-component']).toBe('Select')
-    expect(sourceSchema.properties?.table?.enum).toEqual([{ label: 'player', value: 'player' }])
+    expect(sourceSchema.properties?.tables?.['x-component']).toBe('Select')
+    expect(sourceSchema.properties?.tables?.enum).toEqual([{ label: 'player', value: 'player' }])
   })
 
   it('refreshes the table catalog through an async x-reaction', async () => {
@@ -61,14 +58,14 @@ describe('pipelineDataNodeSchema', () => {
       { label: `${sourceId} users`, value: `${sourceId}.users` },
     ])
     const schema = createPipelineDataNodeSchema('source', { loadTables })
-    const reaction = schema.properties?.table?.['x-reactions']
+    const reaction = schema.properties?.tables?.['x-reactions']
     const setDataSource = vi.fn()
     const setLoading = vi.fn()
     const setValuesIn = vi.fn()
     const field = {
       destroyed: false,
       form: {
-        values: { sourceId: 'warehouse', table: 'warehouse.old' },
+        values: { sourceId: 'warehouse', tables: ['warehouse.old'] },
         setValuesIn,
       },
       setDataSource,
@@ -84,7 +81,7 @@ describe('pipelineDataNodeSchema', () => {
     expect(setDataSource).toHaveBeenLastCalledWith([
       { label: 'warehouse users', value: 'warehouse.users' },
     ])
-    expect(setValuesIn).toHaveBeenCalledWith('table', undefined)
+    expect(setValuesIn).toHaveBeenCalledWith('tables', [])
     expect(setLoading).toHaveBeenLastCalledWith(false)
   })
 })

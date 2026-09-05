@@ -25,6 +25,7 @@
   --color-popover-border: var(--popover-border);
   --color-popover-divider: var(--popover-divider);
   --color-popover-kbd: var(--popover-kbd);
+  --color-kbd-bg-white: var(--kbd-bg-white);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -90,6 +91,7 @@
     --popover-border: rgb(16 24 40 / 0.08);
     --popover-divider: #e8e8e8;
     --popover-kbd: rgb(16 24 40 / 0.04);
+    --kbd-bg-white: rgb(255 255 255 / 0.12);
     --primary: oklch(0% 0 0);
     --primary-foreground: oklch(0.985 0 0);
     --secondary: oklch(0.97 0 0);
@@ -544,6 +546,7 @@
   --popover-border: rgb(16 24 40 / 0.08);
   --popover-divider: #e8e8e8;
   --popover-kbd: rgb(16 24 40 / 0.04);
+  --kbd-bg-white: rgb(255 255 255 / 0.12);
   --pipeline-actionbar-border: rgb(16 24 40 / 0.04);
   --pipeline-actionbar-bg: rgb(255 255 255 / 0.95);
   --pipeline-actionbar-bg-accent: #f5f8ff;
@@ -585,6 +588,7 @@
   --popover-border: rgb(200 206 218 / 0.14);
   --popover-divider: rgb(200 206 218 / 0.14);
   --popover-kbd: rgb(255 255 255 / 0.03);
+  --kbd-bg-white: rgb(255 255 255 / 0.12);
   --pipeline-actionbar-border: rgb(200 206 218 / 0.08);
   --pipeline-actionbar-bg: #222225;
   --pipeline-actionbar-bg-accent: #27272b;
