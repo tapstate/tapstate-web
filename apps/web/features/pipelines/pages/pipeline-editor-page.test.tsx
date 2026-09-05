@@ -640,6 +640,41 @@ describe('PipelineEditorPage', () => {
     )
   })
 
+  it('renders save failures as a fixed, dismissible feedback surface', async () => {
+    await renderPage()
+
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="pipeline-canvas"]')).not.toBeNull(),
+    )
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-testid="pipeline-canvas"]')?.click(),
+    )
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="change-node-config"]')).not.toBeNull(),
+    )
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-testid="change-node-config"]')?.click(),
+    )
+
+    updatePipeline.mockRejectedValueOnce(
+      new Error('Reference points to nothing in this workspace.'),
+    )
+    await act(async () => elementWithText('button', 'Save')?.click())
+
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="pipeline-workflow-feedback"]')).not.toBeNull(),
+    )
+    expect(document.querySelector('.pipeline-canvas__alerts')).not.toBeNull()
+    expect(
+      document.querySelector('[data-testid="pipeline-workflow-feedback"]')?.textContent,
+    ).toContain('Reference points to nothing in this workspace.')
+
+    await act(async () =>
+      document.querySelector<HTMLButtonElement>('[aria-label="Dismiss save error"]')?.click(),
+    )
+    expect(document.querySelector('[data-testid="pipeline-workflow-feedback"]')).toBeNull()
+  })
+
   it('resizes the node configuration panel with pointer and keyboard input', async () => {
     await renderPage()
 

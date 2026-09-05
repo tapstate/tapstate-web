@@ -541,12 +541,15 @@
         "run": "Run",
         "running": "Running…",
         "saveFailed": "Pipeline changes could not be saved.",
+        "saveErrorTitle": "Save failed",
+        "dismissSaveError": "Dismiss save error",
         "runFailed": "Pipeline could not be started.",
         "draftSaveUnavailable": "Add and connect at least one Source before saving this new Pipeline.",
         "draftRunUnavailable": "Save this new Pipeline before running it."
       },
       "diagnostics": {
         "title": "Fix these issues before saving",
+        "dismiss": "Dismiss validation issues",
         "danglingEdge": "A connection points to a missing node.",
         "invalidEdge": "This connection violates the node input or output rules.",
         "cycle": "The graph contains a cycle.",

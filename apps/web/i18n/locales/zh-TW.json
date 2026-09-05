@@ -541,12 +541,15 @@
         "run": "執行",
         "running": "執行中…",
         "saveFailed": "Pipeline 變更儲存失敗。",
+        "saveErrorTitle": "儲存失敗",
+        "dismissSaveError": "關閉儲存錯誤",
         "runFailed": "Pipeline 啟動失敗。",
         "draftSaveUnavailable": "請先新增並連接至少一個 Source，再儲存這個新 Pipeline。",
         "draftRunUnavailable": "請先儲存這個新 Pipeline，再執行它。"
       },
       "diagnostics": {
         "title": "儲存前請修正以下問題",
+        "dismiss": "關閉驗證問題",
         "danglingEdge": "連線指向不存在的節點。",
         "invalidEdge": "這條連線不符合節點的輸入或輸出規則。",
         "cycle": "圖中存在循環依賴。",

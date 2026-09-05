@@ -17,6 +17,21 @@
   --pipeline-form-label: rgb(53 64 82);
   --pipeline-form-fill: rgb(200 206 218 / 25%);
   --pipeline-form-placeholder: rgb(16 24 40 / 30%);
+  --pipeline-feedback-error-border: color-mix(
+    in srgb,
+    var(--pipeline-status-failed-text) 28%,
+    var(--pipeline-border)
+  );
+  --pipeline-feedback-error-start: color-mix(
+    in srgb,
+    var(--pipeline-log-warn-surface) 72%,
+    var(--pipeline-surface)
+  );
+  --pipeline-feedback-error-end: color-mix(
+    in srgb,
+    var(--pipeline-log-error-surface) 78%,
+    var(--pipeline-surface)
+  );
 }
 
 .dark .pipeline-workflow-container {
@@ -122,6 +137,158 @@
   background: color-mix(in srgb, var(--pipeline-surface) 92%, transparent);
   box-shadow: var(--pipeline-shadow-panel);
   pointer-events: auto;
+}
+
+.pipeline-canvas__alerts {
+  position: fixed;
+  top: 1rem;
+  right: 2rem;
+  z-index: 60;
+  display: flex;
+  width: min(22.5rem, calc(100vw - 2rem));
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.pipeline-workflow-feedback {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border: 1px solid var(--pipeline-feedback-error-border);
+  border-radius: 0.75rem;
+  background: linear-gradient(
+    135deg,
+    var(--pipeline-feedback-error-start),
+    var(--pipeline-feedback-error-end)
+  );
+  padding: 0.75rem;
+  color: var(--pipeline-text);
+  box-shadow: var(--pipeline-shadow-panel);
+  animation: pipeline-workflow-feedback-enter 180ms ease-out;
+}
+
+.pipeline-workflow-feedback--warning {
+  --pipeline-feedback-error-border: color-mix(
+    in srgb,
+    var(--pipeline-status-paused-text) 30%,
+    var(--pipeline-border)
+  );
+  --pipeline-feedback-error-start: color-mix(
+    in srgb,
+    var(--pipeline-log-warn-surface) 82%,
+    var(--pipeline-surface)
+  );
+  --pipeline-feedback-error-end: color-mix(
+    in srgb,
+    var(--pipeline-surface-subtle) 88%,
+    var(--pipeline-log-warn-surface)
+  );
+}
+
+.pipeline-workflow-feedback__icon-wrap {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.625rem;
+  background: color-mix(in srgb, var(--pipeline-status-failed-text) 12%, transparent);
+}
+
+.pipeline-workflow-feedback--warning .pipeline-workflow-feedback__icon-wrap {
+  background: color-mix(in srgb, var(--pipeline-status-paused-text) 14%, transparent);
+}
+
+.pipeline-workflow-feedback__icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--pipeline-status-failed-text);
+}
+
+.pipeline-workflow-feedback--warning .pipeline-workflow-feedback__icon {
+  color: var(--pipeline-status-paused-text);
+}
+
+.pipeline-workflow-feedback__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.pipeline-workflow-feedback__title {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  line-height: 1.25rem;
+}
+
+.pipeline-workflow-feedback__message,
+.pipeline-workflow-feedback__list {
+  margin: 0.25rem 0 0;
+  color: var(--pipeline-text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.125rem;
+  overflow-wrap: anywhere;
+}
+
+.pipeline-workflow-feedback__list {
+  padding-left: 1rem;
+}
+
+.pipeline-workflow-feedback__dismiss {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--pipeline-text-subtle);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.pipeline-workflow-feedback__dismiss:hover {
+  background: color-mix(in srgb, var(--pipeline-text) 8%, transparent);
+  color: var(--pipeline-text);
+}
+
+.pipeline-workflow-feedback__dismiss:focus-visible {
+  outline: 2px solid var(--pipeline-selection);
+  outline-offset: 1px;
+}
+
+.pipeline-workflow-feedback__dismiss svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+@keyframes pipeline-workflow-feedback-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-0.35rem) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 640px) {
+  .pipeline-canvas__alerts {
+    right: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pipeline-workflow-feedback {
+    animation: none;
+  }
 }
 
 .pipeline-canvas__tool-layer {

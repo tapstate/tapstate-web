@@ -11,6 +11,7 @@ import {
   Radio,
   ScrollText,
   Workflow,
+  X,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -484,6 +485,12 @@ function PipelineOrchestrationPage({
   )
 
   useEffect(() => {
+    if (!actionError) return
+    const dismissTimer = window.setTimeout(() => setActionError(null), 7000)
+    return () => window.clearTimeout(dismissTimer)
+  }, [actionError])
+
+  useEffect(() => {
     if (!pipelineData) return
     const nextDraft = createPipelineGraphDraft(pipelineData)
     draftRef.current = nextDraft
@@ -800,34 +807,79 @@ function PipelineOrchestrationPage({
       </section>
 
       {(diagnostics.length > 0 || actionError) && (
-        <div
-          className="pipeline-canvas__alerts absolute top-20 right-5 z-30 flex max-w-[min(26rem,calc(100vw-2rem))] flex-col gap-2"
-          role="alert"
-        >
+        <div className="pipeline-canvas__alerts" aria-live="assertive">
           {actionError && (
-            <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] font-medium text-rose-700 shadow-sm">
-              <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-              <span>{actionError}</span>
-            </div>
+            <PipelineWorkflowFeedback
+              tone="error"
+              title={t('pipelines.workspace.actions.saveErrorTitle')}
+              message={actionError}
+              dismissLabel={t('pipelines.workspace.actions.dismissSaveError')}
+              onDismiss={() => setActionError(null)}
+            />
           )}
           {diagnostics.length > 0 && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] font-medium text-amber-800 shadow-sm">
-              <div className="mb-1 flex items-center gap-2">
-                <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
-                <span>{t('pipelines.workspace.diagnostics.title')}</span>
-              </div>
-              <ul className="space-y-0.5 pl-5">
+            <PipelineWorkflowFeedback
+              tone="warning"
+              title={t('pipelines.workspace.diagnostics.title')}
+              dismissLabel={t('pipelines.workspace.diagnostics.dismiss')}
+              onDismiss={() => setDiagnostics([])}
+            >
+              <ul className="pipeline-workflow-feedback__list">
                 {diagnostics.slice(0, 4).map((diagnostic, index) => (
                   <li key={`${diagnostic.code}-${diagnostic.nodeIds.join('-')}-${index}`}>
                     {t(diagnostic.messageKey)}
                   </li>
                 ))}
               </ul>
-            </div>
+            </PipelineWorkflowFeedback>
           )}
         </div>
       )}
     </section>
+  )
+}
+
+function PipelineWorkflowFeedback({
+  tone,
+  title,
+  message,
+  dismissLabel,
+  onDismiss,
+  children,
+}: {
+  tone: 'error' | 'warning'
+  title: string
+  message?: string
+  dismissLabel: string
+  onDismiss: () => void
+  children?: ReactNode
+}) {
+  return (
+    <div
+      className={cn(
+        'pipeline-workflow-feedback',
+        tone === 'warning' && 'pipeline-workflow-feedback--warning',
+      )}
+      role="alert"
+      data-testid="pipeline-workflow-feedback"
+    >
+      <div className="pipeline-workflow-feedback__icon-wrap" aria-hidden="true">
+        <AlertCircle className="pipeline-workflow-feedback__icon" />
+      </div>
+      <div className="pipeline-workflow-feedback__body">
+        <p className="pipeline-workflow-feedback__title">{title}</p>
+        {message && <p className="pipeline-workflow-feedback__message">{message}</p>}
+        {children}
+      </div>
+      <button
+        type="button"
+        className="pipeline-workflow-feedback__dismiss"
+        aria-label={dismissLabel}
+        onClick={onDismiss}
+      >
+        <X aria-hidden="true" />
+      </button>
+    </div>
   )
 }
 

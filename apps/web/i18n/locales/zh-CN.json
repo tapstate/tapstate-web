@@ -541,12 +541,15 @@
         "run": "运行",
         "running": "运行中…",
         "saveFailed": "Pipeline 修改保存失败。",
+        "saveErrorTitle": "保存失败",
+        "dismissSaveError": "关闭保存错误",
         "runFailed": "Pipeline 启动失败。",
         "draftSaveUnavailable": "请先添加并连接至少一个 Source，再保存这个新 Pipeline。",
         "draftRunUnavailable": "请先保存这个新 Pipeline，再运行它。"
       },
       "diagnostics": {
         "title": "保存前请修复以下问题",
+        "dismiss": "关闭校验问题",
         "danglingEdge": "连线指向了不存在的节点。",
         "invalidEdge": "这条连线不符合节点的输入或输出规则。",
         "cycle": "图中存在循环依赖。",
