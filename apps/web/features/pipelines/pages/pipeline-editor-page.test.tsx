@@ -640,7 +640,7 @@ describe('PipelineEditorPage', () => {
     )
   })
 
-  it('renders save failures as a fixed, dismissible feedback surface', async () => {
+  it('renders save failures in the canvas feedback lane', async () => {
     await renderPage()
 
     await vi.waitFor(() =>
@@ -664,7 +664,9 @@ describe('PipelineEditorPage', () => {
     await vi.waitFor(() =>
       expect(document.querySelector('[data-testid="pipeline-workflow-feedback"]')).not.toBeNull(),
     )
-    expect(document.querySelector('.pipeline-canvas__alerts')).not.toBeNull()
+    expect(
+      document.querySelector('.pipeline-canvas-surface .pipeline-canvas__alerts'),
+    ).not.toBeNull()
     expect(
       document.querySelector('[data-testid="pipeline-workflow-feedback"]')?.textContent,
     ).toContain('Reference points to nothing in this workspace.')

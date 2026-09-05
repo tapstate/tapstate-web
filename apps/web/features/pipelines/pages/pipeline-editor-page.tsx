@@ -13,7 +13,15 @@ import {
   Workflow,
   X,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
@@ -717,6 +725,11 @@ function PipelineOrchestrationPage({
     <section
       ref={surfaceRef}
       className="pipeline-canvas-surface relative h-full min-w-0 flex-1 overflow-hidden"
+      style={
+        {
+          '--pipeline-node-panel-width': selection ? '400px' : '0px',
+        } as CSSProperties
+      }
     >
       <a
         href="#pipeline-canvas"
@@ -797,6 +810,9 @@ function PipelineOrchestrationPage({
               onClose: () => setSelection(null),
               onConfigurationChange: handleConfigurationChange,
               onDescriptionChange: handleDescriptionChange,
+              onWidthChange: (width) => {
+                surfaceRef.current?.style.setProperty('--pipeline-node-panel-width', `${width}px`)
+              },
               sourceOptions,
               tableOptions: selectedTargetTableOptions,
               upstreamSourceTables: selectedTargetSourceTables,

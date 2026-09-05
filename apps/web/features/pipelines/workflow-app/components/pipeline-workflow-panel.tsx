@@ -29,6 +29,7 @@ export interface PipelineWorkflowPanelProps {
   onClose: () => void
   onConfigurationChange: (change: PipelineNodeConfigurationChange) => void
   onDescriptionChange: (description: string) => void
+  onWidthChange?: (width: number) => void
   sourceOptions: readonly PipelineSchemaOption[]
   tableOptions?: readonly PipelineSchemaOption[]
   loadTables?: PipelineTableLoader
@@ -42,6 +43,7 @@ export function PipelineWorkflowPanel({
   onClose,
   onConfigurationChange,
   onDescriptionChange,
+  onWidthChange,
   sourceOptions,
   tableOptions,
   loadTables,
@@ -64,7 +66,9 @@ export function PipelineWorkflowPanel({
   function handleResizeMove(event: PointerEvent<HTMLDivElement>) {
     const resize = resizeRef.current
     if (!resize) return
-    setWidth(clampPanelWidth(resize.startWidth + resize.startX - event.clientX))
+    const nextWidth = clampPanelWidth(resize.startWidth + resize.startX - event.clientX)
+    setWidth(nextWidth)
+    onWidthChange?.(nextWidth)
   }
 
   function handleResizeEnd(event: PointerEvent<HTMLDivElement>) {
@@ -88,7 +92,9 @@ export function PipelineWorkflowPanel({
               : null
     if (nextWidth === null) return
     event.preventDefault()
-    setWidth(clampPanelWidth(nextWidth))
+    const clampedWidth = clampPanelWidth(nextWidth)
+    setWidth(clampedWidth)
+    onWidthChange?.(clampedWidth)
   }
 
   return (
