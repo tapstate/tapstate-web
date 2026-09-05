@@ -1,6 +1,8 @@
 import type { Field } from '@formily/core'
 import type { ISchema } from '@formily/json-schema'
 
+import type { SourceView } from '@/service/source-client'
+
 export type PipelineFormilySchema = ISchema & {
   properties?: Record<string, PipelineFormilySchema>
   enum?: Array<{ label: string; value: string }>
@@ -24,6 +26,7 @@ export interface PipelineDataNodeSchemaOptions {
   sourceOptions?: readonly PipelineSchemaOption[]
   tableOptions?: readonly PipelineSchemaOption[]
   loadTables?: PipelineTableLoader
+  sources?: readonly SourceView[]
 }
 
 const verticalItem = {
@@ -64,6 +67,7 @@ function sourceTableSelect(
   title: string,
   options?: readonly PipelineSchemaOption[],
   loadTables?: PipelineTableLoader,
+  sources?: readonly SourceView[],
 ) {
   const field: PipelineFormilySchema = {
     type: 'array',
@@ -105,7 +109,11 @@ function sourceTableSelect(
           }
 
           const normalizedOptions = [...nextOptions]
-          tableField.setDataSource(normalizedOptions)
+          const source = sources?.find((candidate) => candidate.id === sourceId)
+          const scopedOptions = normalizedOptions.filter((option) =>
+            sourceAllowsTable(source, option.value),
+          )
+          tableField.setDataSource(scopedOptions)
           const currentTables: unknown[] = Array.isArray(tableField.form.values.tables)
             ? tableField.form.values.tables
             : []
@@ -113,7 +121,7 @@ function sourceTableSelect(
             (table) =>
               typeof table !== 'string' ||
               isRegexReference(table) ||
-              normalizedOptions.some((option) => option.value === table),
+              scopedOptions.some((option) => option.value === table),
           )
           if (nextTables.length !== currentTables.length) {
             tableField.form.setValuesIn('tables', nextTables)
@@ -138,6 +146,19 @@ function sourceTableSelect(
   }
 
   return field
+}
+
+function sourceAllowsTable(source: SourceView | undefined, table: string) {
+  if (!source || source.tables === null) return true
+  return source.tables.some((configuredTable) => {
+    if (configuredTable.name === table) return true
+    if (!configuredTable.pattern) return false
+    try {
+      return new RegExp(configuredTable.pattern).test(table)
+    } catch {
+      return false
+    }
+  })
 }
 
 function isRegexReference(value: string) {
@@ -165,7 +186,14 @@ export function createPipelineDataNodeSchema(
   const identityFields = {
     sourceId: inputOrSelect(labels.sourceId, options.sourceOptions),
     ...(kind === 'source'
-      ? { tables: sourceTableSelect(labels.table, options.tableOptions, options.loadTables) }
+      ? {
+          tables: sourceTableSelect(
+            labels.table,
+            options.tableOptions,
+            options.loadTables,
+            options.sources,
+          ),
+        }
       : { table: targetTableAutocomplete(labels.table, options.tableOptions) }),
   }
 

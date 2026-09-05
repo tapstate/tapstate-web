@@ -84,4 +84,58 @@ describe('pipelineDataNodeSchema', () => {
     expect(setValuesIn).toHaveBeenCalledWith('tables', [])
     expect(setLoading).toHaveBeenLastCalledWith(false)
   })
+
+  it('drops discovered tables outside the configured Source scope', async () => {
+    const loadTables = vi.fn(async () => [
+      { label: 'Player', value: 'Player' },
+      { label: 'BB_0727', value: 'BB_0727' },
+    ])
+    const schema = createPipelineDataNodeSchema('source', {
+      loadTables,
+      sources: [
+        {
+          id: 'feynman_mysql',
+          metadata: null,
+          connector: 'mysql',
+          config: {},
+          configuredSecrets: [],
+          mode: 'replication',
+          tables: [
+            {
+              type: 'literal',
+              name: 'Player',
+              pattern: null,
+              filter: null,
+              pk: null,
+              options: null,
+            },
+          ],
+          srs: null,
+          contentHash: 'a'.repeat(64),
+        },
+      ],
+    })
+    const reaction = schema.properties?.tables?.['x-reactions']
+    const setDataSource = vi.fn()
+    const setLoading = vi.fn()
+    const setValuesIn = vi.fn()
+    const field = {
+      destroyed: false,
+      form: {
+        values: { sourceId: 'feynman_mysql', tables: ['BB_0727'] },
+        setValuesIn,
+      },
+      setDataSource,
+      setLoading,
+    } as unknown as Field
+
+    expect(typeof reaction).toBe('function')
+    if (typeof reaction !== 'function') return
+    reaction(field, {})
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(setDataSource).toHaveBeenLastCalledWith([{ label: 'Player', value: 'Player' }])
+    expect(setValuesIn).toHaveBeenCalledWith('tables', [])
+    expect(setLoading).toHaveBeenLastCalledWith(false)
+  })
 })

@@ -117,6 +117,7 @@ function localizedDataSchema(
     sourceOptions: options.sourceOptions,
     tableOptions: options.tableOptions,
     loadTables: options.loadTables,
+    sources: options.sources,
   })
   const properties = Object.fromEntries(
     Object.entries(schema.properties ?? {}).map(([name, property]) => [
