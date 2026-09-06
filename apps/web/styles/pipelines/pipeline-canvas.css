@@ -17,27 +17,20 @@
   --pipeline-form-label: rgb(53 64 82);
   --pipeline-form-fill: rgb(200 206 218 / 25%);
   --pipeline-form-placeholder: rgb(16 24 40 / 30%);
-  --pipeline-feedback-error-border: color-mix(
-    in srgb,
-    var(--pipeline-status-failed-text) 28%,
-    var(--pipeline-border)
-  );
-  --pipeline-feedback-error-start: color-mix(
-    in srgb,
-    var(--pipeline-log-warn-surface) 72%,
-    var(--pipeline-surface)
-  );
-  --pipeline-feedback-error-end: color-mix(
-    in srgb,
-    var(--pipeline-log-error-surface) 78%,
-    var(--pipeline-surface)
-  );
+  --pipeline-feedback-surface: rgb(255 255 255 / 95%);
+  --pipeline-feedback-border: rgb(16 24 40 / 8%);
+  --pipeline-feedback-error-halo: rgb(240 68 56 / 25%);
+  --pipeline-feedback-warning-halo: rgb(247 144 9 / 25%);
 }
 
 .dark .pipeline-workflow-container {
   --pipeline-form-label: var(--pipeline-text-muted);
   --pipeline-form-fill: var(--pipeline-surface-subtle);
   --pipeline-form-placeholder: color-mix(in srgb, var(--pipeline-text) 42%, transparent);
+  --pipeline-feedback-surface: rgb(44 44 48 / 95%);
+  --pipeline-feedback-border: rgb(200 206 218 / 14%);
+  --pipeline-feedback-error-halo: rgb(240 68 56 / 30%);
+  --pipeline-feedback-warning-halo: rgb(247 144 9 / 30%);
 }
 
 .pipeline-workspace {
@@ -152,58 +145,56 @@
 }
 
 .pipeline-workflow-feedback {
+  position: relative;
   pointer-events: auto;
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
-  border: 1px solid var(--pipeline-feedback-error-border);
+  border: 1px solid var(--pipeline-feedback-border);
   border-radius: 0.75rem;
-  background: linear-gradient(
-    135deg,
-    var(--pipeline-feedback-error-start),
-    var(--pipeline-feedback-error-end)
-  );
+  overflow: hidden;
+  background: var(--pipeline-feedback-surface);
   padding: 0.75rem;
   color: var(--pipeline-text);
   box-shadow: var(--pipeline-shadow-panel);
+  backdrop-filter: blur(5px);
   animation: pipeline-workflow-feedback-enter 180ms ease-out;
 }
 
+.pipeline-workflow-feedback::before {
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  background: linear-gradient(to right, var(--pipeline-feedback-error-halo), transparent);
+  content: '';
+  opacity: 0.4;
+}
+
 .pipeline-workflow-feedback--warning {
-  --pipeline-feedback-error-border: color-mix(
-    in srgb,
-    var(--pipeline-status-paused-text) 30%,
-    var(--pipeline-border)
-  );
-  --pipeline-feedback-error-start: color-mix(
-    in srgb,
-    var(--pipeline-log-warn-surface) 82%,
-    var(--pipeline-surface)
-  );
-  --pipeline-feedback-error-end: color-mix(
-    in srgb,
-    var(--pipeline-surface-subtle) 88%,
-    var(--pipeline-log-warn-surface)
-  );
+  --pipeline-feedback-error-halo: var(--pipeline-feedback-warning-halo);
+}
+
+.pipeline-workflow-feedback > * {
+  position: relative;
 }
 
 .pipeline-workflow-feedback__icon-wrap {
-  display: grid;
-  width: 1.75rem;
-  height: 1.75rem;
+  display: flex;
+  width: 1.5rem;
+  height: 1.5rem;
   flex: 0 0 auto;
-  place-items: center;
-  border-radius: 0.625rem;
-  background: color-mix(in srgb, var(--pipeline-status-failed-text) 12%, transparent);
+  align-items: center;
+  justify-content: center;
+  padding: 0.125rem;
 }
 
 .pipeline-workflow-feedback--warning .pipeline-workflow-feedback__icon-wrap {
-  background: color-mix(in srgb, var(--pipeline-status-paused-text) 14%, transparent);
+  background: transparent;
 }
 
 .pipeline-workflow-feedback__icon {
-  width: 1rem;
-  height: 1rem;
+  width: 1.25rem;
+  height: 1.25rem;
   color: var(--pipeline-status-failed-text);
 }
 
