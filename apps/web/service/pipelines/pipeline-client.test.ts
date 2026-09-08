@@ -125,6 +125,24 @@ describe('Pipeline client', () => {
     expect(pipeline.dag.nodes[0]).not.toHaveProperty('position')
   })
 
+  it('keeps Pipelines readable when a referenced Source is unresolved', async () => {
+    const unresolvedPipeline = {
+      ...pipeline,
+      sources: [
+        {
+          id: 'missing_source',
+          metadata: null,
+          connector: null,
+          resolved: false,
+        },
+      ],
+    } as const
+
+    await expect(
+      listPipelines(fetcherFor(jsonResponse({ items: [unresolvedPipeline] }))),
+    ).resolves.toEqual([unresolvedPipeline])
+  })
+
   it('accepts failed pipeline status projections without a rendered message', async () => {
     const failedPipeline = {
       ...pipeline,

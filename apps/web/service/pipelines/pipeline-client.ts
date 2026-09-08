@@ -32,7 +32,8 @@ export interface PipelineMetadata {
 export interface PipelineSourceSummary {
   id: string
   metadata: PipelineMetadata | null
-  connector: string
+  connector: string | null
+  resolved?: boolean
 }
 
 export type PipelineJsonObject = Record<string, unknown>
@@ -231,7 +232,9 @@ function isSourceSummary(value: unknown): value is PipelineSourceSummary {
     isRecord(value) &&
     typeof value.id === 'string' &&
     (value.metadata === null || isMetadata(value.metadata)) &&
-    typeof value.connector === 'string'
+    (typeof value.connector === 'string' ||
+      (value.connector === null && value.resolved === false)) &&
+    (value.resolved === undefined || typeof value.resolved === 'boolean')
   )
 }
 
