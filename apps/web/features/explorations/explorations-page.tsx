@@ -1,4 +1,5 @@
 import type { ComponentType, SVGProps } from 'react'
+
 import {
   ArrowUp,
   AtSign,
@@ -12,6 +13,8 @@ import {
   Wrench,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 interface Capability {
@@ -77,27 +80,31 @@ export function ExplorationsPage() {
 
   return (
     <section className="flex h-full w-full flex-col overflow-hidden bg-white md:flex-row">
-      <aside className="flex w-full shrink-0 flex-col border-b border-gray-100/70 bg-[#fcfcfd]/80 md:w-64 md:border-b-0 md:border-r">
+      <aside className="flex w-full shrink-0 flex-col border-b border-gray-100/70 bg-[#fcfcfd]/80 md:w-64 md:border-r md:border-b-0">
         <div className="flex items-center justify-between border-b border-gray-100/70 p-3">
           <h2 className="flex items-center gap-2 text-[13px] font-semibold text-gray-900">
             <History className="h-4 w-4 text-gray-500" aria-hidden="true" />
             {t('explorations.title')}
           </h2>
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
             className="rounded p-1 text-gray-500 transition-colors hover:bg-gray-100"
             aria-label={t('explorations.actions.new')}
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
-          </button>
+          </Button>
         </div>
 
         <div className="min-h-[130px] flex-1 overflow-auto p-2">
           {historyItems.map((item) => (
-            <button
+            <Button
               key={item.id}
               type="button"
+              variant="ghost"
               className={cn(
-                'group mb-1 flex w-full items-center justify-between rounded-md px-3 py-2 text-left transition-colors',
+                'group mb-1 h-auto w-full justify-between rounded-md px-3 py-2 text-left',
                 item.active ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50',
               )}
             >
@@ -108,7 +115,7 @@ export function ExplorationsPage() {
                 className="h-3.5 w-3.5 shrink-0 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100"
                 aria-hidden="true"
               />
-            </button>
+            </Button>
           ))}
         </div>
       </aside>
@@ -171,19 +178,25 @@ export function ExplorationsPage() {
               />
               <div className="flex items-center justify-end bg-white px-2 py-2">
                 <div className="flex items-center gap-2">
-                  <button
-                    className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-gray-400 hover:text-gray-600"
                     aria-label={t('explorations.actions.mention')}
                   >
                     <AtSign className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                  <button
-                    className="mr-1 flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-lg bg-gray-100 text-gray-400 transition-colors"
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    className="mr-1 cursor-not-allowed text-gray-400"
                     aria-label={t('explorations.actions.send')}
                     disabled
                   >
                     <ArrowUp className="h-4 w-4" aria-hidden="true" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

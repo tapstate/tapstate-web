@@ -1,0 +1,368 @@
+.pipeline-monitoring {
+  color: var(--pipeline-text);
+}
+
+.pipeline-monitoring__toolbar,
+.pipeline-monitoring__summary,
+.pipeline-monitoring__card,
+.pipeline-monitoring__state {
+  border: 1px solid var(--pipeline-border);
+  border-radius: 0.75rem;
+  background: var(--pipeline-surface);
+}
+
+.pipeline-monitoring__toolbar,
+.pipeline-monitoring__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+}
+
+.pipeline-monitoring__toolbar-heading,
+.pipeline-monitoring__summary-copy {
+  min-width: 0;
+}
+
+.pipeline-monitoring__eyebrow,
+.pipeline-monitoring__refresh-state,
+.pipeline-monitoring__summary-label,
+.pipeline-monitoring__summary-pipeline {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}
+
+.pipeline-monitoring__eyebrow {
+  color: var(--pipeline-text-muted);
+}
+
+.pipeline-monitoring__refresh-state {
+  color: var(--pipeline-text-subtle);
+}
+
+.pipeline-monitoring__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pipeline-monitoring__summary {
+  margin-top: 0.75rem;
+}
+
+.pipeline-monitoring__summary-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+}
+
+.pipeline-monitoring__summary-label {
+  color: var(--pipeline-text-subtle);
+}
+
+.pipeline-monitoring__summary-pipeline {
+  overflow: hidden;
+  color: var(--pipeline-text);
+  font-family: var(--font-mono);
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pipeline-monitoring__state-badge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 999px;
+  background: var(--pipeline-surface-subtle);
+  color: var(--pipeline-status-stopped-text);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1rem;
+}
+
+.pipeline-monitoring__state-badge[data-state='running'] {
+  background: color-mix(in srgb, var(--pipeline-status-running-text) 10%, transparent);
+  color: var(--pipeline-status-running-text);
+}
+
+.pipeline-monitoring__state-badge[data-state='paused'] {
+  background: color-mix(in srgb, var(--pipeline-status-paused-text) 11%, transparent);
+  color: var(--pipeline-status-paused-text);
+}
+
+.pipeline-monitoring__state-badge[data-state='failed'] {
+  background: color-mix(in srgb, var(--pipeline-status-failed-text) 11%, transparent);
+  color: var(--pipeline-status-failed-text);
+}
+
+.pipeline-monitoring__state-badge[data-state='completed'] {
+  background: color-mix(in srgb, var(--pipeline-status-completed-text) 10%, transparent);
+  color: var(--pipeline-status-completed-text);
+}
+
+.pipeline-monitoring__state-badge[data-state='new'] {
+  background: color-mix(in srgb, var(--pipeline-status-new-text) 10%, transparent);
+  color: var(--pipeline-status-new-text);
+}
+
+.pipeline-monitoring__state-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.pipeline-monitoring__failure {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--pipeline-status-failed-text) 22%, transparent);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--pipeline-status-failed-text) 7%, var(--pipeline-surface));
+}
+
+.pipeline-monitoring__failure-code,
+.pipeline-monitoring__failure-message {
+  margin: 0;
+}
+
+.pipeline-monitoring__failure-code {
+  color: var(--pipeline-status-failed-text);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.pipeline-monitoring__failure-message {
+  margin-top: 0.25rem;
+  color: var(--pipeline-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}
+
+.pipeline-monitoring__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 1fr);
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.pipeline-monitoring__card {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.pipeline-monitoring__card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--pipeline-border);
+}
+
+.pipeline-monitoring__card-title,
+.pipeline-monitoring__card-description {
+  margin: 0;
+}
+
+.pipeline-monitoring__card-title {
+  font-size: 0.8125rem;
+  font-weight: 650;
+  line-height: 1.25rem;
+}
+
+.pipeline-monitoring__card-description {
+  max-width: 52ch;
+  margin-top: 0.25rem;
+  color: var(--pipeline-text-muted);
+  font-size: 0.6875rem;
+  line-height: 1.125rem;
+}
+
+.pipeline-monitoring__count {
+  flex: 0 0 auto;
+  color: var(--pipeline-text-subtle);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25rem;
+}
+
+.pipeline-monitoring__metric-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem 1rem;
+}
+
+.pipeline-monitoring__metric-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 0.85fr) minmax(7rem, 1.7fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2rem;
+}
+
+.pipeline-monitoring__metric-name,
+.pipeline-monitoring__metric-value {
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1.125rem;
+}
+
+.pipeline-monitoring__metric-name {
+  overflow: hidden;
+  color: var(--pipeline-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pipeline-monitoring__metric-track {
+  display: flex;
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--pipeline-surface-subtle);
+}
+
+.pipeline-monitoring__metric-bar {
+  display: block;
+  width: var(--pipeline-metric-ratio);
+  min-width: 0.25rem;
+  border-radius: inherit;
+  background: var(--pipeline-selection);
+}
+
+.pipeline-monitoring__metric-bar[data-sign='negative'] {
+  background: var(--pipeline-status-failed-text);
+}
+
+.pipeline-monitoring__metric-value {
+  min-width: 4.5rem;
+  color: var(--pipeline-text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.pipeline-monitoring__offset-list {
+  margin: 0;
+  padding: 0.5rem 1rem 0.75rem;
+}
+
+.pipeline-monitoring__offset-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(5rem, auto);
+  gap: 1rem;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--pipeline-border);
+}
+
+.pipeline-monitoring__offset-row:last-child {
+  border-bottom: 0;
+}
+
+.pipeline-monitoring__offset-row dt,
+.pipeline-monitoring__offset-row dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1.125rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pipeline-monitoring__offset-row dt {
+  color: var(--pipeline-text-muted);
+}
+
+.pipeline-monitoring__offset-row dd {
+  color: var(--pipeline-text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.pipeline-monitoring__empty-inline,
+.pipeline-monitoring__empty-chart {
+  color: var(--pipeline-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}
+
+.pipeline-monitoring__empty-inline {
+  margin: 0;
+  padding: 1rem;
+}
+
+.pipeline-monitoring__empty-chart {
+  padding: 1rem;
+}
+
+.pipeline-monitoring__empty-title,
+.pipeline-monitoring__empty-description,
+.pipeline-monitoring__state-title,
+.pipeline-monitoring__state-description {
+  margin: 0;
+}
+
+.pipeline-monitoring__empty-title,
+.pipeline-monitoring__state-title {
+  color: var(--pipeline-text);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  line-height: 1.25rem;
+}
+
+.pipeline-monitoring__empty-description,
+.pipeline-monitoring__state-description {
+  max-width: 52ch;
+  margin-top: 0.25rem;
+}
+
+.pipeline-monitoring__state {
+  padding: 1.25rem;
+}
+
+@media (max-width: 760px) {
+  .pipeline-monitoring__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .pipeline-monitoring__toolbar,
+  .pipeline-monitoring__summary {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pipeline-monitoring__actions {
+    justify-content: flex-end;
+  }
+
+  .pipeline-monitoring__summary-copy {
+    display: block;
+  }
+
+  .pipeline-monitoring__summary-pipeline {
+    display: block;
+    margin-top: 0.25rem;
+  }
+
+  .pipeline-monitoring__state-badge {
+    align-self: flex-start;
+  }
+
+  .pipeline-monitoring__metric-row {
+    grid-template-columns: minmax(5rem, 0.85fr) minmax(5rem, 1.7fr) auto;
+    gap: 0.5rem;
+  }
+}

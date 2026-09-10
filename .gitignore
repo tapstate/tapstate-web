@@ -2,6 +2,7 @@ node_modules/
 .pnpm-store/
 dist/
 dist-ssr/
+.tanstack/
 .worktrees/
 *.local
 *.tsbuildinfo
@@ -17,6 +18,8 @@ dist-ssr/
 
 # Logs
 logs/
+!apps/web/features/pipelines/logs/
+!apps/web/features/pipelines/logs/**
 *.log
 npm-debug.log*
 pnpm-debug.log*

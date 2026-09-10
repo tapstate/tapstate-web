@@ -1,48 +1,54 @@
+import type { ISchema } from '@formily/json-schema'
+
+import {
+  AlertCircle,
+  ArrowLeft,
+  Check,
+  ChevronRight,
+  Database,
+  LoaderCircle,
+  Search,
+} from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+
 import type {
-  ConnectorConfigField,
+  ConnectionTestReport,
   ConnectorDetail,
   ConnectorSummary,
-  JsonValue,
   SourceView,
 } from '@/service/source-client'
-import { AlertCircle, Check, Database, LoaderCircle } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+
+import { ConnectorIcon } from '@/components/connector-icon'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import {
   createSource,
   getConnector,
   listConnectors,
   SourceClientError,
+  testConnection,
 } from '@/service/source-client'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  SelectGroup,
-} from '@/components/ui/select'
 import { useAuthStore } from '@/stores/auth-store'
+
+import { ConnectionTestResultDialog } from './connection-test-result'
+import { ConnectorFormily } from './connector-formily'
 import {
-  buildSourceConfig,
-  createInitialConfig,
-  isFieldVisible,
-  type SourceConfigState,
-} from './source-form'
+  connectorSpecConnectionSchema,
+  connectorSpecInitialValues,
+  normalizeConnectorConfigFields,
+  normalizeConnectorConfigValues,
+} from './connector-spec-formily-schema'
+import { buildSourceConfig, createInitialConfig, type SourceConfigState } from './source-form'
 
 interface SourceCreateDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreated: (source: SourceView) => void
 }
+
+type CreateSourceStep = 'select' | 'configure'
 
 function errorMessage(error: unknown, t: ReturnType<typeof useTranslation>['t']) {
   if (!(error instanceof SourceClientError)) return t('sources.create.errors.unknown')
@@ -51,28 +57,36 @@ function errorMessage(error: unknown, t: ReturnType<typeof useTranslation>['t'])
   return t('sources.create.errors.server')
 }
 
-function arrayValue(field: ConnectorConfigField, config: SourceConfigState) {
-  const value = config[field.name]
-  return Array.isArray(value) ? JSON.stringify(value, null, 2) : String(value ?? '')
+function testErrorMessage(error: unknown, t: ReturnType<typeof useTranslation>['t']) {
+  if (!(error instanceof SourceClientError)) return t('sources.test.errors.unknown')
+  if (error.kind === 'network') return t('sources.test.errors.network')
+  if (error.kind === 'protocol') return t('sources.test.errors.protocol')
+  return t('sources.test.errors.server')
 }
 
-const EMPTY_SELECT_VALUE = '__tapstate_empty_value__'
-
-function encodeSelectValue(value: string) {
-  return value === '' ? EMPTY_SELECT_VALUE : value
-}
-
-function decodeSelectValue(value: string) {
-  return value === EMPTY_SELECT_VALUE ? '' : value
+function RequestError({ message }: { message: string }) {
+  return (
+    <div
+      className="border-destructive/30 bg-destructive/10 text-destructive flex items-start gap-2 rounded-lg border px-3 py-2.5 text-[13px] leading-relaxed"
+      role="alert"
+    >
+      <AlertCircle className="mt-0.5 size-4 shrink-0" />
+      <span>{message}</span>
+    </div>
+  )
 }
 
 export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCreateDialogProps) {
-  const { t } = useTranslation()
+  const { i18n, t } = useTranslation()
+  const currentLocale = i18n.resolvedLanguage ?? i18n.language
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const [connectors, setConnectors] = useState<ConnectorSummary[]>([])
   const [connector, setConnector] = useState<ConnectorDetail | null>(null)
+  const [schema, setSchema] = useState<ISchema | null>(null)
   const [sourceId, setSourceId] = useState('')
   const [connectorId, setConnectorId] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [step, setStep] = useState<CreateSourceStep>('select')
   const [sourceMode, setSourceMode] = useState('')
   const [config, setConfig] = useState<SourceConfigState>({})
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -80,21 +94,25 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
   const [loadingConnector, setLoadingConnector] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [requestError, setRequestError] = useState('')
-
-  const visibleFields = useMemo(
-    () => connector?.config.filter((field) => isFieldVisible(field, config)) ?? [],
-    [connector, config],
-  )
+  const [testing, setTesting] = useState(false)
+  const [testReport, setTestReport] = useState<ConnectionTestReport | null>(null)
+  const [testError, setTestError] = useState('')
+  const connectorButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
   useEffect(() => {
     if (!open) return
     setSourceId('')
     setConnectorId('')
+    setSearchTerm('')
+    setStep('select')
     setSourceMode('')
     setConnector(null)
+    setSchema(null)
     setConfig({})
     setFieldErrors({})
     setRequestError('')
+    setTestReport(null)
+    setTestError('')
     if (connectors.length === 0) {
       setLoadingConnectors(true)
       listConnectors(apiFetch)
@@ -106,42 +124,55 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
 
   useEffect(() => {
     setConnector(null)
+    setSchema(null)
     setSourceMode('')
     setConfig({})
     setFieldErrors({})
     setRequestError('')
-    if (!connectorId) return
+    setTestReport(null)
+    setTestError('')
+    if (!connectorId || step !== 'configure') return
 
     setLoadingConnector(true)
     getConnector(connectorId, apiFetch)
       .then((detail) => {
-        setConnector(detail)
-        setConfig(createInitialConfig(detail.config))
+        if (detail.spec.text === null) {
+          setRequestError(t('sources.create.errors.specUnavailable'))
+          return
+        }
+        try {
+          const normalizedFields = normalizeConnectorConfigFields(detail.id, detail.config)
+          const nextSchema = connectorSpecConnectionSchema(
+            detail.spec.text,
+            currentLocale,
+            detail.id,
+          )
+          const initialValues = normalizeConnectorConfigValues(
+            detail.id,
+            connectorSpecInitialValues(detail.spec.text, detail.id),
+          )
+          setSchema(nextSchema)
+          setConfig({ ...createInitialConfig(normalizedFields), ...initialValues })
+          setConnector({ ...detail, config: normalizedFields })
+        } catch {
+          setRequestError(t('sources.create.errors.specInvalid'))
+          return
+        }
         setSourceMode(detail.modes[0] ?? '')
       })
       .catch((error) => setRequestError(errorMessage(error, t)))
       .finally(() => setLoadingConnector(false))
-  }, [apiFetch, connectorId, t])
+  }, [apiFetch, connectorId, currentLocale, step, t])
 
-  function setValue(field: ConnectorConfigField, value: JsonValue | undefined) {
-    setConfig((current) => ({ ...current, [field.name]: value }))
-    setFieldErrors((current) => {
-      const next = { ...current }
-      delete next[field.name]
-      return next
-    })
-  }
-
-  async function submit() {
+  function connectionDraft() {
     const nextErrors: Record<string, string> = {}
-    setRequestError('')
 
     if (!sourceId.trim()) nextErrors.id = t('sources.create.validation.required')
     else if (sourceId.includes('.')) nextErrors.id = t('sources.create.validation.id')
     if (!connectorId) nextErrors.connector = t('sources.create.validation.required')
-    if (Object.keys(nextErrors).length > 0 || connector === null) {
+    if (Object.keys(nextErrors).length > 0 || connector === null || schema === null) {
       setFieldErrors(nextErrors)
-      return
+      return null
     }
 
     const result = buildSourceConfig(connector.config, config)
@@ -149,21 +180,29 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
       nextErrors[name] = t(`sources.create.validation.${code}`)
     if (Object.keys(nextErrors).length > 0) {
       setFieldErrors(nextErrors)
-      return
+      return null
     }
+
+    return { id: sourceId.trim(), connectorId, settings: result.config }
+  }
+
+  async function submit() {
+    setRequestError('')
+    const draft = connectionDraft()
+    if (!draft) return
 
     setSubmitting(true)
     try {
       const created = await createSource(
         {
-          id: sourceId.trim(),
-          connector: connectorId,
-          config: result.config,
+          id: draft.id,
+          connector: draft.connectorId,
+          config: draft.settings,
           ...(sourceMode ? { mode: sourceMode } : {}),
         },
         apiFetch,
       )
-      onCreated(created)
+      onCreated(created.source)
       onOpenChange(false)
     } catch (error) {
       setRequestError(errorMessage(error, t))
@@ -172,231 +211,346 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
     }
   }
 
+  async function runConnectionTest() {
+    setTestError('')
+    setTestReport(null)
+    const draft = connectionDraft()
+    if (!draft) return
+
+    setTesting(true)
+    try {
+      setTestReport(await testConnection(draft, apiFetch))
+    } catch (error) {
+      setTestError(testErrorMessage(error, t))
+    } finally {
+      setTesting(false)
+    }
+  }
+
   function handleOpenChange(nextOpen: boolean) {
-    if (submitting && !nextOpen) return
+    if ((submitting || testing) && !nextOpen) return
     onOpenChange(nextOpen)
   }
+
+  function chooseConnector(id: string) {
+    setConnectorId(id)
+    setFieldErrors((current) => ({ ...current, connector: '' }))
+    setRequestError('')
+    setTestReport(null)
+    setTestError('')
+    setStep('configure')
+  }
+
+  function chooseAnotherConnector() {
+    if (submitting || testing) return
+    const previousConnectorId = connectorId
+    setConnectorId('')
+    setConnector(null)
+    setSchema(null)
+    setConfig({})
+    setRequestError('')
+    setTestReport(null)
+    setTestError('')
+    setStep('select')
+    requestAnimationFrame(() => connectorButtonRefs.current[previousConnectorId]?.focus())
+  }
+
+  const normalizedSearch = searchTerm.trim().toLocaleLowerCase()
+  const visibleConnectors = normalizedSearch
+    ? connectors.filter((item) =>
+        [item.name, item.id, item.group, ...item.modes].some((value) =>
+          value.toLocaleLowerCase().includes(normalizedSearch),
+        ),
+      )
+    : connectors
+  const selectedConnector = connectors.find((item) => item.id === connectorId)
+  const configuredConnectorName = connector?.name ?? selectedConnector?.name
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        closeDisabled={submitting}
+        closeDisabled={submitting || testing}
         closeLabel={t('ask.actions.close')}
-        className="source-create-dialog sm:max-w-[680px]"
+        className="bg-background border-border flex h-[90vh] max-h-[800px] w-full max-w-[1100px] flex-col gap-0 overflow-hidden rounded-2xl border p-0 shadow-2xl ring-0 sm:max-w-[1100px]"
       >
-        <DialogHeader className="source-create-dialog__header mb-5">
-          <span className="source-create-dialog__icon">
-            <Database size={18} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <DialogTitle>{t('sources.create.title')}</DialogTitle>
-            <DialogDescription>{t('sources.create.subtitle')}</DialogDescription>
-          </div>
-        </DialogHeader>
+        {step === 'select' ? (
+          <>
+            <DialogHeader className="bg-background flex h-14 shrink-0 flex-row items-center justify-between border-b border-gray-200/60 px-6">
+              <DialogTitle className="text-foreground text-base font-semibold">
+                {t('sources.create.chooseConnector')}
+              </DialogTitle>
+            </DialogHeader>
 
-        <div className="source-create-dialog__body">
-          {requestError && (
-            <div className="source-create-dialog__alert" role="alert">
-              <AlertCircle size={16} />
-              <span>{requestError}</span>
-            </div>
-          )}
-
-          <div className="source-create-dialog__identity">
-            <label className="source-field">
-              <span className="source-field__label">{t('sources.create.idLabel')}</span>
-              <input
-                value={sourceId}
-                placeholder={t('sources.create.idPlaceholder')}
-                className="h-9 rounded-lg border border-gray-200 px-3 text-[13px] outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
-                onChange={(event) => {
-                  setSourceId(event.target.value)
-                  setFieldErrors((current) => ({ ...current, id: '' }))
-                }}
-              />
-              {fieldErrors.id ? (
-                <span className="source-field__error">{fieldErrors.id}</span>
-              ) : (
-                <span className="source-field__hint">{t('sources.create.idHint')}</span>
-              )}
-            </label>
-
-            <label className="source-field">
-              <span className="source-field__label">{t('sources.create.connectorLabel')}</span>
-              <Select
-                value={connectorId}
-                disabled={loadingConnectors}
-                onValueChange={(value) => {
-                  if (value === null) return
-                  setConnectorId(value)
-                  setFieldErrors((current) => ({ ...current, connector: '' }))
-                }}
+            <div className="flex-1 overflow-y-auto bg-gray-50/40 p-6 lg:p-8">
+              <section
+                className="mx-auto grid w-full max-w-5xl gap-6"
+                aria-label={t('sources.create.chooseConnector')}
               >
-                <SelectTrigger aria-label={t('sources.create.connectorLabel')}>
-                  <SelectValue placeholder={t('sources.create.connectorPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {connectors.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name}
-                      </SelectItem>
+                <label className="border-input bg-background text-muted-foreground focus-within:border-ring focus-within:ring-ring/20 mx-auto flex h-11 w-full max-w-[460px] items-center gap-2 rounded-lg border px-3 transition-colors focus-within:ring-3">
+                  <Search className="size-4 shrink-0" aria-hidden="true" />
+                  <Input
+                    value={searchTerm}
+                    placeholder={t('sources.create.searchConnectors')}
+                    aria-label={t('sources.create.searchConnectors')}
+                    className="h-9 min-w-0 border-0 bg-transparent px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0"
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                  />
+                </label>
+
+                {requestError && <RequestError message={requestError} />}
+
+                {loadingConnectors ? (
+                  <div className="text-muted-foreground flex min-h-24 items-center justify-center gap-2 text-[13px]">
+                    <LoaderCircle className="size-4 animate-spin" />
+                    {t('sources.create.loadingConnectors')}
+                  </div>
+                ) : connectors.length === 0 ? (
+                  <div className="text-muted-foreground flex min-h-24 items-center justify-center text-center text-[13px] leading-relaxed">
+                    {t('sources.create.noConnectors')}
+                  </div>
+                ) : visibleConnectors.length === 0 ? (
+                  <div className="text-muted-foreground flex min-h-24 items-center justify-center text-center text-[13px] leading-relaxed">
+                    {t('sources.create.noMatchingConnectors')}
+                  </div>
+                ) : (
+                  <div
+                    className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                    role="list"
+                  >
+                    {visibleConnectors.map((item) => (
+                      <div key={item.id} role="listitem">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="lg"
+                          className="focus-visible:ring-ring h-16 w-full justify-start rounded-xl px-4 text-left shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-px hover:shadow-[0_8px_20px_-4px_rgba(0,0,0,0.08)] focus-visible:z-10 focus-visible:ring-2 focus-visible:outline-none active:translate-y-0"
+                          ref={(element) => {
+                            connectorButtonRefs.current[item.id] = element
+                          }}
+                          onClick={() => chooseConnector(item.id)}
+                        >
+                          <ConnectorIcon
+                            connectorId={item.id}
+                            name={item.name}
+                            iconPath={item.icon}
+                            size={32}
+                            className="size-8 shrink-0"
+                          />
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                            {item.name}
+                          </span>
+                          <ChevronRight
+                            className="text-muted-foreground size-4 shrink-0"
+                            aria-hidden="true"
+                          />
+                        </Button>
+                      </div>
                     ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-              {fieldErrors.connector && (
-                <span className="source-field__error">{fieldErrors.connector}</span>
-              )}
-            </label>
-          </div>
+                  </div>
+                )}
 
-          {loadingConnector && (
-            <div className="source-create-dialog__loading">
-              <LoaderCircle className="animate-spin" size={18} />
-              {t('sources.create.loadingSchema')}
+                {fieldErrors.connector && (
+                  <span className="text-destructive text-[12px] leading-relaxed">
+                    {fieldErrors.connector}
+                  </span>
+                )}
+              </section>
             </div>
-          )}
+          </>
+        ) : (
+          <>
+            <DialogHeader className="border-border bg-background flex h-14 shrink-0 flex-row items-center justify-between gap-3 border-b px-6">
+              <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                <Button
+                  variant="ghost"
+                  type="button"
+                  disabled={submitting || testing}
+                  aria-label={t('sources.create.chooseAnother')}
+                  className="size-11 shrink-0 p-0 sm:size-9"
+                  onClick={chooseAnotherConnector}
+                >
+                  <ArrowLeft className="size-4" />
+                </Button>
+                <span className="bg-border hidden h-5 w-px shrink-0 sm:block" aria-hidden="true" />
+                {selectedConnector && (
+                  <ConnectorIcon
+                    connectorId={selectedConnector.id}
+                    name={selectedConnector.name}
+                    iconPath={selectedConnector.icon}
+                    size={24}
+                    className="hidden size-6 shrink-0 sm:block"
+                  />
+                )}
+                <DialogTitle className="text-foreground truncate text-base font-semibold">
+                  {configuredConnectorName ?? t('sources.create.connectionTitle')}
+                </DialogTitle>
+              </div>
+            </DialogHeader>
 
-          {!loadingConnector && connector && (
-            <>
-              <div className="source-create-dialog__section-heading">
-                <div>
-                  <h3>{t('sources.create.connectionTitle')}</h3>
-                  <p>{t('sources.create.connectionSubtitle', { connector: connector.name })}</p>
+            <div className="flex min-h-0 flex-1 overflow-hidden">
+              <div className="flex min-w-0 flex-1 flex-col">
+                <div className="flex-1 overflow-y-auto">
+                  <section className="mx-auto grid w-full max-w-3xl gap-6 p-6 lg:p-8">
+                    {requestError && <RequestError message={requestError} />}
+
+                    {loadingConnector ? (
+                      <div className="text-muted-foreground flex min-h-24 items-center justify-center gap-2 text-[13px]">
+                        <LoaderCircle className="size-4 animate-spin" />
+                        {t('sources.create.loadingSchema')}
+                      </div>
+                    ) : connector && schema ? (
+                      <>
+                        <label className="source-field">
+                          <span className="source-field__label">{t('sources.create.idLabel')}</span>
+                          <span className="source-field__hint">{t('sources.create.idHint')}</span>
+                          <Input
+                            value={sourceId}
+                            disabled={submitting || testing}
+                            aria-invalid={Boolean(fieldErrors.id)}
+                            onChange={(event) => {
+                              setSourceId(event.target.value)
+                              setFieldErrors((current) => ({ ...current, id: '' }))
+                              setTestReport(null)
+                              setTestError('')
+                            }}
+                          />
+                          {fieldErrors.id ? (
+                            <span className="source-field__error">{fieldErrors.id}</span>
+                          ) : null}
+                        </label>
+
+                        {connector.modes.length > 1 && (
+                          <div className="source-field">
+                            <span className="source-field__label">
+                              {t('sources.create.modeLabel')}
+                            </span>
+                            <div
+                              className="border-border bg-muted inline-flex w-fit max-w-full gap-1 overflow-x-auto rounded-lg border p-1"
+                              role="group"
+                              aria-label={t('sources.create.modeLabel')}
+                            >
+                              {connector.modes.map((mode) => {
+                                const selected = sourceMode === mode
+                                return (
+                                  <Button
+                                    key={mode}
+                                    type="button"
+                                    variant={selected ? 'secondary' : 'ghost'}
+                                    size="sm"
+                                    aria-pressed={selected}
+                                    disabled={submitting || testing}
+                                    className={`h-11 shrink-0 rounded-md px-5 text-[13px] font-medium sm:h-8 sm:px-3 ${
+                                      selected
+                                        ? 'bg-background text-foreground shadow-sm'
+                                        : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                                    onClick={() => {
+                                      setSourceMode(mode)
+                                      setTestReport(null)
+                                      setTestError('')
+                                    }}
+                                  >
+                                    {mode}
+                                  </Button>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        <ConnectorFormily
+                          fields={connector.config}
+                          schema={schema}
+                          resetKey={`${connector.id}:${connector.spec.contentHash}`}
+                          initialValues={config}
+                          errors={fieldErrors}
+                          disabled={submitting || testing}
+                          onValuesChange={(values) => {
+                            setConfig(values)
+                            setTestReport(null)
+                            setTestError('')
+                          }}
+                        />
+                      </>
+                    ) : null}
+                  </section>
                 </div>
-                <span className="source-create-dialog__origin">
-                  <Check size={13} /> {connector.origin}
-                </span>
+
+                <footer className="border-border bg-background shrink-0 border-t px-6 pb-4 sm:px-8">
+                  <div className="mx-auto flex w-full max-w-3xl justify-end gap-3 pt-4 sm:pt-6">
+                    <Button
+                      variant="outline"
+                      type="button"
+                      disabled={submitting || testing}
+                      className="h-11 px-[22px] sm:h-9 sm:px-4"
+                      onClick={() => onOpenChange(false)}
+                    >
+                      {t('sources.create.cancel')}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      type="button"
+                      disabled={connector === null || schema === null || submitting || testing}
+                      className="h-11 px-[22px] sm:h-9 sm:px-4"
+                      onClick={() => void runConnectionTest()}
+                    >
+                      {testing && <LoaderCircle className="size-4 animate-spin" />}
+                      {testing ? t('sources.test.testing') : t('sources.test.action')}
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={connector === null || schema === null || submitting || testing}
+                      className="h-11 px-[22px] sm:h-9 sm:px-4"
+                      onClick={() => void submit()}
+                    >
+                      {submitting && <LoaderCircle className="size-4 animate-spin" />}
+                      {submitting ? t('sources.create.submitting') : t('sources.create.submit')}
+                    </Button>
+                  </div>
+                </footer>
               </div>
 
-              {connector.modes.length > 0 && (
-                <label className="source-field">
-                  <span className="source-field__label">{t('sources.create.modeLabel')}</span>
-                  <Select
-                    value={sourceMode}
-                    onValueChange={(value) => {
-                      if (value === null) return
-                      setSourceMode(value)
-                    }}
-                  >
-                    <SelectTrigger aria-label={t('sources.create.modeLabel')}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {connector.modes.map((mode) => (
-                        <SelectItem key={mode} value={mode}>
-                          {mode}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </label>
-              )}
-
-              {visibleFields.length > 0 ? (
-                <div className="source-create-dialog__fields">
-                  {visibleFields.map((field) => (
-                    <label key={field.name} className="source-field">
-                      <span className="source-field__label">
-                        {field.label}
-                        {field.required && <small>{t('sources.create.required')}</small>}
-                      </span>
-
-                      {field.options.length > 0 ? (
-                        <Select
-                          value={encodeSelectValue(String(config[field.name] ?? ''))}
-                          onValueChange={(value) => {
-                            if (value === null) return
-                            setValue(field, decodeSelectValue(value))
-                          }}
-                        >
-                          <SelectTrigger aria-label={field.label}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {field.options.map((option) => (
-                              <SelectItem
-                                key={`${field.name}-${option.value}`}
-                                value={encodeSelectValue(option.value)}
-                              >
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : field.type === 'boolean' ? (
-                        <input
-                          type="checkbox"
-                          checked={Boolean(config[field.name])}
-                          onChange={(event) => setValue(field, event.target.checked)}
-                        />
-                      ) : field.type === 'number' ? (
-                        <input
-                          type="number"
-                          value={
-                            typeof config[field.name] === 'number' ? String(config[field.name]) : ''
-                          }
-                          className="h-9 rounded-lg border border-gray-200 px-3 text-[13px]"
-                          onChange={(event) =>
-                            setValue(
-                              field,
-                              event.target.value ? Number(event.target.value) : undefined,
-                            )
-                          }
-                        />
-                      ) : field.type === 'array' ? (
-                        <textarea
-                          value={arrayValue(field, config)}
-                          rows={3}
-                          className="rounded-lg border border-gray-200 px-3 py-2 text-[13px]"
-                          placeholder={t('sources.create.arrayPlaceholder')}
-                          onChange={(event) => setValue(field, event.target.value)}
-                        />
-                      ) : (
-                        <input
-                          value={String(config[field.name] ?? '')}
-                          type={field.secret ? 'password' : 'text'}
-                          autoComplete="off"
-                          className="h-9 rounded-lg border border-gray-200 px-3 text-[13px]"
-                          onChange={(event) => setValue(field, event.target.value)}
-                        />
+              <aside className="border-border bg-background hidden w-[360px] shrink-0 overflow-y-auto border-l p-6 lg:block xl:w-[420px]">
+                <div className="grid gap-5">
+                  <div className="flex items-center gap-3">
+                    <span className="bg-muted text-muted-foreground grid size-9 shrink-0 place-items-center rounded-lg">
+                      <Database className="size-4" />
+                    </span>
+                    <div className="grid gap-0.5">
+                      <h3 className="text-foreground text-sm font-semibold">
+                        {t('sources.create.documentationTitle')}
+                      </h3>
+                      {configuredConnectorName && (
+                        <span className="text-muted-foreground text-[12px]">
+                          {configuredConnectorName}
+                        </span>
                       )}
-
-                      {fieldErrors[field.name] && (
-                        <span className="source-field__error">{fieldErrors[field.name]}</span>
-                      )}
-                    </label>
-                  ))}
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground text-[13px] leading-relaxed">
+                    {t('sources.create.documentationPlaceholder')}
+                  </p>
+                  {connector && (
+                    <span className="text-muted-foreground inline-flex w-fit items-center gap-1.5 text-[12px]">
+                      <Check className="size-3.5" />
+                      {connector.origin}
+                    </span>
+                  )}
                 </div>
-              ) : (
-                <div className="source-create-dialog__no-fields">
-                  {t('sources.create.noConfig')}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        <DialogFooter className="source-create-dialog__footer mt-5">
-          <button
-            className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-[13px] font-medium text-gray-700"
-            type="button"
-            disabled={submitting}
-            onClick={() => onOpenChange(false)}
-          >
-            {t('sources.create.cancel')}
-          </button>
-          <button
-            className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-3 py-1.5 text-[13px] font-medium text-white disabled:opacity-50"
-            type="button"
-            disabled={connector === null || submitting}
-            onClick={() => void submit()}
-          >
-            {submitting && <LoaderCircle className="h-3.5 w-3.5 animate-spin" />}
-            {submitting ? t('sources.create.submitting') : t('sources.create.submit')}
-          </button>
-        </DialogFooter>
+              </aside>
+            </div>
+          </>
+        )}
+        <ConnectionTestResultDialog
+          report={testReport}
+          error={testError}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) {
+              setTestReport(null)
+              setTestError('')
+            }
+          }}
+        />
       </DialogContent>
     </Dialog>
   )

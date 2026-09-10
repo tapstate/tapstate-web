@@ -1,8 +1,8 @@
-import process from 'node:process'
-import { fileURLToPath, URL } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
+import process from 'node:process'
+import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
@@ -18,6 +18,17 @@ export default defineConfig({
     react(),
   ],
   resolve: {
+    // Formily uses React context internally. Keep the workspace bridge and the
+    // Ant Design adapter on one runtime instance so controls receive their field.
+    dedupe: [
+      'react',
+      'react-dom',
+      '@formily/core',
+      '@formily/json-schema',
+      '@formily/react',
+      '@formily/reactive',
+      '@formily/reactive-react',
+    ],
     alias: {
       '@': fileURLToPath(new URL('.', import.meta.url)),
     },
@@ -30,6 +41,10 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/api': {
+        target: process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/connector-icons': {
         target: process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080',
         changeOrigin: true,
       },

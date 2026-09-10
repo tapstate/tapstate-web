@@ -1,31 +1,41 @@
 import type { ComponentType, SVGProps } from 'react'
-import type { SourceTableView, SourceView } from '@/service/source-client'
+
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Activity,
   AlertCircle,
   ArrowLeft,
+  CheckCircle2,
   ChevronRight,
-  Cloud,
   Columns,
   Database,
   FileText,
   GitMerge,
-  HardDrive,
-  Leaf,
   ListFilter,
   LoaderCircle,
-  Maximize2,
-  MoreHorizontal,
   Plus,
+  RefreshCw,
   Search,
   Server,
   Settings,
   Table as TableIcon,
+  Trash2,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { listSources, SourceClientError } from '@/service/source-client'
+
+import type {
+  ConnectorSummary,
+  SourceEnvelope,
+  SourceSchemaReport,
+  SourceSchemaTable,
+  SourceTableView,
+  SourceView,
+} from '@/service/source-client'
+
+import { ConnectorIcon } from '@/components/connector-icon'
+import { Button } from '@/components/ui/button'
+import { RouteTabs } from '@/components/ui/route-tabs'
 import {
   Select,
   SelectContent,
@@ -33,22 +43,42 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useAuthStore } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
-import { SourceCreateDialog } from './source-create-dialog'
+import {
+  discoverSourceSchema,
+  getSource,
+  getSourceSchema,
+  listConnectors,
+  listSources,
+  SourceClientError,
+  testConnection,
+  type ConnectionTestReport,
+} from '@/service/source-client'
+import { useAuthStore } from '@/stores/auth-store'
 
-type SourceTab = 'data' | 'columns' | 'settings' | 'lineage' | 'log'
+import { ConnectionTestResultDialog } from './connection-test-result'
+import { SourceCreateDialog } from './source-create-dialog'
+import { SourceDeleteDialog } from './source-delete-dialog'
+import { SourceEditDialog } from './source-edit-dialog'
+
+export type SourceTab = 'data' | 'columns' | 'settings' | 'lineage' | 'log'
+
+export interface SourcesPageRoute {
+  sourceId?: string
+  tableName?: string
+  tab?: SourceTab
+}
+
+interface SourcesPageProps {
+  route?: SourcesPageRoute
+  onNavigate?: (route: SourcesPageRoute) => void
+}
 
 interface SourceTable {
   id: string
   name: string
   type: string
-  rows: string
-  size: string
-  lastSync: string
-  ingestedRows: string
-  quarantine: string
-  endpoint: string
+  selector: string
 }
 
 interface Source {
@@ -56,8 +86,19 @@ interface Source {
   id: string
   name: string
   type: string
+  connectorName: string
+  connectorIcon: string | null
   host: string
   tables: SourceTable[]
+}
+
+function toSchemaTable(table: SourceSchemaTable): SourceTable {
+  return {
+    id: `schema-${table.name}`,
+    name: table.name,
+    type: 'table',
+    selector: table.name,
+  }
 }
 
 const tabs: Array<{ value: SourceTab; labelKey: string }> = [
@@ -67,26 +108,6 @@ const tabs: Array<{ value: SourceTab; labelKey: string }> = [
   { value: 'lineage', labelKey: 'sources.tabs.lineage' },
   { value: 'log', labelKey: 'sources.tabs.log' },
 ]
-
-function sourceIcon(type: string): ComponentType<SVGProps<SVGSVGElement>> {
-  const connector = type.toLowerCase()
-  if (connector.includes('mongo')) return Leaf
-  if (connector.includes('kafka') || connector.includes('pulsar')) return Activity
-  if (connector.includes('bigquery')) return Cloud
-  if (connector.includes('snowflake') || connector.includes('s3') || connector.includes('file'))
-    return HardDrive
-  if (connector.includes('sql') || connector.includes('oracle')) return Server
-  return Database
-}
-
-function sourceIconColor(type: string) {
-  const connector = type.toLowerCase()
-  if (connector.includes('postgres')) return 'text-[#336791]'
-  if (connector.includes('mongo')) return 'text-[#47A248]'
-  if (connector.includes('kafka') || connector.includes('pulsar')) return 'text-gray-700'
-  if (connector.includes('snowflake')) return 'text-cyan-600'
-  return 'text-gray-600'
-}
 
 function tabIcon(tabName: SourceTab): ComponentType<SVGProps<SVGSVGElement>> {
   switch (tabName) {
@@ -101,16 +122,40 @@ function tabIcon(tabName: SourceTab): ComponentType<SVGProps<SVGSVGElement>> {
   }
 }
 
-export function SourcesPage() {
+function connectionTestErrorMessage(error: unknown, t: ReturnType<typeof useTranslation>['t']) {
+  if (!(error instanceof SourceClientError)) return t('sources.test.errors.unknown')
+  if (error.kind === 'network') return t('sources.test.errors.network')
+  if (error.kind === 'protocol') return t('sources.test.errors.protocol')
+  return t('sources.test.errors.server')
+}
+
+function schemaErrorMessage(error: unknown, t: ReturnType<typeof useTranslation>['t']) {
+  if (error instanceof SourceClientError && error.status === 404)
+    return t('sources.schema.notDiscovered')
+  if (error instanceof SourceClientError && error.kind === 'network')
+    return t('sources.schema.networkError')
+  if (error instanceof SourceClientError && error.kind === 'protocol')
+    return t('sources.schema.protocolError')
+  return t('sources.schema.loadError')
+}
+
+export function SourcesPage({ route, onNavigate }: SourcesPageProps = {}) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const [searchText, setSearchText] = useState('')
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null)
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<SourceTab>('data')
+  const [activeTabState, setActiveTabState] = useState<SourceTab>('data')
   const [createOpen, setCreateOpen] = useState(false)
+  const [editingSourceId, setEditingSourceId] = useState<string | null>(null)
+  const [deletingSource, setDeletingSource] = useState<Source | null>(null)
   const [successMessage, setSuccessMessage] = useState('')
+  const [testingSourceId, setTestingSourceId] = useState<string | null>(null)
+  const [testReport, setTestReport] = useState<ConnectionTestReport | null>(null)
+  const [testError, setTestError] = useState('')
+  const [schemaRefreshingSourceId, setSchemaRefreshingSourceId] = useState<string | null>(null)
+  const [schemaRefreshError, setSchemaRefreshError] = useState('')
 
   function toTable(table: SourceTableView, index: number): SourceTable {
     const name = table.name ?? table.pattern ?? table.filter ?? t('sources.details.unnamedTable')
@@ -118,13 +163,16 @@ export function SourcesPage() {
       id: `${table.type}-${name}-${index}`,
       name,
       type: table.type,
-      rows: '—',
-      size: '—',
-      lastSync: '—',
-      ingestedRows: '—',
-      quarantine: '—',
-      endpoint: t('sources.details.endpointUnavailable'),
+      selector: selectorDescription(table),
     }
+  }
+
+  function selectorDescription(table: SourceTableView) {
+    if (table.type === 'literal' && table.name) return table.name
+    if (table.pattern) return table.pattern
+    if (table.filter) return table.filter
+    if (table.pk?.length) return table.pk.join(', ')
+    return t('sources.details.selectorUnavailable')
   }
 
   function sourceEndpoint(source: SourceView) {
@@ -144,12 +192,14 @@ export function SourcesPage() {
     return t('sources.details.endpointUnavailable')
   }
 
-  function toSource(source: SourceView): Source {
+  function toSource(source: SourceView, connector?: ConnectorSummary): Source {
     return {
       raw: source,
       id: source.id,
       name: source.id,
       type: source.connector,
+      connectorName: connector?.name ?? source.connector,
+      connectorIcon: connector?.icon ?? null,
       host: sourceEndpoint(source),
       tables: (source.tables ?? []).map((table, index) => toTable(table, index)),
     }
@@ -159,8 +209,23 @@ export function SourcesPage() {
     queryKey: ['sources'],
     queryFn: () => listSources(apiFetch),
   })
+  const connectorsQuery = useQuery({
+    queryKey: ['connectors'],
+    queryFn: () => listConnectors(apiFetch),
+  })
+  const editingSourceQuery = useQuery({
+    queryKey: ['source', editingSourceId],
+    enabled: editingSourceId !== null,
+    retry: false,
+    queryFn: () => getSource(editingSourceId!, apiFetch),
+  })
 
-  const sources = (sourcesQuery.data ?? []).map(toSource)
+  const connectorsById = new Map(
+    (connectorsQuery.data ?? []).map((connector) => [connector.id, connector]),
+  )
+  const sources = (sourcesQuery.data ?? []).map((source) =>
+    toSource(source, connectorsById.get(source.connector)),
+  )
   const sourceSearchQuery = searchText.trim().toLowerCase()
   const filteredSources = sourceSearchQuery
     ? sources.filter(
@@ -171,21 +236,96 @@ export function SourcesPage() {
       )
     : sources
 
-  const selectedSource = sources.find((source) => source.id === selectedSourceId) ?? null
-  const selectedTable = selectedSource?.tables.find((table) => table.id === selectedTableId) ?? null
+  const selectedSource = route
+    ? (sources.find((source) => source.id === route.sourceId) ?? null)
+    : (sources.find((source) => source.id === selectedSourceId) ?? null)
+  const sourceSchemaQuery = useQuery({
+    queryKey: ['source-schema', selectedSource?.id],
+    enabled: selectedSource !== null,
+    retry: false,
+    queryFn: () => getSourceSchema(selectedSource!.id, apiFetch),
+  })
+  const discoveredTables = (sourceSchemaQuery.data?.tables ?? []).map(toSchemaTable)
+  const visibleTables = sourceSchemaQuery.data ? discoveredTables : (selectedSource?.tables ?? [])
+  const selectedConfiguredTable = selectedSource?.tables.find(
+    (table) => table.id === selectedTableId,
+  )
+  const routeTable = route?.tableName
+    ? (visibleTables.find((table) => table.name === route.tableName) ?? null)
+    : null
+  const selectedTable = route
+    ? routeTable
+    : (visibleTables.find((table) => table.id === selectedTableId) ??
+      visibleTables.find((table) => table.name === selectedConfiguredTable?.name) ??
+      null)
+  const selectedSchemaTable = selectedTable
+    ? (sourceSchemaQuery.data?.tables.find((table) => table.name === selectedTable.name) ?? null)
+    : null
+  const activeTab = route ? (route.tab ?? (route.tableName ? 'columns' : 'data')) : activeTabState
   const activeTabLabel = t(
     tabs.find((tab) => tab.value === activeTab)?.labelKey ?? 'sources.tabs.data',
   )
 
   function selectSource(source: Source | null) {
+    if (onNavigate) {
+      onNavigate(source ? { sourceId: source.id } : {})
+      return
+    }
     setSelectedSourceId(source?.id ?? null)
     setSelectedTableId(null)
-    setActiveTab('data')
+    setActiveTabState('data')
   }
 
   function selectTable(table: SourceTable) {
+    if (onNavigate && selectedSource) {
+      onNavigate({ sourceId: selectedSource.id, tableName: table.name, tab: 'columns' })
+      return
+    }
     setSelectedTableId(table.id)
-    setActiveTab('data')
+    setActiveTabState('columns')
+  }
+
+  function selectTab(tab: SourceTab) {
+    if (onNavigate && selectedSource && selectedTable) {
+      onNavigate({ sourceId: selectedSource.id, tableName: selectedTable.name, tab })
+      return
+    }
+    setActiveTabState(tab)
+  }
+
+  async function runSourceTest(source: SourceView) {
+    setTestReport(null)
+    setTestError('')
+    setTestingSourceId(source.id)
+    try {
+      setTestReport(
+        await testConnection(
+          { id: source.id, connectorId: source.connector, settings: source.config },
+          apiFetch,
+        ),
+      )
+    } catch (error) {
+      setTestError(connectionTestErrorMessage(error, t))
+    } finally {
+      setTestingSourceId(null)
+    }
+  }
+
+  async function refreshSourceSchema(source: SourceView) {
+    setSchemaRefreshError('')
+    setSchemaRefreshingSourceId(source.id)
+    try {
+      const report = await discoverSourceSchema(
+        { id: source.id, connectorId: source.connector, settings: source.config },
+        apiFetch,
+      )
+      queryClient.setQueryData<SourceSchemaReport>(['source-schema', source.id], report)
+      setSuccessMessage(t('sources.schema.refreshSuccess', { id: source.id }))
+    } catch (error) {
+      setSchemaRefreshError(schemaErrorMessage(error, t))
+    } finally {
+      setSchemaRefreshingSourceId(null)
+    }
   }
 
   function onCreated(created: SourceView) {
@@ -194,10 +334,48 @@ export function SourcesPage() {
         left.id.localeCompare(right.id),
       ),
     )
-    setSelectedSourceId(created.id)
-    setSelectedTableId(null)
+    if (onNavigate) {
+      onNavigate({ sourceId: created.id })
+    } else {
+      setSelectedSourceId(created.id)
+      setSelectedTableId(null)
+    }
     setSuccessMessage(t('sources.create.success', { id: created.id }))
   }
+
+  function onEdited(result: SourceEnvelope) {
+    queryClient.setQueryData<SourceView[]>(['sources'], (current) =>
+      [...(current ?? []).filter((item) => item.id !== result.source.id), result.source].sort(
+        (left, right) => left.id.localeCompare(right.id),
+      ),
+    )
+    queryClient.setQueryData<SourceEnvelope>(['source', result.source.id], result)
+    if (onNavigate) {
+      onNavigate({ sourceId: result.source.id })
+    } else {
+      setSelectedSourceId(result.source.id)
+      setSelectedTableId(null)
+    }
+    setEditingSourceId(null)
+    setSuccessMessage(t('sources.edit.success', { id: result.source.id }))
+  }
+
+  function onDeleted(source: Source) {
+    queryClient.setQueryData<SourceView[]>(['sources'], (current) =>
+      (current ?? []).filter((item) => item.id !== source.id),
+    )
+    queryClient.removeQueries({ queryKey: ['source', source.id] })
+    queryClient.removeQueries({ queryKey: ['source-schema', source.id] })
+    setDeletingSource(null)
+    if (selectedSource?.id === source.id) selectSource(null)
+    setSuccessMessage(t('sources.delete.success', { id: source.id }))
+  }
+
+  useEffect(() => {
+    if (!successMessage) return
+    const timeoutId = window.setTimeout(() => setSuccessMessage(''), 4000)
+    return () => window.clearTimeout(timeoutId)
+  }, [successMessage])
 
   const loadError =
     sourcesQuery.error instanceof SourceClientError && sourcesQuery.error.kind === 'network'
@@ -205,6 +383,8 @@ export function SourcesPage() {
       : sourcesQuery.error
         ? t('sources.states.error')
         : ''
+  const editLoadFailed = editingSourceId === selectedSource?.id && editingSourceQuery.isError
+  const editLoading = editingSourceId === selectedSource?.id && editingSourceQuery.isFetching
 
   return (
     <section className="flex h-full w-full flex-col overflow-hidden bg-white">
@@ -212,32 +392,39 @@ export function SourcesPage() {
         <h1 className="min-w-0 truncate text-[15px] font-semibold text-gray-900">
           {t('sources.title')}
         </h1>
-        <button
+        <Button
           type="button"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-gray-800"
+          className="px-3 text-[13px] font-medium shadow-sm"
           onClick={() => setCreateOpen(true)}
         >
           <Plus className="h-4 w-4" aria-hidden="true" />
           {t('sources.actions.create')}
-        </button>
+        </Button>
       </header>
 
       {successMessage && (
-        <div className="border-b border-emerald-100 bg-emerald-50 px-4 py-2 text-[13px] text-emerald-700 md:px-6">
-          {successMessage}
+        <div
+          className="pointer-events-none fixed top-4 right-4 z-50"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="border-border bg-background text-foreground flex items-center gap-2 rounded-lg border px-3 py-2 text-[13px] shadow-lg">
+            <CheckCircle2 className="text-primary size-4 shrink-0" aria-hidden="true" />
+            <span>{successMessage}</span>
+          </div>
         </div>
       )}
 
       <div className="flex min-h-0 flex-1 flex-col bg-white md:flex-row">
-        <aside className="flex w-full shrink-0 flex-col border-b border-gray-100/70 bg-[#fcfcfd]/80 md:w-64 md:border-b-0 md:border-r">
+        <aside className="flex w-full shrink-0 flex-col border-b border-gray-100/70 bg-[#fcfcfd]/80 md:w-64 md:border-r md:border-b-0">
           <div className="border-b border-gray-100/70 p-3">
             <label className="relative block">
               <span className="sr-only">{t('sources.search.label')}</span>
-              <Search className="absolute left-3 top-2 h-4 w-4 text-gray-400" aria-hidden="true" />
+              <Search className="absolute top-2 left-3 h-4 w-4 text-gray-400" aria-hidden="true" />
               <input
                 value={searchText}
                 type="search"
-                className="w-full rounded-lg border border-gray-200/80 bg-white py-1.5 pl-9 pr-3 text-[13px] outline-none transition focus:border-gray-300 focus:ring-2 focus:ring-gray-900/10"
+                className="w-full rounded-lg border border-gray-200/80 bg-white py-1.5 pr-3 pl-9 text-[13px] transition outline-none focus:border-gray-300 focus:ring-2 focus:ring-gray-900/10"
                 placeholder={t('sources.search.placeholder')}
                 onChange={(event) => setSearchText(event.target.value)}
               />
@@ -246,13 +433,13 @@ export function SourcesPage() {
             <label className="relative mt-2 block">
               <span className="sr-only">{t('sources.filters.connectionStatus.label')}</span>
               <ListFilter
-                className="absolute left-3 top-2 h-3.5 w-3.5 text-gray-400"
+                className="absolute top-2 left-3 h-3.5 w-3.5 text-gray-400"
                 aria-hidden="true"
               />
               <Select value="all">
                 <SelectTrigger
                   aria-label={t('sources.filters.connectionStatus.label')}
-                  className="border-gray-200/80 py-1.5 pl-8 pr-3 text-gray-600 shadow-none"
+                  className="border-gray-200/80 py-1.5 pr-3 pl-8 text-gray-600 shadow-none"
                 >
                   <SelectValue />
                 </SelectTrigger>
@@ -264,10 +451,11 @@ export function SourcesPage() {
           </div>
 
           <div className="flex min-h-[150px] flex-1 gap-1 overflow-auto p-2 md:flex-col">
-            <button
+            <Button
               type="button"
+              variant="ghost"
               className={cn(
-                'flex min-w-[160px] items-center gap-2.5 rounded-md px-3 py-2 text-left text-[13px] transition-colors md:min-w-0',
+                'h-auto min-w-[160px] justify-start px-3 py-2 text-left text-[13px] md:min-w-0',
                 selectedSource === null
                   ? 'bg-gray-100 font-medium text-gray-900'
                   : 'text-gray-600 hover:bg-gray-50',
@@ -276,34 +464,35 @@ export function SourcesPage() {
             >
               <Database className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
               <span className="truncate">{t('sources.allSources')}</span>
-            </button>
+            </Button>
 
-            {filteredSources.map((source) => {
-              const Icon = sourceIcon(source.type)
-              return (
-                <button
-                  key={source.id}
-                  type="button"
-                  className={cn(
-                    'flex min-w-[190px] items-center gap-2.5 rounded-md px-3 py-2 text-left text-[13px] transition-colors md:min-w-0',
-                    selectedSource?.id === source.id
-                      ? 'bg-gray-100 font-medium text-gray-900'
-                      : 'text-gray-600 hover:bg-gray-50',
-                  )}
-                  onClick={() => selectSource(source)}
-                >
-                  <Icon
-                    className={cn('h-4 w-4 shrink-0', sourceIconColor(source.type))}
-                    aria-hidden="true"
-                  />
-                  <span className="truncate">{source.name}</span>
-                  <span
-                    className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300"
-                    aria-hidden="true"
-                  />
-                </button>
-              )
-            })}
+            {filteredSources.map((source) => (
+              <Button
+                key={source.id}
+                type="button"
+                variant="ghost"
+                className={cn(
+                  'h-auto min-w-[190px] justify-start px-3 py-2 text-left text-[13px] md:min-w-0',
+                  selectedSource?.id === source.id
+                    ? 'bg-gray-100 font-medium text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-50',
+                )}
+                onClick={() => selectSource(source)}
+              >
+                <ConnectorIcon
+                  connectorId={source.type}
+                  name={source.connectorName}
+                  iconPath={source.connectorIcon}
+                  size={16}
+                  className="size-4 rounded-md border-0 bg-transparent"
+                />
+                <span className="truncate">{source.name}</span>
+                <span
+                  className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300"
+                  aria-hidden="true"
+                />
+              </Button>
+            ))}
           </div>
         </aside>
 
@@ -318,13 +507,13 @@ export function SourcesPage() {
               <AlertCircle className="h-8 w-8 text-orange-400" aria-hidden="true" />
               <div className="page-state__title">{t('state.error.title')}</div>
               <p className="page-state__body">{loadError}</p>
-              <button
-                className="rounded-lg bg-gray-900 px-3 py-1.5 text-[13px] font-medium text-white"
+              <Button
                 type="button"
+                className="px-3 text-[13px] font-medium"
                 onClick={() => void sourcesQuery.refetch()}
               >
                 {t('state.error.retry')}
-              </button>
+              </Button>
             </div>
           ) : selectedSource && !selectedTable ? (
             <>
@@ -332,15 +521,13 @@ export function SourcesPage() {
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div className="flex min-w-0 items-start gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200/70 bg-gray-50">
-                      {(() => {
-                        const Icon = sourceIcon(selectedSource.type)
-                        return (
-                          <Icon
-                            className={cn('h-5 w-5', sourceIconColor(selectedSource.type))}
-                            aria-hidden="true"
-                          />
-                        )
-                      })()}
+                      <ConnectorIcon
+                        connectorId={selectedSource.type}
+                        name={selectedSource.connectorName}
+                        iconPath={selectedSource.connectorIcon}
+                        size={24}
+                        className="size-6 rounded-lg border-0 bg-transparent"
+                      />
                     </div>
                     <div className="min-w-0">
                       <h2 className="truncate text-base font-semibold text-gray-900">
@@ -357,33 +544,158 @@ export function SourcesPage() {
                             className="h-1.5 w-1.5 rounded-full bg-gray-300"
                             aria-hidden="true"
                           />
-                          {t('sources.details.secretConfigured')}
+                          {t('sources.details.secretConfiguredCount', {
+                            count: selectedSource.raw.configuredSecrets.length,
+                          })}
                         </span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      disabled
-                      className="cursor-not-allowed rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-[13px] font-medium text-gray-400 shadow-sm"
+                  <div className="flex flex-wrap items-center gap-2">
+                    {editLoadFailed && (
+                      <div
+                        className="text-destructive flex items-center gap-1.5 text-[12px]"
+                        role="alert"
+                      >
+                        <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
+                        <span>{t('sources.edit.errors.unknown')}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => void editingSourceQuery.refetch()}
+                        >
+                          {t('state.error.retry')}
+                        </Button>
+                      </div>
+                    )}
+                    <Button
+                      variant="outline"
+                      type="button"
+                      disabled={testingSourceId !== null}
+                      onClick={() => void runSourceTest(selectedSource.raw)}
                     >
-                      {t('sources.actions.test')}
-                    </button>
-                    <button
-                      disabled
-                      className="cursor-not-allowed rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-[13px] font-medium text-gray-400 shadow-sm"
+                      {testingSourceId === selectedSource.id && (
+                        <LoaderCircle className="size-3.5 animate-spin" />
+                      )}
+                      {t(
+                        testingSourceId === selectedSource.id
+                          ? 'sources.test.testing'
+                          : 'sources.actions.test',
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      type="button"
+                      disabled={schemaRefreshingSourceId !== null}
+                      onClick={() => void refreshSourceSchema(selectedSource.raw)}
                     >
-                      {t('sources.actions.sync')}
-                    </button>
+                      <RefreshCw
+                        className={cn(
+                          'size-3.5',
+                          schemaRefreshingSourceId === selectedSource.id && 'animate-spin',
+                        )}
+                      />
+                      {t(
+                        schemaRefreshingSourceId === selectedSource.id
+                          ? 'sources.schema.refreshing'
+                          : 'sources.actions.refreshSchema',
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      type="button"
+                      disabled={editLoading}
+                      className="min-w-[72px]"
+                      onClick={() => setEditingSourceId(selectedSource.id)}
+                    >
+                      {editLoading && <LoaderCircle className="size-3.5 animate-spin" />}
+                      {t('sources.detail.edit')}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      type="button"
+                      className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setDeletingSource(selectedSource)}
+                    >
+                      <Trash2 className="size-3.5" aria-hidden="true" />
+                      {t('sources.delete.confirm')}
+                    </Button>
                   </div>
                 </div>
               </div>
 
               <div className="min-h-0 flex-1 overflow-auto bg-gray-50/40 p-4 md:p-6">
-                <h3 className="mb-3 text-[13px] font-semibold text-gray-900">
-                  {t('sources.tablesIn', { name: selectedSource.name })}
-                </h3>
-                {selectedSource.tables.length === 0 ? (
+                <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 className="text-[13px] font-semibold text-gray-900">
+                    {t('sources.tablesIn', { name: selectedSource.name })}
+                  </h3>
+                  {sourceSchemaQuery.data && (
+                    <span className="text-[12px] text-gray-500">
+                      {t('sources.schema.discoveredAt', {
+                        date: new Intl.DateTimeFormat(undefined, {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        }).format(new Date(sourceSchemaQuery.data.discoveredAt)),
+                      })}
+                    </span>
+                  )}
+                </div>
+
+                {schemaRefreshError && (
+                  <div
+                    className="border-destructive/30 bg-destructive/10 text-destructive mb-4 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-[13px]"
+                    role="alert"
+                  >
+                    <span>{schemaRefreshError}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      type="button"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => void refreshSourceSchema(selectedSource.raw)}
+                    >
+                      {t('state.error.retry')}
+                    </Button>
+                  </div>
+                )}
+
+                {sourceSchemaQuery.isLoading ? (
+                  <div
+                    className="mb-4 flex items-center gap-2 rounded-lg bg-white px-3 py-2.5 text-[13px] text-gray-500 shadow-sm"
+                    role="status"
+                  >
+                    <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+                    {t('sources.schema.loading')}
+                  </div>
+                ) : sourceSchemaQuery.error &&
+                  sourceSchemaQuery.error instanceof SourceClientError &&
+                  sourceSchemaQuery.error.status !== 404 ? (
+                  <div
+                    className="border-destructive/30 bg-destructive/10 text-destructive mb-4 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-[13px]"
+                    role="alert"
+                  >
+                    <span>{schemaErrorMessage(sourceSchemaQuery.error, t)}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      type="button"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => void sourceSchemaQuery.refetch()}
+                    >
+                      {t('state.error.retry')}
+                    </Button>
+                  </div>
+                ) : sourceSchemaQuery.error instanceof SourceClientError &&
+                  sourceSchemaQuery.error.status === 404 ? (
+                  <div className="mb-4 flex items-center gap-2 rounded-lg bg-white px-3 py-2.5 text-[13px] text-gray-500 shadow-sm">
+                    <TableIcon className="size-4" aria-hidden="true" />
+                    {t('sources.schema.notDiscovered')}
+                  </div>
+                ) : null}
+
+                {visibleTables.length === 0 ? (
                   <div className="page-state rounded-lg border border-gray-200/70 bg-white">
                     <TableIcon className="h-8 w-8 text-gray-300" aria-hidden="true" />
                     <div className="page-state__title">{t('sources.noTablesTitle')}</div>
@@ -393,13 +705,12 @@ export function SourcesPage() {
                   <DataTable
                     headers={[
                       t('sources.table.name'),
-                      t('sources.table.rows'),
-                      t('sources.table.size'),
-                      t('sources.table.lastSync'),
+                      t('sources.table.type'),
+                      t('sources.table.selector'),
                       t('common.actions'),
                     ]}
                   >
-                    {selectedSource.tables.map((table) => (
+                    {visibleTables.map((table) => (
                       <tr
                         key={table.id}
                         className="group cursor-pointer transition-colors hover:bg-gray-50/70"
@@ -414,13 +725,10 @@ export function SourcesPage() {
                             <span className="font-medium text-gray-900">{table.name}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right font-mono text-[12px] text-gray-400">
-                          {table.rows}
+                        <td className="px-4 py-3 text-gray-600">{table.type}</td>
+                        <td className="max-w-[320px] truncate px-4 py-3 font-mono text-[12px] text-gray-500">
+                          {table.selector}
                         </td>
-                        <td className="px-4 py-3 text-right font-mono text-[12px] text-gray-400">
-                          {table.size}
-                        </td>
-                        <td className="px-4 py-3 text-gray-400">{table.lastSync}</td>
                         <td className="px-4 py-3 text-right">
                           <ChevronRight
                             className="inline-block h-4 w-4 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100"
@@ -435,64 +743,40 @@ export function SourcesPage() {
             </>
           ) : selectedSource && selectedTable ? (
             <div className="flex h-full min-h-0 flex-col">
-              <div className="shrink-0 border-b border-gray-100/70 bg-white px-4 pt-4 md:px-6">
-                <div className="flex items-center justify-between gap-3">
-                  <button
-                    className="inline-flex items-center gap-1 font-medium text-gray-500 transition-colors hover:text-gray-900"
-                    onClick={() => setSelectedTableId(null)}
-                  >
-                    <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-                    <span className="truncate">{selectedSource.name}</span>
-                  </button>
-                  <button
-                    disabled
-                    className="cursor-not-allowed rounded-md p-1.5 text-gray-300"
-                    aria-label={t('common.expand')}
-                  >
-                    <Maximize2 className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                </div>
-                <div className="mt-4 flex items-center gap-5 overflow-x-auto text-[13px] font-medium">
-                  {tabs.map((tab) => (
-                    <button
-                      key={tab.value}
-                      type="button"
-                      className={cn(
-                        'relative top-px shrink-0 border-b-2 pb-2.5 transition-colors',
-                        activeTab === tab.value
-                          ? 'border-gray-900 text-gray-900'
-                          : 'border-transparent text-gray-500 hover:text-gray-700',
-                      )}
-                      onClick={() => setActiveTab(tab.value)}
-                    >
-                      {t(tab.labelKey)}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <SourceTableDetailHeader
+                sourceName={selectedSource.name}
+                tableName={selectedTable.name}
+                activeTab={activeTab}
+                onBack={() => {
+                  if (onNavigate) {
+                    onNavigate({ sourceId: selectedSource.id })
+                  } else {
+                    setSelectedTableId(null)
+                  }
+                }}
+                onSelectTab={selectTab}
+              />
               <div className="flex min-h-0 flex-1 flex-col bg-white lg:flex-row">
                 <div className="min-w-0 flex-1 overflow-auto">
-                  <div className="page-state">
-                    {(() => {
-                      const Icon = tabIcon(activeTab)
-                      return <Icon className="h-8 w-8 text-gray-300" aria-hidden="true" />
-                    })()}
-                    <div className="page-state__title">
-                      {t('sources.tabComingSoonTitle', { tab: activeTabLabel })}
+                  {activeTab === 'columns' ? (
+                    <TableSchemaView
+                      schemaTable={selectedSchemaTable}
+                      loading={sourceSchemaQuery.isLoading}
+                      unavailable={sourceSchemaQuery.error instanceof SourceClientError}
+                    />
+                  ) : (
+                    <div className="page-state">
+                      {(() => {
+                        const Icon = tabIcon(activeTab)
+                        return <Icon className="h-8 w-8 text-gray-300" aria-hidden="true" />
+                      })()}
+                      <div className="page-state__title">
+                        {t('sources.observationUnavailableTitle', { tab: activeTabLabel })}
+                      </div>
+                      <p className="page-state__body">{t('sources.observationUnavailableBody')}</p>
                     </div>
-                    <p className="page-state__body">{t('sources.tabComingSoonBody')}</p>
-                  </div>
+                  )}
                 </div>
-                <aside className="flex w-full shrink-0 flex-col gap-5 border-t border-gray-100/70 bg-[#fcfcfd]/80 p-5 lg:w-64 lg:border-l lg:border-t-0">
-                  <div className="mb-4 text-[11px] font-semibold uppercase text-gray-500">
-                    {t('sources.stats.last24h')}
-                  </div>
-                  <dl className="space-y-3.5 border-t border-gray-200/70 pt-5 text-[12px]">
-                    <Stat label={t('sources.stats.size')} value={selectedTable.size} />
-                    <Stat label={t('sources.stats.rows')} value={selectedTable.rows} />
-                    <Stat label={t('sources.stats.lastUpdate')} value={selectedTable.lastSync} />
-                  </dl>
-                </aside>
               </div>
             </div>
           ) : (
@@ -501,13 +785,93 @@ export function SourcesPage() {
               filteredSources={filteredSources}
               onCreate={() => setCreateOpen(true)}
               onSelect={selectSource}
+              onTest={(source) => void runSourceTest(source.raw)}
+              testingSourceId={testingSourceId}
             />
           )}
         </main>
       </div>
 
+      <ConnectionTestResultDialog
+        report={testReport}
+        error={testError}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            setTestReport(null)
+            setTestError('')
+          }
+        }}
+      />
       <SourceCreateDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={onCreated} />
+      {editingSourceId &&
+        editingSourceQuery.data &&
+        !editingSourceQuery.isFetching &&
+        !editingSourceQuery.isError && (
+          <SourceEditDialog
+            open
+            source={editingSourceQuery.data.source}
+            etag={editingSourceQuery.data.etag}
+            onOpenChange={(nextOpen) => {
+              if (!nextOpen) setEditingSourceId(null)
+            }}
+            onSaved={onEdited}
+          />
+        )}
+      {deletingSource && (
+        <SourceDeleteDialog
+          open
+          source={deletingSource.raw}
+          etag={`"${deletingSource.raw.contentHash}"`}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) setDeletingSource(null)
+          }}
+          onDeleted={() => onDeleted(deletingSource)}
+        />
+      )}
     </section>
+  )
+}
+
+function SourceTableDetailHeader({
+  sourceName,
+  tableName,
+  activeTab,
+  onBack,
+  onSelectTab,
+}: {
+  sourceName: string
+  tableName: string
+  activeTab: SourceTab
+  onBack: () => void
+  onSelectTab: (tab: SourceTab) => void
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <div className="shrink-0 border-b border-gray-100/70 bg-white px-4 pt-4 md:px-6">
+      <nav className="flex min-w-0 items-center gap-1.5 text-sm" aria-label={t('sources.title')}>
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-8 max-w-[45%] min-w-0 justify-start rounded-md px-2 font-medium text-gray-500 hover:text-gray-900"
+          onClick={onBack}
+        >
+          <ArrowLeft className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="truncate">{sourceName}</span>
+        </Button>
+        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-gray-300" aria-hidden="true" />
+        <span className="min-w-0 truncate font-semibold text-gray-900" title={tableName}>
+          {tableName}
+        </span>
+      </nav>
+      <RouteTabs
+        aria-label={t('sources.tabs.label')}
+        className="mt-3"
+        items={tabs.map((tab) => ({ value: tab.value, label: t(tab.labelKey) }))}
+        value={activeTab}
+        onValueChange={onSelectTab}
+      />
+    </div>
   )
 }
 
@@ -538,16 +902,107 @@ function DataTable({ headers, children }: { headers: string[]; children: React.R
   )
 }
 
+function TableSchemaView({
+  schemaTable,
+  loading,
+  unavailable,
+}: {
+  schemaTable: SourceSchemaTable | null
+  loading: boolean
+  unavailable: boolean
+}) {
+  const { t } = useTranslation()
+
+  if (loading) {
+    return (
+      <div className="page-state" role="status">
+        <LoaderCircle className="h-7 w-7 animate-spin text-gray-300" aria-hidden="true" />
+        <div className="page-state__title">{t('sources.schema.loading')}</div>
+      </div>
+    )
+  }
+
+  if (unavailable || !schemaTable) {
+    return (
+      <div className="page-state">
+        <Columns className="h-8 w-8 text-gray-300" aria-hidden="true" />
+        <div className="page-state__title">{t('sources.tableDetail.noSchema')}</div>
+        <p className="page-state__body">{t('sources.tableDetail.noSchemaBody')}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-5 p-4 md:p-6">
+      <div className="flex flex-wrap items-center gap-2 text-[12px] text-gray-500">
+        <span className="rounded-md bg-gray-50 px-2 py-1">
+          {t('sources.schema.fieldsCount', { count: schemaTable.fields.length })}
+        </span>
+        <span className="rounded-md bg-gray-50 px-2 py-1">
+          {t('sources.schema.primaryKey')}:{' '}
+          {schemaTable.primaryKey.length > 0
+            ? schemaTable.primaryKey.join(', ')
+            : t('sources.schema.none')}
+        </span>
+        <span className="rounded-md bg-gray-50 px-2 py-1">
+          {t('sources.schema.indexes')}: {schemaTable.indexes.length}
+        </span>
+      </div>
+
+      {schemaTable.fields.length === 0 ? (
+        <div className="rounded-lg bg-gray-50 px-4 py-8 text-center text-[13px] text-gray-500">
+          {t('sources.schema.noFields')}
+        </div>
+      ) : (
+        <DataTable headers={[t('sources.schema.fieldName'), t('sources.schema.fieldType')]}>
+          {schemaTable.fields.map((field) => (
+            <tr key={field.name}>
+              <td className="px-4 py-3 font-medium text-gray-900">{field.name}</td>
+              <td className="px-4 py-3 text-right font-mono text-[12px] text-gray-600">
+                {field.type ?? t('sources.schema.unknownType')}
+              </td>
+            </tr>
+          ))}
+        </DataTable>
+      )}
+
+      {schemaTable.indexes.length > 0 && (
+        <section className="rounded-lg border border-gray-200/70 bg-white p-4">
+          <h3 className="text-[13px] font-semibold text-gray-900">{t('sources.schema.indexes')}</h3>
+          <ul className="mt-3 divide-y divide-gray-100/70 text-[13px]">
+            {schemaTable.indexes.map((index) => (
+              <li
+                key={index.name}
+                className="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0"
+              >
+                <span className="min-w-0 truncate font-medium text-gray-700">{index.name}</span>
+                <span className="shrink-0 text-gray-500">
+                  {index.fields.join(', ')}
+                  {index.unique ? ` · ${t('sources.schema.unique')}` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  )
+}
+
 function AllSourcesView({
   sources,
   filteredSources,
   onCreate,
   onSelect,
+  onTest,
+  testingSourceId,
 }: {
   sources: Source[]
   filteredSources: Source[]
   onCreate: () => void
   onSelect: (source: Source) => void
+  onTest: (source: Source) => void
+  testingSourceId: string | null
 }) {
   const { t } = useTranslation()
   return (
@@ -562,13 +1017,9 @@ function AllSourcesView({
             <Database className="h-8 w-8 text-gray-300" aria-hidden="true" />
             <div className="page-state__title">{t('sources.empty.title')}</div>
             <p className="page-state__body">{t('sources.empty.body')}</p>
-            <button
-              className="rounded-lg bg-gray-900 px-3 py-1.5 text-[13px] font-medium text-white"
-              type="button"
-              onClick={onCreate}
-            >
+            <Button type="button" className="px-3 text-[13px] font-medium" onClick={onCreate}>
               {t('sources.actions.create')}
-            </button>
+            </Button>
           </div>
         ) : (
           <DataTable
@@ -588,61 +1039,62 @@ function AllSourcesView({
                 </td>
               </tr>
             ) : (
-              filteredSources.map((source) => {
-                const Icon = sourceIcon(source.type)
-                return (
-                  <tr key={source.id} className="group transition-colors hover:bg-gray-50/70">
-                    <td className="px-4 py-3">
-                      <button
-                        className="flex items-center gap-2.5 text-left"
-                        type="button"
-                        onClick={() => onSelect(source)}
-                      >
-                        <span className="flex h-6 w-6 items-center justify-center rounded-lg border border-gray-200/70 bg-gray-50">
-                          <Icon
-                            className={cn('h-3.5 w-3.5', sourceIconColor(source.type))}
-                            aria-hidden="true"
-                          />
-                        </span>
-                        <span className="font-medium text-gray-900">{source.name}</span>
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{source.type}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 px-1.5 py-0.5 text-[11px] font-medium text-gray-600 ring-1 ring-inset ring-gray-600/15">
-                        <span className="h-1 w-1 rounded-full bg-gray-400" aria-hidden="true" />
-                        {t('sources.details.secretConfigured')}
+              filteredSources.map((source) => (
+                <tr key={source.id} className="group transition-colors hover:bg-gray-50/70">
+                  <td className="px-4 py-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-auto justify-start px-0 text-left"
+                      onClick={() => onSelect(source)}
+                    >
+                      <span className="flex h-6 w-6 items-center justify-center rounded-lg border border-gray-200/70 bg-gray-50">
+                        <ConnectorIcon
+                          connectorId={source.type}
+                          name={source.connectorName}
+                          iconPath={source.connectorIcon}
+                          size={16}
+                          className="size-4 rounded-md border-0 bg-transparent"
+                        />
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-500">{source.host}</td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {t('sources.tablesCount', { count: source.tables.length })}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        className="rounded-md p-1 text-gray-400 opacity-0 transition-colors hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100"
-                        type="button"
-                        aria-label={t('common.more')}
-                      >
-                        <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })
+                      <span className="font-medium text-gray-900">{source.name}</span>
+                    </Button>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">{source.type}</td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 px-1.5 py-0.5 text-[11px] font-medium text-gray-600 ring-1 ring-gray-600/15 ring-inset">
+                      <span className="h-1 w-1 rounded-full bg-gray-400" aria-hidden="true" />
+                      {t('sources.details.secretConfigured')}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-gray-500">{source.host}</td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {t('sources.tablesCount', { count: source.tables.length })}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-700"
+                      type="button"
+                      aria-label={`${t('sources.actions.test')} ${source.name}`}
+                      title={t('sources.actions.test')}
+                      disabled={testingSourceId !== null}
+                      onClick={() => onTest(source)}
+                    >
+                      {testingSourceId === source.id ? (
+                        <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
+                      ) : (
+                        <Activity className="size-3.5" aria-hidden="true" />
+                      )}
+                    </Button>
+                  </td>
+                </tr>
+              ))
             )}
           </DataTable>
         )}
       </div>
-    </div>
-  )
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between gap-3">
-      <dt className="text-gray-500">{label}</dt>
-      <dd className="font-medium text-gray-400">{value}</dd>
     </div>
   )
 }
