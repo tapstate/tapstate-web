@@ -718,6 +718,33 @@ describe('PipelineEditorPage', () => {
     expect(document.querySelector('[data-testid="pipeline-workflow-feedback"]')).toBeNull()
   })
 
+  it('refuses to save while the Source catalog is unavailable', async () => {
+    listSources.mockRejectedValueOnce(new Error('Source catalog unavailable'))
+    await renderPage()
+
+    await vi.waitFor(() => expect(listSources).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="pipeline-canvas"]')).not.toBeNull(),
+    )
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-testid="pipeline-canvas"]')?.click(),
+    )
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="change-node-config"]')).not.toBeNull(),
+    )
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-testid="change-node-config"]')?.click(),
+    )
+    await act(async () => elementWithText('button', 'Save')?.click())
+
+    expect(updatePipeline).not.toHaveBeenCalled()
+    await vi.waitFor(() =>
+      expect(
+        document.querySelector('[data-testid="pipeline-workflow-feedback"]')?.textContent,
+      ).toContain('Unable to load data sources'),
+    )
+  })
+
   it('resizes the node configuration panel with pointer and keyboard input', async () => {
     await renderPage()
 

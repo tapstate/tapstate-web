@@ -691,6 +691,11 @@ function PipelineOrchestrationPage({
 
   async function handleSave(): Promise<boolean> {
     if (!draft || savePipeline.isPending) return false
+    if (!sources.isSuccess) {
+      setDiagnostics([])
+      setActionError(t('pipelines.workspace.nodeSelector.sourcesError'))
+      return false
+    }
     const nextDiagnostics = validatePipelineGraph(draft, sources.data)
     setDiagnostics(nextDiagnostics)
     setActionError(null)
