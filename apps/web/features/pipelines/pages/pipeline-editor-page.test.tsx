@@ -823,7 +823,7 @@ describe('PipelineEditorPage', () => {
     await act(async () => {
       document.querySelector<HTMLButtonElement>('[data-testid="select-target-node"]')?.click()
     })
-    expect(offered()).toEqual(['mongo_out', 'mongo_archive'])
+    expect(offered()).toEqual(['mongo_out', 'atlas_out', 'mongo_archive'])
 
     await act(async () => {
       document.querySelector<HTMLButtonElement>('[data-testid="select-source-node"]')?.click()

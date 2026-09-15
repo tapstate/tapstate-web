@@ -457,24 +457,31 @@ describe('pipeline graph edit model', () => {
     ).toBe(true)
   })
 
-  it('refuses a target whose Source is not on the MongoDB connector, and defers without one', () => {
+  it('refuses a target whose Source is not on a MongoDB connector, and defers without one', () => {
     const draft = createPipelineGraphDraft(view)
     const refused = (catalog?: readonly (string | { id: string; connector: string })[]) =>
       validatePipelineGraph(draft, catalog).filter(
         (item) => item.code === 'unsupported-target-connector',
       )
 
-    // One graph, three catalogs: only what the catalog says about `mongo` changes the verdict.
+    // One graph, four catalogs: only what the catalog says about `mongo` changes the verdict.
     expect(
       refused([
         { id: 'mysql', connector: 'mysql' },
         { id: 'mongo', connector: 'mongodb' },
       ]),
     ).toEqual([])
+    // A managed variant of the same database kind, which is what a deployment on one registers.
     expect(
       refused([
         { id: 'mysql', connector: 'mysql' },
         { id: 'mongo', connector: 'mongodb-atlas' },
+      ]),
+    ).toEqual([])
+    expect(
+      refused([
+        { id: 'mysql', connector: 'mysql' },
+        { id: 'mongo', connector: 'postgres' },
       ]),
     ).toEqual([
       {
