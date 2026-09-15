@@ -21,6 +21,7 @@ import {
   type PipelineTargetTableMapping,
 } from './pipeline-node-model'
 import { isPipelineDagEdgeValid } from './pipeline-node-rules'
+import { isTargetConnector, type SourceIdentity } from './pipeline-target-connectors'
 
 export interface PipelineGraphDraft {
   pipeline: PipelineView
@@ -36,6 +37,7 @@ export type PipelineGraphDiagnosticCode =
   | 'isolated-node'
   | 'missing-configuration'
   | 'invalid-source-reference'
+  | 'unsupported-target-connector'
 
 export interface PipelineGraphDiagnostic {
   code: PipelineGraphDiagnosticCode
@@ -624,11 +626,26 @@ function detailForConfiguration(configuration: PipelineNodeConfiguration, fallba
   return configuration.kind === 'transform' ? configuration.transformType : fallback
 }
 
+/**
+ * `availableSources` is the workspace Source catalog. A bare id says the Source exists and
+ * nothing more; a `SourceIdentity` also says which connector it goes through, which is what
+ * decides whether it may sit under a target node. A caller that passes only ids therefore gets
+ * the reference checks and not the connector one -- the same deferral the catalog's own absence
+ * gets, rather than a verdict drawn from data nobody supplied.
+ */
 export function validatePipelineGraph(
   draft: PipelineGraphDraft,
-  availableSourceIds?: readonly string[],
+  availableSources?: readonly (string | SourceIdentity)[],
 ): PipelineGraphDiagnostic[] {
   const diagnostics: PipelineGraphDiagnostic[] = []
+  const availableSourceIds = availableSources?.map((source) =>
+    typeof source === 'string' ? source : source.id,
+  )
+  const connectorBySourceId = new Map(
+    (availableSources ?? [])
+      .filter((source): source is SourceIdentity => typeof source !== 'string')
+      .map((source) => [source.id, source.connector] as const),
+  )
   const nodes = new Map(draft.dag.nodes.map((node) => [node.id, node]))
   const incoming = new Map<string, number>()
   const outgoing = new Map<string, number>()
@@ -735,6 +752,20 @@ export function validatePipelineGraph(
         code: 'invalid-source-reference',
         nodeIds: [node.id],
         messageKey: 'pipelines.workspace.diagnostics.invalidSourceReference',
+      })
+    }
+    // A target writes through the one supported connector. Judged only when the catalog says
+    // which connector this Source uses: an unknown one is deferred, never passed.
+    if (
+      config.kind === 'target' &&
+      config.sourceId &&
+      connectorBySourceId.has(config.sourceId) &&
+      !isTargetConnector(connectorBySourceId.get(config.sourceId))
+    ) {
+      diagnostics.push({
+        code: 'unsupported-target-connector',
+        nodeIds: [node.id],
+        messageKey: 'pipelines.workspace.diagnostics.unsupportedTargetConnector',
       })
     }
     const hasIncoming = (incoming.get(node.id) ?? 0) > 0

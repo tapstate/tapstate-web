@@ -555,7 +555,8 @@
         "cycle": "The graph contains a cycle.",
         "isolatedNode": "Connect this node to the Pipeline before saving.",
         "missingConfiguration": "Complete this node's configuration before saving.",
-        "invalidSourceReference": "Select an existing Source for this node."
+        "invalidSourceReference": "Select an existing Source for this node.",
+        "unsupportedTargetConnector": "A target can only write to a MongoDB Source. Select one, or change this Source's connector."
       },
       "navigation": {
         "label": "Pipeline workspace navigation",

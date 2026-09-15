@@ -162,6 +162,38 @@ vi.mock('../components/canvas/pipeline-canvas', () => {
         </button>
         <button
           type="button"
+          data-testid="select-source-node"
+          onClick={() =>
+            onSelectionChange({
+              id: 'source:mysql:orders',
+              label: 'orders',
+              detail: 'mysql',
+              description: '',
+              nodeType: 'source',
+              connector: null,
+            })
+          }
+        >
+          Select source node
+        </button>
+        <button
+          type="button"
+          data-testid="select-target-node"
+          onClick={() =>
+            onSelectionChange({
+              id: 'target:mongo_out:orders',
+              label: 'orders',
+              detail: 'mongo_out',
+              description: '',
+              nodeType: 'target',
+              connector: null,
+            })
+          }
+        >
+          Select target node
+        </button>
+        <button
+          type="button"
           data-testid="load-source-schema"
           onClick={() => void loadTables?.('mysql_feynman')}
         >
@@ -243,9 +275,11 @@ vi.mock('../components/canvas/pipeline-canvas', () => {
 vi.mock('../components/node-config/pipeline-node-config-panel', () => ({
   PipelineNodeConfigPanel: ({
     selection,
+    sourceOptions,
     onConfigurationChange,
   }: {
     selection: { label: string; detail: string | null; id: string; configuration?: unknown }
+    sourceOptions?: readonly { label: string; value: string }[]
     onConfigurationChange?: (change: {
       nodeId: string
       kind: 'transform'
@@ -255,6 +289,13 @@ vi.mock('../components/node-config/pipeline-node-config-panel', () => ({
     <aside data-workflow-right-panel>
       <h2>{selection.label}</h2>
       <p>{selection.detail}</p>
+      <ul data-testid="panel-source-options">
+        {(sourceOptions ?? []).map((option) => (
+          <li key={option.value} data-source-option={option.value}>
+            {option.label}
+          </li>
+        ))}
+      </ul>
       <button
         type="button"
         data-testid="change-node-config"
@@ -677,6 +718,33 @@ describe('PipelineEditorPage', () => {
     expect(document.querySelector('[data-testid="pipeline-workflow-feedback"]')).toBeNull()
   })
 
+  it('refuses to save while the Source catalog is unavailable', async () => {
+    listSources.mockRejectedValueOnce(new Error('Source catalog unavailable'))
+    await renderPage()
+
+    await vi.waitFor(() => expect(listSources).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="pipeline-canvas"]')).not.toBeNull(),
+    )
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-testid="pipeline-canvas"]')?.click(),
+    )
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="change-node-config"]')).not.toBeNull(),
+    )
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-testid="change-node-config"]')?.click(),
+    )
+    await act(async () => elementWithText('button', 'Save')?.click())
+
+    expect(updatePipeline).not.toHaveBeenCalled()
+    await vi.waitFor(() =>
+      expect(
+        document.querySelector('[data-testid="pipeline-workflow-feedback"]')?.textContent,
+      ).toContain('Unable to load data sources'),
+    )
+  })
+
   it('resizes the node configuration panel with pointer and keyboard input', async () => {
     await renderPage()
 
@@ -726,5 +794,67 @@ describe('PipelineEditorPage', () => {
       resizeHandle?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'End' }))
     })
     expect(resizeHandle?.getAttribute('aria-valuenow')).toBe('560')
+  })
+
+  it('offers a target node only the MongoDB Sources, while a source node still sees them all', async () => {
+    const pipelineWithTarget = {
+      id: 'orders_to_warehouse',
+      sources: [{ id: 'mysql', metadata: null, connector: 'mysql' }],
+      transforms: [{ id: 'normalize', type: 'map', from: 'orders', expr: 'original-expression' }],
+      serve: {
+        id: 'orders_api',
+        from: 'normalize',
+        sync: [{ id: 'orders_out', source: 'mongo_out' }],
+      },
+      contentHash: 'a'.repeat(64),
+      dag: {
+        nodes: [
+          { id: 'source:mysql:orders', type: 'source', label: 'orders', detail: 'mysql' },
+          { id: 'transform:normalize', type: 'transform', label: 'normalize', detail: 'map' },
+          { id: 'target:mongo_out:orders', type: 'target', label: 'orders', detail: 'mongo_out' },
+        ],
+        edges: [
+          {
+            id: 'source:mysql:orders->transform:normalize',
+            source: 'source:mysql:orders',
+            target: 'transform:normalize',
+            label: null,
+          },
+          {
+            id: 'transform:normalize->target:mongo_out:orders',
+            source: 'transform:normalize',
+            target: 'target:mongo_out:orders',
+            label: null,
+          },
+        ],
+      },
+    }
+    getPipeline.mockResolvedValue(pipelineWithTarget)
+    listSources.mockResolvedValue([
+      { id: 'mysql_feynman', connector: 'mysql', tables: [{ name: 'Player', pattern: null }] },
+      { id: 'mongo_out', connector: 'mongodb', tables: null },
+      { id: 'atlas_out', connector: 'mongodb-atlas', tables: null },
+      { id: 'mongo_archive', connector: 'mongodb', tables: null },
+    ])
+
+    await renderPage()
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="select-target-node"]')).not.toBeNull(),
+    )
+
+    const offered = () =>
+      [...document.querySelectorAll<HTMLElement>('[data-testid="panel-source-options"] li')].map(
+        (option) => option.getAttribute('data-source-option'),
+      )
+
+    await act(async () => {
+      document.querySelector<HTMLButtonElement>('[data-testid="select-target-node"]')?.click()
+    })
+    expect(offered()).toEqual(['mongo_out', 'atlas_out', 'mongo_archive'])
+
+    await act(async () => {
+      document.querySelector<HTMLButtonElement>('[data-testid="select-source-node"]')?.click()
+    })
+    expect(offered()).toEqual(['mysql_feynman', 'mongo_out', 'atlas_out', 'mongo_archive'])
   })
 })
