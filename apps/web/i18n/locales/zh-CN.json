@@ -555,7 +555,8 @@
         "cycle": "图中存在循环依赖。",
         "isolatedNode": "保存前请将此节点连接到 Pipeline。",
         "missingConfiguration": "保存前请完成此节点配置。",
-        "invalidSourceReference": "请选择一个已存在的 Source。"
+        "invalidSourceReference": "请选择一个已存在的 Source。",
+        "unsupportedTargetConnector": "目标节点只能写入 MongoDB 数据源。请改选一个，或更换该数据源的连接器。"
       },
       "navigation": {
         "label": "Pipeline 工作区导航",

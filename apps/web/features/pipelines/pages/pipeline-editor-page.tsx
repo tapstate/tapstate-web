@@ -71,6 +71,7 @@ import {
 } from '../model/pipeline-graph-edit'
 import { pipelineNodeConnectors } from '../model/pipeline-node-connectors'
 import { sourceTableSelections } from '../model/pipeline-node-model'
+import { targetSources } from '../model/pipeline-target-connectors'
 import { PipelineMonitoringPage } from '../monitoring/pipeline-monitoring-page'
 import { PipelineWorkflowWithInnerContext } from '../workflow-app'
 
@@ -550,6 +551,17 @@ function PipelineOrchestrationPage({
       })),
     [sources.data],
   )
+  // A target writes through one connector only, so its picker offers a narrower catalog than a
+  // source node's. Two lists rather than one filtered at the form: the panel takes whichever the
+  // current selection is entitled to, and neither kind can read the other's.
+  const targetSourceOptions = useMemo<PipelineSchemaOption[]>(
+    () =>
+      targetSources(sources.data ?? []).map((source) => ({
+        label: source.id,
+        value: source.id,
+      })),
+    [sources.data],
+  )
   const configuredTableOptionsBySourceId = useMemo(() => {
     const options = new Map<string, PipelineSchemaOption[]>()
     for (const source of sources.data ?? []) {
@@ -679,10 +691,7 @@ function PipelineOrchestrationPage({
 
   async function handleSave(): Promise<boolean> {
     if (!draft || savePipeline.isPending) return false
-    const nextDiagnostics = validatePipelineGraph(
-      draft,
-      sources.data?.map((source) => source.id),
-    )
+    const nextDiagnostics = validatePipelineGraph(draft, sources.data)
     setDiagnostics(nextDiagnostics)
     setActionError(null)
     if (nextDiagnostics.length > 0) return false
@@ -813,7 +822,8 @@ function PipelineOrchestrationPage({
               onWidthChange: (width) => {
                 surfaceRef.current?.style.setProperty('--pipeline-node-panel-width', `${width}px`)
               },
-              sourceOptions,
+              sourceOptions:
+                selection?.configuration?.kind === 'target' ? targetSourceOptions : sourceOptions,
               tableOptions: selectedTargetTableOptions,
               upstreamSourceTables: selectedTargetSourceTables,
               loadTables: loadPipelineTables,

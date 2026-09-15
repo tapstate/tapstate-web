@@ -457,6 +457,37 @@ describe('pipeline graph edit model', () => {
     ).toBe(true)
   })
 
+  it('refuses a target whose Source is not on the MongoDB connector, and defers without one', () => {
+    const draft = createPipelineGraphDraft(view)
+    const refused = (catalog?: readonly (string | { id: string; connector: string })[]) =>
+      validatePipelineGraph(draft, catalog).filter(
+        (item) => item.code === 'unsupported-target-connector',
+      )
+
+    // One graph, three catalogs: only what the catalog says about `mongo` changes the verdict.
+    expect(
+      refused([
+        { id: 'mysql', connector: 'mysql' },
+        { id: 'mongo', connector: 'mongodb' },
+      ]),
+    ).toEqual([])
+    expect(
+      refused([
+        { id: 'mysql', connector: 'mysql' },
+        { id: 'mongo', connector: 'mongodb-atlas' },
+      ]),
+    ).toEqual([
+      {
+        code: 'unsupported-target-connector',
+        nodeIds: ['target:mongo:orders'],
+        messageKey: 'pipelines.workspace.diagnostics.unsupportedTargetConnector',
+      },
+    ])
+    // Ids alone never said which connector `mongo` goes through, so nothing is judged.
+    expect(refused(['mysql', 'mongo'])).toEqual([])
+    expect(refused()).toEqual([])
+  })
+
   it('reports isolated nodes, cycles, and dangling edges', () => {
     const draft = createPipelineGraphDraft(view)
     const isolated = addPipelineNode(draft, { kind: 'view' }, { x: 10, y: 10 }).draft

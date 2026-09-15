@@ -555,7 +555,8 @@
         "cycle": "圖中存在循環依賴。",
         "isolatedNode": "儲存前請將此節點連接到 Pipeline。",
         "missingConfiguration": "儲存前請完成此節點設定。",
-        "invalidSourceReference": "請選擇現有的 Source。"
+        "invalidSourceReference": "請選擇現有的 Source。",
+        "unsupportedTargetConnector": "目標節點只能寫入 MongoDB 資料來源。請改選一個，或更換該資料來源的連接器。"
       },
       "navigation": {
         "label": "Pipeline 工作區導覽",
