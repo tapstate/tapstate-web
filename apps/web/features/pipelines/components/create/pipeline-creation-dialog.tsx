@@ -134,7 +134,7 @@ export function PipelineCreationDialog({ open, onClose }: PipelineCreationDialog
               aria-label={t('pipelines.createEntry.close')}
               onClick={handleClose}
             >
-              <X aria-hidden="true" />
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
 
             {wizardStarted ? (

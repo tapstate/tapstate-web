@@ -62,15 +62,25 @@
 
   .pipeline-create-dialog__close {
     position: absolute;
+    display: flex;
     top: 0.75rem;
     right: 0.75rem;
     z-index: 50;
     width: 2.25rem;
     height: 2.25rem;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
     border: 0;
     border-radius: 0.625rem;
     background: var(--pipeline-create-close-bg);
     color: var(--pipeline-create-close-text);
+  }
+
+  .pipeline-create-dialog__close svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    flex: 0 0 auto;
   }
 
   .pipeline-create-dialog__close:hover {
@@ -334,45 +344,91 @@
   .pipeline-create-preview__stage {
     position: relative;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
     width: 41.5rem;
     height: 28rem;
     min-height: 28rem;
     overflow: hidden;
-    box-shadow: none;
+    background: var(--pipeline-create-surface-subtle);
+    box-shadow: inset 0 0 0 1px var(--pipeline-create-divider);
   }
 
-  .pipeline-create-preview__grid {
+  .pipeline-create-preview__stage--dag {
+    background-image: radial-gradient(circle, rgb(16 24 40 / 10%) 1px, transparent 1px);
+    background-position: 1.25rem 1.25rem;
+    background-size: 1.25rem 1.25rem;
+  }
+
+  .pipeline-create-preview__canvas-toolbar {
+    z-index: 2;
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--pipeline-create-divider);
+    background: rgb(255 255 255 / 86%);
+    padding: 0.7rem 1rem;
+    color: var(--pipeline-create-muted);
+    font-size: 0.6875rem;
+    font-weight: 600;
+  }
+
+  .pipeline-create-preview__canvas-toolbar span:first-child {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .pipeline-create-preview__canvas-toolbar svg { width: 0.85rem; height: 0.85rem; color: var(--pipeline-create-accent); }
+
+  .pipeline-create-preview__toolbar-chip {
+    border: 1px solid rgb(10 168 121 / 18%);
+    border-radius: 999px;
+    background: rgb(10 168 121 / 7%);
+    color: #087f5b;
+    padding: 0.2rem 0.45rem;
+    font-size: 0.625rem;
+  }
+
+  .pipeline-create-preview__graph-row {
     position: absolute;
-    inset: 0;
-    opacity: 1;
-    background: transparent;
+    top: 16.5rem;
+    left: 50%;
+    display: flex;
+    width: max-content;
+    align-items: center;
+    transform: translate(-50%, -50%);
   }
 
-  .pipeline-create-preview__lane {
+  .pipeline-create-preview__edge {
+    position: relative;
+    display: block;
+    width: 4rem;
+    height: 0.125rem;
+    flex: 0 0 4rem;
+    background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--pipeline-create-accent) 52%, white) 0 0.35rem, transparent 0.35rem 0.6rem);
+  }
+
+  .pipeline-create-preview__edge-dot {
     position: absolute;
-    height: 1px;
-    background: color-mix(in srgb, var(--pipeline-create-accent) 36%, transparent);
-    transform-origin: left center;
+    top: 50%;
+    right: -0.25rem;
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 999px;
+    background: var(--pipeline-create-accent);
+    transform: translateY(-50%);
   }
 
-  .pipeline-create-preview__lane--one {
-    top: 50%;
-    right: 22%;
-    left: 21%;
-    transform: rotate(-17deg);
-  }
-
-  .pipeline-create-preview__lane--two {
-    top: 50%;
-    right: 21%;
-    left: 53%;
-    transform: rotate(16deg);
+  .pipeline-create-preview__stage--wizard {
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    background: linear-gradient(180deg, var(--pipeline-create-surface-subtle), var(--pipeline-create-surface));
+    padding: 2.25rem 2.5rem 3.5rem;
   }
 
   .pipeline-create-preview__node {
-    position: absolute;
     display: inline-flex;
     min-width: 6.75rem;
     align-items: center;
@@ -387,21 +443,7 @@
     font-weight: 650;
   }
 
-  .pipeline-create-preview__node--source {
-    top: 23%;
-    left: 9%;
-  }
-
-  .pipeline-create-preview__node--transform {
-    top: 43%;
-    left: 37%;
-    min-width: 8.5rem;
-  }
-
-  .pipeline-create-preview__node--target {
-    right: 8%;
-    bottom: 22%;
-  }
+  .pipeline-create-preview__node--transform { min-width: 8.5rem; }
 
   .pipeline-create-preview__node-dot {
     width: 0.5rem;
@@ -445,6 +487,30 @@
     background: #22c55e;
     box-shadow: 0 0 0 3px rgb(34 197 94 / 12%);
   }
+
+  .pipeline-create-preview__wizard-step {
+    display: flex;
+    width: min(100%, 27rem);
+    align-items: center;
+    gap: 0.75rem;
+    border: 1px solid var(--pipeline-create-border);
+    border-radius: 0.75rem;
+    background: var(--pipeline-create-surface);
+    padding: 0.8rem 0.9rem;
+    box-shadow: 0 2px 6px rgb(16 24 40 / 5%);
+  }
+
+  .pipeline-create-preview__wizard-step--active { border-color: color-mix(in srgb, var(--pipeline-create-accent) 45%, var(--pipeline-create-border)); }
+  .pipeline-create-preview__step-index { display: grid; width: 1.35rem; height: 1.35rem; flex: 0 0 auto; place-items: center; border-radius: 999px; background: var(--pipeline-create-accent); color: white; font-size: 0.625rem; font-weight: 700; }
+  .pipeline-create-preview__wizard-step > div { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 0.2rem; }
+  .pipeline-create-preview__wizard-step strong { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--pipeline-create-text); font-size: 0.75rem; }
+  .pipeline-create-preview__wizard-step strong svg { width: 0.85rem; height: 0.85rem; color: var(--pipeline-create-accent); }
+  .pipeline-create-preview__wizard-step div span { color: var(--pipeline-create-muted); font-size: 0.625rem; }
+  .pipeline-create-preview__wizard-step > svg { width: 0.9rem; height: 0.9rem; color: var(--pipeline-create-muted); }
+  .pipeline-create-preview__wizard-connector { position: relative; display: flex; height: 2.6rem; width: min(100%, 27rem); align-items: center; justify-content: center; color: var(--pipeline-create-border-hover); }
+  .pipeline-create-preview__wizard-connector > svg { width: 1rem; height: 1rem; }
+  .pipeline-create-preview__wizard-connector > span { position: absolute; display: grid; width: 1.55rem; height: 1.55rem; place-items: center; border: 1px solid #8b5cf6; border-radius: 999px; background: var(--pipeline-create-surface); color: #7c3aed; }
+  .pipeline-create-preview__wizard-connector > span svg { width: 0.85rem; height: 0.85rem; }
 
   @media (max-width: 56rem) {
     .pipeline-create-preview {
