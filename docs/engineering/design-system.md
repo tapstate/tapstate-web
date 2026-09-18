@@ -3,6 +3,11 @@
 > 状态：长期设计规范
 > 日期：2026-07-24
 > 范围：Tapstate Web 的视觉 token、Tailwind 使用、shadcn-compatible 组件、前端架构边界、组件拆分、组件状态和 UI 质量门禁
+> 关联文档：
+>
+> - `apps/web/components/ui/AGENTS.md` — 本规范在组件目录层面的落地细则（token 命名、圆角/间距角色化、新增组件检查清单），改动 `components/ui/*` 时与本文件一并生效，不是替代关系。
+> - `docs/engineering/overlay-conventions.md` — 浮层组件（Dropdown/Select/Dialog/Popover/Menu/Tooltip/Drawer）的 z-index 归属和受控 `open`/`onOpenChange` 契约，本文件第 5、8.4 节仅定义视觉 token，不重复该契约。
+> - `docs/engineering/ui-design-constraints.md` — 本规范部分条款（尤其 8.7 的裸值禁令）的来源与取舍依据，日常开发不必读，出现分歧或做治理类改动时查。
 
 ## 1. 目标
 
@@ -41,6 +46,8 @@ Tapstate Web 的 UI 以 shadcn 的语义 token、Radix 可达性交互和 Tailwi
 
 新增颜色时先判断是否能归入上表语义。不能归入时，先在 PR 或变更说明中记录原因，再新增 token。
 
+浮层组件还需要一组独立的 z-index 语义 token（如 `--z-overlay-dropdown` / `--z-overlay-dialog` / `--z-overlay-toast`），层级关系和使用规则见 `docs/engineering/overlay-conventions.md`，不在本表重复维护。
+
 ## 4. 圆角与密度
 
 - `--radius: 0.625rem`。
@@ -72,6 +79,7 @@ Tapstate Web 的 UI 以 shadcn 的语义 token、Radix 可达性交互和 Tailwi
 - Floating surface 使用 `--popover` / `--popover-foreground`。
 - Item hover 使用 `--accent` / `--accent-foreground`。
 - Popper border 使用 `--border`，shadow 用于浮层层级。
+- 本节只定义视觉 token；z-index 归属（禁止业务侧覆盖）和挂载/卸载方式（受控 `open`/`onOpenChange`，不用条件渲染）一律遵循 `docs/engineering/overlay-conventions.md`，不在此重复定义，也不允许与之冲突。
 
 ### Table / List / Tree
 
@@ -85,6 +93,7 @@ Tapstate Web 的 UI 以 shadcn 的语义 token、Radix 可达性交互和 Tailwi
 - Surface 使用 card 或 popover 语义。
 - Header、footer、body 间距稳定；loading/submitting 不能造成按钮跳动。
 - 关闭、提交、取消等控件必须有 disabled/submitting 状态。
+- 同属浮层组件，z-index 和受控挂载规则同样遵循 `docs/engineering/overlay-conventions.md`。
 
 ### 5.1 资源生命周期动作与 mutation 反馈
 
@@ -92,8 +101,8 @@ Tapstate Web 的 UI 以 shadcn 的语义 token、Radix 可达性交互和 Tailwi
 
 | 场景          | 规则                                                                                                               |
 | ------------- | ------------------------------------------------------------------------------------------------------------------ |
-| 高频主操作    | 与状态 badge 保持同一操作槽，但收进稳定尺寸的 overflow menu；菜单项保留明确图标、文字和键盘导航。               |
-| 低频扩展动作  | 继续进入同一 overflow menu，例如复制、删除或更多上下文操作；不要额外撑宽表格列。                                |
+| 高频主操作    | 与状态 badge 保持同一操作槽，但收进稳定尺寸的 overflow menu；菜单项保留明确图标、文字和键盘导航。                  |
+| 低频扩展动作  | 继续进入同一 overflow menu，例如复制、删除或更多上下文操作；不要额外撑宽表格列。                                   |
 | 状态几何      | 状态和动作槽保持固定高度与最小宽度；pending 只替换图标，不改变行高。                                               |
 | 中断性操作    | Stop 等会中断运行的动作必须通过 Alert Dialog 二次确认。                                                            |
 | mutation 失败 | 使用脱离表格文档流的 transient feedback surface，带 live region 与明确关闭动作；禁止把错误文案塞进 `td` 或按钮旁。 |
@@ -106,16 +115,16 @@ Tapstate Web 的 UI 以 shadcn 的语义 token、Radix 可达性交互和 Tailwi
 
 工作台的高级感来自秩序、节制和响应速度，而不是视觉特效。列表、资源浏览器和运行态页面必须遵守以下基线：
 
-| 维度 | 必须遵守的规则 |
-| --- | --- |
-| 信息层级 | 用字重、留白、divider 和语义色区分主次；不要用装饰卡片、渐变或多层背景制造层级。 |
-| 表格几何 | 列宽、行高和状态/操作槽必须稳定。资源名称截断并提供完整 `title`，不能挤压状态或更多操作。 |
-| 操作层级 | 每行只暴露资源名称这一主入口；运行、停止、重试等上下文动作收进固定尺寸的 icon-only overflow trigger。 |
-| 表面深度 | 页面和表格使用一层可辨认的 border；shadow 只用于 dropdown、dialog、toast 等真实浮层。 |
+| 维度     | 必须遵守的规则                                                                                                   |
+| -------- | ---------------------------------------------------------------------------------------------------------------- |
+| 信息层级 | 用字重、留白、divider 和语义色区分主次；不要用装饰卡片、渐变或多层背景制造层级。                                 |
+| 表格几何 | 列宽、行高和状态/操作槽必须稳定。资源名称截断并提供完整 `title`，不能挤压状态或更多操作。                        |
+| 操作层级 | 每行只暴露资源名称这一主入口；运行、停止、重试等上下文动作收进固定尺寸的 icon-only overflow trigger。            |
+| 表面深度 | 页面和表格使用一层可辨认的 border；shadow 只用于 dropdown、dialog、toast 等真实浮层。                            |
 | 颜色系统 | 业务页面只消费 semantic token 或 feature-scoped token；禁止在 JSX 里散落灰阶、品牌蓝、状态发光和 `#...` 背景色。 |
-| 反馈模型 | 列表 mutation 反馈脱离行布局，success 依赖服务端刷新，error 使用带关闭动作的 transient surface。 |
-| 可达性 | 所有 icon-only trigger 提供 `aria-label` 和 keyboard-visible focus；hover 不是唯一的信息载体。 |
-| 窄屏行为 | 列内次要信息可隐藏，表格容器可以局部横向滚动；页面本身不得因长资源名或操作菜单产生横向溢出。 |
+| 反馈模型 | 列表 mutation 反馈脱离行布局，success 依赖服务端刷新，error 使用带关闭动作的 transient surface。                 |
+| 可达性   | 所有 icon-only trigger 提供 `aria-label` 和 keyboard-visible focus；hover 不是唯一的信息载体。                   |
+| 窄屏行为 | 列内次要信息可隐藏，表格容器可以局部横向滚动；页面本身不得因长资源名或操作菜单产生横向溢出。                     |
 
 实现顺序应先确定内容优先级和固定布局槽，再补齐 hover、focus、loading 和 error 状态。不得以玻璃、泛滥阴影或复杂动画替代这些基础规则。
 
@@ -123,12 +132,13 @@ Tapstate Web 的 UI 以 shadcn 的语义 token、Radix 可达性交互和 Tailwi
 
 本规范吸收成熟产品和开源设计系统中可验证、可复用的基础约束；外部实现只作为基线，不直接复制其品牌视觉：
 
-| 来源 | 采用的基线 | 在 Tapstate Web 的落地 |
-| --- | --- | --- |
-| [Vercel Web Interface Guidelines](https://vercel.com/design/guidelines) | content-first、键盘可达、明确的 focus-visible、稳定的交互反馈 | 页面先服务资源定位和操作；所有 icon-only 控件有标签和可见焦点；loading 不改变几何尺寸 |
-| [shadcn/ui](https://github.com/shadcn-ui/ui) | semantic token、可组合 primitive、低噪声 surface | 颜色、边框、背景和 ring 通过语义 token；feature 只增加局部语义变量 |
-| [Radix Themes](https://github.com/radix-ui/themes) | 可达性、密度、状态和层级的组合约束 | Dropdown、Dialog、Tooltip 使用成熟 primitive；hover 不是唯一状态表达 |
-| [Apple Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/) | 层级克制、直接操作、反馈及时、动效服务于状态变化 | 普通 surface 不使用装饰阴影；浮层才表达 elevation；过渡只描述状态变化 |
+| 来源                                                                                               | 采用的基线                                                                                                | 在 Tapstate Web 的落地                                                                                                                                                                                |
+| -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Vercel Web Interface Guidelines](https://vercel.com/design/guidelines)                            | content-first、键盘可达、明确的 focus-visible、稳定的交互反馈                                             | 页面先服务资源定位和操作；所有 icon-only 控件有标签和可见焦点；loading 不改变几何尺寸                                                                                                                 |
+| [shadcn/ui](https://github.com/shadcn-ui/ui)                                                       | semantic token、可组合 primitive、低噪声 surface                                                          | 颜色、边框、背景和 ring 通过语义 token；feature 只增加局部语义变量                                                                                                                                    |
+| [Radix Themes](https://github.com/radix-ui/themes)                                                 | 可达性、密度、状态和层级的组合约束                                                                        | Dropdown、Dialog、Tooltip 使用成熟 primitive；hover 不是唯一状态表达                                                                                                                                  |
+| [Apple Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/) | 层级克制、直接操作、反馈及时、动效服务于状态变化                                                          | 普通 surface 不使用装饰阴影；浮层才表达 elevation；过渡只描述状态变化                                                                                                                                 |
+| [langgenius/dify（web）](https://github.com/langgenius/dify)                                       | Tailwind v4 CSS-first 语义 token 工程化、失效 class 的机器门禁、overlay 组件 z-index/受控模式契约独立成文 | 8.7 的裸值禁令、`docs/engineering/overlay-conventions.md` 的 z-index/受控模式契约、以及计划接入 `tech-stack.md` 验证命令的失效 class 检查，取舍依据记录在 `docs/engineering/ui-design-constraints.md` |
 
 由此得到四条工程化结论：
 
@@ -158,6 +168,7 @@ Tapstate Web 的 UI 以 shadcn 的语义 token、Radix 可达性交互和 Tailwi
 - Dropdown / select / list / tree item hover 是否使用 `--accent`。
 - Focus visible、disabled、invalid、loading、empty、error、success 是否都有可用表现。
 - 桌面和移动视口是否无页面级横向溢出、文字溢出和元素重叠。
+- 涉及浮层组件时，z-index 是否完全由 `components/ui` 内部管理、Dialog/Popover/Dropdown 是否使用受控 `open`/`onOpenChange`（详见 `docs/engineering/overlay-conventions.md`）。
 - `pnpm lint`、`pnpm typecheck`、`pnpm build` 是否按风险等级执行。
 
 ## 8. 前端工程架构
@@ -169,7 +180,7 @@ Tapstate Web 的 UI 以 shadcn 的语义 token、Radix 可达性交互和 Tailwi
 发生冲突时按以下顺序判断：
 
 1. 后端 API / 数据模型合同和产品交互决策。
-2. 本 Design System 的 token、架构和可达性规则。
+2. 本 Design System 的 token、架构和可达性规则（含 `overlay-conventions.md`、`components/ui/AGENTS.md` 这类分拆出的专项契约，视为本规范的一部分，不是更低优先级）。
 3. 已确认的产品 / 设计决策与 PR 变更说明。
 4. 局部实现偏好。
 
@@ -233,7 +244,7 @@ apps/web/
 
 - 路由文件保持薄，只做参数读取、loader、权限边界和 feature page 组合。
 - 业务组件、业务类型、query 和 adapter 默认放在同一 feature 下，避免把领域代码散落到 `components/`。
-- `components/ui` 只放可复用的交互原语；有业务含义的组件不得放入该目录。
+- `components/ui` 只放可复用的交互原语；有业务含义的组件不得放入该目录。该目录下的组件契约细则（token 使用规则、圆角/间距角色化、新增组件检查清单）见同目录下的 `AGENTS.md`。
 - `service` 只描述 HTTP 合同和传输错误，不导出 React hook；hook 放在 feature 的 query 文件。
 - `lib` 只能放框架无关、可独立测试的工具，不能成为未分类业务代码的收容目录。
 - 新增目录前先确认它对应稳定的职责边界；不能为了缩短单个文件而创建一层没有语义的目录。
@@ -242,12 +253,12 @@ apps/web/
 
 组件分为四类，分类决定它可以知道什么：
 
-| 类型            | 位置                         | 责任                                                          |
-| --------------- | ---------------------------- | ------------------------------------------------------------- |
-| Primitive       | `components/ui`              | focus、键盘、尺寸、基础状态和可组合 API                       |
-| Shared composed | `components`                 | 多个 feature 共用的业务中立组合，如资源表格、状态徽标、面板壳 |
-| Feature         | `features/<feature>`         | 领域展示、领域交互、query 结果适配和 feature 状态             |
-| Route/page      | `app/routes` 或 feature page | 页面编排、路由参数、页面级状态组合                            |
+| 类型            | 位置                         | 责任                                                                                                                          |
+| --------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Primitive       | `components/ui`              | focus、键盘、尺寸、基础状态和可组合 API；实现细则见 `components/ui/AGENTS.md`，浮层类 primitive 另见 `overlay-conventions.md` |
+| Shared composed | `components`                 | 多个 feature 共用的业务中立组合，如资源表格、状态徽标、面板壳                                                                 |
+| Feature         | `features/<feature>`         | 领域展示、领域交互、query 结果适配和 feature 状态                                                                             |
+| Route/page      | `app/routes` 或 feature page | 页面编排、路由参数、页面级状态组合                                                                                            |
 
 拆分依据是职责和状态边界，不是机械按 JSX 行数切片。出现以下任一信号时，应拆出子组件或纯函数：
 
@@ -319,7 +330,7 @@ semantic tokens → base/reset → UI primitives → shared composition → feat
 - 同一个 selector 只能有一个权威定义；需要覆盖时使用明确的 variant、data attribute 或 CSS variable，不在文件末尾追加“修补段”。
 - `position: absolute` 只用于拥有明确定位上下文的组件内部元素；图标、handle、端口的定位必须相对于自己的组件盒子，不能依赖其他 feature 的全局 class。
 - Tailwind utility 用于局部布局和一次性组合；重复出现的组件状态、复杂伪元素、渐变、滤镜和连接线样式进入有作用域的 CSS。
-- JSX 中不得散落业务色值、阴影和圆角。例外是来自 connector catalog 的品牌色，但也必须经过明确的 token / 映射函数。
+- JSX 中不得散落业务色值、阴影和圆角。例外是来自 connector catalog 的品牌色，但也必须经过明确的 token / 映射函数。这条禁令的取舍依据和参考对象记录在 `docs/engineering/ui-design-constraints.md`。
 - 深色模式只切换 semantic tokens 和少量明确的组件变量；feature 不得复制一套 dark selector 或硬编码颜色。
 - 复杂视觉效果（如节点图标双层 image、blur、玻璃质感）必须封装在图标/节点组件内部，并有默认、选中、禁用和窄屏表现；不能通过全局 `img` 或 icon class 影响 DataSource 列表。
 
@@ -339,11 +350,11 @@ React Flow 只作为画布基础设施，业务语义由 Pipeline feature 定义
 ### 8.9 可达性、响应式与交互质量
 
 - icon-only 控件必须有 `aria-label`；可见文本和 tooltip 不能互相矛盾。
-- 所有可交互元素支持键盘 focus，使用 `:focus-visible`；浮层、配置面板和 Dialog 必须有正确的 focus 进入、退出和关闭行为。
+- 所有可交互元素支持键盘 focus，使用 `:focus-visible`；浮层、配置面板和 Dialog 必须有正确的 focus 进入、退出和关闭行为，具体规则见 `docs/engineering/overlay-conventions.md` 第 3 节。
 - 不能只用颜色表达状态；状态徽标、节点错误和运行状态同时提供文本、图标或可访问名称。
 - 侧栏、画布、列表和配置面板在窄视口下必须有明确的收缩、滚动或堆叠策略；页面级不能出现横向溢出。
 - 文本、图标、handle 和边在默认主题下满足可读和可辨识要求；禁用态仍可辨认。
-- 需要浮动 panel 时，panel 的层级、遮挡关系、点击外部关闭和移动端行为必须在 PR 或变更说明中明确。
+- 需要浮动 panel 时，panel 的层级、遮挡关系、点击外部关闭和移动端行为必须在 PR 或变更说明中明确；层级本身必须来自 `overlay-conventions.md` 定义的 z-index token 表，不得现场发明数值。
 
 ### 8.10 测试与质量门禁
 
@@ -365,7 +376,7 @@ React Flow 只作为画布基础设施，业务语义由 Pipeline feature 定义
 - 节点移动后保存并重新加载仍保留约定的坐标。
 - 侧栏、节点库和配置面板不会泄漏到其他 feature 的 DOM 或样式。
 
-验证命令按风险等级执行，至少遵守 `tech-stack.md` 和 `tapstate-web/AGENTS.md` 的 Level 1/2/3 规则。
+验证命令按风险等级执行，至少遵守 `tech-stack.md` 和 `tapstate-web/AGENTS.md` 的 Level 1/2/3 规则。失效 Tailwind class 的机器检查一旦落地，将作为新的验证命令加入 `tech-stack.md`（决策背景见 `ui-design-constraints.md`），届时本节同步补充引用，不在此提前列出未实现的命令。
 
 ### 8.11 Definition of Done
 
@@ -376,6 +387,7 @@ React Flow 只作为画布基础设施，业务语义由 Pipeline feature 定义
 - 新样式使用语义 token，selector 有明确 owner 和 scope，没有重复的全局修补规则。
 - loading、empty、error、success 以及适用的表单和冲突状态可操作且已测试。
 - i18n、键盘可达性、窄屏布局和文本溢出已检查。
+- 涉及浮层组件时，z-index 和受控挂载方式符合 `overlay-conventions.md`。
 - 按风险等级运行 lint、typecheck、test、build 和必要的视觉回归；失败项已记录原因。
 - diff 不包含未授权的依赖、无关重构、第二份数据缓存或临时 mock 持久化。
 
@@ -389,4 +401,5 @@ React Flow 只作为画布基础设施，业务语义由 Pipeline feature 定义
 - 组件在 loading、empty、error、success、disabled、validation、submitting 下如何表现？
 - 失败请求、ETag 冲突、权限错误和键盘操作是否都有明确路径？
 - 如果这是画布变更，节点坐标、handle、edge 和 viewport 哪些会保存，哪些不会？
+- 如果这是浮层组件变更，z-index 和挂载方式是否符合 `overlay-conventions.md`，而不是现场加一个 z-index 数值或改用条件渲染？
 - 本次改动是否引入了新的 token、依赖、全局样式或跨 feature 耦合？如果有，PR 或变更说明是否记录了原因和回滚方式？
