@@ -14,7 +14,11 @@ import {
 import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import type { PipelineMutation, PipelineTransformStep } from '@/service/pipelines/pipeline-client'
+import type {
+  PipelineJsonObject,
+  PipelineMutation,
+  PipelineTransformStep,
+} from '@/service/pipelines/pipeline-client'
 
 import { ConnectorIcon } from '@/components/connector-icon'
 import { Button } from '@/components/ui/button'
@@ -38,8 +42,10 @@ import { getSourceSchema, listConnectors, listSources } from '@/service/source-c
 import { useAuthStore } from '@/stores/auth-store'
 
 import type { PipelineTransformType } from '../components/node-library/pipeline-node-library-types'
+import type { PipelineTransformConfigurationPatch } from '../components/transform/types'
 
 import { PipelineSourceTablePicker } from '../components/node-config/pipeline-node-config-panel'
+import { TransformEditor } from '../components/transform/transform-editor'
 
 const ATLAS_CONNECTOR_ID = 'mongodb-atlas'
 const transformTypes: PipelineTransformType[] = ['filter', 'map', 'join', 'union', 'nest', 'js']
@@ -47,10 +53,140 @@ const transformTypes: PipelineTransformType[] = ['filter', 'map', 'join', 'union
 interface WizardStep {
   id: string
   type: PipelineTransformType
+  body: PipelineJsonObject
+  from?: unknown
+  options?: PipelineJsonObject | null
+}
+
+const fanInTransformTypes = new Set<PipelineTransformType>(['join', 'union'])
+
+function inputReferenceFor(sourceId: string, tables: readonly string[], previousStep?: WizardStep) {
+  if (previousStep) return previousStep.id
+  const references = sourceReferences(sourceId, tables)
+  return references.length === 1 ? (references[0] ?? '') : references
+}
+
+function createWizardStep(
+  type: PipelineTransformType,
+  id: string,
+  sourceId: string,
+  sourceTables: readonly string[],
+): WizardStep {
+  const references = sourceReferences(sourceId, sourceTables)
+  if (type === 'join' && references.length > 1) {
+    return {
+      id,
+      type,
+      from: { left: references[0], right: references[1] },
+      body: { engine: 'duckdb', sql: '' },
+    }
+  }
+  if (type === 'union' && references.length > 1) {
+    return { id, type, from: references, body: {} }
+  }
+  if (type === 'nest') {
+    return {
+      id,
+      type,
+      body: { root: { from: references[0] ?? '', key: [], mode: 'upsert' } },
+    }
+  }
+  if (type === 'js') return { id, type, body: { engine: 'javascript', script: '' } }
+  return { id, type, body: type === 'filter' ? { expr: '' } : { fields: {} } }
+}
+
+function transformStepReady(step: WizardStep) {
+  if (step.type === 'filter') return typeof step.body.expr === 'string' && step.body.expr.trim() !== ''
+  if (step.type === 'map') {
+    const fields = step.body.fields
+    return (
+      typeof fields === 'object' &&
+      fields !== null &&
+      !Array.isArray(fields) &&
+      Object.entries(fields).some(([key, value]) => key.trim() && value !== '')
+    )
+  }
+  if (step.type === 'join') {
+    const inputs = step.from
+    return (
+      typeof inputs === 'object' &&
+      inputs !== null &&
+      !Array.isArray(inputs) &&
+      Object.values(inputs).filter((value) => typeof value === 'string' && value.trim()).length >= 2 &&
+      typeof step.body.sql === 'string' &&
+      step.body.sql.trim() !== ''
+    )
+  }
+  if (step.type === 'union') {
+    return (
+      Array.isArray(step.from) &&
+      step.from.filter((value) => typeof value === 'string' && value.trim()).length >= 2
+    )
+  }
+  if (step.type === 'nest') {
+    const root =
+      typeof step.body.root === 'object' &&
+      step.body.root !== null &&
+      !Array.isArray(step.body.root)
+        ? (step.body.root as Record<string, unknown>)
+        : null
+    return (
+      root !== null &&
+      typeof root.from === 'string' &&
+      root.from.trim() !== '' &&
+      Array.isArray(root.key) &&
+      root.key.length > 0
+    )
+  }
+  return step.type === 'js' && typeof step.body.script === 'string' && step.body.script.trim() !== ''
 }
 
 function sourceReferences(sourceId: string, tables: readonly string[]) {
   return tables.map((table) => `${sourceId}.${table}`)
+}
+
+function previewValue(value: unknown) {
+  if (typeof value === 'string') return value.trim() ? value : "''"
+  if (value === undefined) return "''"
+  return JSON.stringify(value)
+}
+
+function previewDsl(
+  pipelineId: string | undefined,
+  sourceId: string,
+  sourceTables: readonly string[],
+  steps: readonly WizardStep[],
+  destinationId: string | undefined,
+) {
+  const transforms = steps.length
+    ? steps
+        .map((step, index) => {
+          const from = step.from ?? inputReferenceFor(sourceId, sourceTables, steps[index - 1])
+          const body = Object.entries(step.body)
+            .map(([key, value]) => `    ${key}: ${previewValue(value)}`)
+            .join('\n')
+          const options = step.options
+            ? `    options: ${previewValue(step.options)}`
+            : ''
+          return [
+            `  - id: ${step.id}`,
+            `    type: ${step.type}`,
+            `    from: ${previewValue(from)}`,
+            body,
+            options,
+          ]
+            .filter(Boolean)
+            .join('\n')
+        })
+        .join('\n')
+    : '  []'
+  return `version: tapstate/v1
+kind: pipeline
+id: ${pipelineId || 'your_pipeline'}
+source: ${sourceId || 'choose_source'}
+transforms:
+${transforms}
+serve: ${destinationId || 'configure_atlas'}`
 }
 
 function buildPipelineMutation({
@@ -74,8 +210,10 @@ function buildPipelineMutation({
   const initialReference = initialReferences.length === 1 ? initialReferences[0] : initialReferences
   const transforms: PipelineTransformStep[] = steps.map((step, index) => ({
     id: step.id,
-    from: index === 0 ? initialReference : steps[index - 1]!.id,
+    from: step.from ?? (index === 0 ? initialReference : steps[index - 1]!.id),
     type: step.type,
+    ...step.body,
+    ...(step.options ? { options: step.options } : {}),
   }))
   const outputReference = steps.at(-1)?.id ?? initialReference
 
@@ -158,6 +296,7 @@ export function WizardBuilder({
     pipelineId &&
     sourceId &&
     sourceTables.length > 0 &&
+    steps.every(transformStepReady) &&
     atlasDestination &&
     destinationTable.trim(),
   )
@@ -167,12 +306,32 @@ export function WizardBuilder({
     : undefined
 
   function addStepOfType(type: PipelineTransformType) {
+    if (!sourceId || sourceTables.length === 0) return
+    if (fanInTransformTypes.has(type) && (steps.length > 0 || sourceTables.length < 2)) return
     const nextIndex = steps.length + 1
-    setSteps((current) => [...current, { id: `${type}_${nextIndex}`, type }])
+    setSteps((current) => [
+      ...current,
+      createWizardStep(type, `${type}_${nextIndex}`, sourceId, sourceTables),
+    ])
   }
 
   function removeStep(index: number) {
     setSteps((current) => current.filter((_, currentIndex) => currentIndex !== index))
+  }
+
+  function updateStep(index: number, patch: PipelineTransformConfigurationPatch) {
+    setSteps((current) =>
+      current.map((step, currentIndex) =>
+        currentIndex === index
+          ? {
+              ...step,
+              body: patch.body ?? step.body,
+              ...(patch.from !== undefined ? { from: patch.from } : {}),
+              ...(patch.options !== undefined ? { options: patch.options } : {}),
+            }
+          : step,
+      ),
+    )
   }
 
   async function handleSave() {
@@ -224,6 +383,7 @@ export function WizardBuilder({
                   onValueChange={(value) => {
                     setSourceId(value ?? '')
                     setSourceTables([])
+                    setSteps([])
                   }}
                 >
                   <SelectTrigger
@@ -252,26 +412,22 @@ export function WizardBuilder({
                   </SelectContent>
                 </Select>
               </label>
-              <label className="pipeline-wizard__field">
-                <span>{t('wizard.tableSelect')}</span>
-                {source ? (
-                  <PipelineSourceTablePicker
-                    key={source.id}
-                    sourceId={source.id}
-                    sources={sources}
-                    options={sourceTableOptions}
-                    loading={sourceTableLoading}
-                    value={sourceTables}
-                    onChange={setSourceTables}
-                  />
-                ) : (
-                  <input
-                    className="pipeline-wizard__input"
-                    disabled
-                    placeholder={t('wizard.selectSourceFirst')}
-                  />
-                )}
-              </label>
+              {source && (
+                <PipelineSourceTablePicker
+                  key={source.id}
+                  sourceId={source.id}
+                  sources={sources}
+                  options={sourceTableOptions}
+                  loading={sourceTableLoading}
+                  value={sourceTables}
+                  onChange={(nextTables) => {
+                    setSourceTables(nextTables)
+                    if (steps.some((step) => fanInTransformTypes.has(step.type))) {
+                      setSteps([])
+                    }
+                  }}
+                />
+              )}
             </div>
             {source && (
               <p className="pipeline-wizard__meta">
@@ -297,8 +453,9 @@ export function WizardBuilder({
                   </span>
                   <div className="pipeline-wizard__node-title">
                     <h2>{t(`wizard.transforms.${step.type}`)}</h2>
-                    <p>{t('wizard.transformHint')}</p>
+                    <p>{t(`wizard.transformDescriptions.${step.type}`)}</p>
                   </div>
+                  <span className="pipeline-wizard__step-kind">{step.type}</span>
                   <button
                     type="button"
                     className="pipeline-wizard__icon-button"
@@ -308,15 +465,42 @@ export function WizardBuilder({
                     <Trash2 className="size-3.5" aria-hidden="true" />
                   </button>
                 </div>
-                <div className="pipeline-wizard__step-detail">
-                  <span>{t('wizard.dslStep')}</span>
-                  <code>{step.id}</code>
+                <div className="pipeline-wizard__step-context">
+                  <span>{t('wizard.input')}</span>
+                  <code>
+                    {JSON.stringify(
+                      step.from ?? inputReferenceFor(sourceId, sourceTables, steps[index - 1]),
+                    )}
+                  </code>
                 </div>
+                <div className="pipeline-wizard__step-editor">
+                  <TransformEditor
+                    config={{
+                      kind: 'transform',
+                      nodeId: `wizard:${step.id}`,
+                      stepId: step.id,
+                      transformType: step.type,
+                      from: step.from ?? inputReferenceFor(sourceId, sourceTables, steps[index - 1]),
+                      options: step.options ?? null,
+                      body: step.body,
+                    }}
+                    onChange={(patch) => updateStep(index, patch)}
+                  />
+                </div>
+                {!transformStepReady(step) && (
+                  <p className="pipeline-wizard__step-warning">
+                    {t('wizard.stepNeedsConfiguration')}
+                  </p>
+                )}
               </WizardNodeCard>
             </div>
           ))}
 
-          <AddStepControl onAdd={addStepOfType} />
+          <AddStepControl
+            canAdd={Boolean(sourceId && sourceTables.length > 0)}
+            canAddFanIn={steps.length === 0 && sourceTables.length > 1}
+            onAdd={addStepOfType}
+          />
 
           <FlowConnector />
           <WizardNodeCard tone="output">
@@ -400,12 +584,7 @@ export function WizardBuilder({
               <pre
                 className="pipeline-wizard__dsl"
                 aria-label={t('wizard.preview.codeLabel')}
-              >{`version: tapstate/v1
-kind: pipeline
-id: ${pipelineId || 'your_pipeline'}
-source: ${sourceId || 'choose_source'}
-transforms: ${steps.length ? `${steps.length} step${steps.length > 1 ? 's' : ''}` : '[]'}
-serve: ${atlasDestination?.id || 'configure_atlas'}`}</pre>
+            >{previewDsl(pipelineId, sourceId, sourceTables, steps, atlasDestination?.id)}</pre>
             ) : (
               <div className="pipeline-wizard__empty-preview">
                 <span className="pipeline-wizard__empty-icon" aria-hidden="true">
@@ -451,7 +630,15 @@ function FlowConnector() {
   )
 }
 
-function AddStepControl({ onAdd }: { onAdd: (type: PipelineTransformType) => void }) {
+function AddStepControl({
+  canAdd,
+  canAddFanIn,
+  onAdd,
+}: {
+  canAdd: boolean
+  canAddFanIn: boolean
+  onAdd: (type: PipelineTransformType) => void
+}) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
 
@@ -464,6 +651,7 @@ function AddStepControl({ onAdd }: { onAdd: (type: PipelineTransformType) => voi
             <button
               type="button"
               className="pipeline-wizard__add-button"
+              disabled={!canAdd}
               aria-label={t('wizard.chooseTransform')}
               title={t('wizard.chooseTransform')}
             >
@@ -477,13 +665,17 @@ function AddStepControl({ onAdd }: { onAdd: (type: PipelineTransformType) => voi
             {transformTypes.map((type) => (
               <DropdownMenuItem
                 key={type}
+                disabled={!canAdd || (fanInTransformTypes.has(type) && !canAddFanIn)}
                 onClick={() => {
                   onAdd(type)
                   setOpen(false)
                 }}
               >
                 <WandSparkles className="size-3.5" aria-hidden="true" />
-                {t(`wizard.transforms.${type}`)}
+                <span className="pipeline-wizard__step-menu-copy">
+                  <strong>{t(`wizard.transforms.${type}`)}</strong>
+                  <small>{t(`wizard.transformDescriptions.${type}`)}</small>
+                </span>
               </DropdownMenuItem>
             ))}
           </DropdownMenuGroup>
