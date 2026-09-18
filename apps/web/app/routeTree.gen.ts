@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as PipelineEditorRouteImport } from './routes/_pipeline-editor'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthenticatedDestinationsRouteImport } from './routes/_authenticated.destinations'
 import { Route as AuthenticatedExplorationsRouteImport } from './routes/_authenticated.explorations'
 import { Route as AuthenticatedPipelinesRouteImport } from './routes/_authenticated.pipelines'
 import { Route as AuthenticatedSourcesRouteImport } from './routes/_authenticated.sources'
@@ -44,6 +45,12 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedDestinationsRoute =
+  AuthenticatedDestinationsRouteImport.update({
+    id: '/destinations',
+    path: '/destinations',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedExplorationsRoute =
   AuthenticatedExplorationsRouteImport.update({
     id: '/explorations',
@@ -128,6 +135,7 @@ const PipelineEditorPipelinesPipelineIdEditMonitoringRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/destinations': typeof AuthenticatedDestinationsRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
   '/sources': typeof AuthenticatedSourcesRouteWithChildren
@@ -144,6 +152,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/destinations': typeof AuthenticatedDestinationsRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
   '/sources': typeof AuthenticatedSourcesIndexRoute
@@ -160,6 +169,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_pipeline-editor': typeof PipelineEditorRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authenticated/destinations': typeof AuthenticatedDestinationsRoute
   '/_authenticated/explorations': typeof AuthenticatedExplorationsRoute
   '/_authenticated/pipelines': typeof AuthenticatedPipelinesRoute
   '/_authenticated/sources': typeof AuthenticatedSourcesRouteWithChildren
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/destinations'
     | '/explorations'
     | '/pipelines'
     | '/sources'
@@ -194,6 +205,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/destinations'
     | '/explorations'
     | '/pipelines'
     | '/sources'
@@ -209,6 +221,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/_pipeline-editor'
     | '/login'
+    | '/_authenticated/destinations'
     | '/_authenticated/explorations'
     | '/_authenticated/pipelines'
     | '/_authenticated/sources'
@@ -259,6 +272,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/destinations': {
+      id: '/_authenticated/destinations'
+      path: '/destinations'
+      fullPath: '/destinations'
+      preLoaderRoute: typeof AuthenticatedDestinationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/explorations': {
       id: '/_authenticated/explorations'
@@ -380,12 +400,14 @@ const AuthenticatedSourcesRouteWithChildren =
   AuthenticatedSourcesRoute._addFileChildren(AuthenticatedSourcesRouteChildren)
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedDestinationsRoute: typeof AuthenticatedDestinationsRoute
   AuthenticatedExplorationsRoute: typeof AuthenticatedExplorationsRoute
   AuthenticatedPipelinesRoute: typeof AuthenticatedPipelinesRoute
   AuthenticatedSourcesRoute: typeof AuthenticatedSourcesRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedDestinationsRoute: AuthenticatedDestinationsRoute,
   AuthenticatedExplorationsRoute: AuthenticatedExplorationsRoute,
   AuthenticatedPipelinesRoute: AuthenticatedPipelinesRoute,
   AuthenticatedSourcesRoute: AuthenticatedSourcesRouteWithChildren,

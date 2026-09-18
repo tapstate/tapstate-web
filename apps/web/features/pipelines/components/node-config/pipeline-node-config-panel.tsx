@@ -311,7 +311,7 @@ function sourceTablePickerOptions(
   )
 }
 
-function PipelineSourceTablePicker({
+export function PipelineSourceTablePicker({
   value,
   options,
   loading = false,

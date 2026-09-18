@@ -697,9 +697,7 @@ describe('PipelineEditorPage', () => {
       document.querySelector<HTMLElement>('[data-testid="change-node-config"]')?.click(),
     )
 
-    updatePipeline.mockRejectedValueOnce(
-      new Error('Reference points to nothing in this workspace.'),
-    )
+    updatePipeline.mockRejectedValue(new Error('Reference points to nothing in this workspace.'))
     await act(async () => elementWithText('button', 'Save')?.click())
 
     await vi.waitFor(() =>
@@ -712,6 +710,17 @@ describe('PipelineEditorPage', () => {
       document.querySelector('[data-testid="pipeline-workflow-feedback"]')?.textContent,
     ).toContain('Reference points to nothing in this workspace.')
 
+    await act(async () => elementWithText('button', 'Save')?.click())
+    await vi.waitFor(() =>
+      expect(document.querySelectorAll('[data-testid="pipeline-workflow-feedback"]')).toHaveLength(
+        2,
+      ),
+    )
+
+    await act(async () =>
+      document.querySelector<HTMLButtonElement>('[aria-label="Dismiss save error"]')?.click(),
+    )
+    expect(document.querySelectorAll('[data-testid="pipeline-workflow-feedback"]')).toHaveLength(1)
     await act(async () =>
       document.querySelector<HTMLButtonElement>('[aria-label="Dismiss save error"]')?.click(),
     )

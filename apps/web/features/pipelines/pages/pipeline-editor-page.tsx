@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { ReactFlowProvider } from '@xyflow/react'
 import {
   Activity,
   AlertCircle,
@@ -74,6 +75,8 @@ import { sourceTableSelections } from '../model/pipeline-node-model'
 import { targetSources } from '../model/pipeline-target-connectors'
 import { PipelineMonitoringPage } from '../monitoring/pipeline-monitoring-page'
 import { PipelineWorkflowWithInnerContext } from '../workflow-app'
+import { PipelineWorkflow } from '../workflow-app/components/pipeline-workflow'
+import { WizardBuilder } from './wizard-builder'
 
 export type PipelineWorkspaceSection = 'orchestrate' | 'api' | 'logs' | 'monitoring'
 
@@ -403,9 +406,11 @@ function PipelineWorkspaceNav({
 function PipelineOrchestrationPage({
   pipelineId,
   stagedDraft,
+  onStagedDraftComplete,
 }: {
   pipelineId: string
   stagedDraft: StagedPipelineDraft | null
+  onStagedDraftComplete?: () => void
 }) {
   const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
@@ -413,13 +418,14 @@ function PipelineOrchestrationPage({
   const [draft, setDraft] = useState<PipelineGraphDraft | null>(null)
   const [isDirty, setIsDirty] = useState(false)
   const [diagnostics, setDiagnostics] = useState<PipelineGraphDiagnostic[]>([])
-  const [actionError, setActionError] = useState<string | null>(null)
+  const [actionErrors, setActionErrors] = useState<readonly { id: number; message: string }[]>([])
   const [layoutDraft, setLayoutDraft] = useState<Pick<PipelineLayout, 'nodes' | 'viewport'> | null>(
     null,
   )
   const surfaceRef = useRef<HTMLElement>(null)
   const latestLayout = useRef<Pick<PipelineLayout, 'nodes' | 'viewport'> | null>(null)
   const draftRef = useRef<PipelineGraphDraft | null>(null)
+  const actionErrorSequence = useRef(0)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isNewPipeline, setIsNewPipeline] = useState(stagedDraft !== null)
   const stagedPipeline = useMemo<PipelineView | null>(() => {
@@ -484,7 +490,12 @@ function PipelineOrchestrationPage({
     },
   })
   const pipelineData = isNewPipeline ? stagedPipeline : pipeline.data
-  const layoutData = isNewPipeline ? { pipelineId, nodes: {}, viewport: null } : layout.data
+  const layoutData = useMemo<PipelineLayout | null>(() => {
+    if (isNewPipeline) return { pipelineId, nodes: {}, viewport: null }
+    if (layout.data) return layout.data
+    if (!layoutDraft) return null
+    return { pipelineId, nodes: {}, viewport: layoutDraft.viewport }
+  }, [isNewPipeline, layout.data, layoutDraft, pipelineId])
 
   useEffect(
     () => () => {
@@ -494,10 +505,17 @@ function PipelineOrchestrationPage({
   )
 
   useEffect(() => {
-    if (!actionError) return
-    const dismissTimer = window.setTimeout(() => setActionError(null), 7000)
+    if (actionErrors.length === 0) return
+    const dismissTimer = window.setTimeout(() => {
+      setActionErrors((current) => current.slice(1))
+    }, 7000)
     return () => window.clearTimeout(dismissTimer)
-  }, [actionError])
+  }, [actionErrors])
+
+  function pushActionError(message: string) {
+    const id = actionErrorSequence.current++
+    setActionErrors((current) => [...current, { id, message }])
+  }
 
   useEffect(() => {
     if (!pipelineData) return
@@ -506,7 +524,7 @@ function PipelineOrchestrationPage({
     setDraft(nextDraft)
     setIsDirty(false)
     setDiagnostics([])
-    setActionError(null)
+    setActionErrors([])
     setSelection(null)
   }, [pipelineData?.contentHash])
 
@@ -693,12 +711,11 @@ function PipelineOrchestrationPage({
     if (!draft || savePipeline.isPending) return false
     if (!sources.isSuccess) {
       setDiagnostics([])
-      setActionError(t('pipelines.workspace.nodeSelector.sourcesError'))
+      pushActionError(t('pipelines.workspace.nodeSelector.sourcesError'))
       return false
     }
     const nextDiagnostics = validatePipelineGraph(draft, sources.data)
     setDiagnostics(nextDiagnostics)
-    setActionError(null)
     if (nextDiagnostics.length > 0) return false
     try {
       const result = await savePipeline.mutateAsync(draft)
@@ -716,7 +733,7 @@ function PipelineOrchestrationPage({
       await pipeline.refetch()
       return true
     } catch (error) {
-      setActionError(
+      pushActionError(
         error instanceof Error ? error.message : t('pipelines.workspace.actions.saveFailed'),
       )
       return false
@@ -726,10 +743,9 @@ function PipelineOrchestrationPage({
   async function handleRun() {
     if (isDirty && !(await handleSave())) return
     try {
-      setActionError(null)
       await run.mutateAsync()
     } catch (error) {
-      setActionError(
+      pushActionError(
         error instanceof Error ? error.message : t('pipelines.workspace.actions.runFailed'),
       )
     }
@@ -777,7 +793,21 @@ function PipelineOrchestrationPage({
             </button>
           </div>
         )}
-        {draft && canvasLayout && (
+        {isNewPipeline && stagedDraft ? (
+          <ReactFlowProvider>
+            <PipelineWorkflow>
+              <WizardBuilder
+                pipelineId={stagedDraft.id}
+                description={stagedDraft.description}
+                onComplete={() => {
+                  clearStagedPipelineDraft(pipelineId)
+                  setIsNewPipeline(false)
+                  onStagedDraftComplete?.()
+                }}
+              />
+            </PipelineWorkflow>
+          </ReactFlowProvider>
+        ) : draft && canvasLayout ? (
           <PipelineWorkflowWithInnerContext
             canvas={{
               dag: draft.dag,
@@ -834,36 +864,46 @@ function PipelineOrchestrationPage({
               loadTables: loadPipelineTables,
             }}
           />
-        )}
+        ) : null}
       </section>
 
-      {(diagnostics.length > 0 || actionError) && (
+      {(diagnostics.length > 0 || actionErrors.length > 0) && (
         <div className="pipeline-canvas__alerts" aria-live="assertive">
-          {actionError && (
+          {actionErrors.map((actionError) => (
             <PipelineWorkflowFeedback
+              key={actionError.id}
               tone="error"
               title={t('pipelines.workspace.actions.saveErrorTitle')}
-              message={actionError}
+              message={actionError.message}
               dismissLabel={t('pipelines.workspace.actions.dismissSaveError')}
-              onDismiss={() => setActionError(null)}
+              onDismiss={() =>
+                setActionErrors((current) =>
+                  current.filter((candidate) => candidate.id !== actionError.id),
+                )
+              }
             />
-          )}
-          {diagnostics.length > 0 && (
-            <PipelineWorkflowFeedback
-              tone="warning"
-              title={t('pipelines.workspace.diagnostics.title')}
-              dismissLabel={t('pipelines.workspace.diagnostics.dismiss')}
-              onDismiss={() => setDiagnostics([])}
-            >
-              <ul className="pipeline-workflow-feedback__list">
-                {diagnostics.slice(0, 4).map((diagnostic, index) => (
-                  <li key={`${diagnostic.code}-${diagnostic.nodeIds.join('-')}-${index}`}>
-                    {t(diagnostic.messageKey)}
-                  </li>
-                ))}
-              </ul>
-            </PipelineWorkflowFeedback>
-          )}
+          ))}
+          {diagnostics.slice(0, 4).map((diagnostic) => {
+            const diagnosticId = `${diagnostic.code}:${diagnostic.nodeIds.join(',')}:${diagnostic.messageKey}`
+            return (
+              <PipelineWorkflowFeedback
+                key={diagnosticId}
+                tone="warning"
+                title={t('pipelines.workspace.diagnostics.title')}
+                message={t(diagnostic.messageKey)}
+                dismissLabel={t('pipelines.workspace.diagnostics.dismiss')}
+                onDismiss={() =>
+                  setDiagnostics((current) =>
+                    current.filter(
+                      (candidate) =>
+                        `${candidate.code}:${candidate.nodeIds.join(',')}:${candidate.messageKey}` !==
+                        diagnosticId,
+                    ),
+                  )
+                }
+              />
+            )
+          })}
         </div>
       )}
     </section>
@@ -876,14 +916,12 @@ function PipelineWorkflowFeedback({
   message,
   dismissLabel,
   onDismiss,
-  children,
 }: {
   tone: 'error' | 'warning'
   title: string
   message?: string
   dismissLabel: string
   onDismiss: () => void
-  children?: ReactNode
 }) {
   return (
     <div
@@ -900,7 +938,6 @@ function PipelineWorkflowFeedback({
       <div className="pipeline-workflow-feedback__body">
         <p className="pipeline-workflow-feedback__title">{title}</p>
         {message && <p className="pipeline-workflow-feedback__message">{message}</p>}
-        {children}
       </div>
       <button
         type="button"
@@ -1037,11 +1074,13 @@ export function PipelineWorkspacePage({
   stagedDraft?: StagedPipelineDraft | null
 }) {
   const [navigationCollapsed, setNavigationCollapsed] = useState(false)
+  const [isStagedDraftActive, setIsStagedDraftActive] = useState(stagedDraft !== null)
   const apiFetch = useAuthStore((state) => state.apiFetch)
+  const activeStagedDraft = isStagedDraftActive ? stagedDraft : null
   const status = useQuery({
     queryKey: ['pipelines', pipelineId, 'status'],
     queryFn: () => getPipelineStatus(pipelineId, apiFetch),
-    enabled: stagedDraft === null,
+    enabled: activeStagedDraft === null,
     retry: false,
     refetchInterval: 5000,
     refetchIntervalInBackground: false,
@@ -1060,7 +1099,11 @@ export function PipelineWorkspacePage({
         status={status.data?.state}
       />
       {section === 'orchestrate' ? (
-        <PipelineOrchestrationPage pipelineId={pipelineId} stagedDraft={stagedDraft} />
+        <PipelineOrchestrationPage
+          pipelineId={pipelineId}
+          stagedDraft={activeStagedDraft}
+          onStagedDraftComplete={() => setIsStagedDraftActive(false)}
+        />
       ) : (
         <WorkspacePageFrame
           pipelineId={pipelineId}

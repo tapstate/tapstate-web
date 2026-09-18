@@ -110,6 +110,7 @@ export function PipelineCanvasContent({
   const [nodes, setNodes] = useNodesState<CanvasNode>([])
   const [edges, setEdges] = useEdgesState<CanvasEdge>([])
   const [viewport, setViewport] = useState<PipelineLayout['viewport']>(null)
+  const [fitView, setFitView] = useState(() => !layout?.viewport)
   const [interactionMode, setInteractionMode] = useState<'pointer' | 'hand'>('hand')
   const nodesRef = useRef(nodes)
   const edgesRef = useRef(edges)
@@ -334,10 +335,11 @@ export function PipelineCanvasContent({
         connectionLineComponent={PipelineConnectionLine}
         connectionLineType={ConnectionLineType.Bezier}
         defaultViewport={graph.viewport ?? undefined}
-        fitView={!graph.viewport}
+        fitView={fitView}
         fitViewOptions={{ padding: 0.36, maxZoom: 0.92 }}
         minZoom={0.2}
         maxZoom={1.6}
+        onInit={() => setFitView(false)}
         panOnDrag={interactionMode === 'hand'}
         selectionOnDrag={interactionMode === 'pointer'}
         onNodesChange={handleNodesChange}
