@@ -157,6 +157,7 @@ function previewDsl(
   sourceTables: readonly string[],
   steps: readonly WizardStep[],
   destinationId: string | undefined,
+  destinationTable: string,
 ) {
   const transforms = steps.length
     ? steps
@@ -180,13 +181,22 @@ function previewDsl(
         })
         .join('\n')
     : '  []'
+  const outputReference = steps.at(-1)?.id ?? inputReferenceFor(sourceId, sourceTables)
+  const renameTarget =
+    sourceTables.length === 1 && destinationTable.trim() && sourceTables[0] !== destinationTable.trim()
+      ? `\n      rename:\n        map:\n          ${sourceTables[0]}: ${destinationTable.trim()}`
+      : ''
+  const serve = destinationId
+    ? `serve:\n  from: ${previewValue(outputReference)}\n  sync:\n    - id: ${destinationId}_${destinationTable.trim() || 'output'}\n      source: ${destinationId}\n      write_mode: upsert${renameTarget}`
+    : 'serve: configure_atlas'
+
   return `version: tapstate/v1
 kind: pipeline
 id: ${pipelineId || 'your_pipeline'}
 source: ${sourceId || 'choose_source'}
 transforms:
 ${transforms}
-serve: ${destinationId || 'configure_atlas'}`
+${serve}`
 }
 
 function buildPipelineMutation({
@@ -208,6 +218,10 @@ function buildPipelineMutation({
 }): PipelineMutation {
   const initialReferences = sourceReferences(sourceId, sourceTables)
   const initialReference = initialReferences.length === 1 ? initialReferences[0] : initialReferences
+  const rename =
+    sourceTables.length === 1 && destinationTable !== sourceTables[0]
+      ? { map: { [sourceTables[0]!]: destinationTable } }
+      : undefined
   const transforms: PipelineTransformStep[] = steps.map((step, index) => ({
     id: step.id,
     from: step.from ?? (index === 0 ? initialReference : steps[index - 1]!.id),
@@ -226,7 +240,14 @@ function buildPipelineMutation({
     serve: {
       id: 'atlas',
       from: outputReference,
-      sync: [{ id: destinationTable, source: destinationId, writeMode: 'upsert' }],
+      sync: [
+        {
+          id: `${destinationId}_${destinationTable}`,
+          source: destinationId,
+          writeMode: 'upsert',
+          ...(rename ? { rename } : {}),
+        },
+      ],
     },
     settings: null,
     experimental: null,
@@ -270,6 +291,15 @@ export function WizardBuilder({
     () => sources.find((source) => source.connector === ATLAS_CONNECTOR_ID) ?? null,
     [sources],
   )
+  const mongodbDestination = useMemo(() => {
+    const candidates = sources.filter((item) => item.connector === 'mongodb')
+    return (
+      candidates.find((item) => /(?:target|destination|sink|out)/i.test(item.id)) ??
+      candidates[0] ??
+      null
+    )
+  }, [sources])
+  const destinationSource = atlasDestination ?? mongodbDestination
   const connectorsById = useMemo(
     () => new Map((connectorsQuery.data ?? []).map((connector) => [connector.id, connector])),
     [connectorsQuery.data],
@@ -292,17 +322,32 @@ export function WizardBuilder({
       ? `${sourceTables[0]} +${sourceTables.length - 1}`
       : (sourceTables[0] ?? '')
   const sourceTableLoading = Boolean(source?.tables === null && sourceSchemaQuery.isPending)
+  const destinationSchemaQuery = useQuery({
+    queryKey: ['wizard', 'destination-schema', destinationSource?.id],
+    queryFn: () => getSourceSchema(destinationSource!.id, apiFetch),
+    enabled: Boolean(destinationSource && destinationSource.tables === null),
+    retry: false,
+  })
+  const destinationTableOptions = useMemo(() => {
+    if (!destinationSource) return []
+    if (destinationSource.tables === null) {
+      return (destinationSchemaQuery.data?.tables ?? []).map((table) => table.name)
+    }
+    return (destinationSource.tables ?? [])
+      .map((table) => table.name)
+      .filter((table): table is string => Boolean(table))
+  }, [destinationSchemaQuery.data?.tables, destinationSource])
   const ready = Boolean(
     pipelineId &&
     sourceId &&
     sourceTables.length > 0 &&
     steps.every(transformStepReady) &&
-    atlasDestination &&
+    destinationSource &&
     destinationTable.trim(),
   )
   const isLoading = sourcesQuery.isPending || connectorsQuery.isPending
-  const atlasConnector = atlasDestination
-    ? connectorsById.get(atlasDestination.connector)
+  const destinationConnector = destinationSource
+    ? connectorsById.get(destinationSource.connector)
     : undefined
 
   function addStepOfType(type: PipelineTransformType) {
@@ -335,7 +380,7 @@ export function WizardBuilder({
   }
 
   async function handleSave() {
-    if (!ready || !pipelineId || !atlasDestination || isSaving) return
+    if (!ready || !pipelineId || !destinationSource || isSaving) return
     setError('')
     setIsSaving(true)
     try {
@@ -346,7 +391,7 @@ export function WizardBuilder({
           sourceId,
           sourceTables,
           steps,
-          destinationId: atlasDestination.id,
+          destinationId: destinationSource.id,
           destinationTable: destinationTable.trim(),
         }),
         apiFetch,
@@ -515,27 +560,63 @@ export function WizardBuilder({
             </div>
             <div className="pipeline-wizard__atlas-row">
               <span className="pipeline-wizard__atlas-mark" aria-hidden="true">
-                <Database className="size-4" />
+                {destinationSource ? (
+                  <ConnectorIcon
+                    connectorId={destinationSource.connector}
+                    name={destinationConnector?.name ?? destinationSource.connector}
+                    iconPath={destinationConnector?.icon}
+                    size={18}
+                    className="rounded-md border-0 bg-transparent"
+                  />
+                ) : (
+                  <Database className="size-4" />
+                )}
               </span>
               <div>
-                <strong>{atlasDestination?.id ?? t('wizard.atlasNotConfigured')}</strong>
-                <span>{atlasConnector?.name ?? t('wizard.atlasHint')}</span>
+                <strong>{destinationSource?.id ?? t('wizard.atlasNotConfigured')}</strong>
+                <span>
+                  {atlasDestination
+                    ? (destinationConnector?.name ?? t('wizard.atlasHint'))
+                    : destinationSource
+                      ? t('wizard.mongodbFallbackHint', { source: destinationSource.id })
+                      : t('wizard.atlasHint')}
+                </span>
               </div>
-              {!atlasDestination && (
+              {!atlasDestination && destinationSource && (
+                <span className="pipeline-wizard__atlas-badge">{t('wizard.previewTarget')}</span>
+              )}
+              {!destinationSource && (
                 <Link to="/sources" className="pipeline-wizard__configure-link">
                   {t('wizard.configureAtlas')}
                 </Link>
               )}
             </div>
-            {atlasDestination && (
+            {destinationSource && (
               <label className="pipeline-wizard__field">
                 <span>{t('wizard.destinationTableSelect')}</span>
                 <input
                   className="pipeline-wizard__input"
+                  list="pipeline-wizard-destination-tables"
                   value={destinationTable}
                   onChange={(event) => setDestinationTable(event.target.value)}
-                  placeholder={t('wizard.destinationTablePlaceholder')}
+                  placeholder={
+                    destinationSchemaQuery.isPending
+                      ? t('wizard.loadingTables')
+                      : t('wizard.destinationTablePlaceholder')
+                  }
                 />
+                {destinationTableOptions.length > 0 && (
+                  <datalist id="pipeline-wizard-destination-tables">
+                    {destinationTableOptions.map((table) => (
+                      <option key={table} value={table} />
+                    ))}
+                  </datalist>
+                )}
+                {!atlasDestination && (
+                  <small className="pipeline-wizard__field-hint">
+                    {t('wizard.mongodbFallbackTableHint')}
+                  </small>
+                )}
               </label>
             )}
           </WizardNodeCard>
@@ -584,7 +665,14 @@ export function WizardBuilder({
               <pre
                 className="pipeline-wizard__dsl"
                 aria-label={t('wizard.preview.codeLabel')}
-            >{previewDsl(pipelineId, sourceId, sourceTables, steps, atlasDestination?.id)}</pre>
+            >{previewDsl(
+              pipelineId,
+              sourceId,
+              sourceTables,
+              steps,
+              destinationSource?.id,
+              destinationTable,
+            )}</pre>
             ) : (
               <div className="pipeline-wizard__empty-preview">
                 <span className="pipeline-wizard__empty-icon" aria-hidden="true">

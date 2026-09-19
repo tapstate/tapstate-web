@@ -1585,6 +1585,26 @@
     font-size: 0.6875rem;
   }
 
+  .pipeline-wizard__atlas-badge {
+    flex: 0 0 auto;
+    margin-left: auto;
+    border: 1px solid color-mix(in srgb, var(--wizard-accent) 28%, var(--wizard-border));
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--wizard-accent) 8%, var(--wizard-surface));
+    color: var(--wizard-accent) !important;
+    padding: 0.2rem 0.45rem;
+    font-size: 0.625rem !important;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  .pipeline-wizard__field-hint {
+    color: var(--wizard-subtle);
+    font-size: 0.6875rem;
+    line-height: 1.25;
+  }
+
   .pipeline-wizard__configure-link {
     margin-left: auto;
     color: var(--wizard-accent);
