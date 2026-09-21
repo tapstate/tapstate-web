@@ -26,14 +26,15 @@ import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
 import {
-  createPipeline,
+  getPipelineDraft,
   getPipeline,
   getPipelineLayout,
   getPipelineStatus,
+  previewPipelineDraft,
+  publishPipelineDraft,
   runPipeline,
-  savePipelineLayout,
-  updatePipeline,
   type PipelineLayout,
+  PipelineClientError,
   type PipelineRuntimeState,
   type PipelineView,
 } from '@/service/pipelines/pipeline-client'
@@ -58,11 +59,12 @@ import type {
 } from '../model/pipeline-node-model'
 
 import { PipelineStatusBadge } from '../components/pipeline-status-badge'
+import { usePipelineDraftAutosave } from '../hooks/use-pipeline-draft-autosave'
 import { PipelineLogsPage } from '../logs/pipeline-logs-page'
+import { buildPipelineDraftMutation, pipelineDraftDocument } from '../model/pipeline-draft-document'
 import { clearStagedPipelineDraft, type StagedPipelineDraft } from '../model/pipeline-draft-session'
 import {
   addPipelineNodes,
-  buildPipelineMutation,
   createPipelineGraphDraft,
   updatePipelineNodeConfiguration,
   validatePipelineGraph,
@@ -183,10 +185,6 @@ function upstreamSourceTables(
       .flatMap((edge) => walk(edge.source))
   }
   return walk(nodeId)
-}
-
-function asQuotedEtag(hash: string) {
-  return hash.startsWith('"') && hash.endsWith('"') ? hash : `"${hash}"`
 }
 
 const workspaceNavigation = [
@@ -417,9 +415,7 @@ function PipelineOrchestrationPage({
     null,
   )
   const surfaceRef = useRef<HTMLElement>(null)
-  const latestLayout = useRef<Pick<PipelineLayout, 'nodes' | 'viewport'> | null>(null)
   const draftRef = useRef<PipelineGraphDraft | null>(null)
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isNewPipeline, setIsNewPipeline] = useState(stagedDraft !== null)
   const stagedPipeline = useMemo<PipelineView | null>(() => {
     if (!stagedDraft) return null
@@ -438,14 +434,24 @@ function PipelineOrchestrationPage({
     }
   }, [stagedDraft])
 
-  const pipeline = useQuery({
-    queryKey: ['pipelines', pipelineId],
-    queryFn: () => getPipeline(pipelineId, apiFetch),
-    enabled: !isNewPipeline,
-  })
-  const layout = useQuery({
-    queryKey: ['pipelines', pipelineId, 'layout'],
-    queryFn: () => getPipelineLayout(pipelineId, apiFetch),
+  const pipelineDraft = useQuery({
+    queryKey: ['pipelines', pipelineId, 'draft'],
+    queryFn: async () => {
+      try {
+        const response = await getPipelineDraft(pipelineId, apiFetch)
+        return { document: pipelineDraftDocument(response.draft), etag: response.etag }
+      } catch (error) {
+        if (!(error instanceof PipelineClientError) || error.status !== 404) throw error
+        const [pipeline, layout] = await Promise.all([
+          getPipeline(pipelineId, apiFetch),
+          getPipelineLayout(pipelineId, apiFetch),
+        ])
+        return {
+          document: { editor: createPipelineGraphDraft(pipeline), layout },
+          etag: null,
+        }
+      }
+    },
     enabled: !isNewPipeline,
   })
   const sources = useQuery({
@@ -456,41 +462,11 @@ function PipelineOrchestrationPage({
     queryKey: ['connectors'],
     queryFn: () => listConnectors(apiFetch),
   })
-  const saveLayout = useMutation({
-    mutationFn: (next: Pick<PipelineLayout, 'nodes' | 'viewport'>) =>
-      savePipelineLayout(pipelineId, next, apiFetch),
-  })
-  const savePipeline = useMutation({
-    mutationFn: async (currentDraft: PipelineGraphDraft) => {
-      const mutation = buildPipelineMutation(currentDraft)
-      const result = isNewPipeline
-        ? await createPipeline(mutation, apiFetch)
-        : await updatePipeline(
-            pipelineId,
-            mutation,
-            asQuotedEtag(currentDraft.pipeline.contentHash),
-            apiFetch,
-          )
-      const layoutSave = latestLayout.current
-        ? await saveLayout.mutateAsync(latestLayout.current)
-        : null
-      return { ...result, layout: layoutSave }
-    },
-  })
-  const run = useMutation({
-    mutationFn: () => {
-      return runPipeline(pipelineId, apiFetch)
-    },
-  })
-  const pipelineData = isNewPipeline ? stagedPipeline : pipeline.data
-  const layoutData = isNewPipeline ? { pipelineId, nodes: {}, viewport: null } : layout.data
-
-  useEffect(
-    () => () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current)
-    },
-    [],
-  )
+  const serverDocument = pipelineDraft.data?.document ?? null
+  const pipelineData = isNewPipeline ? stagedPipeline : serverDocument?.editor.pipeline
+  const layoutData = isNewPipeline
+    ? { pipelineId, nodes: {}, viewport: null }
+    : serverDocument?.layout
 
   useEffect(() => {
     if (!actionError) return
@@ -499,35 +475,27 @@ function PipelineOrchestrationPage({
   }, [actionError])
 
   useEffect(() => {
-    if (!pipelineData) return
-    const nextDraft = createPipelineGraphDraft(pipelineData)
+    if (!pipelineData || !layoutData) return
+    const nextDraft = isNewPipeline
+      ? createPipelineGraphDraft(pipelineData)
+      : (serverDocument?.editor ?? null)
+    if (!nextDraft) return
     draftRef.current = nextDraft
     setDraft(nextDraft)
+    setLayoutDraft({ nodes: layoutData.nodes, viewport: layoutData.viewport })
     setIsDirty(false)
     setDiagnostics([])
     setActionError(null)
     setSelection(null)
-  }, [pipelineData?.contentHash])
-
-  useEffect(() => {
-    if (!layoutData) return
-    setLayoutDraft(
-      (current) => current ?? { nodes: layoutData.nodes, viewport: layoutData.viewport },
-    )
-  }, [layoutData])
+  }, [isNewPipeline, layoutData, pipelineData?.contentHash, serverDocument?.editor])
 
   function scheduleLayoutSave(next: Pick<PipelineLayout, 'nodes' | 'viewport'>) {
-    latestLayout.current = next
     setLayoutDraft(next)
-    if (isNewPipeline) return
-    if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => {
-      if (latestLayout.current) saveLayout.mutate(latestLayout.current)
-    }, 420)
+    setIsDirty(true)
   }
 
-  const isLoading = isNewPipeline ? false : pipeline.isLoading || layout.isLoading
-  const error = isNewPipeline ? false : pipeline.isError || layout.isError
+  const isLoading = isNewPipeline ? false : pipelineDraft.isLoading
+  const error = isNewPipeline ? false : pipelineDraft.isError
   const connectorsBySourceId = useMemo(
     () => pipelineNodeConnectors(sources.data ?? [], connectors.data ?? []),
     [connectors.data, sources.data],
@@ -542,6 +510,27 @@ function PipelineOrchestrationPage({
       nodes: { ...layoutData.nodes, ...layoutDraft?.nodes },
     }
   }, [layoutData, layoutDraft])
+  const autosaveMutation = useMemo(
+    () => (draft && canvasLayout ? buildPipelineDraftMutation(draft, canvasLayout) : null),
+    [canvasLayout, draft],
+  )
+  const autosave = usePipelineDraftAutosave({
+    enabled: Boolean(draft && canvasLayout),
+    mutation: autosaveMutation,
+    initialEtag: pipelineDraft.data?.etag ?? null,
+    fetcher: apiFetch,
+    onError: (error) => {
+      setActionError(
+        error instanceof Error ? error.message : t('pipelines.workspace.actions.saveFailed'),
+      )
+    },
+  })
+  useEffect(() => {
+    if (!autosave.hasPendingChanges) setIsDirty(false)
+  }, [autosave.hasPendingChanges])
+  const run = useMutation({
+    mutationFn: () => runPipeline(pipelineId, apiFetch),
+  })
   const sourceOptions = useMemo<PipelineSchemaOption[]>(
     () =>
       (sources.data ?? []).map((source) => ({
@@ -641,7 +630,7 @@ function PipelineOrchestrationPage({
   ) {
     const current = draftRef.current
     if (!current || choices.length === 0) return
-    const currentLayout = latestLayout.current ?? layoutData
+    const currentLayout = layoutDraft ?? layoutData
     const result = addPipelineNodes(
       current,
       choices,
@@ -678,7 +667,7 @@ function PipelineOrchestrationPage({
   }
 
   async function handleSave(): Promise<boolean> {
-    if (!draft || savePipeline.isPending) return false
+    if (!draft || autosave.isSaving) return false
     const nextDiagnostics = validatePipelineGraph(
       draft,
       sources.data?.map((source) => source.id),
@@ -687,19 +676,15 @@ function PipelineOrchestrationPage({
     setActionError(null)
     if (nextDiagnostics.length > 0) return false
     try {
-      const result = await savePipeline.mutateAsync(draft)
-      const nextDraft = createPipelineGraphDraft(result.pipeline)
-      draftRef.current = nextDraft
-      setDraft(nextDraft)
+      const result = await autosave.saveLatest()
+      if (!result) throw new Error('The Pipeline draft is not ready to save.')
+      await previewPipelineDraft(pipelineId, result.draft.revision, apiFetch)
       setIsDirty(false)
       setDiagnostics([])
       if (isNewPipeline) {
         clearStagedPipelineDraft(pipelineId)
         setIsNewPipeline(false)
       }
-      latestLayout.current = null
-      if (saveTimer.current) clearTimeout(saveTimer.current)
-      await pipeline.refetch()
       return true
     } catch (error) {
       setActionError(
@@ -713,6 +698,15 @@ function PipelineOrchestrationPage({
     if (isDirty && !(await handleSave())) return
     try {
       setActionError(null)
+      const result = autosave.lastResult ?? (await autosave.saveLatest())
+      if (!result) throw new Error('The Pipeline draft is not ready to start.')
+      await previewPipelineDraft(pipelineId, result.draft.revision, apiFetch)
+      await publishPipelineDraft(
+        pipelineId,
+        result.draft.revision,
+        result.draft.publishedArtifactHash,
+        apiFetch,
+      )
       await run.mutateAsync()
     } catch (error) {
       setActionError(
@@ -753,10 +747,7 @@ function PipelineOrchestrationPage({
               type="button"
               className="h-10 rounded-lg bg-slate-900 px-4 text-sm font-medium text-white transition-[background-color,transform] hover:bg-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95"
               onClick={() => {
-                if (!isNewPipeline) {
-                  void pipeline.refetch()
-                  void layout.refetch()
-                }
+                if (!isNewPipeline) void pipelineDraft.refetch()
               }}
             >
               {t('pipelines.workspace.actions.retry')}
@@ -800,7 +791,7 @@ function PipelineOrchestrationPage({
             }}
             header={{
               isDirty,
-              isSaving: savePipeline.isPending,
+              isSaving: autosave.isSaving,
               isRunning: run.isPending,
               onSave: () => void handleSave(),
               onRun: () => void handleRun(),

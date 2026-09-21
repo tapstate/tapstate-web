@@ -12,6 +12,7 @@ import type {
 
 const {
   getPipeline,
+  getPipelineDraft,
   getPipelineLayout,
   getPipelineLogs,
   getPipelineMetrics,
@@ -20,10 +21,14 @@ const {
   runPipeline,
   savePipelineLayout,
   updatePipeline,
+  createPipelineDraft,
+  previewPipelineDraft,
   listConnectors,
   listSources,
+  PipelineClientError,
 } = vi.hoisted(() => ({
   getPipeline: vi.fn(),
+  getPipelineDraft: vi.fn(),
   getPipelineLayout: vi.fn(),
   getPipelineLogs: vi.fn(),
   getPipelineMetrics: vi.fn(),
@@ -32,8 +37,18 @@ const {
   runPipeline: vi.fn(),
   savePipelineLayout: vi.fn(),
   updatePipeline: vi.fn(),
+  createPipelineDraft: vi.fn(),
+  previewPipelineDraft: vi.fn(),
   listConnectors: vi.fn(),
   listSources: vi.fn(),
+  PipelineClientError: class PipelineClientError extends Error {
+    status: number | null
+
+    constructor(_kind: string, message: string, status: number | null = null) {
+      super(message)
+      this.status = status
+    }
+  },
 }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -51,6 +66,7 @@ vi.mock('@tanstack/react-router', () => ({
 
 vi.mock('@/service/pipelines/pipeline-client', () => ({
   getPipeline,
+  getPipelineDraft,
   getPipelineLayout,
   getPipelineLogs,
   getPipelineMetrics,
@@ -58,7 +74,9 @@ vi.mock('@/service/pipelines/pipeline-client', () => ({
   runPipeline,
   savePipelineLayout,
   updatePipeline,
-  PipelineClientError: class PipelineClientError extends Error {},
+  createPipelineDraft,
+  previewPipelineDraft,
+  PipelineClientError,
 }))
 
 vi.mock('@/service/source-client', () => ({
@@ -305,6 +323,25 @@ async function renderPage(section: 'orchestrate' | 'api' | 'logs' | 'monitoring'
 }
 
 beforeEach(() => {
+  getPipelineDraft.mockRejectedValue(new PipelineClientError('server', 'not found', 404))
+  createPipelineDraft.mockImplementation(async (_pipelineId, mutation) => ({
+    draft: {
+      ...mutation,
+      schemaVersion: 1,
+      revision: 2,
+      publishedDraftRevision: null,
+      publishedArtifactHash: null,
+      createdAt: '2026-09-21T00:00:00Z',
+      updatedAt: '2026-09-21T00:00:00Z',
+      updatedBy: 'test',
+    },
+    etag: '"2"',
+  }))
+  previewPipelineDraft.mockResolvedValue({
+    pipelineId: 'orders_to_warehouse',
+    revision: 2,
+    artifact: {},
+  })
   getPipeline.mockResolvedValue({
     id: 'orders_to_warehouse',
     sources: [{ id: 'mysql', metadata: null, connector: 'mysql' }],
@@ -505,9 +542,11 @@ describe('PipelineEditorPage', () => {
     const saveButton = elementWithText('button', 'Save')
     expect(saveButton?.hasAttribute('disabled')).toBe(false)
     await act(async () => saveButton?.click())
-    await vi.waitFor(() => expect(updatePipeline).toHaveBeenCalledTimes(1))
-    expect(updatePipeline.mock.calls[0]?.[1]).toMatchObject({
-      sources: expect.arrayContaining(['mysql_feynman']),
+    await vi.waitFor(() => expect(createPipelineDraft).toHaveBeenCalledTimes(1))
+    expect(createPipelineDraft.mock.calls[0]?.[1]).toMatchObject({
+      graph: {
+        nodes: expect.arrayContaining([expect.objectContaining({ sourceId: 'mysql_feynman' })]),
+      },
     })
   })
 
@@ -539,11 +578,13 @@ describe('PipelineEditorPage', () => {
 
     const saveButton = elementWithText('button', 'Save')
     await act(async () => saveButton?.click())
-    await vi.waitFor(() => expect(updatePipeline).toHaveBeenCalledTimes(1))
-    expect(updatePipeline.mock.calls[0]?.[1]).toMatchObject({
-      transforms: expect.arrayContaining([
-        expect.objectContaining({ id: 'filter_1', type: 'filter', from: 'mysql.orders' }),
-      ]),
+    await vi.waitFor(() => expect(createPipelineDraft).toHaveBeenCalledTimes(1))
+    expect(createPipelineDraft.mock.calls[0]?.[1]).toMatchObject({
+      graph: {
+        nodes: expect.arrayContaining([
+          expect.objectContaining({ id: 'draft:transform:filter_1', type: 'filter' }),
+        ]),
+      },
     })
   })
 
@@ -631,9 +672,13 @@ describe('PipelineEditorPage', () => {
     expect(saveButton?.hasAttribute('disabled')).toBe(false)
 
     await act(async () => saveButton?.click())
-    await vi.waitFor(() => expect(updatePipeline).toHaveBeenCalledTimes(1))
-    expect(updatePipeline.mock.calls[0]?.[1]).toMatchObject({
-      transforms: [expect.objectContaining({ id: 'normalize', expr: 'updated-expression' })],
+    await vi.waitFor(() => expect(createPipelineDraft).toHaveBeenCalledTimes(1))
+    expect(createPipelineDraft.mock.calls[0]?.[1]).toMatchObject({
+      graph: {
+        nodes: expect.arrayContaining([
+          expect.objectContaining({ config: { expr: 'updated-expression' } }),
+        ]),
+      },
     })
     await vi.waitFor(() =>
       expect(elementWithText('button', 'Save')?.hasAttribute('disabled')).toBe(true),
@@ -656,7 +701,7 @@ describe('PipelineEditorPage', () => {
       document.querySelector<HTMLElement>('[data-testid="change-node-config"]')?.click(),
     )
 
-    updatePipeline.mockRejectedValueOnce(
+    createPipelineDraft.mockRejectedValueOnce(
       new Error('Reference points to nothing in this workspace.'),
     )
     await act(async () => elementWithText('button', 'Save')?.click())

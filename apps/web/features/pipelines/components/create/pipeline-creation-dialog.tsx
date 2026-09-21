@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { createPipeline } from '@/service/pipelines/pipeline-client'
+import { createPipelineDraft } from '@/service/pipelines/pipeline-client'
 import { useAuthStore } from '@/stores/auth-store'
 
 import type { PipelineCreationMode } from './pipeline-creation-mode'
@@ -64,16 +64,16 @@ export function PipelineCreationDialog({ open, onClose }: PipelineCreationDialog
       setIsCreating(true)
       setNotice(null)
       try {
-        await createPipeline(
+        await createPipelineDraft(
+          normalizedId,
           {
-            id: normalizedId,
-            metadata: { labels: {}, description: description.trim() || null },
-            sources: [],
-            transforms: [],
-            view: null,
-            serve: null,
-            settings: null,
-            experimental: null,
+            pipelineId: normalizedId,
+            mode: 'dag',
+            name: normalizedId,
+            description: description.trim() || null,
+            graph: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+            wizard: null,
+            baseArtifactHash: null,
           },
           apiFetch,
         )
