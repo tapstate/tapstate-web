@@ -10,7 +10,7 @@ import { useAuthStore } from '@/stores/auth-store'
 
 import type { PipelineCreationMode } from './pipeline-creation-mode'
 
-import { WizardBuilder } from '../../pages/wizard-builder'
+import { stagePipelineDraft } from '../../model/pipeline-draft-session'
 import { pipelineCreationModes } from './pipeline-creation-mode'
 import { PipelineCreationOption } from './pipeline-creation-option'
 import { PipelineCreationPreview as Preview } from './pipeline-creation-preview'
@@ -30,7 +30,6 @@ export function PipelineCreationDialog({ open, onClose }: PipelineCreationDialog
   const [mode, setMode] = useState<PipelineCreationMode>('dag')
   const [pipelineId, setPipelineId] = useState('')
   const [description, setDescription] = useState('')
-  const [wizardStarted, setWizardStarted] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
 
@@ -46,7 +45,6 @@ export function PipelineCreationDialog({ open, onClose }: PipelineCreationDialog
   const hasInvalidId = pipelineId.length > 0 && !isValidId
 
   const handleClose = () => {
-    setWizardStarted(false)
     setNotice(null)
     onClose()
   }
@@ -55,8 +53,12 @@ export function PipelineCreationDialog({ open, onClose }: PipelineCreationDialog
     if (!isValidId || isCreating) return
 
     if (mode === 'wizard') {
-      setNotice(null)
-      setWizardStarted(true)
+      stagePipelineDraft({ id: normalizedId, description: description.trim() })
+      handleClose()
+      await navigate({
+        to: '/pipelines/$pipelineId/edit',
+        params: { pipelineId: normalizedId },
+      })
       return
     }
 
@@ -134,17 +136,10 @@ export function PipelineCreationDialog({ open, onClose }: PipelineCreationDialog
               aria-label={t('pipelines.createEntry.close')}
               onClick={handleClose}
             >
-              <X aria-hidden="true" />
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
 
-            {wizardStarted ? (
-              <WizardBuilder
-                pipelineId={normalizedId}
-                description={description.trim()}
-                onBack={() => setWizardStarted(false)}
-              />
-            ) : (
-              <div className="flex h-full justify-center overflow-x-hidden overflow-y-auto">
+            <div className="flex h-full justify-center overflow-x-hidden overflow-y-auto">
                 <div className="flex flex-1 shrink-0 justify-end">
                   <main className="w-full max-w-185 shrink-0 px-10 pb-10 max-sm:px-4 max-sm:pb-6">
                     <div className="h-6 w-full 2xl:h-34.75" aria-hidden="true" />
@@ -272,8 +267,7 @@ export function PipelineCreationDialog({ open, onClose }: PipelineCreationDialog
                 </div>
 
                 <Preview definition={selectedMode} />
-              </div>
-            )}
+            </div>
           </div>
         </section>
       </DialogContent>

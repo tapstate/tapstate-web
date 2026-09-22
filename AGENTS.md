@@ -11,28 +11,39 @@
 1. `README.md`：仓库结构、启动与基础命令。
 2. `docs/README.md`：产品与工程文档地图。
 3. `UI_DESIGN_GUIDELINES.md`：只有生成、修改、迁移、审查或验收 UI 时读取。
-4. `docs/product/information-architecture.md`：需求触及 IA、一级导航、路由分组或产品对象边界时读取。
-5. `docs/engineering/tech-stack.md`：需求触及依赖、构建、i18n、测试策略或工程约束时读取。
-6. `docs/engineering/design-system.md`：需求触及视觉、组件、样式或前端架构时读取。
+4. `docs/engineering/DESIGN.md`：生成、修改、迁移、审查或验收 UI 前必须读取；它用于校准视觉方向、排版层级、空间节奏和构图参考，不直接覆盖 Tapstate 当前的语义 token、工作台布局或产品决策。
+5. `docs/product/information-architecture.md`：需求触及 IA、一级导航、路由分组或产品对象边界时读取。
+6. `docs/engineering/tech-stack.md`：需求触及依赖、构建、i18n、测试策略或工程约束时读取。
+7. `docs/engineering/design-system.md`：需求触及视觉、组件、样式或前端架构时读取。
+8. `docs/engineering/overlay-conventions.md`：需求涉及 Select / Dropdown / Dialog / Popover / Menu / Tooltip / Drawer 等任意浮层组件时读取，覆盖 z-index 归属、受控 `open`/`onOpenChange` 模式、焦点处理。
+9. `docs/engineering/ui-design-constraints.md`：需要了解某条 UI/样式规则的来源和取舍依据，或推进"语义 token 化、失效 class 检查"这类 UI 工程治理改动时读取；日常开发不必主动读，出现分歧或要做治理类改动时查。
+
+另有一份不在上面列表里、但会被大多数支持 `AGENTS.md` 目录发现机制的工具自动读取的文件：`apps/web/components/ui/AGENTS.md`。凡是改动 `components/ui/*` 下任意原子组件，即使这份 Read Order 没显式列出，也视为必读——它定义了 token 使用规则、圆角/间距角色化和组件新增前的检查清单，是 `docs/engineering/design-system.md` 在组件目录层面的落地细则，不是替代关系。
 
 ## Working Principles
 
 - 项目仍在早期探索阶段，优先采用简单、可回滚、容易调整的实现。
 - 小改动直接完成；较大的改动在聊天、issue 或 PR 中说明范围、风险和验证方式，不在仓库内强制创建额外的过程文档。
 - 先确认现有目录、依赖和数据流，再做最小范围修改。
+- 生成新 UI 前，先搜索仓库中最接近的现有实现并优先复用其组件、布局、交互和样式；只有确认无法复用时才新写一套，并说明原因。
 - 按业务域和职责组织代码；只有当文件数量或依赖关系产生真实认知负担时再继续拆目录。
 - 不做无关重构、依赖升级或全仓格式化；发现后续坏味道时记录在 PR 或交付说明中。
 
 ## UI Quality Gate
 
-生成或修改 UI 前必须遵循根目录 `UI_DESIGN_GUIDELINES.md` 和 `docs/engineering/design-system.md`，主动检查并修正 Anti-Slop、布局、排版、颜色、交互和表单问题。
+生成或修改 UI 前必须遵循根目录 `UI_DESIGN_GUIDELINES.md`、`docs/engineering/DESIGN.md`、`docs/engineering/design-system.md`，以及所在目录下就近的 `components/ui/AGENTS.md`（组件契约）；涉及浮层组件时额外遵循 `docs/engineering/overlay-conventions.md`。主动检查并修正 Anti-Slop、布局、排版、颜色、交互和表单问题。
+
+其中 `DESIGN.md` 是视觉参考和审美校准，不是外部品牌 token 的直接拷贝源。应借鉴其中的构图、层级、排版、留白和组件关系，并映射到 Tapstate 的 semantic token、企业工作台密度和实际业务场景；除非需求明确指定，不得直接复制其中的 Linear 品牌色、深色画布、字体或营销页组件数值。
+
+**禁止在组件里写裸值颜色 / 圆角 / 间距**（如 `text-gray-600`、`rounded-[10px]`、`p-[13px]`）；一律使用 `design-system.md` 和 `components/ui/AGENTS.md` 中约定的语义 token。这是"内外边距、边框不一致"这类低级视觉问题的首要预防手段，优先级高于其他 UI 细节打磨。
 
 ## Frontend Rules
 
 - 使用 React 19，页面路由使用 TanStack Router File Routes，路由源码放在 `apps/web/app/routes/`，由 `@tanstack/router-plugin` 生成 `apps/web/app/routeTree.gen.ts`；开发、预览和打包都使用 Vite。
 - 遵循 strict TypeScript；避免 `any`，除非有明确技术原因。
 - shadcn/ui 风格组件和 Radix primitives 是默认 UI 基座；不要为了单个页面引入新的重型 UI 依赖。
-- Select / Dropdown / Menu 必须优先使用 `apps/web/components/ui/*` 的 shadcn-compatible primitives；不要在业务页使用原生 `<select>` 或手写 floating dropdown。
+- Select / Dropdown / Menu 必须优先使用 `apps/web/components/ui/*` 的 shadcn-compatible primitives；不要在业务页使用原生 `<select>` 或手写 floating dropdown。所有浮层类组件的 z-index 由组件内部统一管理，业务调用方禁止传入 `className="z-*"`、内联 `zIndex` 或任何形式的层级覆盖，详见 `docs/engineering/overlay-conventions.md`。
+- Dialog / Popover / Dropdown 等浮层一律使用受控的 `open` / `onOpenChange` 模式挂载和卸载，不使用 `{isOpen && <X />}` 这种条件渲染方式，避免关闭动效被打断。
 - 动效使用 Motion，保持克制，优先用于浮层进入/退出、状态切换和局部过渡。
 - 服务端状态使用 TanStack Query；客户端 UI/session 状态使用 Zustand。
 - 国际化使用 i18next + react-i18next。用户可见文案必须走 i18next；新增 key 必须同步 `en`、`zh-CN`、`zh-TW`。

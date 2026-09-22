@@ -1,8 +1,7 @@
 /**
  * Holds a pipeline creation hand-off while the creation surface transitions to
- * the editor. A new Pipeline cannot be persisted until it references at least
- * one Source, so the DAG designer starts as an in-memory draft and persists it
- * once the first valid graph is ready.
+ * the editor. The guided builder keeps this draft in memory until the user has
+ * supplied the source, transform, and Atlas destination parts of the DSL.
  */
 export interface StagedPipelineDraft {
   id: string

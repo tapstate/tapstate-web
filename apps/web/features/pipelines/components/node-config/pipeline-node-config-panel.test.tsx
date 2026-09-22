@@ -110,7 +110,7 @@ describe('PipelineNodeConfigPanel', () => {
     expect(host.textContent).toContain('Table')
     expect(host.textContent).not.toContain('Connector')
     expect(host.textContent).not.toContain('Table filter')
-    expect(host.querySelector('[role="combobox"]')).not.toBeNull()
+    expect(host.querySelector('[data-pipeline-source-table-picker]')).not.toBeNull()
   })
 
   it('renders the Source table scope as part of the Source schema', async () => {
@@ -156,6 +156,30 @@ describe('PipelineNodeConfigPanel', () => {
     expect(changes.at(-1)?.values).toMatchObject({
       tables: ['Player', 'Match', '/player_*/'],
     })
+  })
+
+  it('selects exactly one Source table through the inline table list', async () => {
+    const changes: Array<{ values: Record<string, unknown> }> = []
+    const host = await renderPanel(
+      sourceSelection,
+      (change) => changes.push({ values: change.values }),
+      {
+        tableOptions: [
+          { label: 'Player', value: 'Player' },
+          { label: 'Match', value: 'Match' },
+        ],
+        sources: [sourceView],
+      },
+    )
+
+    await act(async () => {
+      host.querySelector<HTMLElement>('[data-pipeline-source-table-option="Match"]')?.click()
+    })
+
+    expect(
+      host.querySelector('[data-pipeline-source-table-option="Match"][aria-checked="true"]'),
+    ).not.toBeNull()
+    expect(changes.at(-1)?.values).toMatchObject({ tables: ['Match'] })
   })
 
   it('validates and adds a custom Source regex rule to the same node', async () => {
@@ -304,9 +328,10 @@ describe('PipelineNodeConfigPanel', () => {
       tableOptions: [{ label: 'Player', value: 'Player' }],
     })
 
-    expect(host.querySelectorAll('[role="combobox"]')).toHaveLength(2)
+    expect(host.querySelectorAll('[role="combobox"]')).toHaveLength(1)
     expect(host.textContent).toContain('MySQL source')
     expect(host.textContent).toContain('Player')
+    expect(host.querySelector('[role="radiogroup"]')).not.toBeNull()
   })
 
   it('loads a source table catalog through Formily x-reactions', async () => {
