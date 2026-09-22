@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { ReactFlowProvider } from '@xyflow/react'
 import {
@@ -416,6 +416,7 @@ function PipelineOrchestrationPage({
 }) {
   const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
+  const queryClient = useQueryClient()
   const [selection, setSelection] = useState<PipelineCanvasSelection | null>(null)
   const [draft, setDraft] = useState<PipelineGraphDraft | null>(null)
   const [isDirty, setIsDirty] = useState(false)
@@ -788,6 +789,11 @@ function PipelineOrchestrationPage({
         apiFetch,
       )
       await run.mutateAsync()
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId, 'status'] }),
+        queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId] }),
+        queryClient.invalidateQueries({ queryKey: ['pipelines'] }),
+      ])
     } catch (error) {
       pushActionError(
         error instanceof Error ? error.message : t('pipelines.workspace.actions.runFailed'),
