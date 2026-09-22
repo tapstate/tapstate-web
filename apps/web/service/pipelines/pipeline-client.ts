@@ -676,12 +676,14 @@ export async function createPipelineDraft(
   id: string,
   mutation: PipelineDraftMutation,
   fetcher: ApiFetcher = fetch,
+  options: { keepalive?: boolean } = {},
 ): Promise<{ draft: PipelineDraft; etag: string }> {
   if (mutation.pipelineId !== id) {
     throw new PipelineClientError('protocol', 'Pipeline draft id does not match the route.', 400)
   }
   return requestDraftMutation(`/pipelines/${encodeURIComponent(id)}/draft`, mutation, fetcher, {
     method: 'POST',
+    keepalive: options.keepalive,
   })
 }
 
@@ -690,6 +692,7 @@ export async function updatePipelineDraft(
   mutation: PipelineDraftMutation,
   etag: string,
   fetcher: ApiFetcher = fetch,
+  options: { keepalive?: boolean } = {},
 ): Promise<{ draft: PipelineDraft; etag: string }> {
   if (!quotedRevision(etag)) {
     throw new PipelineClientError(
@@ -706,6 +709,7 @@ export async function updatePipelineDraft(
   return requestDraftMutation(`/pipelines/${encodeURIComponent(id)}/draft`, mutation, fetcher, {
     method: 'PUT',
     headers: { 'If-Match': etag },
+    keepalive: options.keepalive,
   })
 }
 

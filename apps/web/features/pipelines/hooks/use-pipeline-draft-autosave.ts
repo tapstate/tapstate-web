@@ -9,7 +9,7 @@ import {
   type PipelineDraftMutation,
 } from '@/service/pipelines/pipeline-client'
 
-const AUTOSAVE_DELAY_MS = 750
+const AUTOSAVE_DELAY_MS = 5000
 
 export interface PipelineDraftSaveResult {
   draft: PipelineDraft
@@ -26,8 +26,8 @@ interface PipelineDraftAutosaveOptions {
 }
 
 /**
- * Debounces local graph persistence and serializes writes so every request uses the revision returned by
- * the prior request. The response advances only the local CAS baseline; it never overwrites a newer graph.
+ * Persists the latest dirty graph after a quiet period and serializes CAS writes. The timer is driven by
+ * graph changes, not renders, and a completed save never creates another save without a new change.
  */
 export function usePipelineDraftAutosave({
   enabled,
@@ -41,19 +41,24 @@ export function usePipelineDraftAutosave({
   const etagRef = useRef(initialEtag)
   const generationRef = useRef(0)
   const savedGenerationRef = useRef(0)
-  const hasLoadedMutationRef = useRef(false)
+  const pendingRef = useRef(false)
   const savingRef = useRef<Promise<PipelineDraftSaveResult | null> | null>(null)
+  const fetcherRef = useRef(fetcher)
+  const onSavedRef = useRef(onSaved)
+  const onErrorRef = useRef(onError)
   const [isSaving, setIsSaving] = useState(false)
   const [lastResult, setLastResult] = useState<PipelineDraftSaveResult | null>(null)
-  const [hasPendingChanges, setHasPendingChanges] = useState(Boolean(mutation))
+  const [hasPendingChanges, setHasPendingChanges] = useState(false)
+
+  fetcherRef.current = fetcher
+  onSavedRef.current = onSaved
+  onErrorRef.current = onError
 
   useEffect(() => {
+    if (mutation === mutationRef.current) return
     mutationRef.current = mutation
-    if (!hasLoadedMutationRef.current) {
-      hasLoadedMutationRef.current = true
-      return
-    }
     generationRef.current += 1
+    pendingRef.current = Boolean(mutation)
     setHasPendingChanges(Boolean(mutation))
   }, [mutation])
 
@@ -61,43 +66,54 @@ export function usePipelineDraftAutosave({
     etagRef.current = initialEtag
   }, [initialEtag])
 
-  const saveLatest = useCallback(async (): Promise<PipelineDraftSaveResult | null> => {
-    if (!enabled || !mutationRef.current) return null
-    if (savingRef.current) return savingRef.current
-    if (savedGenerationRef.current >= generationRef.current) {
-      generationRef.current += 1
-      setHasPendingChanges(true)
-    }
+  const saveLatest = useCallback(
+    async (keepalive = false): Promise<PipelineDraftSaveResult | null> => {
+      if (!enabled || !mutationRef.current || !pendingRef.current) return null
+      if (savingRef.current) return savingRef.current
 
-    const save = (async () => {
-      setIsSaving(true)
-      let result: PipelineDraftSaveResult | null = null
-      try {
-        while (mutationRef.current && savedGenerationRef.current < generationRef.current) {
-          const generation = generationRef.current
-          const current = mutationRef.current
-          const response = etagRef.current
-            ? await updatePipelineDraft(current.pipelineId, current, etagRef.current, fetcher)
-            : await createPipelineDraft(current.pipelineId, current, fetcher)
-          result = response
-          etagRef.current = response.etag
-          savedGenerationRef.current = generation
-          setLastResult(response)
-          onSaved?.(response)
+      const save = (async () => {
+        setIsSaving(true)
+        let result: PipelineDraftSaveResult | null = null
+        try {
+          while (mutationRef.current && pendingRef.current) {
+            const generation = generationRef.current
+            const current = mutationRef.current
+            const response = etagRef.current
+              ? await updatePipelineDraft(
+                  current.pipelineId,
+                  current,
+                  etagRef.current,
+                  fetcherRef.current,
+                  { keepalive },
+                )
+              : await createPipelineDraft(current.pipelineId, current, fetcherRef.current, {
+                  keepalive,
+                })
+            result = response
+            etagRef.current = response.etag
+            savedGenerationRef.current = generation
+            setLastResult(response)
+            onSavedRef.current?.(response)
+
+            if (savedGenerationRef.current === generationRef.current) {
+              pendingRef.current = false
+              setHasPendingChanges(false)
+            }
+          }
+          return result
+        } catch (error) {
+          onErrorRef.current?.(error)
+          throw error
+        } finally {
+          setIsSaving(false)
+          savingRef.current = null
         }
-        setHasPendingChanges(false)
-        return result
-      } catch (error) {
-        onError?.(error)
-        throw error
-      } finally {
-        setIsSaving(false)
-        savingRef.current = null
-      }
-    })()
-    savingRef.current = save
-    return save
-  }, [enabled, fetcher, onError, onSaved])
+      })()
+      savingRef.current = save
+      return save
+    },
+    [enabled],
+  )
 
   useEffect(() => {
     if (!enabled || !mutation) return
@@ -107,10 +123,15 @@ export function usePipelineDraftAutosave({
     return () => window.clearTimeout(timer)
   }, [enabled, mutation, saveLatest])
 
+  const flushOnPageClose = useCallback(() => {
+    void saveLatest(true).catch(() => undefined)
+  }, [saveLatest])
+
   return {
     isSaving,
     hasPendingChanges,
     lastResult,
     saveLatest,
+    flushOnPageClose,
   }
 }

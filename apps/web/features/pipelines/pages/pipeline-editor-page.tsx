@@ -539,6 +539,44 @@ function PipelineOrchestrationPage({
       )
     },
   })
+  const autosaveRef = useRef(autosave)
+  const pipelineDraftRef = useRef(pipelineDraft)
+  const visibleRefreshTimer = useRef<number | null>(null)
+  autosaveRef.current = autosave
+  pipelineDraftRef.current = pipelineDraft
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        autosaveRef.current.flushOnPageClose()
+        return
+      }
+      if (document.visibilityState !== 'visible') return
+
+      if (visibleRefreshTimer.current !== null) {
+        window.clearTimeout(visibleRefreshTimer.current)
+      }
+      visibleRefreshTimer.current = window.setTimeout(() => {
+        visibleRefreshTimer.current = null
+        const currentAutosave = autosaveRef.current
+        if (!currentAutosave.hasPendingChanges && !currentAutosave.isSaving) {
+          void pipelineDraftRef.current.refetch()
+        }
+      }, 500)
+    }
+    const handleBeforeUnload = () => autosaveRef.current.flushOnPageClose()
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      if (visibleRefreshTimer.current !== null) {
+        window.clearTimeout(visibleRefreshTimer.current)
+      }
+    }
+  }, [])
+
   useEffect(() => {
     if (!autosave.hasPendingChanges) setIsDirty(false)
   }, [autosave.hasPendingChanges])
