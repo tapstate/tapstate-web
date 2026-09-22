@@ -29,6 +29,7 @@ import type {
 
 interface PipelineNodeSelectorProps {
   open: boolean
+  disabled?: boolean
   insertion: PipelineNodeInsertionContext | null
   sources: SourceView[] | undefined
   connectors: ConnectorSummary[] | undefined
@@ -84,6 +85,7 @@ function choiceForDirectItem(choice: DirectChoice): PipelineNodeChoice {
 /** A shared, compact selector for inserting a configured Source or a Pipeline operation. */
 export function PipelineNodeSelector({
   open,
+  disabled = false,
   insertion,
   sources,
   connectors,
@@ -99,14 +101,14 @@ export function PipelineNodeSelector({
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (!open) return
+    if (!open || disabled) return
     setQuery('')
     const frame = requestAnimationFrame(() => searchRef.current?.focus())
     return () => cancelAnimationFrame(frame)
-  }, [open])
+  }, [disabled, open])
 
   useEffect(() => {
-    if (!open) return
+    if (!open || disabled) return
     function onKeyDown(event: globalThis.KeyboardEvent) {
       if (event.key === 'Escape') {
         event.preventDefault()
@@ -124,7 +126,7 @@ export function PipelineNodeSelector({
       document.removeEventListener('keydown', onKeyDown)
       document.removeEventListener('pointerdown', onPointerDown)
     }
-  }, [onOpenChange, open])
+  }, [disabled, onOpenChange, open])
 
   const connectorsById = useMemo(
     () => new Map((connectors ?? []).map((item) => [item.id, item])),

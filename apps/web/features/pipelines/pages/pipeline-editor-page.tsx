@@ -596,6 +596,7 @@ function PipelineOrchestrationPage({
   const run = useMutation({
     mutationFn: () => runPipeline(pipelineId, apiFetch),
   })
+  const isReadOnly = runtimeStatus === 'RUNNING' || runtimeStatus === 'PAUSED'
   const sourceOptions = useMemo<PipelineSchemaOption[]>(
     () =>
       (sources.data ?? []).map((source) => ({
@@ -881,10 +882,12 @@ function PipelineOrchestrationPage({
               onAddNodes: handleChooseNodes,
               loadTables: loadPipelineTables,
               onSelectionChange: handleSelectionChange,
+              readOnly: isReadOnly,
             }}
             header={{
               isDirty,
               isSaving: autosave.isSaving,
+              isReadOnly,
               isRunning:
                 run.isPending ||
                 runtimeStatus === 'RUNNING' ||
@@ -895,6 +898,7 @@ function PipelineOrchestrationPage({
             }}
             panel={{
               selection,
+              isReadOnly,
               onClose: () => setSelection(null),
               onConfigurationChange: handleConfigurationChange,
               onDescriptionChange: handleDescriptionChange,
@@ -1131,7 +1135,7 @@ export function PipelineWorkspacePage({
     retry: false,
     refetchInterval: (query) => {
       if (query.state.error instanceof PipelineClientError && query.state.error.status === 404) {
-        return 30000
+        return false
       }
       return 5000
     },

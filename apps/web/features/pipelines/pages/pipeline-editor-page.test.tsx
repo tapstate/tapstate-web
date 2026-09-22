@@ -416,7 +416,7 @@ beforeEach(() => {
     nodes: {},
     viewport: null,
   })
-  getPipelineStatus.mockResolvedValue({ pipelineId: 'orders_to_warehouse', state: 'RUNNING' })
+  getPipelineStatus.mockResolvedValue({ pipelineId: 'orders_to_warehouse', state: 'STOPPED' })
   getPipelineMetrics.mockResolvedValue({ pipelineId: 'orders_to_warehouse', metrics: {} })
   getPipelineLogs.mockResolvedValue({ pipelineId: 'orders_to_warehouse', lines: [] })
   savePipelineLayout.mockResolvedValue({
@@ -474,6 +474,7 @@ afterEach(async () => {
 
 describe('PipelineEditorPage', () => {
   it('keeps the canvas in the Build route and exposes separate workspace navigation', async () => {
+    getPipelineStatus.mockResolvedValue({ pipelineId: 'orders_to_warehouse', state: 'RUNNING' })
     await renderPage()
 
     await vi.waitFor(() =>
@@ -630,6 +631,7 @@ describe('PipelineEditorPage', () => {
   })
 
   it('loads status and metrics after navigating to Monitoring', async () => {
+    getPipelineStatus.mockResolvedValue({ pipelineId: 'orders_to_warehouse', state: 'RUNNING' })
     await renderPage('monitoring')
 
     await vi.waitFor(() => expect(container?.textContent).toContain('Running'))

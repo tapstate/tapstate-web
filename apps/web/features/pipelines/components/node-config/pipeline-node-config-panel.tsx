@@ -481,11 +481,7 @@ export function PipelineSourceTablePicker({
                 className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-[var(--pipeline-text)] transition-colors hover:bg-[var(--pipeline-surface-subtle)]"
                 data-pipeline-source-table-option={option.value}
               >
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={() => toggle(option)}
-                />
+                <input type="checkbox" checked={isSelected} onChange={() => toggle(option)} />
                 {option.tableKind === 'regex' ? (
                   <Regex
                     className="size-3 shrink-0 text-[var(--pipeline-text-muted)]"
@@ -762,6 +758,7 @@ function transformPatchValues(patch: PipelineTransformConfigurationPatch): Pipel
 export function PipelineNodeConfigPanel({
   selection,
   onClose,
+  isReadOnly = false,
   onConfigurationChange,
   onDescriptionChange,
   sourceOptions,
@@ -772,6 +769,7 @@ export function PipelineNodeConfigPanel({
 }: {
   selection: PipelineCanvasSelection
   onClose: () => void
+  isReadOnly?: boolean
   onConfigurationChange?: (change: PipelineNodeConfigurationChange) => void
   onDescriptionChange?: (description: string) => void
   sourceOptions?: readonly PipelineSchemaOption[]
@@ -821,6 +819,8 @@ export function PipelineNodeConfigPanel({
             <X className="size-4" />
           </Button>
         </div>
+      </div>
+      <fieldset disabled={isReadOnly} className="contents">
         <div className="p-2">
           <div className="group flex max-h-[3.75rem] overflow-y-auto rounded-[8px] bg-transparent px-2 py-[5px] leading-none focus-within:shadow-xs">
             <Textarea
@@ -838,36 +838,36 @@ export function PipelineNodeConfigPanel({
             />
           </div>
         </div>
-      </div>
-      <div className="pipeline-node-config__scroll">
-        {configuration?.kind === 'source' || configuration?.kind === 'target' ? (
-          <DataNodeForm
-            configuration={configuration}
-            sourceOptions={sourceOptions}
-            tableOptions={tableOptions}
-            loadTables={loadTables}
-            sources={sources}
-            upstreamSourceTables={upstreamSourceTables}
-            onChange={emit}
-          />
-        ) : null}
-        {configuration?.kind === 'transform' ? (
-          <TransformEditor
-            config={configuration}
-            onChange={(patch) => emit(transformPatchValues(patch))}
-          />
-        ) : null}
-        {configuration?.kind === 'view' ? (
-          <div className="pipeline-node-config__empty">
-            {t('pipelines.workspace.config.viewReadOnly')}
-          </div>
-        ) : null}
-        {!configuration ? (
-          <div className="pipeline-node-config__empty">
-            {t('pipelines.workspace.inspector.emptyBody')}
-          </div>
-        ) : null}
-      </div>
+        <div className="pipeline-node-config__scroll">
+          {configuration?.kind === 'source' || configuration?.kind === 'target' ? (
+            <DataNodeForm
+              configuration={configuration}
+              sourceOptions={sourceOptions}
+              tableOptions={tableOptions}
+              loadTables={loadTables}
+              sources={sources}
+              upstreamSourceTables={upstreamSourceTables}
+              onChange={emit}
+            />
+          ) : null}
+          {configuration?.kind === 'transform' ? (
+            <TransformEditor
+              config={configuration}
+              onChange={(patch) => emit(transformPatchValues(patch))}
+            />
+          ) : null}
+          {configuration?.kind === 'view' ? (
+            <div className="pipeline-node-config__empty">
+              {t('pipelines.workspace.config.viewReadOnly')}
+            </div>
+          ) : null}
+          {!configuration ? (
+            <div className="pipeline-node-config__empty">
+              {t('pipelines.workspace.inspector.emptyBody')}
+            </div>
+          ) : null}
+        </div>
+      </fieldset>
     </>
   )
 }
