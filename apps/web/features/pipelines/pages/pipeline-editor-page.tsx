@@ -404,11 +404,15 @@ function PipelineWorkspaceNav({
 function PipelineOrchestrationPage({
   pipelineId,
   stagedDraft,
+  runtimeStatus,
   onStagedDraftComplete,
+  onPublishedRevisionChange,
 }: {
   pipelineId: string
   stagedDraft: StagedPipelineDraft | null
+  runtimeStatus?: PipelineRuntimeState
   onStagedDraftComplete?: () => void
+  onPublishedRevisionChange?: (published: boolean) => void
 }) {
   const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
@@ -454,7 +458,11 @@ function PipelineOrchestrationPage({
           getPipelineLayout(pipelineId, apiFetch),
         ])
         return {
-          document: { editor: createPipelineGraphDraft(pipeline), layout },
+          document: {
+            editor: createPipelineGraphDraft(pipeline),
+            layout,
+            hasPublishedRevision: true,
+          },
           etag: null,
         }
       }
@@ -474,6 +482,11 @@ function PipelineOrchestrationPage({
   const layoutData = isNewPipeline
     ? { pipelineId, nodes: {}, viewport: null }
     : serverDocument?.layout
+
+  useEffect(() => {
+    const published = isNewPipeline ? false : (serverDocument?.hasPublishedRevision ?? true)
+    onPublishedRevisionChange?.(published)
+  }, [isNewPipeline, onPublishedRevisionChange, serverDocument?.hasPublishedRevision])
 
   useEffect(() => {
     if (actionErrors.length === 0) return
@@ -872,7 +885,11 @@ function PipelineOrchestrationPage({
             header={{
               isDirty,
               isSaving: autosave.isSaving,
-              isRunning: run.isPending,
+              isRunning:
+                run.isPending ||
+                runtimeStatus === 'RUNNING' ||
+                runtimeStatus === 'PAUSED' ||
+                runtimeStatus === 'FAILED',
               onSave: () => void handleSave(),
               onRun: () => void handleRun(),
             }}
@@ -1102,14 +1119,22 @@ export function PipelineWorkspacePage({
 }) {
   const [navigationCollapsed, setNavigationCollapsed] = useState(false)
   const [isStagedDraftActive, setIsStagedDraftActive] = useState(stagedDraft !== null)
+  const [hasPublishedRevision, setHasPublishedRevision] = useState(
+    stagedDraft === null && section !== 'orchestrate',
+  )
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const activeStagedDraft = isStagedDraftActive ? stagedDraft : null
   const status = useQuery({
     queryKey: ['pipelines', pipelineId, 'status'],
     queryFn: () => getPipelineStatus(pipelineId, apiFetch),
-    enabled: activeStagedDraft === null,
+    enabled: activeStagedDraft === null && (section !== 'orchestrate' || hasPublishedRevision),
     retry: false,
-    refetchInterval: 5000,
+    refetchInterval: (query) => {
+      if (query.state.error instanceof PipelineClientError && query.state.error.status === 404) {
+        return 30000
+      }
+      return 5000
+    },
     refetchIntervalInBackground: false,
   })
 
@@ -1129,6 +1154,8 @@ export function PipelineWorkspacePage({
         <PipelineOrchestrationPage
           pipelineId={pipelineId}
           stagedDraft={activeStagedDraft}
+          runtimeStatus={status.data?.state}
+          onPublishedRevisionChange={setHasPublishedRevision}
           onStagedDraftComplete={() => setIsStagedDraftActive(false)}
         />
       ) : (

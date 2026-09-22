@@ -18,6 +18,7 @@ const DEFAULT_VIEWPORT = { x: 0, y: 0, zoom: 1 }
 export interface PipelineDraftDocument {
   editor: PipelineGraphDraft
   layout: PipelineLayout
+  hasPublishedRevision: boolean
 }
 
 /** Converts the editor's clean graph and transient canvas coordinates to one durable draft document. */
@@ -105,6 +106,7 @@ export function pipelineDraftDocument(draft: PipelineDraft): PipelineDraftDocume
   return {
     editor: { pipeline, dag: pipeline.dag, configurations, descriptions },
     layout: { pipelineId: draft.pipelineId, nodes: positions, viewport: draft.graph.viewport },
+    hasPublishedRevision: draft.publishedDraftRevision !== null,
   }
 }
 
