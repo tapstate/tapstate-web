@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-production-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: install the pinned package manager
+        run: corepack enable
+      - name: install frozen dependencies
+        run: pnpm install --frozen-lockfile
+      - name: typecheck
+        run: pnpm typecheck
+      - name: lint
+        run: pnpm lint
+      - name: verify translations
+        run: pnpm --filter web i18n:check
+      - name: run unit tests
+        run: pnpm --filter web test
+      - name: build the production bundle
+        run: pnpm build
+      - name: require the bundle entry point
+        run: test -s apps/web/dist/index.html

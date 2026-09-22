@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { AUTH_TOKEN_KEY, clearStoredToken, loadStoredToken, saveStoredToken } from './auth-session'
 
 function memoryStorage(): Storage {
