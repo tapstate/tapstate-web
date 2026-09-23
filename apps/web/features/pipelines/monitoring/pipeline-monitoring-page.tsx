@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { Pause, Play, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -8,6 +9,7 @@ import { PipelineClientError, type PipelineRuntimeState } from '@/service/pipeli
 
 import { PipelineMetricChart } from './pipeline-metric-chart'
 import { usePipelineMonitoringQueries } from './pipeline-monitoring-queries'
+import { PipelineReadSurface } from './pipeline-read-surface'
 
 function isObservationUnavailable(error: unknown) {
   return error instanceof PipelineClientError && error.status === 404
@@ -19,14 +21,23 @@ function stateTone(state: PipelineRuntimeState) {
 
 export function PipelineMonitoringPage({ pipelineId }: { pipelineId: string }) {
   const { i18n, t } = useTranslation()
+  const queryClient = useQueryClient()
   const [autoRefresh, setAutoRefresh] = useState(true)
   const { status, metrics } = usePipelineMonitoringQueries(pipelineId, autoRefresh)
   const isLoading = status.isLoading || metrics.isLoading
   const error = status.error ?? metrics.error
   const hasError = status.isError || metrics.isError
   const lastUpdated = Math.max(status.dataUpdatedAt, metrics.dataUpdatedAt)
-  const offsetEntries = Object.entries(metrics.data?.perTableOffset ?? {})
+  const offsetEntries = Object.entries(
+    metrics.data?.targetAckedPosition ?? metrics.data?.perTableOffset ?? {},
+  )
   const metricCount = Object.keys(metrics.data?.metrics ?? {}).length
+  const refreshMonitoring = () => {
+    void status.refetch()
+    void metrics.refetch()
+    void queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId, 'metrics-history'] })
+    void queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId, 'explain'] })
+  }
 
   if (isLoading) {
     return (
@@ -57,10 +68,7 @@ export function PipelineMonitoringPage({ pipelineId }: { pipelineId: string }) {
         <Button
           className="mt-4"
           size="sm"
-          onClick={() => {
-            void status.refetch()
-            void metrics.refetch()
-          }}
+          onClick={refreshMonitoring}
           disabled={status.isFetching || metrics.isFetching}
         >
           <RefreshCw
@@ -100,10 +108,7 @@ export function PipelineMonitoringPage({ pipelineId }: { pipelineId: string }) {
             size="icon-sm"
             aria-label={t('pipelines.workspace.runtime.monitoring.refreshAria')}
             title={t('pipelines.workspace.runtime.monitoring.refresh')}
-            onClick={() => {
-              void status.refetch()
-              void metrics.refetch()
-            }}
+            onClick={refreshMonitoring}
             disabled={status.isFetching || metrics.isFetching}
           >
             <RefreshCw
@@ -208,6 +213,13 @@ export function PipelineMonitoringPage({ pipelineId }: { pipelineId: string }) {
           )}
         </section>
       </div>
+
+      <PipelineReadSurface
+        pipelineId={pipelineId}
+        tables={Object.keys(
+          metrics.data?.targetAckedPosition ?? metrics.data?.perTableOffset ?? {},
+        ).sort()}
+      />
     </section>
   )
 }

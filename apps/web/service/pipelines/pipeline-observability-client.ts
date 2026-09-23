@@ -4,12 +4,7 @@ import { PipelineClientError, type PipelineRuntimeState } from './pipeline-clien
 
 export type PipelineHistoryResolution = 'auto' | 'raw' | 'PT5M' | 'PT30M' | 'PT1H' | 'PT3H' | 'PT6H'
 
-export type PipelineHistoryStartReason =
-  | 'WINDOW_START'
-  | 'CONTINUATION'
-  | 'COUNTER_RESET'
-  | 'GAP'
-  | 'EXECUTION_CHANGE'
+export type PipelineHistoryStartReason = 'WINDOW_START' | 'CONTINUATION' | 'COUNTER_RESET' | 'GAP'
 
 export type PipelineExplainKind =
   | 'OBSERVATION_STALE'
@@ -155,7 +150,7 @@ function isHistorySegment(value: unknown): value is PipelineHistorySegment {
     isRecord(value) &&
     typeof value.intervalStart === 'string' &&
     typeof value.intervalEnd === 'string' &&
-    ['WINDOW_START', 'CONTINUATION', 'COUNTER_RESET', 'GAP', 'EXECUTION_CHANGE'].includes(
+    ['WINDOW_START', 'CONTINUATION', 'COUNTER_RESET', 'GAP'].includes(
       value.startReason as string,
     ) &&
     Array.isArray(value.points) &&

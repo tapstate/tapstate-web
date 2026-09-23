@@ -181,7 +181,29 @@ export interface PipelineStatus {
 export interface PipelineMetrics {
   pipelineId: string
   metrics: Record<string, number>
+  targetAckedPosition?: Record<string, string>
+  positionsNotCollected?: string[]
+  facts?: PipelineMetricFact[]
+  /** Retained for older servers during the transition to targetAckedPosition. */
   perTableOffset?: Record<string, string>
+}
+
+export interface PipelineMetricFactPoint {
+  attributes: Record<string, string>
+  observedAt: string
+  value?: number
+  startTime?: string
+  count?: number
+  sum?: number
+  bounds?: number[]
+  bucketCounts?: number[]
+}
+
+export interface PipelineMetricFact {
+  name: string
+  type: 'counter' | 'gauge' | 'histogram'
+  unit: string
+  points: PipelineMetricFactPoint[]
 }
 
 export interface PipelineLogLine {
@@ -395,8 +417,39 @@ function isNumberMap(value: unknown): value is Record<string, number> {
   return isRecord(value) && Object.values(value).every((item) => typeof item === 'number')
 }
 
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string')
+}
+
 function isStringMap(value: unknown): value is Record<string, string> {
   return isRecord(value) && Object.values(value).every((item) => typeof item === 'string')
+}
+
+function isMetricFactPoint(value: unknown): value is PipelineMetricFactPoint {
+  return (
+    isRecord(value) &&
+    isStringMap(value.attributes) &&
+    typeof value.observedAt === 'string' &&
+    (value.value === undefined || typeof value.value === 'number') &&
+    (value.startTime === undefined || typeof value.startTime === 'string') &&
+    (value.count === undefined || typeof value.count === 'number') &&
+    (value.sum === undefined || typeof value.sum === 'number') &&
+    (value.bounds === undefined ||
+      (Array.isArray(value.bounds) && value.bounds.every((n) => typeof n === 'number'))) &&
+    (value.bucketCounts === undefined ||
+      (Array.isArray(value.bucketCounts) && value.bucketCounts.every((n) => typeof n === 'number')))
+  )
+}
+
+function isPipelineMetricFact(value: unknown): value is PipelineMetricFact {
+  return (
+    isRecord(value) &&
+    typeof value.name === 'string' &&
+    ['counter', 'gauge', 'histogram'].includes(value.type as string) &&
+    typeof value.unit === 'string' &&
+    Array.isArray(value.points) &&
+    value.points.every(isMetricFactPoint)
+  )
 }
 
 function isPipelineMetrics(value: unknown): value is PipelineMetrics {
@@ -404,6 +457,10 @@ function isPipelineMetrics(value: unknown): value is PipelineMetrics {
     isRecord(value) &&
     typeof value.pipelineId === 'string' &&
     isNumberMap(value.metrics) &&
+    (value.targetAckedPosition === undefined || isStringMap(value.targetAckedPosition)) &&
+    (value.positionsNotCollected === undefined || isStringArray(value.positionsNotCollected)) &&
+    (value.facts === undefined ||
+      (Array.isArray(value.facts) && value.facts.every(isPipelineMetricFact))) &&
     (value.perTableOffset === undefined || isStringMap(value.perTableOffset))
   )
 }
