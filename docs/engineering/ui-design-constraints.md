@@ -60,7 +60,7 @@ Dify 把所有原子级 UI（button、dialog、popover、select、tooltip 等）
 
 **落地到 Tapstate：**
 
-你已经在用 shadcn 风格组件 + Radix primitives，这条正好补齐你 UI 工程边界里缺的部分：
+你已经在用 shadcn/ui + Base UI，这条正好补齐你 UI 工程边界里缺的部分：
 
 - 在 `apps/web/components/ui/` 下建一份 `AGENTS.md`（或加进现有 tech-stack.md 的对应章节），写清楚：
   - overlay 类组件（Select / Dropdown / Dialog / Popover）禁止在调用点传 z-index，统一由 `components/ui` 内部管理；

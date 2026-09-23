@@ -14,7 +14,7 @@
 ## 2. 组件结构规范
 
 - 每个原子组件一个目录：`components/ui/<component-name>/index.tsx`，样式变体用 `class-variance-authority`（或等价的 variant 工具）集中定义在同一文件的顶部，不要在 JSX 里用三元表达式拼 class 字符串。
-- Radix primitive 的行为（开关、键盘导航、焦点陷阱）一律直接复用 Radix 自带能力，**不要在业务层重新实现**这些交互逻辑；如果 Radix 默认行为不满足需求，先确认是不是用错了 API，再考虑自定义。
+- Base UI primitive 的行为（开关、键盘导航、焦点管理）一律直接复用 Base UI 自带能力，**不要在业务层重新实现**这些交互逻辑；如果默认行为不满足需求，先确认是不是用错了 API，再考虑自定义。
 - 组件对外只暴露必要的 props；内部实现细节（比如具体用了哪个 Radix primitive）不通过 props 泄漏给调用方。
 
 ## 3. 圆角与间距的角色化约束
@@ -33,7 +33,7 @@
 
 在往 `components/ui/` 加新组件之前，按顺序确认：
 
-1. shadcn/ui 或 Radix 官方是否已有对应 primitive？有则复用，不重新造轮子。
+1. shadcn/ui 或 Base UI 是否已有对应 primitive？有则复用，不重新造轮子。
 2. 是否需要新增语义 token？需要则先在 `tailwind.css` 补齐。
 3. 是否是 overlay 类组件（会浮层展示）？是则额外遵守 `overlay-conventions.md` 的契约。
 4. 组件是否需要国际化文案？按 `Tapstate Web Engineering Guide` 的 i18n 硬约束处理，不写裸字符串。
