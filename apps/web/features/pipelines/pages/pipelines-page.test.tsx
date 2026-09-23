@@ -4,16 +4,19 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { apiFetch, listPipelines, listSources, runPipeline, stopPipeline } = vi.hoisted(() => ({
-  apiFetch: vi.fn(),
-  listPipelines: vi.fn(),
-  listSources: vi.fn(),
-  runPipeline: vi.fn(),
-  stopPipeline: vi.fn(),
-}))
+const { apiFetch, listPipelines, listPipelineDrafts, listSources, runPipeline, stopPipeline } =
+  vi.hoisted(() => ({
+    apiFetch: vi.fn(),
+    listPipelines: vi.fn(),
+    listPipelineDrafts: vi.fn(),
+    listSources: vi.fn(),
+    runPipeline: vi.fn(),
+    stopPipeline: vi.fn(),
+  }))
 
 vi.mock('@/service/source-client', () => ({ listSources }))
 vi.mock('@/service/pipelines/pipeline-client', () => ({
+  listPipelineDrafts,
   listPipelines,
   runPipeline,
   stopPipeline,
@@ -97,6 +100,7 @@ beforeEach(() => {
       status: null,
     },
   ])
+  listPipelineDrafts.mockResolvedValue([])
   runPipeline.mockResolvedValue({})
   stopPipeline.mockResolvedValue({})
   apiFetch.mockResolvedValue({ ok: true })
@@ -141,6 +145,41 @@ describe('PipelinesPage', () => {
       'Actions',
     )
     expect(elementWithText('a', 'Edit')).toBeUndefined()
+  })
+
+  it('lists durable Wizard drafts as resumable drafts without lifecycle controls', async () => {
+    listPipelineDrafts.mockResolvedValue([
+      {
+        pipelineId: 'unfinished_wizard',
+        schemaVersion: 1,
+        revision: 3,
+        mode: 'wizard',
+        name: 'unfinished_wizard',
+        description: null,
+        graph: null,
+        wizard: {},
+        baseArtifactHash: null,
+        publishedDraftRevision: null,
+        publishedArtifactHash: null,
+        createdAt: '2026-09-24T00:00:00Z',
+        updatedAt: '2026-09-24T00:00:00Z',
+        updatedBy: 'admin',
+      },
+    ])
+
+    await renderPage()
+
+    const link = await vi.waitFor(() => {
+      const candidate = document.querySelector<HTMLAnchorElement>(
+        'a[href="/pipelines/unfinished_wizard/edit"]',
+      )
+      expect(candidate).not.toBeNull()
+      return candidate
+    })
+    const row = link?.closest('tr')
+    expect(row?.textContent).toContain('Draft')
+    expect(row?.textContent).toContain('r3')
+    expect(row?.querySelectorAll('button')).toHaveLength(0)
   })
 
   it('shows an unavailable state when a Pipeline has no runtime observation', async () => {

@@ -270,6 +270,7 @@ function sourceTablePickerOptions(
   sourceId: string | undefined,
   sources: readonly SourceView[] | undefined,
   options: readonly PipelineSchemaOption[] | undefined,
+  allowPatterns: boolean,
 ) {
   const source = sources?.find((candidate) => candidate.id === sourceId)
   const catalogOptions = (options ?? [])
@@ -292,7 +293,7 @@ function sourceTablePickerOptions(
       tableKind: 'literal' as const,
     }))
   const regexOptions =
-    source?.tables === null
+    !allowPatterns || source?.tables === null
       ? []
       : (source?.tables ?? []).flatMap((table) => {
           if (!table.pattern) return []
@@ -317,6 +318,8 @@ export function PipelineSourceTablePicker({
   sourceId,
   sources,
   onChange,
+  selectionMode = 'toggle',
+  allowPatterns = true,
 }: {
   value?: unknown
   options?: readonly PipelineSchemaOption[]
@@ -324,6 +327,8 @@ export function PipelineSourceTablePicker({
   sourceId?: string
   sources?: readonly SourceView[]
   onChange?: (value: string[]) => void
+  selectionMode?: 'single' | 'multiple' | 'toggle'
+  allowPatterns?: boolean
 }) {
   const { t } = useTranslation()
   const currentValue = Array.isArray(value)
@@ -331,23 +336,27 @@ export function PipelineSourceTablePicker({
     : typeof value === 'string'
       ? [value]
       : []
-  const [mode, setMode] = useState<'single' | 'multiple'>(
-    currentValue.length > 1 ? 'multiple' : 'single',
+  const [mode, setMode] = useState<'single' | 'multiple'>(() =>
+    selectionMode === 'toggle' ? (currentValue.length > 1 ? 'multiple' : 'single') : selectionMode,
   )
   const [selected, setSelected] = useState<string[]>(currentValue)
   const [tableQuery, setTableQuery] = useState('')
   const [pattern, setPattern] = useState('')
   const [patternError, setPatternError] = useState(false)
   const tableOptions = useMemo(
-    () => sourceTablePickerOptions(sourceId, sources, options),
-    [options, sourceId, sources],
+    () => sourceTablePickerOptions(sourceId, sources, options, allowPatterns),
+    [allowPatterns, options, sourceId, sources],
   )
 
   useEffect(() => {
     setSelected(currentValue)
     setTableQuery('')
-    if (currentValue.length > 1) setMode('multiple')
-  }, [sourceId, value])
+    if (selectionMode === 'toggle') {
+      if (currentValue.length > 1) setMode('multiple')
+    } else {
+      setMode(selectionMode)
+    }
+  }, [selectionMode, sourceId, value])
 
   const normalizedTableQuery = tableQuery.trim().toLocaleLowerCase()
   const filteredTableOptions = normalizedTableQuery
@@ -398,25 +407,27 @@ export function PipelineSourceTablePicker({
 
   return (
     <div className="space-y-2" data-pipeline-source-table-picker>
-      <div
-        className="inline-flex w-full gap-1 rounded-lg bg-[var(--pipeline-surface-subtle)] p-1"
-        role="tablist"
-        aria-label={t('pipelines.workspace.config.tableSelectionMode')}
-      >
-        {(['single', 'multiple'] as const).map((nextMode) => (
-          <button
-            key={nextMode}
-            type="button"
-            role="tab"
-            aria-selected={mode === nextMode}
-            data-pipeline-source-table-picker-mode={nextMode}
-            className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-[var(--pipeline-selection)] focus-visible:outline-none ${mode === nextMode ? 'bg-[var(--pipeline-surface)] text-[var(--pipeline-text)] shadow-xs' : 'text-[var(--pipeline-text-muted)] hover:text-[var(--pipeline-text)]'}`}
-            onClick={() => setMode(nextMode)}
-          >
-            {t(`pipelines.workspace.config.${nextMode}Table`)}
-          </button>
-        ))}
-      </div>
+      {selectionMode === 'toggle' && (
+        <div
+          className="inline-flex w-full gap-1 rounded-lg bg-[var(--pipeline-surface-subtle)] p-1"
+          role="tablist"
+          aria-label={t('pipelines.workspace.config.tableSelectionMode')}
+        >
+          {(['single', 'multiple'] as const).map((nextMode) => (
+            <button
+              key={nextMode}
+              type="button"
+              role="tab"
+              aria-selected={mode === nextMode}
+              data-pipeline-source-table-picker-mode={nextMode}
+              className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-[var(--pipeline-selection)] focus-visible:outline-none ${mode === nextMode ? 'bg-[var(--pipeline-surface)] text-[var(--pipeline-text)] shadow-xs' : 'text-[var(--pipeline-text-muted)] hover:text-[var(--pipeline-text)]'}`}
+              onClick={() => setMode(nextMode)}
+            >
+              {t(`pipelines.workspace.config.${nextMode}Table`)}
+            </button>
+          ))}
+        </div>
+      )}
 
       {showTableSearch && (
         <label className="flex h-9 items-center gap-2 rounded-lg border border-[var(--pipeline-border)] bg-[var(--pipeline-surface)] px-3 text-[var(--pipeline-text-muted)]">
@@ -481,11 +492,7 @@ export function PipelineSourceTablePicker({
                 className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-[var(--pipeline-text)] transition-colors hover:bg-[var(--pipeline-surface-subtle)]"
                 data-pipeline-source-table-option={option.value}
               >
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={() => toggle(option)}
-                />
+                <input type="checkbox" checked={isSelected} onChange={() => toggle(option)} />
                 {option.tableKind === 'regex' ? (
                   <Regex
                     className="size-3 shrink-0 text-[var(--pipeline-text-muted)]"
@@ -504,7 +511,7 @@ export function PipelineSourceTablePicker({
             )
           })
         ) : (
-          <p className="flex min-h-9 items-center rounded-lg border border-dashed border-[var(--pipeline-border)] bg-[var(--pipeline-surface-subtle)] px-3 py-2 text-xs leading-4 font-normal text-[var(--pipeline-text-muted)]">
+          <p className="flex min-h-9 items-center px-3 py-2 text-xs leading-4 text-[var(--pipeline-text-muted)]">
             {tableOptions.length === 0
               ? t('pipelines.workspace.config.noSourceTableOptions')
               : t('pipelines.workspace.config.noMatchingTables')}

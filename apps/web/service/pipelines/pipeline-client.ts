@@ -155,6 +155,35 @@ export interface PipelineLayout {
   viewport: PipelineLayoutViewport | null
 }
 
+export interface PipelineDraft {
+  pipelineId: string
+  schemaVersion: number
+  revision: number
+  mode: 'dag' | 'wizard'
+  name: string | null
+  description: string | null
+  graph: PipelineJsonObject | null
+  wizard: PipelineJsonObject | null
+  baseArtifactHash: string | null
+  publishedDraftRevision: number | null
+  publishedArtifactHash: string | null
+  createdAt: string
+  updatedAt: string
+  updatedBy: string
+}
+
+export type PipelineDraftWrite = Pick<
+  PipelineDraft,
+  'pipelineId' | 'schemaVersion' | 'mode' | 'name' | 'description' | 'graph' | 'wizard'
+>
+
+export interface PipelineDraftPreview {
+  pipelineId: string
+  revision: number
+  dsl: string
+  artifact: PipelineJsonObject
+}
+
 export class PipelineClientError extends Error {
   constructor(
     readonly kind: 'network' | 'server' | 'protocol',
@@ -339,6 +368,26 @@ function isPipelineLayout(value: unknown): value is PipelineLayout {
   )
 }
 
+function isPipelineDraft(value: unknown): value is PipelineDraft {
+  return (
+    isRecord(value) &&
+    typeof value.pipelineId === 'string' &&
+    typeof value.schemaVersion === 'number' &&
+    typeof value.revision === 'number' &&
+    (value.mode === 'dag' || value.mode === 'wizard') &&
+    (value.name === null || typeof value.name === 'string') &&
+    (value.description === null || typeof value.description === 'string') &&
+    (value.graph === null || isJsonObject(value.graph)) &&
+    (value.wizard === null || isJsonObject(value.wizard)) &&
+    (value.baseArtifactHash === null || typeof value.baseArtifactHash === 'string') &&
+    (value.publishedDraftRevision === null || typeof value.publishedDraftRevision === 'number') &&
+    (value.publishedArtifactHash === null || typeof value.publishedArtifactHash === 'string') &&
+    typeof value.createdAt === 'string' &&
+    typeof value.updatedAt === 'string' &&
+    typeof value.updatedBy === 'string'
+  )
+}
+
 async function request(path: string, fetcher: ApiFetcher, init?: RequestInit): Promise<unknown> {
   let response: Response
   try {
@@ -468,6 +517,139 @@ export async function getPipeline(id: string, fetcher: ApiFetcher = fetch): Prom
     throw new PipelineClientError('protocol', 'Tapstate returned an invalid Pipeline graph.')
   }
   return payload
+}
+
+async function requestDraftMutation(
+  path: string,
+  method: 'POST' | 'PUT',
+  body: PipelineDraftWrite,
+  fetcher: ApiFetcher,
+  revision?: number,
+): Promise<PipelineDraft> {
+  const headers: Record<string, string> = { 'content-type': 'application/json' }
+  if (revision !== undefined) headers['If-Match'] = `"${revision}"`
+  let response: Response
+  try {
+    response = await fetcher(`/api${path}`, {
+      method,
+      headers,
+      body: JSON.stringify(body),
+    })
+  } catch (error) {
+    throw new PipelineClientError(
+      'network',
+      error instanceof Error ? error.message : 'Pipeline draft request failed.',
+    )
+  }
+  const payload = await response.json().catch(() => null)
+  if (!response.ok) {
+    const code = isRecord(payload) && typeof payload.code === 'string' ? payload.code : null
+    const params = isRecord(payload) && isRecord(payload.params) ? payload.params : {}
+    throw new PipelineClientError(
+      'server',
+      responseMessage(payload, 'Tapstate refused the Pipeline draft mutation.'),
+      response.status,
+      code,
+      params,
+    )
+  }
+  const etag = response.headers.get('ETag')
+  if (!isPipelineDraft(payload) || etag !== `"${payload.revision}"`) {
+    throw new PipelineClientError('protocol', 'Tapstate returned an invalid Pipeline draft.')
+  }
+  return payload
+}
+
+export async function createPipelineDraft(
+  body: PipelineDraftWrite,
+  fetcher: ApiFetcher = fetch,
+): Promise<PipelineDraft> {
+  return requestDraftMutation(
+    `/pipelines/${encodeURIComponent(body.pipelineId)}/draft`,
+    'POST',
+    body,
+    fetcher,
+  )
+}
+
+export async function updatePipelineDraft(
+  body: PipelineDraftWrite,
+  revision: number,
+  fetcher: ApiFetcher = fetch,
+): Promise<PipelineDraft> {
+  return requestDraftMutation(
+    `/pipelines/${encodeURIComponent(body.pipelineId)}/draft`,
+    'PUT',
+    body,
+    fetcher,
+    revision,
+  )
+}
+
+export async function getPipelineDraft(
+  id: string,
+  fetcher: ApiFetcher = fetch,
+): Promise<PipelineDraft | null> {
+  try {
+    const payload = await request(`/pipelines/${encodeURIComponent(id)}/draft`, fetcher)
+    if (!isPipelineDraft(payload)) {
+      throw new PipelineClientError('protocol', 'Tapstate returned an invalid Pipeline draft.')
+    }
+    return payload
+  } catch (error) {
+    if (error instanceof PipelineClientError && error.status === 404) return null
+    throw error
+  }
+}
+
+export async function listPipelineDrafts(fetcher: ApiFetcher = fetch): Promise<PipelineDraft[]> {
+  const payload = await request('/pipelines/drafts', fetcher)
+  if (
+    !isRecord(payload) ||
+    !Array.isArray(payload.items) ||
+    !payload.items.every(isPipelineDraft)
+  ) {
+    throw new PipelineClientError('protocol', 'Tapstate returned an invalid Pipeline draft list.')
+  }
+  return payload.items
+}
+
+export async function previewPipelineDraft(
+  id: string,
+  revision: number,
+  fetcher: ApiFetcher = fetch,
+): Promise<PipelineDraftPreview> {
+  const payload = await request(`/pipelines/${encodeURIComponent(id)}/draft:preview`, fetcher, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ revision }),
+  })
+  if (
+    !isRecord(payload) ||
+    payload.pipelineId !== id ||
+    payload.revision !== revision ||
+    typeof payload.dsl !== 'string' ||
+    !isJsonObject(payload.artifact)
+  ) {
+    throw new PipelineClientError('protocol', 'Tapstate returned an invalid Pipeline preview.')
+  }
+  return payload as unknown as PipelineDraftPreview
+}
+
+export async function publishPipelineDraft(
+  id: string,
+  revision: number,
+  baseArtifactHash: string | null,
+  fetcher: ApiFetcher = fetch,
+): Promise<void> {
+  const payload = await request(`/pipelines/${encodeURIComponent(id)}/draft:publish`, fetcher, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ revision, artifactHash: baseArtifactHash }),
+  })
+  if (!isRecord(payload) || payload.pipelineId !== id || payload.revision !== revision) {
+    throw new PipelineClientError('protocol', 'Tapstate returned an invalid Pipeline publication.')
+  }
 }
 
 export async function listPipelines(fetcher: ApiFetcher = fetch): Promise<PipelineView[]> {
