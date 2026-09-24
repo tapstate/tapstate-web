@@ -178,6 +178,55 @@ describe('ConnectorFormily', () => {
     expect(changes.at(-1)).toMatchObject({ strategy: 'fast' })
   })
 
+  it('lets an Atlas connection switch from URI to tested standard fields', async () => {
+    const changes: Array<Record<string, unknown>> = []
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const schema = connectorSpecConnectionSchema(
+      JSON.stringify({
+        configOptions: {
+          connection: {
+            type: 'object',
+            properties: {
+              isUri: {
+                type: 'boolean',
+                title: 'Connection method',
+                default: true,
+                'x-decorator': 'FormItem',
+                'x-component': 'Radio.Group',
+                enum: [
+                  { label: 'URI Mode', value: true, disabled: false },
+                  { label: 'Standard Mode', value: false, disabled: true },
+                ],
+              },
+            },
+          },
+        },
+      }),
+      'en',
+      'mongodb-atlas',
+    )
+
+    await act(async () => {
+      root?.render(
+        <ConnectorFormily
+          fields={fields}
+          schema={schema}
+          resetKey="create:mongodb-atlas:spec"
+          initialValues={{ isUri: true }}
+          onValuesChange={(values) => changes.push(values)}
+        />,
+      )
+    })
+
+    const buttons = [...(container.querySelectorAll<HTMLButtonElement>('button') ?? [])]
+    const standard = buttons.find((button) => button.textContent === 'Standard Mode')
+    expect(standard?.disabled).toBe(false)
+    await act(async () => standard?.click())
+    expect(changes.at(-1)).toMatchObject({ isUri: false })
+  })
+
   it('registers adapter components and backend-compatible aliases', async () => {
     container = document.createElement('div')
     document.body.append(container)

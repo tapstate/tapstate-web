@@ -108,4 +108,53 @@ describe('source form helpers', () => {
       errors: {},
     })
   })
+
+  it('submits only the selected Atlas connection method', () => {
+    const atlasFields: ConnectorConfigField[] = [
+      { ...fields[0], name: 'isUri', type: 'boolean', defaultValue: 'true' },
+      {
+        ...fields[0],
+        name: 'uri',
+        visibleWhen: { controllingField: 'isUri', equalsAnyOf: ['true'] },
+      },
+      {
+        ...fields[0],
+        name: 'host',
+        visibleWhen: { controllingField: 'isUri', equalsAnyOf: ['false'] },
+      },
+      {
+        ...fields[0],
+        name: 'database',
+        visibleWhen: { controllingField: 'isUri', equalsAnyOf: ['false'] },
+      },
+      {
+        ...fields[0],
+        name: 'password',
+        required: false,
+        secret: true,
+        visibleWhen: { controllingField: 'isUri', equalsAnyOf: ['false'] },
+      },
+    ]
+    const state = {
+      isUri: false,
+      uri: 'mongodb+srv://unused.invalid/app',
+      host: 'mongo-a.example.net:27017,mongo-b.example.net:27017',
+      database: 'app',
+      password: 'test-only-secret',
+    }
+
+    expect(buildSourceConfig(atlasFields, state)).toEqual({
+      config: {
+        isUri: false,
+        host: state.host,
+        database: 'app',
+        password: 'test-only-secret',
+      },
+      errors: {},
+    })
+    expect(buildSourceConfig(atlasFields, { ...state, isUri: true })).toEqual({
+      config: { isUri: true, uri: state.uri },
+      errors: {},
+    })
+  })
 })

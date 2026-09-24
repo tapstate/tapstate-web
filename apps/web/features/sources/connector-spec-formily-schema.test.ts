@@ -184,6 +184,57 @@ describe('connector spec Formily schema', () => {
     expect(connectorSpecInitialValues(mongoSpec, 'mongodb')).toEqual({})
   })
 
+  it('offers tested Atlas standard fields without changing another connector spec', () => {
+    const atlasSpec = JSON.stringify({
+      configOptions: {
+        connection: {
+          type: 'object',
+          properties: {
+            isUri: {
+              type: 'boolean',
+              default: true,
+              'x-component': 'Radio.Group',
+              enum: [
+                { label: 'URI Mode', value: true, disabled: false },
+                { label: 'Standard Mode', value: false, disabled: true },
+              ],
+            },
+            uri: { type: 'string', 'x-component': 'Input' },
+            host: { type: 'string', 'x-component': 'Input' },
+            database: { type: 'string', 'x-component': 'Input' },
+            isUrlTips1: { type: 'void', 'x-component': 'Text' },
+            uriTips: { type: 'void', 'x-component': 'Text' },
+          },
+        },
+      },
+    })
+
+    const atlas = connectorSpecConnectionSchema(atlasSpec, 'en', 'mongodb-atlas')
+    expect(atlas).toMatchObject({
+      properties: {
+        isUri: {
+          enum: [
+            { label: 'URI Mode', value: true, disabled: false },
+            { label: 'Standard Mode', value: false, disabled: false },
+          ],
+        },
+      },
+    })
+    expect(atlas.properties).not.toHaveProperty('isUrlTips1')
+    expect(atlas.properties).not.toHaveProperty('uriTips')
+    expect(connectorSpecInitialValues(atlasSpec, 'mongodb-atlas')).toEqual({ isUri: true })
+    expect(connectorSpecConnectionSchema(atlasSpec, 'en', 'postgres')).toMatchObject({
+      properties: {
+        isUri: {
+          enum: [
+            { label: 'URI Mode', value: true, disabled: false },
+            { label: 'Standard Mode', value: false, disabled: true },
+          ],
+        },
+      },
+    })
+  })
+
   it('uses defaults declared in the raw spec and rejects malformed source text', () => {
     expect(connectorSpecInitialValues(specText)).toEqual({ host: 'localhost', port: 3306 })
     expect(() => connectorSpecConnectionSchema('{', 'en')).toThrow('invalid JSON')

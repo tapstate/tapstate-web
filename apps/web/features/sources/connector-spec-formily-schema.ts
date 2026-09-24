@@ -72,6 +72,14 @@ function isMongoDbConnector(connectorId: string | undefined) {
   return connectorId?.trim().toLocaleLowerCase() === 'mongodb'
 }
 
+function isAtlasConnector(connectorId: string | undefined) {
+  return connectorId?.trim().toLocaleLowerCase() === 'mongodb-atlas'
+}
+
+function isMongoFamilyConnector(connectorId: string | undefined) {
+  return isMongoDbConnector(connectorId) || isAtlasConnector(connectorId)
+}
+
 function isMysqlConnector(connectorId: string | undefined) {
   return connectorId?.trim().toLocaleLowerCase() === 'mysql'
 }
@@ -91,6 +99,28 @@ function finiteNumber(value: unknown) {
  * Formily schema and its defaults agree on the value type.
  */
 function withConnectorSpecificSchema(node: JsonRecord, connectorId?: string): JsonRecord {
+  if (isAtlasConnector(connectorId)) {
+    const properties = asRecord(node.properties)
+    const isUri = asRecord(properties?.isUri)
+    if (properties === null || isUri === null || !Array.isArray(isUri.enum)) return node
+
+    // The real Atlas connector also connects from resolved hosts and standard fields. Its upstream
+    // spec disables that choice, so expose only this verified option without changing PDK bytes.
+    return {
+      ...node,
+      properties: {
+        ...properties,
+        isUri: {
+          ...isUri,
+          enum: isUri.enum.map((option) => {
+            const entry = asRecord(option)
+            return entry?.value === false ? { ...entry, disabled: false } : option
+          }),
+        },
+      },
+    }
+  }
+
   if (!isMysqlConnector(connectorId)) return node
 
   const properties = asRecord(node.properties)
@@ -111,7 +141,7 @@ function withConnectorSpecificSchema(node: JsonRecord, connectorId?: string): Js
   }
 }
 
-function withoutMongoDbPresentationFields(node: JsonRecord): JsonRecord {
+function withoutMongoPresentationFields(node: JsonRecord): JsonRecord {
   const properties = asRecord(node.properties)
   if (properties === null) return node
 
@@ -120,7 +150,7 @@ function withoutMongoDbPresentationFields(node: JsonRecord): JsonRecord {
       .filter(([name]) => !MONGODB_PRESENTATION_FIELD_NAMES.has(name))
       .map(([name, value]) => {
         const property = asRecord(value)
-        return [name, property === null ? value : withoutMongoDbPresentationFields(property)]
+        return [name, property === null ? value : withoutMongoPresentationFields(property)]
       }),
   )
   const required = Array.isArray(node.required)
@@ -141,7 +171,9 @@ function connectionSchema(text: string, locale: string, connectorId?: string): J
   const { connection, spec } = parseConnectionSchema(text)
   const resolved = resolveSchemaMessages(connection, messagesForLocale(spec, locale)) as JsonRecord
   const normalized = withConnectorSpecificSchema(resolved, connectorId)
-  return isMongoDbConnector(connectorId) ? withoutMongoDbPresentationFields(normalized) : normalized
+  return isMongoFamilyConnector(connectorId)
+    ? withoutMongoPresentationFields(normalized)
+    : normalized
 }
 
 export function connectorSpecConnectionSchema(
@@ -178,8 +210,8 @@ export function connectorSpecInitialValues(text: string, connectorId?: string): 
   const values: SourceConfigState = {}
   const connection = parseConnectionSchema(text).connection
   readDefaults(
-    isMongoDbConnector(connectorId)
-      ? withoutMongoDbPresentationFields(withConnectorSpecificSchema(connection, connectorId))
+    isMongoFamilyConnector(connectorId)
+      ? withoutMongoPresentationFields(withConnectorSpecificSchema(connection, connectorId))
       : withConnectorSpecificSchema(connection, connectorId),
     values,
   )
