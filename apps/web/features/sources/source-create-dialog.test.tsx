@@ -47,6 +47,12 @@ const postgresql: ConnectorSummary = {
   name: 'PostgreSQL',
 }
 
+const awsRdsMysql: ConnectorSummary = {
+  ...mysql,
+  id: 'aws-rds-mysql',
+  name: 'Amazon RDS for MySQL',
+}
+
 const detail: ConnectorDetail = {
   ...mysql,
   config: [
@@ -292,6 +298,38 @@ describe('SourceCreateDialog', () => {
     expect(hasClasses(connectorSearchField()?.closest('label'), 'mx-auto', 'max-w-[460px]')).toBe(
       true,
     )
+  })
+
+  it('offers a registered AWS RDS MySQL connector as a snapshot or CDC source', async () => {
+    listConnectors.mockResolvedValue([mysql, mongodb, awsRdsMysql])
+    getConnector.mockResolvedValue({ ...detail, ...awsRdsMysql })
+    host = document.createElement('div')
+    document.body.append(host)
+    root = createRoot(host)
+
+    await act(async () => {
+      root?.render(
+        <SourceCreateDialog
+          open
+          onOpenChange={() => undefined}
+          onCreated={(_source: SourceView) => undefined}
+        />,
+      )
+    })
+
+    const awsCard = () =>
+      [...document.body.querySelectorAll('button')].find((button) =>
+        button.textContent?.includes('Amazon RDS for MySQL'),
+      )
+    await vi.waitFor(() => expect(awsCard()).toBeDefined())
+    await act(async () => awsCard()?.click())
+    await vi.waitFor(() => {
+      expect(getConnector).toHaveBeenCalledWith('aws-rds-mysql', expect.any(Function))
+      expect(document.body.textContent).toContain('Spec host')
+    })
+    const modeGroup = document.body.querySelector('[role="group"][aria-label="Read mode"]')
+    expect(modeGroup?.textContent).toContain('snapshot')
+    expect(modeGroup?.textContent).toContain('cdc')
   })
 
   it('does not fabricate a configuration form when the registered connector lacks spec text', async () => {

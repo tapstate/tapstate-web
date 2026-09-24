@@ -24,6 +24,7 @@ describe('pipeline target connectors', () => {
       'postgres',
       'oracle',
       'sqlserver',
+      'aws-rds-mysql',
       'kafka',
       // Not in the release's supported set: a server accepting it is one an operator widened.
       'mongodb3',
@@ -38,6 +39,7 @@ describe('pipeline target connectors', () => {
   it('keeps only the Sources a target may write to, in the order they were given', () => {
     const sources = [
       { id: 'mysql_orders', connector: 'mysql' },
+      { id: 'rds_orders', connector: 'aws-rds-mysql' },
       { id: 'mongo_out', connector: 'mongodb' },
       { id: 'atlas_out', connector: 'mongodb-atlas' },
       { id: 'legacy_out', connector: 'mongodb3' },
