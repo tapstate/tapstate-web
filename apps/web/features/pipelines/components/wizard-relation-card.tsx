@@ -1,5 +1,15 @@
-import { Database, Filter, Plus, Trash2, WandSparkles, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import {
+  ChevronDown,
+  Database,
+  Filter,
+  FolderTree,
+  Plus,
+  RefreshCw,
+  Trash2,
+  WandSparkles,
+  X,
+} from 'lucide-react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { SourceSchemaField } from '@/service/source-client'
@@ -54,6 +64,8 @@ export interface WizardRelationSource {
 
 export function WizardRelationCard({
   relation,
+  children,
+  childrenCount,
   sources,
   entities,
   excludedEntityIds,
@@ -69,8 +81,11 @@ export function WizardRelationCard({
   onUpdateTransform,
   onRemoveTransform,
   onRemove,
+  onAddRelatedTable,
 }: {
   relation: WizardRelation
+  children: ReactNode
+  childrenCount: number
   sources: readonly WizardRelationSource[]
   entities: readonly WizardPipelineEntity[]
   excludedEntityIds: ReadonlySet<string>
@@ -86,9 +101,13 @@ export function WizardRelationCard({
   onUpdateTransform: (stepId: string, patch: PipelineTransformConfigurationPatch) => void
   onRemoveTransform: (stepId: string) => void
   onRemove: () => void
+  onAddRelatedTable: (shape: WizardRelationShape) => void
 }) {
   const { t } = useTranslation()
   const [transformMenuOpen, setTransformMenuOpen] = useState(false)
+  const [relatedMenuOpen, setRelatedMenuOpen] = useState(false)
+  const [tableSelectionOpen, setTableSelectionOpen] = useState(!relation.table)
+  const [preprocessingOpen, setPreprocessingOpen] = useState(false)
   const selectedSource = sources.find((source) => source.id === relation.sourceId)
   const parentEntity = entities.find((entity) => entity.id === relation.parentId)
   const associationFields = relation.conditions.map((condition) => condition.childField)
@@ -171,77 +190,109 @@ export function WizardRelationCard({
         </button>
       </header>
 
-      <div className="pipeline-wizard__relation-fields">
-        <label className="pipeline-wizard__field">
-          <span>{t('wizard.relations.source')}</span>
-          <Select
-            value={relation.sourceId}
-            onValueChange={(sourceId) => onChangeSource(sourceId ?? '')}
-            disabled={sourcesLoading}
+      {relation.table && !tableSelectionOpen ? (
+        <div className="pipeline-wizard__relation-table-summary">
+          {selectedSource && (
+            <ConnectorIcon
+              connectorId={selectedSource.connector}
+              name={selectedSource.connectorName}
+              iconPath={selectedSource.connectorIcon}
+              size={18}
+            />
+          )}
+          <div>
+            <strong>{relation.table}</strong>
+            <span>{selectedSource?.id ?? relation.sourceId}</span>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setTableSelectionOpen(true)}
           >
-            <SelectTrigger
-              className="pipeline-wizard__select"
-              aria-label={t('wizard.relations.source')}
+            <RefreshCw className="size-3.5" aria-hidden="true" />
+            {t('wizard.switchTable')}
+          </Button>
+        </div>
+      ) : (
+        <div className="pipeline-wizard__relation-fields">
+          <label className="pipeline-wizard__field">
+            <span>{t('wizard.relations.source')}</span>
+            <Select
+              value={relation.sourceId}
+              onValueChange={(sourceId) => {
+                onChangeSource(sourceId ?? '')
+                setTableSelectionOpen(true)
+              }}
+              disabled={sourcesLoading}
             >
-              <SelectValue
-                placeholder={
-                  sourcesLoading ? t('wizard.loading') : t('wizard.relations.chooseSource')
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {sources.map((source) => (
-                <SelectItem key={source.id} value={source.id}>
-                  <ConnectorIcon
-                    connectorId={source.connector}
-                    name={source.connectorName}
-                    iconPath={source.connectorIcon}
-                    size={18}
-                  />
-                  <span>{source.id}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </label>
-
-        <label className="pipeline-wizard__field">
-          <span>{t('wizard.relations.table')}</span>
-          <Select
-            value={relation.table}
-            onValueChange={(table) => onChangeTable(table ?? '')}
-            disabled={!selectedSource || selectedSource.loadingTables}
-          >
-            <SelectTrigger
-              className="pipeline-wizard__select"
-              aria-label={t('wizard.relations.table')}
-            >
-              <SelectValue
-                placeholder={
-                  !selectedSource
-                    ? t('wizard.relations.chooseSourceFirst')
-                    : selectedSource.loadingTables
-                      ? t('wizard.loadingTables')
-                      : t('wizard.relations.chooseTable')
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {selectedSource?.tables.length ? (
-                selectedSource.tables.map((table) => (
-                  <SelectItem key={table} value={table}>
-                    {table}
+              <SelectTrigger
+                className="pipeline-wizard__select"
+                aria-label={t('wizard.relations.source')}
+              >
+                <SelectValue
+                  placeholder={
+                    sourcesLoading ? t('wizard.loading') : t('wizard.relations.chooseSource')
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {sources.map((source) => (
+                  <SelectItem key={source.id} value={source.id}>
+                    <ConnectorIcon
+                      connectorId={source.connector}
+                      name={source.connectorName}
+                      iconPath={source.connectorIcon}
+                      size={18}
+                    />
+                    <span>{source.id}</span>
                   </SelectItem>
-                ))
-              ) : (
-                <SelectItem value="__no_tables__" disabled>
-                  {t('wizard.relations.noTables')}
-                </SelectItem>
-              )}
-            </SelectContent>
-          </Select>
-        </label>
-      </div>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
+
+          <label className="pipeline-wizard__field">
+            <span>{t('wizard.relations.table')}</span>
+            <Select
+              value={relation.table}
+              onValueChange={(table) => {
+                onChangeTable(table ?? '')
+                if (table) setTableSelectionOpen(false)
+              }}
+              disabled={!selectedSource || selectedSource.loadingTables}
+            >
+              <SelectTrigger
+                className="pipeline-wizard__select"
+                aria-label={t('wizard.relations.table')}
+              >
+                <SelectValue
+                  placeholder={
+                    !selectedSource
+                      ? t('wizard.relations.chooseSourceFirst')
+                      : selectedSource.loadingTables
+                        ? t('wizard.loadingTables')
+                        : t('wizard.relations.chooseTable')
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {selectedSource?.tables.length ? (
+                  selectedSource.tables.map((table) => (
+                    <SelectItem key={table} value={table}>
+                      {table}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="__no_tables__" disabled>
+                    {t('wizard.relations.noTables')}
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </label>
+        </div>
+      )}
 
       {relation.shape === 'flat' ? (
         <p className="pipeline-wizard__flat-hint">{t('wizard.relations.flatHint')}</p>
@@ -440,10 +491,20 @@ export function WizardRelationCard({
 
       <section className="pipeline-wizard__relation-processing">
         <div className="pipeline-wizard__relation-section-heading">
-          <div>
-            <strong>{t('wizard.relations.preprocessing')}</strong>
-            <span>{t('wizard.relations.preprocessingHint')}</span>
-          </div>
+          <button
+            type="button"
+            className="pipeline-wizard__preprocess-toggle"
+            aria-expanded={preprocessingOpen}
+            onClick={() => setPreprocessingOpen((open) => !open)}
+          >
+            <span>
+              <strong>{t('wizard.relations.preprocessing')}</strong>
+              <span className="pipeline-wizard__preprocess-count">
+                {relation.transforms.length}
+              </span>
+            </span>
+            <ChevronDown className="size-3.5" aria-hidden="true" data-open={preprocessingOpen} />
+          </button>
           <DropdownMenu open={transformMenuOpen} onOpenChange={setTransformMenuOpen}>
             <DropdownMenuTrigger
               render={
@@ -461,6 +522,7 @@ export function WizardRelationCard({
                     key={type}
                     onClick={() => {
                       onAddTransform(type)
+                      setPreprocessingOpen(true)
                       setTransformMenuOpen(false)
                     }}
                   >
@@ -476,56 +538,114 @@ export function WizardRelationCard({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        {relation.transforms.map((step, index) => (
-          <div className="pipeline-wizard__relation-transform" key={step.id}>
-            <div className="pipeline-wizard__relation-transform-title">
-              <span>
-                {step.type === 'filter' ? (
-                  <Filter className="size-3.5" aria-hidden="true" />
-                ) : (
-                  <WandSparkles className="size-3.5" aria-hidden="true" />
-                )}
-                {t(`wizard.transforms.${step.type}`)}
-              </span>
-              <button
-                type="button"
-                className="pipeline-wizard__icon-button"
-                aria-label={t('wizard.removeStep')}
-                onClick={() => onRemoveTransform(step.id)}
-              >
-                <Trash2 className="size-3.5" aria-hidden="true" />
-              </button>
-            </div>
-            <div className="pipeline-wizard__relation-transform-editor">
-              <TransformEditor
-                config={{
-                  kind: 'transform',
-                  nodeId: `wizard:${relation.id}:${step.id}`,
-                  stepId: step.id,
-                  transformType: step.type,
-                  from:
-                    index === 0
-                      ? `${relation.sourceId}.${relation.table}`
-                      : relation.transforms[index - 1]?.id,
-                  options: null,
-                  body: step.body,
-                }}
-                onChange={(patch) => onUpdateTransform(step.id, patch)}
-              />
-            </div>
-          </div>
-        ))}
-        {!processingSafe && relation.transforms.some((step) => step.type === 'map') && (
-          <p className="pipeline-wizard__field-hint" role="alert">
-            {t('wizard.relations.requiredFieldsHint')}
-          </p>
-        )}
-        {relation.transforms.some((step) => !wizardRelationTransformReady(step)) && (
-          <p className="pipeline-wizard__field-hint" role="alert">
-            {t('wizard.stepNeedsConfiguration')}
-          </p>
+        {preprocessingOpen && (
+          <>
+            <p className="pipeline-wizard__preprocess-hint">
+              {t('wizard.relations.preprocessingHint')}
+            </p>
+            {relation.transforms.map((step, index) => (
+              <div className="pipeline-wizard__relation-transform" key={step.id}>
+                <div className="pipeline-wizard__relation-transform-title">
+                  <span>
+                    {step.type === 'filter' ? (
+                      <Filter className="size-3.5" aria-hidden="true" />
+                    ) : (
+                      <WandSparkles className="size-3.5" aria-hidden="true" />
+                    )}
+                    {t(`wizard.transforms.${step.type}`)}
+                  </span>
+                  <button
+                    type="button"
+                    className="pipeline-wizard__icon-button"
+                    aria-label={t('wizard.removeStep')}
+                    onClick={() => onRemoveTransform(step.id)}
+                  >
+                    <Trash2 className="size-3.5" aria-hidden="true" />
+                  </button>
+                </div>
+                <div className="pipeline-wizard__relation-transform-editor">
+                  <TransformEditor
+                    config={{
+                      kind: 'transform',
+                      nodeId: `wizard:${relation.id}:${step.id}`,
+                      stepId: step.id,
+                      transformType: step.type,
+                      from:
+                        index === 0
+                          ? `${relation.sourceId}.${relation.table}`
+                          : relation.transforms[index - 1]?.id,
+                      options: null,
+                      body: step.body,
+                    }}
+                    onChange={(patch) => onUpdateTransform(step.id, patch)}
+                  />
+                </div>
+              </div>
+            ))}
+            {relation.transforms.length === 0 && (
+              <p className="pipeline-wizard__preprocess-hint">
+                {t('wizard.relations.noPreprocessing')}
+              </p>
+            )}
+            {!processingSafe && relation.transforms.some((step) => step.type === 'map') && (
+              <p className="pipeline-wizard__field-hint" role="alert">
+                {t('wizard.relations.requiredFieldsHint')}
+              </p>
+            )}
+            {relation.transforms.some((step) => !wizardRelationTransformReady(step)) && (
+              <p className="pipeline-wizard__field-hint" role="alert">
+                {t('wizard.stepNeedsConfiguration')}
+              </p>
+            )}
+          </>
         )}
       </section>
+
+      {relation.table && (
+        <section className="pipeline-wizard__nested-relations">
+          <div className="pipeline-wizard__nested-heading">
+            <div>
+              <FolderTree className="size-4" aria-hidden="true" />
+              <strong>{t('wizard.relations.nestedSubRelations')}</strong>
+              <span>{childrenCount}</span>
+            </div>
+            <DropdownMenu open={relatedMenuOpen} onOpenChange={setRelatedMenuOpen}>
+              <DropdownMenuTrigger
+                render={
+                  <Button type="button" variant="outline" size="sm">
+                    <Plus className="size-3.5" aria-hidden="true" />
+                    {t('wizard.relations.addSubRelation', { table: relation.table })}
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end" className="pipeline-wizard__step-menu">
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>{t('wizard.relations.addRelatedTable')}</DropdownMenuLabel>
+                  {(['object', 'array', 'flat'] as const).map((shape) => (
+                    <DropdownMenuItem
+                      key={shape}
+                      onClick={() => {
+                        onAddRelatedTable(shape)
+                        setRelatedMenuOpen(false)
+                      }}
+                    >
+                      <Database className="size-3.5" aria-hidden="true" />
+                      {t(`wizard.relations.addAs.${shape}`)}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          {childrenCount > 0 ? (
+            <div className="pipeline-wizard__nested-content">{children}</div>
+          ) : (
+            <p className="pipeline-wizard__nested-empty">
+              {t('wizard.relations.noNestedRelations')}
+            </p>
+          )}
+        </section>
+      )}
     </article>
   )
 }

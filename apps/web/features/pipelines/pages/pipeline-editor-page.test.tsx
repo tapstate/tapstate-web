@@ -461,6 +461,9 @@ describe('PipelineEditorPage', () => {
     expect(elementWithText('a', 'Build')?.className).toContain(
       'pipeline-workspace__nav-link--active',
     )
+    expect(elementWithText('a', 'Build')?.querySelector('span')?.className).toContain(
+      'max-sm:sr-only',
+    )
   })
 
   it('keeps navigation as a docked workspace aside inside the 4px workspace gutter', async () => {
@@ -472,6 +475,7 @@ describe('PipelineEditorPage', () => {
     const navigation = document.querySelector<HTMLElement>('[data-testid="workspace-navigation"]')
     expect(navigation?.dataset.collapsed).toBe('false')
     expect(navigation?.className).toContain('pipeline-workspace__navigation')
+    expect(navigation?.className).toContain('max-sm:w-14')
     expect(navigation?.className).toContain('relative')
     expect(navigation?.className).not.toContain('absolute')
     expect(navigation?.className).not.toContain('p-1')

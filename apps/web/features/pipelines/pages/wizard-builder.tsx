@@ -7,6 +7,7 @@ import {
   Database,
   LoaderCircle,
   Plus,
+  RefreshCw,
   Table2,
   Trash2,
   WandSparkles,
@@ -61,6 +62,7 @@ import {
 } from '../components/wizard-relation-card'
 import {
   canCompileWizardRelations,
+  wizardRelationAddShapes,
   wizardRelationChildren,
   wizardRelationDescendants,
   wizardRelationTransformsPreserveRequiredFields,
@@ -236,6 +238,9 @@ export function WizardBuilder({ pipelineId, draft }: { pipelineId: string; draft
   const [initial] = useState(() => initialWizardState(draft))
   const [sourceId, setSourceId] = useState(initial.sourceId)
   const [rootTable, setRootTable] = useState(initial.rootTable)
+  const [isRootEditing, setIsRootEditing] = useState(!initial.rootTable)
+  const [rootDraftSourceId, setRootDraftSourceId] = useState(initial.sourceId)
+  const [rootDraftTable, setRootDraftTable] = useState(initial.rootTable)
   const [rootKey, setRootKey] = useState<string[]>(initial.rootKey)
   const [relations, setRelations] = useState<WizardRelation[]>(initial.relations)
   const [steps, setSteps] = useState<WizardStep[]>(initial.steps)
@@ -266,12 +271,17 @@ export function WizardBuilder({ pipelineId, draft }: { pipelineId: string; draft
   })
   const sources = sourcesQuery.data ?? []
   const source = sources.find((item) => item.id === sourceId)
+  const rootDraftSource = sources.find((item) => item.id === rootDraftSourceId)
   const schemaSourceIds = useMemo(
     () =>
       Array.from(
-        new Set([sourceId, ...relations.map((relation) => relation.sourceId)].filter(Boolean)),
+        new Set(
+          [sourceId, rootDraftSourceId, ...relations.map((relation) => relation.sourceId)].filter(
+            Boolean,
+          ),
+        ),
       ),
-    [relations, sourceId],
+    [relations, rootDraftSourceId, sourceId],
   )
   const schemaQueries = useQueries({
     queries: schemaSourceIds.map((id) => ({
@@ -288,24 +298,26 @@ export function WizardBuilder({ pipelineId, draft }: { pipelineId: string; draft
       ),
     [schemaQueries, schemaSourceIds],
   )
-  const sourceSchema = schemasBySourceId.get(sourceId)
+  const sourceSchema = schemasBySourceId.get(rootDraftSourceId)
   const rootSchemaQuery = schemaQueries[schemaSourceIds.indexOf(sourceId)]
+  const rootDraftSchemaQuery = schemaQueries[schemaSourceIds.indexOf(rootDraftSourceId)]
   const connectorsById = useMemo(
     () => new Map((connectorsQuery.data ?? []).map((connector) => [connector.id, connector])),
     [connectorsQuery.data],
   )
   const sourceTableOptions = useMemo(() => {
-    if (!source) return []
-    if (source.tables === null) {
+    if (!rootDraftSource) return []
+    if (rootDraftSource.tables === null) {
       return (sourceSchema?.tables ?? []).map((table) => ({ label: table.name, value: table.name }))
     }
-    return (source.tables ?? [])
+    return (rootDraftSource.tables ?? [])
       .map((table) => table.name)
       .filter((table): table is string => Boolean(table))
       .map((table) => ({ label: table, value: table }))
-  }, [source, sourceSchema?.tables])
+  }, [rootDraftSource, sourceSchema?.tables])
   const sourceTableLoading = Boolean(
-    source?.tables === null && schemaQueries[schemaSourceIds.indexOf(sourceId)]?.isPending,
+    rootDraftSource?.tables === null &&
+    schemaQueries[schemaSourceIds.indexOf(rootDraftSourceId)]?.isPending,
   )
   const tableDetailsBySource = useMemo(() => {
     const details = new Map<string, Map<string, SourceSchemaTable>>()
@@ -315,6 +327,7 @@ export function WizardBuilder({ pipelineId, draft }: { pipelineId: string; draft
     return details
   }, [schemasBySourceId])
   const rootDetails = tableDetailsBySource.get(sourceId)?.get(rootTable)
+  const rootDraftDetails = tableDetailsBySource.get(rootDraftSourceId)?.get(rootDraftTable)
   const rootFields = rootDetails?.fields ?? []
   const saveBaselineReady =
     !sourcesQuery.isPending &&
@@ -627,19 +640,23 @@ export function WizardBuilder({ pipelineId, draft }: { pipelineId: string; draft
     [connectorsById, schemaQueries, schemaSourceIds, schemaTablesBySource, sources],
   )
 
-  function resetForSource(nextSourceId: string) {
-    setSourceId(nextSourceId)
-    setRootTable('')
-    setRootKey([])
-    setRelations([])
-    setSteps([])
+  function confirmRootTable() {
+    if (!rootDraftSourceId || !rootDraftTable) return
+    const rootChanged = rootDraftSourceId !== sourceId || rootDraftTable !== rootTable
+    setSourceId(rootDraftSourceId)
+    setRootTable(rootDraftTable)
+    setRootKey(rootDraftDetails?.primaryKey ?? [])
+    setIsRootEditing(false)
+    if (rootChanged) {
+      setRelations([])
+      setSteps([])
+    }
   }
 
-  function setRootTableAndKey(table: string) {
-    setRootTable(table)
-    setRootKey(tableDetailsBySource.get(sourceId)?.get(table)?.primaryKey ?? [])
-    setRelations([])
-    setSteps([])
+  function cancelRootEdit() {
+    setRootDraftSourceId(sourceId)
+    setRootDraftTable(rootTable)
+    setIsRootEditing(false)
   }
 
   function addRelation(parentId: string, shape: WizardRelationShape) {
@@ -831,6 +848,7 @@ export function WizardBuilder({ pipelineId, draft }: { pipelineId: string; draft
         <div className="pipeline-wizard__relation-branch" key={relation.id}>
           <WizardRelationCard
             relation={relation}
+            childrenCount={wizardRelationChildren(relations, relation.id).length}
             sources={wizardRelationSources}
             entities={entities}
             excludedEntityIds={excludedEntityIds}
@@ -855,9 +873,10 @@ export function WizardBuilder({ pipelineId, draft }: { pipelineId: string; draft
               })
             }
             onRemove={() => removeRelation(relation.id)}
-          />
-          <AddRelationControl onAdd={(shape) => addRelation(relation.id, shape)} />
-          {renderRelationTree(relation.id)}
+            onAddRelatedTable={(shape) => addRelation(relation.id, shape)}
+          >
+            {renderRelationTree(relation.id)}
+          </WizardRelationCard>
         </div>
       )
     })
@@ -873,85 +892,69 @@ export function WizardBuilder({ pipelineId, draft }: { pipelineId: string; draft
           inert={!saveBaselineReady}
         >
           <WizardNodeCard tone="source">
-            <div className="pipeline-wizard__node-heading">
-              <span className="pipeline-wizard__node-icon pipeline-wizard__node-icon--source">
-                <Database className="size-4" aria-hidden="true" />
-              </span>
-              <div className="pipeline-wizard__node-title">
-                <h1>{rootTable || t('wizard.sourceTitle')}</h1>
-                <p>{t('wizard.sourceHint')}</p>
-              </div>
-            </div>
-            <div className="pipeline-wizard__fields">
-              <label className="pipeline-wizard__field">
-                <span>{t('wizard.sourceSelect')}</span>
-                <Select value={sourceId} onValueChange={(value) => resetForSource(value ?? '')}>
-                  <SelectTrigger
-                    className="pipeline-wizard__select"
-                    aria-label={t('wizard.sourceSelect')}
+            {rootTable && !isRootEditing ? (
+              <div className="pipeline-wizard__root-summary">
+                <div className="pipeline-wizard__root-summary-heading">
+                  <span className="pipeline-wizard__node-icon pipeline-wizard__node-icon--source">
+                    <Database className="size-4" aria-hidden="true" />
+                  </span>
+                  <div className="pipeline-wizard__root-summary-title">
+                    <span>{t('wizard.rootTableLabel')}</span>
+                    <h1>{rootTable}</h1>
+                    <p>
+                      {t('wizard.rootTableMetadata', {
+                        source: source?.id ?? sourceId,
+                        primaryKey: rootKey.join(', ') || t('wizard.relations.chooseDocumentKey'),
+                        count: rootFields.length,
+                      })}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setRootDraftSourceId(sourceId)
+                      setRootDraftTable(rootTable)
+                      setIsRootEditing(true)
+                    }}
                   >
-                    <SelectValue
-                      placeholder={isLoading ? t('wizard.loading') : t('wizard.sourceSelect')}
-                    />
-                  </SelectTrigger>
-                  <SelectContent className="pipeline-wizard__source-select-content">
-                    {sources.map((item) => {
-                      const connector = connectorsById.get(item.connector)
-                      return (
-                        <SelectItem key={item.id} value={item.id}>
-                          <ConnectorIcon
-                            connectorId={item.connector}
-                            name={connector?.name ?? item.connector}
-                            iconPath={connector?.icon}
-                            size={20}
-                          />
-                          <span className="pipeline-wizard__source-option-label">{item.id}</span>
-                        </SelectItem>
-                      )
-                    })}
-                  </SelectContent>
-                </Select>
-              </label>
-              {source && (
-                <div className="pipeline-wizard__field">
-                  <span>{t('wizard.tableSelect')}</span>
-                  <PipelineSourceTablePicker
-                    key={source.id}
-                    sourceId={source.id}
-                    sources={sources}
-                    options={sourceTableOptions}
-                    loading={sourceTableLoading}
-                    value={rootTable}
-                    selectionMode="single"
-                    allowPatterns={false}
-                    onChange={(tables) => setRootTableAndKey(tables[0] ?? '')}
-                  />
+                    <RefreshCw className="size-3.5" aria-hidden="true" />
+                    {t('wizard.switchTable')}
+                  </Button>
                 </div>
-              )}
-            </div>
-            {source && (
-              <p className="pipeline-wizard__meta">
-                <Check className="size-3.5" aria-hidden="true" />
-                {connectorsById.get(source.connector)?.name ?? source.connector}
-                <span aria-hidden="true">·</span>
-                <code>
-                  {rootTable ? wizardSourceRef(source.id, rootTable) : t('wizard.awaitingTable')}
-                </code>
-              </p>
-            )}
-            {rootTable && relations.length > 0 && (
-              <div className="pipeline-wizard__identity">
-                <span>{t('wizard.relations.documentKey')}</span>
-                {rootKey.length > 0 ? (
-                  <code>{rootKey.join(', ')}</code>
-                ) : (
-                  <label className="pipeline-wizard__identity-select">
-                    <span className="sr-only">{t('wizard.relations.chooseDocumentKey')}</span>
+                <div
+                  className="pipeline-wizard__root-columns"
+                  aria-label={t('wizard.columnsLabel')}
+                >
+                  <span>{t('wizard.columnsLabel')}:</span>
+                  <div>
+                    {rootFields.slice(0, 4).map((field) => (
+                      <code key={field.name}>{field.name}</code>
+                    ))}
+                    {rootFields.length > 4 && (
+                      <span>{t('wizard.moreColumns', { count: rootFields.length - 4 })}</span>
+                    )}
+                    {rootFields.length === 0 && (
+                      <span className="pipeline-wizard__root-columns-empty">
+                        {rootSchemaQuery?.isPending
+                          ? t('wizard.relations.loadingSchema')
+                          : t('wizard.relations.schemaUnavailable')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {rootKey.length === 0 && rootFields.length > 0 && (
+                  <label className="pipeline-wizard__identity">
+                    <span>{t('wizard.relations.documentKey')}</span>
                     <Select
                       value={rootKey[0] ?? ''}
                       onValueChange={(value) => setRootKey(value ? [value] : [])}
                     >
-                      <SelectTrigger className="pipeline-wizard__select">
+                      <SelectTrigger
+                        className="pipeline-wizard__select"
+                        aria-label={t('wizard.relations.chooseDocumentKey')}
+                      >
                         <SelectValue placeholder={t('wizard.relations.chooseDocumentKey')} />
                       </SelectTrigger>
                       <SelectContent>
@@ -964,18 +967,123 @@ export function WizardBuilder({ pipelineId, draft }: { pipelineId: string; draft
                     </Select>
                   </label>
                 )}
-                {rootKey.length === 0 && rootFields.length === 0 && (
-                  <span className="pipeline-wizard__field-hint">
-                    {rootSchemaQuery?.isPending
-                      ? t('wizard.relations.loadingSchema')
-                      : t('wizard.relations.schemaRequired')}
-                  </span>
-                )}
               </div>
+            ) : (
+              <>
+                <div className="pipeline-wizard__node-heading">
+                  <span className="pipeline-wizard__node-icon pipeline-wizard__node-icon--source">
+                    <Database className="size-4" aria-hidden="true" />
+                  </span>
+                  <div className="pipeline-wizard__node-title">
+                    <h1>{t('wizard.rootTableLabel')}</h1>
+                    <p>{t('wizard.sourceHint')}</p>
+                  </div>
+                  {!rootTable && (
+                    <span className="pipeline-wizard__setup-badge">
+                      {t('wizard.setupRequired')}
+                    </span>
+                  )}
+                </div>
+                <div className="pipeline-wizard__fields">
+                  <label className="pipeline-wizard__field">
+                    <span>{t('wizard.sourceSelect')}</span>
+                    <Select
+                      value={rootDraftSourceId}
+                      onValueChange={(value) => {
+                        setRootDraftSourceId(value ?? '')
+                        setRootDraftTable('')
+                      }}
+                    >
+                      <SelectTrigger
+                        className="pipeline-wizard__select"
+                        aria-label={t('wizard.sourceSelect')}
+                      >
+                        <SelectValue
+                          placeholder={isLoading ? t('wizard.loading') : t('wizard.sourceSelect')}
+                        />
+                      </SelectTrigger>
+                      <SelectContent className="pipeline-wizard__source-select-content">
+                        {sources.map((item) => {
+                          const connector = connectorsById.get(item.connector)
+                          return (
+                            <SelectItem key={item.id} value={item.id}>
+                              <ConnectorIcon
+                                connectorId={item.connector}
+                                name={connector?.name ?? item.connector}
+                                iconPath={connector?.icon}
+                                size={20}
+                              />
+                              <span className="pipeline-wizard__source-option-label">
+                                {item.id}
+                              </span>
+                            </SelectItem>
+                          )
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </label>
+                  {rootDraftSource && (
+                    <div className="pipeline-wizard__field">
+                      <span>{t('wizard.tableSelect')}</span>
+                      <PipelineSourceTablePicker
+                        key={rootDraftSource.id}
+                        sourceId={rootDraftSource.id}
+                        sources={sources}
+                        options={sourceTableOptions}
+                        loading={sourceTableLoading}
+                        value={rootDraftTable}
+                        selectionMode="single"
+                        allowPatterns={false}
+                        onChange={(tables) => setRootDraftTable(tables[0] ?? '')}
+                      />
+                    </div>
+                  )}
+                </div>
+                {rootDraftSource && (
+                  <p className="pipeline-wizard__meta">
+                    <Check className="size-3.5" aria-hidden="true" />
+                    {connectorsById.get(rootDraftSource.connector)?.name ??
+                      rootDraftSource.connector}
+                    <span aria-hidden="true">·</span>
+                    <code>
+                      {rootDraftTable
+                        ? wizardSourceRef(rootDraftSource.id, rootDraftTable)
+                        : t('wizard.awaitingTable')}
+                    </code>
+                  </p>
+                )}
+                {rootTable &&
+                  (relations.length > 0 || steps.length > 0) &&
+                  (rootDraftSourceId !== sourceId || rootDraftTable !== rootTable) && (
+                    <p className="pipeline-wizard__root-change-warning" role="status">
+                      {t('wizard.rootChangeWarning')}
+                    </p>
+                  )}
+                <div className="pipeline-wizard__root-edit-actions">
+                  {rootTable && (
+                    <Button type="button" variant="outline" size="sm" onClick={cancelRootEdit}>
+                      {t('wizard.cancelRootEdit')}
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={
+                      !rootDraftSourceId ||
+                      !rootDraftTable ||
+                      Boolean(rootDraftSource && rootDraftSchemaQuery?.isPending)
+                    }
+                    onClick={confirmRootTable}
+                  >
+                    <Check className="size-3.5" aria-hidden="true" />
+                    {rootTable ? t('wizard.saveRootChanges') : t('wizard.confirmRootTable')}
+                  </Button>
+                </div>
+              </>
             )}
           </WizardNodeCard>
 
-          {rootTable && (
+          {rootTable && !isRootEditing ? (
             <>
               {relations.length > 0 || steps.length > 0 ? (
                 <AddRelationControl onAdd={(shape) => addRelation('root', shape)} />
@@ -989,6 +1097,11 @@ export function WizardBuilder({ pipelineId, draft }: { pipelineId: string; draft
               )}
               {renderRelationTree('root')}
             </>
+          ) : (
+            <div className="pipeline-wizard__root-add-prompt">
+              <AddRelationControl onAdd={(shape) => addRelation('root', shape)} disabled />
+              <p>{t('wizard.confirmRootFirst')}</p>
+            </div>
           )}
 
           {steps.map((step, index) => (
@@ -1255,7 +1368,13 @@ function FlowConnector() {
   )
 }
 
-function AddRelationControl({ onAdd }: { onAdd: (shape: WizardRelationShape) => void }) {
+function AddRelationControl({
+  onAdd,
+  disabled = false,
+}: {
+  onAdd: (shape: WizardRelationShape) => void
+  disabled?: boolean
+}) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   return (
@@ -1266,6 +1385,7 @@ function AddRelationControl({ onAdd }: { onAdd: (shape: WizardRelationShape) => 
             <button
               type="button"
               className="pipeline-wizard__add-button"
+              disabled={disabled}
               aria-label={t('wizard.relations.addRelatedTable')}
               title={t('wizard.relations.addRelatedTable')}
             >
@@ -1276,7 +1396,7 @@ function AddRelationControl({ onAdd }: { onAdd: (shape: WizardRelationShape) => 
         <DropdownMenuContent align="center" sideOffset={8} className="pipeline-wizard__step-menu">
           <DropdownMenuGroup>
             <DropdownMenuLabel>{t('wizard.relations.addRelatedTable')}</DropdownMenuLabel>
-            {(['object', 'array'] as const).map((shape) => (
+            {wizardRelationAddShapes.map((shape) => (
               <DropdownMenuItem
                 key={shape}
                 onClick={() => {
@@ -1329,7 +1449,7 @@ function AddStepControl({
           {includeRelations && onAddRelation && (
             <DropdownMenuGroup>
               <DropdownMenuLabel>{t('wizard.relations.addRelatedTable')}</DropdownMenuLabel>
-              {(['object', 'array'] as const).map((shape) => (
+              {wizardRelationAddShapes.map((shape) => (
                 <DropdownMenuItem
                   key={shape}
                   onClick={() => {

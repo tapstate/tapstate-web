@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   canCompileWizardRelations,
+  wizardRelationAddShapes,
   wizardRelationTransformReady,
   wizardRelationTransformsPreserveRequiredFields,
   type WizardRelation,
@@ -27,6 +28,10 @@ function relation(overrides: Partial<WizardRelation> = {}): WizardRelation {
 }
 
 describe('pipeline Wizard relation model', () => {
+  it('offers every supported Nest shape when adding a relation', () => {
+    expect(wizardRelationAddShapes).toEqual(['object', 'array', 'flat'])
+  })
+
   it('accepts a nested relation tree with flat, object, and array shapes', () => {
     const child = relation({
       id: 'items',

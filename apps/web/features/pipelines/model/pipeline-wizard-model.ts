@@ -3,6 +3,12 @@ import type { PipelineJsonObject } from '@/service/pipelines/pipeline-client'
 export type WizardRelationShape = 'flat' | 'object' | 'array'
 export type WizardRelationTransformType = 'filter' | 'map'
 
+export const wizardRelationAddShapes = [
+  'object',
+  'array',
+  'flat',
+] as const satisfies readonly WizardRelationShape[]
+
 export interface WizardRootTable {
   id: 'root'
   sourceId: string

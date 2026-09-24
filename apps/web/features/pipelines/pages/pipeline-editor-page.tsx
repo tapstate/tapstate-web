@@ -309,7 +309,7 @@ function PipelineWorkspaceNav({
     <aside
       className={cn(
         'pipeline-workspace__navigation relative flex h-full shrink-0 overflow-hidden transition-[width] duration-150 motion-reduce:transition-none',
-        collapsed ? 'w-14' : 'w-62 max-md:w-52',
+        collapsed ? 'w-14' : 'w-62 max-md:w-52 max-sm:w-14',
       )}
       data-testid="workspace-navigation"
       data-collapsed={collapsed}
@@ -322,14 +322,16 @@ function PipelineWorkspaceNav({
             to="/pipelines"
             className={cn(
               'inline-flex h-8 shrink-0 items-center rounded-lg text-slate-700 transition-[background-color,transform] hover:bg-slate-100 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95',
-              collapsed ? 'size-8 justify-center' : 'max-w-full gap-1 px-1.5',
+              collapsed
+                ? 'size-8 justify-center'
+                : 'max-w-full gap-1 px-1.5 max-sm:size-8 max-sm:justify-center max-sm:gap-0 max-sm:px-0',
             )}
             aria-label={t('pipelines.workspace.back')}
           >
             <ChevronLeft className="size-4 shrink-0" aria-hidden="true" />
             {!collapsed && (
               <span
-                className="min-w-0 truncate text-[13px] font-semibold text-slate-800"
+                className="min-w-0 truncate text-[13px] font-semibold text-slate-800 max-sm:sr-only"
                 data-testid="workspace-navigation-title"
               >
                 {t('nav.pipelines')}
@@ -339,7 +341,7 @@ function PipelineWorkspaceNav({
           {!collapsed && (
             <button
               type="button"
-              className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-[background-color,color,transform] hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95"
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-[background-color,color,transform] hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-sm:hidden"
               aria-label={t('pipelines.workspace.navigation.collapse')}
               onClick={() => onCollapsedChange(true)}
             >
@@ -351,7 +353,7 @@ function PipelineWorkspaceNav({
         {collapsed && (
           <button
             type="button"
-            className="mt-1 inline-flex size-10 shrink-0 items-center justify-center self-center rounded-lg text-slate-400 transition-[background-color,color,transform] hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95"
+            className="mt-1 inline-flex size-10 shrink-0 items-center justify-center self-center rounded-lg text-slate-400 transition-[background-color,color,transform] hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-sm:hidden"
             aria-label={t('pipelines.workspace.navigation.expand')}
             onClick={() => onCollapsedChange(false)}
           >
@@ -359,12 +361,17 @@ function PipelineWorkspaceNav({
           </button>
         )}
 
-        <div className={cn('mt-5 flex items-start gap-3 px-2', collapsed && 'justify-center px-0')}>
+        <div
+          className={cn(
+            'mt-5 flex items-start gap-3 px-2 max-sm:justify-center max-sm:px-0',
+            collapsed && 'justify-center px-0',
+          )}
+        >
           <span className="pipeline-workspace__identity-mark mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg">
             <Workflow className="size-4" aria-hidden="true" />
           </span>
           {!collapsed && (
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex min-w-0 flex-1 flex-col gap-1 max-sm:sr-only">
               <span className="block max-w-full min-w-0 truncate text-[13px] leading-5 font-semibold text-slate-800">
                 {pipelineId}
               </span>
@@ -390,7 +397,9 @@ function PipelineWorkspaceNav({
                   activeSection={activeSection}
                 >
                   <Icon className="size-4 shrink-0" aria-hidden="true" />
-                  <span className={cn(collapsed && 'sr-only')}>{t(item.labelKey)}</span>
+                  <span className={cn('max-sm:sr-only', collapsed && 'sr-only')}>
+                    {t(item.labelKey)}
+                  </span>
                 </WorkspaceNavLink>
               </div>
             )
