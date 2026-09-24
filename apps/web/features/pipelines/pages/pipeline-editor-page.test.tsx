@@ -331,6 +331,25 @@ vi.mock('../components/node-config/pipeline-node-config-panel', () => ({
   ),
 }))
 
+vi.mock('./wizard-builder', () => ({
+  WizardBuilder: ({
+    pipelineId,
+    draft,
+    etag,
+  }: {
+    pipelineId: string
+    draft: { mode: string }
+    etag: string
+  }) => (
+    <div
+      data-testid="wizard-builder"
+      data-pipeline-id={pipelineId}
+      data-draft-mode={draft.mode}
+      data-etag={etag}
+    />
+  ),
+}))
+
 import { PipelineEditorPage, PipelineWorkspacePage } from './pipeline-editor-page'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
@@ -473,6 +492,46 @@ afterEach(async () => {
 })
 
 describe('PipelineEditorPage', () => {
+  it('opens a Wizard draft in Wizard mode without hydrating it as a DAG', async () => {
+    getPipelineDraft.mockResolvedValue({
+      draft: {
+        pipelineId: 'orders_to_warehouse',
+        schemaVersion: 1,
+        revision: 3,
+        mode: 'wizard',
+        name: 'orders_to_warehouse',
+        description: null,
+        graph: null,
+        wizard: {
+          root: { id: 'root', sourceId: 'mysql_feynman', table: 'Player', key: ['id'] },
+          related: [],
+          transforms: [],
+          output: { kind: 'atlas', config: {} },
+        },
+        baseArtifactHash: null,
+        publishedDraftRevision: null,
+        publishedArtifactHash: null,
+        createdAt: '2026-09-21T00:00:00Z',
+        updatedAt: '2026-09-21T00:00:00Z',
+        updatedBy: 'test',
+      },
+      etag: '"3"',
+    })
+    await renderPage()
+
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="wizard-builder"]')).not.toBeNull(),
+    )
+    const wizard = document.querySelector<HTMLElement>('[data-testid="wizard-builder"]')
+    expect(wizard?.dataset).toMatchObject({
+      pipelineId: 'orders_to_warehouse',
+      draftMode: 'wizard',
+      etag: '"3"',
+    })
+    expect(getPipeline).not.toHaveBeenCalled()
+    expect(getPipelineLayout).not.toHaveBeenCalled()
+  })
+
   it('keeps the canvas in the Build route and exposes separate workspace navigation', async () => {
     getPipelineStatus.mockResolvedValue({ pipelineId: 'orders_to_warehouse', state: 'RUNNING' })
     await renderPage()
@@ -499,6 +558,9 @@ describe('PipelineEditorPage', () => {
     expect(elementWithText('a', 'Build')?.className).toContain(
       'pipeline-workspace__nav-link--active',
     )
+    expect(elementWithText('a', 'Build')?.querySelector('span')?.className).toContain(
+      'max-sm:sr-only',
+    )
   })
 
   it('keeps navigation as a docked workspace aside inside the 4px workspace gutter', async () => {
@@ -510,6 +572,7 @@ describe('PipelineEditorPage', () => {
     const navigation = document.querySelector<HTMLElement>('[data-testid="workspace-navigation"]')
     expect(navigation?.dataset.collapsed).toBe('false')
     expect(navigation?.className).toContain('pipeline-workspace__navigation')
+    expect(navigation?.className).toContain('max-sm:w-14')
     expect(navigation?.className).toContain('relative')
     expect(navigation?.className).not.toContain('absolute')
     expect(navigation?.className).not.toContain('p-1')

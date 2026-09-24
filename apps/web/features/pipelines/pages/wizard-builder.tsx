@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
   ArrowDown,
@@ -7,18 +7,20 @@ import {
   Database,
   LoaderCircle,
   Plus,
+  RefreshCw,
   Table2,
   Trash2,
   WandSparkles,
 } from 'lucide-react'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type {
   PipelineJsonObject,
-  PipelineMutation,
-  PipelineTransformStep,
+  PipelineDraft,
+  PipelineDraftMutation,
 } from '@/service/pipelines/pipeline-client'
+import type { SourceSchemaTable } from '@/service/source-client'
 
 import { ConnectorIcon } from '@/components/connector-icon'
 import { Button } from '@/components/ui/button'
@@ -37,7 +39,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { createPipeline } from '@/service/pipelines/pipeline-client'
+import {
+  getPipelineDraft,
+  previewPipelineDraft,
+  publishPipelineDraft,
+  runPipeline,
+  updatePipelineDraft,
+  type PipelineDraftPreview,
+} from '@/service/pipelines/pipeline-client'
 import { getSourceSchema, listConnectors, listSources } from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -46,9 +55,28 @@ import type { PipelineTransformConfigurationPatch } from '../components/transfor
 
 import { PipelineSourceTablePicker } from '../components/node-config/pipeline-node-config-panel'
 import { TransformEditor } from '../components/transform/transform-editor'
+import {
+  WizardRelationCard,
+  type WizardPipelineEntity,
+  type WizardRelationSource,
+} from '../components/wizard-relation-card'
+import {
+  canCompileWizardRelations,
+  wizardRelationAddShapes,
+  wizardRelationChildren,
+  wizardRelationDescendants,
+  wizardRelationTransformsPreserveRequiredFields,
+  wizardSourceRef,
+  wizardRelationTransformReady,
+  type WizardRelation,
+  type WizardRelationShape,
+  type WizardRelationTransform,
+  type WizardRelationTransformType,
+  type WizardRootTable,
+} from '../model/pipeline-wizard-model'
 
 const ATLAS_CONNECTOR_ID = 'mongodb-atlas'
-const transformTypes: PipelineTransformType[] = ['filter', 'map', 'join', 'union', 'nest', 'js']
+const transformTypes: PipelineTransformType[] = ['filter', 'map']
 
 interface WizardStep {
   id: string
@@ -58,219 +86,189 @@ interface WizardStep {
   options?: PipelineJsonObject | null
 }
 
-const fanInTransformTypes = new Set<PipelineTransformType>(['join', 'union'])
-
-function inputReferenceFor(sourceId: string, tables: readonly string[], previousStep?: WizardStep) {
-  if (previousStep) return previousStep.id
-  const references = sourceReferences(sourceId, tables)
-  return references.length === 1 ? (references[0] ?? '') : references
-}
-
-function createWizardStep(
-  type: PipelineTransformType,
-  id: string,
-  sourceId: string,
-  sourceTables: readonly string[],
-): WizardStep {
-  const references = sourceReferences(sourceId, sourceTables)
-  if (type === 'join' && references.length > 1) {
-    return {
-      id,
-      type,
-      from: { left: references[0], right: references[1] },
-      body: { engine: 'duckdb', sql: '' },
-    }
-  }
-  if (type === 'union' && references.length > 1) {
-    return { id, type, from: references, body: {} }
-  }
-  if (type === 'nest') {
-    return {
-      id,
-      type,
-      body: { root: { from: references[0] ?? '', key: [], mode: 'upsert' } },
-    }
-  }
-  if (type === 'js') return { id, type, body: { engine: 'javascript', script: '' } }
-  return { id, type, body: type === 'filter' ? { expr: '' } : { fields: {} } }
+function createWizardStep(type: PipelineTransformType, id: string, from: string): WizardStep {
+  if (type === 'js') return { id, type, from, body: { engine: 'javascript', script: '' } }
+  if (type === 'filter') return { id, type, from, body: { expr: '' } }
+  return { id, type, from, body: { fields: {} } }
 }
 
 function transformStepReady(step: WizardStep) {
-  if (step.type === 'filter') return typeof step.body.expr === 'string' && step.body.expr.trim() !== ''
+  if (step.type === 'filter')
+    return typeof step.body.expr === 'string' && step.body.expr.trim() !== ''
   if (step.type === 'map') {
-    const fields = step.body.fields
-    return (
-      typeof fields === 'object' &&
-      fields !== null &&
-      !Array.isArray(fields) &&
-      Object.entries(fields).some(([key, value]) => key.trim() && value !== '')
-    )
+    return wizardRelationTransformReady({ id: step.id, type: 'map', body: step.body })
   }
-  if (step.type === 'join') {
-    const inputs = step.from
-    return (
-      typeof inputs === 'object' &&
-      inputs !== null &&
-      !Array.isArray(inputs) &&
-      Object.values(inputs).filter((value) => typeof value === 'string' && value.trim()).length >= 2 &&
-      typeof step.body.sql === 'string' &&
-      step.body.sql.trim() !== ''
-    )
-  }
-  if (step.type === 'union') {
-    return (
-      Array.isArray(step.from) &&
-      step.from.filter((value) => typeof value === 'string' && value.trim()).length >= 2
-    )
-  }
-  if (step.type === 'nest') {
-    const root =
-      typeof step.body.root === 'object' &&
-      step.body.root !== null &&
-      !Array.isArray(step.body.root)
-        ? (step.body.root as Record<string, unknown>)
-        : null
-    return (
-      root !== null &&
-      typeof root.from === 'string' &&
-      root.from.trim() !== '' &&
-      Array.isArray(root.key) &&
-      root.key.length > 0
-    )
-  }
-  return step.type === 'js' && typeof step.body.script === 'string' && step.body.script.trim() !== ''
+  return (
+    step.type === 'js' && typeof step.body.script === 'string' && step.body.script.trim() !== ''
+  )
 }
 
-function sourceReferences(sourceId: string, tables: readonly string[]) {
-  return tables.map((table) => `${sourceId}.${table}`)
+function objectValue(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null
 }
 
-function previewValue(value: unknown) {
-  if (typeof value === 'string') return value.trim() ? value : "''"
-  if (value === undefined) return "''"
-  return JSON.stringify(value)
+function stringValue(value: unknown) {
+  return typeof value === 'string' ? value : ''
 }
 
-function previewDsl(
-  pipelineId: string | undefined,
-  sourceId: string,
-  sourceTables: readonly string[],
-  steps: readonly WizardStep[],
-  destinationId: string | undefined,
-  destinationTable: string,
-) {
-  const transforms = steps.length
-    ? steps
-        .map((step, index) => {
-          const from = step.from ?? inputReferenceFor(sourceId, sourceTables, steps[index - 1])
-          const body = Object.entries(step.body)
-            .map(([key, value]) => `    ${key}: ${previewValue(value)}`)
-            .join('\n')
-          const options = step.options
-            ? `    options: ${previewValue(step.options)}`
-            : ''
-          return [
-            `  - id: ${step.id}`,
-            `    type: ${step.type}`,
-            `    from: ${previewValue(from)}`,
-            body,
-            options,
-          ]
-            .filter(Boolean)
-            .join('\n')
-        })
-        .join('\n')
-    : '  []'
-  const outputReference = steps.at(-1)?.id ?? inputReferenceFor(sourceId, sourceTables)
-  const renameTarget =
-    sourceTables.length === 1 && destinationTable.trim() && sourceTables[0] !== destinationTable.trim()
-      ? `\n      rename:\n        map:\n          ${sourceTables[0]}: ${destinationTable.trim()}`
-      : ''
-  const serve = destinationId
-    ? `serve:\n  from: ${previewValue(outputReference)}\n  sync:\n    - id: ${destinationId}_${destinationTable.trim() || 'output'}\n      source: ${destinationId}\n      write_mode: upsert${renameTarget}`
-    : 'serve: configure_atlas'
-
-  return `version: tapstate/v1
-kind: pipeline
-id: ${pipelineId || 'your_pipeline'}
-source: ${sourceId || 'choose_source'}
-transforms:
-${transforms}
-${serve}`
+function stringList(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : []
 }
 
-function buildPipelineMutation({
-  pipelineId,
-  description,
-  sourceId,
-  sourceTables,
-  steps,
-  destinationId,
-  destinationTable,
-}: {
-  pipelineId: string
-  description: string
+function transformFields(step: WizardStep): PipelineJsonObject {
+  if (step.type === 'filter') return { expr: step.body.expr ?? '' }
+  if (step.type === 'map') return objectValue(step.body.fields) ?? {}
+  return { script: step.body.script ?? '' }
+}
+
+interface WizardInitialState {
   sourceId: string
-  sourceTables: readonly string[]
-  steps: readonly WizardStep[]
+  rootTable: string
+  rootKey: string[]
+  relations: WizardRelation[]
+  steps: WizardStep[]
   destinationId: string
   destinationTable: string
-}): PipelineMutation {
-  const initialReferences = sourceReferences(sourceId, sourceTables)
-  const initialReference = initialReferences.length === 1 ? initialReferences[0] : initialReferences
-  const rename =
-    sourceTables.length === 1 && destinationTable !== sourceTables[0]
-      ? { map: { [sourceTables[0]!]: destinationTable } }
-      : undefined
-  const transforms: PipelineTransformStep[] = steps.map((step, index) => ({
-    id: step.id,
-    from: step.from ?? (index === 0 ? initialReference : steps[index - 1]!.id),
-    type: step.type,
-    ...step.body,
-    ...(step.options ? { options: step.options } : {}),
-  }))
-  const outputReference = steps.at(-1)?.id ?? initialReference
+}
+
+function initialWizardState(draft: PipelineDraft): WizardInitialState {
+  const wizard = objectValue(draft.wizard) ?? {}
+  const root = objectValue(wizard.root) ?? {}
+  const output = objectValue(wizard.output) ?? {}
+  const outputConfig = objectValue(output.config) ?? {}
+  const relations = Array.isArray(wizard.related) ? wizard.related : []
+  const transforms = Array.isArray(wizard.transforms) ? wizard.transforms : []
 
   return {
-    id: pipelineId,
-    metadata: { labels: {}, description: description || null },
-    sources: [sourceId],
-    transforms,
-    view: null,
-    serve: {
-      id: 'atlas',
-      from: outputReference,
-      sync: [
+    sourceId: stringValue(root.sourceId),
+    rootTable: stringValue(root.table),
+    rootKey: stringList(root.key),
+    relations: relations.flatMap((value) => {
+      const item = objectValue(value)
+      const relation = objectValue(item?.relation)
+      if (!item || !relation || typeof item.id !== 'string') return []
+      const conditions = Array.isArray(relation.on) ? relation.on : []
+      const preTransforms = Array.isArray(item.preTransforms) ? item.preTransforms : []
+      const conditionRows = conditions.flatMap((conditionValue) => {
+        const condition = objectValue(conditionValue)
+        return condition
+          ? [
+              {
+                id: crypto.randomUUID(),
+                childField: stringValue(condition.childField),
+                parentField: stringValue(condition.parentField),
+              },
+            ]
+          : []
+      })
+      return [
         {
-          id: `${destinationId}_${destinationTable}`,
-          source: destinationId,
-          writeMode: 'upsert',
-          ...(rename ? { rename } : {}),
-        },
-      ],
-    },
-    settings: null,
-    experimental: null,
+          id: item.id,
+          sourceId: stringValue(item.sourceId),
+          table: stringValue(item.table),
+          parentId: stringValue(item.parentId) || 'root',
+          shape:
+            relation.shape === 'flat' || relation.shape === 'array' ? relation.shape : 'object',
+          path: stringValue(relation.path),
+          key:
+            stringList(relation.key).length > 0
+              ? stringList(relation.key)
+              : stringList(relation.arrayKey),
+          arrayKey:
+            stringList(relation.arrayKey).length > 0
+              ? stringList(relation.arrayKey)
+              : stringList(relation.key),
+          conditions:
+            conditionRows.length > 0
+              ? conditionRows
+              : [{ id: crypto.randomUUID(), childField: '', parentField: '' }],
+          transforms: preTransforms.flatMap<WizardRelationTransform>((transformValue) => {
+            const transform = objectValue(transformValue)
+            const fields = objectValue(transform?.fields)
+            if (
+              typeof transform?.id !== 'string' ||
+              (transform.type !== 'filter' && transform.type !== 'map')
+            ) {
+              return []
+            }
+            return transform.type === 'filter'
+              ? [
+                  {
+                    id: transform.id,
+                    type: 'filter',
+                    body: { expr: stringValue(fields?.expr) },
+                  } satisfies WizardRelationTransform,
+                ]
+              : [
+                  {
+                    id: transform.id,
+                    type: 'map',
+                    body: { fields: fields ?? {} },
+                  } satisfies WizardRelationTransform,
+                ]
+          }),
+        } satisfies WizardRelation,
+      ]
+    }),
+    steps: transforms.flatMap((value) => {
+      const step = objectValue(value)
+      const fields = objectValue(step?.fields) ?? {}
+      if (typeof step?.id !== 'string' || (step.type !== 'filter' && step.type !== 'map')) return []
+      return [
+        {
+          id: step.id,
+          type: step.type,
+          body: step.type === 'filter' ? { expr: stringValue(fields.expr) } : { fields },
+        } satisfies WizardStep,
+      ]
+    }),
+    destinationId: stringValue(outputConfig.sourceId),
+    destinationTable: stringValue(outputConfig.table ?? outputConfig.destinationTable),
   }
 }
 
 export function WizardBuilder({
-  onComplete,
   pipelineId,
-  description,
+  draft,
+  etag,
 }: {
-  onComplete: () => void
-  pipelineId?: string
-  description?: string
+  pipelineId: string
+  draft: PipelineDraft
+  etag: string
 }) {
   const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
-  const [sourceId, setSourceId] = useState('')
-  const [sourceTables, setSourceTables] = useState<string[]>([])
-  const [steps, setSteps] = useState<WizardStep[]>([])
-  const [destinationTable, setDestinationTable] = useState('')
+  const queryClient = useQueryClient()
+  const [initial] = useState(() => initialWizardState(draft))
+  const [sourceId, setSourceId] = useState(initial.sourceId)
+  const [rootTable, setRootTable] = useState(initial.rootTable)
+  const [isRootEditing, setIsRootEditing] = useState(!initial.rootTable)
+  const [rootDraftSourceId, setRootDraftSourceId] = useState(initial.sourceId)
+  const [rootDraftTable, setRootDraftTable] = useState(initial.rootTable)
+  const [rootKey, setRootKey] = useState<string[]>(initial.rootKey)
+  const [relations, setRelations] = useState<WizardRelation[]>(initial.relations)
+  const [steps, setSteps] = useState<WizardStep[]>(initial.steps)
+  const [destinationSourceId, setDestinationSourceId] = useState(initial.destinationId)
+  const [destinationTable, setDestinationTable] = useState(initial.destinationTable)
+  const description = draft.description ?? ''
   const [isSaving, setIsSaving] = useState(false)
+  const [isPublishing, setIsPublishing] = useState(false)
+  const [isStarting, setIsStarting] = useState(false)
   const [error, setError] = useState('')
+  const [saveState, setSaveState] = useState<'saving' | 'saved' | 'error'>('saved')
+  const [preview, setPreview] = useState<PipelineDraftPreview | null>(null)
+  const [previewError, setPreviewError] = useState('')
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const persistedDraftRef = useRef(draft)
+  const etagRef = useRef(etag)
+  const lastSavedFingerprint = useRef<string | null>(null)
+  const saveBaselineInitialized = useRef(false)
+  const currentWriteRef = useRef<PipelineDraftMutation | null>(null)
+  const pendingSaveRef = useRef<Promise<{ draft: PipelineDraft; etag: string }> | null>(null)
 
   const sourcesQuery = useQuery({
     queryKey: ['wizard', 'sources'],
@@ -282,13 +280,71 @@ export function WizardBuilder({
   })
   const sources = sourcesQuery.data ?? []
   const source = sources.find((item) => item.id === sourceId)
-  const sourceSchemaQuery = useQuery({
-    queryKey: ['wizard', 'source-schema', sourceId],
-    queryFn: () => getSourceSchema(sourceId, apiFetch),
-    enabled: Boolean(sourceId && source?.tables === null),
+  const rootDraftSource = sources.find((item) => item.id === rootDraftSourceId)
+  const schemaSourceIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [sourceId, rootDraftSourceId, ...relations.map((relation) => relation.sourceId)].filter(
+            Boolean,
+          ),
+        ),
+      ),
+    [relations, rootDraftSourceId, sourceId],
+  )
+  const schemaQueries = useQueries({
+    queries: schemaSourceIds.map((id) => ({
+      queryKey: ['wizard', 'source-schema', id],
+      queryFn: () => getSourceSchema(id, apiFetch),
+      enabled: Boolean(sources.find((item) => item.id === id)),
+      retry: false,
+    })),
   })
+  const schemasBySourceId = useMemo(
+    () =>
+      new Map<string, (typeof schemaQueries)[number]['data']>(
+        schemaSourceIds.map((id, index) => [id, schemaQueries[index]?.data]),
+      ),
+    [schemaQueries, schemaSourceIds],
+  )
+  const sourceSchema = schemasBySourceId.get(rootDraftSourceId)
+  const rootSchemaQuery = schemaQueries[schemaSourceIds.indexOf(sourceId)]
+  const rootDraftSchemaQuery = schemaQueries[schemaSourceIds.indexOf(rootDraftSourceId)]
+  const connectorsById = useMemo(
+    () => new Map((connectorsQuery.data ?? []).map((connector) => [connector.id, connector])),
+    [connectorsQuery.data],
+  )
+  const sourceTableOptions = useMemo(() => {
+    if (!rootDraftSource) return []
+    if (rootDraftSource.tables === null) {
+      return (sourceSchema?.tables ?? []).map((table) => ({ label: table.name, value: table.name }))
+    }
+    return (rootDraftSource.tables ?? [])
+      .map((table) => table.name)
+      .filter((table): table is string => Boolean(table))
+      .map((table) => ({ label: table, value: table }))
+  }, [rootDraftSource, sourceSchema?.tables])
+  const sourceTableLoading = Boolean(
+    rootDraftSource?.tables === null &&
+    schemaQueries[schemaSourceIds.indexOf(rootDraftSourceId)]?.isPending,
+  )
+  const tableDetailsBySource = useMemo(() => {
+    const details = new Map<string, Map<string, SourceSchemaTable>>()
+    for (const [id, schema] of schemasBySourceId) {
+      details.set(id, new Map((schema?.tables ?? []).map((table) => [table.name, table])))
+    }
+    return details
+  }, [schemasBySourceId])
+  const rootDetails = tableDetailsBySource.get(sourceId)?.get(rootTable)
+  const rootDraftDetails = tableDetailsBySource.get(rootDraftSourceId)?.get(rootDraftTable)
+  const rootFields = rootDetails?.fields ?? []
+  const saveBaselineReady =
+    !sourcesQuery.isPending &&
+    !connectorsQuery.isPending &&
+    !(Boolean(source && rootTable) && rootSchemaQuery?.isPending)
+
   const atlasDestination = useMemo(
-    () => sources.find((source) => source.connector === ATLAS_CONNECTOR_ID) ?? null,
+    () => sources.find((item) => item.connector === ATLAS_CONNECTOR_ID) ?? null,
     [sources],
   )
   const mongodbDestination = useMemo(() => {
@@ -299,35 +355,24 @@ export function WizardBuilder({
       null
     )
   }, [sources])
-  const destinationSource = atlasDestination ?? mongodbDestination
-  const connectorsById = useMemo(
-    () => new Map((connectorsQuery.data ?? []).map((connector) => [connector.id, connector])),
-    [connectorsQuery.data],
-  )
-  const sourceTableOptions = useMemo(() => {
-    if (!source) return []
-    if (source.tables === null) {
-      return (sourceSchemaQuery.data?.tables ?? []).map((table) => ({
-        label: table.name,
-        value: table.name,
-      }))
+  const destinationSource =
+    sources.find((item) => item.id === destinationSourceId) ??
+    atlasDestination ??
+    mongodbDestination
+  useEffect(() => {
+    if (destinationSource && destinationSource.id !== destinationSourceId) {
+      setDestinationSourceId(destinationSource.id)
     }
-    return (source.tables ?? [])
-      .map((table) => table.name)
-      .filter((table): table is string => Boolean(table))
-      .map((table) => ({ label: table, value: table }))
-  }, [source, sourceSchemaQuery.data?.tables])
-  const sourceTableSummary =
-    sourceTables.length > 1
-      ? `${sourceTables[0]} +${sourceTables.length - 1}`
-      : (sourceTables[0] ?? '')
-  const sourceTableLoading = Boolean(source?.tables === null && sourceSchemaQuery.isPending)
+  }, [destinationSource, destinationSourceId])
   const destinationSchemaQuery = useQuery({
     queryKey: ['wizard', 'destination-schema', destinationSource?.id],
     queryFn: () => getSourceSchema(destinationSource!.id, apiFetch),
     enabled: Boolean(destinationSource && destinationSource.tables === null),
     retry: false,
   })
+  const destinationTablesLoading = Boolean(
+    destinationSource?.tables === null && destinationSchemaQuery.isPending,
+  )
   const destinationTableOptions = useMemo(() => {
     if (!destinationSource) return []
     if (destinationSource.tables === null) {
@@ -337,27 +382,457 @@ export function WizardBuilder({
       .map((table) => table.name)
       .filter((table): table is string => Boolean(table))
   }, [destinationSchemaQuery.data?.tables, destinationSource])
-  const ready = Boolean(
-    pipelineId &&
-    sourceId &&
-    sourceTables.length > 0 &&
-    steps.every(transformStepReady) &&
-    destinationSource &&
-    destinationTable.trim(),
-  )
-  const isLoading = sourcesQuery.isPending || connectorsQuery.isPending
   const destinationConnector = destinationSource
     ? connectorsById.get(destinationSource.connector)
     : undefined
 
-  function addStepOfType(type: PipelineTransformType) {
-    if (!sourceId || sourceTables.length === 0) return
-    if (fanInTransformTypes.has(type) && (steps.length > 0 || sourceTables.length < 2)) return
-    const nextIndex = steps.length + 1
-    setSteps((current) => [
+  const draftWrite = useMemo<PipelineDraftMutation>(
+    () => ({
+      pipelineId,
+      mode: 'wizard',
+      name: draft.name ?? pipelineId,
+      description: description.trim() || null,
+      graph: null,
+      baseArtifactHash: draft.baseArtifactHash,
+      wizard: {
+        root: { id: 'root', sourceId, table: rootTable, key: rootKey, preTransforms: [] },
+        related: relations.map((relation) => ({
+          id: relation.id,
+          parentId: relation.parentId,
+          sourceId: relation.sourceId,
+          table: relation.table,
+          relation: {
+            on: relation.conditions.map(({ childField, parentField }) => ({
+              childField,
+              parentField,
+            })),
+            shape: relation.shape,
+            path: relation.shape === 'flat' ? null : relation.path,
+            key: relation.key,
+            arrayKey:
+              relation.shape === 'array'
+                ? relation.arrayKey.length > 0
+                  ? relation.arrayKey
+                  : relation.key
+                : [],
+          },
+          preTransforms: relation.transforms.map((transform) => ({
+            id: transform.id,
+            type: transform.type,
+            fields:
+              transform.type === 'filter'
+                ? { expr: transform.body.expr ?? '' }
+                : (objectValue(transform.body.fields) ?? {}),
+          })),
+        })),
+        transforms: steps.map((step) => ({
+          id: step.id,
+          type: step.type,
+          fields: transformFields(step),
+        })),
+        output: {
+          kind: 'atlas',
+          config: {
+            sourceId: destinationSource?.id ?? destinationSourceId,
+            table: destinationTable.trim(),
+            inputTable: rootTable,
+            writeMode: 'upsert',
+          },
+        },
+      },
+    }),
+    [
+      description,
+      destinationSource?.id,
+      destinationSourceId,
+      destinationTable,
+      draft.baseArtifactHash,
+      draft.name,
+      pipelineId,
+      relations,
+      rootKey,
+      rootTable,
+      sourceId,
+      steps,
+    ],
+  )
+  const draftFingerprint = JSON.stringify(draftWrite)
+  currentWriteRef.current = draftWrite
+
+  const entities = useMemo<WizardPipelineEntity[]>(() => {
+    const items: WizardPipelineEntity[] = []
+    if (sourceId && rootTable) {
+      items.push({
+        id: 'root',
+        sourceId,
+        table: rootTable,
+        label: `${rootTable} · ${sourceId}`,
+        fields: rootDetails?.fields ?? [],
+      })
+    }
+    for (const relation of relations) {
+      if (!relation.sourceId || !relation.table) continue
+      const detail = tableDetailsBySource.get(relation.sourceId)?.get(relation.table)
+      items.push({
+        id: relation.id,
+        sourceId: relation.sourceId,
+        table: relation.table,
+        label: `${relation.table} · ${relation.sourceId}`,
+        fields: detail?.fields ?? [],
+      })
+    }
+    return items
+  }, [relations, rootDetails?.fields, rootTable, sourceId, tableDetailsBySource])
+
+  const wizardRoot: WizardRootTable = { id: 'root', sourceId, table: rootTable, key: rootKey }
+  const relationReady = canCompileWizardRelations({ root: wizardRoot, relations })
+  const ready = Boolean(
+    pipelineId &&
+    saveBaselineReady &&
+    sourceId &&
+    rootTable &&
+    steps.every(transformStepReady) &&
+    relations.every((relation) => relation.transforms.every(wizardRelationTransformReady)) &&
+    relationReady &&
+    destinationSource &&
+    destinationTable.trim(),
+  )
+  const persistCurrentDraft = useCallback(async () => {
+    while (true) {
+      const write = currentWriteRef.current
+      if (!write) throw new Error(t('wizard.errors.save'))
+      const fingerprint = JSON.stringify(write)
+      if (fingerprint === lastSavedFingerprint.current) return persistedDraftRef.current
+      if (pendingSaveRef.current) {
+        await pendingSaveRef.current
+        continue
+      }
+
+      setIsSaving(true)
+      setSaveState('saving')
+      const pending = updatePipelineDraft(pipelineId, write, etagRef.current, apiFetch)
+      pendingSaveRef.current = pending
+      try {
+        const response = await pending
+        persistedDraftRef.current = response.draft
+        etagRef.current = response.etag
+        lastSavedFingerprint.current = fingerprint
+        queryClient.setQueryData(['pipelines', pipelineId, 'draft'], {
+          mode: 'wizard',
+          draft: response.draft,
+          etag: response.etag,
+        })
+        setSaveState('saved')
+      } catch (cause) {
+        setSaveState('error')
+        throw cause
+      } finally {
+        if (pendingSaveRef.current === pending) pendingSaveRef.current = null
+        setIsSaving(false)
+      }
+    }
+  }, [apiFetch, pipelineId, queryClient, t])
+
+  useEffect(() => {
+    if (!saveBaselineReady) return
+    if (!saveBaselineInitialized.current) {
+      const suggestedRootKey = rootDetails?.primaryKey
+      if (rootKey.length === 0 && suggestedRootKey && suggestedRootKey.length > 0) {
+        setRootKey(suggestedRootKey)
+        return
+      }
+      saveBaselineInitialized.current = true
+      lastSavedFingerprint.current = draftFingerprint
+      return
+    }
+    if (draftFingerprint === lastSavedFingerprint.current) return
+    const timer = window.setTimeout(() => {
+      void persistCurrentDraft().catch((cause: unknown) => {
+        setError(cause instanceof Error ? cause.message : t('wizard.errors.save'))
+      })
+    }, 550)
+    return () => window.clearTimeout(timer)
+  }, [
+    draftFingerprint,
+    persistCurrentDraft,
+    rootDetails?.primaryKey,
+    rootKey,
+    saveBaselineReady,
+    t,
+  ])
+
+  useEffect(() => {
+    if (!ready) {
+      setPreview(null)
+      setPreviewError('')
+      setPreviewLoading(false)
+      return
+    }
+    let cancelled = false
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        setPreviewLoading(true)
+        setPreviewError('')
+        try {
+          const saved = await persistCurrentDraft()
+          const result = await previewPipelineDraft(pipelineId, saved.revision, apiFetch)
+          if (!cancelled && draftFingerprint === JSON.stringify(currentWriteRef.current)) {
+            setPreview(result)
+          }
+        } catch (cause) {
+          if (!cancelled) {
+            setPreview(null)
+            setPreviewError(cause instanceof Error ? cause.message : t('wizard.preview.failed'))
+          }
+        } finally {
+          if (!cancelled) setPreviewLoading(false)
+        }
+      })()
+    }, 700)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [apiFetch, draftFingerprint, persistCurrentDraft, pipelineId, ready, t])
+
+  async function handleSave(startAfterPublish = false) {
+    if (!ready || !destinationSource || isPublishing || isStarting) return
+    setError('')
+    setIsPublishing(true)
+    if (startAfterPublish) setIsStarting(true)
+    try {
+      const saved = await persistCurrentDraft()
+      await previewPipelineDraft(pipelineId, saved.revision, apiFetch)
+      await publishPipelineDraft(pipelineId, saved.revision, saved.publishedArtifactHash, apiFetch)
+      const published = await getPipelineDraft(pipelineId, apiFetch)
+      persistedDraftRef.current = published.draft
+      etagRef.current = published.etag
+      queryClient.setQueryData(['pipelines', pipelineId, 'draft'], {
+        mode: 'wizard',
+        draft: published.draft,
+        etag: published.etag,
+      })
+      await queryClient.invalidateQueries({ queryKey: ['pipelines'] })
+      if (startAfterPublish) {
+        await runPipeline(pipelineId, apiFetch)
+        await queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId, 'status'] })
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t('wizard.errors.save'))
+    } finally {
+      setIsPublishing(false)
+      setIsStarting(false)
+    }
+  }
+
+  const isLoading = sourcesQuery.isPending || connectorsQuery.isPending
+  const schemaTablesBySource = useMemo(() => {
+    const result = new Map<string, readonly string[]>()
+    for (const currentSource of sources) {
+      const tableNames =
+        currentSource.tables === null
+          ? (schemasBySourceId.get(currentSource.id)?.tables ?? []).map((table) => table.name)
+          : (currentSource.tables ?? [])
+              .map((table) => table.name)
+              .filter((table): table is string => Boolean(table))
+      result.set(currentSource.id, tableNames)
+    }
+    return result
+  }, [schemasBySourceId, sources])
+  const wizardRelationSources = useMemo<WizardRelationSource[]>(
+    () =>
+      sources.map((item) => {
+        const connector = connectorsById.get(item.connector)
+        return {
+          id: item.id,
+          connector: item.connector,
+          connectorName: connector?.name ?? item.connector,
+          connectorIcon: connector?.icon ?? undefined,
+          tables: schemaTablesBySource.get(item.id) ?? [],
+          loadingTables:
+            item.tables === null &&
+            Boolean(schemaQueries[schemaSourceIds.indexOf(item.id)]?.isPending),
+        }
+      }),
+    [connectorsById, schemaQueries, schemaSourceIds, schemaTablesBySource, sources],
+  )
+
+  function confirmRootTable() {
+    if (!rootDraftSourceId || !rootDraftTable) return
+    const rootChanged = rootDraftSourceId !== sourceId || rootDraftTable !== rootTable
+    setSourceId(rootDraftSourceId)
+    setRootTable(rootDraftTable)
+    setRootKey(rootDraftDetails?.primaryKey ?? [])
+    setIsRootEditing(false)
+    if (rootChanged) {
+      setRelations([])
+      setSteps([])
+    }
+  }
+
+  function cancelRootEdit() {
+    setRootDraftSourceId(sourceId)
+    setRootDraftTable(rootTable)
+    setIsRootEditing(false)
+  }
+
+  function addRelation(parentId: string, shape: WizardRelationShape) {
+    const id = `relation_${crypto.randomUUID()}`
+    setRelations((current) => [
       ...current,
-      createWizardStep(type, `${type}_${nextIndex}`, sourceId, sourceTables),
+      {
+        id,
+        sourceId,
+        table: '',
+        parentId,
+        shape,
+        path: '',
+        key: [],
+        arrayKey: [],
+        conditions: [{ id: `condition_${crypto.randomUUID()}`, childField: '', parentField: '' }],
+        transforms: [],
+      },
     ])
+  }
+
+  function updateRelation(nextRelation: WizardRelation) {
+    setRelations((current) =>
+      current.map((relation) => (relation.id === nextRelation.id ? nextRelation : relation)),
+    )
+  }
+
+  function changeRelationSource(relationId: string, nextSourceId: string) {
+    setRelations((current) =>
+      current.map((item) => {
+        if (item.id === relationId) {
+          return {
+            ...item,
+            sourceId: nextSourceId,
+            table: '',
+            path: '',
+            key: [],
+            arrayKey: [],
+            conditions: item.conditions.map((condition) => ({
+              ...condition,
+              childField: '',
+              parentField: '',
+            })),
+            transforms: [],
+          }
+        }
+        if (item.parentId === relationId) {
+          return {
+            ...item,
+            conditions: item.conditions.map((condition) => ({ ...condition, parentField: '' })),
+          }
+        }
+        return item
+      }),
+    )
+  }
+
+  function changeRelationTable(relationId: string, table: string) {
+    const relation = relations.find((item) => item.id === relationId)
+    if (!relation) return
+    const details = tableDetailsBySource.get(relation.sourceId)?.get(table)
+    setRelations((current) =>
+      current.map((item) => {
+        if (item.id === relationId) {
+          return {
+            ...item,
+            table,
+            path:
+              item.shape === 'flat'
+                ? ''
+                : !item.path || item.path === item.table
+                  ? (table.split('.').at(-1) ?? table)
+                  : item.path,
+            key: details?.primaryKey ?? [],
+            arrayKey: details?.primaryKey ?? [],
+            conditions: item.conditions.map((condition) => ({
+              ...condition,
+              childField: '',
+              parentField: '',
+            })),
+            transforms: [],
+          }
+        }
+        if (item.parentId === relationId) {
+          return {
+            ...item,
+            conditions: item.conditions.map((condition) => ({ ...condition, parentField: '' })),
+          }
+        }
+        return item
+      }),
+    )
+  }
+
+  function changeRelationShape(relationId: string, shape: WizardRelationShape) {
+    const relation = relations.find((item) => item.id === relationId)
+    if (!relation) return
+    updateRelation({
+      ...relation,
+      shape,
+      path:
+        shape === 'flat'
+          ? ''
+          : relation.path || (relation.table.split('.').at(-1) ?? relation.table),
+      arrayKey:
+        shape === 'array' && relation.arrayKey.length === 0 ? relation.key : relation.arrayKey,
+    })
+  }
+
+  function addRelationTransform(relationId: string, type: WizardRelationTransformType) {
+    const relation = relations.find((item) => item.id === relationId)
+    if (!relation?.table) return
+    const transform: WizardRelationTransform = {
+      id: `${relationId}_${type}_${crypto.randomUUID()}`,
+      type,
+      body: type === 'filter' ? { expr: '' } : { fields: {} },
+    }
+    updateRelation({ ...relation, transforms: [...relation.transforms, transform] })
+  }
+
+  function updateRelationTransform(
+    relationId: string,
+    stepId: string,
+    patch: PipelineTransformConfigurationPatch,
+  ) {
+    const relation = relations.find((item) => item.id === relationId)
+    if (!relation) return
+    updateRelation({
+      ...relation,
+      transforms: relation.transforms.map((transform) =>
+        transform.id === stepId ? { ...transform, body: patch.body ?? transform.body } : transform,
+      ),
+    })
+  }
+
+  function removeRelation(relationId: string) {
+    const relation = relations.find((item) => item.id === relationId)
+    if (!relation) return
+    setRelations((current) =>
+      current
+        .filter((item) => item.id !== relationId)
+        .map((item) =>
+          item.parentId === relationId
+            ? {
+                ...item,
+                parentId: relation.parentId,
+                conditions: item.conditions.map((condition) => ({ ...condition, parentField: '' })),
+              }
+            : item,
+        ),
+    )
+  }
+
+  function addTransform(type: PipelineTransformType) {
+    if (!rootTable) return
+    const from =
+      steps.at(-1)?.id ?? (relations.length ? 'wizard_nest' : wizardSourceRef(sourceId, rootTable))
+    const id = `${type}_${crypto.randomUUID()}`
+    setSteps((current) => [...current, createWizardStep(type, id, from)])
   }
 
   function removeStep(index: number) {
@@ -379,114 +854,275 @@ export function WizardBuilder({
     )
   }
 
-  async function handleSave() {
-    if (!ready || !pipelineId || !destinationSource || isSaving) return
-    setError('')
-    setIsSaving(true)
-    try {
-      await createPipeline(
-        buildPipelineMutation({
-          pipelineId,
-          description: description?.trim() ?? '',
-          sourceId,
-          sourceTables,
-          steps,
-          destinationId: destinationSource.id,
-          destinationTable: destinationTable.trim(),
-        }),
-        apiFetch,
-      )
-      onComplete()
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('wizard.errors.save'))
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
   const [previewMode, setPreviewMode] = useState<'dsl' | 'rows'>('dsl')
+
+  function renderRelationTree(parentId: string): ReactNode {
+    return wizardRelationChildren(relations, parentId).map((relation) => {
+      const childFields =
+        tableDetailsBySource.get(relation.sourceId)?.get(relation.table)?.fields ?? []
+      const excludedEntityIds = new Set([
+        relation.id,
+        ...wizardRelationDescendants(relations, relation.id),
+      ])
+      return (
+        <div className="pipeline-wizard__relation-branch" key={relation.id}>
+          <WizardRelationCard
+            relation={relation}
+            childrenCount={wizardRelationChildren(relations, relation.id).length}
+            sources={wizardRelationSources}
+            entities={entities}
+            excludedEntityIds={excludedEntityIds}
+            childFields={childFields}
+            childSchemaLoading={Boolean(
+              schemaQueries[schemaSourceIds.indexOf(relation.sourceId)]?.isPending,
+            )}
+            processingSafe={wizardRelationTransformsPreserveRequiredFields(relations, relation.id)}
+            sourcesLoading={isLoading}
+            onChange={updateRelation}
+            onChangeShape={(shape) => changeRelationShape(relation.id, shape)}
+            onChangeSource={(sourceId) => changeRelationSource(relation.id, sourceId)}
+            onChangeTable={(table) => changeRelationTable(relation.id, table)}
+            onAddTransform={(type) => addRelationTransform(relation.id, type)}
+            onUpdateTransform={(stepId, patch) =>
+              updateRelationTransform(relation.id, stepId, patch)
+            }
+            onRemoveTransform={(stepId) =>
+              updateRelation({
+                ...relation,
+                transforms: relation.transforms.filter((transform) => transform.id !== stepId),
+              })
+            }
+            onRemove={() => removeRelation(relation.id)}
+            onAddRelatedTable={(shape) => addRelation(relation.id, shape)}
+          >
+            {renderRelationTree(relation.id)}
+          </WizardRelationCard>
+        </div>
+      )
+    })
+  }
 
   return (
     <section className="pipeline-wizard" data-testid="wizard-builder">
       <div className="pipeline-wizard__workspace">
-        <main className="pipeline-wizard__stack pr-2 pl-3" aria-label={t('wizard.flowLabel')}>
+        <main
+          className="pipeline-wizard__stack"
+          aria-label={t('wizard.flowLabel')}
+          aria-busy={!saveBaselineReady}
+          inert={!saveBaselineReady}
+        >
           <WizardNodeCard tone="source">
-            <div className="pipeline-wizard__node-heading">
-              <span className="pipeline-wizard__node-icon pipeline-wizard__node-icon--source">
-                <Database className="size-4" aria-hidden="true" />
-              </span>
-              <div className="pipeline-wizard__node-title">
-                <h1>{sourceTableSummary || t('wizard.sourceTitle')}</h1>
-                <p>{t('wizard.sourceHint')}</p>
-              </div>
-            </div>
-            <div className="pipeline-wizard__fields">
-              <label className="pipeline-wizard__field">
-                <span>{t('wizard.sourceSelect')}</span>
-                <Select
-                  value={sourceId}
-                  onValueChange={(value) => {
-                    setSourceId(value ?? '')
-                    setSourceTables([])
-                    setSteps([])
-                  }}
-                >
-                  <SelectTrigger
-                    className="pipeline-wizard__select"
-                    aria-label={t('wizard.sourceSelect')}
+            {rootTable && !isRootEditing ? (
+              <div className="pipeline-wizard__root-summary">
+                <div className="pipeline-wizard__root-summary-heading">
+                  <span className="pipeline-wizard__node-icon pipeline-wizard__node-icon--source">
+                    <Database className="size-4" aria-hidden="true" />
+                  </span>
+                  <div className="pipeline-wizard__root-summary-title">
+                    <span>{t('wizard.rootTableLabel')}</span>
+                    <h1>{rootTable}</h1>
+                    <p>
+                      {t('wizard.rootTableMetadata', {
+                        source: source?.id ?? sourceId,
+                        primaryKey: rootKey.join(', ') || t('wizard.relations.chooseDocumentKey'),
+                        count: rootFields.length,
+                      })}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setRootDraftSourceId(sourceId)
+                      setRootDraftTable(rootTable)
+                      setIsRootEditing(true)
+                    }}
                   >
-                    <SelectValue
-                      placeholder={isLoading ? t('wizard.loading') : t('wizard.sourceSelect')}
-                    />
-                  </SelectTrigger>
-                  <SelectContent className="pipeline-wizard__source-select-content">
-                    {sources.map((item) => {
-                      const connector = connectorsById.get(item.connector)
-                      return (
-                        <SelectItem key={item.id} value={item.id}>
-                          <ConnectorIcon
-                            connectorId={item.connector}
-                            name={connector?.name ?? item.connector}
-                            iconPath={connector?.icon}
-                            size={20}
-                          />
-                          <span className="pipeline-wizard__source-option-label">{item.id}</span>
-                        </SelectItem>
-                      )
-                    })}
-                  </SelectContent>
-                </Select>
-              </label>
-              {source && (
-                <PipelineSourceTablePicker
-                  key={source.id}
-                  sourceId={source.id}
-                  sources={sources}
-                  options={sourceTableOptions}
-                  loading={sourceTableLoading}
-                  value={sourceTables}
-                  onChange={(nextTables) => {
-                    setSourceTables(nextTables)
-                    if (steps.some((step) => fanInTransformTypes.has(step.type))) {
-                      setSteps([])
+                    <RefreshCw className="size-3.5" aria-hidden="true" />
+                    {t('wizard.switchTable')}
+                  </Button>
+                </div>
+                <div
+                  className="pipeline-wizard__root-columns"
+                  aria-label={t('wizard.columnsLabel')}
+                >
+                  <span>{t('wizard.columnsLabel')}:</span>
+                  <div>
+                    {rootFields.slice(0, 4).map((field) => (
+                      <code key={field.name}>{field.name}</code>
+                    ))}
+                    {rootFields.length > 4 && (
+                      <span>{t('wizard.moreColumns', { count: rootFields.length - 4 })}</span>
+                    )}
+                    {rootFields.length === 0 && (
+                      <span className="pipeline-wizard__root-columns-empty">
+                        {rootSchemaQuery?.isPending
+                          ? t('wizard.relations.loadingSchema')
+                          : t('wizard.relations.schemaUnavailable')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {rootKey.length === 0 && rootFields.length > 0 && (
+                  <label className="pipeline-wizard__identity">
+                    <span>{t('wizard.relations.documentKey')}</span>
+                    <Select
+                      value={rootKey[0] ?? ''}
+                      onValueChange={(value) => setRootKey(value ? [value] : [])}
+                    >
+                      <SelectTrigger
+                        className="pipeline-wizard__select"
+                        aria-label={t('wizard.relations.chooseDocumentKey')}
+                      >
+                        <SelectValue placeholder={t('wizard.relations.chooseDocumentKey')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {rootFields.map((field) => (
+                          <SelectItem key={field.name} value={field.name}>
+                            {field.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </label>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="pipeline-wizard__node-heading">
+                  <span className="pipeline-wizard__node-icon pipeline-wizard__node-icon--source">
+                    <Database className="size-4" aria-hidden="true" />
+                  </span>
+                  <div className="pipeline-wizard__node-title">
+                    <h1>{t('wizard.rootTableLabel')}</h1>
+                    <p>{t('wizard.sourceHint')}</p>
+                  </div>
+                  {!rootTable && (
+                    <span className="pipeline-wizard__setup-badge">
+                      {t('wizard.setupRequired')}
+                    </span>
+                  )}
+                </div>
+                <div className="pipeline-wizard__fields">
+                  <label className="pipeline-wizard__field">
+                    <span>{t('wizard.sourceSelect')}</span>
+                    <Select
+                      value={rootDraftSourceId}
+                      onValueChange={(value) => {
+                        setRootDraftSourceId(value ?? '')
+                        setRootDraftTable('')
+                      }}
+                    >
+                      <SelectTrigger
+                        className="pipeline-wizard__select"
+                        aria-label={t('wizard.sourceSelect')}
+                      >
+                        <SelectValue
+                          placeholder={isLoading ? t('wizard.loading') : t('wizard.sourceSelect')}
+                        />
+                      </SelectTrigger>
+                      <SelectContent className="pipeline-wizard__source-select-content">
+                        {sources.map((item) => {
+                          const connector = connectorsById.get(item.connector)
+                          return (
+                            <SelectItem key={item.id} value={item.id}>
+                              <ConnectorIcon
+                                connectorId={item.connector}
+                                name={connector?.name ?? item.connector}
+                                iconPath={connector?.icon}
+                                size={20}
+                              />
+                              <span className="pipeline-wizard__source-option-label">
+                                {item.id}
+                              </span>
+                            </SelectItem>
+                          )
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </label>
+                  {rootDraftSource && (
+                    <div className="pipeline-wizard__field">
+                      <span>{t('wizard.tableSelect')}</span>
+                      <PipelineSourceTablePicker
+                        key={rootDraftSource.id}
+                        sourceId={rootDraftSource.id}
+                        sources={sources}
+                        options={sourceTableOptions}
+                        loading={sourceTableLoading}
+                        value={rootDraftTable}
+                        selectionMode="single"
+                        allowPatterns={false}
+                        onChange={(tables) => setRootDraftTable(tables[0] ?? '')}
+                      />
+                    </div>
+                  )}
+                </div>
+                {rootDraftSource && (
+                  <p className="pipeline-wizard__meta">
+                    <Check className="size-3.5" aria-hidden="true" />
+                    {connectorsById.get(rootDraftSource.connector)?.name ??
+                      rootDraftSource.connector}
+                    <span aria-hidden="true">·</span>
+                    <code>
+                      {rootDraftTable
+                        ? wizardSourceRef(rootDraftSource.id, rootDraftTable)
+                        : t('wizard.awaitingTable')}
+                    </code>
+                  </p>
+                )}
+                {rootTable &&
+                  (relations.length > 0 || steps.length > 0) &&
+                  (rootDraftSourceId !== sourceId || rootDraftTable !== rootTable) && (
+                    <p className="pipeline-wizard__root-change-warning" role="status">
+                      {t('wizard.rootChangeWarning')}
+                    </p>
+                  )}
+                <div className="pipeline-wizard__root-edit-actions">
+                  {rootTable && (
+                    <Button type="button" variant="outline" size="sm" onClick={cancelRootEdit}>
+                      {t('wizard.cancelRootEdit')}
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={
+                      !rootDraftSourceId ||
+                      !rootDraftTable ||
+                      Boolean(rootDraftSource && rootDraftSchemaQuery?.isPending)
                     }
-                  }}
-                />
-              )}
-            </div>
-            {source && (
-              <p className="pipeline-wizard__meta">
-                <Check className="size-3.5" aria-hidden="true" />
-                {connectorsById.get(source.connector)?.name ?? source.connector}
-                <span aria-hidden="true">·</span>
-                <code>
-                  {sourceTables.length > 0
-                    ? sourceReferences(source.id, sourceTables).join(', ')
-                    : t('wizard.awaitingTable')}
-                </code>
-              </p>
+                    onClick={confirmRootTable}
+                  >
+                    <Check className="size-3.5" aria-hidden="true" />
+                    {rootTable ? t('wizard.saveRootChanges') : t('wizard.confirmRootTable')}
+                  </Button>
+                </div>
+              </>
             )}
           </WizardNodeCard>
+
+          {rootTable && !isRootEditing ? (
+            <>
+              {relations.length > 0 || steps.length > 0 ? (
+                <AddRelationControl onAdd={(shape) => addRelation('root', shape)} />
+              ) : (
+                <AddStepControl
+                  canAdd
+                  includeRelations
+                  onAdd={addTransform}
+                  onAddRelation={(shape) => addRelation('root', shape)}
+                />
+              )}
+              {renderRelationTree('root')}
+            </>
+          ) : (
+            <div className="pipeline-wizard__root-add-prompt">
+              <AddRelationControl onAdd={(shape) => addRelation('root', shape)} disabled />
+              <p>{t('wizard.confirmRootFirst')}</p>
+            </div>
+          )}
 
           {steps.map((step, index) => (
             <div key={step.id} className="pipeline-wizard__segment">
@@ -513,8 +1149,9 @@ export function WizardBuilder({
                 <div className="pipeline-wizard__step-context">
                   <span>{t('wizard.input')}</span>
                   <code>
-                    {JSON.stringify(
-                      step.from ?? inputReferenceFor(sourceId, sourceTables, steps[index - 1]),
+                    {String(
+                      steps[index - 1]?.id ??
+                        (relations.length ? 'wizard_nest' : wizardSourceRef(sourceId, rootTable)),
                     )}
                   </code>
                 </div>
@@ -525,7 +1162,9 @@ export function WizardBuilder({
                       nodeId: `wizard:${step.id}`,
                       stepId: step.id,
                       transformType: step.type,
-                      from: step.from ?? inputReferenceFor(sourceId, sourceTables, steps[index - 1]),
+                      from:
+                        steps[index - 1]?.id ??
+                        (relations.length ? 'wizard_nest' : wizardSourceRef(sourceId, rootTable)),
                       options: step.options ?? null,
                       body: step.body,
                     }}
@@ -541,11 +1180,9 @@ export function WizardBuilder({
             </div>
           ))}
 
-          <AddStepControl
-            canAdd={Boolean(sourceId && sourceTables.length > 0)}
-            canAddFanIn={steps.length === 0 && sourceTables.length > 1}
-            onAdd={addStepOfType}
-          />
+          {rootTable && (relations.length > 0 || steps.length > 0) && (
+            <AddStepControl canAdd onAdd={addTransform} />
+          )}
 
           <FlowConnector />
           <WizardNodeCard tone="output">
@@ -600,7 +1237,7 @@ export function WizardBuilder({
                   value={destinationTable}
                   onChange={(event) => setDestinationTable(event.target.value)}
                   placeholder={
-                    destinationSchemaQuery.isPending
+                    destinationTablesLoading
                       ? t('wizard.loadingTables')
                       : t('wizard.destinationTablePlaceholder')
                   }
@@ -627,9 +1264,31 @@ export function WizardBuilder({
                 {error}
               </p>
             )}
-            <Button type="button" disabled={!ready || isSaving} onClick={() => void handleSave()}>
-              {isSaving && <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />}
-              {isSaving ? t('wizard.saving') : t('wizard.create')}
+            <span className="pipeline-wizard__save-state" role="status">
+              {saveState === 'saving'
+                ? t('wizard.autosaving')
+                : saveState === 'error'
+                  ? t('wizard.autosaveError')
+                  : t('wizard.autosaved')}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!ready || isSaving || isPublishing || isStarting}
+              onClick={() => void handleSave(false)}
+            >
+              {isPublishing && (
+                <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
+              )}
+              {isPublishing ? t('wizard.saving') : t('wizard.savePipeline')}
+            </Button>
+            <Button
+              type="button"
+              disabled={!ready || isSaving || isPublishing || isStarting}
+              onClick={() => void handleSave(true)}
+            >
+              {isStarting && <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />}
+              {isStarting ? t('wizard.starting') : t('wizard.startPipeline')}
             </Button>
           </div>
         </main>
@@ -662,17 +1321,28 @@ export function WizardBuilder({
           </div>
           <div className="pipeline-wizard__preview-body">
             {previewMode === 'dsl' ? (
-              <pre
-                className="pipeline-wizard__dsl"
-                aria-label={t('wizard.preview.codeLabel')}
-            >{previewDsl(
-              pipelineId,
-              sourceId,
-              sourceTables,
-              steps,
-              destinationSource?.id,
-              destinationTable,
-            )}</pre>
+              previewLoading ? (
+                <div className="pipeline-wizard__empty-preview" role="status">
+                  <LoaderCircle className="size-5 animate-spin" aria-hidden="true" />
+                  <span>{t('wizard.preview.compiling')}</span>
+                </div>
+              ) : previewError ? (
+                <div className="pipeline-wizard__preview-error" role="alert">
+                  {previewError}
+                </div>
+              ) : preview ? (
+                <pre className="pipeline-wizard__dsl" aria-label={t('wizard.preview.codeLabel')}>
+                  {preview.dsl ?? JSON.stringify(preview.artifact, null, 2)}
+                </pre>
+              ) : (
+                <div className="pipeline-wizard__empty-preview">
+                  <span className="pipeline-wizard__empty-icon" aria-hidden="true">
+                    <Braces className="size-5" />
+                  </span>
+                  <strong>{t('wizard.preview.awaitingConfiguration')}</strong>
+                  <span>{t('wizard.preview.awaitingConfigurationHint')}</span>
+                </div>
+              )
             ) : (
               <div className="pipeline-wizard__empty-preview">
                 <span className="pipeline-wizard__empty-icon" aria-hidden="true">
@@ -718,18 +1388,66 @@ function FlowConnector() {
   )
 }
 
-function AddStepControl({
-  canAdd,
-  canAddFanIn,
+function AddRelationControl({
   onAdd,
+  disabled = false,
 }: {
-  canAdd: boolean
-  canAddFanIn: boolean
-  onAdd: (type: PipelineTransformType) => void
+  onAdd: (shape: WizardRelationShape) => void
+  disabled?: boolean
 }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
+  return (
+    <div className="pipeline-wizard__relation-add-control">
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger
+          render={
+            <button
+              type="button"
+              className="pipeline-wizard__add-button"
+              disabled={disabled}
+              aria-label={t('wizard.relations.addRelatedTable')}
+              title={t('wizard.relations.addRelatedTable')}
+            >
+              <Plus className="size-4" aria-hidden="true" />
+            </button>
+          }
+        />
+        <DropdownMenuContent align="center" sideOffset={8} className="pipeline-wizard__step-menu">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>{t('wizard.relations.addRelatedTable')}</DropdownMenuLabel>
+            {wizardRelationAddShapes.map((shape) => (
+              <DropdownMenuItem
+                key={shape}
+                onClick={() => {
+                  onAdd(shape)
+                  setOpen(false)
+                }}
+              >
+                <Database className="size-3.5" aria-hidden="true" />
+                {t(`wizard.relations.addAs.${shape}`)}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  )
+}
 
+function AddStepControl({
+  canAdd,
+  includeRelations = false,
+  onAdd,
+  onAddRelation,
+}: {
+  canAdd: boolean
+  includeRelations?: boolean
+  onAdd: (type: PipelineTransformType) => void
+  onAddRelation?: (shape: WizardRelationShape) => void
+}) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
   return (
     <div className="pipeline-wizard__add-control">
       <div className="pipeline-wizard__add-line" aria-hidden="true" />
@@ -740,20 +1458,39 @@ function AddStepControl({
               type="button"
               className="pipeline-wizard__add-button"
               disabled={!canAdd}
-              aria-label={t('wizard.chooseTransform')}
-              title={t('wizard.chooseTransform')}
+              aria-label={t(includeRelations ? 'wizard.addPipelineStep' : 'wizard.chooseTransform')}
+              title={t(includeRelations ? 'wizard.addPipelineStep' : 'wizard.chooseTransform')}
             >
               <Plus className="size-4" aria-hidden="true" />
             </button>
           }
         />
         <DropdownMenuContent align="center" sideOffset={8} className="pipeline-wizard__step-menu">
+          {includeRelations && onAddRelation && (
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>{t('wizard.relations.addRelatedTable')}</DropdownMenuLabel>
+              {wizardRelationAddShapes.map((shape) => (
+                <DropdownMenuItem
+                  key={shape}
+                  onClick={() => {
+                    onAddRelation(shape)
+                    setOpen(false)
+                  }}
+                >
+                  <Database className="size-3.5" aria-hidden="true" />
+                  {t(`wizard.relations.addAs.${shape}`)}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+          )}
           <DropdownMenuGroup>
-            <DropdownMenuLabel>{t('wizard.chooseTransform')}</DropdownMenuLabel>
+            <DropdownMenuLabel>
+              {t(includeRelations ? 'wizard.addProcessor' : 'wizard.chooseTransform')}
+            </DropdownMenuLabel>
             {transformTypes.map((type) => (
               <DropdownMenuItem
                 key={type}
-                disabled={!canAdd || (fanInTransformTypes.has(type) && !canAddFanIn)}
+                disabled={!canAdd}
                 onClick={() => {
                   onAdd(type)
                   setOpen(false)

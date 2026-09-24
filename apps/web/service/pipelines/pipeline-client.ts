@@ -154,6 +154,7 @@ export interface PipelineDraftMutation {
 export interface PipelineDraftPreview {
   pipelineId: string
   revision: number
+  dsl?: string
   artifact: PipelineJsonObject
 }
 

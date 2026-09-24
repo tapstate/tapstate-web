@@ -37,7 +37,6 @@ import {
   type PipelineLayout,
   PipelineClientError,
   type PipelineRuntimeState,
-  type PipelineView,
 } from '@/service/pipelines/pipeline-client'
 import { getSourceSchema, listConnectors, listSources } from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
@@ -63,7 +62,6 @@ import { PipelineStatusBadge } from '../components/pipeline-status-badge'
 import { usePipelineDraftAutosave } from '../hooks/use-pipeline-draft-autosave'
 import { PipelineLogsPage } from '../logs/pipeline-logs-page'
 import { buildPipelineDraftMutation, pipelineDraftDocument } from '../model/pipeline-draft-document'
-import { clearStagedPipelineDraft, type StagedPipelineDraft } from '../model/pipeline-draft-session'
 import {
   addPipelineNodes,
   createPipelineGraphDraft,
@@ -309,7 +307,7 @@ function PipelineWorkspaceNav({
     <aside
       className={cn(
         'pipeline-workspace__navigation relative flex h-full shrink-0 overflow-hidden transition-[width] duration-150 motion-reduce:transition-none',
-        collapsed ? 'w-14' : 'w-62 max-md:w-52',
+        collapsed ? 'w-14' : 'w-62 max-md:w-52 max-sm:w-14',
       )}
       data-testid="workspace-navigation"
       data-collapsed={collapsed}
@@ -322,14 +320,16 @@ function PipelineWorkspaceNav({
             to="/pipelines"
             className={cn(
               'inline-flex h-8 shrink-0 items-center rounded-lg text-slate-700 transition-[background-color,transform] hover:bg-slate-100 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95',
-              collapsed ? 'size-8 justify-center' : 'max-w-full gap-1 px-1.5',
+              collapsed
+                ? 'size-8 justify-center'
+                : 'max-w-full gap-1 px-1.5 max-sm:size-8 max-sm:justify-center max-sm:gap-0 max-sm:px-0',
             )}
             aria-label={t('pipelines.workspace.back')}
           >
             <ChevronLeft className="size-4 shrink-0" aria-hidden="true" />
             {!collapsed && (
               <span
-                className="min-w-0 truncate text-[13px] font-semibold text-slate-800"
+                className="min-w-0 truncate text-[13px] font-semibold text-slate-800 max-sm:sr-only"
                 data-testid="workspace-navigation-title"
               >
                 {t('nav.pipelines')}
@@ -339,7 +339,7 @@ function PipelineWorkspaceNav({
           {!collapsed && (
             <button
               type="button"
-              className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-[background-color,color,transform] hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95"
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-[background-color,color,transform] hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-sm:hidden"
               aria-label={t('pipelines.workspace.navigation.collapse')}
               onClick={() => onCollapsedChange(true)}
             >
@@ -351,7 +351,7 @@ function PipelineWorkspaceNav({
         {collapsed && (
           <button
             type="button"
-            className="mt-1 inline-flex size-10 shrink-0 items-center justify-center self-center rounded-lg text-slate-400 transition-[background-color,color,transform] hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95"
+            className="mt-1 inline-flex size-10 shrink-0 items-center justify-center self-center rounded-lg text-slate-400 transition-[background-color,color,transform] hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-sm:hidden"
             aria-label={t('pipelines.workspace.navigation.expand')}
             onClick={() => onCollapsedChange(false)}
           >
@@ -359,12 +359,17 @@ function PipelineWorkspaceNav({
           </button>
         )}
 
-        <div className={cn('mt-5 flex items-start gap-3 px-2', collapsed && 'justify-center px-0')}>
+        <div
+          className={cn(
+            'mt-5 flex items-start gap-3 px-2 max-sm:justify-center max-sm:px-0',
+            collapsed && 'justify-center px-0',
+          )}
+        >
           <span className="pipeline-workspace__identity-mark mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg">
             <Workflow className="size-4" aria-hidden="true" />
           </span>
           {!collapsed && (
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex min-w-0 flex-1 flex-col gap-1 max-sm:sr-only">
               <span className="block max-w-full min-w-0 truncate text-[13px] leading-5 font-semibold text-slate-800">
                 {pipelineId}
               </span>
@@ -390,7 +395,9 @@ function PipelineWorkspaceNav({
                   activeSection={activeSection}
                 >
                   <Icon className="size-4 shrink-0" aria-hidden="true" />
-                  <span className={cn(collapsed && 'sr-only')}>{t(item.labelKey)}</span>
+                  <span className={cn('max-sm:sr-only', collapsed && 'sr-only')}>
+                    {t(item.labelKey)}
+                  </span>
                 </WorkspaceNavLink>
               </div>
             )
@@ -403,16 +410,10 @@ function PipelineWorkspaceNav({
 
 function PipelineOrchestrationPage({
   pipelineId,
-  stagedDraft,
   runtimeStatus,
-  onStagedDraftComplete,
-  onPublishedRevisionChange,
 }: {
   pipelineId: string
-  stagedDraft: StagedPipelineDraft | null
   runtimeStatus?: PipelineRuntimeState
-  onStagedDraftComplete?: () => void
-  onPublishedRevisionChange?: (published: boolean) => void
 }) {
   const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
@@ -428,30 +429,19 @@ function PipelineOrchestrationPage({
   const surfaceRef = useRef<HTMLElement>(null)
   const draftRef = useRef<PipelineGraphDraft | null>(null)
   const actionErrorSequence = useRef(0)
-  const [isNewPipeline, setIsNewPipeline] = useState(stagedDraft !== null)
-  const stagedPipeline = useMemo<PipelineView | null>(() => {
-    if (!stagedDraft) return null
-    return {
-      id: stagedDraft.id,
-      metadata: { labels: {}, description: stagedDraft.description || null },
-      sources: [],
-      transforms: [],
-      view: null,
-      serve: null,
-      settings: null,
-      experimental: null,
-      dag: { nodes: [], edges: [] },
-      contentHash: 'draft',
-      status: null,
-    }
-  }, [stagedDraft])
-
   const pipelineDraft = useQuery({
     queryKey: ['pipelines', pipelineId, 'draft'],
     queryFn: async () => {
       try {
         const response = await getPipelineDraft(pipelineId, apiFetch)
-        return { document: pipelineDraftDocument(response.draft), etag: response.etag }
+        if (response.draft.mode === 'wizard') {
+          return { mode: 'wizard' as const, draft: response.draft, etag: response.etag }
+        }
+        return {
+          mode: 'dag' as const,
+          document: pipelineDraftDocument(response.draft),
+          etag: response.etag,
+        }
       } catch (error) {
         if (!(error instanceof PipelineClientError) || error.status !== 404) throw error
         const [pipeline, layout] = await Promise.all([
@@ -459,6 +449,7 @@ function PipelineOrchestrationPage({
           getPipelineLayout(pipelineId, apiFetch),
         ])
         return {
+          mode: 'dag' as const,
           document: {
             editor: createPipelineGraphDraft(pipeline),
             layout,
@@ -468,8 +459,10 @@ function PipelineOrchestrationPage({
         }
       }
     },
-    enabled: !isNewPipeline,
+    retry: false,
   })
+  const serverDocument = pipelineDraft.data?.mode === 'dag' ? pipelineDraft.data.document : null
+
   const sources = useQuery({
     queryKey: ['sources'],
     queryFn: () => listSources(apiFetch),
@@ -478,16 +471,8 @@ function PipelineOrchestrationPage({
     queryKey: ['connectors'],
     queryFn: () => listConnectors(apiFetch),
   })
-  const serverDocument = pipelineDraft.data?.document ?? null
-  const pipelineData = isNewPipeline ? stagedPipeline : serverDocument?.editor.pipeline
-  const layoutData = isNewPipeline
-    ? { pipelineId, nodes: {}, viewport: null }
-    : serverDocument?.layout
-
-  useEffect(() => {
-    const published = isNewPipeline ? false : (serverDocument?.hasPublishedRevision ?? true)
-    onPublishedRevisionChange?.(published)
-  }, [isNewPipeline, onPublishedRevisionChange, serverDocument?.hasPublishedRevision])
+  const pipelineData = serverDocument?.editor.pipeline
+  const layoutData = serverDocument?.layout
 
   useEffect(() => {
     if (actionErrors.length === 0) return
@@ -504,9 +489,7 @@ function PipelineOrchestrationPage({
 
   useEffect(() => {
     if (!pipelineData || !layoutData) return
-    const nextDraft = isNewPipeline
-      ? createPipelineGraphDraft(pipelineData)
-      : (serverDocument?.editor ?? null)
+    const nextDraft = serverDocument?.editor ?? null
     if (!nextDraft) return
     draftRef.current = nextDraft
     setDraft(nextDraft)
@@ -515,15 +498,15 @@ function PipelineOrchestrationPage({
     setDiagnostics([])
     setActionErrors([])
     setSelection(null)
-  }, [isNewPipeline, layoutData, pipelineData?.contentHash, serverDocument?.editor])
+  }, [layoutData, pipelineData?.contentHash, serverDocument?.editor])
 
   function scheduleLayoutSave(next: Pick<PipelineLayout, 'nodes' | 'viewport'>) {
     setLayoutDraft(next)
     setIsDirty(true)
   }
 
-  const isLoading = isNewPipeline ? false : pipelineDraft.isLoading
-  const error = isNewPipeline ? false : pipelineDraft.isError
+  const isLoading = pipelineDraft.isLoading
+  const error = pipelineDraft.isError
   const connectorsBySourceId = useMemo(
     () => pipelineNodeConnectors(sources.data ?? [], connectors.data ?? []),
     [connectors.data, sources.data],
@@ -763,10 +746,6 @@ function PipelineOrchestrationPage({
       await previewPipelineDraft(pipelineId, result.draft.revision, apiFetch)
       setIsDirty(false)
       setDiagnostics([])
-      if (isNewPipeline) {
-        clearStagedPipelineDraft(pipelineId)
-        setIsNewPipeline(false)
-      }
       return true
     } catch (error) {
       pushActionError(
@@ -833,24 +812,20 @@ function PipelineOrchestrationPage({
               type="button"
               className="h-10 rounded-lg bg-slate-900 px-4 text-sm font-medium text-white transition-[background-color,transform] hover:bg-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95"
               onClick={() => {
-                if (!isNewPipeline) void pipelineDraft.refetch()
+                void pipelineDraft.refetch()
               }}
             >
               {t('pipelines.workspace.actions.retry')}
             </button>
           </div>
         )}
-        {isNewPipeline && stagedDraft ? (
+        {pipelineDraft.data?.mode === 'wizard' ? (
           <ReactFlowProvider>
             <PipelineWorkflow>
               <WizardBuilder
-                pipelineId={stagedDraft.id}
-                description={stagedDraft.description}
-                onComplete={() => {
-                  clearStagedPipelineDraft(pipelineId)
-                  setIsNewPipeline(false)
-                  onStagedDraftComplete?.()
-                }}
+                pipelineId={pipelineId}
+                draft={pipelineDraft.data.draft}
+                etag={pipelineDraft.data.etag}
               />
             </PipelineWorkflow>
           </ReactFlowProvider>
@@ -1121,23 +1096,30 @@ function ApiAccessPage({ pipelineId }: { pipelineId: string }) {
 export function PipelineWorkspacePage({
   pipelineId,
   section,
-  stagedDraft = null,
 }: {
   pipelineId: string
   section: PipelineWorkspaceSection
-  stagedDraft?: StagedPipelineDraft | null
 }) {
   const [navigationCollapsed, setNavigationCollapsed] = useState(false)
-  const [isStagedDraftActive, setIsStagedDraftActive] = useState(stagedDraft !== null)
-  const [hasPublishedRevision, setHasPublishedRevision] = useState(
-    stagedDraft === null && section !== 'orchestrate',
-  )
   const apiFetch = useAuthStore((state) => state.apiFetch)
-  const activeStagedDraft = isStagedDraftActive ? stagedDraft : null
+  const pipelineDraft = useQuery({
+    queryKey: ['pipelines', pipelineId, 'draft-status'],
+    queryFn: async () => {
+      try {
+        return await getPipelineDraft(pipelineId, apiFetch)
+      } catch (error) {
+        if (error instanceof PipelineClientError && error.status === 404) return null
+        throw error
+      }
+    },
+    retry: false,
+  })
   const status = useQuery({
     queryKey: ['pipelines', pipelineId, 'status'],
     queryFn: () => getPipelineStatus(pipelineId, apiFetch),
-    enabled: activeStagedDraft === null && (section !== 'orchestrate' || hasPublishedRevision),
+    enabled:
+      pipelineDraft.isSuccess &&
+      (pipelineDraft.data === null || pipelineDraft.data?.draft.publishedDraftRevision !== null),
     retry: false,
     refetchInterval: (query) => {
       if (query.state.error instanceof PipelineClientError && query.state.error.status === 404) {
@@ -1161,13 +1143,7 @@ export function PipelineWorkspacePage({
         status={status.data?.state}
       />
       {section === 'orchestrate' ? (
-        <PipelineOrchestrationPage
-          pipelineId={pipelineId}
-          stagedDraft={activeStagedDraft}
-          runtimeStatus={status.data?.state}
-          onPublishedRevisionChange={setHasPublishedRevision}
-          onStagedDraftComplete={() => setIsStagedDraftActive(false)}
-        />
+        <PipelineOrchestrationPage pipelineId={pipelineId} runtimeStatus={status.data?.state} />
       ) : (
         <WorkspacePageFrame
           pipelineId={pipelineId}
@@ -1183,18 +1159,6 @@ export function PipelineWorkspacePage({
   )
 }
 
-export function PipelineEditorPage({
-  pipelineId,
-  stagedDraft = null,
-}: {
-  pipelineId: string
-  stagedDraft?: StagedPipelineDraft | null
-}) {
-  return (
-    <PipelineWorkspacePage
-      pipelineId={pipelineId}
-      section="orchestrate"
-      stagedDraft={stagedDraft}
-    />
-  )
+export function PipelineEditorPage({ pipelineId }: { pipelineId: string }) {
+  return <PipelineWorkspacePage pipelineId={pipelineId} section="orchestrate" />
 }

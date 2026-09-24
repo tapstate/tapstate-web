@@ -7,7 +7,12 @@ import type { ApiFetcher } from '@/service/source-client'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { listPipelines, type PipelineView } from '@/service/pipelines/pipeline-client'
+import {
+  listPipelineDrafts,
+  listPipelines,
+  type PipelineDraft,
+  type PipelineView,
+} from '@/service/pipelines/pipeline-client'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { PipelineCreationDialog } from '../components/create/pipeline-creation-dialog'
@@ -38,10 +43,25 @@ export function PipelinesPage() {
     refetchInterval: 5000,
     refetchIntervalInBackground: false,
   })
-  const pipelines = pipelinesQuery.data ?? []
-  const selectedPipeline = useMemo(
-    () => pipelines.find((pipeline) => pipeline.id === selectedId) ?? null,
-    [pipelines, selectedId],
+  const draftsQuery = useQuery({
+    queryKey: ['pipelines', 'drafts'],
+    queryFn: () => listPipelineDrafts(apiFetch),
+    refetchInterval: 5000,
+    refetchIntervalInBackground: false,
+  })
+  const rows = useMemo(() => {
+    const pipelines = pipelinesQuery.data ?? []
+    const pipelineIds = new Set(pipelines.map((pipeline) => pipeline.id))
+    return [
+      ...pipelines.map((pipeline) => ({ id: pipeline.id, pipeline, draft: null })),
+      ...(draftsQuery.data ?? [])
+        .filter((draft) => draft.mode === 'wizard' && !pipelineIds.has(draft.pipelineId))
+        .map((draft) => ({ id: draft.pipelineId, pipeline: null, draft })),
+    ]
+  }, [draftsQuery.data, pipelinesQuery.data])
+  const selectedRow = useMemo(
+    () => rows.find((row) => row.id === selectedId) ?? null,
+    [rows, selectedId],
   )
 
   return (
@@ -82,13 +102,13 @@ export function PipelinesPage() {
               <GitMerge className="h-4 w-4 text-gray-400" aria-hidden="true" />
               <span>{t('pipelines.allPipelines')}</span>
             </Button>
-            {pipelinesQuery.isLoading ? (
+            {pipelinesQuery.isLoading || draftsQuery.isLoading ? (
               <div className="space-y-2 px-2 py-1.5" aria-label={t('pipelines.states.loading')}>
                 <div className="h-3 w-36 animate-pulse rounded bg-gray-100" />
                 <div className="h-3 w-24 animate-pulse rounded bg-gray-100" />
               </div>
             ) : (
-              pipelines.map((pipeline) => (
+              rows.map((pipeline) => (
                 <TreeItem
                   key={pipeline.id}
                   node={{ id: pipeline.id, name: pipeline.id, type: 'pipeline' }}
@@ -103,28 +123,37 @@ export function PipelinesPage() {
         </aside>
 
         <main className="flex min-w-0 flex-1 flex-col bg-white">
-          {selectedPipeline && <PipelineHeader pipeline={selectedPipeline} />}
+          {selectedRow && (
+            <PipelineHeader
+              pipeline={selectedRow.pipeline}
+              pipelineId={selectedRow.id}
+              isDraft={selectedRow.draft !== null}
+            />
+          )}
           <div className="min-h-0 flex-1 overflow-auto bg-white p-4 md:p-6">
-            {pipelinesQuery.isLoading ? (
+            {pipelinesQuery.isLoading || draftsQuery.isLoading ? (
               <PipelineListState message={t('pipelines.states.loading')} />
-            ) : pipelinesQuery.isError ? (
+            ) : pipelinesQuery.isError || draftsQuery.isError ? (
               <PipelineListState
                 message={t('pipelines.states.error')}
                 action={
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => void pipelinesQuery.refetch()}
+                    onClick={() => {
+                      void pipelinesQuery.refetch()
+                      void draftsQuery.refetch()
+                    }}
                   >
                     {t('state.error.retry')}
                   </Button>
                 }
               />
-            ) : pipelines.length === 0 ? (
+            ) : rows.length === 0 ? (
               <PipelineListState message={t('pipelines.states.empty')} />
             ) : (
               <PipelineTable
-                pipelines={pipelines}
+                rows={rows}
                 apiFetch={apiFetch}
                 onMutationError={(pipelineId, action, error) => {
                   const message = serverErrorMessage(error)
@@ -159,18 +188,39 @@ function serverErrorMessage(error: unknown): string | undefined {
     : undefined
 }
 
-function PipelineHeader({ pipeline }: { pipeline: PipelineView }) {
+interface PipelineListRow {
+  id: string
+  pipeline: PipelineView | null
+  draft: PipelineDraft | null
+}
+
+function PipelineHeader({
+  pipeline,
+  pipelineId,
+  isDraft,
+}: {
+  pipeline: PipelineView | null
+  pipelineId: string
+  isDraft: boolean
+}) {
+  const { t } = useTranslation()
   return (
     <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-gray-100/70 px-4 md:px-6">
       <div className="flex min-w-0 items-center gap-2">
         <GitMerge className="h-4 w-4 shrink-0 text-blue-500" aria-hidden="true" />
-        <h2 className="truncate text-[14px] font-semibold text-gray-900">{pipeline.id}</h2>
-        <code
-          className="hidden shrink-0 rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] text-gray-500 sm:inline"
-          title={pipeline.contentHash}
-        >
-          {pipeline.contentHash.slice(0, 12)}
-        </code>
+        <h2 className="truncate text-[14px] font-semibold text-gray-900">{pipelineId}</h2>
+        {pipeline ? (
+          <code
+            className="hidden shrink-0 rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] text-gray-500 sm:inline"
+            title={pipeline.contentHash}
+          >
+            {pipeline.contentHash.slice(0, 12)}
+          </code>
+        ) : isDraft ? (
+          <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+            {t('wizard.draft')}
+          </span>
+        ) : null}
       </div>
     </div>
   )
@@ -187,12 +237,12 @@ function PipelineListState({ message, action }: { message: string; action?: Reac
 }
 
 function PipelineTable({
-  pipelines,
+  rows,
   apiFetch,
   onMutationError,
   onMutationStart,
 }: {
-  pipelines: PipelineView[]
+  rows: PipelineListRow[]
   apiFetch: ApiFetcher
   onMutationError: (pipelineId: string, action: PipelineLifecycleAction, error?: unknown) => void
   onMutationStart: () => void
@@ -216,25 +266,25 @@ function PipelineTable({
           </tr>
         </thead>
         <tbody>
-          {pipelines.map((pipeline) => (
+          {rows.map((row) => (
             <tr
-              key={pipeline.id}
+              key={row.id}
               className="group relative border-b border-gray-100/60 transition-colors focus-within:bg-gray-50/50 hover:bg-gray-50/50"
             >
               <td className="px-4 py-3">
                 <a
                   className="inline-flex min-h-9 max-w-full items-center gap-2.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-                  href={`/pipelines/${encodeURIComponent(pipeline.id)}/edit`}
-                  aria-label={t('pipelines.actions.editPipeline', { id: pipeline.id })}
+                  href={`/pipelines/${encodeURIComponent(row.id)}/edit`}
+                  aria-label={t('pipelines.actions.editPipeline', { id: row.id })}
                 >
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                     <GitMerge className="h-3.5 w-3.5 text-blue-500" aria-hidden="true" />
                   </span>
                   <span
                     className="min-w-0 text-[13px] font-medium break-words text-gray-900"
-                    title={pipeline.id}
+                    title={row.id}
                   >
-                    {pipeline.id}
+                    {row.id}
                   </span>
                 </a>
               </td>
@@ -242,22 +292,39 @@ function PipelineTable({
                 {t('pipelines.type.pipeline')}
               </td>
               <td className="hidden px-4 py-3 md:table-cell">
-                <code className="font-mono text-[12px] text-gray-400" title={pipeline.contentHash}>
-                  {pipeline.contentHash.slice(0, 12)}
-                </code>
+                {row.pipeline ? (
+                  <code
+                    className="font-mono text-[12px] text-gray-400"
+                    title={row.pipeline.contentHash}
+                  >
+                    {row.pipeline.contentHash.slice(0, 12)}
+                  </code>
+                ) : (
+                  <span className="text-[12px] text-gray-500">
+                    {t('pipelines.table.draftRevision', { revision: row.draft?.revision ?? 1 })}
+                  </span>
+                )}
               </td>
               <td className="px-4 py-3">
-                <PipelineStatusBadge status={pipeline.status?.state} />
+                {row.pipeline ? (
+                  <PipelineStatusBadge status={row.pipeline.status?.state} />
+                ) : (
+                  <span className="inline-flex h-6 items-center rounded-md border border-amber-200 bg-amber-50 px-2 text-[11px] font-semibold text-amber-800">
+                    {t('wizard.draft')}
+                  </span>
+                )}
               </td>
               <td className="relative w-20 px-4 py-3">
-                <PipelineLifecycleMenu
-                  pipelineId={pipeline.id}
-                  status={pipeline.status?.state}
-                  contentHash={pipeline.contentHash}
-                  apiFetch={apiFetch}
-                  onMutationStart={onMutationStart}
-                  onMutationError={(action, error) => onMutationError(pipeline.id, action, error)}
-                />
+                {row.pipeline && (
+                  <PipelineLifecycleMenu
+                    pipelineId={row.id}
+                    status={row.pipeline.status?.state}
+                    contentHash={row.pipeline.contentHash}
+                    apiFetch={apiFetch}
+                    onMutationStart={onMutationStart}
+                    onMutationError={(action, error) => onMutationError(row.id, action, error)}
+                  />
+                )}
               </td>
             </tr>
           ))}

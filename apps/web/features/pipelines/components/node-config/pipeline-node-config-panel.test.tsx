@@ -9,7 +9,7 @@ import type { PipelineSourceTableSelection } from '../../model/pipeline-node-mod
 import type { PipelineCanvasSelection } from '../canvas/pipeline-canvas-types'
 import type { PipelineSchemaOption, PipelineTableLoader } from './pipeline-data-node-schema'
 
-import { PipelineNodeConfigPanel } from './pipeline-node-config-panel'
+import { PipelineNodeConfigPanel, PipelineSourceTablePicker } from './pipeline-node-config-panel'
 
 class ResizeObserverMock {
   observe() {}
@@ -63,6 +63,28 @@ async function renderPanel(
         loadTables={options.loadTables}
         sources={options.sources}
         upstreamSourceTables={options.upstreamSourceTables}
+      />,
+    )
+  })
+  return container
+}
+
+async function renderTablePicker(onChange: (tables: string[]) => void) {
+  container = document.createElement('div')
+  document.body.append(container)
+  root = createRoot(container)
+  await act(async () => {
+    root?.render(
+      <PipelineSourceTablePicker
+        sourceId={sourceView.id}
+        sources={[sourceView]}
+        options={[
+          { label: 'Player', value: 'Player' },
+          { label: 'Match', value: 'Match' },
+        ]}
+        selectionMode="single"
+        allowPatterns={false}
+        onChange={onChange}
       />,
     )
   })
@@ -412,5 +434,20 @@ describe('PipelineNodeConfigPanel', () => {
     expect(host.querySelector('input[aria-label="Target field"]')).not.toBeNull()
     expect(host.querySelector('input[aria-label="Source field or expression"]')).not.toBeNull()
     expect(host.textContent).not.toContain('Table filter')
+  })
+
+  it('locks the Wizard root picker to one physical table without exposing pattern scope', async () => {
+    const changes: string[][] = []
+    const host = await renderTablePicker((tables) => changes.push(tables))
+
+    expect(host.querySelector('[data-pipeline-source-table-picker-mode]')).toBeNull()
+    expect(host.querySelector('[data-pipeline-source-table-picker-pattern]')).toBeNull()
+    expect(host.querySelector('[data-pipeline-source-table-option="player_*"]')).toBeNull()
+
+    await act(async () => {
+      host.querySelector<HTMLElement>('[data-pipeline-source-table-option="Match"]')?.click()
+    })
+
+    expect(changes).toEqual([['Match']])
   })
 })
