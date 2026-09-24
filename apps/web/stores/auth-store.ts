@@ -1,5 +1,7 @@
 import { create } from 'zustand'
+
 import { authenticatedFetch } from '@/service/auth-client'
+
 import {
   browserSessionStorage,
   clearStoredToken,

@@ -1,13 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import {
-  Copy,
-  LoaderCircle,
-  MoreHorizontal,
-  Pencil,
-  Play,
-  Square,
-  Trash2,
-} from 'lucide-react'
+import { Copy, LoaderCircle, MoreHorizontal, Pencil, Play, Square, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -312,7 +304,7 @@ export function PipelineLifecycleMenu({
             <DialogDescription>{t('pipelines.delete.body')}</DialogDescription>
           </DialogHeader>
           {deleteError && (
-            <p role="alert" className="text-[13px] text-destructive">
+            <p role="alert" className="text-destructive text-[13px]">
               {t('pipelines.delete.failed')}
             </p>
           )}
