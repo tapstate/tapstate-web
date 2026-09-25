@@ -1,0 +1,276 @@
+import type { PipelineJsonObject } from '@/service/pipelines/pipeline-client'
+
+import type { DataSourceMeta, RelationNode, WizardViewState } from './ReferenceWizardBuilder'
+import type { TransformStep } from './TableTransformsManager'
+
+const object = (v: unknown): Record<string, unknown> =>
+  v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {}
+const text = (v: unknown): string => (typeof v === 'string' ? v : '')
+const array = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
+const strings = (v: unknown): string[] => array(v).filter((x): x is string => typeof x === 'string')
+
+export function readTransforms(value: unknown): TransformStep[] {
+  return array(value).flatMap((raw) => {
+    const t = object(raw),
+      fields = object(t.fields)
+    const type = text(t.type)
+    if (!['filter', 'map', 'unwind', 'js', 'union'].includes(type)) return []
+    return [
+      {
+        id: text(t.id),
+        name: text(t.name) || type,
+        type: type as TransformStep['type'],
+        enabled: t.enabled !== false,
+        isExpanded: false,
+        config:
+          type === 'filter'
+            ? { filter: { expr: text(fields.expr), isRawCel: true } }
+            : type === 'map'
+              ? {
+                  map: {
+                    passthroughUnlisted: true,
+                    fields: Object.entries(fields).map(([key, v], i) => ({
+                      id: `${text(t.id)}-${i}`,
+                      outputField: key,
+                      ruleType:
+                        v === false
+                          ? 'delete'
+                          : typeof v === 'string' && v.startsWith('$')
+                            ? 'rename'
+                            : typeof v === 'string' && v.startsWith('=')
+                              ? 'compute'
+                              : 'literal',
+                      value:
+                        typeof v === 'string' && (v.startsWith('$') || v.startsWith('='))
+                          ? v
+                          : JSON.stringify(v),
+                    })),
+                  },
+                }
+              : type === 'js'
+                ? { js: { script: text(fields.script) } }
+                : type === 'union'
+                  ? { union: { from: strings(fields.from) } }
+                  : {
+                      unwind: {
+                        path: text(fields.path),
+                        element_key: text(fields.element_key),
+                        include_array_index: text(fields.include_array_index),
+                        preserve_null_and_empty_arrays:
+                          fields.preserve_null_and_empty_arrays === true,
+                      },
+                    },
+      },
+    ]
+  })
+}
+
+export function writeTransforms(steps: TransformStep[] = []): PipelineJsonObject[] {
+  return steps.map((t) => ({
+    id: t.id,
+    type: t.type,
+    fields:
+      t.type === 'filter'
+        ? { expr: t.config.filter?.expr || '' }
+        : t.type === 'map'
+          ? Object.fromEntries(
+              (t.config.map?.fields || []).map((f) => [
+                f.outputField,
+                f.ruleType === 'delete'
+                  ? false
+                  : f.ruleType === 'literal'
+                    ? literalValue(f.value)
+                    : f.ruleType === 'rename' && f.value && !f.value.startsWith('$')
+                      ? '$' + f.value
+                      : f.ruleType === 'compute' && f.value && !f.value.startsWith('=')
+                        ? '=' + f.value
+                        : f.value,
+              ]),
+            )
+          : t.type === 'js'
+            ? { script: t.config.js?.script || '' }
+            : t.type === 'union'
+              ? { from: t.config.union?.from || [] }
+              : { ...t.config.unwind },
+  }))
+}
+
+function literalValue(value: string): unknown {
+  try {
+    return JSON.parse(value)
+  } catch {
+    return value
+  }
+}
+
+/** Guard current server compiler gaps rather than publishing incorrect literal values. */
+export function wizardPublicationIssue(value: PipelineJsonObject | null): string | null {
+  const wizard = object(value)
+  const root = object(wizard.root)
+  if (!text(root.sourceId) || !text(root.table))
+    return 'Select and confirm a root table before publishing.'
+  const transforms = [
+    ...array(root.preTransforms),
+    ...array(wizard.related).flatMap((r) => array(object(r).preTransforms)),
+    ...array(wizard.transforms),
+  ].map(object)
+  for (const t of transforms) {
+    if (t.type !== 'filter' && t.type !== 'map')
+      return `The current server cannot publish Wizard ${text(t.type)} transforms yet. Your configuration is saved as a draft.`
+    if (
+      t.type === 'map' &&
+      Object.values(object(t.fields)).some((v) => typeof v === 'string' && v.startsWith('='))
+    )
+      return 'The current server cannot compile computed field expressions yet. Your configuration is saved as a draft; publishing is blocked to avoid writing expression strings as data.'
+    if (t.type === 'filter' && !text(object(t.fields).expr).trim())
+      return 'Complete the filter expression before publishing.'
+  }
+  return null
+}
+
+export function readWizard(
+  value: PipelineJsonObject | null,
+  catalog: DataSourceMeta[],
+): WizardViewState {
+  const wizard = object(value),
+    root = object(wizard.root),
+    output = object(object(wizard.output).config)
+  const sourceId = text(root.sourceId),
+    table = text(root.table)
+  const meta = catalog.find((s) => s.id === sourceId)?.tables.find((t) => t.name === table)
+  const rows = array(wizard.related).map(object)
+  const token = (id: string) =>
+    id === 'root' ? table : `${text(rows.find((r) => r.id === id)?.table)} · ${id}`
+  const nodes = new Map<string, RelationNode>()
+  for (const r of rows) {
+    const relation = object(r.relation),
+      on = array(relation.on).map(object)
+    const parentTable = token(text(r.parentId) || 'root')
+    nodes.set(text(r.id), {
+      id: text(r.id),
+      source: text(r.sourceId),
+      table: text(r.table),
+      primaryKey: strings(relation.key),
+      type:
+        relation.shape === 'flat'
+          ? 'flatten'
+          : relation.shape === 'array'
+            ? 'sub_array'
+            : 'sub_doc',
+      targetField: text(relation.path),
+      key: text(on[0]?.childField),
+      parentTable,
+      parentKey: text(on[0]?.parentField),
+      conditions: on.map((c) => ({
+        childKey: text(c.childField),
+        parentKey: text(c.parentField),
+        parentTable,
+        operator: '=',
+      })),
+      preProcessing: [],
+      transforms: readTransforms(r.preTransforms),
+      children: [],
+    })
+  }
+  const relations: RelationNode[] = []
+  for (const r of rows) {
+    const node = nodes.get(text(r.id))!
+    const parent = nodes.get(text(r.parentId))
+    if (parent && parent !== node) parent.children!.push(node)
+    else relations.push(node)
+  }
+  const computed = array(wizard.transforms)
+    .map(object)
+    .find((t) => t.id === 'wizard_computed_fields')
+  return {
+    root:
+      sourceId && table
+        ? {
+            source: sourceId,
+            table,
+            primaryKey: strings(root.key).join(', '),
+            keys: strings(root.key),
+            rowCount: '—',
+            columns: meta?.columns || [],
+            transforms: readTransforms(root.preTransforms),
+          }
+        : null,
+    relations,
+    computedFields: Object.entries(object(computed?.fields)).map(([name, expr]) => ({
+      name,
+      expr: text(expr).replace(/^=/, ''),
+    })),
+    destinationTable: text(output.table),
+  }
+}
+
+export function writeWizard(
+  state: WizardViewState,
+  original: PipelineJsonObject | null,
+  destinationId: string,
+): PipelineJsonObject {
+  const previous = object(original),
+    originalRows = array(previous.related).map(object)
+  const related: PipelineJsonObject[] = []
+  const walk = (nodes: RelationNode[], parentId: string) => {
+    for (const r of nodes) {
+      const old = originalRows.find((x) => x.id === r.id)
+      related.push({
+        ...old,
+        id: r.id,
+        parentId,
+        sourceId: r.source,
+        table: r.table,
+        relation: {
+          ...object(old?.relation),
+          shape: r.type === 'flatten' ? 'flat' : r.type === 'sub_array' ? 'array' : 'object',
+          path: r.type === 'flatten' ? null : r.targetField,
+          key: r.primaryKey || [],
+          arrayKey: r.type === 'sub_array' ? r.primaryKey || [] : [],
+          on: (r.conditions || [{ childKey: r.key, parentKey: r.parentKey }]).map((c) => ({
+            childField: c.childKey,
+            parentField: c.parentKey,
+          })),
+        },
+        preTransforms: writeTransforms(r.transforms),
+      })
+      walk(r.children || [], r.id)
+    }
+  }
+  walk(state.relations, 'root')
+  const transforms = array(previous.transforms)
+    .map(object)
+    .filter((t) => t.id !== 'wizard_computed_fields')
+  if (state.computedFields.length)
+    transforms.push({
+      id: 'wizard_computed_fields',
+      type: 'map',
+      fields: Object.fromEntries(
+        state.computedFields.map((f) => [f.name, `=${f.expr.replace(/^=/, '')}`]),
+      ),
+    })
+  return {
+    ...previous,
+    root: {
+      ...object(previous.root),
+      id: 'root',
+      sourceId: state.root?.source || '',
+      table: state.root?.table || '',
+      key: state.root?.keys || [],
+      preTransforms: writeTransforms(state.root?.transforms),
+    },
+    related,
+    transforms,
+    output: {
+      ...object(previous.output),
+      kind: 'atlas',
+      config: {
+        ...object(object(previous.output).config),
+        sourceId: destinationId,
+        table: state.destinationTable,
+        inputTable: state.root?.table || '',
+        writeMode: 'upsert',
+      },
+    },
+  }
+}

@@ -315,16 +315,14 @@ function PipelineTable({
                 )}
               </td>
               <td className="relative w-20 px-4 py-3">
-                {row.pipeline && (
-                  <PipelineLifecycleMenu
-                    pipelineId={row.id}
-                    status={row.pipeline.status?.state}
-                    contentHash={row.pipeline.contentHash}
-                    apiFetch={apiFetch}
-                    onMutationStart={onMutationStart}
-                    onMutationError={(action, error) => onMutationError(row.id, action, error)}
-                  />
-                )}
+                <PipelineLifecycleMenu
+                  pipelineId={row.id}
+                  status={row.pipeline?.status?.state}
+                  contentHash={row.pipeline?.contentHash ?? null}
+                  apiFetch={apiFetch}
+                  onMutationStart={onMutationStart}
+                  onMutationError={(action, error) => onMutationError(row.id, action, error)}
+                />
               </td>
             </tr>
           ))}

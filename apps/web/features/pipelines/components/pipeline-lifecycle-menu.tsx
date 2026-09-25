@@ -1,13 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import {
-  Copy,
-  LoaderCircle,
-  MoreHorizontal,
-  Pencil,
-  Play,
-  Square,
-  Trash2,
-} from 'lucide-react'
+import { Copy, LoaderCircle, MoreHorizontal, Pencil, Play, Square, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -61,7 +53,7 @@ export function PipelineLifecycleMenu({
   pipelineId: string
   status?: PipelineRuntimeState
   apiFetch: ApiFetcher
-  contentHash: string
+  contentHash: string | null
   onMutationError?: (action: PipelineLifecycleAction, error?: unknown) => void
   onMutationStart?: () => void
 }) {
@@ -72,7 +64,8 @@ export function PipelineLifecycleMenu({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deletePending, setDeletePending] = useState(false)
   const [deleteError, setDeleteError] = useState(false)
-  const action = status ? lifecycleActionByState[status] : undefined
+  const isDraft = contentHash === null
+  const action = !isDraft && status ? lifecycleActionByState[status] : undefined
   const resolvedAction = action
 
   const pending = pendingAction !== null || deletePending
@@ -111,6 +104,7 @@ export function PipelineLifecycleMenu({
   }
 
   async function executeDelete() {
+    if (contentHash === null) return
     setDeletePending(true)
     setDeleteError(false)
     onMutationStart?.()
@@ -135,7 +129,10 @@ export function PipelineLifecycleMenu({
   }
 
   const actionLabel = resolvedAction ? t(`pipelines.lifecycle.${resolvedAction}`) : null
-  const actionAriaLabel = t('pipelines.lifecycle.actions', { id: pipelineId })
+  const actionAriaLabel = t(
+    isDraft ? 'pipelines.actions.morePipeline' : 'pipelines.lifecycle.actions',
+    { id: pipelineId },
+  )
   const actionButtonLabel = resolvedAction ? `${actionLabel} pipeline ${pipelineId}` : null
   const editLabel = t('pipelines.actions.editPipeline', { id: pipelineId })
   const editHref = `/pipelines/${encodeURIComponent(pipelineId)}/edit`
@@ -188,21 +185,25 @@ export function PipelineLifecycleMenu({
               <Pencil aria-hidden="true" />
               {editLabel}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={copyPipelineId}>
-              <Copy aria-hidden="true" />
-              {t('pipelines.actions.copyPipeline')}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => {
-                setDeleteError(false)
-                setDeleteDialogOpen(true)
-              }}
-            >
-              <Trash2 aria-hidden="true" />
-              {t('pipelines.actions.deletePipeline')}
-            </DropdownMenuItem>
+            {!isDraft && (
+              <>
+                <DropdownMenuItem onClick={copyPipelineId}>
+                  <Copy aria-hidden="true" />
+                  {t('pipelines.actions.copyPipeline')}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => {
+                    setDeleteError(false)
+                    setDeleteDialogOpen(true)
+                  }}
+                >
+                  <Trash2 aria-hidden="true" />
+                  {t('pipelines.actions.deletePipeline')}
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -312,7 +313,7 @@ export function PipelineLifecycleMenu({
             <DialogDescription>{t('pipelines.delete.body')}</DialogDescription>
           </DialogHeader>
           {deleteError && (
-            <p role="alert" className="text-[13px] text-destructive">
+            <p role="alert" className="text-destructive text-[13px]">
               {t('pipelines.delete.failed')}
             </p>
           )}

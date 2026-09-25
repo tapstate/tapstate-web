@@ -1,0 +1,114 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Source-faithful Cyntex WizardBuilder surface. Do not inherit DAG card styles. */
+.wizard-reference {
+  --wizard-background: #f7f7f9;
+  --wizard-foreground: #111827;
+  --wizard-card: #ffffff;
+  --wizard-muted: #6b7280;
+  --wizard-border: #e5e7eb;
+  --wizard-primary: #2563eb;
+  --wizard-primary-hover: #1d4ed8;
+  --wizard-control-radius: var(--radius);
+  --wizard-card-radius: 16px;
+  --wizard-panel-radius: 12px;
+  --wizard-control-height: 32px;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-weight: 400;
+  color: #111827;
+  min-height: 0;
+}
+.wizard-reference button {
+  border-radius: var(--wizard-control-radius);
+}
+.wizard-reference .wizard-reference-panel-radius {
+  border-radius: var(--wizard-panel-radius);
+}
+.wizard-reference .wizard-reference-relation-radius {
+  border-radius: var(--wizard-card-radius);
+}
+.wizard-reference input,
+.wizard-reference select,
+.wizard-reference textarea {
+  border-radius: var(--wizard-control-radius);
+  font-weight: 400;
+}
+.wizard-reference select {
+  text-overflow: ellipsis;
+}
+.wizard-reference .font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+.wizard-reference-preview {
+  min-width: 0;
+}
+.wizard-reference-root-card {
+  border-radius: var(--wizard-card-radius);
+  color: var(--wizard-foreground);
+}
+.wizard-reference-root-form [data-slot='select-trigger'] {
+  height: var(--wizard-control-height);
+  min-width: 0;
+  border-radius: var(--wizard-control-radius);
+  border-color: #d1d5db;
+  color: var(--wizard-foreground);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-weight: 400;
+}
+.wizard-reference-root-form [data-slot='select-trigger']:hover {
+  border-color: #9ca3af;
+}
+.wizard-reference-root-form [data-slot='select-trigger']:focus-visible {
+  border-color: var(--wizard-primary);
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 12%);
+}
+.wizard-reference-root-form [data-slot='select-content'] {
+  border-radius: var(--wizard-control-radius);
+  padding: 6px;
+  box-shadow: 0 12px 32px rgb(17 24 39 / 14%);
+}
+.wizard-reference-root-form [data-slot='select-item'] {
+  min-height: 40px;
+  border-radius: var(--radius-sm);
+  padding-inline: 10px;
+  color: var(--wizard-foreground);
+}
+.wizard-reference-root-form [data-slot='select-item']:focus {
+  background: #f3f4f6;
+}
+@media (max-width: 1100px) {
+  .wizard-reference-preview {
+    width: 320px;
+  }
+  .wizard-reference-canvas {
+    padding-inline: 16px;
+  }
+}
+@media (max-width: 760px) {
+  .wizard-reference-root-form > .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .wizard-reference > .flex-1 {
+    flex-direction: column;
+    overflow: auto;
+  }
+  .wizard-reference-canvas {
+    flex: none;
+    overflow: visible;
+    padding: 16px;
+  }
+  .wizard-reference-preview {
+    width: 100%;
+    min-height: 360px;
+    border-left: 0;
+  }
+  .wizard-reference .grid-cols-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .wizard-reference section > .flex {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}

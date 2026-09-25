@@ -1,6 +1,6 @@
 import {
   Braces,
-  Database,
+  ChevronDown,
   Filter,
   FolderTree,
   Layers,
@@ -105,7 +105,6 @@ export function WizardRelationCard({
 }) {
   const { t } = useTranslation()
   const [transformMenuOpen, setTransformMenuOpen] = useState(false)
-  const [relatedMenuOpen, setRelatedMenuOpen] = useState(false)
   const [tableSelectionOpen, setTableSelectionOpen] = useState(!relation.table)
   const [preprocessingOpen, setPreprocessingOpen] = useState(false)
   const [pathEditing, setPathEditing] = useState(false)
@@ -145,26 +144,91 @@ export function WizardRelationCard({
   return (
     <article className="pipeline-wizard__relation-card">
       <header className="pipeline-wizard__relation-header">
-        <div
-          className="pipeline-wizard__relation-shapes"
-          role="group"
-          aria-label={t('wizard.relations.shape')}
-        >
-          {(['object', 'array', 'flat'] as const).map((shape) => {
-            const ShapeIcon = shape === 'object' ? Braces : shape === 'array' ? FolderTree : Layers
-            return (
-              <button
-                key={shape}
-                type="button"
-                aria-pressed={relation.shape === shape}
-                data-active={relation.shape === shape}
-                onClick={() => onChangeShape(shape)}
-              >
-                <ShapeIcon className="size-3.5" aria-hidden="true" />
-                {t(`wizard.relations.shapes.${shape}`)}
-              </button>
-            )
-          })}
+        <div className="pipeline-wizard__relation-heading">
+          <div className="pipeline-wizard__relation-heading-main">
+            <div
+              className="pipeline-wizard__relation-shapes"
+              role="group"
+              aria-label={t('wizard.relations.shape')}
+            >
+              {(['object', 'array', 'flat'] as const).map((shape) => {
+                const ShapeIcon =
+                  shape === 'object' ? Braces : shape === 'array' ? FolderTree : Layers
+                return (
+                  <button
+                    key={shape}
+                    type="button"
+                    aria-pressed={relation.shape === shape}
+                    data-active={relation.shape === shape}
+                    onClick={() => onChangeShape(shape)}
+                  >
+                    <ShapeIcon className="size-3.5" aria-hidden="true" />
+                    {t(`wizard.relations.shapes.${shape}`)}
+                  </button>
+                )
+              })}
+            </div>
+            <div className="pipeline-wizard__relation-title-row">
+              <strong>{relation.table || t('wizard.relations.newTable')}</strong>
+              {relation.table && (
+                <button
+                  type="button"
+                  className="pipeline-wizard__relation-edit-table"
+                  onClick={() => setTableSelectionOpen(true)}
+                >
+                  {t('wizard.relations.editTable')}
+                </button>
+              )}
+              {relation.table &&
+                relation.shape !== 'flat' &&
+                (pathEditing ? (
+                  <label className="pipeline-wizard__relation-path-edit">
+                    <span>{t('wizard.relations.outputField')}</span>
+                    <input
+                      autoFocus
+                      className="pipeline-wizard__input"
+                      value={relation.path}
+                      onChange={(event) => onChange({ ...relation, path: event.target.value })}
+                      onBlur={() => setPathEditing(false)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === 'Escape') setPathEditing(false)
+                      }}
+                      aria-label={t('wizard.relations.outputField')}
+                    />
+                  </label>
+                ) : (
+                  <button
+                    type="button"
+                    className="pipeline-wizard__relation-alias"
+                    onClick={() => setPathEditing(true)}
+                    aria-label={t('wizard.relations.editOutputField')}
+                  >
+                    <span>{t('wizard.relations.as')}</span>
+                    <code>{relation.path || t('wizard.relations.outputFieldPlaceholder')}</code>
+                    <Pencil className="size-3" aria-hidden="true" />
+                  </button>
+                ))}
+            </div>
+          </div>
+          {relation.table && (
+            <button
+              type="button"
+              className="pipeline-wizard__relation-source-summary"
+              onClick={() => setTableSelectionOpen((open) => !open)}
+            >
+              {selectedSource && (
+                <ConnectorIcon
+                  connectorId={selectedSource.connector}
+                  name={selectedSource.connectorName}
+                  iconPath={selectedSource.connectorIcon}
+                  size={18}
+                />
+              )}
+              <span>{t('wizard.relations.source')}:</span>
+              <strong>{selectedSource?.id ?? relation.sourceId}</strong>
+              <ChevronDown className="size-3" aria-hidden="true" />
+            </button>
+          )}
         </div>
         <div className="pipeline-wizard__relation-actions">
           {relation.table && (
@@ -188,7 +252,7 @@ export function WizardRelationCard({
             onClick={() => setPreprocessingOpen((open) => !open)}
           >
             {t('wizard.relations.preprocess')}
-            <span>{relation.transforms.length}</span>
+            {relation.transforms.length > 0 && <span>{relation.transforms.length}</span>}
           </button>
           <button
             type="button"
@@ -201,62 +265,7 @@ export function WizardRelationCard({
         </div>
       </header>
 
-      <div className="pipeline-wizard__relation-title-row">
-        <strong>{relation.table || t('wizard.relations.newTable')}</strong>
-        {relation.table &&
-          relation.shape !== 'flat' &&
-          (pathEditing ? (
-            <label className="pipeline-wizard__relation-path-edit">
-              <span>{t('wizard.relations.outputField')}</span>
-              <input
-                autoFocus
-                className="pipeline-wizard__input"
-                value={relation.path}
-                onChange={(event) => onChange({ ...relation, path: event.target.value })}
-                onBlur={() => setPathEditing(false)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') setPathEditing(false)
-                  if (event.key === 'Escape') setPathEditing(false)
-                }}
-                aria-label={t('wizard.relations.outputField')}
-              />
-            </label>
-          ) : (
-            <button
-              type="button"
-              className="pipeline-wizard__relation-alias"
-              onClick={() => setPathEditing(true)}
-              aria-label={t('wizard.relations.editOutputField')}
-            >
-              <span>{t('wizard.relations.as')}</span>
-              <code>{relation.path || t('wizard.relations.outputFieldPlaceholder')}</code>
-              <Pencil className="size-3" aria-hidden="true" />
-            </button>
-          ))}
-      </div>
-
-      {relation.table && !tableSelectionOpen ? (
-        <div className="pipeline-wizard__relation-source-summary">
-          {selectedSource && (
-            <ConnectorIcon
-              connectorId={selectedSource.connector}
-              name={selectedSource.connectorName}
-              iconPath={selectedSource.connectorIcon}
-              size={18}
-            />
-          )}
-          <span>
-            {t('wizard.relations.source')}:{' '}
-            <strong>{selectedSource?.id ?? relation.sourceId}</strong>
-            {relation.key.length > 0 && (
-              <>
-                <span aria-hidden="true"> · </span>
-                {t('wizard.relations.rowKey')}: <code>{relation.key.join(', ')}</code>
-              </>
-            )}
-          </span>
-        </div>
-      ) : (
+      {(!relation.table || tableSelectionOpen) && (
         <div className="pipeline-wizard__relation-fields">
           <label className="pipeline-wizard__field">
             <span>{t('wizard.relations.source')}</span>
@@ -340,180 +349,200 @@ export function WizardRelationCard({
         <p className="pipeline-wizard__flat-hint">{t('wizard.relations.flatHint')}</p>
       )}
 
-      {relation.table && (
+      {relation.table && (tableSelectionOpen || relation.key.length === 0) && (
         <div className="pipeline-wizard__identity">
           <span>{t('wizard.relations.rowKey')}</span>
-          {relation.key.length > 0 ? (
-            <code>{relation.key.join(', ')}</code>
-          ) : (
-            <label className="pipeline-wizard__identity-select">
-              <span className="sr-only">{t('wizard.relations.chooseRowKey')}</span>
-              <Select
-                value=""
-                onValueChange={(value) =>
-                  onChange({
-                    ...relation,
-                    key: value ? [value] : [],
-                    arrayKey: value ? [value] : [],
-                  })
-                }
-                disabled={childFields.length === 0}
-              >
-                <SelectTrigger className="pipeline-wizard__select">
-                  <SelectValue placeholder={t('wizard.relations.chooseRowKey')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {childFields.map((field) => (
-                    <SelectItem key={field.name} value={field.name}>
-                      {field.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </label>
-          )}
+          <label className="pipeline-wizard__identity-select">
+            <span className="sr-only">{t('wizard.relations.chooseRowKey')}</span>
+            <Select
+              value={relation.key[0] ?? ''}
+              onValueChange={(value) =>
+                onChange({
+                  ...relation,
+                  key: value ? [value] : [],
+                  arrayKey: value ? [value] : [],
+                })
+              }
+              disabled={childFields.length === 0}
+            >
+              <SelectTrigger className="pipeline-wizard__select">
+                <SelectValue placeholder={t('wizard.relations.chooseRowKey')} />
+              </SelectTrigger>
+              <SelectContent>
+                {childFields.map((field) => (
+                  <SelectItem key={field.name} value={field.name}>
+                    {field.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
         </div>
       )}
 
-      <section
-        className="pipeline-wizard__relation-conditions"
-        aria-label={t('wizard.relations.conditions')}
-      >
-        <div className="pipeline-wizard__relation-section-heading">
-          <div>
-            <strong>{t('wizard.relations.conditions')}</strong>
-            <span>{t('wizard.relations.conditionsHint')}</span>
+      {relation.table && (
+        <section
+          className="pipeline-wizard__relation-conditions"
+          aria-label={t('wizard.relations.conditions')}
+        >
+          <div className="sr-only">
+            <div>
+              <strong>{t('wizard.relations.conditions')}</strong>
+              <span>{t('wizard.relations.conditionsHint')}</span>
+            </div>
           </div>
-        </div>
 
-        {relation.conditions.map((condition) => {
-          return (
-            <div className="pipeline-wizard__relation-condition" key={condition.id}>
-              <Select
-                value={condition.childField}
-                onValueChange={(childField) =>
-                  updateCondition(condition.id, { childField: childField ?? '' })
-                }
-                disabled={!relation.table || childFields.length === 0}
-              >
-                <SelectTrigger
-                  className="pipeline-wizard__select"
-                  aria-label={t('wizard.relations.childField')}
-                >
-                  <SelectValue placeholder={t('wizard.relations.chooseChildField')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {childFields.map((field) => (
-                    <SelectItem key={field.name} value={field.name}>
-                      {field.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <span className="pipeline-wizard__relation-equals" aria-hidden="true">
-                =
-              </span>
-              <div className="pipeline-wizard__relation-parent-fields">
+          {relation.conditions.map((condition) => {
+            return (
+              <div className="pipeline-wizard__relation-condition" key={condition.id}>
                 <Select
-                  value={relation.parentId}
-                  onValueChange={(parentId) => parentId && changeParentEntity(parentId)}
-                  disabled={!relation.table || availableEntities.length === 0}
-                >
-                  <SelectTrigger
-                    className="pipeline-wizard__select pipeline-wizard__parent-table-select"
-                    aria-label={t('wizard.relations.parentTable')}
-                  >
-                    <SelectValue placeholder={t('wizard.relations.chooseTarget')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableEntities.map((entity) => (
-                      <SelectItem key={entity.id} value={entity.id}>
-                        {entity.label}
-                        {entity.id === 'root' ? ` (${t('wizard.relations.rootTable')})` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={condition.parentField}
-                  onValueChange={(parentField) =>
-                    updateCondition(condition.id, { parentField: parentField ?? '' })
+                  value={condition.childField}
+                  onValueChange={(childField) =>
+                    updateCondition(condition.id, { childField: childField ?? '' })
                   }
-                  disabled={!relation.table || !parentEntity || parentEntity.fields.length === 0}
+                  disabled={!relation.table || childFields.length === 0}
                 >
                   <SelectTrigger
-                    className="pipeline-wizard__select pipeline-wizard__parent-field-select"
-                    aria-label={t('wizard.relations.parentField')}
+                    className="pipeline-wizard__select"
+                    aria-label={t('wizard.relations.childField')}
                   >
-                    <SelectValue placeholder={t('wizard.relations.chooseParentField')} />
+                    <SelectValue placeholder={t('wizard.relations.chooseChildField')}>
+                      {(value: string | null) =>
+                        value ? (
+                          <>
+                            <span className="pipeline-wizard__field-prefix">
+                              {relation.table.split('.').at(-1)}.
+                            </span>
+                            {value}
+                          </>
+                        ) : (
+                          t('wizard.relations.chooseChildField')
+                        )
+                      }
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {parentEntity?.fields.map((field) => (
+                    {childFields.map((field) => (
                       <SelectItem key={field.name} value={field.name}>
                         {field.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <span className="pipeline-wizard__relation-equals" aria-hidden="true">
+                  =
+                </span>
+                <div className="pipeline-wizard__relation-parent-fields">
+                  <Select
+                    value={relation.parentId}
+                    onValueChange={(parentId) => parentId && changeParentEntity(parentId)}
+                    disabled={!relation.table || availableEntities.length === 0}
+                  >
+                    <SelectTrigger
+                      className="pipeline-wizard__select pipeline-wizard__parent-table-select"
+                      aria-label={t('wizard.relations.parentTable')}
+                    >
+                      <SelectValue placeholder={t('wizard.relations.chooseTarget')}>
+                        {(value: string | null) =>
+                          value
+                            ? `${
+                                availableEntities
+                                  .find((entity) => entity.id === value)
+                                  ?.table.split('.')
+                                  .at(-1) ?? value
+                              }${value === 'root' ? ` (${t('wizard.relations.rootTable')})` : ''}`
+                            : t('wizard.relations.chooseTarget')
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableEntities.map((entity) => (
+                        <SelectItem key={entity.id} value={entity.id}>
+                          {entity.label}
+                          {entity.id === 'root' ? ` (${t('wizard.relations.rootTable')})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={condition.parentField}
+                    onValueChange={(parentField) =>
+                      updateCondition(condition.id, { parentField: parentField ?? '' })
+                    }
+                    disabled={!relation.table || !parentEntity || parentEntity.fields.length === 0}
+                  >
+                    <SelectTrigger
+                      className="pipeline-wizard__select pipeline-wizard__parent-field-select"
+                      aria-label={t('wizard.relations.parentField')}
+                    >
+                      <SelectValue placeholder={t('wizard.relations.chooseParentField')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {parentEntity?.fields.map((field) => (
+                        <SelectItem key={field.name} value={field.name}>
+                          {field.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {relation.conditions.length > 1 && (
+                  <button
+                    type="button"
+                    className="pipeline-wizard__icon-button"
+                    aria-label={t('wizard.relations.removeCondition')}
+                    onClick={() =>
+                      onChange({
+                        ...relation,
+                        conditions: relation.conditions.filter((item) => item.id !== condition.id),
+                      })
+                    }
+                  >
+                    <X className="size-3.5" aria-hidden="true" />
+                  </button>
+                )}
+                {relation.conditions.length === 1 && <span aria-hidden="true" />}
               </div>
-              {relation.conditions.length > 1 && (
-                <button
-                  type="button"
-                  className="pipeline-wizard__icon-button"
-                  aria-label={t('wizard.relations.removeCondition')}
-                  onClick={() =>
-                    onChange({
-                      ...relation,
-                      conditions: relation.conditions.filter((item) => item.id !== condition.id),
-                    })
-                  }
-                >
-                  <X className="size-3.5" aria-hidden="true" />
-                </button>
-              )}
-              {relation.conditions.length === 1 && <span aria-hidden="true" />}
-            </div>
-          )
-        })}
+            )
+          })}
 
-        {relation.table && childFields.length === 0 && (
-          <p className="pipeline-wizard__field-hint">
-            {childSchemaLoading
-              ? t('wizard.relations.loadingSchema')
-              : t('wizard.relations.schemaUnavailable')}
-          </p>
-        )}
-        {relation.table && parentEntity && parentEntity.fields.length === 0 && (
-          <p className="pipeline-wizard__field-hint">
-            {t('wizard.relations.parentSchemaUnavailable')}
-          </p>
-        )}
-        {relation.table && childFields.length > 0 && !isRelationshipComplete && (
-          <p className="pipeline-wizard__field-hint">
-            {t('wizard.relations.completeRelationship')}
-          </p>
-        )}
+          {relation.table && childFields.length === 0 && (
+            <p className="pipeline-wizard__field-hint">
+              {childSchemaLoading
+                ? t('wizard.relations.loadingSchema')
+                : t('wizard.relations.schemaUnavailable')}
+            </p>
+          )}
+          {relation.table && parentEntity && parentEntity.fields.length === 0 && (
+            <p className="pipeline-wizard__field-hint">
+              {t('wizard.relations.parentSchemaUnavailable')}
+            </p>
+          )}
+          {relation.table && childFields.length > 0 && !isRelationshipComplete && (
+            <p className="pipeline-wizard__field-hint">
+              {t('wizard.relations.completeRelationship')}
+            </p>
+          )}
 
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="pipeline-wizard__add-condition"
-          disabled={!relation.table || !parentEntity}
-          onClick={() =>
-            onChange({
-              ...relation,
-              conditions: [
-                ...relation.conditions,
-                { id: crypto.randomUUID(), childField: '', parentField: '' },
-              ],
-            })
-          }
-        >
-          <Plus className="size-3.5" aria-hidden="true" />
-          {t('wizard.relations.addCondition')}
-        </Button>
-      </section>
+          <button
+            type="button"
+            className="pipeline-wizard__add-condition"
+            disabled={!relation.table || !parentEntity}
+            onClick={() =>
+              onChange({
+                ...relation,
+                conditions: [
+                  ...relation.conditions,
+                  { id: crypto.randomUUID(), childField: '', parentField: '' },
+                ],
+              })
+            }
+          >
+            <Plus className="size-3.5" aria-hidden="true" />
+            {t('wizard.relations.addCondition')}
+          </button>
+        </section>
+      )}
 
       {preprocessingOpen && (
         <section className="pipeline-wizard__relation-processing">
@@ -618,35 +647,20 @@ export function WizardRelationCard({
             <div>
               <FolderTree className="size-4" aria-hidden="true" />
               <strong>{t('wizard.relations.nestedSubRelations')}</strong>
-              <span>{childrenCount}</span>
+              <span>({childrenCount})</span>
             </div>
-            <DropdownMenu open={relatedMenuOpen} onOpenChange={setRelatedMenuOpen}>
-              <DropdownMenuTrigger
-                render={
-                  <Button type="button" variant="outline" size="sm">
-                    <Plus className="size-3.5" aria-hidden="true" />
-                    {t('wizard.relations.addSubRelation', { table: relation.table })}
-                  </Button>
-                }
-              />
-              <DropdownMenuContent align="end" className="pipeline-wizard__step-menu">
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel>{t('wizard.relations.addRelatedTable')}</DropdownMenuLabel>
-                  {(['object', 'array', 'flat'] as const).map((shape) => (
-                    <DropdownMenuItem
-                      key={shape}
-                      onClick={() => {
-                        onAddRelatedTable(shape)
-                        setRelatedMenuOpen(false)
-                      }}
-                    >
-                      <Database className="size-3.5" aria-hidden="true" />
-                      {t(`wizard.relations.addAs.${shape}`)}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="pipeline-wizard__nested-add"
+              onClick={() => onAddRelatedTable('array')}
+            >
+              <Plus className="size-3.5" aria-hidden="true" />
+              {t('wizard.relations.addSubRelation', {
+                table: relation.table.split('.').at(-1) ?? relation.table,
+              })}
+            </Button>
           </div>
           {childrenCount > 0 ? (
             <div className="pipeline-wizard__nested-content">{children}</div>

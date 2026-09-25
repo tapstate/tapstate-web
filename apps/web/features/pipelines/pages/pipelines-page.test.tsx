@@ -179,7 +179,22 @@ describe('PipelinesPage', () => {
     const row = link?.closest('tr')
     expect(row?.textContent).toContain('Draft')
     expect(row?.textContent).toContain('r3')
-    expect(row?.querySelectorAll('button')).toHaveLength(0)
+    expect(row?.textContent).not.toContain('Edit')
+    expect(row?.querySelectorAll('a[href="/pipelines/unfinished_wizard/edit"]')).toHaveLength(2)
+    expect(row?.querySelector('.pipeline-list__lifecycle-menu')).not.toBeNull()
+    expect(row?.querySelector('.pipeline-list__actions-hover')).not.toBeNull()
+    expect(row?.querySelector('[aria-label="More actions for unfinished_wizard"]')).not.toBeNull()
+    expect(row?.querySelector('[aria-label="Start unfinished_wizard"]')).toBeNull()
+    expect(row?.querySelector('[aria-label="Stop unfinished_wizard"]')).toBeNull()
+
+    await act(async () => {
+      row
+        ?.querySelector<HTMLButtonElement>('[aria-label="More actions for unfinished_wizard"]')
+        ?.click()
+    })
+    expect(elementWithText('[role="menuitem"]', 'Edit unfinished_wizard')).toBeDefined()
+    expect(elementWithText('[role="menuitem"]', 'Copy pipeline ID')).toBeUndefined()
+    expect(elementWithText('[role="menuitem"]', 'Delete')).toBeUndefined()
   })
 
   it('shows an unavailable state when a Pipeline has no runtime observation', async () => {
