@@ -1,0 +1,31 @@
+{
+  "app": {
+    "brand": "Tapstate Cloud",
+    "console": "Cloud 主控台",
+    "organization": "組織",
+    "organizationPlaceholder": "選擇一個組織",
+    "workspace": "工作區",
+    "primaryNavigation": "主導覽",
+    "preview": "預覽",
+    "unauthenticated": "未連線",
+    "signedOut": "未登入"
+  },
+  "access": {
+    "eyebrow": "安全雲端工作區",
+    "title": "請先登入",
+    "description": "Cloud Console 需要經過驗證的工作階段。接通 Cloud 身分服務後，將啟用登入和組織存取。",
+    "status": "目前沒有有效工作階段"
+  },
+  "sections": {
+    "overview": { "title": "總覽", "description": "查看 Cloud 組織和代管叢集摘要。" },
+    "clusters": {
+      "title": "叢集",
+      "description": "查看叢集狀態並開啟獲准存取的 Cluster Console。"
+    },
+    "organizations": { "title": "組織", "description": "管理組織成員和存取權限。" },
+    "billing": { "title": "用量與帳單", "description": "查看目前組織的資源用量。" },
+    "settings": { "title": "設定", "description": "管理組織和帳戶偏好設定。" },
+    "notConnectedTitle": "Cloud 服務尚未接通",
+    "notConnectedDescription": "此頁面屬於受保護路由。完成登入和 API 接線後，才會顯示 Cloud 資料。"
+  }
+}

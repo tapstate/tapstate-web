@@ -1,0 +1,31 @@
+{
+  "app": {
+    "brand": "Tapstate Cloud",
+    "console": "Cloud 控制台",
+    "organization": "组织",
+    "organizationPlaceholder": "选择一个组织",
+    "workspace": "工作区",
+    "primaryNavigation": "主导航",
+    "preview": "预览",
+    "unauthenticated": "未连接",
+    "signedOut": "未登录"
+  },
+  "access": {
+    "eyebrow": "安全云工作区",
+    "title": "请先登录",
+    "description": "Cloud Console 需要经过认证的会话。接入 Cloud 身份服务后，将启用登录和组织访问。",
+    "status": "当前没有有效会话"
+  },
+  "sections": {
+    "overview": { "title": "概览", "description": "查看 Cloud 组织和托管集群摘要。" },
+    "clusters": {
+      "title": "集群",
+      "description": "查看集群状态并打开获准访问的 Cluster Console。"
+    },
+    "organizations": { "title": "组织", "description": "管理组织成员和访问权限。" },
+    "billing": { "title": "用量与账单", "description": "查看当前组织的资源用量。" },
+    "settings": { "title": "设置", "description": "管理组织和账户偏好。" },
+    "notConnectedTitle": "Cloud 服务尚未接通",
+    "notConnectedDescription": "此页面属于受保护路由。完成登录和 API 接入后，才会显示 Cloud 数据。"
+  }
+}

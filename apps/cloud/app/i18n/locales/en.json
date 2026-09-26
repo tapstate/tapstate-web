@@ -1,0 +1,43 @@
+{
+  "app": {
+    "brand": "Tapstate Cloud",
+    "console": "Cloud Console",
+    "organization": "ORGANIZATION",
+    "organizationPlaceholder": "Select an organization",
+    "workspace": "WORKSPACE",
+    "primaryNavigation": "Primary navigation",
+    "preview": "Preview",
+    "unauthenticated": "Not connected",
+    "signedOut": "Signed out"
+  },
+  "access": {
+    "eyebrow": "SECURE CLOUD WORKSPACE",
+    "title": "Sign in to continue",
+    "description": "Cloud Console requires an authenticated session. Sign-in and organization access will be enabled when the Cloud identity service is connected.",
+    "status": "No active session"
+  },
+  "sections": {
+    "overview": {
+      "title": "Overview",
+      "description": "A summary of your Cloud organization and managed clusters."
+    },
+    "clusters": {
+      "title": "Clusters",
+      "description": "Review cluster status and open an authorized Cluster Console."
+    },
+    "organizations": {
+      "title": "Organization",
+      "description": "Manage organization membership and access."
+    },
+    "billing": {
+      "title": "Usage & billing",
+      "description": "Review usage for the current organization."
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "Manage organization and account preferences."
+    },
+    "notConnectedTitle": "Cloud services are not connected",
+    "notConnectedDescription": "This screen is a protected route. Cloud data will appear after sign-in and API integration are available."
+  }
+}
