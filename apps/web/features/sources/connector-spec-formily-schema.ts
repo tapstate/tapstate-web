@@ -80,8 +80,9 @@ function isMongoFamilyConnector(connectorId: string | undefined) {
   return isMongoDbConnector(connectorId) || isAtlasConnector(connectorId)
 }
 
-function isMysqlConnector(connectorId: string | undefined) {
-  return connectorId?.trim().toLocaleLowerCase() === 'mysql'
+function usesMysqlNumericPort(connectorId: string | undefined) {
+  const id = connectorId?.trim().toLocaleLowerCase()
+  return id === 'mysql' || id === 'aws-rds-mysql'
 }
 
 function finiteNumber(value: unknown) {
@@ -93,10 +94,9 @@ function finiteNumber(value: unknown) {
 }
 
 /**
- * A few connector specs predate the typed catalog contract. MySQL's top-level
- * port is one of those fields: it is declared as a string while rendered by
- * InputNumber. Keep this compatibility rule at the spec boundary so both the
- * Formily schema and its defaults agree on the value type.
+ * The MySQL and AWS RDS MySQL specs declare their top-level port as a string
+ * while rendering it with InputNumber. Keep the form and catalog values aligned
+ * with the numeric value their shared connector implementation expects.
  */
 function withConnectorSpecificSchema(node: JsonRecord, connectorId?: string): JsonRecord {
   if (isAtlasConnector(connectorId)) {
@@ -121,7 +121,7 @@ function withConnectorSpecificSchema(node: JsonRecord, connectorId?: string): Js
     }
   }
 
-  if (!isMysqlConnector(connectorId)) return node
+  if (!usesMysqlNumericPort(connectorId)) return node
 
   const properties = asRecord(node.properties)
   const port = asRecord(properties?.port)
@@ -219,15 +219,14 @@ export function connectorSpecInitialValues(text: string, connectorId?: string): 
 }
 
 /**
- * Align catalog field metadata with connector-specific spec fixes. This is
- * intentionally narrow: only the MySQL connection port is corrected, while
- * unrelated connectors keep the catalog-declared type.
+ * Align catalog field metadata with the MySQL-family port fix while leaving
+ * unrelated connector fields at their catalog-declared types.
  */
 export function normalizeConnectorConfigFields(
   connectorId: string | undefined,
   fields: readonly ConnectorConfigField[],
 ): ConnectorConfigField[] {
-  if (!isMysqlConnector(connectorId)) return [...fields]
+  if (!usesMysqlNumericPort(connectorId)) return [...fields]
 
   return fields.map((field) =>
     field.name === 'port' ? { ...field, type: 'number' as const } : field,
@@ -239,7 +238,7 @@ export function normalizeConnectorConfigValues(
   values: Record<string, unknown>,
 ): SourceConfigState {
   const normalized = { ...values } as SourceConfigState
-  if (!isMysqlConnector(connectorId) || !Object.hasOwn(values, 'port')) return normalized
+  if (!usesMysqlNumericPort(connectorId) || !Object.hasOwn(values, 'port')) return normalized
 
   const port = finiteNumber(values.port)
   if (port !== undefined) normalized.port = port

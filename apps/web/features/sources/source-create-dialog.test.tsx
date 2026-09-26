@@ -303,6 +303,13 @@ describe('SourceCreateDialog', () => {
   it('offers a registered AWS RDS MySQL connector as a snapshot or CDC source', async () => {
     listConnectors.mockResolvedValue([mysql, mongodb, awsRdsMysql])
     getConnector.mockResolvedValue({ ...detail, ...awsRdsMysql })
+    testConnection.mockResolvedValueOnce({
+      connectionId: 'rds-source',
+      connectorId: 'aws-rds-mysql',
+      outcome: 'FAILED',
+      checks: [{ name: 'Login', status: 'FAILED', message: 'Login denied' }],
+      testedAt: 1_754_800_000_000,
+    })
     host = document.createElement('div')
     document.body.append(host)
     root = createRoot(host)
@@ -330,6 +337,33 @@ describe('SourceCreateDialog', () => {
     const modeGroup = document.body.querySelector('[role="group"][aria-label="Read mode"]')
     expect(modeGroup?.textContent).toContain('snapshot')
     expect(modeGroup?.textContent).toContain('cdc')
+
+    const sourceIdInput = dialogContent()?.querySelector<HTMLInputElement>(
+      'label.source-field input',
+    )
+    const hostInput = fieldInput('Spec host')
+    expect(sourceIdInput).toBeDefined()
+    expect(hostInput).toBeDefined()
+    await act(async () => {
+      changeInput(sourceIdInput!, 'rds-source')
+      changeInput(hostInput!, 'db.example')
+    })
+    const testButton = [...document.body.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Test connection',
+    )
+    await act(async () => testButton?.click())
+    await vi.waitFor(() => {
+      expect(testConnection).toHaveBeenCalledWith(
+        {
+          id: 'rds-source',
+          connectorId: 'aws-rds-mysql',
+          settings: { host: 'db.example', port: 3306 },
+        },
+        expect.any(Function),
+      )
+      expect(document.body.textContent).toContain('Connection test failed')
+      expect(document.body.textContent).toContain('Login denied')
+    })
   })
 
   it('does not fabricate a configuration form when the registered connector lacks spec text', async () => {
