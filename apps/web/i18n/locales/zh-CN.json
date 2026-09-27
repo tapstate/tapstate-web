@@ -73,8 +73,8 @@
         "successMark": "✓",
         "connectCommand": "tapstate auth login",
         "connectResult": "Authenticated successfully",
-        "workspaceCommand": "tapstate workspace init ai-context",
-        "workspaceResult": "Workspace initialized",
+        "workspaceCommand": "tapstate new sample",
+        "workspaceResult": "Project created",
         "sourceCommand": "tapstate connect postgres --prod",
         "sourceResult": "Connected to production database (14.2ms)",
         "pipelineCommand": "tapstate pipeline deploy user-events",
@@ -220,7 +220,7 @@
       "required": "必填",
       "arrayPlaceholder": "输入 JSON 数组",
       "noConfig": "此连接器没有声明连接配置字段。",
-      "noConnectors": "此工作区没有可用的连接器。",
+      "noConnectors": "此服务器没有可用的连接器。",
       "documentationTitle": "连接器文档",
       "documentationPlaceholder": "连接器配置指引将显示在这里。",
       "cancel": "取消",
@@ -385,13 +385,18 @@
       "settings": "设置"
     }
   },
+  "projects": {
+    "groupTitle": "项目 · {{project}}",
+    "noProject": "未归属项目",
+    "sharedByAll": "所有项目共用"
+  },
   "pipelines": {
     "title": "流水线",
     "subtitle": "查看流水线资源、生成视图和服务 API。",
     "allPipelines": "全部流水线",
     "explorer": "资源树",
     "states": {
-      "empty": "当前工作区尚未存储任何流水线。",
+      "empty": "尚未在任何项目中存储流水线。",
       "error": "无法加载已存储的流水线。",
       "loading": "正在加载已存储的流水线。"
     },

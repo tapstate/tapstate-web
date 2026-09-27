@@ -73,8 +73,8 @@
         "successMark": "✓",
         "connectCommand": "tapstate auth login",
         "connectResult": "Authenticated successfully",
-        "workspaceCommand": "tapstate workspace init ai-context",
-        "workspaceResult": "Workspace initialized",
+        "workspaceCommand": "tapstate new sample",
+        "workspaceResult": "Project created",
         "sourceCommand": "tapstate connect postgres --prod",
         "sourceResult": "Connected to production database (14.2ms)",
         "pipelineCommand": "tapstate pipeline deploy user-events",
@@ -220,7 +220,7 @@
       "required": "Required",
       "arrayPlaceholder": "Enter a JSON array",
       "noConfig": "This connector does not declare connection fields.",
-      "noConnectors": "No connectors are available for this workspace.",
+      "noConnectors": "No connectors are available on this server.",
       "documentationTitle": "Connector documentation",
       "documentationPlaceholder": "Connector setup guidance will appear here.",
       "cancel": "Cancel",
@@ -385,13 +385,18 @@
       "settings": "Settings"
     }
   },
+  "projects": {
+    "groupTitle": "Project · {{project}}",
+    "noProject": "No project",
+    "sharedByAll": "Shared by all projects"
+  },
   "pipelines": {
     "title": "Pipelines",
     "subtitle": "Inspect pipeline resources, generated views, and serving APIs.",
     "allPipelines": "All Pipelines",
     "explorer": "Explorer",
     "states": {
-      "empty": "No pipelines have been stored in this workspace.",
+      "empty": "No pipelines have been stored in any project.",
       "error": "We couldn't load stored pipelines.",
       "loading": "Loading stored pipelines."
     },

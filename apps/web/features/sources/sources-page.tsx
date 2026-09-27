@@ -21,7 +21,7 @@ import {
   Table as TableIcon,
   Trash2,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type {
@@ -43,6 +43,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { groupByProject, hasProjectGroups, projectLabel } from '@/lib/project-grouping'
 import { cn } from '@/lib/utils'
 import {
   discoverSourceSchema,
@@ -1005,6 +1006,13 @@ function AllSourcesView({
   testingSourceId: string | null
 }) {
   const { t } = useTranslation()
+  const groups = groupByProject(filteredSources, (source) => projectLabel(source.raw.metadata))
+  // Servers that predate project labels keep the flat, header-less list. The
+  // decision uses every source, not the search result, so headers stay stable
+  // while the user filters.
+  const grouped = hasProjectGroups(
+    groupByProject(sources, (source) => projectLabel(source.raw.metadata)),
+  )
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-gray-50/40">
       <div className="shrink-0 border-b border-gray-100/70 bg-white px-4 py-4 md:px-6">
@@ -1039,57 +1047,23 @@ function AllSourcesView({
                 </td>
               </tr>
             ) : (
-              filteredSources.map((source) => (
-                <tr key={source.id} className="group transition-colors hover:bg-gray-50/70">
-                  <td className="px-4 py-3">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="h-auto justify-start px-0 text-left"
-                      onClick={() => onSelect(source)}
-                    >
-                      <span className="flex h-6 w-6 items-center justify-center rounded-lg border border-gray-200/70 bg-gray-50">
-                        <ConnectorIcon
-                          connectorId={source.type}
-                          name={source.connectorName}
-                          iconPath={source.connectorIcon}
-                          size={16}
-                          className="size-4 rounded-md border-0 bg-transparent"
-                        />
-                      </span>
-                      <span className="font-medium text-gray-900">{source.name}</span>
-                    </Button>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{source.type}</td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 px-1.5 py-0.5 text-[11px] font-medium text-gray-600 ring-1 ring-gray-600/15 ring-inset">
-                      <span className="h-1 w-1 rounded-full bg-gray-400" aria-hidden="true" />
-                      {t('sources.details.secretConfigured')}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">{source.host}</td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {t('sources.tablesCount', { count: source.tables.length })}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-700"
-                      type="button"
-                      aria-label={`${t('sources.actions.test')} ${source.name}`}
-                      title={t('sources.actions.test')}
-                      disabled={testingSourceId !== null}
-                      onClick={() => onTest(source)}
-                    >
-                      {testingSourceId === source.id ? (
-                        <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
-                      ) : (
-                        <Activity className="size-3.5" aria-hidden="true" />
-                      )}
-                    </Button>
-                  </td>
-                </tr>
+              groups.map((group) => (
+                <Fragment key={group.project ?? '\u0000unlabeled'}>
+                  {grouped && (
+                    <tr className="bg-gray-50/40">
+                      <th
+                        colSpan={6}
+                        scope="colgroup"
+                        className="px-4 pt-4 pb-2 text-[12px] font-semibold whitespace-nowrap text-gray-500"
+                      >
+                        {group.project === null
+                          ? t('projects.sharedByAll')
+                          : t('projects.groupTitle', { project: group.project })}
+                      </th>
+                    </tr>
+                  )}
+                  {group.items.map(renderRow)}
+                </Fragment>
               ))
             )}
           </DataTable>
@@ -1097,4 +1071,59 @@ function AllSourcesView({
       </div>
     </div>
   )
+
+  function renderRow(source: Source) {
+    return (
+      <tr key={source.id} className="group transition-colors hover:bg-gray-50/70">
+        <td className="px-4 py-3">
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-auto justify-start px-0 text-left"
+            onClick={() => onSelect(source)}
+          >
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg border border-gray-200/70 bg-gray-50">
+              <ConnectorIcon
+                connectorId={source.type}
+                name={source.connectorName}
+                iconPath={source.connectorIcon}
+                size={16}
+                className="size-4 rounded-md border-0 bg-transparent"
+              />
+            </span>
+            <span className="font-medium text-gray-900">{source.name}</span>
+          </Button>
+        </td>
+        <td className="px-4 py-3 text-gray-600">{source.type}</td>
+        <td className="px-4 py-3">
+          <span className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 px-1.5 py-0.5 text-[11px] font-medium text-gray-600 ring-1 ring-gray-600/15 ring-inset">
+            <span className="h-1 w-1 rounded-full bg-gray-400" aria-hidden="true" />
+            {t('sources.details.secretConfigured')}
+          </span>
+        </td>
+        <td className="px-4 py-3 text-gray-500">{source.host}</td>
+        <td className="px-4 py-3 text-gray-600">
+          {t('sources.tablesCount', { count: source.tables.length })}
+        </td>
+        <td className="px-4 py-3 text-right">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-700"
+            type="button"
+            aria-label={`${t('sources.actions.test')} ${source.name}`}
+            title={t('sources.actions.test')}
+            disabled={testingSourceId !== null}
+            onClick={() => onTest(source)}
+          >
+            {testingSourceId === source.id ? (
+              <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <Activity className="size-3.5" aria-hidden="true" />
+            )}
+          </Button>
+        </td>
+      </tr>
+    )
+  }
 }

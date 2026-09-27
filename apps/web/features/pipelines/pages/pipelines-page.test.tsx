@@ -342,7 +342,7 @@ describe('PipelinesPage', () => {
 
     await vi.waitFor(() => expect(listPipelines).toHaveBeenCalledTimes(2))
     await vi.waitFor(() =>
-      expect(container?.textContent).toContain('No pipelines have been stored in this workspace.'),
+      expect(container?.textContent).toContain('No pipelines have been stored in any project.'),
     )
   })
 })
