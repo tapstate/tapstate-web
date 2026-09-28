@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react'
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
 
@@ -90,9 +91,9 @@ export interface TableTransformsManagerProps {
 const TRANSFORM_TYPE_META: Record<
   TransformType,
   {
-    title: string
+    titleKey: string
+    descriptionKey: string
     typeName: string
-    description: string
     icon: React.ComponentType<{ className?: string }>
     badgeColor: string
     borderColor: string
@@ -100,45 +101,45 @@ const TRANSFORM_TYPE_META: Record<
   }
 > = {
   filter: {
-    title: '筛选记录',
+    titleKey: 'pipelines.workspace.transform.filter.title',
     typeName: 'Filter',
-    description: '只让符合条件的行或事件继续向下游流动 (CEL 布尔表达式)',
+    descriptionKey: 'pipelines.workspace.transform.wizard.filterDescription',
     icon: Filter,
     badgeColor: 'bg-amber-100 text-amber-800 border-amber-200',
     borderColor: 'border-amber-300',
     activeBg: 'bg-amber-50/50',
   },
   map: {
-    title: '整理字段',
+    titleKey: 'pipelines.workspace.transform.map.title',
     typeName: 'Map',
-    description: '重命名、删除、计算输出字段或注入固定常量 (默认未配置字段透传)',
+    descriptionKey: 'pipelines.workspace.transform.wizard.mapDescription',
     icon: Layers,
     badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
     borderColor: 'border-blue-300',
     activeBg: 'bg-blue-50/50',
   },
   unwind: {
-    title: '展开数组',
+    titleKey: 'pipelines.workspace.transform.unwind.title',
     typeName: 'Unwind',
-    description: '将记录中的数组展开为多行记录，建立子元素独立行身份',
+    descriptionKey: 'pipelines.workspace.transform.wizard.unwindDescription',
     icon: Workflow,
     badgeColor: 'bg-purple-100 text-purple-800 border-purple-200',
     borderColor: 'border-purple-300',
     activeBg: 'bg-purple-50/50',
   },
   js: {
-    title: '编写处理逻辑',
+    titleKey: 'pipelines.workspace.transform.js.title',
     typeName: 'JavaScript',
-    description: '使用 process(record, ctx) 编写自定义事件过滤、转换与分发逻辑',
+    descriptionKey: 'pipelines.workspace.transform.wizard.jsDescription',
     icon: FileCode2,
     badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
     borderColor: 'border-emerald-300',
     activeBg: 'bg-emerald-50/50',
   },
   union: {
-    title: '合并数据流',
+    titleKey: 'pipelines.workspace.transform.union.title',
     typeName: 'Union',
-    description: '把多个输入流汇聚成一路继续处理 (不自动对齐字段或去重)',
+    descriptionKey: 'pipelines.workspace.transform.wizard.unionDescription',
     icon: Sparkles,
     badgeColor: 'bg-rose-100 text-rose-800 border-rose-200',
     borderColor: 'border-rose-300',
@@ -154,6 +155,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
   onChange,
   hideHeader = false,
 }) => {
+  const { t } = useTranslation()
   const [isAddingStep, setIsAddingStep] = React.useState(false)
 
   const handleCreateStep = (type: TransformType) => {
@@ -171,7 +173,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
 
     const newStep: TransformStep = {
       id: newStepId,
-      name: `${TRANSFORM_TYPE_META[type].title} (${TRANSFORM_TYPE_META[type].typeName})`,
+      name: `${t(TRANSFORM_TYPE_META[type].titleKey)} (${TRANSFORM_TYPE_META[type].typeName})`,
       type,
       enabled: true,
       isExpanded: true,
@@ -216,10 +218,10 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1.5 text-[12px] font-semibold text-gray-800">
               <Workflow className="h-3.5 w-3.5 text-blue-600" />
-              <span>Transforms (预处理链条)</span>
+              <span>{t('pipelines.workspace.transform.wizard.transformsHeading')}</span>
             </span>
             <span className="rounded-full bg-gray-100 px-2 py-0.5 font-mono text-[11px] text-gray-400">
-              {transforms.length} steps
+              {t('pipelines.workspace.transform.wizard.stepsCount', { count: transforms.length })}
             </span>
           </div>
 
@@ -230,7 +232,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
               className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-blue-200/90 bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-700 shadow-2xs transition-colors hover:bg-blue-100"
             >
               <Plus className="h-3.5 w-3.5" />
-              <span>添加 Transform</span>
+              <span>{t('pipelines.workspace.transform.wizard.addTransform')}</span>
             </button>
           )}
         </div>
@@ -260,16 +262,16 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                   </div>
                   <div>
                     <div className="text-[12px] font-semibold text-gray-900 group-hover:text-blue-700">
-                      {meta.title}
+                      {t(meta.titleKey)}
                     </div>
                     <div className="mt-0.5 line-clamp-2 text-[10px] leading-relaxed text-gray-500">
-                      {meta.description}
+                      {t(meta.descriptionKey)}
                     </div>
                   </div>
                 </div>
                 <div className="mt-2.5 flex items-center border-t border-gray-100 pt-2 text-[10px] font-medium text-blue-600">
                   <Plus className="mr-1 h-3 w-3" />
-                  添加此步骤
+                  {t('pipelines.workspace.transform.wizard.addThisStep')}
                 </div>
               </button>
             )
@@ -282,14 +284,20 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
         <div className="animate-in fade-in zoom-in-95 wizard-reference-panel-radius space-y-3 border-2 border-blue-400 bg-white p-3.5 shadow-sm">
           <div className="flex items-center justify-between border-b border-gray-100 pb-2">
             <div>
-              <h4 className="text-[13px] font-semibold text-gray-900">选择 Transform 目标类型</h4>
-              <p className="text-[11px] text-gray-500">按你的数据处理目标选择，配置将就地完成</p>
+              <h4 className="text-[13px] font-semibold text-gray-900">
+                {t('pipelines.workspace.transform.wizard.chooseTransformType')}
+              </h4>
+              <p className="text-[11px] text-gray-500">
+                {t('pipelines.workspace.transform.wizard.chooseTransformDescription')}
+              </p>
             </div>
             <button
               type="button"
               onClick={() => {
                 setIsAddingStep(false)
               }}
+              aria-label={t('pipelines.workspace.transform.wizard.closeTransformPicker')}
+              title={t('pipelines.workspace.transform.wizard.closeTransformPicker')}
               className="cursor-pointer rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
             >
               <X className="h-4 w-4" />
@@ -321,15 +329,15 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                     </div>
                     <div>
                       <div className="text-[12px] font-semibold text-gray-900 group-hover:text-blue-700">
-                        {meta.title}
+                        {t(meta.titleKey)}
                       </div>
                       <div className="mt-0.5 line-clamp-2 text-[10px] leading-relaxed text-gray-500">
-                        {meta.description}
+                        {t(meta.descriptionKey)}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center pt-2 text-[10px] font-medium text-blue-600 transition-transform group-hover:translate-x-0.5">
-                    <span>配置步骤</span>
+                    <span>{t('pipelines.workspace.transform.wizard.configureStep')}</span>
                     <ArrowRight className="ml-0.5 h-3 w-3" />
                   </div>
                 </button>
@@ -374,7 +382,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                     )}
                   >
                     <IconComp className="h-3 w-3" />
-                    <span>{meta.title}</span>
+                    <span>{t(meta.titleKey)}</span>
                   </span>
 
                   <span className="font-mono text-[10px] text-gray-400">{meta.typeName}</span>
@@ -391,7 +399,8 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                       disabled={idx === 0}
                       onClick={() => moveStep(idx, 'up')}
                       className="cursor-pointer p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30"
-                      title="上移步骤"
+                      title={t('pipelines.workspace.transform.wizard.moveStepUp')}
+                      aria-label={t('pipelines.workspace.transform.wizard.moveStepUp')}
                     >
                       <ChevronUp className="h-3.5 w-3.5" />
                     </button>
@@ -400,7 +409,8 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                       disabled={idx === transforms.length - 1}
                       onClick={() => moveStep(idx, 'down')}
                       className="cursor-pointer border-l border-gray-200 p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30"
-                      title="下移步骤"
+                      title={t('pipelines.workspace.transform.wizard.moveStepDown')}
+                      aria-label={t('pipelines.workspace.transform.wizard.moveStepDown')}
                     >
                       <ChevronDown className="h-3.5 w-3.5" />
                     </button>
@@ -411,7 +421,8 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                     type="button"
                     onClick={() => removeStep(idx)}
                     className="cursor-pointer rounded-lg p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                    title="删除此步骤"
+                    title={t('pipelines.workspace.transform.wizard.removeStep')}
+                    aria-label={t('pipelines.workspace.transform.wizard.removeStep')}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -422,6 +433,16 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                       updateStep(idx, (prev) => ({ ...prev, isExpanded: !prev.isExpanded }))
                     }
                     className="cursor-pointer rounded-lg p-1 text-gray-400 hover:text-gray-600"
+                    title={t(
+                      step.isExpanded
+                        ? 'pipelines.workspace.transform.wizard.collapseStep'
+                        : 'pipelines.workspace.transform.wizard.expandStep',
+                    )}
+                    aria-label={t(
+                      step.isExpanded
+                        ? 'pipelines.workspace.transform.wizard.collapseStep'
+                        : 'pipelines.workspace.transform.wizard.expandStep',
+                    )}
                   >
                     {step.isExpanded ? (
                       <ChevronUp className="h-4 w-4" />
@@ -439,7 +460,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                   <div className="flex items-center gap-3">
                     <div className="flex-1">
                       <label className="mb-1 block text-[11px] font-medium text-gray-600">
-                        步骤描述名称
+                        {t('pipelines.workspace.transform.wizard.stepName')}
                       </label>
                       <input
                         type="text"
@@ -448,13 +469,13 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                           const val = e.target.value
                           updateStep(idx, (prev) => ({ ...prev, name: val }))
                         }}
-                        placeholder="例如：过滤已取消订单 / 格式化收件人"
+                        placeholder={t('pipelines.workspace.transform.wizard.stepNamePlaceholder')}
                         className="w-full rounded-lg border border-gray-300 bg-gray-50/80 px-2.5 py-1.5 text-[12px] text-gray-900 transition-colors focus:border-blue-500 focus:bg-white focus:outline-none"
                       />
                     </div>
                     <div className="w-48">
                       <label className="mb-1 block text-[11px] font-medium text-gray-600">
-                        系统 DSL ID
+                        {t('pipelines.workspace.transform.wizard.dslId')}
                       </label>
                       <input
                         type="text"
@@ -559,7 +580,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
           className="group inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-[12px] font-medium text-gray-700 shadow-2xs transition-all hover:border-gray-400 hover:bg-gray-50"
         >
           <Plus className="h-3.5 w-3.5 text-blue-600 transition-transform group-hover:scale-110" />
-          添加下一个 Transform 步骤
+          {t('pipelines.workspace.transform.wizard.addNextStep')}
         </button>
       )}
     </div>
@@ -576,6 +597,7 @@ interface FilterEditorProps {
 }
 
 const FilterEditor: React.FC<FilterEditorProps> = ({ config, columns, onChange }) => {
+  const { t } = useTranslation()
   const isRawCel = config.isRawCel ?? false
   const conditions = config.conditions || []
 
@@ -623,7 +645,7 @@ const FilterEditor: React.FC<FilterEditorProps> = ({ config, columns, onChange }
         <div className="flex items-center gap-1.5">
           <Filter className="h-3.5 w-3.5 text-amber-600" />
           <span className="text-[12px] font-semibold text-amber-950">
-            筛选规则配置 (Filter Conditions)
+            {t('pipelines.workspace.transform.wizard.filterConditions')}
           </span>
         </div>
         <button
@@ -631,7 +653,11 @@ const FilterEditor: React.FC<FilterEditorProps> = ({ config, columns, onChange }
           onClick={() => onChange({ ...config, isRawCel: !isRawCel })}
           className="cursor-pointer text-[11px] font-medium text-amber-800 underline hover:text-amber-950"
         >
-          {isRawCel ? '切换到可视化条件构建器' : '直接编辑 CEL 原生表达式'}
+          {t(
+            isRawCel
+              ? 'pipelines.workspace.transform.wizard.visualConditionBuilder'
+              : 'pipelines.workspace.transform.wizard.rawCelEditor',
+          )}
         </button>
       </div>
 
@@ -644,7 +670,7 @@ const FilterEditor: React.FC<FilterEditorProps> = ({ config, columns, onChange }
             >
               {cIdx > 0 && (
                 <span className="rounded-lg border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
-                  AND
+                  {t('pipelines.workspace.transform.wizard.and')}
                 </span>
               )}
 
@@ -655,17 +681,23 @@ const FilterEditor: React.FC<FilterEditorProps> = ({ config, columns, onChange }
                   onChange={(e) => updateSingleCondition(cIdx, { field: e.target.value })}
                   className="cursor-pointer bg-transparent font-medium text-gray-900 focus:outline-none"
                 >
-                  <optgroup label="发现的 Schema 字段">
+                  <optgroup label={t('pipelines.workspace.transform.wizard.schemaFields')}>
                     {columns.map((col) => (
                       <option key={col} value={col}>
                         {col}
                       </option>
                     ))}
                   </optgroup>
-                  <optgroup label="CDC 事件 Envelope 字段">
-                    <option value="op">op (操作类型 c/u/d/r)</option>
-                    <option value="ts">ts (时间戳)</option>
-                    <option value="src">src (数据源信息)</option>
+                  <optgroup label={t('pipelines.workspace.transform.wizard.cdcEnvelopeFields')}>
+                    <option value="op">
+                      {t('pipelines.workspace.transform.wizard.operationType')}
+                    </option>
+                    <option value="ts">
+                      {t('pipelines.workspace.transform.wizard.eventTimestamp')}
+                    </option>
+                    <option value="src">
+                      {t('pipelines.workspace.transform.wizard.sourceMetadata')}
+                    </option>
                   </optgroup>
                 </select>
               </div>
@@ -678,14 +710,28 @@ const FilterEditor: React.FC<FilterEditorProps> = ({ config, columns, onChange }
                 }
                 className="cursor-pointer rounded-lg border border-gray-300 bg-gray-50 px-2 py-1 font-mono text-[12px] text-gray-800 focus:outline-none"
               >
-                <option value="==">== (等于)</option>
-                <option value="!=">!= (不等于)</option>
-                <option value=">">&gt; (大于)</option>
-                <option value="<">&lt; (小于)</option>
-                <option value=">=">&gt;= (大于等于)</option>
-                <option value="<=">&lt;= (小于等于)</option>
-                <option value="contains">contains (包含)</option>
-                <option value="starts_with">startsWith (前缀匹配)</option>
+                <option value="==">== ({t('pipelines.workspace.transform.wizard.equals')})</option>
+                <option value="!=">
+                  != ({t('pipelines.workspace.transform.wizard.notEquals')})
+                </option>
+                <option value=">">
+                  &gt; ({t('pipelines.workspace.transform.wizard.greaterThan')})
+                </option>
+                <option value="<">
+                  &lt; ({t('pipelines.workspace.transform.wizard.lessThan')})
+                </option>
+                <option value=">=">
+                  &gt;= ({t('pipelines.workspace.transform.wizard.greaterOrEqual')})
+                </option>
+                <option value="<=">
+                  &lt;= ({t('pipelines.workspace.transform.wizard.lessOrEqual')})
+                </option>
+                <option value="contains">
+                  contains ({t('pipelines.workspace.transform.wizard.contains')})
+                </option>
+                <option value="starts_with">
+                  startsWith ({t('pipelines.workspace.transform.wizard.startsWith')})
+                </option>
               </select>
 
               {/* Value Input */}
@@ -693,7 +739,7 @@ const FilterEditor: React.FC<FilterEditorProps> = ({ config, columns, onChange }
                 type="text"
                 value={cond.value}
                 onChange={(e) => updateSingleCondition(cIdx, { value: e.target.value })}
-                placeholder="'ACTIVE' 或 100"
+                placeholder={t('pipelines.workspace.transform.wizard.filterValuePlaceholder')}
                 className="min-w-[120px] flex-1 rounded-lg border border-gray-300 bg-white px-2 py-1 font-mono text-[12px] text-gray-900 focus:border-amber-500 focus:outline-none"
               />
 
@@ -701,6 +747,8 @@ const FilterEditor: React.FC<FilterEditorProps> = ({ config, columns, onChange }
                 <button
                   type="button"
                   onClick={() => removeCondition(cIdx)}
+                  title={t('pipelines.workspace.transform.removeCondition')}
+                  aria-label={t('pipelines.workspace.transform.removeCondition')}
                   className="cursor-pointer rounded-lg p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -716,11 +764,11 @@ const FilterEditor: React.FC<FilterEditorProps> = ({ config, columns, onChange }
               className="flex cursor-pointer items-center gap-1 text-[11px] font-medium text-amber-800 hover:text-amber-950 hover:underline"
             >
               <Plus className="h-3 w-3" />
-              <span>添加筛选条件 (AND)</span>
+              <span>{t('pipelines.workspace.transform.wizard.addFilterCondition')}</span>
             </button>
 
             <span className="font-mono text-[10px] text-amber-700">
-              生成的 CEL:{' '}
+              {t('pipelines.workspace.transform.wizard.generatedCel')}:{' '}
               <code className="rounded-lg border border-amber-200 bg-white/80 px-1.5 py-0.5">
                 {config.expr}
               </code>
@@ -730,20 +778,20 @@ const FilterEditor: React.FC<FilterEditorProps> = ({ config, columns, onChange }
       ) : (
         <div className="space-y-1.5">
           <label className="block text-[11px] font-medium text-amber-900">
-            CEL (Common Expression Language) 表达式
+            {t('pipelines.workspace.transform.wizard.celExpression')}
           </label>
           <textarea
             value={config.expr}
             onChange={(e) => onChange({ ...config, expr: e.target.value })}
             rows={2}
             className="w-full rounded-lg border border-amber-300 bg-white p-2 font-mono text-[12px] text-gray-900 focus:ring-1 focus:ring-amber-500 focus:outline-none"
-            placeholder="例如: op != 'd' && after.amount > 0"
+            placeholder={t('pipelines.workspace.transform.wizard.celPlaceholder')}
           />
           <div className="flex items-center gap-1 text-[10px] text-amber-800">
             <Info className="h-3 w-3" />
             <span>
-              表达式作用于事件 Envelope，可访问 <code>op</code>, <code>ts</code>,{' '}
-              <code>before</code>, <code>after</code>, <code>schema</code>。
+              {t('pipelines.workspace.transform.wizard.celEnvelopeHelp')} <code>op</code>,{' '}
+              <code>ts</code>, <code>before</code>, <code>after</code>, <code>schema</code>.
             </span>
           </div>
         </div>
@@ -762,6 +810,7 @@ interface MapEditorProps {
 }
 
 const MapEditor: React.FC<MapEditorProps> = ({ config, columns, onChange }) => {
+  const { t } = useTranslation()
   const fields = config.fields || []
   const passthrough = config.passthroughUnlisted ?? true
 
@@ -810,11 +859,11 @@ const MapEditor: React.FC<MapEditorProps> = ({ config, columns, onChange }) => {
         <div className="flex items-center gap-1.5">
           <Layers className="h-3.5 w-3.5 text-blue-600" />
           <span className="text-[12px] font-semibold text-blue-950">
-            字段整理与映射规则 (Field Mapping Rules)
+            {t('pipelines.workspace.transform.wizard.mapRules')}
           </span>
         </div>
         <span className="rounded-lg border border-blue-200 bg-blue-100/70 px-2 py-0.5 text-[11px] text-blue-700">
-          按顺序依次应用
+          {t('pipelines.workspace.transform.wizard.applyInOrder')}
         </span>
       </div>
 
@@ -823,13 +872,9 @@ const MapEditor: React.FC<MapEditorProps> = ({ config, columns, onChange }) => {
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
         <div className="space-y-1">
           <p className="font-medium">
-            💡 <strong>默认透传行为说明：</strong>未在此列表中声明的输入字段将
-            <strong>自动完整透传</strong>。
+            💡 {t('pipelines.workspace.transform.wizard.passthroughSummary')}
           </p>
-          <p className="text-blue-700">
-            你只需要为需要重命名（<code>$old</code>）、删除（<code>false</code>）、计算（
-            <code>=expr</code>）或注入常量的字段添加规则。
-          </p>
+          <p className="text-blue-700">{t('pipelines.workspace.transform.wizard.mapRuleHelp')}</p>
         </div>
       </div>
 
@@ -843,7 +888,7 @@ const MapEditor: React.FC<MapEditorProps> = ({ config, columns, onChange }) => {
             {/* Output Field Name */}
             <div className="w-36">
               <label className="mb-0.5 block text-[10px] font-medium text-gray-500">
-                输出字段名 (Target)
+                {t('pipelines.workspace.transform.wizard.outputField')}
               </label>
               <input
                 type="text"
@@ -856,7 +901,7 @@ const MapEditor: React.FC<MapEditorProps> = ({ config, columns, onChange }) => {
             {/* Rule Type */}
             <div className="w-36">
               <label className="mb-0.5 block text-[10px] font-medium text-gray-500">
-                处理规则 (Type)
+                {t('pipelines.workspace.transform.wizard.ruleType')}
               </label>
               <select
                 value={rule.ruleType}
@@ -865,21 +910,29 @@ const MapEditor: React.FC<MapEditorProps> = ({ config, columns, onChange }) => {
                 }
                 className="w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 px-2 py-1 text-[12px] font-medium text-gray-800 focus:outline-none"
               >
-                <option value="rename">重命名/取值 ($field)</option>
-                <option value="compute">CEL 计算 (=expr)</option>
-                <option value="delete">删除字段 (false)</option>
-                <option value="literal">新增固定值 (literal)</option>
+                <option value="rename">
+                  {t('pipelines.workspace.transform.wizard.renameRule')}
+                </option>
+                <option value="compute">
+                  {t('pipelines.workspace.transform.wizard.computeRule')}
+                </option>
+                <option value="delete">
+                  {t('pipelines.workspace.transform.wizard.deleteRule')}
+                </option>
+                <option value="literal">
+                  {t('pipelines.workspace.transform.wizard.literalRule')}
+                </option>
               </select>
             </div>
 
             {/* Value Expression */}
             <div className="min-w-[160px] flex-1">
               <label className="mb-0.5 block text-[10px] font-medium text-gray-500">
-                规则值 / 表达式 (DSL Value)
+                {t('pipelines.workspace.transform.wizard.ruleValue')}
               </label>
               {rule.ruleType === 'delete' ? (
                 <div className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 font-mono text-[11px] font-semibold text-red-700">
-                  false (该字段将被丢弃不输出)
+                  false ({t('pipelines.workspace.transform.wizard.fieldWillBeDropped')})
                 </div>
               ) : (
                 <input
@@ -891,7 +944,7 @@ const MapEditor: React.FC<MapEditorProps> = ({ config, columns, onChange }) => {
                       ? '$old_field_name'
                       : rule.ruleType === 'compute'
                         ? '=after.first_name + " " + after.last_name'
-                        : '"west" 或 100'
+                        : t('pipelines.workspace.transform.wizard.literalValuePlaceholder')
                   }
                   className="w-full rounded-lg border border-gray-300 bg-white px-2 py-1 font-mono text-[12px] text-gray-900 focus:border-blue-500 focus:outline-none"
                 />
@@ -902,8 +955,9 @@ const MapEditor: React.FC<MapEditorProps> = ({ config, columns, onChange }) => {
             <button
               type="button"
               onClick={() => removeFieldRule(fIdx)}
+              title={t('pipelines.workspace.transform.wizard.removeRule')}
+              aria-label={t('pipelines.workspace.transform.wizard.removeRule')}
               className="mt-4 cursor-pointer rounded-lg p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
-              title="删除此规则"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -918,7 +972,7 @@ const MapEditor: React.FC<MapEditorProps> = ({ config, columns, onChange }) => {
           className="flex cursor-pointer items-center gap-1 text-[11px] font-medium text-blue-700 hover:text-blue-900 hover:underline"
         >
           <Plus className="h-3 w-3" />
-          <span>添加字段映射 (Add Field Rule)</span>
+          <span>{t('pipelines.workspace.transform.wizard.addFieldRule')}</span>
         </button>
 
         <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-gray-600">
@@ -926,10 +980,10 @@ const MapEditor: React.FC<MapEditorProps> = ({ config, columns, onChange }) => {
             type="checkbox"
             checked={passthrough}
             disabled
-            title="The current server always passes through unlisted fields."
+            title={t('pipelines.workspace.transform.wizard.passthroughDisabledHelp')}
             className="rounded-lg border-gray-300 text-blue-600 focus:ring-blue-500"
           />
-          <span>允许未声明字段自动透传 (默认开启)</span>
+          <span>{t('pipelines.workspace.transform.wizard.passthroughUnlisted')}</span>
         </label>
       </div>
     </div>
@@ -946,17 +1000,18 @@ interface UnwindEditorProps {
 }
 
 const UnwindEditor: React.FC<UnwindEditorProps> = ({ config, columns, onChange }) => {
+  const { t } = useTranslation()
   return (
     <div className="wizard-reference-panel-radius space-y-3 border border-purple-200/70 bg-purple-50/30 p-3.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Workflow className="h-3.5 w-3.5 text-purple-600" />
           <span className="text-[12px] font-semibold text-purple-950">
-            数组展开配置 (Array Unwind)
+            {t('pipelines.workspace.transform.wizard.unwindSettings')}
           </span>
         </div>
         <span className="rounded-lg border border-purple-200 bg-purple-100/70 px-2 py-0.5 text-[11px] text-purple-700">
-          单层展开
+          {t('pipelines.workspace.transform.wizard.singleLevel')}
         </span>
       </div>
 
@@ -964,7 +1019,8 @@ const UnwindEditor: React.FC<UnwindEditorProps> = ({ config, columns, onChange }
       <div className="grid grid-cols-1 gap-3 rounded-lg border border-purple-200 bg-white p-3 shadow-2xs md:grid-cols-2">
         <div>
           <label className="mb-1 block text-[11px] font-medium text-gray-700">
-            要展开的数组字段 (path) <span className="text-red-500">*</span>
+            {t('pipelines.workspace.transform.wizard.arrayField')}{' '}
+            <span className="text-red-500">*</span>
           </label>
           <select
             value={config.path}
@@ -977,61 +1033,65 @@ const UnwindEditor: React.FC<UnwindEditorProps> = ({ config, columns, onChange }
               </option>
             ))}
             {!columns.includes(config.path) && config.path && (
-              <option value={config.path}>{config.path} (自定义字段)</option>
+              <option value={config.path}>
+                {config.path} ({t('pipelines.workspace.transform.wizard.customField')})
+              </option>
             )}
           </select>
           <span className="mt-0.5 block text-[10px] text-gray-400">
-            只支持顶层数组字段展开，不支持嵌套点路径
+            {t('pipelines.workspace.transform.wizard.topLevelArrayHelp')}
           </span>
         </div>
 
         <div>
           <label className="mb-1 block text-[11px] font-medium text-gray-700">
-            元素内部主键标识 (element_key)
+            {t('pipelines.workspace.transform.wizard.elementKey')}
           </label>
           <input
             type="text"
             value={config.element_key || ''}
             onChange={(e) => onChange({ ...config, element_key: e.target.value })}
-            placeholder="例如: sku, item_id, id"
+            placeholder={t('pipelines.workspace.transform.wizard.elementKeyPlaceholder')}
             className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 font-mono text-[12px] text-gray-900 focus:border-purple-500 focus:outline-none"
           />
           <span className="mt-0.5 block text-[10px] text-gray-400">
-            用于识别行身份并与父记录主键组合生成目标行键
+            {t('pipelines.workspace.transform.wizard.elementKeyHelp')}
           </span>
         </div>
 
         <div>
           <label className="mb-1 block text-[11px] font-medium text-gray-700">
-            生成数组序号列名 (include_array_index)
+            {t('pipelines.workspace.transform.wizard.arrayIndexField')}
           </label>
           <input
             type="text"
             value={config.include_array_index || ''}
             onChange={(e) => onChange({ ...config, include_array_index: e.target.value })}
-            placeholder="例如: item_no, idx (从 0 开始)"
+            placeholder={t('pipelines.workspace.transform.wizard.arrayIndexPlaceholder')}
             className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 font-mono text-[12px] text-gray-900 focus:border-purple-500 focus:outline-none"
           />
           <span className="mt-0.5 block text-[10px] text-gray-400">
-            无 element_key 时可用序号区分元素
+            {t('pipelines.workspace.transform.wizard.arrayIndexHelp')}
           </span>
         </div>
 
         <div>
           <label className="mb-1 block text-[11px] font-medium text-gray-700">
-            展开列类型声明 (element_type)
+            {t('pipelines.workspace.transform.wizard.elementType')}
           </label>
           <select
             value={config.element_type || 'json'}
             onChange={(e) => onChange({ ...config, element_type: e.target.value })}
             className="w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 px-2.5 py-1.5 font-mono text-[12px] text-gray-900 focus:outline-none"
           >
-            <option value="json">json (默认结构化对象)</option>
+            <option value="json">
+              json ({t('pipelines.workspace.transform.wizard.structuredObjectDefault')})
+            </option>
             <option value="string">string</option>
             <option value="int">int / integer</option>
           </select>
           <span className="mt-0.5 block text-[10px] text-gray-400">
-            仅声明输出列数据类型，不转换实际物理值
+            {t('pipelines.workspace.transform.wizard.elementTypeHelp')}
           </span>
         </div>
       </div>
@@ -1049,10 +1109,10 @@ const UnwindEditor: React.FC<UnwindEditorProps> = ({ config, columns, onChange }
           />
           <div>
             <span className="font-semibold text-gray-900">
-              保留空数组或缺失记录 (preserve_null_and_empty_arrays)
+              {t('pipelines.workspace.transform.wizard.preserveEmptyArrays')}
             </span>
             <p className="text-[10px] text-gray-500">
-              勾选后，若数组为空或 null，仍会保留一条父记录，展开列置空。
+              {t('pipelines.workspace.transform.wizard.preserveEmptyArraysHelp')}
             </p>
           </div>
         </label>
@@ -1062,20 +1122,23 @@ const UnwindEditor: React.FC<UnwindEditorProps> = ({ config, columns, onChange }
       <div className="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-[11px] text-amber-900">
         <div className="flex items-center gap-1.5 font-semibold text-amber-950">
           <ShieldAlert className="h-4 w-4 shrink-0 text-amber-600" />
-          <span>Unwind 运行前置条件与风险提示</span>
+          <span>{t('pipelines.workspace.transform.wizard.unwindRequirements')}</span>
         </div>
         <ul className="list-disc space-y-0.5 pl-4 text-amber-800">
           <li>
-            <strong>下游写入模式：</strong>必须使用 <code>UPSERT</code> 写入目标端，不支持{' '}
-            <code>Append</code> 模式。
+            <strong>{t('pipelines.workspace.transform.wizard.writeMode')}: </strong>
+            {t('pipelines.workspace.transform.wizard.writeModeHelp', {
+              upsert: 'UPSERT',
+              append: 'Append',
+            })}
           </li>
           <li>
-            <strong>CDC 完整镜像：</strong>MySQL 需完整 row image，MongoDB 需启用 collection
-            pre-images。
+            <strong>{t('pipelines.workspace.transform.wizard.cdcImages')}: </strong>
+            {t('pipelines.workspace.transform.wizard.cdcImagesHelp')}
           </li>
           <li>
-            <strong>键冲突防范：</strong>请确保 <code>element_key</code>{' '}
-            在父记录范围内唯一，防止目标端数据覆盖。
+            <strong>{t('pipelines.workspace.transform.wizard.keyCollision')}: </strong>
+            {t('pipelines.workspace.transform.wizard.keyCollisionHelp', { field: 'element_key' })}
           </li>
         </ul>
       </div>
@@ -1092,13 +1155,14 @@ interface JsEditorProps {
 }
 
 const JsEditor: React.FC<JsEditorProps> = ({ config, onChange }) => {
+  const { t } = useTranslation()
   return (
     <div className="wizard-reference-panel-radius space-y-3 border border-emerald-200/70 bg-emerald-50/30 p-3.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <FileCode2 className="h-3.5 w-3.5 text-emerald-600" />
           <span className="text-[12px] font-semibold text-emerald-950">
-            自定义处理脚本 (JavaScript process)
+            {t('pipelines.workspace.transform.wizard.javascriptScript')}
           </span>
         </div>
         <span className="rounded-lg border border-emerald-200 bg-emerald-100/70 px-2 py-0.5 font-mono text-[11px] text-emerald-800">
@@ -1112,7 +1176,11 @@ const JsEditor: React.FC<JsEditorProps> = ({ config, onChange }) => {
             <Code className="h-3.5 w-3.5 text-emerald-400" />
             <span className="font-mono text-emerald-400">process(record, ctx)</span>
           </div>
-          <span className="text-[10px]">支持多行 JavaScript ES6+</span>
+          <span className="text-[10px]">
+            {t('pipelines.workspace.transform.wizard.multilineScript', {
+              language: 'JavaScript ES6+',
+            })}
+          </span>
         </div>
 
         <textarea
@@ -1128,39 +1196,45 @@ const JsEditor: React.FC<JsEditorProps> = ({ config, onChange }) => {
       {/* Script Context Reference Drawer */}
       <div className="grid grid-cols-1 gap-2 rounded-lg border border-emerald-200 bg-white p-3 text-[11px] md:grid-cols-2">
         <div>
-          <strong className="mb-1 block text-gray-900">📥 record 事件对象:</strong>
+          <strong className="mb-1 block text-gray-900">
+            📥 {t('pipelines.workspace.transform.wizard.recordObject')}:
+          </strong>
           <ul className="list-disc space-y-0.5 pl-4 font-mono text-[10px] text-gray-600">
             <li>
-              <code>op</code>: 操作类型 ('c', 'u', 'd', 'r')
+              <code>op</code>: {t('pipelines.workspace.transform.wizard.operationTypeDetail')} ('c',
+              'u', 'd', 'r')
             </li>
             <li>
-              <code>before</code>: 变更前镜像数据
+              <code>before</code>: {t('pipelines.workspace.transform.wizard.beforeImage')}
             </li>
             <li>
-              <code>after</code>: 变更后镜像数据
+              <code>after</code>: {t('pipelines.workspace.transform.wizard.afterImage')}
             </li>
             <li>
-              <code>ts</code>: 事件时间戳
+              <code>ts</code>: {t('pipelines.workspace.transform.wizard.eventTimestampDetail')}
             </li>
             <li>
-              <code>src</code>: 上游数据源元数据
+              <code>src</code>: {t('pipelines.workspace.transform.wizard.sourceMetadataDetail')}
             </li>
           </ul>
         </div>
         <div>
-          <strong className="mb-1 block text-gray-900">📤 ctx 上下文方法:</strong>
+          <strong className="mb-1 block text-gray-900">
+            📤 {t('pipelines.workspace.transform.wizard.contextMethods')}:
+          </strong>
           <ul className="list-disc space-y-0.5 pl-4 font-mono text-[10px] text-gray-600">
             <li>
-              <code>ctx.emit(rec)</code>: 分发一条记录 (可多次调用)
+              <code>ctx.emit(rec)</code>: {t('pipelines.workspace.transform.wizard.emitRecord')}
             </li>
             <li>
-              <code>ctx.log(msg)</code>: 输出调试诊断日志
+              <code>ctx.log(msg)</code>: {t('pipelines.workspace.transform.wizard.writeDebugLog')}
             </li>
             <li>
-              <code>return null</code>: 丢弃当前记录
+              <code>return null</code>: {t('pipelines.workspace.transform.wizard.discardRecord')}
             </li>
             <li>
-              <code>return record</code>: 直接发出该记录
+              <code>return record</code>:{' '}
+              {t('pipelines.workspace.transform.wizard.emitRecordDirectly')}
             </li>
           </ul>
         </div>
@@ -1185,6 +1259,7 @@ const UnionEditor: React.FC<UnionEditorProps> = ({
   availableUpstreamSources,
   onChange,
 }) => {
+  const { t } = useTranslation()
   const fromSources = config.from || [currentTable]
 
   const addSource = (source: string) => {
@@ -1205,11 +1280,11 @@ const UnionEditor: React.FC<UnionEditorProps> = ({
         <div className="flex items-center gap-1.5">
           <Sparkles className="h-3.5 w-3.5 text-rose-600" />
           <span className="text-[12px] font-semibold text-rose-950">
-            合并数据流来源 (Union Streams)
+            {t('pipelines.workspace.transform.wizard.unionStreams')}
           </span>
         </div>
         <span className="rounded-lg border border-rose-200 bg-rose-100/70 px-2 py-0.5 text-[11px] text-rose-700">
-          多路汇聚 (Fan-in)
+          {t('pipelines.workspace.transform.wizard.fanIn')}
         </span>
       </div>
 
@@ -1217,11 +1292,14 @@ const UnionEditor: React.FC<UnionEditorProps> = ({
       <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-[11px] text-rose-900">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
         <div className="space-y-1">
-          <p className="font-semibold">⚠️ 语义与对齐说明：</p>
+          <p className="font-semibold">
+            ⚠️ {t('pipelines.workspace.transform.wizard.unionSemanticsTitle')}
+          </p>
           <p className="text-rose-800">
-            Union 仅负责把多个输入流的数据汇聚为一路向下游继续流动，
-            <strong>不负责字段重命名、字段对齐或数据去重</strong>。 若各流 Schema 不一致，建议在
-            Union 前使用 <strong>Map (整理字段)</strong> 统一字段格式。
+            {t('pipelines.workspace.transform.wizard.unionSemanticsLead')}{' '}
+            <strong>{t('pipelines.workspace.transform.wizard.unionSemanticsLimitation')}</strong>{' '}
+            {t('pipelines.workspace.transform.wizard.unionSemanticsAdvice')} <strong>Map</strong>{' '}
+            {t('pipelines.workspace.transform.wizard.unionSemanticsMapAdvice')}
           </p>
         </div>
       </div>
@@ -1229,7 +1307,7 @@ const UnionEditor: React.FC<UnionEditorProps> = ({
       {/* Sources List */}
       <div className="space-y-2 rounded-lg border border-rose-200 bg-white p-3 shadow-2xs">
         <label className="mb-1 block text-[11px] font-medium text-gray-700">
-          当前汇聚的输入流列表 (from):
+          {t('pipelines.workspace.transform.wizard.unionInputList')}
         </label>
 
         {fromSources.map((src, sIdx) => (
@@ -1242,7 +1320,7 @@ const UnionEditor: React.FC<UnionEditorProps> = ({
               <span>{src}</span>
               {src === currentTable && (
                 <span className="rounded-lg border border-gray-200 bg-white px-1 text-[10px] text-gray-400">
-                  当前表
+                  {t('pipelines.workspace.transform.wizard.currentTable')}
                 </span>
               )}
             </div>
@@ -1251,6 +1329,8 @@ const UnionEditor: React.FC<UnionEditorProps> = ({
               <button
                 type="button"
                 onClick={() => removeSource(sIdx)}
+                title={t('pipelines.workspace.transform.wizard.removeUnionInput')}
+                aria-label={t('pipelines.workspace.transform.wizard.removeUnionInput')}
                 className="cursor-pointer rounded-lg p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
               >
                 <X className="h-3.5 w-3.5" />
@@ -1262,7 +1342,9 @@ const UnionEditor: React.FC<UnionEditorProps> = ({
         {/* Add Upstream Source */}
         {availableUpstreamSources.filter((s) => !fromSources.includes(s)).length > 0 && (
           <div className="flex items-center gap-2 border-t border-gray-100 pt-2">
-            <span className="text-[11px] text-gray-500">添加上游流:</span>
+            <span className="text-[11px] text-gray-500">
+              {t('pipelines.workspace.transform.wizard.addUpstreamInput')}:
+            </span>
             <select
               onChange={(e) => {
                 if (e.target.value) {
@@ -1271,10 +1353,11 @@ const UnionEditor: React.FC<UnionEditorProps> = ({
                 }
               }}
               defaultValue=""
+              aria-label={t('pipelines.workspace.transform.wizard.addUpstreamInput')}
               className="cursor-pointer rounded-lg border border-gray-300 bg-gray-50 px-2 py-1 font-mono text-[11px] text-gray-800 focus:outline-none"
             >
               <option value="" disabled>
-                -- 选择其他可用流 --
+                -- {t('pipelines.workspace.transform.wizard.selectAnotherInput')} --
               </option>
               {availableUpstreamSources
                 .filter((s) => !fromSources.includes(s))

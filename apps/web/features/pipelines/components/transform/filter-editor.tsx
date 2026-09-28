@@ -140,7 +140,10 @@ export function FilterEditor({ config, onChange }: TransformEditorProps) {
               options={[
                 { value: 'equals', label: '=' },
                 { value: 'notEquals', label: '≠' },
-                { value: 'contains', label: 'contains' },
+                {
+                  value: 'contains',
+                  label: t('pipelines.workspace.transform.containsOperator'),
+                },
               ]}
               onChange={(operator) =>
                 updateRows(
