@@ -100,6 +100,26 @@ describe('SourceEditDialog source payload helpers', () => {
     )
     expect(buildSourceTestSettings({ password: 'saved-secret' }, clear)).toEqual({
       host: 'db.local',
+      password: '',
+    })
+  })
+
+  it('explicitly clears an optional secret in a test request instead of requesting restoration', () => {
+    const optionalFields = fields.map((field) =>
+      field.secret ? { ...field, required: false } : field,
+    )
+    const clear = buildSourceEditConfig(
+      optionalFields,
+      { host: 'db.local' },
+      { password: { action: 'clear', value: '' } },
+    )
+
+    expect(clear.errors).toEqual({})
+    expect(clear.config).not.toHaveProperty('password')
+    expect(clear.clearSecrets).toEqual(['password'])
+    expect(buildSourceTestSettings({ host: 'db.saved' }, clear)).toEqual({
+      host: 'db.local',
+      password: '',
     })
   })
 

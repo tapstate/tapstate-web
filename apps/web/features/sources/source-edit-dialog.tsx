@@ -134,7 +134,9 @@ export function buildSourceTestSettings(
   sourceConfigValues: ReturnType<typeof buildSourceEditConfig>,
 ) {
   const settings = { ...currentConfig, ...sourceConfigValues.config }
-  for (const name of sourceConfigValues.clearSecrets) delete settings[name]
+  // An omitted secret asks the server to restore its saved value. An explicit empty
+  // value tests the cleared draft without changing the persisted Source.
+  for (const name of sourceConfigValues.clearSecrets) settings[name] = ''
   return settings
 }
 
