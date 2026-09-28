@@ -52,7 +52,7 @@ export function OrganizationsPage() {
         <label className="relative">
           <Search className="absolute top-2 left-2.5 h-3.5 w-3.5 text-neutral-400" />
           <input
-            className="w-48 rounded-md border border-black/[0.08] bg-white py-1 pr-3 pl-8 text-xs text-neutral-800 focus:outline-none dark:border-white/[0.08] dark:bg-[#202124] dark:text-neutral-200"
+            className="w-48 rounded-lg border border-black/[0.08] bg-white py-1 pr-3 pl-8 text-xs text-neutral-800 focus:outline-none dark:border-white/[0.08] dark:bg-[#202124] dark:text-neutral-200"
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="Search organizations..."
             type="search"
