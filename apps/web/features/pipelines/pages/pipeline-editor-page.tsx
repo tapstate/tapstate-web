@@ -7,6 +7,7 @@ import {
   Braces,
   ChevronLeft,
   Gauge,
+  LoaderCircle,
   PanelLeftClose,
   PanelLeftOpen,
   Radio,
@@ -58,9 +59,11 @@ import type {
   PipelineNodeConfigurationChange,
 } from '../model/pipeline-node-model'
 
+import { PipelineLifecycleMenu } from '../components/pipeline-lifecycle-menu'
 import { PipelineStatusBadge } from '../components/pipeline-status-badge'
 import { usePipelineDraftAutosave } from '../hooks/use-pipeline-draft-autosave'
 import { PipelineLogsPage } from '../logs/pipeline-logs-page'
+import { getDeploymentProfile } from '../model/deployment-profile'
 import { buildPipelineDraftMutation, pipelineDraftDocument } from '../model/pipeline-draft-document'
 import {
   addPipelineNodes,
@@ -72,6 +75,7 @@ import {
 } from '../model/pipeline-graph-edit'
 import { pipelineNodeConnectors } from '../model/pipeline-node-connectors'
 import { sourceTableSelections } from '../model/pipeline-node-model'
+import { pipelineStatusRefetchInterval } from '../model/pipeline-status-polling'
 import { targetSources } from '../model/pipeline-target-connectors'
 import { PipelineMonitoringPage } from '../monitoring/pipeline-monitoring-page'
 import { PipelineWorkflowWithInnerContext } from '../workflow-app'
@@ -79,6 +83,10 @@ import { PipelineWorkflow } from '../workflow-app/components/pipeline-workflow'
 import { WizardBuilder } from './wizard-builder'
 
 export type PipelineWorkspaceSection = 'orchestrate' | 'api' | 'logs' | 'monitoring'
+
+function isPipelineReadOnly(status?: PipelineRuntimeState) {
+  return status === 'RUNNING' || status === 'PAUSED' || status === 'FAILED'
+}
 
 function connectorForConfiguration(
   configuration: PipelineNodeConfiguration | null,
@@ -411,9 +419,15 @@ function PipelineWorkspaceNav({
 function PipelineOrchestrationPage({
   pipelineId,
   runtimeStatus,
+  runtimeObservationPending,
+  runtimeObservationError,
+  onRetryRuntimeObservation,
 }: {
   pipelineId: string
   runtimeStatus?: PipelineRuntimeState
+  runtimeObservationPending: boolean
+  runtimeObservationError: boolean
+  onRetryRuntimeObservation: () => void
 }) {
   const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
@@ -501,6 +515,7 @@ function PipelineOrchestrationPage({
   }, [layoutData, pipelineData?.contentHash, serverDocument?.editor])
 
   function scheduleLayoutSave(next: Pick<PipelineLayout, 'nodes' | 'viewport'>) {
+    if (isReadOnly) return
     setLayoutDraft(next)
     setIsDirty(true)
   }
@@ -526,7 +541,7 @@ function PipelineOrchestrationPage({
     [canvasLayout, draft],
   )
   const autosave = usePipelineDraftAutosave({
-    enabled: Boolean(draft && canvasLayout),
+    enabled: Boolean(draft && canvasLayout) && !isPipelineReadOnly(runtimeStatus),
     mutation: autosaveMutation,
     initialEtag: pipelineDraft.data?.etag ?? null,
     fetcher: apiFetch,
@@ -580,7 +595,7 @@ function PipelineOrchestrationPage({
   const run = useMutation({
     mutationFn: () => runPipeline(pipelineId, apiFetch),
   })
-  const isReadOnly = runtimeStatus === 'RUNNING' || runtimeStatus === 'PAUSED'
+  const isReadOnly = isPipelineReadOnly(runtimeStatus)
   const sourceOptions = useMemo<PipelineSchemaOption[]>(
     () =>
       (sources.data ?? []).map((source) => ({
@@ -594,11 +609,13 @@ function PipelineOrchestrationPage({
   // current selection is entitled to, and neither kind can read the other's.
   const targetSourceOptions = useMemo<PipelineSchemaOption[]>(
     () =>
-      targetSources(sources.data ?? []).map((source) => ({
-        label: source.id,
-        value: source.id,
-      })),
-    [sources.data],
+      targetSources(sources.data ?? [], connectors.data ?? [], getDeploymentProfile()).map(
+        (source) => ({
+          label: source.id,
+          value: source.id,
+        }),
+      ),
+    [connectors.data, sources.data],
   )
   const configuredTableOptionsBySourceId = useMemo(() => {
     const options = new Map<string, PipelineSchemaOption[]>()
@@ -648,6 +665,7 @@ function PipelineOrchestrationPage({
   }
 
   function handleConfigurationChange(change: PipelineNodeConfigurationChange) {
+    if (isReadOnly) return
     const current = draftRef.current
     if (!current) return
     const next = synchronizeConfiguredNodeIdentity(
@@ -661,6 +679,7 @@ function PipelineOrchestrationPage({
   }
 
   function handleDescriptionChange(description: string) {
+    if (isReadOnly) return
     if (!selection) return
     const current = draftRef.current
     if (!current) return
@@ -689,6 +708,7 @@ function PipelineOrchestrationPage({
     choices: readonly PipelineNodeChoice[],
     insertion: PipelineNodeInsertionContext,
   ) {
+    if (isReadOnly) return
     const current = draftRef.current
     if (!current || choices.length === 0) return
     const currentLayout = layoutDraft ?? layoutData
@@ -728,10 +748,13 @@ function PipelineOrchestrationPage({
   }
 
   async function handleSave(): Promise<boolean> {
+    if (isReadOnly) return false
     if (!draft || autosave.isSaving) return false
     const nextDiagnostics = validatePipelineGraph(
       draft,
-      sources.data?.map((source) => source.id),
+      sources.data,
+      connectors.data,
+      getDeploymentProfile(),
     )
     if (!sources.isSuccess) {
       setDiagnostics([])
@@ -756,6 +779,7 @@ function PipelineOrchestrationPage({
   }
 
   async function handleRun() {
+    if (isReadOnly) return
     if (isDirty && !(await handleSave())) return
     try {
       const result = autosave.lastResult ?? (await autosave.saveLatest())
@@ -797,13 +821,58 @@ function PipelineOrchestrationPage({
         {t('pipelines.workspace.skipToCanvas')}
       </a>
 
-      <section id="pipeline-canvas" className="absolute inset-0 min-h-0">
-        {isLoading && (
+      {isReadOnly && (
+        <div
+          className="pipeline-workspace__readonly-banner"
+          role="status"
+          aria-live="polite"
+          data-testid="pipeline-readonly-banner"
+        >
+          <div className="min-w-0">
+            <p className="text-foreground text-[13px] font-semibold">
+              {t('pipelines.workspace.readOnly.title')}
+            </p>
+            <p className="text-muted-foreground text-[12px]">
+              {t('pipelines.workspace.readOnly.description', { state: runtimeStatus })}
+            </p>
+          </div>
+          <PipelineLifecycleMenu
+            pipelineId={pipelineId}
+            status={runtimeStatus}
+            apiFetch={apiFetch}
+            contentHash="published"
+            presentation="stop-button"
+            onMutationError={(_action, cause) =>
+              pushActionError(
+                cause instanceof Error ? cause.message : t('pipelines.lifecycle.stopFailed'),
+              )
+            }
+          />
+        </div>
+      )}
+
+      <section
+        id="pipeline-canvas"
+        className={cn('absolute inset-x-0 bottom-0 min-h-0', isReadOnly ? 'top-14' : 'top-0')}
+      >
+        {(isLoading || runtimeObservationPending) && (
           <div className="pipeline-canvas-state flex h-full items-center justify-center text-sm font-medium text-slate-500">
-            {t('pipelines.workspace.loading')}
+            {runtimeObservationPending ? (
+              <span className="inline-flex items-center gap-2" role="status">
+                <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+                {t('pipelines.workspace.runtime.checkingBeforeEdit')}
+              </span>
+            ) : (
+              t('pipelines.workspace.loading')
+            )}
           </div>
         )}
-        {error && (
+        {runtimeObservationError && !isLoading && (
+          <div className="pipeline-canvas-state flex h-full items-center justify-center">
+            <QueryIssue unavailable={false} onRetry={onRetryRuntimeObservation} />
+          </div>
+        )}
+        {error && !runtimeObservationPending && (
           <div className="pipeline-canvas-state flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
             <p className="text-sm font-semibold text-slate-800">
               {t('pipelines.workspace.error.title')}
@@ -819,17 +888,20 @@ function PipelineOrchestrationPage({
             </button>
           </div>
         )}
-        {pipelineDraft.data?.mode === 'wizard' ? (
+        {!runtimeObservationPending &&
+        !runtimeObservationError &&
+        pipelineDraft.data?.mode === 'wizard' ? (
           <ReactFlowProvider>
             <PipelineWorkflow>
               <WizardBuilder
                 pipelineId={pipelineId}
                 draft={pipelineDraft.data.draft}
                 etag={pipelineDraft.data.etag}
+                readOnly={isReadOnly}
               />
             </PipelineWorkflow>
           </ReactFlowProvider>
-        ) : draft && canvasLayout ? (
+        ) : !runtimeObservationPending && !runtimeObservationError && draft && canvasLayout ? (
           <PipelineWorkflowWithInnerContext
             canvas={{
               dag: draft.dag,
@@ -839,6 +911,7 @@ function PipelineOrchestrationPage({
               descriptions,
               onLayoutChange: scheduleLayoutSave,
               onGraphChange: (nextDag) => {
+                if (isReadOnly) return
                 const current = draftRef.current
                 if (!current) return
                 const nodeIds = new Set(nextDag.nodes.map((node) => node.id))
@@ -1114,21 +1187,19 @@ export function PipelineWorkspacePage({
     },
     retry: false,
   })
+  const statusEnabled =
+    pipelineDraft.isSuccess &&
+    (pipelineDraft.data === null || pipelineDraft.data?.draft.publishedDraftRevision !== null)
   const status = useQuery({
     queryKey: ['pipelines', pipelineId, 'status'],
     queryFn: () => getPipelineStatus(pipelineId, apiFetch),
-    enabled:
-      pipelineDraft.isSuccess &&
-      (pipelineDraft.data === null || pipelineDraft.data?.draft.publishedDraftRevision !== null),
+    enabled: statusEnabled,
     retry: false,
-    refetchInterval: (query) => {
-      if (query.state.error instanceof PipelineClientError && query.state.error.status === 404) {
-        return false
-      }
-      return 5000
-    },
+    refetchInterval: (query) => pipelineStatusRefetchInterval(query.state.error),
     refetchIntervalInBackground: false,
   })
+  const runtimeObservationMissing =
+    status.error instanceof PipelineClientError && status.error.code === 'monitor.no-observation'
 
   return (
     <main
@@ -1143,7 +1214,15 @@ export function PipelineWorkspacePage({
         status={status.data?.state}
       />
       {section === 'orchestrate' ? (
-        <PipelineOrchestrationPage pipelineId={pipelineId} runtimeStatus={status.data?.state} />
+        <PipelineOrchestrationPage
+          pipelineId={pipelineId}
+          runtimeStatus={status.data?.state}
+          runtimeObservationPending={
+            statusEnabled && (status.isPending || runtimeObservationMissing)
+          }
+          runtimeObservationError={statusEnabled && status.isError && !runtimeObservationMissing}
+          onRetryRuntimeObservation={() => void status.refetch()}
+        />
       ) : (
         <WorkspacePageFrame
           pipelineId={pipelineId}

@@ -467,10 +467,12 @@
       "stop": "Stop",
       "startFailed": "Pipeline could not be started.",
       "stopFailed": "Pipeline could not be stopped.",
+      "stopBeforeEdit": "Stop to edit",
       "confirmStopTitle": "Stop {{id}}?",
-      "confirmStopBody": "Running work will stop after this request.",
+      "confirmStopBody": "Choose whether to keep saved progress and operator state for the next run, or clear them and start fresh. Pipeline stop never deletes data from the destination.",
       "cancel": "Cancel",
-      "confirmStop": "Stop Pipeline",
+      "confirmStopKeepState": "Stop and keep state",
+      "confirmStopClearState": "Stop and clear state",
       "dismissFeedback": "Dismiss lifecycle error"
     },
     "delete": {
@@ -535,6 +537,11 @@
     "workspace": {
       "skipToCanvas": "Skip to Pipeline canvas",
       "loading": "Loading Pipeline canvas",
+      "readOnly": {
+        "title": "This Pipeline must be stopped before editing",
+        "description": "Runtime state: {{state}}. Stop the Pipeline before changing its configuration.",
+        "editorStatus": "Pipeline configuration is read-only until the runtime is stopped."
+      },
       "back": "Pipelines",
       "layout": {
         "saving": "Saving layout",
@@ -795,6 +802,7 @@
       "runtime": {
         "eyebrow": "Operations",
         "loading": "Loading observation",
+        "checkingBeforeEdit": "Checking runtime status before opening the editor…",
         "state": "State",
         "offsets": "Source offsets",
         "emptyMetrics": "No metrics have been published for this Pipeline.",
@@ -1049,10 +1057,17 @@
     "tablePlaceholder": "Enter a source table",
     "selectSourceFirst": "Select a source first",
     "outputTitle": "Choose a destination",
-    "outputHint": "Write the result to your single Atlas destination.",
+    "outputHint": "Write the result to the destination configured for this deployment.",
     "destinationSelect": "Atlas destination",
     "destinationTableSelect": "Atlas table",
     "destinationTablePlaceholder": "Enter a destination table",
+    "destinationContext": "Destination",
+    "configureDestination": "Configure destination",
+    "destinationAtlasSource": "Atlas destination",
+    "destinationTargetSource": "Target source",
+    "destinationSourcePlaceholder": "Select a writable source",
+    "destinationTable": "Target table",
+    "writeStrategy": "Write strategy",
     "awaitingTable": "Choose a table to continue",
     "relations": {
       "addRelatedTable": "Add related table",
@@ -1142,6 +1157,7 @@
     "savePipeline": "Save",
     "startPipeline": "Save & start",
     "starting": "Starting pipeline…",
+    "alreadyRunning": "The draft is saved and published, but this Pipeline is already running. Stop the current run before starting the new revision.",
     "errors": { "save": "The pipeline could not be created. Try again." },
     "transforms": {
       "filter": "Filter rows",

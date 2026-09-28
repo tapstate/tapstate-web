@@ -8,6 +8,7 @@ import {
   publishPipelineDraft,
   runPipeline,
   updatePipelineDraft,
+  PipelineClientError,
   type PipelineDraft,
   type PipelineDraftMutation,
   type PipelineDraftPreview,
@@ -25,16 +26,21 @@ import {
   writeWizard,
   wizardPublicationIssue,
 } from '../components/reference-wizard/wizard-adapter'
+import { getDeploymentProfile } from '../model/deployment-profile'
+import { targetSources } from '../model/pipeline-target-connectors'
 import { sourceScopedTableNames } from '../model/source-table-scope'
+import { PipelineWorkflowHeader } from '../workflow-app/components/pipeline-workflow-header'
 
 export function WizardBuilder({
   pipelineId,
   draft,
   etag,
+  readOnly = false,
 }: {
   pipelineId: string
   draft: PipelineDraft
   etag: string
+  readOnly?: boolean
 }) {
   const { t } = useTranslation()
   const apiFetch = useAuthStore((s) => s.apiFetch)
@@ -49,6 +55,7 @@ export function WizardBuilder({
   })
   const connectors = connectorsQuery.data || []
   const sources = sourcesQuery.data || []
+  const deploymentProfile = getDeploymentProfile()
   const schemas = useQueries({
     queries: sources.map((s) => ({
       queryKey: ['wizard', 'source-schema', s.id],
@@ -72,6 +79,8 @@ export function WizardBuilder({
           connector: s.connector,
           connectorName: connector?.name || s.connector,
           iconPath: connector?.icon || null,
+          sink: connector?.sink || false,
+          writeModes: connector?.writeModes || [],
           tables: names.map((name) => {
             const detail = details.find((t) => t.name === name)
             return {
@@ -89,7 +98,9 @@ export function WizardBuilder({
   const [wizard, setWizard] = useState(draft.wizard)
   const [status, setStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
+  const [action, setAction] = useState<'save' | 'start' | null>(null)
   const [preview, setPreview] = useState<PipelineDraftPreview | null>(null)
   const currentDraft = useRef(draft)
   const currentEtag = useRef(etag)
@@ -97,13 +108,52 @@ export function WizardBuilder({
   const savedFingerprint = useRef(JSON.stringify(draft.wizard))
   const currentWizard = useRef(wizard)
   currentWizard.current = wizard
-  const originalOutput = draft.wizard?.output as { config?: { sourceId?: string } } | undefined
+  const outputConfig = draft.wizard?.output as
+    | { kind?: string; config?: { sourceId?: string; writeMode?: string } }
+    | undefined
+  const availableDestinationSources = targetSources(sources, connectors, deploymentProfile)
   const destination =
-    sources.find((s) => s.id === originalOutput?.config?.sourceId) ||
-    sources.find((s) => s.connector === 'mongodb-atlas') ||
-    sources.find((s) => s.connector === 'mongodb' && /target|destination|sink|out/i.test(s.id)) ||
-    sources.find((s) => s.connector === 'mongodb')
+    availableDestinationSources.find((source) => source.id === outputConfig?.config?.sourceId) ||
+    availableDestinationSources[0]
+  const destinationConnector = connectors.find(
+    (connector) => connector.id === destination?.connector,
+  )
+  useEffect(() => {
+    if (!destination || readOnly) return
+    const expectedKind = deploymentProfile === 'cloud' ? 'atlas' : 'source'
+    const writeModes = destinationConnector?.writeModes || []
+    const mode = writeModes[0] || 'upsert'
+    setWizard((current) => {
+      const output = current?.output as
+        | { kind?: string; config?: Record<string, unknown> }
+        | undefined
+      const config = output?.config || {}
+      if (
+        output?.kind === expectedKind &&
+        config.sourceId === destination.id &&
+        typeof config.table === 'string' &&
+        (writeModes.includes(String(config.writeMode || 'upsert')) || writeModes.length === 0)
+      )
+        return current
+      return {
+        ...current,
+        output: {
+          ...output,
+          kind: expectedKind,
+          config: {
+            ...config,
+            sourceId: destination.id,
+            writeMode:
+              writeModes.includes(String(config.writeMode || 'upsert')) || writeModes.length === 0
+                ? config.writeMode
+                : mode,
+          },
+        },
+      }
+    })
+  }, [destination, destinationConnector, deploymentProfile, readOnly])
   const persist = useCallback(async () => {
+    if (readOnly) return currentDraft.current
     while (JSON.stringify(currentWizard.current) !== savedFingerprint.current) {
       if (pending.current) {
         await pending.current
@@ -144,8 +194,9 @@ export function WizardBuilder({
       }
     }
     return currentDraft.current
-  }, [apiFetch, pipelineId, queryClient])
+  }, [apiFetch, pipelineId, queryClient, readOnly])
   useEffect(() => {
+    if (readOnly) return
     if (JSON.stringify(wizard) === savedFingerprint.current) return
     const timer = window.setTimeout(() => {
       void persist().catch((cause) =>
@@ -153,19 +204,30 @@ export function WizardBuilder({
       )
     }, 550)
     return () => window.clearTimeout(timer)
-  }, [persist, t, wizard])
+  }, [persist, readOnly, t, wizard])
   const onChange = useCallback(
     (state: WizardViewState) => {
+      if (readOnly) return
       setError('')
+      setNotice('')
       setPreview(null)
-      setWizard((previous) => writeWizard(state, previous, destination?.id || ''))
+      setWizard((previous) =>
+        writeWizard(
+          state,
+          previous,
+          state.destinationSourceId || destination?.id || '',
+          deploymentProfile,
+        ),
+      )
     },
-    [destination?.id],
+    [destination?.id, deploymentProfile, readOnly],
   )
   async function publish(start: boolean) {
-    if (busy) return
+    if (busy || readOnly) return
     setBusy(true)
+    setAction(start ? 'start' : 'save')
     setError('')
+    setNotice('')
     try {
       const saved = await persist()
       const issue = wizardPublicationIssue(currentWizard.current)
@@ -177,11 +239,32 @@ export function WizardBuilder({
       currentDraft.current = published.draft
       currentEtag.current = published.etag
       queryClient.setQueryData(['pipelines', pipelineId, 'draft'], { mode: 'wizard', ...published })
-      await queryClient.invalidateQueries({ queryKey: ['pipelines'] })
-      if (start) await runPipeline(pipelineId, apiFetch)
+      if (start) {
+        let alreadyRunning = false
+        try {
+          await runPipeline(pipelineId, apiFetch)
+        } catch (cause) {
+          // Do not auto-stop an active run: that can interrupt ingestion and requires a
+          // separate state-retention decision. Explain that publish succeeded but restart did not.
+          if (
+            !(cause instanceof PipelineClientError) ||
+            cause.code !== 'lifecycle.illegal-transition' ||
+            cause.params.from !== 'RUNNING'
+          )
+            throw cause
+          alreadyRunning = true
+        }
+        if (alreadyRunning) setNotice(t('wizard.alreadyRunning'))
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId, 'status'] }),
+        queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId] }),
+        queryClient.invalidateQueries({ queryKey: ['pipelines'] }),
+      ])
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('wizard.errors.save'))
     } finally {
+      setAction(null)
       setBusy(false)
     }
   }
@@ -192,57 +275,80 @@ export function WizardBuilder({
       </div>
     )
   return (
-    <ReferenceWizardBuilder
-      catalog={catalog}
-      initial={readWizard(draft.wizard, catalog)}
-      onChange={onChange}
-      destinationName={
-        destination
-          ? (destination.connector === 'mongodb-atlas' ? 'MongoDB Atlas' : 'MongoDB') +
-            ' (' +
-            destination.id +
-            ')'
-          : ''
-      }
-      sourceError={sourcesQuery.error?.message || schemas.find((s) => s.error)?.error?.message}
-      compiledSpec={preview?.dsl || JSON.stringify(wizard, null, 2)}
-      footer={
-        <div className="mt-5 flex flex-wrap items-center justify-end gap-3 text-[11px]">
-          {error && (
-            <p
-              role="alert"
-              className="w-full rounded border border-red-200 bg-red-50 p-3 text-red-700"
-            >
-              {error}
-            </p>
-          )}
-          <span role="status" className="text-gray-500">
-            {t(
-              status === 'saving'
-                ? 'wizard.autosaving'
-                : status === 'error'
-                  ? 'wizard.autosaveError'
-                  : 'wizard.autosaved',
+    <>
+      <ReferenceWizardBuilder
+        catalog={catalog}
+        initial={readWizard(
+          wizard,
+          catalog,
+          destination?.id,
+          destinationConnector?.writeModes?.[0] || 'upsert',
+        )}
+        onChange={onChange}
+        destinationName={
+          destination
+            ? (connectors.find((connector) => connector.id === destination.connector)?.name ||
+                destination.connector) +
+              ' (' +
+              destination.id +
+              ')'
+            : ''
+        }
+        deploymentProfile={deploymentProfile}
+        readOnly={readOnly}
+        actions={
+          <PipelineWorkflowHeader
+            placement="sticky"
+            isDirty={JSON.stringify(wizard) !== savedFingerprint.current}
+            isSaving={busy && action === 'save'}
+            isRunning={busy && action === 'start'}
+            isBusy={busy}
+            isReadOnly={readOnly}
+            canSave
+            saveLabel={t('wizard.savePipeline')}
+            savePendingLabel={t('pipelines.workspace.actions.saving')}
+            runLabel={t('wizard.startPipeline')}
+            runPendingLabel={t('wizard.starting')}
+            onSave={() => void publish(false)}
+            onRun={() => void publish(true)}
+          />
+        }
+        sourceError={sourcesQuery.error?.message || schemas.find((s) => s.error)?.error?.message}
+        compiledSpec={preview?.dsl || JSON.stringify(wizard, null, 2)}
+        footer={
+          <div className="mt-5 flex flex-wrap items-center justify-end gap-3 text-[11px]">
+            {error && (
+              <p
+                role="alert"
+                className="w-full rounded border border-red-200 bg-red-50 p-3 text-red-700"
+              >
+                {error}
+              </p>
             )}
-          </span>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void publish(false)}
-            className="rounded border border-gray-200 bg-white px-3 py-1.5 text-gray-600 shadow-xs disabled:opacity-50"
-          >
-            {t('wizard.savePipeline')}
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void publish(true)}
-            className="rounded bg-blue-600 px-3 py-1.5 text-white shadow-xs disabled:opacity-50"
-          >
-            {t('wizard.startPipeline')}
-          </button>
-        </div>
-      }
-    />
+            {notice && (
+              <p
+                className="border-border bg-muted text-muted-foreground rounded-control w-full border p-3"
+                role="status"
+              >
+                {notice}
+              </p>
+            )}
+            <span role="status" className="text-gray-500">
+              {readOnly
+                ? t('pipelines.workspace.readOnly.editorStatus')
+                : action === 'start'
+                  ? t('wizard.starting')
+                  : t(
+                      status === 'saving'
+                        ? 'wizard.autosaving'
+                        : status === 'error'
+                          ? 'wizard.autosaveError'
+                          : 'wizard.autosaved',
+                    )}
+            </span>
+          </div>
+        }
+      />
+    </>
   )
 }

@@ -457,42 +457,19 @@ describe('pipeline graph edit model', () => {
     ).toBe(true)
   })
 
-  it('refuses a target whose Source is not on a MongoDB connector, and defers without one', () => {
+  it('requires sink-capable connector metadata for target Sources', () => {
     const draft = createPipelineGraphDraft(view)
-    const refused = (catalog?: readonly (string | { id: string; connector: string })[]) =>
-      validatePipelineGraph(draft, catalog).filter(
+    const sources = [
+      { id: 'mysql', connector: 'mysql' },
+      { id: 'mongo', connector: 'mongodb' },
+    ]
+    const refused = (connectors: { id: string; sink: boolean }[]) =>
+      validatePipelineGraph(draft, sources, connectors as never).filter(
         (item) => item.code === 'unsupported-target-connector',
       )
 
-    // One graph, four catalogs: only what the catalog says about `mongo` changes the verdict.
-    expect(
-      refused([
-        { id: 'mysql', connector: 'mysql' },
-        { id: 'mongo', connector: 'mongodb' },
-      ]),
-    ).toEqual([])
-    // A managed variant of the same database kind, which is what a deployment on one registers.
-    expect(
-      refused([
-        { id: 'mysql', connector: 'mysql' },
-        { id: 'mongo', connector: 'mongodb-atlas' },
-      ]),
-    ).toEqual([])
-    expect(
-      refused([
-        { id: 'mysql', connector: 'mysql' },
-        { id: 'mongo', connector: 'postgres' },
-      ]),
-    ).toEqual([
-      {
-        code: 'unsupported-target-connector',
-        nodeIds: ['target:mongo:orders'],
-        messageKey: 'pipelines.workspace.diagnostics.unsupportedTargetConnector',
-      },
-    ])
-    // Ids alone never said which connector `mongo` goes through, so nothing is judged.
-    expect(refused(['mysql', 'mongo'])).toEqual([])
-    expect(refused()).toEqual([])
+    expect(refused([{ id: 'mongodb', sink: true }])).toEqual([])
+    expect(refused([{ id: 'mongodb', sink: false }])).toHaveLength(1)
   })
 
   it('reports isolated nodes, cycles, and dangling edges', () => {

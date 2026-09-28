@@ -11,6 +11,7 @@ import { useAuthStore } from '@/stores/auth-store'
 
 import type { PipelineCreationMode } from './pipeline-creation-mode'
 
+import { getDeploymentProfile } from '../../model/deployment-profile'
 import { pipelineCreationModes } from './pipeline-creation-mode'
 import { PipelineCreationOption } from './pipeline-creation-option'
 import { PipelineCreationPreview as Preview } from './pipeline-creation-preview'
@@ -69,7 +70,10 @@ export function PipelineCreationDialog({ open, onClose }: PipelineCreationDialog
               root: { id: 'root', sourceId: '', table: '', key: [], preTransforms: [] },
               related: [],
               transforms: [],
-              output: { kind: 'atlas', config: {} },
+              output: {
+                kind: getDeploymentProfile() === 'cloud' ? 'atlas' : 'source',
+                config: {},
+              },
             },
             baseArtifactHash: null,
           },

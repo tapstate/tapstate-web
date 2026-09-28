@@ -13,13 +13,11 @@ function inputReferences(value: unknown) {
 export function TransformEditorShell({
   icon: Icon,
   title,
-  description,
   from,
   children,
 }: {
   icon: LucideIcon
   title: string
-  description: string
   from?: unknown
   children: ReactNode
 }) {
@@ -32,25 +30,22 @@ export function TransformEditorShell({
         <span className="pipeline-transform__icon" aria-hidden="true">
           <Icon className="size-4" />
         </span>
-        <div className="min-w-0">
-          <h3>{title}</h3>
-          <p>{description}</p>
-          <div
-            className="pipeline-transform__inputs"
-            aria-label={t('pipelines.workspace.transform.inputs')}
-          >
-            <span className="pipeline-transform__inputs-label">
-              {t('pipelines.workspace.transform.inputs')}
-            </span>
-            {inputs.length > 0 ? (
-              inputs.map((input) => <code key={input}>{input}</code>)
-            ) : (
-              <span className="pipeline-transform__inputs-empty">
-                {t('pipelines.workspace.transform.inputsEmpty')}
-              </span>
-            )}
-          </div>
-        </div>
+        <h3>{title}</h3>
+      </div>
+      <div
+        className="pipeline-transform__inputs"
+        aria-label={t('pipelines.workspace.transform.inputs')}
+      >
+        <span className="pipeline-transform__inputs-label">
+          {t('pipelines.workspace.transform.inputs')}
+        </span>
+        {inputs.length > 0 ? (
+          inputs.map((input) => <code key={input}>{input}</code>)
+        ) : (
+          <span className="pipeline-transform__inputs-empty">
+            {t('pipelines.workspace.transform.inputsEmpty')}
+          </span>
+        )}
       </div>
       <div className="pipeline-transform__body">{children}</div>
     </section>

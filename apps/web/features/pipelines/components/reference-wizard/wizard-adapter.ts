@@ -1,5 +1,6 @@
 import type { PipelineJsonObject } from '@/service/pipelines/pipeline-client'
 
+import type { DeploymentProfile } from '../../model/deployment-profile'
 import type { DataSourceMeta, RelationNode, WizardViewState } from './ReferenceWizardBuilder'
 import type { TransformStep } from './TableTransformsManager'
 
@@ -107,8 +108,11 @@ function literalValue(value: string): unknown {
 export function wizardPublicationIssue(value: PipelineJsonObject | null): string | null {
   const wizard = object(value)
   const root = object(wizard.root)
+  const output = object(object(wizard.output).config)
   if (!text(root.sourceId) || !text(root.table))
     return 'Select and confirm a root table before publishing.'
+  if (!text(output.sourceId) || !text(output.table))
+    return 'Choose a writable destination source and target table before publishing.'
   const transforms = [
     ...array(root.preTransforms),
     ...array(wizard.related).flatMap((r) => array(object(r).preTransforms)),
@@ -131,6 +135,8 @@ export function wizardPublicationIssue(value: PipelineJsonObject | null): string
 export function readWizard(
   value: PipelineJsonObject | null,
   catalog: DataSourceMeta[],
+  fallbackDestinationId = '',
+  fallbackWriteMode = 'upsert',
 ): WizardViewState {
   const wizard = object(value),
     root = object(wizard.root),
@@ -179,9 +185,6 @@ export function readWizard(
     if (parent && parent !== node) parent.children!.push(node)
     else relations.push(node)
   }
-  const computed = array(wizard.transforms)
-    .map(object)
-    .find((t) => t.id === 'wizard_computed_fields')
   return {
     root:
       sourceId && table
@@ -196,11 +199,10 @@ export function readWizard(
           }
         : null,
     relations,
-    computedFields: Object.entries(object(computed?.fields)).map(([name, expr]) => ({
-      name,
-      expr: text(expr).replace(/^=/, ''),
-    })),
+    transforms: readTransforms(wizard.transforms),
     destinationTable: text(output.table),
+    destinationSourceId: text(output.sourceId) || fallbackDestinationId,
+    destinationWriteMode: text(output.writeMode) || fallbackWriteMode,
   }
 }
 
@@ -208,6 +210,7 @@ export function writeWizard(
   state: WizardViewState,
   original: PipelineJsonObject | null,
   destinationId: string,
+  deploymentProfile: DeploymentProfile = 'on-prem',
 ): PipelineJsonObject {
   const previous = object(original),
     originalRows = array(previous.related).map(object)
@@ -238,17 +241,7 @@ export function writeWizard(
     }
   }
   walk(state.relations, 'root')
-  const transforms = array(previous.transforms)
-    .map(object)
-    .filter((t) => t.id !== 'wizard_computed_fields')
-  if (state.computedFields.length)
-    transforms.push({
-      id: 'wizard_computed_fields',
-      type: 'map',
-      fields: Object.fromEntries(
-        state.computedFields.map((f) => [f.name, `=${f.expr.replace(/^=/, '')}`]),
-      ),
-    })
+  const transforms = writeTransforms(state.transforms)
   return {
     ...previous,
     root: {
@@ -263,13 +256,13 @@ export function writeWizard(
     transforms,
     output: {
       ...object(previous.output),
-      kind: 'atlas',
+      kind: deploymentProfile === 'cloud' ? 'atlas' : 'source',
       config: {
         ...object(object(previous.output).config),
-        sourceId: destinationId,
+        sourceId: state.destinationSourceId || destinationId,
         table: state.destinationTable,
         inputTable: state.root?.table || '',
-        writeMode: 'upsert',
+        writeMode: state.destinationWriteMode || 'upsert',
       },
     },
   }

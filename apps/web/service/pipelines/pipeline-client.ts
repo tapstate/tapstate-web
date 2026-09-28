@@ -864,8 +864,16 @@ export async function runPipeline(id: string, fetcher: ApiFetcher = fetch): Prom
   return request(`/pipelines/${encodeURIComponent(id)}:start`, fetcher, { method: 'POST' })
 }
 
-export async function stopPipeline(id: string, fetcher: ApiFetcher = fetch): Promise<unknown> {
-  return request(`/pipelines/${encodeURIComponent(id)}:stop`, fetcher, { method: 'POST' })
+export async function stopPipeline(
+  id: string,
+  purgeState: boolean,
+  fetcher: ApiFetcher = fetch,
+): Promise<unknown> {
+  return request(`/pipelines/${encodeURIComponent(id)}:stop`, fetcher, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ purgeState }),
+  })
 }
 
 export async function getPipeline(id: string, fetcher: ApiFetcher = fetch): Promise<PipelineView> {

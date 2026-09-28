@@ -65,9 +65,11 @@
 
 .pipeline-list__actions-hover {
   --pipeline-action-hover-background: color-mix(in srgb, var(--muted) 82%, transparent);
+  --pipeline-list-action-shadow: 0 1px 3px rgb(0 0 0 / 5%), 0 1px 2px rgb(0 0 0 / 2%);
   height: 1.75rem;
   min-height: 1.75rem;
-  border-radius: 0.625rem;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--pipeline-list-action-shadow);
   white-space: nowrap;
 }
 

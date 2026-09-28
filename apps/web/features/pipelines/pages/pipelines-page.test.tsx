@@ -4,18 +4,30 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { apiFetch, listPipelines, listPipelineDrafts, listSources, runPipeline, stopPipeline } =
-  vi.hoisted(() => ({
-    apiFetch: vi.fn(),
-    listPipelines: vi.fn(),
-    listPipelineDrafts: vi.fn(),
-    listSources: vi.fn(),
-    runPipeline: vi.fn(),
-    stopPipeline: vi.fn(),
-  }))
+const {
+  apiFetch,
+  deletePipelineDraft,
+  getPipelineDraft,
+  listPipelines,
+  listPipelineDrafts,
+  listSources,
+  runPipeline,
+  stopPipeline,
+} = vi.hoisted(() => ({
+  apiFetch: vi.fn(),
+  deletePipelineDraft: vi.fn(),
+  getPipelineDraft: vi.fn(),
+  listPipelines: vi.fn(),
+  listPipelineDrafts: vi.fn(),
+  listSources: vi.fn(),
+  runPipeline: vi.fn(),
+  stopPipeline: vi.fn(),
+}))
 
 vi.mock('@/service/source-client', () => ({ listSources }))
 vi.mock('@/service/pipelines/pipeline-client', () => ({
+  deletePipelineDraft,
+  getPipelineDraft,
   listPipelineDrafts,
   listPipelines,
   runPipeline,
@@ -103,6 +115,8 @@ beforeEach(() => {
   listPipelineDrafts.mockResolvedValue([])
   runPipeline.mockResolvedValue({})
   stopPipeline.mockResolvedValue({})
+  getPipelineDraft.mockResolvedValue({ etag: '"3"' })
+  deletePipelineDraft.mockResolvedValue(undefined)
   apiFetch.mockResolvedValue({ ok: true })
 })
 
@@ -193,8 +207,15 @@ describe('PipelinesPage', () => {
         ?.click()
     })
     expect(elementWithText('[role="menuitem"]', 'Edit unfinished_wizard')).toBeDefined()
-    expect(elementWithText('[role="menuitem"]', 'Copy pipeline ID')).toBeUndefined()
-    expect(elementWithText('[role="menuitem"]', 'Delete')).toBeUndefined()
+    expect(elementWithText('[role="menuitem"]', 'Copy pipeline ID')).toBeDefined()
+    expect(elementWithText('[role="menuitem"]', 'Delete')).toBeDefined()
+
+    await act(async () => elementWithText('[role="menuitem"]', 'Delete')?.click())
+    await act(async () => elementWithText('button', 'Delete Pipeline')?.click())
+    await vi.waitFor(() =>
+      expect(getPipelineDraft).toHaveBeenCalledWith('unfinished_wizard', apiFetch),
+    )
+    expect(deletePipelineDraft).toHaveBeenCalledWith('unfinished_wizard', '"3"', apiFetch)
   })
 
   it('shows an unavailable state when a Pipeline has no runtime observation', async () => {
@@ -321,10 +342,44 @@ describe('PipelinesPage', () => {
     await vi.waitFor(() => expect(document.body.textContent).toContain('Stop orders_to_warehouse?'))
     expect(stopPipeline).not.toHaveBeenCalled()
 
-    await act(async () => elementWithText('button', 'Stop Pipeline')?.click())
+    expect(elementWithText('button', 'Stop and keep state')).toBeDefined()
+    expect(elementWithText('button', 'Stop and clear state')).toBeDefined()
+    await act(async () => elementWithText('button', 'Stop and keep state')?.click())
     await vi.waitFor(() =>
-      expect(stopPipeline).toHaveBeenCalledWith('orders_to_warehouse', expect.anything()),
+      expect(stopPipeline).toHaveBeenCalledWith('orders_to_warehouse', false, expect.anything()),
     )
+  })
+
+  it('sends an explicit clear-state choice and closes confirmation before showing a failure', async () => {
+    stopPipeline.mockRejectedValueOnce(
+      Object.assign(
+        new Error('Stopping pipeline p3 did not say whether to clear what it has accumulated.'),
+        { code: 'lifecycle.purge-state-not-stated' },
+      ),
+    )
+    await renderPage()
+    await vi.waitFor(() => expect(container?.textContent).toContain('orders_to_warehouse'))
+
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="Pipeline lifecycle actions for orders_to_warehouse"]',
+        )
+        ?.click(),
+    )
+    await act(async () => elementWithText('[role="menuitem"]', 'Stop')?.click())
+    await vi.waitFor(() => expect(document.body.textContent).toContain('Stop orders_to_warehouse?'))
+    await act(async () => elementWithText('button', 'Stop and clear state')?.click())
+
+    await vi.waitFor(() =>
+      expect(stopPipeline).toHaveBeenCalledWith('orders_to_warehouse', true, expect.anything()),
+    )
+    await vi.waitFor(() => {
+      expect(document.querySelector('[data-slot="dialog-content"]')).toBeNull()
+      expect(document.querySelector('[role="alert"]')?.textContent).toContain(
+        'Stopping pipeline p3 did not say whether to clear',
+      )
+    })
   })
 
   it('shows lifecycle request failures in a fixed feedback surface', async () => {

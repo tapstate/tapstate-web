@@ -467,10 +467,12 @@
       "stop": "停止",
       "startFailed": "流水线启动失败。",
       "stopFailed": "流水线停止失败。",
+      "stopBeforeEdit": "停止后编辑",
       "confirmStopTitle": "停止 {{id}}？",
-      "confirmStopBody": "本次请求会停止正在执行的工作。",
+      "confirmStopBody": "选择保留已保存的进度和算子状态供下次运行续接，或清除它们并从头开始。停止 Pipeline 不会删除目标端数据。",
       "cancel": "取消",
-      "confirmStop": "停止流水线",
+      "confirmStopKeepState": "停止并保留状态",
+      "confirmStopClearState": "停止并清除状态",
       "dismissFeedback": "关闭生命周期错误"
     },
     "delete": {
@@ -535,6 +537,11 @@
     "workspace": {
       "skipToCanvas": "跳到 Pipeline 画布",
       "loading": "正在加载 Pipeline 画布",
+      "readOnly": {
+        "title": "请先停止 Pipeline，再编辑",
+        "description": "当前运行状态：{{state}}。请先停止 Pipeline，再修改配置。",
+        "editorStatus": "停止运行前，Pipeline 配置为只读。"
+      },
       "back": "Pipelines",
       "layout": {
         "saving": "正在保存布局",
@@ -777,6 +784,7 @@
       "runtime": {
         "eyebrow": "运行信息",
         "loading": "正在加载观测数据",
+        "checkingBeforeEdit": "正在确认运行状态，确认后将打开编辑器…",
         "state": "状态",
         "offsets": "Source 位点",
         "emptyMetrics": "此 Pipeline 尚未发布指标。",
@@ -1027,10 +1035,17 @@
     "tablePlaceholder": "输入源表名称",
     "selectSourceFirst": "请先选择数据源",
     "outputTitle": "选择目的地",
-    "outputHint": "将结果写入你配置的唯一 Atlas 目的地。",
+    "outputHint": "将结果写入当前部署配置允许的目标端。",
     "destinationSelect": "Atlas 目的地",
     "destinationTableSelect": "Atlas 表",
     "destinationTablePlaceholder": "输入目标表名称",
+    "destinationContext": "目标端",
+    "configureDestination": "配置目标端",
+    "destinationAtlasSource": "Atlas 目标连接",
+    "destinationTargetSource": "目标数据源",
+    "destinationSourcePlaceholder": "选择可写入的数据源",
+    "destinationTable": "目标表",
+    "writeStrategy": "写入策略",
     "awaitingTable": "选择表后继续",
     "relations": {
       "addRelatedTable": "添加关联表",
@@ -1116,6 +1131,7 @@
     "savePipeline": "保存",
     "startPipeline": "保存并启动",
     "starting": "正在启动 Pipeline…",
+    "alreadyRunning": "草稿已保存并发布，但此 Pipeline 已在运行。请先停止当前运行，再启动新版本。",
     "errors": { "save": "无法创建 Pipeline，请重试。" },
     "transforms": {
       "filter": "过滤行",

@@ -473,10 +473,12 @@
       "stop": "停止",
       "startFailed": "流水線啟動失敗。",
       "stopFailed": "流水線停止失敗。",
+      "stopBeforeEdit": "停止後編輯",
       "confirmStopTitle": "停止 {{id}}？",
-      "confirmStopBody": "此請求會停止正在執行的工作。",
+      "confirmStopBody": "選擇保留已儲存的進度和算子狀態供下次執行續接，或清除它們並從頭開始。停止 Pipeline 不會刪除目標端資料。",
       "cancel": "取消",
-      "confirmStop": "停止流水線",
+      "confirmStopKeepState": "停止並保留狀態",
+      "confirmStopClearState": "停止並清除狀態",
       "dismissFeedback": "關閉生命週期錯誤"
     },
     "table": {
@@ -535,6 +537,11 @@
     "workspace": {
       "skipToCanvas": "跳至 Pipeline 畫布",
       "loading": "正在載入 Pipeline 畫布",
+      "readOnly": {
+        "title": "請先停止 Pipeline，再編輯",
+        "description": "目前執行狀態：{{state}}。請先停止 Pipeline，再修改設定。",
+        "editorStatus": "停止執行前，Pipeline 設定為唯讀。"
+      },
       "back": "Pipelines",
       "layout": {
         "saving": "正在儲存版面配置",
@@ -777,6 +784,7 @@
       "runtime": {
         "eyebrow": "執行資訊",
         "loading": "正在載入觀測資料",
+        "checkingBeforeEdit": "正在確認執行狀態，確認後將開啟編輯器…",
         "state": "狀態",
         "offsets": "Source 位點",
         "emptyMetrics": "此 Pipeline 尚未發布指標。",
@@ -1027,10 +1035,17 @@
     "tablePlaceholder": "輸入來源資料表名稱",
     "selectSourceFirst": "請先選擇資料來源",
     "outputTitle": "選擇目的地",
-    "outputHint": "將結果寫入你設定的唯一 Atlas 目的地。",
+    "outputHint": "將結果寫入目前部署設定允許的目標端。",
     "destinationSelect": "Atlas 目的地",
     "destinationTableSelect": "Atlas 資料表",
     "destinationTablePlaceholder": "輸入目標資料表名稱",
+    "destinationContext": "目標端",
+    "configureDestination": "設定目標端",
+    "destinationAtlasSource": "Atlas 目標連線",
+    "destinationTargetSource": "目標資料來源",
+    "destinationSourcePlaceholder": "選擇可寫入的資料來源",
+    "destinationTable": "目標資料表",
+    "writeStrategy": "寫入策略",
     "awaitingTable": "選擇資料表後繼續",
     "relations": {
       "addRelatedTable": "新增關聯資料表",
@@ -1116,6 +1131,7 @@
     "savePipeline": "儲存",
     "startPipeline": "儲存並啟動",
     "starting": "正在啟動 Pipeline…",
+    "alreadyRunning": "草稿已儲存並發布，但此 Pipeline 已在執行。請先停止目前的執行，再啟動新版本。",
     "errors": { "save": "無法建立 Pipeline，請重試。" },
     "transforms": {
       "filter": "篩選資料列",

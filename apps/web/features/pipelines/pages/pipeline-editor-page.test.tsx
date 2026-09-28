@@ -336,16 +336,19 @@ vi.mock('./wizard-builder', () => ({
     pipelineId,
     draft,
     etag,
+    readOnly,
   }: {
     pipelineId: string
     draft: { mode: string }
     etag: string
+    readOnly?: boolean
   }) => (
     <div
       data-testid="wizard-builder"
       data-pipeline-id={pipelineId}
       data-draft-mode={draft.mode}
       data-etag={etag}
+      data-read-only={readOnly ? 'true' : 'false'}
     />
   ),
 }))
@@ -480,7 +483,16 @@ beforeEach(() => {
     discoveredAt: 1_754_800_000_000,
     tables: [{ name: 'Player', fields: [], primaryKey: [], indexes: [] }],
   })
-  listConnectors.mockResolvedValue([{ id: 'mysql', name: 'MySQL', icon: '/connectors/mysql.svg' }])
+  listConnectors.mockResolvedValue([
+    { id: 'mysql', name: 'MySQL', icon: '/connectors/mysql.svg', sink: false },
+    { id: 'mongodb', name: 'MongoDB', icon: '/connectors/mongodb.svg', sink: true },
+    {
+      id: 'mongodb-atlas',
+      name: 'MongoDB Atlas',
+      icon: '/connectors/mongodb-atlas.svg',
+      sink: true,
+    },
+  ] as never)
 })
 
 afterEach(async () => {
@@ -532,6 +544,74 @@ describe('PipelineEditorPage', () => {
     expect(getPipelineLayout).not.toHaveBeenCalled()
   })
 
+  it('waits for runtime status before exposing an already-published editor', async () => {
+    getPipelineDraft.mockResolvedValue({
+      draft: {
+        pipelineId: 'orders_to_warehouse',
+        schemaVersion: 1,
+        revision: 3,
+        mode: 'wizard',
+        name: 'orders_to_warehouse',
+        description: null,
+        graph: null,
+        wizard: { root: null, related: [], transforms: [], output: { kind: 'atlas', config: {} } },
+        baseArtifactHash: 'a'.repeat(64),
+        publishedDraftRevision: 2,
+        publishedArtifactHash: 'b'.repeat(64),
+        createdAt: '2026-09-21T00:00:00Z',
+        updatedAt: '2026-09-21T00:00:00Z',
+        updatedBy: 'test',
+      },
+      etag: '"3"',
+    })
+    let resolveStatus: ((status: { pipelineId: string; state: 'STOPPED' }) => void) | undefined
+    getPipelineStatus.mockImplementationOnce(
+      () => new Promise((resolve) => (resolveStatus = resolve)),
+    )
+
+    await renderPage()
+    await vi.waitFor(() => expect(getPipelineStatus).toHaveBeenCalledTimes(1))
+    expect(document.querySelector('[data-testid="wizard-builder"]')).toBeNull()
+    expect(container?.textContent).toContain('Checking runtime status before opening the editor')
+
+    await act(async () => resolveStatus?.({ pipelineId: 'orders_to_warehouse', state: 'STOPPED' }))
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="wizard-builder"]')).not.toBeNull(),
+    )
+  })
+
+  it('opens a published Wizard read-only when its runtime is active', async () => {
+    getPipelineDraft.mockResolvedValue({
+      draft: {
+        pipelineId: 'orders_to_warehouse',
+        schemaVersion: 1,
+        revision: 3,
+        mode: 'wizard',
+        name: 'orders_to_warehouse',
+        description: null,
+        graph: null,
+        wizard: { root: null, related: [], transforms: [], output: { kind: 'atlas', config: {} } },
+        baseArtifactHash: 'a'.repeat(64),
+        publishedDraftRevision: 2,
+        publishedArtifactHash: 'b'.repeat(64),
+        createdAt: '2026-09-21T00:00:00Z',
+        updatedAt: '2026-09-21T00:00:00Z',
+        updatedBy: 'test',
+      },
+      etag: '"3"',
+    })
+    getPipelineStatus.mockResolvedValue({ pipelineId: 'orders_to_warehouse', state: 'RUNNING' })
+
+    await renderPage()
+    await vi.waitFor(() =>
+      expect(
+        document.querySelector<HTMLElement>('[data-testid="wizard-builder"]')?.dataset.readOnly,
+      ).toBe('true'),
+    )
+    expect(document.querySelector('[data-testid="pipeline-readonly-banner"]')).not.toBeNull()
+    expect(elementWithText('button', 'Stop to edit')).toBeDefined()
+  })
+
   it('keeps the canvas in the Build route and exposes separate workspace navigation', async () => {
     getPipelineStatus.mockResolvedValue({ pipelineId: 'orders_to_warehouse', state: 'RUNNING' })
     await renderPage()
@@ -544,6 +624,10 @@ describe('PipelineEditorPage', () => {
         'Running',
       ),
     )
+    expect(
+      document.querySelector('[data-testid="pipeline-readonly-banner"]')?.textContent,
+    ).toContain('This Pipeline must be stopped before editing')
+    expect(elementWithText('button', 'Stop to edit')).toBeDefined()
     expect(getPipelineStatus).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function))
     expect(elementWithText('span', 'PIPELINE')).toBeUndefined()
     expect(elementWithText('a', 'Build')?.getAttribute('href')).toBe(
@@ -616,6 +700,9 @@ describe('PipelineEditorPage', () => {
     )
 
     expect(document.querySelector('[data-workflow-header]')).not.toBeNull()
+    expect(document.querySelector('[data-workflow-header]')?.getAttribute('data-placement')).toBe(
+      'floating',
+    )
     expect(document.querySelector('.pipeline-canvas__top-overlay')).toBeNull()
     expect(document.querySelector('.pipeline-canvas__operator')).not.toBeNull()
 
@@ -917,7 +1004,7 @@ describe('PipelineEditorPage', () => {
     expect(resizeHandle?.getAttribute('aria-valuenow')).toBe('560')
   })
 
-  it('offers a target node only the MongoDB Sources, while a source node still sees them all', async () => {
+  it('offers a target node sink-capable Sources, while a source node still sees them all', async () => {
     const pipelineWithTarget = {
       id: 'orders_to_warehouse',
       sources: [{ id: 'mysql', metadata: null, connector: 'mysql' }],
@@ -957,6 +1044,11 @@ describe('PipelineEditorPage', () => {
       { id: 'atlas_out', connector: 'mongodb-atlas', tables: null },
       { id: 'mongo_archive', connector: 'mongodb', tables: null },
     ])
+    listConnectors.mockResolvedValue([
+      { id: 'mysql', name: 'MySQL', sink: false },
+      { id: 'mongodb', name: 'MongoDB', sink: true },
+      { id: 'mongodb-atlas', name: 'MongoDB Atlas', sink: true },
+    ] as never)
 
     await renderPage()
     await vi.waitFor(() =>

@@ -41,12 +41,13 @@ export function AppSidebar() {
             <Link
               key={item.to}
               to={item.to}
+              aria-current={pathname.startsWith(item.to) ? 'page' : undefined}
               className={cn(
                 'app-sidebar__link',
                 pathname.startsWith(item.to) && 'app-sidebar__link--active',
               )}
             >
-              <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
               <span>{t(item.labelKey)}</span>
             </Link>
           )

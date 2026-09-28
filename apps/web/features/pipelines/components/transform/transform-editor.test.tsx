@@ -242,6 +242,8 @@ describe('TransformEditor', () => {
     })
 
     expect(host.textContent).toContain('TypeScript')
+    expect(host.querySelector('[data-slot="select-trigger"]')).not.toBeNull()
+    expect(host.querySelector('.ant-select')).toBeNull()
     expect(host.querySelector<HTMLTextAreaElement>('textarea[aria-label="Script"]')?.value).toBe(
       'return record',
     )

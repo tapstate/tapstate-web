@@ -24,6 +24,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import {
+  deletePipelineDraft,
+  getPipelineDraft,
   runPipeline,
   stopPipeline,
   type PipelineRuntimeState,
@@ -47,6 +49,7 @@ export function PipelineLifecycleMenu({
   status,
   apiFetch,
   contentHash,
+  presentation = 'list',
   onMutationError,
   onMutationStart,
 }: {
@@ -54,6 +57,7 @@ export function PipelineLifecycleMenu({
   status?: PipelineRuntimeState
   apiFetch: ApiFetcher
   contentHash: string | null
+  presentation?: 'list' | 'stop-button'
   onMutationError?: (action: PipelineLifecycleAction, error?: unknown) => void
   onMutationStart?: () => void
 }) {
@@ -80,7 +84,7 @@ export function PipelineLifecycleMenu({
     ])
   }
 
-  async function execute(nextAction: PipelineLifecycleAction) {
+  async function execute(nextAction: PipelineLifecycleAction, purgeState = false) {
     setPendingAction(nextAction)
     onMutationStart?.()
 
@@ -88,11 +92,12 @@ export function PipelineLifecycleMenu({
       if (nextAction === 'start') {
         await runPipeline(pipelineId, apiFetch)
       } else {
-        await stopPipeline(pipelineId, apiFetch)
+        await stopPipeline(pipelineId, purgeState, apiFetch)
       }
       await refreshProjections()
       if (nextAction === 'stop') setStopDialogOpen(false)
     } catch (error) {
+      if (nextAction === 'stop') setStopDialogOpen(false)
       // A lifecycle request can race with another worker or with a different
       // browser tab. Refresh the projection even when the server rejects the
       // transition so the menu reflects the authoritative runtime state.
@@ -104,17 +109,21 @@ export function PipelineLifecycleMenu({
   }
 
   async function executeDelete() {
-    if (contentHash === null) return
     setDeletePending(true)
     setDeleteError(false)
     onMutationStart?.()
 
     try {
-      const response = await apiFetch(`/api/artifacts/${encodeURIComponent(pipelineId)}`, {
-        method: 'DELETE',
-        headers: { 'If-Match': `"${contentHash}"` },
-      })
-      if (!response.ok) throw new Error('Pipeline deletion failed')
+      if (contentHash === null) {
+        const { etag } = await getPipelineDraft(pipelineId, apiFetch)
+        await deletePipelineDraft(pipelineId, etag, apiFetch)
+      } else {
+        const response = await apiFetch(`/api/artifacts/${encodeURIComponent(pipelineId)}`, {
+          method: 'DELETE',
+          headers: { 'If-Match': `"${contentHash}"` },
+        })
+        if (!response.ok) throw new Error('Pipeline deletion failed')
+      }
       await refreshProjections()
       setDeleteDialogOpen(false)
     } catch {
@@ -185,25 +194,21 @@ export function PipelineLifecycleMenu({
               <Pencil aria-hidden="true" />
               {editLabel}
             </DropdownMenuItem>
-            {!isDraft && (
-              <>
-                <DropdownMenuItem onClick={copyPipelineId}>
-                  <Copy aria-hidden="true" />
-                  {t('pipelines.actions.copyPipeline')}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => {
-                    setDeleteError(false)
-                    setDeleteDialogOpen(true)
-                  }}
-                >
-                  <Trash2 aria-hidden="true" />
-                  {t('pipelines.actions.deletePipeline')}
-                </DropdownMenuItem>
-              </>
-            )}
+            <DropdownMenuItem onClick={copyPipelineId}>
+              <Copy aria-hidden="true" />
+              {t('pipelines.actions.copyPipeline')}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => {
+                setDeleteError(false)
+                setDeleteDialogOpen(true)
+              }}
+            >
+              <Trash2 aria-hidden="true" />
+              {t('pipelines.actions.deletePipeline')}
+            </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -212,49 +217,64 @@ export function PipelineLifecycleMenu({
 
   return (
     <>
-      <div className="pipeline-list__lifecycle-menu">
-        <div className="pipeline-list__actions-default pointer-events-auto flex items-center justify-end opacity-100 transition-opacity duration-200 group-focus-within:pointer-events-none group-focus-within:opacity-0 group-hover:pointer-events-none group-hover:opacity-0">
-          <LifecycleDropdown />
-        </div>
-        <div className="pipeline-list__actions-hover pointer-events-none absolute top-1/2 right-4 z-10 flex -translate-y-1/2 items-center overflow-hidden border border-gray-200 bg-white opacity-0 shadow-sm transition-all duration-200 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
-          {resolvedAction && (
-            <button
-              type="button"
-              className="pipeline-list__action-button border-r border-gray-200 px-2.5 py-1.5 text-gray-500 transition-colors hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60"
-              aria-label={actionButtonLabel ?? undefined}
-              title={actionButtonLabel ?? undefined}
-              disabled={pending}
-              onClick={() => requestAction(resolvedAction)}
-            >
-              {pending ? (
-                <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-              ) : (
-                <ActionIcon
-                  className={
-                    resolvedAction === 'start'
-                      ? 'h-3.5 w-3.5 text-emerald-600'
-                      : 'h-3.5 w-3.5 text-amber-600'
-                  }
-                  fill="currentColor"
-                  aria-hidden="true"
-                />
-              )}
-            </button>
+      {presentation === 'stop-button' ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={pending}
+          className="gap-2"
+          onClick={() => requestAction('stop')}
+        >
+          {pending ? (
+            <LoaderCircle className="animate-spin" aria-hidden="true" />
+          ) : (
+            <Square aria-hidden="true" />
           )}
-          <a
-            href={editHref}
-            className="pipeline-list__action-button border-r border-gray-200 px-2.5 py-1.5 text-gray-500 transition-colors hover:bg-gray-50"
-            aria-label={editLabel}
-            title={editLabel}
-          >
-            <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-          </a>
-          <LifecycleDropdown
-            triggerLabel={t('pipelines.actions.morePipeline', { id: pipelineId })}
-            triggerClassName="pipeline-list__action-button h-auto w-auto rounded-none border-0 px-2.5 py-1.5 transition-colors hover:bg-gray-50"
-          />
+          {t('pipelines.lifecycle.stopBeforeEdit')}
+        </Button>
+      ) : (
+        <div className="pipeline-list__lifecycle-menu">
+          <div className="pipeline-list__actions-default pointer-events-auto flex items-center justify-end opacity-100 transition-opacity duration-200 group-focus-within:pointer-events-none group-focus-within:opacity-0 group-hover:pointer-events-none group-hover:opacity-0">
+            <LifecycleDropdown />
+          </div>
+          <div className="pipeline-list__actions-hover pointer-events-none absolute top-1/2 right-4 z-10 flex -translate-y-1/2 items-center overflow-hidden border border-gray-200 bg-white opacity-0 transition-opacity duration-200 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
+            {resolvedAction && (
+              <button
+                type="button"
+                className={cn(
+                  'pipeline-list__action-button border-r border-gray-200 px-2.5 py-1.5 text-gray-500 transition-colors hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60',
+                  resolvedAction === 'start'
+                    ? 'text-emerald-600 hover:text-emerald-700'
+                    : 'text-amber-600 hover:text-amber-700',
+                )}
+                aria-label={actionButtonLabel ?? undefined}
+                title={actionButtonLabel ?? undefined}
+                disabled={pending}
+                onClick={() => requestAction(resolvedAction)}
+              >
+                {pending ? (
+                  <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <ActionIcon className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true" />
+                )}
+              </button>
+            )}
+            <a
+              href={editHref}
+              className="pipeline-list__action-button border-r border-gray-200 px-2.5 py-1.5 text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900"
+              aria-label={editLabel}
+              title={editLabel}
+            >
+              <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+            </a>
+            <LifecycleDropdown
+              triggerLabel={t('pipelines.actions.morePipeline', { id: pipelineId })}
+              triggerClassName="pipeline-list__action-button h-auto w-auto rounded-none border-0 px-2.5 py-1.5 transition-colors hover:bg-gray-50 hover:text-gray-900"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       <Dialog
         open={stopDialogOpen}
@@ -285,13 +305,23 @@ export function PipelineLifecycleMenu({
             </Button>
             <Button
               type="button"
+              variant="outline"
+              disabled={pending}
+              className="px-3 text-[13px]"
+              onClick={() => void execute('stop', false)}
+            >
+              {pendingAction === 'stop' && <LoaderCircle className="animate-spin" />}
+              {t('pipelines.lifecycle.confirmStopKeepState')}
+            </Button>
+            <Button
+              type="button"
               variant="destructive"
               disabled={pending}
               className="px-3 text-[13px]"
-              onClick={() => void execute('stop')}
+              onClick={() => void execute('stop', true)}
             >
               {pendingAction === 'stop' && <LoaderCircle className="animate-spin" />}
-              {t('pipelines.lifecycle.confirmStop')}
+              {t('pipelines.lifecycle.confirmStopClearState')}
             </Button>
           </DialogFooter>
         </DialogContent>

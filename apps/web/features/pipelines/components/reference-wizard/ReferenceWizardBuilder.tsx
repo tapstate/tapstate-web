@@ -14,10 +14,12 @@ import {
   Workflow,
 } from 'lucide-react'
 import * as React from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { ConnectorIcon } from '@/components/connector-icon'
 
 import './wizard-reference.css'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -27,6 +29,8 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 
+import type { DeploymentProfile } from '../../model/deployment-profile'
+
 import { TableTransformsManager, type TransformStep } from './TableTransformsManager'
 import { reparentRelation } from './wizard-tree'
 
@@ -35,9 +39,12 @@ export interface WizardBuilderProps {
   initial: WizardViewState
   onChange: (state: WizardViewState) => void
   destinationName: string
+  deploymentProfile: DeploymentProfile
   footer: React.ReactNode
+  actions?: React.ReactNode
   compiledSpec: string
   sourceError?: string
+  readOnly?: boolean
 }
 
 export interface JoinCondition {
@@ -84,6 +91,8 @@ export interface DataSourceMeta {
   connector?: string
   connectorName?: string
   iconPath?: string | null
+  sink?: boolean
+  writeModes?: string[]
   tables: TableMeta[]
 }
 
@@ -101,8 +110,10 @@ export interface RootConfig {
 export interface WizardViewState {
   root: RootConfig | null
   relations: RelationNode[]
-  computedFields: { name: string; expr: string }[]
+  transforms: TransformStep[]
   destinationTable: string
+  destinationSourceId: string
+  destinationWriteMode: string
 }
 
 export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
@@ -110,14 +121,22 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   initial,
   onChange,
   destinationName,
+  deploymentProfile,
   footer,
+  actions,
   compiledSpec,
   sourceError,
+  readOnly = false,
 }) => {
+  const { t } = useTranslation()
   const [activeContext, setActiveContext] = React.useState('root')
   const [previewMode, setPreviewMode] = React.useState<'json' | 'table'>('json')
   const [showPlanModal, setShowPlanModal] = React.useState(false)
   const [targetCollection, setTargetCollection] = React.useState(initial.destinationTable)
+  const [targetSourceId, setTargetSourceId] = React.useState(initial.destinationSourceId)
+  const [targetWriteMode, setTargetWriteMode] = React.useState(
+    initial.destinationWriteMode || 'upsert',
+  )
   const [rootConfig, setRootConfig] = React.useState<RootConfig | null>(initial.root)
   const [isRootEditing, setIsRootEditing] = React.useState(!initial.root)
   const [scratchSelectedSource, setScratchSelectedSource] = React.useState(
@@ -125,12 +144,33 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   )
   const [scratchSelectedTable, setScratchSelectedTable] = React.useState(initial.root?.table || '')
   const [relations, setRelations] = React.useState<RelationNode[]>(initial.relations)
-  const [computedFields, setComputedFields] = React.useState(initial.computedFields)
+  const [pipelineTransforms, setPipelineTransforms] = React.useState(initial.transforms)
+  const targetDataSource = AVAILABLE_DATA_SOURCES.find((source) => source.id === targetSourceId)
+  const availableWriteModes = targetDataSource?.writeModes?.length
+    ? targetDataSource.writeModes
+    : ['upsert']
+  const selectedWriteMode = availableWriteModes.includes(targetWriteMode)
+    ? targetWriteMode
+    : availableWriteModes[0]
   const onChangeRef = React.useRef(onChange)
   onChangeRef.current = onChange
   const viewState = React.useMemo(
-    () => ({ root: rootConfig, relations, computedFields, destinationTable: targetCollection }),
-    [rootConfig, relations, computedFields, targetCollection],
+    () => ({
+      root: rootConfig,
+      relations,
+      transforms: pipelineTransforms,
+      destinationTable: targetCollection,
+      destinationSourceId: targetSourceId,
+      destinationWriteMode: selectedWriteMode,
+    }),
+    [
+      rootConfig,
+      relations,
+      pipelineTransforms,
+      targetCollection,
+      targetSourceId,
+      selectedWriteMode,
+    ],
   )
   const lastView = React.useRef(JSON.stringify(viewState))
   React.useEffect(() => {
@@ -489,22 +529,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     setActiveAddChildForRelId(null)
   }
 
-  const addComputedField = () => {
-    setComputedFields([
-      ...computedFields,
-      {
-        name: `metric_${computedFields.length + 1}`,
-        expr: '',
-      },
-    ])
-    setActiveContext('doc_process')
-  }
-
   // Preview Label & Data
   const activeContextLabel = React.useMemo(() => {
     if (activeContext === 'root') return 'Root Anchor'
     if (activeContext === 'doc_process') return 'Post Operations'
-    if (activeContext === 'atlas') return 'MongoDB Atlas'
+    if (activeContext === 'destination') return t('wizard.destinationContext')
     for (const rel of relations) {
       if (rel.id === activeContext) return rel.targetField
       if (rel.children) {
@@ -528,7 +557,13 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   const previewDoc = rootConfig
     ? shapeFor(getColumnsForTable(rootConfig.source, rootConfig.table), relations)
     : {}
-  for (const field of computedFields) if (field.name) previewDoc[field.name] = null
+  for (const step of pipelineTransforms) {
+    if (step.type !== 'map') continue
+    for (const field of step.config.map?.fields || []) {
+      if (field.ruleType === 'delete') delete previewDoc[field.outputField]
+      else if (field.outputField) previewDoc[field.outputField] = null
+    }
+  }
 
   const renderRelation = (rel: RelationNode, nested = false): React.ReactNode => (
     <div key={rel.id} className="relative">
@@ -1340,467 +1375,179 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   )
 
   return (
-    <div className="wizard-reference flex h-full w-full flex-col overflow-hidden bg-[#FAFAFA] font-sans text-gray-900 select-none">
+    <div className="wizard-reference flex h-full w-full flex-col overflow-hidden font-sans text-gray-900 select-none">
       {/* Top Workbench Header */}
       {/* Main Workspace Split */}
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+      <div className="wizard-reference-workspace flex min-h-0 flex-1 overflow-hidden">
         {/* Left / Center Canvas */}
-        <main className="wizard-reference-canvas flex min-w-0 flex-1 flex-col items-center overflow-y-auto px-8 py-6">
-          <div className="w-full max-w-[720px] pb-24">
-            {/* ================================================================= */}
-            {/* STEP 1: ROOT TABLE (主表锚点 - 卡片原生就地配置，前后形态统一) */}
-            {/* ================================================================= */}
-            <section
-              id="step-root-table"
-              onClick={() => setActiveContext('root')}
-              className={cn(
-                'wizard-reference-root-card cursor-pointer border bg-white p-4 shadow-xs transition-all duration-150',
-                activeContext === 'root'
-                  ? 'border-blue-500 ring-1 ring-blue-500/20'
-                  : 'border-gray-200 hover:border-gray-300',
-              )}
-            >
-              {/* Card Header */}
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-blue-200 bg-blue-50 text-blue-700">
-                    <Database className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-lg border border-blue-200/60 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-blue-700 uppercase">
-                        Root Table
-                      </span>
-                      {isRootConfigured && !isRootEditing && rootConfig ? (
-                        <h2 className="font-mono text-[13px] font-semibold text-gray-900">
-                          {rootConfig.table}
-                        </h2>
-                      ) : (
-                        <span className="text-[13px] font-semibold text-gray-900">
-                          {isRootConfigured ? 'Edit Root Table' : 'Select Root Table'}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Subtitle / Meta info when configured */}
-                    {isRootConfigured && !isRootEditing && rootConfig ? (
-                      <div className="mt-1 flex items-center gap-2 text-[11px] text-gray-500">
-                        <span>
-                          Source:{' '}
-                          <strong className="font-normal text-gray-700">{rootConfig.source}</strong>
-                        </span>
-                        <span>•</span>
-                        <span>
-                          PK:{' '}
-                          <code className="font-mono text-gray-700">{rootConfig.primaryKey}</code>
-                        </span>
-                        <span>•</span>
-                        <span>{rootConfig.columns.length} columns</span>
-                      </div>
-                    ) : (
-                      <div className="mt-1 text-[11px] text-gray-500">
-                        Anchor entity for document assembly. Each row maps to a MongoDB document.
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Top Right Actions */}
-                <div className="flex shrink-0 items-center gap-1.5">
-                  {isRootConfigured && !isRootEditing ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setRootConfig((prev) =>
-                            prev ? { ...prev, isTransformsOpen: !prev.isTransformsOpen } : null,
-                          )
-                        }}
-                        className={cn(
-                          'flex cursor-pointer items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-medium shadow-2xs transition-colors',
-                          rootConfig?.isTransformsOpen
-                            ? 'border-blue-300 bg-blue-50 text-blue-700'
-                            : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900',
-                        )}
-                        title="Configure transforms and pre-processing for root table"
-                      >
-                        <Workflow className="h-3 w-3 text-blue-600" />
-                        <span>Transforms</span>
-                        {(rootConfig?.transforms?.length || 0) > 0 && (
-                          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-100 text-[10px] font-bold text-blue-700">
-                            {rootConfig?.transforms?.length}
-                          </span>
-                        )}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          startRootEdit()
-                        }}
-                        className="flex cursor-pointer items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-600 shadow-2xs transition-colors hover:bg-gray-50 hover:text-gray-900"
-                      >
-                        <RefreshCw className="h-3 w-3 text-gray-400" />
-                        Switch Table
-                      </button>
-                    </>
-                  ) : !isRootConfigured ? (
-                    <span className="rounded-lg border border-amber-200/80 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-                      Setup Required
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-
-              {/* Inline Configuration Form */}
-              {(!isRootConfigured || isRootEditing) && (
-                <div
-                  className="wizard-reference-root-form mt-3.5 space-y-3 border-t border-gray-100 pt-3.5"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="mb-1 block text-[11px] font-medium text-gray-600">
-                        Data Source
-                      </label>
-                      <Select
-                        value={scratchSelectedSource || undefined}
-                        onValueChange={(value) => {
-                          if (value === null) return
-                          setScratchSelectedSource(value)
-                          const src = AVAILABLE_DATA_SOURCES.find((s) => s.name === value)
-                          setScratchSelectedTable(src?.tables[0]?.name || '')
-                        }}
-                      >
-                        <SelectTrigger
-                          aria-label="Data Source"
-                          className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
-                        >
-                          {AVAILABLE_DATA_SOURCES.find(
-                            (ds) => ds.name === scratchSelectedSource,
-                          ) && (
-                            <ConnectorIcon
-                              connectorId={
-                                AVAILABLE_DATA_SOURCES.find(
-                                  (ds) => ds.name === scratchSelectedSource,
-                                )?.connector || scratchSelectedSource
-                              }
-                              name={
-                                AVAILABLE_DATA_SOURCES.find(
-                                  (ds) => ds.name === scratchSelectedSource,
-                                )?.connectorName || scratchSelectedSource
-                              }
-                              iconPath={
-                                AVAILABLE_DATA_SOURCES.find(
-                                  (ds) => ds.name === scratchSelectedSource,
-                                )?.iconPath
-                              }
-                              size={24}
-                            />
-                          )}
-                          <SelectValue placeholder="Select a source" />
-                        </SelectTrigger>
-                        <SelectContent className="wizard-reference-select-content rounded-lg">
-                          {AVAILABLE_DATA_SOURCES.map((ds) => (
-                            <SelectItem
-                              key={ds.id}
-                              value={ds.name}
-                              className="rounded-md px-1.5 py-1 text-[12px]"
-                            >
-                              <span className="flex min-w-0 items-center gap-3">
-                                <ConnectorIcon
-                                  connectorId={ds.connector || ds.badge}
-                                  name={ds.connectorName || ds.badge}
-                                  iconPath={ds.iconPath}
-                                  size={20}
-                                />
-                                <span className="truncate">{ds.name}</span>
-                                <span className="ml-auto shrink-0 text-[11px] text-gray-500">
-                                  {ds.connectorName || ds.badge}
-                                </span>
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <label className="mb-1 block text-[11px] font-medium text-gray-600">
-                        Table
-                      </label>
-                      <Select
-                        value={scratchSelectedTable || undefined}
-                        onValueChange={(value) => {
-                          if (value !== null) setScratchSelectedTable(value)
-                        }}
-                      >
-                        <SelectTrigger
-                          aria-label="Table"
-                          className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 font-mono text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
-                        >
-                          <SelectValue placeholder="Select a source table" />
-                        </SelectTrigger>
-                        <SelectContent className="wizard-reference-select-content rounded-lg">
-                          {scratchAvailableTables.map((tbl) => (
-                            <SelectItem
-                              key={tbl.name}
-                              value={tbl.name}
-                              className="rounded-md px-1.5 py-1 font-mono text-[12px]"
-                            >
-                              <span className="flex items-center gap-2">
-                                <Table2 className="size-4 text-gray-500" />
-                                {tbl.name}
-                                {tbl.primaryKey ? ` (PK: ${tbl.primaryKey})` : ''}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {sourceError && (
-                    <p role="alert" className="text-[11px] text-amber-700">
-                      {sourceError}
-                    </p>
+        <div className="wizard-reference-editor-column">
+          <fieldset
+            disabled={readOnly}
+            className="contents"
+            aria-label={readOnly ? t('pipelines.workspace.readOnly.editorStatus') : undefined}
+            data-testid="wizard-editor-controls"
+            data-read-only={readOnly ? 'true' : 'false'}
+          >
+            <main className="wizard-reference-canvas flex min-w-0 flex-1 flex-col overflow-y-auto">
+              <div className="w-full min-w-0 pb-24">
+                {/* ================================================================= */}
+                {/* STEP 1: ROOT TABLE (主表锚点 - 卡片原生就地配置，前后形态统一) */}
+                {/* ================================================================= */}
+                <section
+                  id="step-root-table"
+                  onClick={() => setActiveContext('root')}
+                  className={cn(
+                    'wizard-reference-root-card cursor-pointer border bg-white p-4 shadow-xs transition-all duration-150',
+                    activeContext === 'root'
+                      ? 'border-blue-500 ring-1 ring-blue-500/20'
+                      : 'border-gray-200 hover:border-gray-300',
                   )}
-                  {/* Quick Presets & Confirm Buttons */}
-                  <div className="flex items-center justify-between pt-1">
-                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
-                      <span className="text-gray-400">Quick pick:</span>
-                      {scratchAvailableTables.slice(0, 2).map((tbl) => (
-                        <button
-                          key={tbl.name}
-                          type="button"
-                          onClick={() => quickPickRoot(scratchSelectedSource, tbl.name)}
-                          className="cursor-pointer rounded-lg border border-gray-200 bg-gray-50 px-1.5 py-0.5 font-mono text-[11px] text-gray-700 transition-colors hover:border-blue-400 hover:text-blue-600"
-                        >
-                          {tbl.name}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {isRootConfigured && isRootEditing && (
-                        <button
-                          type="button"
-                          onClick={() => setIsRootEditing(false)}
-                          className="cursor-pointer px-2.5 py-1 text-[11px] font-medium text-gray-600 hover:text-gray-800"
-                        >
-                          Cancel
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={confirmRootTable}
-                        className="flex cursor-pointer items-center gap-1 bg-blue-600 px-3.5 py-1.5 text-[11px] font-medium text-white shadow-2xs transition-colors hover:bg-blue-700"
-                      >
-                        <Check className="h-3 w-3" />
-                        {isRootConfigured ? 'Save Changes' : 'Confirm Root Table'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Columns preview (when configured and not editing) */}
-              {rootConfig && !isRootEditing && (
-                <div className="mt-2.5 flex items-center justify-between border-t border-gray-100 pt-2 text-[11px] text-gray-400">
-                  <div className="flex max-w-[500px] items-center gap-1.5 truncate">
-                    <span>Columns:</span>
-                    {rootConfig.columns.slice(0, 4).map((col) => (
-                      <span
-                        key={col}
-                        className="rounded-lg bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-700"
-                      >
-                        {col}
-                      </span>
-                    ))}
-                    {rootConfig.columns.length > 4 && (
-                      <span className="text-[10px] text-gray-400">
-                        +{rootConfig.columns.length - 4} more
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    Est. volume: <strong className="text-gray-600">{rootConfig.rowCount}</strong>
-                  </div>
-                </div>
-              )}
-
-              {/* Root Table Transforms Manager (Expanded) */}
-              {rootConfig && !isRootEditing && rootConfig.isTransformsOpen && (
-                <div
-                  className="mt-3 border-t border-gray-100 pt-3"
-                  onClick={(e) => e.stopPropagation()}
                 >
-                  <TableTransformsManager
-                    tableName={rootConfig.table}
-                    sourceName={rootConfig.source}
-                    columns={rootConfig.columns}
-                    availableUpstreamSources={AVAILABLE_DATA_SOURCES.flatMap((s) =>
-                      s.tables.map((t) => t.name),
-                    )}
-                    transforms={rootConfig.transforms || []}
-                    onChange={(nextTransforms) =>
-                      setRootConfig((prev) =>
-                        prev ? { ...prev, transforms: nextTransforms } : null,
-                      )
-                    }
-                  />
-                </div>
-              )}
-            </section>
-
-            {/* ============================================================= */}
-            {/* CONNECTOR: From Root down to Relations Tree (Delicate dashed spine) */}
-            {/* ============================================================= */}
-            <div className="ml-8 flex h-5 justify-start">
-              <div className="h-full border-l border-dashed border-gray-300" />
-            </div>
-
-            {/* ============================================================= */}
-            {/* STEP 2: RELATIONS LIST (动态子表树 - 精致虚线导轨，精准分支) */}
-            {/* ============================================================= */}
-            <div className="relative ml-8 space-y-3.5 border-l border-dashed border-gray-300 pl-6">
-              {/* Dynamically Render Each Relation Node */}
-              {relations.map((rel) => renderRelation(rel))}
-
-              {/* =========================================================== */}
-              {/* INLINE ADD RELATION CARD (在流中就地添加，完全对齐树形导轨) */}
-              {/* =========================================================== */}
-              <div className="relative">
-                {/* Exact branch connector from border-dashed guide to this button/card */}
-                <div className="absolute top-4 -left-6 w-6 border-b border-dashed border-gray-300" />
-
-                {/* ADD BUTTON (When closed) */}
-                {!isAddingRelation ? (
-                  <div>
-                    <button
-                      type="button"
-                      onClick={openInlineAddRelation}
-                      disabled={!isRootConfigured}
-                      className="group inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-[12px] font-medium text-gray-700 shadow-2xs transition-all hover:border-gray-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <Plus className="h-3.5 w-3.5 text-blue-600 transition-transform group-hover:scale-110" />
-                      <span>Add Related Table</span>
-                      <span className="font-normal text-gray-400">(1:N Array or 1:1 Document)</span>
-                    </button>
-                    {!isRootConfigured && (
-                      <div className="mt-1 text-[11px] text-amber-600">
-                        Please confirm the Root Table above first.
+                  {/* Card Header */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-blue-200 bg-blue-50 text-blue-700">
+                        <Database className="h-4 w-4" />
                       </div>
-                    )}
-                  </div>
-                ) : (
-                  /* INLINE FORM CARD (When open) */
-                  <div className="animate-in fade-in zoom-in-95 wizard-reference-panel-radius border-2 border-blue-400 bg-white p-4 text-[12px] shadow-md">
-                    <div className="mb-3 flex items-center justify-between border-b border-gray-100 pb-2">
-                      <div className="flex items-center gap-1.5 text-[13px] font-semibold text-gray-900">
-                        <Plus className="h-4 w-4 text-blue-600" />
-                        Add Related Table to{' '}
-                        <span className="font-mono text-blue-700">
-                          {rootConfig?.table || 'Root'}
-                        </span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-lg border border-blue-200/60 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-blue-700 uppercase">
+                            Root Table
+                          </span>
+                          {isRootConfigured && !isRootEditing && rootConfig ? (
+                            <h2 className="font-mono text-[13px] font-semibold text-gray-900">
+                              {rootConfig.table}
+                            </h2>
+                          ) : (
+                            <span className="text-[13px] font-semibold text-gray-900">
+                              {isRootConfigured ? 'Edit Root Table' : 'Select Root Table'}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Subtitle / Meta info when configured */}
+                        {isRootConfigured && !isRootEditing && rootConfig ? (
+                          <div className="mt-1 flex items-center gap-2 text-[11px] text-gray-500">
+                            <span>
+                              Source:{' '}
+                              <strong className="font-normal text-gray-700">
+                                {rootConfig.source}
+                              </strong>
+                            </span>
+                            <span>•</span>
+                            <span>
+                              PK:{' '}
+                              <code className="font-mono text-gray-700">
+                                {rootConfig.primaryKey}
+                              </code>
+                            </span>
+                            <span>•</span>
+                            <span>{rootConfig.columns.length} columns</span>
+                          </div>
+                        ) : (
+                          <div className="mt-1 text-[11px] text-gray-500">
+                            Anchor entity for document assembly. Each row maps to a MongoDB
+                            document.
+                          </div>
+                        )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingRelation(false)}
-                        className="cursor-pointer text-gray-400 hover:text-gray-600"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
                     </div>
 
-                    <div className="space-y-3">
-                      {/* 1. Semantic Relationship Type */}
-                      <div>
-                        <label className="mb-1.5 block text-[11px] font-medium text-gray-600">
-                          Relationship Semantic *
-                        </label>
-                        <div className="grid grid-cols-3 gap-2">
+                    {/* Top Right Actions */}
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {isRootConfigured && !isRootEditing ? (
+                        <>
                           <button
                             type="button"
-                            onClick={() => setNewRelType('sub_doc')}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setRootConfig((prev) =>
+                                prev ? { ...prev, isTransformsOpen: !prev.isTransformsOpen } : null,
+                              )
+                            }}
                             className={cn(
-                              'cursor-pointer rounded-lg border p-2.5 text-left transition-all',
-                              newRelType === 'sub_doc'
-                                ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-400'
-                                : 'border-gray-200 bg-white hover:border-gray-300',
+                              'flex cursor-pointer items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-medium shadow-2xs transition-colors',
+                              rootConfig?.isTransformsOpen
+                                ? 'border-blue-300 bg-blue-50 text-blue-700'
+                                : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900',
                             )}
+                            title="Configure transforms and pre-processing for root table"
                           >
-                            <div className="flex items-center gap-1 text-[11px] font-semibold text-indigo-700">
-                              <Braces className="h-3.5 w-3.5" />
-                              Document &#123; &#125;
-                            </div>
-                            <div className="mt-0.5 text-[10px] text-gray-500">
-                              Embed as nested object map
-                            </div>
+                            <Workflow className="h-3 w-3 text-blue-600" />
+                            <span>Transforms</span>
+                            {(rootConfig?.transforms?.length || 0) > 0 && (
+                              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-100 text-[10px] font-bold text-blue-700">
+                                {rootConfig?.transforms?.length}
+                              </span>
+                            )}
                           </button>
 
                           <button
                             type="button"
-                            onClick={() => setNewRelType('sub_array')}
-                            className={cn(
-                              'cursor-pointer rounded-lg border p-2.5 text-left transition-all',
-                              newRelType === 'sub_array'
-                                ? 'border-purple-500 bg-purple-50/50 ring-1 ring-purple-400'
-                                : 'border-gray-200 bg-white hover:border-gray-300',
-                            )}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              startRootEdit()
+                            }}
+                            className="flex cursor-pointer items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-600 shadow-2xs transition-colors hover:bg-gray-50 hover:text-gray-900"
                           >
-                            <div className="flex items-center gap-1 text-[11px] font-semibold text-purple-700">
-                              <FolderTree className="h-3.5 w-3.5" />
-                              Array [ ]
-                            </div>
-                            <div className="mt-0.5 text-[10px] text-gray-500">
-                              Embed rows as array (1:N)
-                            </div>
+                            <RefreshCw className="h-3 w-3 text-gray-400" />
+                            Switch Table
                           </button>
+                        </>
+                      ) : !isRootConfigured ? (
+                        <span className="rounded-lg border border-amber-200/80 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                          Setup Required
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
 
-                          <button
-                            type="button"
-                            onClick={() => setNewRelType('flatten')}
-                            className={cn(
-                              'cursor-pointer rounded-lg border p-2.5 text-left transition-all',
-                              newRelType === 'flatten'
-                                ? 'border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-400'
-                                : 'border-gray-200 bg-white hover:border-gray-300',
-                            )}
-                          >
-                            <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
-                              <Layers className="h-3.5 w-3.5" />
-                              Flatten
-                            </div>
-                            <div className="mt-0.5 text-[10px] text-gray-500">
-                              Merge fields directly into root
-                            </div>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* 2. Source & Table Pickers */}
-                      <div className="grid grid-cols-2 gap-2.5">
+                  {/* Inline Configuration Form */}
+                  {(!isRootConfigured || isRootEditing) && (
+                    <div
+                      className="wizard-reference-root-form mt-3.5 space-y-3 border-t border-gray-100 pt-3.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="mb-1 block text-[11px] font-medium text-gray-600">
-                            Child Data Source
+                            Data Source
                           </label>
                           <Select
-                            value={newRelSource || undefined}
+                            value={scratchSelectedSource || undefined}
                             onValueChange={(value) => {
                               if (value === null) return
-                              setNewRelSource(value)
-                              const tables = getTablesForSource(value)
-                              if (tables.length > 0) handleNewRelTableSelect(tables[0].name)
-                              else setNewRelTable('')
+                              setScratchSelectedSource(value)
+                              const src = AVAILABLE_DATA_SOURCES.find((s) => s.name === value)
+                              setScratchSelectedTable(src?.tables[0]?.name || '')
                             }}
                           >
                             <SelectTrigger
-                              aria-label="Child Data Source"
+                              aria-label="Data Source"
                               className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
                             >
+                              {AVAILABLE_DATA_SOURCES.find(
+                                (ds) => ds.name === scratchSelectedSource,
+                              ) && (
+                                <ConnectorIcon
+                                  connectorId={
+                                    AVAILABLE_DATA_SOURCES.find(
+                                      (ds) => ds.name === scratchSelectedSource,
+                                    )?.connector || scratchSelectedSource
+                                  }
+                                  name={
+                                    AVAILABLE_DATA_SOURCES.find(
+                                      (ds) => ds.name === scratchSelectedSource,
+                                    )?.connectorName || scratchSelectedSource
+                                  }
+                                  iconPath={
+                                    AVAILABLE_DATA_SOURCES.find(
+                                      (ds) => ds.name === scratchSelectedSource,
+                                    )?.iconPath
+                                  }
+                                  size={24}
+                                />
+                              )}
                               <SelectValue placeholder="Select a source" />
                             </SelectTrigger>
                             <SelectContent className="wizard-reference-select-content rounded-lg">
@@ -1810,14 +1557,17 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                                   value={ds.name}
                                   className="rounded-md px-1.5 py-1 text-[12px]"
                                 >
-                                  <span className="flex min-w-0 items-center gap-2">
+                                  <span className="flex min-w-0 items-center gap-3">
                                     <ConnectorIcon
                                       connectorId={ds.connector || ds.badge}
                                       name={ds.connectorName || ds.badge}
                                       iconPath={ds.iconPath}
-                                      size={18}
+                                      size={20}
                                     />
                                     <span className="truncate">{ds.name}</span>
+                                    <span className="ml-auto shrink-0 text-[11px] text-gray-500">
+                                      {ds.connectorName || ds.badge}
+                                    </span>
                                   </span>
                                 </SelectItem>
                               ))}
@@ -1827,30 +1577,31 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
 
                         <div>
                           <label className="mb-1 block text-[11px] font-medium text-gray-600">
-                            Child Table
+                            Table
                           </label>
                           <Select
-                            value={newRelTable || undefined}
+                            value={scratchSelectedTable || undefined}
                             onValueChange={(value) => {
-                              if (value !== null) handleNewRelTableSelect(value)
+                              if (value !== null) setScratchSelectedTable(value)
                             }}
                           >
                             <SelectTrigger
-                              aria-label="Child Table"
+                              aria-label="Table"
                               className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 font-mono text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
                             >
                               <SelectValue placeholder="Select a source table" />
                             </SelectTrigger>
                             <SelectContent className="wizard-reference-select-content rounded-lg">
-                              {getTablesForSource(newRelSource).map((t) => (
+                              {scratchAvailableTables.map((tbl) => (
                                 <SelectItem
-                                  key={t.name}
-                                  value={t.name}
+                                  key={tbl.name}
+                                  value={tbl.name}
                                   className="rounded-md px-1.5 py-1 font-mono text-[12px]"
                                 >
                                   <span className="flex items-center gap-2">
                                     <Table2 className="size-4 text-gray-500" />
-                                    {t.name}
+                                    {tbl.name}
+                                    {tbl.primaryKey ? ` (PK: ${tbl.primaryKey})` : ''}
                                   </span>
                                 </SelectItem>
                               ))}
@@ -1859,238 +1610,583 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                         </div>
                       </div>
 
-                      {/* 3. Join Condition */}
-                      <div>
-                        <label className="mb-1 block text-[11px] font-medium text-gray-600">
-                          Join Condition
-                        </label>
-                        <div className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 p-2 text-[11px]">
-                          <span className="font-mono text-gray-600">
-                            {newRelTable.split('.').pop()}.
-                          </span>
-                          <input
-                            value={newRelKey}
-                            onChange={(e) => setNewRelKey(e.target.value)}
-                            className="w-28 rounded-lg border border-gray-300 bg-white px-1.5 py-1 font-mono text-gray-900"
-                            placeholder="foreign_key"
-                          />
-                          <span className="font-bold text-gray-400">=</span>
-                          <span className="font-mono text-gray-600">
-                            {rootConfig?.table || 'root'}.
-                          </span>
-                          <input
-                            value={newRelParentKey}
-                            onChange={(e) => setNewRelParentKey(e.target.value)}
-                            className="w-20 rounded-lg border border-gray-300 bg-white px-1.5 py-1 font-mono text-gray-900"
-                            placeholder="primary_key"
-                          />
+                      {sourceError && (
+                        <p role="alert" className="text-[11px] text-amber-700">
+                          {sourceError}
+                        </p>
+                      )}
+                      {/* Quick Presets & Confirm Buttons */}
+                      <div className="flex items-center justify-between pt-1">
+                        <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                          <span className="text-gray-400">Quick pick:</span>
+                          {scratchAvailableTables.slice(0, 2).map((tbl) => (
+                            <button
+                              key={tbl.name}
+                              type="button"
+                              onClick={() => quickPickRoot(scratchSelectedSource, tbl.name)}
+                              className="cursor-pointer rounded-lg border border-gray-200 bg-gray-50 px-1.5 py-0.5 font-mono text-[11px] text-gray-700 transition-colors hover:border-blue-400 hover:text-blue-600"
+                            >
+                              {tbl.name}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {isRootConfigured && isRootEditing && (
+                            <button
+                              type="button"
+                              onClick={() => setIsRootEditing(false)}
+                              className="cursor-pointer px-2.5 py-1 text-[11px] font-medium text-gray-600 hover:text-gray-800"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={confirmRootTable}
+                            className="flex cursor-pointer items-center gap-1 bg-blue-600 px-3.5 py-1.5 text-[11px] font-medium text-white shadow-2xs transition-colors hover:bg-blue-700"
+                          >
+                            <Check className="h-3 w-3" />
+                            {isRootConfigured ? 'Save Changes' : 'Confirm Root Table'}
+                          </button>
                         </div>
                       </div>
+                    </div>
+                  )}
 
-                      {/* 4. Embed Field Name */}
+                  {/* Columns preview (when configured and not editing) */}
+                  {rootConfig && !isRootEditing && (
+                    <div className="mt-2.5 flex items-center justify-between border-t border-gray-100 pt-2 text-[11px] text-gray-400">
+                      <div className="flex max-w-[500px] items-center gap-1.5 truncate">
+                        <span>Columns:</span>
+                        {rootConfig.columns.slice(0, 4).map((col) => (
+                          <span
+                            key={col}
+                            className="rounded-lg bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-700"
+                          >
+                            {col}
+                          </span>
+                        ))}
+                        {rootConfig.columns.length > 4 && (
+                          <span className="text-[10px] text-gray-400">
+                            +{rootConfig.columns.length - 4} more
+                          </span>
+                        )}
+                      </div>
                       <div>
-                        <label className="mb-1 block text-[11px] font-medium text-gray-600">
-                          Target Field in Document
-                        </label>
-                        <input
-                          value={newRelTargetField}
-                          onChange={(e) => setNewRelTargetField(e.target.value)}
-                          className="w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 font-mono text-[11px] text-gray-800"
-                          placeholder="e.g. orders"
-                        />
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center justify-end gap-2 pt-2">
-                        <button
-                          type="button"
-                          onClick={() => setIsAddingRelation(false)}
-                          className="cursor-pointer px-3 py-1.5 text-[11px] font-medium text-gray-600 hover:text-gray-900"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={confirmAddRelation}
-                          className="flex cursor-pointer items-center gap-1 rounded-lg bg-blue-600 px-3.5 py-1.5 text-[11px] font-medium text-white shadow-2xs transition-colors hover:bg-blue-700"
-                        >
-                          <Check className="h-3 w-3" />
-                          Embed Relation
-                        </button>
+                        Est. volume:{' '}
+                        <strong className="text-gray-600">{rootConfig.rowCount}</strong>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            </div>
+                  )}
 
-            {/* ============================================================= */}
-            {/* CONNECTOR: From Stage 1 (Root & Relations) down to Stage 2 (Transform) */}
-            {/* ============================================================= */}
-            <div className="ml-8 flex h-6 justify-start">
-              <div className="h-full border-l border-dashed border-gray-300" />
-            </div>
-
-            {/* ============================================================= */}
-            {/* STEP 3: POST-ASSEMBLY DOCUMENT OPERATIONS (平级主要阶段) */}
-            {/* ============================================================= */}
-            <section
-              id="step-doc-process"
-              onClick={() => setActiveContext('doc_process')}
-              className={cn(
-                'wizard-reference-panel-radius cursor-pointer border bg-white p-4 shadow-xs transition-all duration-150',
-                activeContext === 'doc_process'
-                  ? 'border-blue-500 ring-1 ring-blue-500/20'
-                  : 'border-gray-200 hover:border-gray-300',
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700">
-                    <Braces className="h-3.5 w-3.5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-lg border border-emerald-200/60 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-emerald-700 uppercase">
-                        Step 3: Post-Assembly
-                      </span>
-                      <h3 className="text-[13px] font-semibold text-gray-900">
-                        Transform & Computed Document Fields
-                      </h3>
-                    </div>
-                    <p className="mt-0.5 text-[11px] text-gray-500">
-                      Calculated after relations are assembled into document (e.g. lifetime_value)
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    addComputedField()
-                  }}
-                  className="flex cursor-pointer items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 shadow-2xs hover:bg-emerald-100 hover:text-emerald-900"
-                >
-                  <Plus className="h-3 w-3" />
-                  Add Field
-                </button>
-              </div>
-
-              <div className="mt-3 space-y-1.5 border-t border-gray-100 pt-2.5">
-                {computedFields.map((f, fIdx) => (
-                  <div
-                    key={fIdx}
-                    className="flex items-center justify-between rounded-lg border border-gray-200/60 bg-gray-50 p-2 text-[11px]"
-                  >
-                    <div className="flex items-center gap-2 font-mono">
-                      <input
-                        aria-label="Computed field name"
-                        value={f.name}
-                        onChange={(e) =>
-                          setComputedFields((prev) =>
-                            prev.map((x, i) => (i === fIdx ? { ...x, name: e.target.value } : x)),
+                  {/* Root Table Transforms Manager (Expanded) */}
+                  {rootConfig && !isRootEditing && rootConfig.isTransformsOpen && (
+                    <div
+                      className="mt-3 border-t border-gray-100 pt-3"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <TableTransformsManager
+                        tableName={rootConfig.table}
+                        sourceName={rootConfig.source}
+                        columns={rootConfig.columns}
+                        availableUpstreamSources={AVAILABLE_DATA_SOURCES.flatMap((s) =>
+                          s.tables.map((t) => t.name),
+                        )}
+                        transforms={rootConfig.transforms || []}
+                        onChange={(nextTransforms) =>
+                          setRootConfig((prev) =>
+                            prev ? { ...prev, transforms: nextTransforms } : null,
                           )
                         }
-                        className="w-32 bg-transparent font-semibold text-emerald-700 outline-none"
-                        placeholder="Field name"
                       />
-                      <span className="text-gray-400">=</span>
-                      <code className="rounded-lg border border-gray-200 bg-white px-1.5 py-0.5 font-mono text-blue-700">
-                        <input
-                          aria-label="Computed field expression"
-                          value={f.expr}
-                          onChange={(e) =>
-                            setComputedFields((prev) =>
-                              prev.map((x, i) => (i === fIdx ? { ...x, expr: e.target.value } : x)),
-                            )
-                          }
-                          className="w-full min-w-0 bg-transparent outline-none"
-                          placeholder="CEL expression"
-                        />
-                      </code>
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        const updated = [...computedFields]
-                        updated.splice(fIdx, 1)
-                        setComputedFields(updated)
-                      }}
-                      className="cursor-pointer p-1 text-gray-400 hover:text-red-500"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-                {computedFields.length === 0 && (
-                  <div className="py-1 text-[11px] text-gray-400 italic">
-                    No post-assembly computed fields configured. (Optional)
-                  </div>
-                )}
-              </div>
-            </section>
+                  )}
+                </section>
 
-            {/* ============================================================= */}
-            {/* CONNECTOR: From Stage 2 down to Stage 3 (Atlas Destination) */}
-            {/* ============================================================= */}
-            <div className="ml-8 flex h-6 justify-start">
-              <div className="h-full border-l border-dashed border-gray-300" />
-            </div>
+                {/* ============================================================= */}
+                {/* CONNECTOR: From Root down to Relations Tree (Delicate dashed spine) */}
+                {/* ============================================================= */}
+                <div className="ml-8 flex h-5 justify-start">
+                  <div className="h-full border-l border-dashed border-gray-300" />
+                </div>
 
-            {/* ============================================================= */}
-            {/* STEP 4: DESTINATION OUTPUT (MongoDB Atlas - 平级主要阶段) */}
-            {/* ============================================================= */}
-            <section
-              id="step-destination"
-              onClick={() => setActiveContext('atlas')}
-              className={cn(
-                'wizard-reference-panel-radius cursor-pointer border bg-white p-4 shadow-xs transition-all duration-150',
-                activeContext === 'atlas'
-                  ? 'border-blue-500 ring-1 ring-blue-500/20'
-                  : 'border-gray-200 hover:border-gray-300',
-              )}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600">
-                    <Zap className="h-3.5 w-3.5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-lg border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-emerald-700 uppercase">
-                        Step 4: Target Destination
-                      </span>
-                      <span className="text-[13px] font-semibold text-gray-900">
-                        {destinationName || 'Configure destination'}
-                      </span>
-                    </div>
-                    <div className="mt-0.5 text-[11px] text-gray-500">
-                      Target:{' '}
-                      <code className="rounded-lg border border-gray-200 bg-gray-50 px-1.5 py-0.5 font-mono text-gray-700">
-                        <input
-                          aria-label="Target collection"
-                          value={targetCollection}
-                          onChange={(e) => setTargetCollection(e.target.value)}
-                          placeholder="database.collection"
-                          className="w-56 min-w-0 bg-transparent font-mono text-[11px] outline-none"
-                        />
-                      </code>
-                    </div>
+                {/* ============================================================= */}
+                {/* STEP 2: RELATIONS LIST (动态子表树 - 精致虚线导轨，精准分支) */}
+                {/* ============================================================= */}
+                <div className="relative ml-8 space-y-3.5 border-l border-dashed border-gray-300 pl-6">
+                  {/* Dynamically Render Each Relation Node */}
+                  {relations.map((rel) => renderRelation(rel))}
+
+                  {/* =========================================================== */}
+                  {/* INLINE ADD RELATION CARD (在流中就地添加，完全对齐树形导轨) */}
+                  {/* =========================================================== */}
+                  <div className="relative">
+                    {/* Exact branch connector from border-dashed guide to this button/card */}
+                    <div className="absolute top-4 -left-6 w-6 border-b border-dashed border-gray-300" />
+
+                    {/* ADD BUTTON (When closed) */}
+                    {!isAddingRelation ? (
+                      <div>
+                        <button
+                          type="button"
+                          onClick={openInlineAddRelation}
+                          disabled={!isRootConfigured}
+                          className="group inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-[12px] font-medium text-gray-700 shadow-2xs transition-all hover:border-gray-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Plus className="h-3.5 w-3.5 text-blue-600 transition-transform group-hover:scale-110" />
+                          <span>Add Related Table</span>
+                          <span className="font-normal text-gray-400">
+                            (1:N Array or 1:1 Document)
+                          </span>
+                        </button>
+                        {!isRootConfigured && (
+                          <div className="mt-1 text-[11px] text-amber-600">
+                            Please confirm the Root Table above first.
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      /* INLINE FORM CARD (When open) */
+                      <div className="animate-in fade-in zoom-in-95 wizard-reference-panel-radius border-2 border-blue-400 bg-white p-4 text-[12px] shadow-md">
+                        <div className="mb-3 flex items-center justify-between border-b border-gray-100 pb-2">
+                          <div className="flex items-center gap-1.5 text-[13px] font-semibold text-gray-900">
+                            <Plus className="h-4 w-4 text-blue-600" />
+                            Add Related Table to{' '}
+                            <span className="font-mono text-blue-700">
+                              {rootConfig?.table || 'Root'}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingRelation(false)}
+                            className="cursor-pointer text-gray-400 hover:text-gray-600"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        <div className="space-y-3">
+                          {/* 1. Semantic Relationship Type */}
+                          <div>
+                            <label className="mb-1.5 block text-[11px] font-medium text-gray-600">
+                              Relationship Semantic *
+                            </label>
+                            <div className="grid grid-cols-3 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setNewRelType('sub_doc')}
+                                className={cn(
+                                  'cursor-pointer rounded-lg border p-2.5 text-left transition-all',
+                                  newRelType === 'sub_doc'
+                                    ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-400'
+                                    : 'border-gray-200 bg-white hover:border-gray-300',
+                                )}
+                              >
+                                <div className="flex items-center gap-1 text-[11px] font-semibold text-indigo-700">
+                                  <Braces className="h-3.5 w-3.5" />
+                                  Document &#123; &#125;
+                                </div>
+                                <div className="mt-0.5 text-[10px] text-gray-500">
+                                  Embed as nested object map
+                                </div>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setNewRelType('sub_array')}
+                                className={cn(
+                                  'cursor-pointer rounded-lg border p-2.5 text-left transition-all',
+                                  newRelType === 'sub_array'
+                                    ? 'border-purple-500 bg-purple-50/50 ring-1 ring-purple-400'
+                                    : 'border-gray-200 bg-white hover:border-gray-300',
+                                )}
+                              >
+                                <div className="flex items-center gap-1 text-[11px] font-semibold text-purple-700">
+                                  <FolderTree className="h-3.5 w-3.5" />
+                                  Array [ ]
+                                </div>
+                                <div className="mt-0.5 text-[10px] text-gray-500">
+                                  Embed rows as array (1:N)
+                                </div>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setNewRelType('flatten')}
+                                className={cn(
+                                  'cursor-pointer rounded-lg border p-2.5 text-left transition-all',
+                                  newRelType === 'flatten'
+                                    ? 'border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-400'
+                                    : 'border-gray-200 bg-white hover:border-gray-300',
+                                )}
+                              >
+                                <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
+                                  <Layers className="h-3.5 w-3.5" />
+                                  Flatten
+                                </div>
+                                <div className="mt-0.5 text-[10px] text-gray-500">
+                                  Merge fields directly into root
+                                </div>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* 2. Source & Table Pickers */}
+                          <div className="grid grid-cols-2 gap-2.5">
+                            <div>
+                              <label className="mb-1 block text-[11px] font-medium text-gray-600">
+                                Child Data Source
+                              </label>
+                              <Select
+                                value={newRelSource || undefined}
+                                onValueChange={(value) => {
+                                  if (value === null) return
+                                  setNewRelSource(value)
+                                  const tables = getTablesForSource(value)
+                                  if (tables.length > 0) handleNewRelTableSelect(tables[0].name)
+                                  else setNewRelTable('')
+                                }}
+                              >
+                                <SelectTrigger
+                                  aria-label="Child Data Source"
+                                  className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                                >
+                                  <SelectValue placeholder="Select a source" />
+                                </SelectTrigger>
+                                <SelectContent className="wizard-reference-select-content rounded-lg">
+                                  {AVAILABLE_DATA_SOURCES.map((ds) => (
+                                    <SelectItem
+                                      key={ds.id}
+                                      value={ds.name}
+                                      className="rounded-md px-1.5 py-1 text-[12px]"
+                                    >
+                                      <span className="flex min-w-0 items-center gap-2">
+                                        <ConnectorIcon
+                                          connectorId={ds.connector || ds.badge}
+                                          name={ds.connectorName || ds.badge}
+                                          iconPath={ds.iconPath}
+                                          size={18}
+                                        />
+                                        <span className="truncate">{ds.name}</span>
+                                      </span>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div>
+                              <label className="mb-1 block text-[11px] font-medium text-gray-600">
+                                Child Table
+                              </label>
+                              <Select
+                                value={newRelTable || undefined}
+                                onValueChange={(value) => {
+                                  if (value !== null) handleNewRelTableSelect(value)
+                                }}
+                              >
+                                <SelectTrigger
+                                  aria-label="Child Table"
+                                  className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 font-mono text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                                >
+                                  <SelectValue placeholder="Select a source table" />
+                                </SelectTrigger>
+                                <SelectContent className="wizard-reference-select-content rounded-lg">
+                                  {getTablesForSource(newRelSource).map((t) => (
+                                    <SelectItem
+                                      key={t.name}
+                                      value={t.name}
+                                      className="rounded-md px-1.5 py-1 font-mono text-[12px]"
+                                    >
+                                      <span className="flex items-center gap-2">
+                                        <Table2 className="size-4 text-gray-500" />
+                                        {t.name}
+                                      </span>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          {/* 3. Join Condition */}
+                          <div>
+                            <label className="mb-1 block text-[11px] font-medium text-gray-600">
+                              Join Condition
+                            </label>
+                            <div className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 p-2 text-[11px]">
+                              <span className="font-mono text-gray-600">
+                                {newRelTable.split('.').pop()}.
+                              </span>
+                              <input
+                                value={newRelKey}
+                                onChange={(e) => setNewRelKey(e.target.value)}
+                                className="w-28 rounded-lg border border-gray-300 bg-white px-1.5 py-1 font-mono text-gray-900"
+                                placeholder="foreign_key"
+                              />
+                              <span className="font-bold text-gray-400">=</span>
+                              <span className="font-mono text-gray-600">
+                                {rootConfig?.table || 'root'}.
+                              </span>
+                              <input
+                                value={newRelParentKey}
+                                onChange={(e) => setNewRelParentKey(e.target.value)}
+                                className="w-20 rounded-lg border border-gray-300 bg-white px-1.5 py-1 font-mono text-gray-900"
+                                placeholder="primary_key"
+                              />
+                            </div>
+                          </div>
+
+                          {/* 4. Embed Field Name */}
+                          <div>
+                            <label className="mb-1 block text-[11px] font-medium text-gray-600">
+                              Target Field in Document
+                            </label>
+                            <input
+                              value={newRelTargetField}
+                              onChange={(e) => setNewRelTargetField(e.target.value)}
+                              className="w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 font-mono text-[11px] text-gray-800"
+                              placeholder="e.g. orders"
+                            />
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center justify-end gap-2 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => setIsAddingRelation(false)}
+                              className="cursor-pointer px-3 py-1.5 text-[11px] font-medium text-gray-600 hover:text-gray-900"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={confirmAddRelation}
+                              className="flex cursor-pointer items-center gap-1 rounded-lg bg-blue-600 px-3.5 py-1.5 text-[11px] font-medium text-white shadow-2xs transition-colors hover:bg-blue-700"
+                            >
+                              <Check className="h-3 w-3" />
+                              Embed Relation
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1 text-[11px] text-gray-600">
-                  Write Strategy: <strong className="font-semibold text-gray-900">Upsert</strong>
+                {/* ============================================================= */}
+                {/* CONNECTOR: From Stage 1 (Root & Relations) down to Stage 2 (Transform) */}
+                {/* ============================================================= */}
+                <div className="ml-8 flex h-6 justify-start">
+                  <div className="h-full border-l border-dashed border-gray-300" />
                 </div>
+
+                {/* ============================================================= */}
+                {/* PIPELINE TRANSFORMS */}
+                {/* ============================================================= */}
+                <section
+                  id="step-doc-process"
+                  onClick={() => setActiveContext('doc_process')}
+                  className={cn(
+                    'wizard-reference-panel-radius cursor-pointer border bg-white p-4 shadow-xs transition-all duration-150',
+                    activeContext === 'doc_process'
+                      ? 'border-blue-500 ring-1 ring-blue-500/20'
+                      : 'border-gray-200 hover:border-gray-300',
+                  )}
+                >
+                  <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-600">
+                        <Workflow className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-[13px] font-semibold tracking-tight text-gray-900">
+                          Transform
+                        </h3>
+                        <span className="rounded-lg bg-gray-100 px-2 py-0.5 font-mono text-[11px] font-medium text-gray-400">
+                          {pipelineTransforms.length}{' '}
+                          {pipelineTransforms.length === 1 ? 'step' : 'steps'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-3.5" onClick={(event) => event.stopPropagation()}>
+                    <TableTransformsManager
+                      tableName={rootConfig?.table || 'root'}
+                      sourceName={rootConfig?.source || 'Pipeline'}
+                      columns={Array.from(
+                        new Set([
+                          ...getColumnsForTable(rootConfig?.source || '', rootConfig?.table || ''),
+                          ...flattenRelations(relations).flatMap((relation) =>
+                            getColumnsForTable(relation.source, relation.table),
+                          ),
+                        ]),
+                      )}
+                      availableUpstreamSources={[
+                        rootConfig?.table || 'root',
+                        ...flattenRelations(relations).map((relation) => relation.table),
+                      ]}
+                      transforms={pipelineTransforms}
+                      onChange={setPipelineTransforms}
+                      hideHeader={true}
+                    />
+                  </div>
+                </section>
+
+                {/* ============================================================= */}
+                {/* CONNECTOR: Transform stage to the configured destination */}
+                {/* ============================================================= */}
+                <div className="ml-8 flex h-6 justify-start">
+                  <div className="h-full border-l border-dashed border-gray-300" />
+                </div>
+
+                {/* ============================================================= */}
+                {/* Destination */}
+                {/* ============================================================= */}
+                <section
+                  id="step-destination"
+                  onClick={() => setActiveContext('destination')}
+                  className={cn(
+                    'wizard-reference-panel-radius cursor-pointer border bg-white p-4 shadow-xs transition-all duration-150',
+                    activeContext === 'destination'
+                      ? 'border-blue-500 ring-1 ring-blue-500/20'
+                      : 'border-gray-200 hover:border-gray-300',
+                  )}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600">
+                        <Zap className="h-3.5 w-3.5" />
+                      </div>
+                      <div>
+                        <h3 className="text-[13px] font-semibold text-gray-900">
+                          {targetDataSource
+                            ? `${targetDataSource.connectorName || targetDataSource.connector} (${targetDataSource.name})`
+                            : destinationName || t('wizard.configureDestination')}
+                        </h3>
+                        <div className="mt-4 grid grid-cols-2 gap-4">
+                          <div className="grid min-w-0 gap-2">
+                            <span
+                              id="wizard-destination-source-label"
+                              className="text-foreground text-[13px] leading-none font-medium"
+                            >
+                              {t(
+                                deploymentProfile === 'cloud'
+                                  ? 'wizard.destinationAtlasSource'
+                                  : 'wizard.destinationTargetSource',
+                              )}
+                            </span>
+                            <Select
+                              value={targetSourceId}
+                              onValueChange={(value) => {
+                                if (value === null) return
+                                setTargetSourceId(value)
+                                const next = AVAILABLE_DATA_SOURCES.find(
+                                  (source) => source.id === value,
+                                )
+                                if (
+                                  next?.writeModes?.length &&
+                                  !next.writeModes.includes(targetWriteMode)
+                                ) {
+                                  setTargetWriteMode(next.writeModes[0])
+                                }
+                              }}
+                            >
+                              <SelectTrigger
+                                aria-labelledby="wizard-destination-source-label"
+                                className="w-full text-[13px] font-normal"
+                              >
+                                <SelectValue
+                                  placeholder={t('wizard.destinationSourcePlaceholder')}
+                                />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {AVAILABLE_DATA_SOURCES.filter((source) => {
+                                  if (source.sink !== true) return false
+                                  return (
+                                    deploymentProfile !== 'cloud' ||
+                                    source.connector === 'mongodb-atlas'
+                                  )
+                                }).map((source) => (
+                                  <SelectItem key={source.id} value={source.id}>
+                                    <span className="flex items-center gap-2">
+                                      <ConnectorIcon
+                                        connectorId={source.connector || ''}
+                                        name={source.connectorName || source.badge}
+                                        iconPath={source.iconPath}
+                                        size={18}
+                                      />
+                                      <span>{source.name}</span>
+                                      <span className="text-muted-foreground">
+                                        {source.connectorName}
+                                      </span>
+                                    </span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid min-w-0 gap-2">
+                            <span
+                              id="wizard-destination-table-label"
+                              className="text-foreground text-[13px] leading-none font-medium"
+                            >
+                              {t('wizard.destinationTable')}
+                            </span>
+                            <Input
+                              aria-labelledby="wizard-destination-table-label"
+                              value={targetCollection}
+                              onChange={(event) => setTargetCollection(event.target.value)}
+                              placeholder={t('wizard.destinationTablePlaceholder')}
+                              className="w-full font-mono text-[13px] font-normal"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {(() => {
+                      const modes = availableWriteModes
+                      return modes.length > 1 ? (
+                        <label className="flex shrink-0 items-center gap-2 text-[11px] font-medium text-[var(--pipeline-text-muted)]">
+                          {t('wizard.writeStrategy')}
+                          <Select
+                            value={selectedWriteMode}
+                            onValueChange={(value) => value !== null && setTargetWriteMode(value)}
+                          >
+                            <SelectTrigger className="rounded-control h-8 w-28 bg-white text-[11px] font-medium">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {modes.map((mode) => (
+                                <SelectItem key={mode} value={mode}>
+                                  {mode}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </label>
+                      ) : (
+                        <div className="flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-[var(--pipeline-text-muted)]">
+                          {t('wizard.writeStrategy')}:{' '}
+                          <strong className="font-semibold text-[var(--pipeline-text)]">
+                            {selectedWriteMode}
+                          </strong>
+                        </div>
+                      )
+                    })()}
+                  </div>
+                </section>
+                {footer}
               </div>
-            </section>
-            {footer}
-          </div>
-        </main>
+            </main>
+          </fieldset>
+          {actions}
+        </div>
 
         {/* Right Side: Real-time Live Result Preview (Original w-[440px]) */}
-        <aside className="wizard-reference-preview z-10 flex w-[440px] shrink-0 flex-col border-l border-gray-200 bg-white">
+        <aside className="wizard-reference-preview flex flex-col bg-white">
           {/* Preview Header */}
           <div className="flex h-11 shrink-0 items-center justify-between border-b border-gray-200 bg-gray-50/50 px-4">
             <div className="flex items-center gap-2">

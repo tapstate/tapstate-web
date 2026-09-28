@@ -10,7 +10,6 @@ import {
   ChevronUp,
   AlertTriangle,
   Info,
-  CheckCircle2,
   Code,
   ArrowRight,
   ShieldAlert,
@@ -85,6 +84,7 @@ export interface TableTransformsManagerProps {
   availableUpstreamSources?: string[]
   transforms: TransformStep[]
   onChange: (transforms: TransformStep[]) => void
+  hideHeader?: boolean
 }
 
 const TRANSFORM_TYPE_META: Record<
@@ -152,6 +152,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
   availableUpstreamSources = [],
   transforms = [],
   onChange,
+  hideHeader = false,
 }) => {
   const [isAddingStep, setIsAddingStep] = React.useState(false)
 
@@ -209,51 +210,75 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
 
   return (
     <div className="space-y-3">
-      {/* Header & Step Counter */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1.5 text-[12px] font-semibold text-gray-800">
-            <Workflow className="h-3.5 w-3.5 text-blue-600" />
-            <span>Transforms (预处理链条)</span>
-          </span>
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 font-mono text-[11px] text-gray-400">
-            {transforms.length} steps
-          </span>
+      {/* Source header is hidden when the enclosing Transform card owns the heading. */}
+      {!hideHeader && transforms.length > 0 && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5 text-[12px] font-semibold text-gray-800">
+              <Workflow className="h-3.5 w-3.5 text-blue-600" />
+              <span>Transforms (预处理链条)</span>
+            </span>
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 font-mono text-[11px] text-gray-400">
+              {transforms.length} steps
+            </span>
+          </div>
+
+          {!isAddingStep && (
+            <button
+              type="button"
+              onClick={() => setIsAddingStep(true)}
+              className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-blue-200/90 bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-700 shadow-2xs transition-colors hover:bg-blue-100"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>添加 Transform</span>
+            </button>
+          )}
         </div>
+      )}
 
-        {!isAddingStep && (
-          <button
-            type="button"
-            onClick={() => setIsAddingStep(true)}
-            className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-blue-200/90 bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-700 shadow-2xs transition-colors hover:bg-blue-100"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>添加 Transform</span>
-          </button>
-        )}
-      </div>
-
-      {/* Empty State */}
-      {transforms.length === 0 && !isAddingStep && (
-        <div className="wizard-reference-panel-radius border border-dashed border-gray-200 bg-gray-50/80 px-4 py-5 text-center">
-          <Workflow className="mx-auto mb-1.5 h-7 w-7 text-gray-300" />
-          <p className="mb-0.5 text-[12px] font-medium text-gray-600">尚未配置预处理转换步骤</p>
-          <p className="mx-auto mb-3 max-w-md text-[11px] text-gray-400">
-            在数据进入 Join 或装配前，进行过滤、字段重命名/计算、数组展开或自定义 JS 处理。
-          </p>
-          <button
-            type="button"
-            onClick={() => setIsAddingStep(true)}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-[12px] font-medium text-blue-700 shadow-2xs transition-colors hover:bg-blue-50"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>添加第一个 Transform</span>
-          </button>
+      {/* Empty state follows the reference: each type is a direct action. */}
+      {transforms.length === 0 && (
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
+          {(Object.keys(TRANSFORM_TYPE_META) as TransformType[]).map((type) => {
+            const meta = TRANSFORM_TYPE_META[type]
+            const IconComp = meta.icon
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => handleCreateStep(type)}
+                className="group wizard-reference-panel-radius flex cursor-pointer flex-col justify-between border border-gray-200 bg-white p-3 text-left transition-all duration-150 hover:border-blue-400 hover:bg-blue-50/20 hover:shadow-xs"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className={cn('rounded-lg border p-1.5 text-[11px]', meta.badgeColor)}>
+                      <IconComp className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="font-mono text-[10px] font-medium text-gray-400 group-hover:text-blue-600">
+                      {meta.typeName}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="text-[12px] font-semibold text-gray-900 group-hover:text-blue-700">
+                      {meta.title}
+                    </div>
+                    <div className="mt-0.5 line-clamp-2 text-[10px] leading-relaxed text-gray-500">
+                      {meta.description}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-2.5 flex items-center border-t border-gray-100 pt-2 text-[10px] font-medium text-blue-600">
+                  <Plus className="mr-1 h-3 w-3" />
+                  添加此步骤
+                </div>
+              </button>
+            )
+          })}
         </div>
       )}
 
       {/* Step Selector Card (When Adding) */}
-      {isAddingStep && (
+      {isAddingStep && transforms.length > 0 && (
         <div className="animate-in fade-in zoom-in-95 wizard-reference-panel-radius space-y-3 border-2 border-blue-400 bg-white p-3.5 shadow-sm">
           <div className="flex items-center justify-between border-b border-gray-100 pb-2">
             <div>
@@ -352,25 +377,13 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                     <span>{meta.title}</span>
                   </span>
 
-                  <span className="truncate text-[12px] font-medium text-gray-800">
-                    {step.name || step.id}
-                  </span>
-
-                  <span className="rounded-lg border border-gray-200/80 bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-400">
-                    id: {step.id}
-                  </span>
+                  <span className="font-mono text-[10px] text-gray-400">{meta.typeName}</span>
                 </div>
 
                 <div
                   className="flex shrink-0 items-center gap-1.5"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {/* Status Indicator */}
-                  <span className="flex items-center gap-1 rounded-lg border border-emerald-200/90 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
-                    <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                    <span>字段已核对</span>
-                  </span>
-
                   {/* Move Up/Down */}
                   <div className="flex items-center rounded-lg border border-gray-200 bg-white">
                     <button
@@ -539,6 +552,16 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
           )
         })}
       </div>
+      {transforms.length > 0 && !isAddingStep && (
+        <button
+          type="button"
+          onClick={() => setIsAddingStep(true)}
+          className="group inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-[12px] font-medium text-gray-700 shadow-2xs transition-all hover:border-gray-400 hover:bg-gray-50"
+        >
+          <Plus className="h-3.5 w-3.5 text-blue-600 transition-transform group-hover:scale-110" />
+          添加下一个 Transform 步骤
+        </button>
+      )}
     </div>
   )
 }

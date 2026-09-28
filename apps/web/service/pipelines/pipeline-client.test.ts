@@ -355,14 +355,18 @@ describe('Pipeline client', () => {
   it('encodes Pipeline ids for start and stop lifecycle operations', async () => {
     const startRequests: Request[] = []
     const stopRequests: Request[] = []
+    const purgeRequests: Request[] = []
 
     await runPipeline('orders/warehouse', fetcherFor(jsonResponse({}), startRequests))
-    await stopPipeline('orders/warehouse', fetcherFor(jsonResponse({}), stopRequests))
+    await stopPipeline('orders/warehouse', false, fetcherFor(jsonResponse({}), stopRequests))
+    await stopPipeline('orders/warehouse', true, fetcherFor(jsonResponse({}), purgeRequests))
 
     expect(new URL(startRequests[0].url).pathname).toBe('/api/pipelines/orders%2Fwarehouse:start')
     expect(startRequests[0].method).toBe('POST')
     expect(new URL(stopRequests[0].url).pathname).toBe('/api/pipelines/orders%2Fwarehouse:stop')
     expect(stopRequests[0].method).toBe('POST')
+    expect(await stopRequests[0].clone().json()).toEqual({ purgeState: false })
+    expect(await purgeRequests[0].clone().json()).toEqual({ purgeState: true })
   })
 
   it('uses the conditional PUT mutation contract and surfaces server validation text', async () => {
