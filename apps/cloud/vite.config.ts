@@ -1,6 +1,7 @@
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
+import process from 'node:process'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
@@ -15,5 +16,14 @@ export default defineConfig({
     tailwindcss(),
     react(),
   ],
-  server: { port: 5174, strictPort: true },
+  server: {
+    port: 5174,
+    strictPort: true,
+    proxy: {
+      '/v1': {
+        target: process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
+  },
 })

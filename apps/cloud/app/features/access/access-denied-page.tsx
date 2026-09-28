@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { CloudOff, ShieldAlert } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -17,6 +18,9 @@ export function AccessDeniedPage() {
           <CloudOff aria-hidden="true" />
           <span>{t('access.status')}</span>
         </div>
+        <Link className="cloud-button-primary access-action" to="/auth">
+          {t('access.signInAction')}
+        </Link>
       </div>
     </main>
   )
