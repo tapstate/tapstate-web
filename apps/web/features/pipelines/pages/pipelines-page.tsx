@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { GitMerge, Plus } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { ApiFetcher } from '@/service/source-client'
 
 import { Button } from '@/components/ui/button'
+import { groupByProject, isDefaultProject, projectLabel } from '@/lib/project-grouping'
 import { cn } from '@/lib/utils'
 import { listPipelines, type PipelineView } from '@/service/pipelines/pipeline-client'
 import { useAuthStore } from '@/stores/auth-store'
@@ -198,6 +199,9 @@ function PipelineTable({
   onMutationStart: () => void
 }) {
   const { t } = useTranslation()
+  // Always grouped: the Default project exists on every server and holds every
+  // unlabeled pipeline, so an older server simply shows one Default group.
+  const groups = groupByProject(pipelines, (pipeline) => projectLabel(pipeline.metadata))
 
   return (
     <div className="overflow-x-auto">
@@ -216,53 +220,79 @@ function PipelineTable({
           </tr>
         </thead>
         <tbody>
-          {pipelines.map((pipeline) => (
-            <tr
-              key={pipeline.id}
-              className="group relative border-b border-gray-100/60 transition-colors focus-within:bg-gray-50/50 hover:bg-gray-50/50"
-            >
-              <td className="px-4 py-3">
-                <a
-                  className="inline-flex min-h-9 max-w-full items-center gap-2.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-                  href={`/pipelines/${encodeURIComponent(pipeline.id)}/edit`}
-                  aria-label={t('pipelines.actions.editPipeline', { id: pipeline.id })}
+          {groups.map((group) => (
+            <Fragment key={group.project}>
+              <tr className="border-b border-gray-100/60">
+                <th
+                  colSpan={5}
+                  scope="colgroup"
+                  className="px-4 pt-5 pb-2 text-[12px] font-semibold whitespace-nowrap text-gray-500"
                 >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                    <GitMerge className="h-3.5 w-3.5 text-blue-500" aria-hidden="true" />
-                  </span>
-                  <span
-                    className="min-w-0 text-[13px] font-medium break-words text-gray-900"
-                    title={pipeline.id}
-                  >
-                    {pipeline.id}
-                  </span>
-                </a>
-              </td>
-              <td className="hidden px-4 py-3 text-[13px] text-gray-500 sm:table-cell">
-                {t('pipelines.type.pipeline')}
-              </td>
-              <td className="hidden px-4 py-3 md:table-cell">
-                <code className="font-mono text-[12px] text-gray-400" title={pipeline.contentHash}>
-                  {pipeline.contentHash.slice(0, 12)}
-                </code>
-              </td>
-              <td className="px-4 py-3">
-                <PipelineStatusBadge status={pipeline.status?.state} />
-              </td>
-              <td className="relative w-20 px-4 py-3">
-                <PipelineLifecycleMenu
-                  pipelineId={pipeline.id}
-                  status={pipeline.status?.state}
-                  contentHash={pipeline.contentHash}
-                  apiFetch={apiFetch}
-                  onMutationStart={onMutationStart}
-                  onMutationError={(action, error) => onMutationError(pipeline.id, action, error)}
-                />
-              </td>
-            </tr>
+                  {isDefaultProject(group)
+                    ? t('projects.defaultProject')
+                    : t('projects.groupTitle', { project: group.project })}
+                </th>
+              </tr>
+              {group.items.length === 0 && (
+                <tr className="border-b border-gray-100/60">
+                  <td colSpan={5} className="px-4 py-3 text-[13px] text-gray-500">
+                    {t('projects.emptyDefaultPipelines')}
+                  </td>
+                </tr>
+              )}
+              {group.items.map(renderRow)}
+            </Fragment>
           ))}
         </tbody>
       </table>
     </div>
   )
+
+  function renderRow(pipeline: PipelineView) {
+    return (
+      <tr
+        key={pipeline.id}
+        className="group relative border-b border-gray-100/60 transition-colors focus-within:bg-gray-50/50 hover:bg-gray-50/50"
+      >
+        <td className="px-4 py-3">
+          <a
+            className="inline-flex min-h-9 max-w-full items-center gap-2.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+            href={`/pipelines/${encodeURIComponent(pipeline.id)}/edit`}
+            aria-label={t('pipelines.actions.editPipeline', { id: pipeline.id })}
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+              <GitMerge className="h-3.5 w-3.5 text-blue-500" aria-hidden="true" />
+            </span>
+            <span
+              className="min-w-0 text-[13px] font-medium break-words text-gray-900"
+              title={pipeline.id}
+            >
+              {pipeline.id}
+            </span>
+          </a>
+        </td>
+        <td className="hidden px-4 py-3 text-[13px] text-gray-500 sm:table-cell">
+          {t('pipelines.type.pipeline')}
+        </td>
+        <td className="hidden px-4 py-3 md:table-cell">
+          <code className="font-mono text-[12px] text-gray-400" title={pipeline.contentHash}>
+            {pipeline.contentHash.slice(0, 12)}
+          </code>
+        </td>
+        <td className="px-4 py-3">
+          <PipelineStatusBadge status={pipeline.status?.state} />
+        </td>
+        <td className="relative w-20 px-4 py-3">
+          <PipelineLifecycleMenu
+            pipelineId={pipeline.id}
+            status={pipeline.status?.state}
+            contentHash={pipeline.contentHash}
+            apiFetch={apiFetch}
+            onMutationStart={onMutationStart}
+            onMutationError={(action, error) => onMutationError(pipeline.id, action, error)}
+          />
+        </td>
+      </tr>
+    )
+  }
 }
