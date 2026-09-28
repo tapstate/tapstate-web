@@ -56,7 +56,10 @@ async function renderPage(pipelines: PipelineView[]) {
   })
 }
 
-/** Maps each group header to the pipeline ids rendered beneath it, in table order. */
+/**
+ * Maps each group header to the rows rendered beneath it, in table order. A
+ * pipeline row contributes its id; an empty-group row contributes its text.
+ */
 function groupedRows(): [string, string[]][] {
   const groups: [string, string[]][] = []
   for (const row of container?.querySelectorAll('tbody tr') ?? []) {
@@ -65,10 +68,16 @@ function groupedRows(): [string, string[]][] {
       groups.push([header.textContent ?? '', []])
       continue
     }
-    const id = row.querySelector('a span[title]')?.getAttribute('title') ?? ''
+    const id = row.querySelector('a span[title]')?.getAttribute('title') ?? row.textContent ?? ''
     groups.at(-1)?.[1].push(id)
   }
   return groups
+}
+
+function defaultProjectHeaderRow(): HTMLTableRowElement | undefined {
+  return [...(container?.querySelectorAll('tbody tr') ?? [])].find(
+    (row) => row.querySelector('th[scope="colgroup"]')?.textContent === 'Default project',
+  ) as HTMLTableRowElement | undefined
 }
 
 afterEach(async () => {
@@ -80,7 +89,7 @@ afterEach(async () => {
 })
 
 describe('PipelinesGroupByProjectTest', () => {
-  it('groups pipelines by the project label and puts unlabeled ones under No project', async () => {
+  it('puts the Default project first with the unlabeled pipeline, then the two projects', async () => {
     // Ids deliberately disagree with their labels, so prefix-based grouping fails.
     await renderPage([
       pipeline('retail_orders', 'bank_c360'),
@@ -89,20 +98,35 @@ describe('PipelinesGroupByProjectTest', () => {
     ])
 
     expect(groupedRows()).toEqual([
+      ['Default project', ['legacy_sync']],
       ['Project · bank_c360', ['retail_orders']],
       ['Project · retail', ['bank_ledger']],
-      ['No project', ['legacy_sync']],
     ])
   })
 
-  it('keeps the flat list without group headers when no pipeline carries a label', async () => {
+  it('renders no remove action on the Default project header', async () => {
+    await renderPage([pipeline('retail_orders', 'bank_c360'), pipeline('legacy_sync')])
+
+    const header = defaultProjectHeaderRow()
+    expect(header).toBeDefined()
+    expect(
+      header?.querySelector('button, [role="button"], [role="menu"], [aria-haspopup]'),
+    ).toBeNull()
+  })
+
+  it('still shows the Default project header with an empty line when every pipeline is labeled', async () => {
+    await renderPage([pipeline('retail_orders', 'bank_c360'), pipeline('bank_ledger', 'retail')])
+
+    expect(groupedRows()).toEqual([
+      ['Default project', ['No pipelines in the Default project.']],
+      ['Project · bank_c360', ['retail_orders']],
+      ['Project · retail', ['bank_ledger']],
+    ])
+  })
+
+  it('groups every pipeline under the Default project on a server without project labels', async () => {
     await renderPage([pipeline('b_first'), pipeline('a_second')])
 
-    expect(container?.querySelector('th[scope="colgroup"]')).toBeNull()
-    expect(
-      [...(container?.querySelectorAll('tbody a span[title]') ?? [])].map((span) =>
-        span.getAttribute('title'),
-      ),
-    ).toEqual(['b_first', 'a_second'])
+    expect(groupedRows()).toEqual([['Default project', ['b_first', 'a_second']]])
   })
 })

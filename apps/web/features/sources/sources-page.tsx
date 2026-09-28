@@ -43,7 +43,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { groupByProject, hasProjectGroups, projectLabel } from '@/lib/project-grouping'
+import { groupByProject, isDefaultProject, projectLabel } from '@/lib/project-grouping'
 import { cn } from '@/lib/utils'
 import {
   discoverSourceSchema,
@@ -1006,13 +1006,9 @@ function AllSourcesView({
   testingSourceId: string | null
 }) {
   const { t } = useTranslation()
+  // Always grouped: the Default project exists on every server and holds every
+  // unlabeled source, so an older server simply shows one Default group.
   const groups = groupByProject(filteredSources, (source) => projectLabel(source.raw.metadata))
-  // Servers that predate project labels keep the flat, header-less list. The
-  // decision uses every source, not the search result, so headers stay stable
-  // while the user filters.
-  const grouped = hasProjectGroups(
-    groupByProject(sources, (source) => projectLabel(source.raw.metadata)),
-  )
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-gray-50/40">
       <div className="shrink-0 border-b border-gray-100/70 bg-white px-4 py-4 md:px-6">
@@ -1048,18 +1044,23 @@ function AllSourcesView({
               </tr>
             ) : (
               groups.map((group) => (
-                <Fragment key={group.project ?? '\u0000unlabeled'}>
-                  {grouped && (
-                    <tr className="bg-gray-50/40">
-                      <th
-                        colSpan={6}
-                        scope="colgroup"
-                        className="px-4 pt-4 pb-2 text-[12px] font-semibold whitespace-nowrap text-gray-500"
-                      >
-                        {group.project === null
-                          ? t('projects.sharedByAll')
-                          : t('projects.groupTitle', { project: group.project })}
-                      </th>
+                <Fragment key={group.project}>
+                  <tr className="bg-gray-50/40">
+                    <th
+                      colSpan={6}
+                      scope="colgroup"
+                      className="px-4 pt-4 pb-2 text-[12px] font-semibold whitespace-nowrap text-gray-500"
+                    >
+                      {isDefaultProject(group)
+                        ? t('projects.defaultProject')
+                        : t('projects.groupTitle', { project: group.project })}
+                    </th>
+                  </tr>
+                  {group.items.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-3 text-[13px] text-gray-500">
+                        {t('projects.emptyDefaultSources')}
+                      </td>
                     </tr>
                   )}
                   {group.items.map(renderRow)}

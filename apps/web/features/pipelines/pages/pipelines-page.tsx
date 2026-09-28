@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import type { ApiFetcher } from '@/service/source-client'
 
 import { Button } from '@/components/ui/button'
-import { groupByProject, hasProjectGroups, projectLabel } from '@/lib/project-grouping'
+import { groupByProject, isDefaultProject, projectLabel } from '@/lib/project-grouping'
 import { cn } from '@/lib/utils'
 import { listPipelines, type PipelineView } from '@/service/pipelines/pipeline-client'
 import { useAuthStore } from '@/stores/auth-store'
@@ -199,9 +199,9 @@ function PipelineTable({
   onMutationStart: () => void
 }) {
   const { t } = useTranslation()
+  // Always grouped: the Default project exists on every server and holds every
+  // unlabeled pipeline, so an older server simply shows one Default group.
   const groups = groupByProject(pipelines, (pipeline) => projectLabel(pipeline.metadata))
-  // Servers that predate project labels keep the flat, header-less list.
-  const grouped = hasProjectGroups(groups)
 
   return (
     <div className="overflow-x-auto">
@@ -221,18 +221,23 @@ function PipelineTable({
         </thead>
         <tbody>
           {groups.map((group) => (
-            <Fragment key={group.project ?? '\u0000unlabeled'}>
-              {grouped && (
+            <Fragment key={group.project}>
+              <tr className="border-b border-gray-100/60">
+                <th
+                  colSpan={5}
+                  scope="colgroup"
+                  className="px-4 pt-5 pb-2 text-[12px] font-semibold whitespace-nowrap text-gray-500"
+                >
+                  {isDefaultProject(group)
+                    ? t('projects.defaultProject')
+                    : t('projects.groupTitle', { project: group.project })}
+                </th>
+              </tr>
+              {group.items.length === 0 && (
                 <tr className="border-b border-gray-100/60">
-                  <th
-                    colSpan={5}
-                    scope="colgroup"
-                    className="px-4 pt-5 pb-2 text-[12px] font-semibold whitespace-nowrap text-gray-500"
-                  >
-                    {group.project === null
-                      ? t('projects.noProject')
-                      : t('projects.groupTitle', { project: group.project })}
-                  </th>
+                  <td colSpan={5} className="px-4 py-3 text-[13px] text-gray-500">
+                    {t('projects.emptyDefaultPipelines')}
+                  </td>
                 </tr>
               )}
               {group.items.map(renderRow)}

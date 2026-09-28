@@ -387,8 +387,9 @@
   },
   "projects": {
     "groupTitle": "項目 · {{project}}",
-    "noProject": "未歸屬項目",
-    "sharedByAll": "所有項目共用"
+    "defaultProject": "預設項目",
+    "emptyDefaultPipelines": "預設項目中沒有流水線。",
+    "emptyDefaultSources": "預設項目中沒有資料來源。"
   },
   "pipelines": {
     "title": "流水線",

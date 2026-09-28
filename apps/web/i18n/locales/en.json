@@ -387,8 +387,9 @@
   },
   "projects": {
     "groupTitle": "Project · {{project}}",
-    "noProject": "No project",
-    "sharedByAll": "Shared by all projects"
+    "defaultProject": "Default project",
+    "emptyDefaultPipelines": "No pipelines in the Default project.",
+    "emptyDefaultSources": "No data sources in the Default project."
   },
   "pipelines": {
     "title": "Pipelines",

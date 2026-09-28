@@ -2,16 +2,19 @@
  * Groups list items by the reserved `project` label that the CLI writes into
  * `metadata.labels.project` when it applies a project.
  *
- * Grouping is by the label value only, never by id shape. Items without a
- * label are never dropped: they form one trailing group whose `project` is
- * `null`, so callers can title it ("No project", "Shared by all projects").
+ * Every server has a Default project (id `default`) from its first start. Any
+ * item without a project label belongs to it, so unlabeled items are never
+ * dropped. Grouping is by the label value only, never by id shape.
  */
 
 export const PROJECT_LABEL = 'project'
 
+/** Id of the project that every server has and that owns unlabeled items. */
+export const DEFAULT_PROJECT_ID = 'default'
+
 export interface ProjectGroup<T> {
-  /** Project id from the label, or `null` for the trailing unlabeled group. */
-  project: string | null
+  /** Project id; `DEFAULT_PROJECT_ID` for the Default project group. */
+  project: string
   items: T[]
 }
 
@@ -28,41 +31,37 @@ export function projectLabel(metadata: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null
 }
 
+/** True when the group is the Default project. */
+export function isDefaultProject(group: { project: string }): boolean {
+  return group.project === DEFAULT_PROJECT_ID
+}
+
 /**
- * Splits items into project groups sorted by project id, followed by the
- * unlabeled group when it is non-empty. Item order inside a group follows the
- * input order.
+ * Splits items into project groups. The Default project group always comes
+ * first and is always present, even when empty; it holds unlabeled items and
+ * items labeled with the default id. The other projects follow sorted by id.
+ * Item order inside a group follows the input order.
  */
 export function groupByProject<T>(
   items: readonly T[],
   projectOf: (item: T) => string | null,
 ): ProjectGroup<T>[] {
+  const defaultItems: T[] = []
   const byProject = new Map<string, T[]>()
-  const unlabeled: T[] = []
   for (const item of items) {
-    const project = projectOf(item)
-    if (project === null) {
-      unlabeled.push(item)
+    const project = projectOf(item) ?? DEFAULT_PROJECT_ID
+    if (project === DEFAULT_PROJECT_ID) {
+      defaultItems.push(item)
       continue
     }
     const group = byProject.get(project)
     if (group) group.push(item)
     else byProject.set(project, [item])
   }
-  const groups: ProjectGroup<T>[] = [...byProject.keys()]
+  const others = [...byProject.keys()]
     .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))
     .map((project) => ({ project, items: byProject.get(project) ?? [] }))
-  if (unlabeled.length > 0) groups.push({ project: null, items: unlabeled })
-  return groups
-}
-
-/**
- * True when at least one group carries a project label. Pages render the flat,
- * header-less list otherwise, so servers that predate project labels look
- * unchanged.
- */
-export function hasProjectGroups<T>(groups: readonly ProjectGroup<T>[]): boolean {
-  return groups.some((group) => group.project !== null)
+  return [{ project: DEFAULT_PROJECT_ID, items: defaultItems }, ...others]
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

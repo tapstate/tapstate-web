@@ -57,7 +57,10 @@ async function renderPage(sources: SourceView[]) {
   })
 }
 
-/** Maps each group header to the source ids rendered beneath it, in table order. */
+/**
+ * Maps each group header to the rows rendered beneath it, in table order. A
+ * source row contributes its id; an empty-group row contributes its text.
+ */
 function groupedRows(): [string, string[]][] {
   const groups: [string, string[]][] = []
   for (const row of container?.querySelectorAll('main tbody tr') ?? []) {
@@ -66,7 +69,8 @@ function groupedRows(): [string, string[]][] {
       groups.push([header.textContent ?? '', []])
       continue
     }
-    groups.at(-1)?.[1].push(row.querySelector('td button')?.textContent ?? '')
+    const id = row.querySelector('td button')?.textContent ?? row.textContent ?? ''
+    groups.at(-1)?.[1].push(id)
   }
   return groups
 }
@@ -80,7 +84,8 @@ afterEach(async () => {
 })
 
 describe('SourcesGroupByProjectTest', () => {
-  it('puts unlabeled sources under Shared by all projects after the project groups', async () => {
+  it('puts the unlabeled source under the Default project, first, then the projects', async () => {
+    // Ids deliberately disagree with their labels, so prefix-based grouping fails.
     await renderPage([
       source('shared_atlas'),
       source('retail_mysql', 'bank_c360'),
@@ -88,16 +93,30 @@ describe('SourcesGroupByProjectTest', () => {
     ])
 
     expect(groupedRows()).toEqual([
+      ['Default project', ['shared_atlas']],
       ['Project · bank_c360', ['retail_mysql']],
       ['Project · retail', ['bank_pg']],
-      ['Shared by all projects', ['shared_atlas']],
+    ])
+    const header = [...(container?.querySelectorAll('main tbody tr') ?? [])].find(
+      (row) => row.querySelector('th[scope="colgroup"]')?.textContent === 'Default project',
+    )
+    expect(
+      header?.querySelector('button, [role="button"], [role="menu"], [aria-haspopup]'),
+    ).toBeNull()
+  })
+
+  it('still shows the Default project header with an empty line when every source is labeled', async () => {
+    await renderPage([source('retail_mysql', 'bank_c360')])
+
+    expect(groupedRows()).toEqual([
+      ['Default project', ['No data sources in the Default project.']],
+      ['Project · bank_c360', ['retail_mysql']],
     ])
   })
 
-  it('keeps the flat list without group headers when no source carries a label', async () => {
+  it('groups every source under the Default project on a server without project labels', async () => {
     await renderPage([source('orders'), source('customers')])
 
-    expect(container?.querySelector('th[scope="colgroup"]')).toBeNull()
-    expect(container?.querySelectorAll('main tbody tr')).toHaveLength(2)
+    expect(groupedRows()).toEqual([['Default project', ['orders', 'customers']]])
   })
 })
