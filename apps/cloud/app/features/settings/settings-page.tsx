@@ -24,7 +24,7 @@ export function SettingsPage() {
             <UserRound className="h-3.5 w-3.5" />
             Account
           </h2>
-          <div className="space-y-3 rounded-lg border border-black/[0.06] p-4 dark:border-white/[0.06]">
+          <div className="space-y-3 rounded-xl border border-black/[0.06] p-4 dark:border-white/[0.06]">
             <div>
               <div className="text-xs font-medium text-neutral-900 dark:text-white">Name</div>
               <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
@@ -53,7 +53,7 @@ export function SettingsPage() {
             <Building2 className="h-3.5 w-3.5" />
             Organization
           </h2>
-          <div className="space-y-3 rounded-lg border border-black/[0.06] p-4 dark:border-white/[0.06]">
+          <div className="space-y-3 rounded-xl border border-black/[0.06] p-4 dark:border-white/[0.06]">
             <div>
               <div className="text-xs font-medium text-neutral-900 dark:text-white">Name</div>
               <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">

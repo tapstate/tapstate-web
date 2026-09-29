@@ -3,7 +3,7 @@
 @theme {
   --radius-md: 8px;
   --radius-lg: 10px;
-  --radius-xl: 10px;
+  --radius-xl: 14px;
   --radius-2xl: 16px;
 }
 
@@ -21,8 +21,8 @@
   --app-padding: 8px;
   --shell-gap: 8px;
 
-  --radius-control: var(--radius-xl);
-  --radius-card: var(--radius-lg);
+  --radius-control: var(--radius-lg);
+  --radius-card: var(--radius-xl);
   --radius-main: var(--radius-2xl);
 
   --main-shadow:

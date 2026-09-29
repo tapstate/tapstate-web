@@ -259,7 +259,7 @@
     width: 2.5rem;
     height: 2.5rem;
     place-items: center;
-    border-radius: var(--radius-card);
+    border-radius: var(--radius-control);
     background: var(--muted);
     color: var(--muted-foreground);
     font-weight: 700;

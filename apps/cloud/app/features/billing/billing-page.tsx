@@ -55,7 +55,7 @@ export function BillingPage() {
       </header>
 
       <div className="max-w-4xl space-y-6 p-6">
-        <section className="space-y-4 rounded-lg border border-black/[0.06] p-5 dark:border-white/[0.06]">
+        <section className="space-y-4 rounded-xl border border-black/[0.06] p-5 dark:border-white/[0.06]">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
               <span className="text-sm font-semibold text-neutral-900 dark:text-white">
@@ -111,7 +111,7 @@ export function BillingPage() {
           <h2 className="text-xs font-semibold tracking-wider text-neutral-400 uppercase">
             Subscription Items
           </h2>
-          <div className="overflow-hidden rounded-lg border border-black/[0.06] dark:border-white/[0.06]">
+          <div className="overflow-hidden rounded-xl border border-black/[0.06] dark:border-white/[0.06]">
             {subscription?.items?.length ? (
               <div className="divide-y divide-black/[0.04] dark:divide-white/[0.04]">
                 {subscription.items.map((item) => (

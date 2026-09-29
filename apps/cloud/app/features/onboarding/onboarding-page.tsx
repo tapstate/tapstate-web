@@ -187,7 +187,7 @@ export function OnboardingPage({
                 )}
               </div>
 
-              <div className="overflow-hidden rounded-lg border border-black/[0.12] bg-white shadow-2xs dark:border-white/[0.14] dark:bg-[#1a1b1e]">
+              <div className="overflow-hidden rounded-xl border border-black/[0.12] bg-white shadow-2xs dark:border-white/[0.14] dark:bg-[#1a1b1e]">
                 <div className="flex border-b border-black/[0.08] bg-neutral-50/70 dark:border-white/[0.08] dark:bg-white/[0.02]">
                   <div className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-[12px] font-semibold text-[#111827] dark:text-white">
                     <MapPin className="h-4 w-4 shrink-0" />
@@ -280,7 +280,7 @@ export function OnboardingPage({
                 </span>
               </div>
 
-              <div className="space-y-2.5 rounded-lg border border-black/[0.08] bg-white p-3.5 shadow-2xs dark:border-white/[0.1] dark:bg-[#1a1b1e]">
+              <div className="space-y-2.5 rounded-xl border border-black/[0.08] bg-white p-3.5 shadow-2xs dark:border-white/[0.1] dark:bg-[#1a1b1e]">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-[13px] font-semibold text-[#111827] dark:text-white">
                     {clusterName || t('onboarding.clusterPreviewEmpty')}

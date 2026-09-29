@@ -63,7 +63,7 @@ export function CloudOverviewView({
 
       <div className="max-w-5xl space-y-6 p-6">
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <div className="rounded-lg border border-black/[0.06] bg-neutral-50/40 p-3.5 dark:border-white/[0.06] dark:bg-white/[0.02]">
+          <div className="rounded-xl border border-black/[0.06] bg-neutral-50/40 p-3.5 dark:border-white/[0.06] dark:bg-white/[0.02]">
             <div className="text-[11px] text-neutral-500 dark:text-neutral-400">Total Clusters</div>
             <div className="mt-1 font-mono text-lg font-semibold text-neutral-900 dark:text-white">
               {clusters.length}
@@ -73,7 +73,7 @@ export function CloudOverviewView({
             </div>
           </div>
 
-          <div className="rounded-lg border border-black/[0.06] bg-neutral-50/40 p-3.5 dark:border-white/[0.06] dark:bg-white/[0.02]">
+          <div className="rounded-xl border border-black/[0.06] bg-neutral-50/40 p-3.5 dark:border-white/[0.06] dark:bg-white/[0.02]">
             <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
               Active Pipelines
             </div>
@@ -83,7 +83,7 @@ export function CloudOverviewView({
             <div className="mt-0.5 text-[10px] text-neutral-400">Usage data unavailable</div>
           </div>
 
-          <div className="rounded-lg border border-black/[0.06] bg-neutral-50/40 p-3.5 dark:border-white/[0.06] dark:bg-white/[0.02]">
+          <div className="rounded-xl border border-black/[0.06] bg-neutral-50/40 p-3.5 dark:border-white/[0.06] dark:bg-white/[0.02]">
             <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
               Total Synced Rows (7d)
             </div>
@@ -93,7 +93,7 @@ export function CloudOverviewView({
             <div className="mt-0.5 text-[10px] text-neutral-400">Usage data unavailable</div>
           </div>
 
-          <div className="rounded-lg border border-black/[0.06] bg-neutral-50/40 p-3.5 dark:border-white/[0.06] dark:bg-white/[0.02]">
+          <div className="rounded-xl border border-black/[0.06] bg-neutral-50/40 p-3.5 dark:border-white/[0.06] dark:bg-white/[0.02]">
             <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
               Monthly Active Rows
             </div>
@@ -119,7 +119,7 @@ export function CloudOverviewView({
             </button>
           </div>
 
-          <div className="divide-y divide-black/[0.05] overflow-hidden rounded-lg border border-black/[0.06] dark:divide-white/[0.05] dark:border-white/[0.06]">
+          <div className="divide-y divide-black/[0.05] overflow-hidden rounded-xl border border-black/[0.06] dark:divide-white/[0.05] dark:border-white/[0.06]">
             {clusters.length === 0 ? (
               <div className="px-4 py-8 text-center text-xs text-neutral-400">
                 No clusters yet. Use “Provision Cluster” to create one.

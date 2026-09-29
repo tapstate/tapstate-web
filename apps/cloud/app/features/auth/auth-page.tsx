@@ -37,7 +37,7 @@ function errorMessageKey(error: unknown) {
 }
 
 const inputClassName =
-  'w-full h-10 px-3.5 rounded-xl border border-black/[0.1] dark:border-white/[0.12] bg-white dark:bg-[#202124] text-[13px] text-[#111827] dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-[#111827] dark:focus:border-white focus:ring-1 focus:ring-[#111827] dark:focus:ring-white transition-all font-mono'
+  'w-full h-10 px-3.5 rounded-lg border border-black/[0.1] dark:border-white/[0.12] bg-white dark:bg-[#202124] text-[13px] text-[#111827] dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-[#111827] dark:focus:border-white focus:ring-1 focus:ring-[#111827] dark:focus:ring-white transition-all font-mono'
 
 export function AuthPage({
   darkMode,
@@ -217,7 +217,7 @@ export function AuthPage({
                 </div>
 
                 <button
-                  className="mt-1 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#111827] text-[13px] font-medium text-white shadow-xs transition-all hover:bg-[#1f2937] active:scale-[0.99] disabled:opacity-50 dark:bg-white dark:text-[#111827] dark:hover:bg-neutral-100"
+                  className="mt-1 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#111827] text-[13px] font-medium text-white shadow-xs transition-all hover:bg-[#1f2937] active:scale-[0.99] disabled:opacity-50 dark:bg-white dark:text-[#111827] dark:hover:bg-neutral-100"
                   disabled={isSubmitting}
                   type="submit"
                 >

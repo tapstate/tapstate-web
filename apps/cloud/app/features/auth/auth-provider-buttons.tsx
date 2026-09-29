@@ -13,7 +13,7 @@ export function AuthProviderButtons({ mode }: AuthProviderButtonsProps) {
       <div className="space-y-2 pt-1">
         <button
           aria-describedby="auth-provider-coming-soon"
-          className="flex h-10 w-full items-center justify-center gap-2.5 rounded-xl border border-black/[0.08] bg-white px-4 text-[13px] font-medium text-[#374151] shadow-2xs transition-all hover:border-black/20 hover:bg-neutral-50 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-black/[0.08] disabled:hover:bg-white disabled:active:scale-100 dark:border-white/[0.1] dark:bg-[#202124] dark:text-neutral-200 dark:hover:border-white/20 dark:hover:bg-[#26282b] dark:disabled:hover:border-white/[0.1] dark:disabled:hover:bg-[#202124]"
+          className="flex h-10 w-full items-center justify-center gap-2.5 rounded-lg border border-black/[0.08] bg-white px-4 text-[13px] font-medium text-[#374151] shadow-2xs transition-all hover:border-black/20 hover:bg-neutral-50 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-black/[0.08] disabled:hover:bg-white disabled:active:scale-100 dark:border-white/[0.1] dark:bg-[#202124] dark:text-neutral-200 dark:hover:border-white/20 dark:hover:bg-[#26282b] dark:disabled:hover:border-white/[0.1] dark:disabled:hover:bg-[#202124]"
           disabled
           title={comingSoon}
           type="button"
@@ -24,7 +24,7 @@ export function AuthProviderButtons({ mode }: AuthProviderButtonsProps) {
 
         <button
           aria-describedby="auth-provider-coming-soon"
-          className="flex h-10 w-full items-center justify-center gap-2.5 rounded-xl border border-black/[0.08] bg-white px-4 text-[13px] font-medium text-[#374151] shadow-2xs transition-all hover:border-black/20 hover:bg-neutral-50 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-black/[0.08] disabled:hover:bg-white disabled:active:scale-100 dark:border-white/[0.1] dark:bg-[#202124] dark:text-neutral-200 dark:hover:border-white/20 dark:hover:bg-[#26282b] dark:disabled:hover:border-white/[0.1] dark:disabled:hover:bg-[#202124]"
+          className="flex h-10 w-full items-center justify-center gap-2.5 rounded-lg border border-black/[0.08] bg-white px-4 text-[13px] font-medium text-[#374151] shadow-2xs transition-all hover:border-black/20 hover:bg-neutral-50 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-black/[0.08] disabled:hover:bg-white disabled:active:scale-100 dark:border-white/[0.1] dark:bg-[#202124] dark:text-neutral-200 dark:hover:border-white/20 dark:hover:bg-[#26282b] dark:disabled:hover:border-white/[0.1] dark:disabled:hover:bg-[#202124]"
           disabled
           title={comingSoon}
           type="button"
