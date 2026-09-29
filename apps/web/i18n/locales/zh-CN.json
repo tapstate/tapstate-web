@@ -46,6 +46,10 @@
     "separator": "/"
   },
   "auth": {
+    "cloudSession": {
+      "title": "需要 Cluster 会话",
+      "description": "请返回 Tapstate Cloud 并重新进入此 Cluster，以创建新的安全会话。"
+    },
     "login": {
       "eyebrow": "实时上下文",
       "signalTitle": "让每个决策保持最新。",

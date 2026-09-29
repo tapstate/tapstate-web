@@ -46,6 +46,10 @@
     "separator": "/"
   },
   "auth": {
+    "cloudSession": {
+      "title": "需要 Cluster 工作階段",
+      "description": "請返回 Tapstate Cloud 並重新進入此 Cluster，以建立新的安全工作階段。"
+    },
     "login": {
       "eyebrow": "即時上下文",
       "signalTitle": "讓每個決策保持最新。",

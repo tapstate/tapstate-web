@@ -46,6 +46,10 @@
     "separator": "/"
   },
   "auth": {
+    "cloudSession": {
+      "title": "Cluster session required",
+      "description": "Return to Tapstate Cloud and open this Cluster again to create a new secure session."
+    },
     "login": {
       "eyebrow": "REAL-TIME CONTEXT",
       "signalTitle": "Make every decision current.",

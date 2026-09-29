@@ -18,16 +18,19 @@ import { useUiStore } from '@/stores/ui-store'
 export function AppHeader() {
   const navigate = useNavigate()
   const { t, i18n } = useTranslation()
-  const clear = useAuthStore((state) => state.clear)
+  const logoutSession = useAuthStore((state) => state.logout)
   const setAskTapstateOpen = useUiStore((state) => state.setAskTapstateOpen)
 
   function switchLocale(nextLocale: AppLocale) {
     void i18n.changeLanguage(nextLocale)
   }
 
-  function logout() {
-    clear()
-    void navigate({ replace: true, to: '/login' })
+  async function logout() {
+    try {
+      await logoutSession()
+    } finally {
+      void navigate({ replace: true, to: '/login' })
+    }
   }
 
   return (
@@ -90,7 +93,7 @@ export function AppHeader() {
           className="app-sidebar__icon-button"
           aria-label={t('app.logout')}
           title={t('app.logout')}
-          onClick={logout}
+          onClick={() => void logout()}
         >
           <LogOut className="h-4 w-4" aria-hidden="true" />
         </Button>
