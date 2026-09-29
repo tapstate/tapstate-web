@@ -45,25 +45,33 @@ describe('auth store deployment profiles', () => {
 
   it('marks the cloud session unauthenticated after the first 401 without reloading', async () => {
     const fetcher = vi.fn<typeof fetch>(async () => new Response(null, { status: 401 }))
+    const redirectToCloudConsole = vi.fn()
     const store = createAuthStore({
       profile: 'cloud',
       storage: memoryStorage('stale-on-prem-token'),
       fetcher,
       origin: 'https://cluster-a.dev.cloud.tapstate.com',
+      cloudConsoleUrl: 'https://dev.cloud.tapstate.com/',
+      redirectToCloudConsole,
     })
 
     await store.getState().apiFetch('/api/sources')
 
     expect(store.getState().isAuthenticated).toBe(false)
     expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(redirectToCloudConsole).toHaveBeenCalledOnce()
+    expect(redirectToCloudConsole).toHaveBeenCalledWith('https://dev.cloud.tapstate.com/')
   })
 
   it('posts cloud logout with the same-origin session and clears local state', async () => {
     const fetcher = vi.fn<typeof fetch>(async () => new Response(null, { status: 204 }))
+    const redirectToCloudConsole = vi.fn()
     const store = createAuthStore({
       profile: 'cloud',
       fetcher,
       origin: 'https://cluster-a.dev.cloud.tapstate.com',
+      cloudConsoleUrl: 'https://dev.cloud.tapstate.com/',
+      redirectToCloudConsole,
     })
 
     await store.getState().logout()
@@ -73,5 +81,6 @@ describe('auth store deployment profiles', () => {
       expect.objectContaining({ credentials: 'same-origin', method: 'POST' }),
     )
     expect(store.getState().isAuthenticated).toBe(false)
+    expect(redirectToCloudConsole).toHaveBeenCalledWith('https://dev.cloud.tapstate.com/')
   })
 })

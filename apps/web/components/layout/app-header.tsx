@@ -19,6 +19,7 @@ export function AppHeader() {
   const navigate = useNavigate()
   const { t, i18n } = useTranslation()
   const logoutSession = useAuthStore((state) => state.logout)
+  const authProfile = useAuthStore((state) => state.profile)
   const setAskTapstateOpen = useUiStore((state) => state.setAskTapstateOpen)
 
   function switchLocale(nextLocale: AppLocale) {
@@ -29,7 +30,7 @@ export function AppHeader() {
     try {
       await logoutSession()
     } finally {
-      void navigate({ replace: true, to: '/login' })
+      if (authProfile === 'on-prem') void navigate({ replace: true, to: '/login' })
     }
   }
 

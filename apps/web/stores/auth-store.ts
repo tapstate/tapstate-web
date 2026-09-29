@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 import { authenticatedFetch, cloudSessionFetch, logoutCloudSession } from '@/service/auth-client'
+import { cloudConsoleUrl, replaceWithCloudConsole } from '@/utils/cloud-console'
 import { deploymentProfile, type DeploymentProfile } from '@/utils/deployment-profile'
 
 import {
@@ -25,12 +26,16 @@ interface AuthStoreOptions {
   storage?: Storage | null
   fetcher?: typeof fetch
   origin?: string
+  cloudConsoleUrl?: string
+  redirectToCloudConsole?: (url: string) => void
 }
 
 export function createAuthStore(options: AuthStoreOptions = {}) {
   const profile = options.profile ?? deploymentProfile
   const storage = options.storage === undefined ? browserSessionStorage() : options.storage
   const fetcher = options.fetcher ?? fetch
+  const consoleUrl = options.cloudConsoleUrl ?? cloudConsoleUrl
+  const redirectToCloud = options.redirectToCloudConsole ?? replaceWithCloudConsole
   const storedToken = profile === 'on-prem' ? loadStoredToken(storage) : null
 
   return create<AuthState>((set, get) => ({
@@ -52,6 +57,7 @@ export function createAuthStore(options: AuthStoreOptions = {}) {
           await logoutCloudSession(fetcher, options.origin)
         } finally {
           set({ token: null, isAuthenticated: false })
+          redirectToCloud(consoleUrl)
         }
         return
       }
@@ -62,7 +68,10 @@ export function createAuthStore(options: AuthStoreOptions = {}) {
         profile === 'cloud'
           ? await cloudSessionFetch(input, init, fetcher, options.origin)
           : await authenticatedFetch(input, init, get().token, fetcher)
-      if (response.status === 401) get().clear()
+      if (response.status === 401) {
+        get().clear()
+        if (profile === 'cloud') redirectToCloud(consoleUrl)
+      }
       return response
     },
   }))

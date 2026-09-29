@@ -6,11 +6,11 @@ import { useTranslation } from 'react-i18next'
 import type { AppLocale } from '@/i18n'
 
 import { Button } from '@/components/ui/button'
-import { CloudSessionRequired } from '@/features/auth/cloud-session-required'
 import { SUPPORTED_LOCALES } from '@/i18n'
 import { cn } from '@/lib/utils'
 import { AuthClientError, login } from '@/service/auth-client'
 import { useAuthStore } from '@/stores/auth-store'
+import { replaceWithCloudConsole } from '@/utils/cloud-console'
 import { deploymentProfile } from '@/utils/deployment-profile'
 
 export const Route = createFileRoute('/login')({
@@ -34,14 +34,11 @@ function LoginRouteComponent() {
 }
 
 function CloudLoginRouteComponent() {
-  const navigate = useNavigate()
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-
   useEffect(() => {
-    if (isAuthenticated) void navigate({ replace: true, to: '/sources' })
-  }, [isAuthenticated, navigate])
+    replaceWithCloudConsole()
+  }, [])
 
-  return <CloudSessionRequired />
+  return null
 }
 
 function OnPremLoginRouteComponent() {
