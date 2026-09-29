@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as PipelineEditorRouteImport } from './routes/_pipeline-editor'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedExplorationsRouteImport } from './routes/_authenticated.explorations'
+import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated.overview'
 import { Route as AuthenticatedPipelinesRouteImport } from './routes/_authenticated.pipelines'
 import { Route as AuthenticatedSourcesRouteImport } from './routes/_authenticated.sources'
 import { Route as AuthenticatedSourcesIndexRouteImport } from './routes/_authenticated.sources.index'
@@ -50,6 +51,11 @@ const AuthenticatedExplorationsRoute =
     path: '/explorations',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedOverviewRoute = AuthenticatedOverviewRouteImport.update({
+  id: '/overview',
+  path: '/overview',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedPipelinesRoute = AuthenticatedPipelinesRouteImport.update({
   id: '/pipelines',
   path: '/pipelines',
@@ -129,6 +135,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
+  '/overview': typeof AuthenticatedOverviewRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
   '/sources': typeof AuthenticatedSourcesRouteWithChildren
   '/sources/$sourceId': typeof AuthenticatedSourcesSourceIdRouteWithChildren
@@ -145,6 +152,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
+  '/overview': typeof AuthenticatedOverviewRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
   '/sources': typeof AuthenticatedSourcesIndexRoute
   '/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
@@ -161,6 +169,7 @@ export interface FileRoutesById {
   '/_pipeline-editor': typeof PipelineEditorRouteWithChildren
   '/login': typeof LoginRoute
   '/_authenticated/explorations': typeof AuthenticatedExplorationsRoute
+  '/_authenticated/overview': typeof AuthenticatedOverviewRoute
   '/_authenticated/pipelines': typeof AuthenticatedPipelinesRoute
   '/_authenticated/sources': typeof AuthenticatedSourcesRouteWithChildren
   '/_authenticated/sources/$sourceId': typeof AuthenticatedSourcesSourceIdRouteWithChildren
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/explorations'
+    | '/overview'
     | '/pipelines'
     | '/sources'
     | '/sources/$sourceId'
@@ -195,6 +205,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/explorations'
+    | '/overview'
     | '/pipelines'
     | '/sources'
     | '/sources/$sourceId/$tableName'
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/_pipeline-editor'
     | '/login'
     | '/_authenticated/explorations'
+    | '/_authenticated/overview'
     | '/_authenticated/pipelines'
     | '/_authenticated/sources'
     | '/_authenticated/sources/$sourceId'
@@ -265,6 +277,13 @@ declare module '@tanstack/react-router' {
       path: '/explorations'
       fullPath: '/explorations'
       preLoaderRoute: typeof AuthenticatedExplorationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/overview': {
+      id: '/_authenticated/overview'
+      path: '/overview'
+      fullPath: '/overview'
+      preLoaderRoute: typeof AuthenticatedOverviewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/pipelines': {
@@ -381,12 +400,14 @@ const AuthenticatedSourcesRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedExplorationsRoute: typeof AuthenticatedExplorationsRoute
+  AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
   AuthenticatedPipelinesRoute: typeof AuthenticatedPipelinesRoute
   AuthenticatedSourcesRoute: typeof AuthenticatedSourcesRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedExplorationsRoute: AuthenticatedExplorationsRoute,
+  AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
   AuthenticatedPipelinesRoute: AuthenticatedPipelinesRoute,
   AuthenticatedSourcesRoute: AuthenticatedSourcesRouteWithChildren,
 }

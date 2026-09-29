@@ -1,7 +1,7 @@
 import type { ComponentType, SVGProps } from 'react'
 
 import { Link, useRouterState } from '@tanstack/react-router'
-import { Database, GitMerge, MessageSquareText, Terminal } from 'lucide-react'
+import { Database, GitMerge, LayoutDashboard, MessageSquareText, Terminal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
@@ -15,6 +15,7 @@ interface NavigationItem {
 }
 
 const navigation: NavigationItem[] = [
+  { labelKey: 'nav.overview', to: '/overview', icon: LayoutDashboard },
   { labelKey: 'nav.sources', to: '/sources', icon: Database },
   { labelKey: 'nav.pipelines', to: '/pipelines', icon: GitMerge },
   { labelKey: 'nav.explorations', to: '/explorations', icon: MessageSquareText },

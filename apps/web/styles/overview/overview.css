@@ -1,0 +1,255 @@
+/*
+ * Overview page. Every selector starts at the feature root. The three flow blocks share one
+ * row grid (title, count, details, footer) so they line up whatever their content.
+ */
+.overview-page {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--background);
+}
+
+.overview-page .overview-page__header {
+  display: flex;
+  height: 3.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  padding: 0 1.5rem;
+}
+
+.overview-page .overview-page__chip {
+  border-radius: 9999px;
+  background: var(--muted);
+  padding: 0.125rem 0.625rem;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+}
+
+.overview-page .overview-page__body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2rem;
+  overflow: auto;
+  padding: 1.5rem;
+}
+
+.overview-page .overview-page__state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+
+.overview-page .overview-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.5rem minmax(0, 1fr) 2.5rem minmax(0, 1fr);
+  align-items: start;
+}
+
+.overview-page .overview-block-slot {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.overview-page .overview-block {
+  display: grid;
+  grid-template-rows: 1.5rem 1.75rem 5.5rem 1.25rem;
+  gap: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  padding: 1rem;
+}
+
+.overview-page .overview-block--current {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 12%, transparent);
+}
+
+.overview-page .overview-block__title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.overview-page .overview-block__step {
+  display: inline-flex;
+  height: 1.25rem;
+  width: 1.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--primary);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary-foreground);
+}
+
+.overview-page .overview-block__step--done {
+  background: var(--success);
+}
+
+.overview-page .overview-block__problems {
+  margin-left: auto;
+  border-radius: 9999px;
+  padding: 0 0.5rem;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25rem;
+  color: var(--background);
+}
+
+.overview-page .overview-block__problems--warning {
+  background: var(--warning);
+}
+
+.overview-page .overview-block__problems--destructive {
+  background: var(--destructive);
+}
+
+.overview-page .overview-block__metric {
+  align-self: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.overview-page .overview-block__details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.overview-page .overview-block__detail {
+  display: flex;
+  min-width: 0;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.overview-page .overview-block__detail dt {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--foreground);
+}
+
+.overview-page .overview-block__detail dd {
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+
+.overview-page .overview-block__footer {
+  display: flex;
+  align-items: center;
+}
+
+.overview-page .overview-link {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--primary);
+  text-underline-offset: 3px;
+}
+
+.overview-page .overview-link:hover {
+  text-decoration: underline;
+}
+
+.overview-page .overview-link:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* The arrow sits level with the count row of the blocks beside it. */
+.overview-page .overview-arrow {
+  display: flex;
+  height: 8.25rem;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted-foreground);
+}
+
+.overview-page .overview-arrow--idle {
+  opacity: 0.5;
+}
+
+.overview-page .overview-arrow__narrow {
+  display: none;
+}
+
+.overview-page .overview-callout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  border-radius: var(--radius);
+  background: var(--primary);
+  padding: 0.75rem 1rem;
+  color: var(--primary-foreground);
+}
+
+.overview-page .overview-callout .overview-callout__skip {
+  color: var(--primary-foreground);
+}
+
+.overview-page .overview-attention {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.overview-page .overview-attention__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.overview-page .overview-attention__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 13px;
+}
+
+@media (max-width: 767px) {
+  .overview-page .overview-page__header,
+  .overview-page .overview-page__body {
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+
+  .overview-page .overview-flow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .overview-page .overview-arrow {
+    height: 2rem;
+  }
+
+  .overview-page .overview-arrow__wide {
+    display: none;
+  }
+
+  .overview-page .overview-arrow__narrow {
+    display: block;
+  }
+}

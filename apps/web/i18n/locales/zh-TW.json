@@ -990,5 +990,70 @@
     "governance": { "title": "治理", "placeholder": "血緣、校驗和監控。" },
     "services": { "title": "資料服務", "placeholder": "已發布 API 和 Token。" },
     "admin": { "title": "管理", "placeholder": "使用者、角色、租戶和設定。" }
+  },
+  "overview": {
+    "title": "概覽",
+    "notReported": "此伺服器尚未提供",
+    "problems_one": "{{count}} 個問題",
+    "problems_other": "{{count}} 個問題",
+    "states": {
+      "loading": "正在載入概覽…",
+      "error": "概覽載入失敗。"
+    },
+    "setup": {
+      "progress": "設定 {{completed}}/{{total}}",
+      "hideHints": "隱藏設定提示",
+      "showHints": "顯示設定提示",
+      "stepOf": "第 {{step}} 步，共 {{total}} 步",
+      "stepNumber": "設定第 {{step}} 步",
+      "stepDone": "設定第 {{step}} 步已完成",
+      "later": "略過，稍後再做",
+      "stateStore": {
+        "title": "選擇檢視存放的位置",
+        "description": "Tapstate 把 pipeline 建立的檢視保存在 state store 中。此伺服器尚未設定，需要管理員設定。"
+      },
+      "sources": {
+        "title": "新增資料來源",
+        "description": "連接一個你要用來建立的資料庫。",
+        "action": "新增資料來源"
+      },
+      "pipeline": {
+        "title": "建立第一條 pipeline",
+        "description": "把資料表鏡像到 Atlas，或建立一個隨來源資料變化持續更新的檢視。",
+        "action": "建立 pipeline"
+      }
+    },
+    "sources": {
+      "title": "資料來源",
+      "metric_one": "{{count}} 個資料來源",
+      "metric_other": "{{count}} 個資料來源",
+      "none": "還沒有資料來源",
+      "more_one": "還有 {{count}} 個",
+      "more_other": "還有 {{count}} 個",
+      "open": "開啟資料來源"
+    },
+    "pipelines": {
+      "title": "Pipelines",
+      "metric_one": "{{count}} 條 pipeline",
+      "metric_other": "{{count}} 條 pipeline",
+      "running": "執行中",
+      "idle": "閒置",
+      "error": "錯誤",
+      "open": "開啟 Pipelines"
+    },
+    "stateStore": {
+      "title": "State store",
+      "ready": "就緒",
+      "missing": "未設定",
+      "location": "位置",
+      "managed": "Tapstate state store",
+      "views": "檢視",
+      "note": "檢視保存的位置"
+    },
+    "attention": {
+      "title": "需要關注",
+      "clear": "一切正常",
+      "pipelineFailed": "Pipeline {{pipeline}} 失敗"
+    }
   }
 }

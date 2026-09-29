@@ -57,7 +57,7 @@ function LoginRouteComponent() {
   )
 
   useEffect(() => {
-    if (isAuthenticated) void navigate({ replace: true, to: '/sources' })
+    if (isAuthenticated) void navigate({ replace: true, to: '/overview' })
   }, [isAuthenticated, navigate])
 
   useEffect(() => {
@@ -114,7 +114,7 @@ function LoginRouteComponent() {
     try {
       const result = await login({ username: username.trim(), password })
       setToken(result.token)
-      void navigate({ replace: true, to: '/sources' })
+      void navigate({ replace: true, to: '/overview' })
     } catch (error) {
       setFormError(errorMessage(error))
     } finally {

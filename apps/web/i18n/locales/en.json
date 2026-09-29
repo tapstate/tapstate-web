@@ -1008,5 +1008,70 @@
     "governance": { "title": "Governance", "placeholder": "Lineage, verification, monitoring." },
     "services": { "title": "Data Services", "placeholder": "Published APIs & tokens." },
     "admin": { "title": "Admin", "placeholder": "Users, roles, tenants, settings." }
+  },
+  "overview": {
+    "title": "Overview",
+    "notReported": "Not reported by this server yet",
+    "problems_one": "{{count}} problem",
+    "problems_other": "{{count}} problems",
+    "states": {
+      "loading": "Loading the overview…",
+      "error": "The overview could not be loaded."
+    },
+    "setup": {
+      "progress": "Setup {{completed}} of {{total}}",
+      "hideHints": "Hide setup hints",
+      "showHints": "Show setup hints",
+      "stepOf": "Step {{step}} of {{total}}",
+      "stepNumber": "Setup step {{step}}",
+      "stepDone": "Setup step {{step}} done",
+      "later": "Skip, I'll do it later",
+      "stateStore": {
+        "title": "Choose where your views live",
+        "description": "Tapstate keeps the views your pipelines build in a state store. This server has none yet; an administrator needs to configure one."
+      },
+      "sources": {
+        "title": "Add a data source",
+        "description": "Connect a database you want to build from.",
+        "action": "Add a source"
+      },
+      "pipeline": {
+        "title": "Build your first pipeline",
+        "description": "Mirror tables into Atlas, or build a view that stays up to date as source rows change.",
+        "action": "Create a pipeline"
+      }
+    },
+    "sources": {
+      "title": "Sources",
+      "metric_one": "{{count}} source",
+      "metric_other": "{{count}} sources",
+      "none": "No sources yet",
+      "more_one": "and {{count}} more",
+      "more_other": "and {{count}} more",
+      "open": "Open Data Sources"
+    },
+    "pipelines": {
+      "title": "Pipelines",
+      "metric_one": "{{count}} pipeline",
+      "metric_other": "{{count}} pipelines",
+      "running": "Running",
+      "idle": "Idle",
+      "error": "Error",
+      "open": "Open Pipelines"
+    },
+    "stateStore": {
+      "title": "State store",
+      "ready": "Ready",
+      "missing": "Not set up",
+      "location": "Location",
+      "managed": "Tapstate state store",
+      "views": "Views",
+      "note": "Where your views are kept"
+    },
+    "attention": {
+      "title": "Needs attention",
+      "clear": "All clear",
+      "pipelineFailed": "Pipeline {{pipeline}} failed"
+    }
   }
 }

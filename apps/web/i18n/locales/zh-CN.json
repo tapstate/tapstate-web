@@ -990,5 +990,70 @@
     "governance": { "title": "治理", "placeholder": "血缘、校验和监控。" },
     "services": { "title": "数据服务", "placeholder": "已发布 API 和 Token。" },
     "admin": { "title": "管理", "placeholder": "用户、角色、租户和设置。" }
+  },
+  "overview": {
+    "title": "概览",
+    "notReported": "此服务器暂未提供",
+    "problems_one": "{{count}} 个问题",
+    "problems_other": "{{count}} 个问题",
+    "states": {
+      "loading": "正在加载概览…",
+      "error": "概览加载失败。"
+    },
+    "setup": {
+      "progress": "设置 {{completed}}/{{total}}",
+      "hideHints": "隐藏设置提示",
+      "showHints": "显示设置提示",
+      "stepOf": "第 {{step}} 步，共 {{total}} 步",
+      "stepNumber": "设置第 {{step}} 步",
+      "stepDone": "设置第 {{step}} 步已完成",
+      "later": "跳过，稍后再做",
+      "stateStore": {
+        "title": "选择视图存放的位置",
+        "description": "Tapstate 把 pipeline 构建的视图保存在 state store 中。此服务器尚未配置，需要管理员配置。"
+      },
+      "sources": {
+        "title": "添加数据源",
+        "description": "连接一个你要用来构建的数据库。",
+        "action": "添加数据源"
+      },
+      "pipeline": {
+        "title": "构建第一条 pipeline",
+        "description": "把表镜像到 Atlas，或构建一个随源数据变化持续更新的视图。",
+        "action": "创建 pipeline"
+      }
+    },
+    "sources": {
+      "title": "数据源",
+      "metric_one": "{{count}} 个数据源",
+      "metric_other": "{{count}} 个数据源",
+      "none": "还没有数据源",
+      "more_one": "还有 {{count}} 个",
+      "more_other": "还有 {{count}} 个",
+      "open": "打开数据源"
+    },
+    "pipelines": {
+      "title": "Pipelines",
+      "metric_one": "{{count}} 条 pipeline",
+      "metric_other": "{{count}} 条 pipeline",
+      "running": "运行中",
+      "idle": "空闲",
+      "error": "出错",
+      "open": "打开 Pipelines"
+    },
+    "stateStore": {
+      "title": "State store",
+      "ready": "就绪",
+      "missing": "未设置",
+      "location": "位置",
+      "managed": "Tapstate state store",
+      "views": "视图",
+      "note": "视图保存的位置"
+    },
+    "attention": {
+      "title": "需要关注",
+      "clear": "一切正常",
+      "pipelineFailed": "Pipeline {{pipeline}} 失败"
+    }
   }
 }
