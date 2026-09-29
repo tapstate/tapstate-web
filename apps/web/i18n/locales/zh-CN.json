@@ -21,6 +21,7 @@
   },
   "nav": {
     "overview": "概览",
+    "settings": "设置",
     "resources": "资源",
     "develop": "开发",
     "operations": "运行",
@@ -1048,12 +1049,38 @@
       "location": "位置",
       "managed": "Tapstate state store",
       "views": "视图",
-      "note": "视图保存的位置"
+      "open": "打开 State store"
     },
     "attention": {
       "title": "需要关注",
       "clear": "一切正常",
       "pipelineFailed": "Pipeline {{pipeline}} 失败"
+    }
+  },
+  "stateStorePage": {
+    "title": "State store",
+    "intro": "Tapstate 把 pipeline 构建的视图保存在 state store 中。新视图存到默认 store。",
+    "listLabel": "State store 列表",
+    "add": "添加 store",
+    "addLimit": "本版本只支持一个 store",
+    "default": "默认",
+    "delete": "删除",
+    "fields": {
+      "type": "类型",
+      "checks": "检查",
+      "usage": "用量",
+      "access": "访问"
+    },
+    "managed": {
+      "name": "Tapstate state store",
+      "type": "服务器自身的 MongoDB",
+      "access": "由服务器管理",
+      "deleteReason": "此 store 由服务器管理"
+    },
+    "states": {
+      "loading": "正在加载 state store…",
+      "error": "state store 加载失败。",
+      "empty": "此服务器没有配置 state store。"
     }
   }
 }

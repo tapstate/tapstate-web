@@ -1,12 +1,6 @@
 import type { PipelineRuntimeState, PipelineView } from '@/service/pipelines/pipeline-client'
-import type { SourceView } from '@/service/source-client'
 
-/**
- * Id under which the server registers its own managed store for views. It is listed with the
- * sources, but it is where views are kept rather than something to build from, so the
- * overview counts it as the state store and never as a data source.
- */
-export const MANAGED_VIEW_STORE_SOURCE_ID = 'views'
+import { MANAGED_VIEW_STORE_SOURCE_ID, type SourceView } from '@/service/source-client'
 
 /** The three setup steps, in the order a new workspace is guided through them. */
 export const SETUP_STEP_ORDER = ['stateStore', 'sources', 'pipeline'] as const

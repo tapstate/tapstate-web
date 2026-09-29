@@ -5,6 +5,7 @@
 @import './pipelines/pipeline-node-selector.css' layer(components);
 @import './pipelines/pipeline-create.css' layer(components);
 @import './overview/overview.css' layer(components);
+@import './settings/settings.css' layer(components);
 
 @layer components {
   .connector-icon {

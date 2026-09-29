@@ -1,0 +1,111 @@
+/* Settings pages. Every selector starts at the feature root. */
+.settings-page {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--background);
+}
+
+.settings-page .settings-page__header {
+  display: flex;
+  height: 3.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  padding: 0 1.5rem;
+}
+
+.settings-page .settings-page__body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+  overflow: auto;
+  padding: 1.5rem;
+}
+
+.settings-page .settings-page__state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+
+.settings-page .settings-store-list {
+  display: flex;
+  max-width: 48rem;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.settings-page .settings-store {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.settings-page .settings-store + .settings-store {
+  border-top: 1px solid var(--border);
+}
+
+.settings-page .settings-store__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.settings-page .settings-store__badge {
+  border-radius: 9999px;
+  background: var(--muted);
+  padding: 0 0.5rem;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.25rem;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+}
+
+.settings-page .settings-store__details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 1.5rem;
+  font-size: 13px;
+}
+
+.settings-page .settings-store__details dt {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.settings-page .settings-store__details dd {
+  color: var(--foreground);
+}
+
+.settings-page .settings-store__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+@media (max-width: 767px) {
+  .settings-page .settings-page__header,
+  .settings-page .settings-page__body {
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+
+  .settings-page .settings-store__details {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

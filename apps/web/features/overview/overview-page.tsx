@@ -236,9 +236,9 @@ function OverviewContent({ overview, guidance, current, onDefer }: OverviewConte
             { label: t('overview.stateStore.views'), value: t('overview.notReported') },
           ]}
           footer={
-            <span className="text-muted-foreground text-[12px]">
-              {t('overview.stateStore.note')}
-            </span>
+            <Link to="/settings" className="overview-link">
+              {t('overview.stateStore.open')}
+            </Link>
           }
           step={stepNumber('stateStore')}
           stepDone={overview.setup.done.stateStore}

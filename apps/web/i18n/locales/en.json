@@ -21,6 +21,7 @@
   },
   "nav": {
     "overview": "Overview",
+    "settings": "Settings",
     "resources": "Resources",
     "develop": "Develop",
     "operations": "Operations",
@@ -1066,12 +1067,38 @@
       "location": "Location",
       "managed": "Tapstate state store",
       "views": "Views",
-      "note": "Where your views are kept"
+      "open": "Open State stores"
     },
     "attention": {
       "title": "Needs attention",
       "clear": "All clear",
       "pipelineFailed": "Pipeline {{pipeline}} failed"
+    }
+  },
+  "stateStorePage": {
+    "title": "State stores",
+    "intro": "Tapstate keeps the views your pipelines build in a state store. New views go to the default store.",
+    "listLabel": "State stores",
+    "add": "Add store",
+    "addLimit": "One store in this release",
+    "default": "Default",
+    "delete": "Delete",
+    "fields": {
+      "type": "Type",
+      "checks": "Checks",
+      "usage": "Usage",
+      "access": "Access"
+    },
+    "managed": {
+      "name": "Tapstate state store",
+      "type": "The server's own MongoDB",
+      "access": "Managed by the server",
+      "deleteReason": "The server manages this store"
+    },
+    "states": {
+      "loading": "Loading state stores…",
+      "error": "State stores could not be loaded.",
+      "empty": "No state store is configured on this server."
     }
   }
 }

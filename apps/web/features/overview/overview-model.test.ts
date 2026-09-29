@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import type { PipelineRuntimeState, PipelineView } from '@/service/pipelines/pipeline-client'
-import type { SourceView } from '@/service/source-client'
 
-import { buildOverview, MANAGED_VIEW_STORE_SOURCE_ID, pipelineHealth } from './overview-model'
+import { MANAGED_VIEW_STORE_SOURCE_ID, type SourceView } from '@/service/source-client'
+
+import { buildOverview, pipelineHealth } from './overview-model'
 
 function source(id: string, connector = 'postgres'): SourceView {
   return {

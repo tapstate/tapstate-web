@@ -21,6 +21,7 @@
   },
   "nav": {
     "overview": "概覽",
+    "settings": "設定",
     "resources": "資源",
     "develop": "開發",
     "operations": "運行",
@@ -1048,12 +1049,38 @@
       "location": "位置",
       "managed": "Tapstate state store",
       "views": "檢視",
-      "note": "檢視保存的位置"
+      "open": "開啟 State store"
     },
     "attention": {
       "title": "需要關注",
       "clear": "一切正常",
       "pipelineFailed": "Pipeline {{pipeline}} 失敗"
+    }
+  },
+  "stateStorePage": {
+    "title": "State store",
+    "intro": "Tapstate 把 pipeline 建立的檢視保存在 state store 中。新檢視存到預設 store。",
+    "listLabel": "State store 清單",
+    "add": "新增 store",
+    "addLimit": "此版本只支援一個 store",
+    "default": "預設",
+    "delete": "刪除",
+    "fields": {
+      "type": "類型",
+      "checks": "檢查",
+      "usage": "用量",
+      "access": "存取"
+    },
+    "managed": {
+      "name": "Tapstate state store",
+      "type": "伺服器自身的 MongoDB",
+      "access": "由伺服器管理",
+      "deleteReason": "此 store 由伺服器管理"
+    },
+    "states": {
+      "loading": "正在載入 state store…",
+      "error": "state store 載入失敗。",
+      "empty": "此伺服器沒有設定 state store。"
     }
   }
 }
