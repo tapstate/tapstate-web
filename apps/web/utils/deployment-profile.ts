@@ -6,3 +6,5 @@ export function getDeploymentProfile(
 ): DeploymentProfile {
   return mode?.trim().toLowerCase() === 'cloud' ? 'cloud' : 'on-prem'
 }
+
+export const deploymentProfile = getDeploymentProfile()
