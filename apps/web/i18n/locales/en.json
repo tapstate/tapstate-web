@@ -20,6 +20,7 @@
     }
   },
   "nav": {
+    "views": "Views",
     "overview": "Overview",
     "settings": "Settings",
     "resources": "Resources",
@@ -1099,6 +1100,91 @@
       "loading": "Loading state stores…",
       "error": "State stores could not be loaded.",
       "empty": "No state store is configured on this server."
+    }
+  },
+  "views": {
+    "title": "Views",
+    "newView": "New view",
+    "intro": "Your live operational state: every view Tapstate keeps current.",
+    "kind": {
+      "view": "View",
+      "replica": "Replica"
+    },
+    "status": {
+      "fresh": "Fresh · {{behind}} behind",
+      "stale": "Stale · {{age}}",
+      "staleUnknown": "Stale",
+      "loading": "Loading {{percent}}%",
+      "loadingUnknown": "Loading",
+      "notLoaded": "Not loaded"
+    },
+    "duration": {
+      "s": "{{value}} s",
+      "min": "{{value}} min",
+      "h": "{{value}} h",
+      "d": "{{value}} d"
+    },
+    "ago": "{{age}} ago",
+    "summary": {
+      "total_one": "{{count}} view",
+      "total_other": "{{count}} views",
+      "fresh_one": "{{count}} fresh",
+      "fresh_other": "{{count}} fresh",
+      "stale_one": "{{count}} stale",
+      "stale_other": "{{count}} stale",
+      "slowest": "slowest {{behind}} behind"
+    },
+    "table": {
+      "name": "Name",
+      "type": "Type",
+      "storedIn": "Stored in",
+      "status": "Status",
+      "documents": "Documents",
+      "lastChange": "Last change",
+      "maintainedBy": "Maintained by"
+    },
+    "storedIn": {
+      "managed": "Tapstate state store",
+      "store": "{{store}} / {{database}}"
+    },
+    "states": {
+      "loading": "Loading views…",
+      "error": "Views could not be loaded.",
+      "notReported": "This server does not list views yet. Each pipeline still shows where it writes on its own page."
+    },
+    "explainer": {
+      "empty": "No views yet. A view is a collection Tapstate keeps current from your source tables.",
+      "what": "A view is a collection Tapstate keeps current from your source tables.",
+      "flowLabel": "How a view is made",
+      "sources": "Sources",
+      "pipeline": "Pipeline",
+      "view": "View",
+      "storedIn": "Views will be stored in",
+      "storeMissing": "Not set up yet",
+      "setUp": "Set up",
+      "build": "Build a view",
+      "replicas": "Tables you mirror are listed here too, as replicas."
+    },
+    "detail": {
+      "maintainedBy": "Maintained by",
+      "notFound": "No view named {{id}} on this server.",
+      "tabsLabel": "View sections",
+      "tabs": {
+        "overview": "Overview",
+        "documents": "Documents",
+        "shape": "Shape",
+        "lineage": "Lineage",
+        "indexes": "Indexes"
+      },
+      "pending": {
+        "documents": "Browsing documents is not available on this server yet.",
+        "shape": "The document shape is not available on this server yet.",
+        "lineage": "Field lineage is not available on this server yet.",
+        "indexes": "Index details are not available on this server yet."
+      },
+      "size": "Size",
+      "largestDocument": "Largest document",
+      "collection": "Collection"
     }
   }
 }

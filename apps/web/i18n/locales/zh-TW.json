@@ -20,6 +20,7 @@
     }
   },
   "nav": {
+    "views": "檢視",
     "overview": "概覽",
     "settings": "設定",
     "resources": "資源",
@@ -1081,6 +1082,91 @@
       "loading": "正在載入 state store…",
       "error": "state store 載入失敗。",
       "empty": "此伺服器沒有設定 state store。"
+    }
+  },
+  "views": {
+    "title": "檢視",
+    "newView": "新增檢視",
+    "intro": "你的即時營運狀態：Tapstate 持續保持最新的每一個檢視。",
+    "kind": {
+      "view": "檢視",
+      "replica": "副本"
+    },
+    "status": {
+      "fresh": "最新 · 落後 {{behind}}",
+      "stale": "過期 · {{age}}",
+      "staleUnknown": "過期",
+      "loading": "載入中 {{percent}}%",
+      "loadingUnknown": "載入中",
+      "notLoaded": "未載入"
+    },
+    "duration": {
+      "s": "{{value}} 秒",
+      "min": "{{value}} 分鐘",
+      "h": "{{value}} 小時",
+      "d": "{{value}} 天"
+    },
+    "ago": "{{age}}前",
+    "summary": {
+      "total_one": "{{count}} 個檢視",
+      "total_other": "{{count}} 個檢視",
+      "fresh_one": "{{count}} 個最新",
+      "fresh_other": "{{count}} 個最新",
+      "stale_one": "{{count}} 個過期",
+      "stale_other": "{{count}} 個過期",
+      "slowest": "最慢落後 {{behind}}"
+    },
+    "table": {
+      "name": "名稱",
+      "type": "類型",
+      "storedIn": "存放於",
+      "status": "狀態",
+      "documents": "文件數",
+      "lastChange": "最近變更",
+      "maintainedBy": "維護者"
+    },
+    "storedIn": {
+      "managed": "Tapstate state store",
+      "store": "{{store}} / {{database}}"
+    },
+    "states": {
+      "loading": "正在載入檢視…",
+      "error": "檢視載入失敗。",
+      "notReported": "此伺服器暫不提供檢視清單。每條 pipeline 的頁面仍會顯示它寫到哪裡。"
+    },
+    "explainer": {
+      "empty": "還沒有檢視。檢視是 Tapstate 依據來源表持續保持最新的 collection。",
+      "what": "檢視是 Tapstate 依據來源表持續保持最新的 collection。",
+      "flowLabel": "檢視如何產生",
+      "sources": "資料來源",
+      "pipeline": "Pipeline",
+      "view": "檢視",
+      "storedIn": "檢視將存放於",
+      "storeMissing": "尚未設定",
+      "setUp": "去設定",
+      "build": "建立檢視",
+      "replicas": "鏡像的表也會以副本列在這裡。"
+    },
+    "detail": {
+      "maintainedBy": "維護者",
+      "notFound": "此伺服器上沒有名為 {{id}} 的檢視。",
+      "tabsLabel": "檢視分區",
+      "tabs": {
+        "overview": "概覽",
+        "documents": "文件",
+        "shape": "形狀",
+        "lineage": "血緣",
+        "indexes": "索引"
+      },
+      "pending": {
+        "documents": "此伺服器暫不支援瀏覽文件。",
+        "shape": "此伺服器暫不提供文件形狀。",
+        "lineage": "此伺服器暫不提供欄位血緣。",
+        "indexes": "此伺服器暫不提供索引詳情。"
+      },
+      "size": "大小",
+      "largestDocument": "最大文件",
+      "collection": "Collection"
     }
   }
 }

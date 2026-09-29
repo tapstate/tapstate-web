@@ -18,8 +18,11 @@ import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedPipelinesRouteImport } from './routes/_authenticated.pipelines'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated.settings'
 import { Route as AuthenticatedSourcesRouteImport } from './routes/_authenticated.sources'
+import { Route as AuthenticatedViewsRouteImport } from './routes/_authenticated.views'
 import { Route as AuthenticatedSourcesIndexRouteImport } from './routes/_authenticated.sources.index'
 import { Route as AuthenticatedSourcesSourceIdRouteImport } from './routes/_authenticated.sources.$sourceId'
+import { Route as AuthenticatedViewsIndexRouteImport } from './routes/_authenticated.views.index'
+import { Route as AuthenticatedViewsViewIdRouteImport } from './routes/_authenticated.views.$viewId'
 import { Route as AuthenticatedSourcesSourceIdIndexRouteImport } from './routes/_authenticated.sources.$sourceId.index'
 import { Route as AuthenticatedSourcesSourceIdTableNameRouteImport } from './routes/_authenticated.sources.$sourceId.$tableName'
 import { Route as PipelineEditorPipelinesPipelineIdEditRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit'
@@ -72,6 +75,11 @@ const AuthenticatedSourcesRoute = AuthenticatedSourcesRouteImport.update({
   path: '/sources',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedViewsRoute = AuthenticatedViewsRouteImport.update({
+  id: '/views',
+  path: '/views',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedSourcesIndexRoute =
   AuthenticatedSourcesIndexRouteImport.update({
     id: '/',
@@ -85,6 +93,17 @@ const AuthenticatedSourcesSourceIdRoute =
     id: '/$sourceId',
     path: '/$sourceId',
     getParentRoute: () => AuthenticatedSourcesRoute,
+  } as any)
+const AuthenticatedViewsIndexRoute = AuthenticatedViewsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedViewsRoute,
+} as any)
+const AuthenticatedViewsViewIdRoute =
+  AuthenticatedViewsViewIdRouteImport.update({
+    id: '/$viewId',
+    path: '/$viewId',
+    getParentRoute: () => AuthenticatedViewsRoute,
   } as any)
 const AuthenticatedSourcesSourceIdIndexRoute =
   AuthenticatedSourcesSourceIdIndexRouteImport.update({
@@ -145,8 +164,11 @@ export interface FileRoutesByFullPath {
   '/pipelines': typeof AuthenticatedPipelinesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/sources': typeof AuthenticatedSourcesRouteWithChildren
+  '/views': typeof AuthenticatedViewsRouteWithChildren
   '/sources/$sourceId': typeof AuthenticatedSourcesSourceIdRouteWithChildren
+  '/views/$viewId': typeof AuthenticatedViewsViewIdRoute
   '/sources/': typeof AuthenticatedSourcesIndexRoute
+  '/views/': typeof AuthenticatedViewsIndexRoute
   '/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
   '/pipelines/$pipelineId/edit': typeof PipelineEditorPipelinesPipelineIdEditRouteWithChildren
   '/sources/$sourceId/': typeof AuthenticatedSourcesSourceIdIndexRoute
@@ -162,7 +184,9 @@ export interface FileRoutesByTo {
   '/overview': typeof AuthenticatedOverviewRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/views/$viewId': typeof AuthenticatedViewsViewIdRoute
   '/sources': typeof AuthenticatedSourcesIndexRoute
+  '/views': typeof AuthenticatedViewsIndexRoute
   '/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
   '/sources/$sourceId': typeof AuthenticatedSourcesSourceIdIndexRoute
   '/pipelines/$pipelineId/edit/api': typeof PipelineEditorPipelinesPipelineIdEditApiRoute
@@ -181,8 +205,11 @@ export interface FileRoutesById {
   '/_authenticated/pipelines': typeof AuthenticatedPipelinesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/sources': typeof AuthenticatedSourcesRouteWithChildren
+  '/_authenticated/views': typeof AuthenticatedViewsRouteWithChildren
   '/_authenticated/sources/$sourceId': typeof AuthenticatedSourcesSourceIdRouteWithChildren
+  '/_authenticated/views/$viewId': typeof AuthenticatedViewsViewIdRoute
   '/_authenticated/sources/': typeof AuthenticatedSourcesIndexRoute
+  '/_authenticated/views/': typeof AuthenticatedViewsIndexRoute
   '/_authenticated/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
   '/_pipeline-editor/pipelines/$pipelineId/edit': typeof PipelineEditorPipelinesPipelineIdEditRouteWithChildren
   '/_authenticated/sources/$sourceId/': typeof AuthenticatedSourcesSourceIdIndexRoute
@@ -201,8 +228,11 @@ export interface FileRouteTypes {
     | '/pipelines'
     | '/settings'
     | '/sources'
+    | '/views'
     | '/sources/$sourceId'
+    | '/views/$viewId'
     | '/sources/'
+    | '/views/'
     | '/sources/$sourceId/$tableName'
     | '/pipelines/$pipelineId/edit'
     | '/sources/$sourceId/'
@@ -218,7 +248,9 @@ export interface FileRouteTypes {
     | '/overview'
     | '/pipelines'
     | '/settings'
+    | '/views/$viewId'
     | '/sources'
+    | '/views'
     | '/sources/$sourceId/$tableName'
     | '/sources/$sourceId'
     | '/pipelines/$pipelineId/edit/api'
@@ -236,8 +268,11 @@ export interface FileRouteTypes {
     | '/_authenticated/pipelines'
     | '/_authenticated/settings'
     | '/_authenticated/sources'
+    | '/_authenticated/views'
     | '/_authenticated/sources/$sourceId'
+    | '/_authenticated/views/$viewId'
     | '/_authenticated/sources/'
+    | '/_authenticated/views/'
     | '/_authenticated/sources/$sourceId/$tableName'
     | '/_pipeline-editor/pipelines/$pipelineId/edit'
     | '/_authenticated/sources/$sourceId/'
@@ -319,6 +354,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSourcesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/views': {
+      id: '/_authenticated/views'
+      path: '/views'
+      fullPath: '/views'
+      preLoaderRoute: typeof AuthenticatedViewsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/sources/': {
       id: '/_authenticated/sources/'
       path: '/'
@@ -332,6 +374,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/sources/$sourceId'
       preLoaderRoute: typeof AuthenticatedSourcesSourceIdRouteImport
       parentRoute: typeof AuthenticatedSourcesRoute
+    }
+    '/_authenticated/views/': {
+      id: '/_authenticated/views/'
+      path: '/'
+      fullPath: '/views/'
+      preLoaderRoute: typeof AuthenticatedViewsIndexRouteImport
+      parentRoute: typeof AuthenticatedViewsRoute
+    }
+    '/_authenticated/views/$viewId': {
+      id: '/_authenticated/views/$viewId'
+      path: '/$viewId'
+      fullPath: '/views/$viewId'
+      preLoaderRoute: typeof AuthenticatedViewsViewIdRouteImport
+      parentRoute: typeof AuthenticatedViewsRoute
     }
     '/_authenticated/sources/$sourceId/': {
       id: '/_authenticated/sources/$sourceId/'
@@ -417,12 +473,26 @@ const AuthenticatedSourcesRouteChildren: AuthenticatedSourcesRouteChildren = {
 const AuthenticatedSourcesRouteWithChildren =
   AuthenticatedSourcesRoute._addFileChildren(AuthenticatedSourcesRouteChildren)
 
+interface AuthenticatedViewsRouteChildren {
+  AuthenticatedViewsViewIdRoute: typeof AuthenticatedViewsViewIdRoute
+  AuthenticatedViewsIndexRoute: typeof AuthenticatedViewsIndexRoute
+}
+
+const AuthenticatedViewsRouteChildren: AuthenticatedViewsRouteChildren = {
+  AuthenticatedViewsViewIdRoute: AuthenticatedViewsViewIdRoute,
+  AuthenticatedViewsIndexRoute: AuthenticatedViewsIndexRoute,
+}
+
+const AuthenticatedViewsRouteWithChildren =
+  AuthenticatedViewsRoute._addFileChildren(AuthenticatedViewsRouteChildren)
+
 interface AuthenticatedRouteChildren {
   AuthenticatedExplorationsRoute: typeof AuthenticatedExplorationsRoute
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
   AuthenticatedPipelinesRoute: typeof AuthenticatedPipelinesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSourcesRoute: typeof AuthenticatedSourcesRouteWithChildren
+  AuthenticatedViewsRoute: typeof AuthenticatedViewsRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -431,6 +501,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPipelinesRoute: AuthenticatedPipelinesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSourcesRoute: AuthenticatedSourcesRouteWithChildren,
+  AuthenticatedViewsRoute: AuthenticatedViewsRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

@@ -20,6 +20,7 @@
     }
   },
   "nav": {
+    "views": "视图",
     "overview": "概览",
     "settings": "设置",
     "resources": "资源",
@@ -1081,6 +1082,91 @@
       "loading": "正在加载 state store…",
       "error": "state store 加载失败。",
       "empty": "此服务器没有配置 state store。"
+    }
+  },
+  "views": {
+    "title": "视图",
+    "newView": "新建视图",
+    "intro": "你的实时运营状态：Tapstate 持续保持最新的每一个视图。",
+    "kind": {
+      "view": "视图",
+      "replica": "副本"
+    },
+    "status": {
+      "fresh": "最新 · 落后 {{behind}}",
+      "stale": "过期 · {{age}}",
+      "staleUnknown": "过期",
+      "loading": "加载中 {{percent}}%",
+      "loadingUnknown": "加载中",
+      "notLoaded": "未加载"
+    },
+    "duration": {
+      "s": "{{value}} 秒",
+      "min": "{{value}} 分钟",
+      "h": "{{value}} 小时",
+      "d": "{{value}} 天"
+    },
+    "ago": "{{age}}前",
+    "summary": {
+      "total_one": "{{count}} 个视图",
+      "total_other": "{{count}} 个视图",
+      "fresh_one": "{{count}} 个最新",
+      "fresh_other": "{{count}} 个最新",
+      "stale_one": "{{count}} 个过期",
+      "stale_other": "{{count}} 个过期",
+      "slowest": "最慢落后 {{behind}}"
+    },
+    "table": {
+      "name": "名称",
+      "type": "类型",
+      "storedIn": "存放于",
+      "status": "状态",
+      "documents": "文档数",
+      "lastChange": "最近变更",
+      "maintainedBy": "维护者"
+    },
+    "storedIn": {
+      "managed": "Tapstate state store",
+      "store": "{{store}} / {{database}}"
+    },
+    "states": {
+      "loading": "正在加载视图…",
+      "error": "视图加载失败。",
+      "notReported": "此服务器暂不提供视图列表。每条 pipeline 的页面仍会显示它写到哪里。"
+    },
+    "explainer": {
+      "empty": "还没有视图。视图是 Tapstate 根据源表持续保持最新的 collection。",
+      "what": "视图是 Tapstate 根据源表持续保持最新的 collection。",
+      "flowLabel": "视图如何产生",
+      "sources": "数据源",
+      "pipeline": "Pipeline",
+      "view": "视图",
+      "storedIn": "视图将存放于",
+      "storeMissing": "尚未设置",
+      "setUp": "去设置",
+      "build": "构建视图",
+      "replicas": "镜像的表也会作为副本列在这里。"
+    },
+    "detail": {
+      "maintainedBy": "维护者",
+      "notFound": "此服务器上没有名为 {{id}} 的视图。",
+      "tabsLabel": "视图分区",
+      "tabs": {
+        "overview": "概览",
+        "documents": "文档",
+        "shape": "形状",
+        "lineage": "血缘",
+        "indexes": "索引"
+      },
+      "pending": {
+        "documents": "此服务器暂不支持浏览文档。",
+        "shape": "此服务器暂不提供文档形状。",
+        "lineage": "此服务器暂不提供字段血缘。",
+        "indexes": "此服务器暂不提供索引详情。"
+      },
+      "size": "大小",
+      "largestDocument": "最大文档",
+      "collection": "Collection"
     }
   }
 }

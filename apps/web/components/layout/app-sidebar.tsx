@@ -4,6 +4,7 @@ import { Link, useRouterState } from '@tanstack/react-router'
 import {
   Database,
   GitMerge,
+  Layers,
   LayoutDashboard,
   MessageSquareText,
   Settings,
@@ -25,6 +26,7 @@ const navigation: NavigationItem[] = [
   { labelKey: 'nav.overview', to: '/overview', icon: LayoutDashboard },
   { labelKey: 'nav.sources', to: '/sources', icon: Database },
   { labelKey: 'nav.pipelines', to: '/pipelines', icon: GitMerge },
+  { labelKey: 'nav.views', to: '/views', icon: Layers },
   { labelKey: 'nav.explorations', to: '/explorations', icon: MessageSquareText },
   { labelKey: 'nav.settings', to: '/settings', icon: Settings },
 ]
