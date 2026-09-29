@@ -780,6 +780,7 @@
         "removeAlias": "移除輸入",
         "addAlias": "新增輸入",
         "engine": "查詢引擎",
+        "builtinEngine": "內建引擎",
         "leftAlias": "左側別名",
         "rightAlias": "右側別名",
         "joinType": "連接類型",

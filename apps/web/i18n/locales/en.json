@@ -780,6 +780,7 @@
         "removeAlias": "Remove input",
         "addAlias": "Add input",
         "engine": "Query engine",
+        "builtinEngine": "Built-in",
         "leftAlias": "Left alias",
         "rightAlias": "Right alias",
         "joinType": "Join type",

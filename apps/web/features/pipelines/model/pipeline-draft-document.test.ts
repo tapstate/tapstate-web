@@ -159,4 +159,84 @@ describe('Pipeline draft document', () => {
       viewport: { x: 0, y: 0, zoom: 1 },
     })
   })
+
+  it('round-trips join and union input wiring with the durable draft', () => {
+    const joinId = 'draft:transform:join'
+    const unionId = 'draft:transform:union'
+    const configuredEditor: PipelineGraphDraft = {
+      ...editor,
+      dag: {
+        nodes: [
+          ...editor.dag.nodes,
+          { id: joinId, type: 'transform', label: 'join', detail: 'join', description: null },
+          { id: unionId, type: 'transform', label: 'union', detail: 'union', description: null },
+        ],
+        edges: editor.dag.edges,
+      },
+      configurations: new Map([
+        ...editor.configurations,
+        [
+          joinId,
+          {
+            kind: 'transform',
+            nodeId: joinId,
+            stepId: 'joined_orders',
+            transformType: 'join',
+            from: { order_rows: 'mysql.orders', customer_rows: 'mysql.customers' },
+            options: null,
+            body: { engine: 'builtin', sql: 'select * from order_rows' },
+          },
+        ],
+        [
+          unionId,
+          {
+            kind: 'transform',
+            nodeId: unionId,
+            stepId: 'all_orders',
+            transformType: 'union',
+            from: ['mysql.orders', 'mysql.archived_orders'],
+            options: null,
+            body: {},
+          },
+        ],
+      ]),
+    }
+
+    const mutation = buildPipelineDraftMutation(configuredEditor, {
+      nodes: {},
+      viewport: { x: 0, y: 0, zoom: 1 },
+    })
+    const document = pipelineDraftDocument({
+      ...mutation,
+      schemaVersion: 1,
+      revision: 2,
+      name: 'orders_to_warehouse',
+      description: mutation.description ?? null,
+      graph: mutation.graph!,
+      wizard: null,
+      baseArtifactHash: null,
+      publishedDraftRevision: null,
+      publishedArtifactHash: null,
+      createdAt: '2026-09-21T00:00:00Z',
+      updatedAt: '2026-09-21T00:00:01Z',
+      updatedBy: 'user@example.com',
+    })
+
+    expect(mutation.graph?.nodes.find((node) => node.id === joinId)?.config).toMatchObject({
+      from: { order_rows: 'mysql.orders', customer_rows: 'mysql.customers' },
+      engine: 'builtin',
+    })
+    expect(mutation.graph?.nodes.find((node) => node.id === unionId)?.config).toMatchObject({
+      from: ['mysql.orders', 'mysql.archived_orders'],
+    })
+    expect(document.editor.configurations.get(joinId)).toMatchObject({
+      kind: 'transform',
+      from: { order_rows: 'mysql.orders', customer_rows: 'mysql.customers' },
+      body: { engine: 'builtin', sql: 'select * from order_rows' },
+    })
+    expect(document.editor.configurations.get(unionId)).toMatchObject({
+      kind: 'transform',
+      from: ['mysql.orders', 'mysql.archived_orders'],
+    })
+  })
 })

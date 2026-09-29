@@ -177,6 +177,9 @@ function draftNode(
     type: configuration.transformType,
     config: {
       ...configuration.body,
+      ...(configuration.from === null || configuration.from === undefined
+        ? {}
+        : { from: configuration.from }),
       ...(configuration.options ? { options: configuration.options } : {}),
     },
     metadata: { ...metadata, editorKind: 'transform', stepId: configuration.stepId },
@@ -229,13 +232,13 @@ function editorConfiguration(
       body: node.config,
     }
   }
-  const { options, ...body } = node.config
+  const { from, options, ...body } = node.config
   return {
     kind,
     nodeId: node.id,
     stepId: text(node.metadata.stepId) ?? node.id,
     transformType: node.type,
-    from: null,
+    from: from ?? null,
     options: isObject(options) ? options : null,
     body,
   }

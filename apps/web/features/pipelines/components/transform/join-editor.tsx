@@ -35,7 +35,7 @@ export function JoinEditor({ config, onChange }: TransformEditorProps) {
   const { t } = useTranslation()
   const [aliases, setAliases] = useState(() => initialAliases(config.from))
   const [engine, setEngine] = useState(() =>
-    typeof config.body.engine === 'string' ? config.body.engine : 'duckdb',
+    typeof config.body.engine === 'string' ? config.body.engine : 'builtin',
   )
   const [sql, setSql] = useState(() => (typeof config.body.sql === 'string' ? config.body.sql : ''))
   const configurationKey = JSON.stringify({
@@ -46,7 +46,7 @@ export function JoinEditor({ config, onChange }: TransformEditorProps) {
 
   useEffect(() => {
     setAliases(initialAliases(config.from))
-    setEngine(typeof config.body.engine === 'string' ? config.body.engine : 'duckdb')
+    setEngine(typeof config.body.engine === 'string' ? config.body.engine : 'builtin')
     setSql(typeof config.body.sql === 'string' ? config.body.sql : '')
   }, [configurationKey])
 
@@ -136,7 +136,7 @@ export function JoinEditor({ config, onChange }: TransformEditorProps) {
         <TransformSelect
           label={t('pipelines.workspace.transform.engine')}
           value={engine}
-          options={[{ value: 'duckdb', label: 'DuckDB' }]}
+          options={[{ value: 'builtin', label: t('pipelines.workspace.transform.builtinEngine') }]}
           onChange={updateEngine}
         />
       </div>

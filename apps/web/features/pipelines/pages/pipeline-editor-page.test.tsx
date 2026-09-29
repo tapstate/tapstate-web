@@ -1003,7 +1003,9 @@ describe('PipelineEditorPage', () => {
     expect(createPipelineDraft.mock.calls[0]?.[1]).toMatchObject({
       graph: {
         nodes: expect.arrayContaining([
-          expect.objectContaining({ config: { expr: 'updated-expression' } }),
+          expect.objectContaining({
+            config: { expr: 'updated-expression', from: 'orders' },
+          }),
         ]),
       },
     })
