@@ -22,7 +22,9 @@ const {
   savePipelineLayout,
   updatePipeline,
   createPipelineDraft,
+  updatePipelineDraft,
   previewPipelineDraft,
+  publishPipelineDraft,
   listConnectors,
   listSources,
   PipelineClientError,
@@ -38,7 +40,9 @@ const {
   savePipelineLayout: vi.fn(),
   updatePipeline: vi.fn(),
   createPipelineDraft: vi.fn(),
+  updatePipelineDraft: vi.fn(),
   previewPipelineDraft: vi.fn(),
+  publishPipelineDraft: vi.fn(),
   listConnectors: vi.fn(),
   listSources: vi.fn(),
   PipelineClientError: class PipelineClientError extends Error {
@@ -75,7 +79,9 @@ vi.mock('@/service/pipelines/pipeline-client', () => ({
   savePipelineLayout,
   updatePipeline,
   createPipelineDraft,
+  updatePipelineDraft,
   previewPipelineDraft,
+  publishPipelineDraft,
   PipelineClientError,
 }))
 
@@ -337,11 +343,15 @@ vi.mock('./wizard-builder', () => ({
     draft,
     etag,
     readOnly,
+    runtimeObservationPending,
+    runtimeObservationError,
   }: {
     pipelineId: string
     draft: { mode: string }
     etag: string
     readOnly?: boolean
+    runtimeObservationPending?: boolean
+    runtimeObservationError?: boolean
   }) => (
     <div
       data-testid="wizard-builder"
@@ -349,6 +359,8 @@ vi.mock('./wizard-builder', () => ({
       data-draft-mode={draft.mode}
       data-etag={etag}
       data-read-only={readOnly ? 'true' : 'false'}
+      data-runtime-pending={runtimeObservationPending ? 'true' : 'false'}
+      data-runtime-error={runtimeObservationError ? 'true' : 'false'}
     />
   ),
 }))
@@ -400,6 +412,26 @@ beforeEach(() => {
     },
     etag: '"2"',
   }))
+  updatePipelineDraft.mockImplementation(async (_pipelineId, mutation) => ({
+    draft: {
+      ...mutation,
+      schemaVersion: 1,
+      revision: 3,
+      publishedDraftRevision: null,
+      publishedArtifactHash: null,
+      createdAt: '2026-09-21T00:00:00Z',
+      updatedAt: '2026-09-21T00:00:00Z',
+      updatedBy: 'test',
+    },
+    etag: '"3"',
+  }))
+  publishPipelineDraft.mockResolvedValue({
+    pipelineId: 'orders_to_warehouse',
+    revision: 3,
+    published: true,
+    artifactHash: 'a'.repeat(64),
+  })
+  runPipeline.mockResolvedValue({ pipelineId: 'orders_to_warehouse' })
   previewPipelineDraft.mockResolvedValue({
     pipelineId: 'orders_to_warehouse',
     revision: 2,
@@ -542,9 +574,10 @@ describe('PipelineEditorPage', () => {
     })
     expect(getPipeline).not.toHaveBeenCalled()
     expect(getPipelineLayout).not.toHaveBeenCalled()
+    expect(getPipelineStatus).not.toHaveBeenCalled()
   })
 
-  it('waits for runtime status before exposing an already-published editor', async () => {
+  it('keeps a published Wizard visible and read-only while runtime status is pending', async () => {
     getPipelineDraft.mockResolvedValue({
       draft: {
         pipelineId: 'orders_to_warehouse',
@@ -571,13 +604,117 @@ describe('PipelineEditorPage', () => {
 
     await renderPage()
     await vi.waitFor(() => expect(getPipelineStatus).toHaveBeenCalledTimes(1))
-    expect(document.querySelector('[data-testid="wizard-builder"]')).toBeNull()
-    expect(container?.textContent).toContain('Checking runtime status before opening the editor')
+    const wizard = document.querySelector<HTMLElement>('[data-testid="wizard-builder"]')
+    expect(wizard?.dataset.readOnly).toBe('true')
+    expect(wizard?.dataset.runtimePending).toBe('true')
+    expect(container?.textContent).not.toContain(
+      'Checking runtime status before opening the editor',
+    )
 
     await act(async () => resolveStatus?.({ pipelineId: 'orders_to_warehouse', state: 'STOPPED' }))
     await vi.waitFor(() =>
-      expect(document.querySelector('[data-testid="wizard-builder"]')).not.toBeNull(),
+      expect(
+        document.querySelector<HTMLElement>('[data-testid="wizard-builder"]')?.dataset.readOnly,
+      ).toBe('false'),
     )
+  })
+
+  it('keeps a published Wizard visible when runtime status lookup fails', async () => {
+    getPipelineDraft.mockResolvedValue({
+      draft: {
+        pipelineId: 'orders_to_warehouse',
+        schemaVersion: 1,
+        revision: 6,
+        mode: 'wizard',
+        name: 'orders_to_warehouse',
+        description: null,
+        graph: null,
+        wizard: { root: null, related: [], transforms: [], output: { kind: 'atlas', config: {} } },
+        baseArtifactHash: 'a'.repeat(64),
+        publishedDraftRevision: 6,
+        publishedArtifactHash: 'b'.repeat(64),
+        createdAt: '2026-09-21T00:00:00Z',
+        updatedAt: '2026-09-21T00:00:00Z',
+        updatedBy: 'test',
+      },
+      etag: '"6"',
+    })
+    getPipelineStatus.mockRejectedValue(new Error('Runtime query failed'))
+
+    await renderPage()
+    await vi.waitFor(() =>
+      expect(
+        document.querySelector<HTMLElement>('[data-testid="wizard-builder"]')?.dataset.runtimeError,
+      ).toBe('true'),
+    )
+    expect(
+      document.querySelector<HTMLElement>('[data-testid="wizard-builder"]')?.dataset.readOnly,
+    ).toBe('true')
+    expect(container?.textContent).not.toContain(
+      'Checking runtime status before opening the editor',
+    )
+  })
+
+  it('keeps a published DAG visible while runtime status is pending or unavailable', async () => {
+    getPipelineDraft.mockResolvedValue({
+      draft: {
+        pipelineId: 'orders_to_warehouse',
+        schemaVersion: 1,
+        revision: 3,
+        mode: 'dag',
+        name: 'orders_to_warehouse',
+        description: null,
+        graph: {
+          nodes: [
+            {
+              id: 'source:orders',
+              type: 'source',
+              sourceId: 'mysql_feynman',
+              table: 'Player',
+              config: {},
+              metadata: {},
+            },
+            {
+              id: 'target:orders',
+              type: 'target',
+              sourceId: 'mongo_out',
+              table: 'Player',
+              config: {},
+              metadata: {},
+            },
+          ],
+          edges: [{ id: 'source-to-target', source: 'source:orders', target: 'target:orders' }],
+          viewport: { x: 0, y: 0, zoom: 1 },
+        },
+        wizard: null,
+        baseArtifactHash: null,
+        publishedDraftRevision: 3,
+        publishedArtifactHash: 'a'.repeat(64),
+        createdAt: '2026-09-21T00:00:00Z',
+        updatedAt: '2026-09-21T00:00:00Z',
+        updatedBy: 'test',
+      },
+      etag: '"3"',
+    })
+    let rejectStatus: ((reason: Error) => void) | undefined
+    getPipelineStatus.mockImplementationOnce(
+      () => new Promise((_resolve, reject) => (rejectStatus = reject)),
+    )
+
+    await renderPage()
+    await vi.waitFor(() => expect(getPipelineStatus).toHaveBeenCalledTimes(1))
+    expect(document.querySelector('[data-testid="pipeline-canvas"]')).not.toBeNull()
+
+    await act(async () => rejectStatus?.(new Error('Runtime status unavailable')))
+    await vi.waitFor(() =>
+      expect(container?.textContent).toContain('Could not confirm runtime status.'),
+    )
+    expect(document.querySelector('[data-testid="pipeline-canvas"]')).not.toBeNull()
+    expect(elementWithText('button', 'Run')).toBeUndefined()
+    await act(async () => elementWithText('button', 'Retry')?.click())
+    await vi.waitFor(() => expect(getPipelineStatus).toHaveBeenCalledTimes(2))
+    await vi.waitFor(() => expect(elementWithText('button', 'Run')).toBeDefined())
+    expect(document.querySelector('[data-testid="pipeline-canvas"]')).not.toBeNull()
   })
 
   it('opens a published Wizard read-only when its runtime is active', async () => {
@@ -608,8 +745,7 @@ describe('PipelineEditorPage', () => {
         document.querySelector<HTMLElement>('[data-testid="wizard-builder"]')?.dataset.readOnly,
       ).toBe('true'),
     )
-    expect(document.querySelector('[data-testid="pipeline-readonly-banner"]')).not.toBeNull()
-    expect(elementWithText('button', 'Stop to edit')).toBeDefined()
+    expect(document.querySelector('[data-testid="pipeline-readonly-banner"]')).toBeNull()
   })
 
   it('keeps the canvas in the Build route and exposes separate workspace navigation', async () => {
@@ -624,10 +760,8 @@ describe('PipelineEditorPage', () => {
         'Running',
       ),
     )
-    expect(
-      document.querySelector('[data-testid="pipeline-readonly-banner"]')?.textContent,
-    ).toContain('This Pipeline must be stopped before editing')
-    expect(elementWithText('button', 'Stop to edit')).toBeDefined()
+    expect(document.querySelector('[data-testid="pipeline-readonly-banner"]')).toBeNull()
+    expect(elementWithText('button', 'Stop')).toBeDefined()
     expect(getPipelineStatus).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function))
     expect(elementWithText('span', 'PIPELINE')).toBeUndefined()
     expect(elementWithText('a', 'Build')?.getAttribute('href')).toBe(
@@ -875,6 +1009,34 @@ describe('PipelineEditorPage', () => {
     })
     await vi.waitFor(() =>
       expect(elementWithText('button', 'Save')?.hasAttribute('disabled')).toBe(true),
+    )
+  })
+
+  it('publishes the revision just saved when starting a dirty DAG with an older autosave result', async () => {
+    await renderPage()
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="pipeline-canvas"]')).not.toBeNull(),
+    )
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-testid="pipeline-canvas"]')?.click(),
+    )
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-testid="change-node-config"]')?.click(),
+    )
+    await act(async () => elementWithText('button', 'Save')?.click())
+    await vi.waitFor(() => expect(createPipelineDraft).toHaveBeenCalledTimes(1))
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-testid="change-node-config"]')?.click(),
+    )
+    await act(async () => elementWithText('button', 'Run')?.click())
+
+    await vi.waitFor(() => expect(updatePipelineDraft).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() => expect(publishPipelineDraft).toHaveBeenCalledTimes(1))
+    expect(publishPipelineDraft).toHaveBeenCalledWith(
+      'orders_to_warehouse',
+      3,
+      null,
+      expect.any(Function),
     )
   })
 

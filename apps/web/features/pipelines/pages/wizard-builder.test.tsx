@@ -170,7 +170,12 @@ beforeEach(() => {
     published: true,
   })
   getPipelineDraft.mockResolvedValue({
-    draft: { ...initialDraft, revision: 2, publishedArtifactHash: 'a'.repeat(64) },
+    draft: {
+      ...initialDraft,
+      revision: 2,
+      publishedDraftRevision: 2,
+      publishedArtifactHash: 'a'.repeat(64),
+    },
     etag: '"2"',
   })
   runPipeline.mockResolvedValue({ targetState: 'RUNNING' })
@@ -184,6 +189,79 @@ afterEach(() => {
 })
 
 describe('WizardBuilder publish flow', () => {
+  it('shows runtime lookup progress and failure in the dock while keeping the Wizard mounted', async () => {
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const publishedDraft = { ...initialDraft, publishedDraftRevision: 1 }
+    const onRetryRuntimeObservation = vi.fn()
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder
+            pipelineId={publishedDraft.pipelineId}
+            draft={publishedDraft}
+            etag='"1"'
+            readOnly
+            runtimeObservationPending
+            onRetryRuntimeObservation={onRetryRuntimeObservation}
+          />
+        </QueryClientProvider>,
+      )
+    })
+    await vi.waitFor(() =>
+      expect(container?.querySelector('[data-workflow-header]')).not.toBeNull(),
+    )
+    expect(container?.querySelector('[data-read-only="true"]')).not.toBeNull()
+    expect(container?.querySelector('[data-workflow-header]')?.textContent).toContain(
+      'Checking runtime status',
+    )
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder
+            pipelineId={publishedDraft.pipelineId}
+            draft={publishedDraft}
+            etag='"1"'
+            readOnly
+            runtimeObservationError
+            onRetryRuntimeObservation={onRetryRuntimeObservation}
+          />
+        </QueryClientProvider>,
+      )
+    })
+    expect(container?.querySelector('[data-workflow-header]')?.textContent).toContain(
+      'Could not confirm runtime status',
+    )
+    await act(async () => {
+      Array.from(
+        container?.querySelectorAll<HTMLButtonElement>('[data-workflow-header] button') || [],
+      )
+        .find((button) => button.textContent?.includes('Retry'))
+        ?.click()
+    })
+    expect(onRetryRuntimeObservation).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder
+            pipelineId={publishedDraft.pipelineId}
+            draft={publishedDraft}
+            etag='"1"'
+            readOnly
+            runtimeStatus="RUNNING"
+          />
+        </QueryClientProvider>,
+      )
+    })
+    expect(container?.querySelector('[data-workflow-header]')?.textContent).toContain('Running')
+    expect(container?.querySelector('[data-workflow-header]')?.textContent).not.toContain('Retry')
+  })
+
   it('does not allow edits, autosave, or publish while the runtime is active', async () => {
     container = document.createElement('div')
     document.body.append(container)
@@ -226,6 +304,44 @@ describe('WizardBuilder publish flow', () => {
     expect(previewPipelineDraft).not.toHaveBeenCalled()
     expect(publishPipelineDraft).not.toHaveBeenCalled()
     expect(runPipeline).not.toHaveBeenCalled()
+  })
+
+  it('saves a Wizard draft without previewing, publishing, or starting it', async () => {
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries')
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={initialDraft.pipelineId} draft={initialDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await act(async () => new Promise((resolve) => window.setTimeout(resolve, 50)))
+
+    await act(async () => {
+      container?.querySelector<HTMLButtonElement>('[data-testid="change-wizard"]')?.click()
+    })
+    await act(async () => {
+      Array.from(
+        container?.querySelectorAll<HTMLButtonElement>('[data-workflow-header] button') || [],
+      )
+        .find((button) => button.textContent?.trim() === 'Save')
+        ?.click()
+      await Promise.resolve()
+    })
+    await vi.waitFor(() => expect(updatePipelineDraft).toHaveBeenCalledTimes(1))
+
+    expect(previewPipelineDraft).not.toHaveBeenCalled()
+    expect(publishPipelineDraft).not.toHaveBeenCalled()
+    expect(runPipeline).not.toHaveBeenCalled()
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['pipelines', 'drafts'] })
+    expect(invalidateQueries).not.toHaveBeenCalledWith({
+      queryKey: ['pipelines', initialDraft.pipelineId, 'status'],
+    })
   })
 
   it('autosaves a transform draft, previews, publishes, then starts it', async () => {
@@ -293,6 +409,13 @@ describe('WizardBuilder publish flow', () => {
       expect.any(Function),
     )
     expect(runPipeline).toHaveBeenCalledWith(initialDraft.pipelineId, expect.any(Function))
+    expect(
+      queryClient.getQueryData<{ draft: PipelineDraft }>([
+        'pipelines',
+        initialDraft.pipelineId,
+        'draft-status',
+      ])?.draft.publishedDraftRevision,
+    ).toBe(2)
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: ['pipelines', initialDraft.pipelineId, 'status'],
     })
@@ -300,6 +423,83 @@ describe('WizardBuilder publish flow', () => {
       queryKey: ['pipelines', initialDraft.pipelineId],
     })
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['pipelines'] })
+  })
+
+  it('keeps a keyless upsert draft saved and explains how to make it publishable', async () => {
+    const keylessDraft: PipelineDraft = {
+      ...initialDraft,
+      wizard: {
+        ...initialDraft.wizard!,
+        root: { id: 'root', sourceId: 'mysql', table: 'BB_0727', key: [], preTransforms: [] },
+        output: {
+          kind: 'source',
+          config: { sourceId: 'mysql', table: 'k2', writeMode: 'upsert' },
+        },
+      },
+    }
+    getSourceSchema.mockResolvedValue({
+      tables: [{ name: 'BB_0727', primaryKey: [], fields: [{ name: 'payload' }] }],
+    })
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={keylessDraft.pipelineId} draft={keylessDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await act(async () => new Promise((resolve) => window.setTimeout(resolve, 50)))
+    await act(async () => {
+      Array.from(
+        container?.querySelectorAll<HTMLButtonElement>('[data-workflow-header] button') || [],
+      )
+        .find((button) => button.textContent?.includes('Save & start'))
+        ?.click()
+      await Promise.resolve()
+    })
+
+    expect(container?.querySelector('[role="alert"]')?.textContent).toContain('mysql.BB_0727')
+    expect(container?.querySelector('[role="alert"]')?.textContent).toContain('Append')
+    expect(previewPipelineDraft).not.toHaveBeenCalled()
+    expect(publishPipelineDraft).not.toHaveBeenCalled()
+    expect(runPipeline).not.toHaveBeenCalled()
+  })
+
+  it('keeps the Wizard and failure reason visible when starting fails', async () => {
+    runPipeline.mockRejectedValueOnce(new Error('Runtime is unavailable'))
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={initialDraft.pipelineId} draft={initialDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await vi.waitFor(() =>
+      expect(container?.querySelector('[data-workflow-header]')).not.toBeNull(),
+    )
+    await act(async () => {
+      Array.from(
+        container?.querySelectorAll<HTMLButtonElement>('[data-workflow-header] button') || [],
+      )
+        .find((button) => button.textContent?.includes('Save & start'))
+        ?.click()
+    })
+    await vi.waitFor(() =>
+      expect(container?.querySelector('[role="alert"]')?.textContent).toContain(
+        'Runtime is unavailable',
+      ),
+    )
+    expect(container?.querySelector('.wizard-reference-editor-column')).not.toBeNull()
+    expect(container?.querySelector('[data-workflow-header]')?.textContent).toContain(
+      'Runtime is unavailable',
+    )
   })
 
   it('shows startup feedback and treats a concurrent start as success when already RUNNING', async () => {

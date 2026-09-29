@@ -10,23 +10,34 @@
   --wizard-primary-hover: #1d4ed8;
   --wizard-control-radius: var(--radius);
   --wizard-card-radius: 16px;
-  --wizard-panel-radius: 12px;
+  --wizard-panel-radius: var(--radius-xl);
   --wizard-control-height: 32px;
   --wizard-preview-width: 440px;
   --wizard-canvas-gutter: 24px;
   --wizard-preview-margin: 8px;
-  --wizard-actionbar-height: 3rem;
-  --wizard-actionbar-surface: color-mix(in srgb, var(--background) 82%, transparent);
+  --wizard-actionbar-height: 4.5rem;
+  --wizard-action-dock-height: 3.25rem;
+  --wizard-action-dock-surface: color-mix(in srgb, var(--pipeline-actionbar-bg) 50%, transparent);
+  --wizard-action-dock-rim: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--background) 54%, transparent) 0%,
+    color-mix(in srgb, var(--pipeline-nav-glass-highlight) 38%, transparent) 28%,
+    color-mix(in srgb, var(--pipeline-text) 5%, transparent) 76%,
+    color-mix(in srgb, var(--background) 24%, transparent) 100%
+  );
+  --wizard-action-dock-lift:
+    0 16px 38px color-mix(in srgb, var(--pipeline-text) 10%, transparent),
+    0 3px 9px color-mix(in srgb, var(--pipeline-text) 5%, transparent);
+  --wizard-mobile-gutter: 1rem;
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   font-weight: 400;
   color: #111827;
   min-height: 0;
 }
-.wizard-reference button {
-  border-radius: var(--wizard-control-radius);
-}
-.wizard-reference .wizard-reference-panel-radius {
-  border-radius: var(--wizard-panel-radius);
+@layer components {
+  .wizard-reference button {
+    border-radius: var(--wizard-control-radius);
+  }
 }
 .wizard-reference .wizard-reference-relation-radius {
   border-radius: var(--wizard-card-radius);
@@ -70,12 +81,80 @@
   height: var(--wizard-actionbar-height);
   flex: 0 0 var(--wizard-actionbar-height);
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   margin-top: calc(-1 * var(--wizard-actionbar-height));
-  padding: 0 var(--wizard-preview-margin) 0 var(--wizard-canvas-gutter);
-  background-color: var(--wizard-actionbar-surface);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  box-sizing: border-box;
+  padding: 0 var(--wizard-canvas-gutter) 0.75rem;
+  background: transparent;
+  pointer-events: none;
+}
+.wizard-reference .pipeline-workflow-action-dock__filters {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+.wizard-reference .pipeline-workflow-action-dock {
+  position: relative;
+  isolation: isolate;
+  pointer-events: auto;
+  display: flex;
+  width: min(100%, 36rem);
+  min-width: 0;
+  height: var(--wizard-action-dock-height);
+  flex: 0 1 auto;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-inline: auto;
+  padding: 0 0.75rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-2xl);
+  background: var(--wizard-action-dock-surface);
+  box-shadow: var(--wizard-action-dock-lift);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+}
+@supports (backdrop-filter: url('#pipeline-workflow-action-dock-refraction')) {
+  .wizard-reference .pipeline-workflow-action-dock {
+    -webkit-backdrop-filter: blur(20px) saturate(180%)
+      url('#pipeline-workflow-action-dock-refraction');
+    backdrop-filter: blur(20px) saturate(180%) url('#pipeline-workflow-action-dock-refraction');
+  }
+}
+.wizard-reference .pipeline-workflow-action-dock::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid transparent;
+  background: var(--wizard-action-dock-rim) border-box;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  content: '';
+  pointer-events: none;
+}
+.wizard-reference .pipeline-workflow-action-dock > * {
+  position: relative;
+  z-index: 1;
+}
+.wizard-reference .wizard-reference-action-dock__status {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.625rem;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.wizard-reference .pipeline-workflow-action-dock [role='toolbar'] {
+  flex: 0 0 auto;
 }
 .wizard-reference .wizard-reference-canvas {
   padding: var(--wizard-canvas-gutter) 0 var(--wizard-canvas-gutter) var(--wizard-canvas-gutter);
@@ -146,6 +225,12 @@
     min-height: 360px;
     flex: none;
     margin: 0 var(--wizard-preview-margin) var(--wizard-preview-margin);
+  }
+  .wizard-reference .pipeline-workflow-header--sticky {
+    padding-inline: var(--wizard-mobile-gutter);
+  }
+  .wizard-reference .pipeline-workflow-action-dock {
+    width: 100%;
   }
   .wizard-reference .grid-cols-2 {
     grid-template-columns: minmax(0, 1fr);

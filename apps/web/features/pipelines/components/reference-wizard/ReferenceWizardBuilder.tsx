@@ -78,6 +78,7 @@ export interface TableMeta {
   name: string
   primaryKey: string
   keys?: string[]
+  discovered?: boolean
   rowCount: string
   columns: string[]
   defaultKey?: string
@@ -1167,7 +1168,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
             {activeAddChildForRelId === rel.id && (
               <div className="relative">
                 <div className="absolute top-5 -left-4 w-4 border-b border-dashed border-purple-300" />
-                <div className="animate-in fade-in zoom-in-95 wizard-reference-panel-radius border-2 border-purple-400 bg-white p-4 text-[12px] shadow-sm">
+                <div className="animate-in fade-in zoom-in-95 rounded-xl border-2 border-purple-400 bg-white p-4 text-[12px] shadow-sm">
                   <div className="mb-3 flex items-center justify-between border-b border-gray-100 pb-2">
                     <div className="flex items-center gap-1.5 text-[13px] font-semibold text-gray-900">
                       <Plus className="h-4 w-4 text-purple-600" />
@@ -1748,7 +1749,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                       </div>
                     ) : (
                       /* INLINE FORM CARD (When open) */
-                      <div className="animate-in fade-in zoom-in-95 wizard-reference-panel-radius border-2 border-blue-400 bg-white p-4 text-[12px] shadow-md">
+                      <div className="animate-in fade-in zoom-in-95 rounded-xl border-2 border-blue-400 bg-white p-4 text-[12px] shadow-md">
                         <div className="mb-3 flex items-center justify-between border-b border-gray-100 pb-2">
                           <div className="flex items-center gap-1.5 text-[13px] font-semibold text-gray-900">
                             <Plus className="h-4 w-4 text-blue-600" />
@@ -1989,7 +1990,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   id="step-doc-process"
                   onClick={() => setActiveContext('doc_process')}
                   className={cn(
-                    'wizard-reference-panel-radius cursor-pointer border bg-white p-4 shadow-xs transition-all duration-150',
+                    'cursor-pointer rounded-xl border bg-white p-4 shadow-xs transition-all duration-150',
                     activeContext === 'doc_process'
                       ? 'border-blue-500 ring-1 ring-blue-500/20'
                       : 'border-gray-200 hover:border-gray-300',
@@ -2048,7 +2049,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   id="step-destination"
                   onClick={() => setActiveContext('destination')}
                   className={cn(
-                    'wizard-reference-panel-radius cursor-pointer border bg-white p-4 shadow-xs transition-all duration-150',
+                    'cursor-pointer rounded-xl border bg-white p-4 shadow-xs transition-all duration-150',
                     activeContext === 'destination'
                       ? 'border-blue-500 ring-1 ring-blue-500/20'
                       : 'border-gray-200 hover:border-gray-300',
@@ -2186,7 +2187,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
         </div>
 
         {/* Right Side: Real-time Live Result Preview (Original w-[440px]) */}
-        <aside className="wizard-reference-preview flex flex-col bg-white">
+        <aside className="wizard-reference-preview flex flex-col rounded-xl bg-white">
           {/* Preview Header */}
           <div className="flex h-11 shrink-0 items-center justify-between border-b border-gray-200 bg-gray-50/50 px-4">
             <div className="flex items-center gap-2">
@@ -2290,7 +2291,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       {/* COMPILED PLAN MODAL (Pure JSON) */}
       {showPlanModal && (
         <div className="backdrop-blur-2xs fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="animate-in fade-in wizard-reference-panel-radius flex max-h-[80vh] w-full max-w-xl flex-col overflow-hidden border border-gray-200 bg-white shadow-xl">
+          <div className="animate-in fade-in flex max-h-[80vh] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-3">
               <div className="flex items-center gap-2">
                 <FileCode className="h-4 w-4 text-blue-600" />

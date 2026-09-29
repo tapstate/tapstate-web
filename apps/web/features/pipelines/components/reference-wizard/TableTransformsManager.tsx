@@ -249,7 +249,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                 key={type}
                 type="button"
                 onClick={() => handleCreateStep(type)}
-                className="group wizard-reference-panel-radius flex cursor-pointer flex-col justify-between border border-gray-200 bg-white p-3 text-left transition-all duration-150 hover:border-blue-400 hover:bg-blue-50/20 hover:shadow-xs"
+                className="group flex cursor-pointer flex-col justify-between rounded-xl border border-gray-200 bg-white p-3 text-left transition-all duration-150 hover:border-blue-400 hover:bg-blue-50/20 hover:shadow-xs"
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -281,7 +281,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
 
       {/* Step Selector Card (When Adding) */}
       {isAddingStep && transforms.length > 0 && (
-        <div className="animate-in fade-in zoom-in-95 wizard-reference-panel-radius space-y-3 border-2 border-blue-400 bg-white p-3.5 shadow-sm">
+        <div className="animate-in fade-in zoom-in-95 space-y-3 rounded-xl border-2 border-blue-400 bg-white p-3.5 shadow-sm">
           <div className="flex items-center justify-between border-b border-gray-100 pb-2">
             <div>
               <h4 className="text-[13px] font-semibold text-gray-900">
@@ -314,7 +314,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                   type="button"
                   onClick={() => handleCreateStep(type)}
                   className={cn(
-                    'group wizard-reference-panel-radius flex cursor-pointer flex-col justify-between border p-2.5 text-left transition-all duration-150 hover:shadow-xs',
+                    'group flex cursor-pointer flex-col justify-between rounded-xl border p-2.5 text-left transition-all duration-150 hover:shadow-xs',
                     'border-gray-200 bg-gray-50/70 hover:border-blue-300 hover:bg-white',
                   )}
                 >
@@ -357,7 +357,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
             <div
               key={step.id}
               className={cn(
-                'wizard-reference-panel-radius overflow-hidden border bg-white shadow-2xs transition-all duration-150',
+                'overflow-hidden rounded-xl border bg-white shadow-2xs transition-all duration-150',
                 step.isExpanded
                   ? 'border-gray-300 ring-1 ring-black/5'
                   : 'border-gray-200 hover:border-gray-300',
@@ -640,7 +640,7 @@ const FilterEditor: React.FC<FilterEditorProps> = ({ config, columns, onChange }
   }
 
   return (
-    <div className="wizard-reference-panel-radius space-y-3 border border-amber-200/70 bg-amber-50/30 p-3.5">
+    <div className="space-y-3 rounded-xl border border-amber-200/70 bg-amber-50/30 p-3.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Filter className="h-3.5 w-3.5 text-amber-600" />
@@ -854,7 +854,7 @@ const MapEditor: React.FC<MapEditorProps> = ({ config, columns, onChange }) => {
   }
 
   return (
-    <div className="wizard-reference-panel-radius space-y-3 border border-blue-200/70 bg-blue-50/30 p-3.5">
+    <div className="space-y-3 rounded-xl border border-blue-200/70 bg-blue-50/30 p-3.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Layers className="h-3.5 w-3.5 text-blue-600" />
@@ -1002,7 +1002,7 @@ interface UnwindEditorProps {
 const UnwindEditor: React.FC<UnwindEditorProps> = ({ config, columns, onChange }) => {
   const { t } = useTranslation()
   return (
-    <div className="wizard-reference-panel-radius space-y-3 border border-purple-200/70 bg-purple-50/30 p-3.5">
+    <div className="space-y-3 rounded-xl border border-purple-200/70 bg-purple-50/30 p-3.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Workflow className="h-3.5 w-3.5 text-purple-600" />
@@ -1157,7 +1157,7 @@ interface JsEditorProps {
 const JsEditor: React.FC<JsEditorProps> = ({ config, onChange }) => {
   const { t } = useTranslation()
   return (
-    <div className="wizard-reference-panel-radius space-y-3 border border-emerald-200/70 bg-emerald-50/30 p-3.5">
+    <div className="space-y-3 rounded-xl border border-emerald-200/70 bg-emerald-50/30 p-3.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <FileCode2 className="h-3.5 w-3.5 text-emerald-600" />
@@ -1170,7 +1170,7 @@ const JsEditor: React.FC<JsEditorProps> = ({ config, onChange }) => {
         </span>
       </div>
 
-      <div className="wizard-reference-panel-radius space-y-2 border border-slate-700 bg-slate-900 p-3 shadow-inner">
+      <div className="space-y-2 rounded-xl border border-slate-700 bg-slate-900 p-3 shadow-inner">
         <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 text-[11px] text-slate-400">
           <div className="flex items-center gap-2">
             <Code className="h-3.5 w-3.5 text-emerald-400" />
@@ -1275,7 +1275,7 @@ const UnionEditor: React.FC<UnionEditorProps> = ({
   }
 
   return (
-    <div className="wizard-reference-panel-radius space-y-3 border border-rose-200/70 bg-rose-50/30 p-3.5">
+    <div className="space-y-3 rounded-xl border border-rose-200/70 bg-rose-50/30 p-3.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Sparkles className="h-3.5 w-3.5 text-rose-600" />

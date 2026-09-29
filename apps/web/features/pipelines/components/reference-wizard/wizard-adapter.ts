@@ -10,6 +10,22 @@ const text = (v: unknown): string => (typeof v === 'string' ? v : '')
 const array = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
 const strings = (v: unknown): string[] => array(v).filter((x): x is string => typeof x === 'string')
 
+export function summarizeWizard(value: PipelineJsonObject | null) {
+  const wizard = object(value)
+  const related = array(wizard.related).map(object)
+  const transforms = [
+    ...array(object(wizard.root).preTransforms),
+    ...related.flatMap((relation) => array(relation.preTransforms)),
+    ...array(wizard.transforms),
+  ]
+
+  return {
+    rootTable: text(object(wizard.root).table),
+    relatedCount: related.length,
+    transformCount: transforms.length,
+  }
+}
+
 export function readTransforms(value: unknown): TransformStep[] {
   return array(value).flatMap((raw) => {
     const t = object(raw),
@@ -128,6 +144,27 @@ export function wizardPublicationIssue(value: PipelineJsonObject | null): string
       return 'The current server cannot compile computed field expressions yet. Your configuration is saved as a draft; publishing is blocked to avoid writing expression strings as data.'
     if (t.type === 'filter' && !text(object(t.fields).expr).trim())
       return 'Complete the filter expression before publishing.'
+  }
+  return null
+}
+
+/** The server cannot upsert rows from a discovered input table without a primary key. */
+export function wizardUpsertKeylessInput(
+  value: PipelineJsonObject | null,
+  catalog: DataSourceMeta[],
+) {
+  const wizard = object(value)
+  const output = object(object(wizard.output).config)
+  if ((text(output.writeMode) || 'upsert') !== 'upsert') return null
+  const inputs = [object(wizard.root), ...array(wizard.related).map(object)]
+  for (const input of inputs) {
+    const sourceId = text(input.sourceId)
+    const table = text(input.table)
+    const metadata = catalog
+      .find((source) => source.id === sourceId)
+      ?.tables.find((candidate) => candidate.name === table)
+    if (metadata?.discovered && (metadata.keys ? metadata.keys.length === 0 : !metadata.primaryKey))
+      return { sourceId, table }
   }
   return null
 }

@@ -2,9 +2,81 @@ import { describe, expect, it } from 'vitest'
 
 import type { WizardViewState } from './ReferenceWizardBuilder'
 
-import { readWizard, writeWizard } from './wizard-adapter'
+import {
+  readWizard,
+  summarizeWizard,
+  writeWizard,
+  wizardUpsertKeylessInput,
+} from './wizard-adapter'
 
 describe('Wizard post-assembly transforms', () => {
+  it('identifies only discovered keyless inputs when the destination upserts', () => {
+    const catalog = [
+      {
+        id: 'mysql',
+        name: 'MySQL',
+        badge: 'mysql',
+        tables: [
+          {
+            name: 'orders',
+            primaryKey: 'id',
+            keys: ['id'],
+            discovered: true,
+            rowCount: '—',
+            columns: [],
+          },
+          {
+            name: 'events',
+            primaryKey: '',
+            keys: [],
+            discovered: true,
+            rowCount: '—',
+            columns: [],
+          },
+          {
+            name: 'unknown',
+            primaryKey: '',
+            keys: [],
+            discovered: false,
+            rowCount: '—',
+            columns: [],
+          },
+        ],
+      },
+    ]
+    const wizard = {
+      root: { sourceId: 'mysql', table: 'orders' },
+      related: [{ sourceId: 'mysql', table: 'events' }],
+      output: { config: { writeMode: 'upsert' } },
+    }
+    expect(wizardUpsertKeylessInput(wizard, catalog)).toEqual({
+      sourceId: 'mysql',
+      table: 'events',
+    })
+    expect(
+      wizardUpsertKeylessInput({ ...wizard, output: { config: { writeMode: 'append' } } }, catalog),
+    ).toBeNull()
+    expect(
+      wizardUpsertKeylessInput(
+        { ...wizard, related: [], root: { sourceId: 'mysql', table: 'unknown' } },
+        catalog,
+      ),
+    ).toBeNull()
+  })
+
+  it('summarizes root, related-table, and post-assembly transforms for the action dock', () => {
+    expect(
+      summarizeWizard({
+        root: { table: 'customers', preTransforms: [{ type: 'filter' }] },
+        related: [
+          { table: 'orders', preTransforms: [{ type: 'map' }, { type: 'unwind' }] },
+          { table: 'profiles', preTransforms: [] },
+        ],
+        transforms: [{ type: 'js' }],
+      }),
+    ).toEqual({ rootTable: 'customers', relatedCount: 2, transformCount: 4 })
+  })
+
   it('round-trips ordered transforms through the Wizard document', () => {
     const state: WizardViewState = {
       root: {

@@ -1,10 +1,11 @@
 import type { ComponentType, SVGProps } from 'react'
 
 import { Link, useRouterState } from '@tanstack/react-router'
-import { Database, GitMerge, MessageSquareText, Server, Terminal } from 'lucide-react'
+import { Database, GitMerge, MessageSquareText, Table2, Terminal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
+import { getDeploymentProfile } from '@/utils/deployment-profile'
 
 import { AppHeader } from './app-header'
 
@@ -17,7 +18,9 @@ interface NavigationItem {
 const navigation: NavigationItem[] = [
   { labelKey: 'nav.sources', to: '/sources', icon: Database },
   { labelKey: 'nav.pipelines', to: '/pipelines', icon: GitMerge },
-  { labelKey: 'nav.destinations', to: '/destinations', icon: Server },
+  ...(getDeploymentProfile() === 'cloud'
+    ? [{ labelKey: 'nav.views', to: '/views', icon: Table2 }]
+    : []),
   { labelKey: 'nav.explorations', to: '/explorations', icon: MessageSquareText },
 ]
 

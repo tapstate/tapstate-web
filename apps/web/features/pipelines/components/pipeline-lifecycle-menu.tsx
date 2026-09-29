@@ -218,7 +218,9 @@ export function PipelineLifecycleMenu({
           variant="outline"
           size="sm"
           disabled={pending}
-          className="gap-2"
+          aria-busy={pending}
+          aria-label={t('pipelines.lifecycle.stopPipeline', { id: pipelineId })}
+          className="text-destructive hover:bg-destructive/10 hover:text-destructive gap-2"
           onClick={() => requestAction('stop')}
         >
           {pending ? (
@@ -226,7 +228,7 @@ export function PipelineLifecycleMenu({
           ) : (
             <Square aria-hidden="true" />
           )}
-          {t('pipelines.lifecycle.stopBeforeEdit')}
+          {pending ? t('pipelines.lifecycle.stopping') : t('pipelines.lifecycle.stop')}
         </Button>
       ) : (
         <div className="pipeline-list__lifecycle-menu">

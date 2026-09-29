@@ -86,6 +86,11 @@
     color-scheme: light;
 
     --radius: 0.625rem;
+    --app-shell-canvas: #eff0f1;
+    --app-shell-background:
+      radial-gradient(circle at 10% 5%, rgb(255 255 255 / 80%), transparent 30%),
+      radial-gradient(circle at 14% 88%, rgb(255 255 255 / 22%), transparent 34%),
+      linear-gradient(145deg, #eff0f1 0%, #e9eaec 48%, #e3e5e8 100%);
     --background: oklch(1 0 0);
     --foreground: oklch(0% 0 0);
     --card: oklch(1 0 0);
@@ -282,6 +287,10 @@
   .dark {
     color-scheme: dark;
 
+    --app-shell-canvas: #141517;
+    --app-shell-background:
+      radial-gradient(circle at 10% 5%, rgb(255 255 255 / 5%), transparent 30%),
+      linear-gradient(145deg, #131417 0%, #16171a 48%, #101113 100%);
     --background: oklch(0.145 0 0);
     --foreground: oklch(0.985 0 0);
     --card: oklch(0.205 0 0);
@@ -438,16 +447,15 @@
     height: 100%;
     margin: 0;
     overflow-x: hidden;
+    background-color: var(--app-shell-canvas);
   }
 
   body {
     overflow: hidden;
-    background: var(--app-bg);
     color: var(--app-text);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-    @apply bg-background text-foreground;
   }
 
   ::-webkit-scrollbar {

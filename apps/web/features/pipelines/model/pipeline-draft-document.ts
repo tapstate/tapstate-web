@@ -21,16 +21,28 @@ export interface PipelineDraftDocument {
   hasPublishedRevision: boolean
 }
 
+export interface PipelineDraftBasicInfo {
+  name: string
+  description: string | null
+}
+
+export type SavePipelineDraftBasicInfo = (
+  basicInfo: PipelineDraftBasicInfo,
+) => Promise<{ draft: PipelineDraft; etag: string }>
+
 /** Converts the editor's clean graph and transient canvas coordinates to one durable draft document. */
 export function buildPipelineDraftMutation(
   editor: PipelineGraphDraft,
   layout: Pick<PipelineLayout, 'nodes' | 'viewport'>,
+  basicInfo?: PipelineDraftBasicInfo,
 ): PipelineDraftMutation {
   return {
     pipelineId: editor.pipeline.id,
     mode: 'dag',
-    name: editor.pipeline.id,
-    description: editor.pipeline.metadata?.description ?? null,
+    name: basicInfo?.name ?? editor.pipeline.id,
+    description: basicInfo
+      ? basicInfo.description
+      : (editor.pipeline.metadata?.description ?? null),
     graph: {
       nodes: editor.dag.nodes.map((node) => {
         const configuration = editor.configurations.get(node.id)

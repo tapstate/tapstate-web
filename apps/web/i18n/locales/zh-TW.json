@@ -29,7 +29,7 @@
     "admin": "管理",
     "sources": "資料來源",
     "pipelines": "流水線",
-    "destinations": "目的地",
+    "views": "Views",
     "explorations": "探索"
   },
   "context": {
@@ -487,7 +487,7 @@
       "stop": "停止",
       "startFailed": "流水線啟動失敗。",
       "stopFailed": "流水線停止失敗。",
-      "stopBeforeEdit": "停止後編輯",
+      "stopping": "正在停止…",
       "confirmStopTitle": "停止 {{id}}？",
       "confirmStopBody": "選擇保留已儲存的進度和算子狀態供下次執行續接，或清除它們並從頭開始。停止 Pipeline 不會刪除目標端資料。",
       "cancel": "取消",
@@ -552,8 +552,6 @@
       "skipToCanvas": "跳至 Pipeline 畫布",
       "loading": "正在載入 Pipeline 畫布",
       "readOnly": {
-        "title": "請先停止 Pipeline，再編輯",
-        "description": "目前執行狀態：{{state}}。請先停止 Pipeline，再修改設定。",
         "editorStatus": "停止執行前，Pipeline 設定為唯讀。"
       },
       "back": "Pipelines",
@@ -609,7 +607,19 @@
         "monitoring": "監控",
         "addNode": "新增節點",
         "collapse": "收合工作區導覽",
-        "expand": "展開工作區導覽"
+        "expand": "展開工作區導覽",
+        "editBasicInfo": "編輯 Pipeline 資訊",
+        "editTitle": "編輯 Pipeline 資訊",
+        "editDescription": "修改此工作區中顯示的名稱和描述。",
+        "nameLabel": "名稱",
+        "descriptionLabel": "描述",
+        "nameRequired": "請輸入 Pipeline 名稱。",
+        "save": "儲存",
+        "saving": "儲存中…",
+        "cancel": "取消",
+        "closeEditor": "關閉 Pipeline 資訊編輯",
+        "saveFailed": "無法儲存 Pipeline 資訊。",
+        "editorLoading": "Pipeline 編輯器仍在載入。"
       },
       "nodeSelector": {
         "title": "新增節點",
@@ -912,7 +922,6 @@
       "runtime": {
         "eyebrow": "執行資訊",
         "loading": "正在載入觀測資料",
-        "checkingBeforeEdit": "正在確認執行狀態，確認後將開啟編輯器…",
         "state": "狀態",
         "offsets": "Source 位點",
         "emptyMetrics": "此 Pipeline 尚未發布指標。",
@@ -1261,11 +1270,25 @@
     "autosaving": "正在儲存草稿…",
     "autosaved": "草稿已儲存",
     "autosaveError": "草稿儲存失敗",
+    "unsavedChanges": "有未儲存的變更",
+    "actionSummary": "{{relatedCount}} 個關聯資料表 · {{transformCount}} 個處理步驟",
     "savePipeline": "儲存",
     "startPipeline": "儲存並啟動",
     "starting": "正在啟動 Pipeline…",
+    "startPhases": {
+      "saving": "正在儲存草稿…",
+      "validating": "正在檢查設定…",
+      "publishing": "正在發佈 Pipeline…",
+      "starting": "正在啟動 Pipeline…",
+      "checking": "正在確認執行狀態…"
+    },
+    "checkingRuntime": "正在確認執行狀態…",
+    "runtimeStatusError": "無法確認執行狀態。",
     "alreadyRunning": "草稿已儲存並發布，但此 Pipeline 已在執行。請先停止目前的執行，再啟動新版本。",
-    "errors": { "save": "無法建立 Pipeline，請重試。" },
+    "errors": {
+      "save": "無法建立 Pipeline，請重試。",
+      "upsertNeedsKey": "{{sourceId}}.{{table}} 沒有主鍵。若目標支援追加寫入，請將寫入模式改為 Append；否則請先為來源資料表新增主鍵。"
+    },
     "transforms": {
       "filter": "篩選資料列",
       "map": "映射欄位",
@@ -1309,43 +1332,62 @@
       "transform": "轉換"
     }
   },
-  "destinations": {
-    "eyebrow": "寫入目標",
-    "title": "目的地",
-    "subtitle": "用來承載 Pipeline 物化資料的唯一 Atlas 目的地。",
-    "manageSources": "管理連線",
-    "manageAtlas": "管理 Atlas",
-    "configure": "設定 Atlas",
-    "atlas": "MongoDB Atlas",
-    "refresh": "重新整理 Schema",
-    "selectedTable": "目前資料表",
-    "noTablesBody": "連接 Atlas 叢集後重新整理 Schema。",
-    "schemaEmpty": "這個資料表目前尚未發現欄位。",
-    "all": "全部目的地",
-    "ready": "可寫入",
-    "openSource": "開啟連線",
-    "endpoint": "位址",
-    "endpointUnavailable": "位址已隱藏",
-    "tables": "資料表",
-    "connector": "連接器",
-    "catalogEyebrow": "目標目錄",
-    "tableTitle": "可用資料表",
-    "schemaUnavailable": "Schema 暫不可用，請在資料來源頁面重新整理此連線。",
-    "noTables": "沒有可用的目標資料表設定。",
-    "unnamedTable": "未命名資料表",
-    "fields": "{{count}} 個欄位",
-    "fieldsUnknown": "尚未發現欄位",
-    "search": { "label": "搜尋目的地", "placeholder": "搜尋目的地..." },
+  "views": {
+    "title": "Views",
+    "subtitle": "瀏覽 Tapstate 在雲端版狀態儲存中持續維護的集合。",
+    "refresh": "重新整理",
+    "materialized": "已物化",
+    "explorer": "VIEW 集合",
+    "detailTabs": "View 詳情",
+    "search": {
+      "label": "搜尋 Views",
+      "placeholder": "搜尋 Views...",
+      "empty": "沒有符合的 View。"
+    },
     "empty": {
-      "title": "連接你的 Atlas 目的地",
-      "body": "建立 Pipeline 前，請先設定一個 MongoDB Atlas 連線。",
-      "selectTitle": "選擇一個目的地",
-      "selectBody": "選擇連線以查看它的目標資料表。"
+      "title": "尚無物化 View",
+      "body": "建立並啟動 Pipeline，即可在雲端版狀態儲存中持續維護一個集合。",
+      "action": "開啟 Pipelines"
     },
     "states": {
-      "loading": "正在載入目的地",
-      "error": "目的地無法使用",
-      "errorBody": "無法載入連線目錄。"
+      "loading": "正在載入 Views...",
+      "error": "無法載入 Views。"
+    },
+    "stats": {
+      "documents": "預估文件數",
+      "storage": "儲存大小",
+      "loading": "正在載入...",
+      "error": "無法取得集合統計資料。"
+    },
+    "tabs": {
+      "preview": "資料預覽",
+      "model": "模型",
+      "lineage": "血緣"
+    },
+    "preview": {
+      "title": "最近文件",
+      "loading": "正在讀取文件樣例...",
+      "error": "無法預覽文件。",
+      "empty": "此集合目前沒有可預覽的文件。",
+      "rows": "{{count}} 筆樣例",
+      "moreAvailable": "還有更多文件"
+    },
+    "model": {
+      "title": "集合欄位",
+      "description": "目前已發現的物化 View 欄位。",
+      "fieldCount": "{{count}} 個欄位",
+      "field": "欄位",
+      "sampleType": "樣例型別",
+      "empty": "目前樣例中沒有欄位。",
+      "undiscovered": "伺服器尚未發現此 View 的欄位。"
+    },
+    "lineage": {
+      "title": "維護 Pipeline",
+      "description": "維護此 View 的 Pipeline 上游資料表。",
+      "feeds": "讀取自",
+      "loading": "正在載入 Pipeline 血緣...",
+      "unavailable": "此伺服器尚未提供該 View 的 Pipeline 血緣。",
+      "noSources": "沒有上游資料表資訊。"
     }
   },
   "notFound": {

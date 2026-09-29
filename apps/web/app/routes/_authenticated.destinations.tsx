@@ -1,11 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Navigate } from '@tanstack/react-router'
 
-import { DestinationsPage } from '@/features/destinations/destinations-page'
+import { getDeploymentProfile } from '@/utils/deployment-profile'
 
 export const Route = createFileRoute('/_authenticated/destinations')({
-  component: DestinationsRouteComponent,
+  component: LegacyDestinationsRouteComponent,
 })
 
-function DestinationsRouteComponent() {
-  return <DestinationsPage />
+function LegacyDestinationsRouteComponent() {
+  return <Navigate replace to={getDeploymentProfile() === 'cloud' ? '/views' : '/pipelines'} />
 }

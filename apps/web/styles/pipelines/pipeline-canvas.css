@@ -13,7 +13,6 @@
 }
 
 .pipeline-workflow-container {
-  background: var(--pipeline-canvas-bg);
   --pipeline-form-label: rgb(53 64 82);
   --pipeline-form-fill: rgb(200 206 218 / 25%);
   --pipeline-form-placeholder: rgb(16 24 40 / 30%);
@@ -29,7 +28,6 @@
   --pipeline-workspace-gutter: 0.25rem;
   --pipeline-workspace-panel-radius: 0.5rem;
 
-  background: var(--pipeline-canvas-bg);
   color: var(--pipeline-text);
 }
 

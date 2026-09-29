@@ -127,11 +127,23 @@ export function usePipelineDraftAutosave({
     void saveLatest(true).catch(() => undefined)
   }, [saveLatest])
 
+  const saveMutation = useCallback(
+    (nextMutation: PipelineDraftMutation) => {
+      mutationRef.current = nextMutation
+      generationRef.current += 1
+      pendingRef.current = true
+      setHasPendingChanges(true)
+      return saveLatest()
+    },
+    [saveLatest],
+  )
+
   return {
     isSaving,
     hasPendingChanges,
     lastResult,
     saveLatest,
+    saveMutation,
     flushOnPageClose,
   }
 }

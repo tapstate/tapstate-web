@@ -29,7 +29,7 @@
     "admin": "Admin",
     "sources": "Data Sources",
     "pipelines": "Pipelines",
-    "destinations": "Destinations",
+    "views": "Views",
     "explorations": "Explorations"
   },
   "context": {
@@ -481,7 +481,7 @@
       "stop": "Stop",
       "startFailed": "Pipeline could not be started.",
       "stopFailed": "Pipeline could not be stopped.",
-      "stopBeforeEdit": "Stop to edit",
+      "stopping": "Stopping…",
       "confirmStopTitle": "Stop {{id}}?",
       "confirmStopBody": "Choose whether to keep saved progress and operator state for the next run, or clear them and start fresh. Pipeline stop never deletes data from the destination.",
       "cancel": "Cancel",
@@ -552,8 +552,6 @@
       "skipToCanvas": "Skip to Pipeline canvas",
       "loading": "Loading Pipeline canvas",
       "readOnly": {
-        "title": "This Pipeline must be stopped before editing",
-        "description": "Runtime state: {{state}}. Stop the Pipeline before changing its configuration.",
         "editorStatus": "Pipeline configuration is read-only until the runtime is stopped."
       },
       "back": "Pipelines",
@@ -609,7 +607,19 @@
         "monitoring": "Monitoring",
         "addNode": "Add node",
         "collapse": "Collapse workspace navigation",
-        "expand": "Expand workspace navigation"
+        "expand": "Expand workspace navigation",
+        "editBasicInfo": "Edit pipeline details",
+        "editTitle": "Edit pipeline details",
+        "editDescription": "Update the name and description shown in this workspace.",
+        "nameLabel": "Name",
+        "descriptionLabel": "Description",
+        "nameRequired": "Enter a pipeline name.",
+        "save": "Save",
+        "saving": "Saving…",
+        "cancel": "Cancel",
+        "closeEditor": "Close pipeline details",
+        "saveFailed": "Could not save pipeline details.",
+        "editorLoading": "The Pipeline editor is still loading."
       },
       "nodeSelector": {
         "title": "Add node",
@@ -933,7 +943,6 @@
       "runtime": {
         "eyebrow": "Operations",
         "loading": "Loading observation",
-        "checkingBeforeEdit": "Checking runtime status before opening the editor…",
         "state": "State",
         "offsets": "Source offsets",
         "emptyMetrics": "No metrics have been published for this Pipeline.",
@@ -1290,11 +1299,25 @@
     "autosaving": "Saving changes to draft…",
     "autosaved": "Draft saved",
     "autosaveError": "Draft save failed",
+    "unsavedChanges": "Unsaved changes",
+    "actionSummary": "{{relatedCount}} related tables · {{transformCount}} Transform steps",
     "savePipeline": "Save",
     "startPipeline": "Save & start",
     "starting": "Starting pipeline…",
+    "startPhases": {
+      "saving": "Saving draft…",
+      "validating": "Checking configuration…",
+      "publishing": "Publishing pipeline…",
+      "starting": "Starting pipeline…",
+      "checking": "Checking runtime status…"
+    },
+    "checkingRuntime": "Checking runtime status…",
+    "runtimeStatusError": "Could not confirm runtime status.",
     "alreadyRunning": "The draft is saved and published, but this Pipeline is already running. Stop the current run before starting the new revision.",
-    "errors": { "save": "The pipeline could not be created. Try again." },
+    "errors": {
+      "save": "The pipeline could not be created. Try again.",
+      "upsertNeedsKey": "{{sourceId}}.{{table}} has no primary key. Choose Append for the destination if it supports Append, or add a primary key before starting."
+    },
     "transforms": {
       "filter": "Filter rows",
       "map": "Map fields",
@@ -1338,43 +1361,62 @@
       "transform": "Transform"
     }
   },
-  "destinations": {
-    "eyebrow": "Write targets",
-    "title": "Destinations",
-    "subtitle": "Your single Atlas destination for materialized Pipeline data.",
-    "manageSources": "Manage connections",
-    "manageAtlas": "Manage Atlas",
-    "configure": "Configure Atlas",
-    "atlas": "MongoDB Atlas",
-    "refresh": "Refresh schema",
-    "selectedTable": "Selected table",
-    "noTablesBody": "Refresh the schema after connecting your Atlas cluster.",
-    "schemaEmpty": "No fields have been discovered for this table yet.",
-    "all": "All destinations",
-    "ready": "Ready for writes",
-    "openSource": "Open connection",
-    "endpoint": "Endpoint",
-    "endpointUnavailable": "Endpoint hidden",
-    "tables": "Tables",
-    "connector": "Connector",
-    "catalogEyebrow": "Target catalog",
-    "tableTitle": "Available tables",
-    "schemaUnavailable": "Schema is not available yet. Refresh this connection from Sources.",
-    "noTables": "No configured target tables are available.",
-    "unnamedTable": "Unnamed table",
-    "fields": "{{count}} fields",
-    "fieldsUnknown": "Fields not discovered",
-    "search": { "label": "Search destinations", "placeholder": "Search destinations..." },
+  "views": {
+    "title": "Views",
+    "subtitle": "Browse the collections Tapstate materializes in your Cloud state store.",
+    "refresh": "Refresh",
+    "materialized": "Materialized",
+    "explorer": "VIEW COLLECTIONS",
+    "detailTabs": "View details",
+    "search": {
+      "label": "Search views",
+      "placeholder": "Search views...",
+      "empty": "No views match this search."
+    },
     "empty": {
-      "title": "Connect your Atlas destination",
-      "body": "Configure one MongoDB Atlas connection before creating a Pipeline.",
-      "selectTitle": "Select a destination",
-      "selectBody": "Choose a connection to inspect its target tables."
+      "title": "No materialized views yet",
+      "body": "Create and start a Pipeline to keep a collection current in your Cloud state store.",
+      "action": "Open Pipelines"
     },
     "states": {
-      "loading": "Loading destinations",
-      "error": "Destinations are unavailable",
-      "errorBody": "The connection catalog could not be loaded."
+      "loading": "Loading views...",
+      "error": "Views could not be loaded."
+    },
+    "stats": {
+      "documents": "Estimated documents",
+      "storage": "Storage size",
+      "loading": "Loading...",
+      "error": "Collection statistics are unavailable."
+    },
+    "tabs": {
+      "preview": "Data preview",
+      "model": "Model",
+      "lineage": "Lineage"
+    },
+    "preview": {
+      "title": "Recent documents",
+      "loading": "Loading a sample of documents...",
+      "error": "Document preview is unavailable.",
+      "empty": "This collection has no documents to preview.",
+      "rows": "{{count}} sample rows",
+      "moreAvailable": "More documents exist"
+    },
+    "model": {
+      "title": "Collection fields",
+      "description": "Fields discovered for this materialized view.",
+      "fieldCount": "{{count}} fields",
+      "field": "Field",
+      "sampleType": "Sample type",
+      "empty": "No fields were found in the current sample.",
+      "undiscovered": "The server has not discovered this view's fields yet."
+    },
+    "lineage": {
+      "title": "Maintained by",
+      "description": "Upstream source tables from the Pipeline that maintains this view.",
+      "feeds": "reads from",
+      "loading": "Loading Pipeline lineage...",
+      "unavailable": "Pipeline lineage is not available for this view on this server.",
+      "noSources": "No upstream source tables were reported."
     }
   },
   "notFound": {

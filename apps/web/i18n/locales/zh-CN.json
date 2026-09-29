@@ -29,7 +29,7 @@
     "admin": "管理",
     "sources": "数据源",
     "pipelines": "流水线",
-    "destinations": "目的地",
+    "views": "Views",
     "explorations": "探索"
   },
   "context": {
@@ -481,7 +481,7 @@
       "stop": "停止",
       "startFailed": "流水线启动失败。",
       "stopFailed": "流水线停止失败。",
-      "stopBeforeEdit": "停止后编辑",
+      "stopping": "正在停止…",
       "confirmStopTitle": "停止 {{id}}？",
       "confirmStopBody": "选择保留已保存的进度和算子状态供下次运行续接，或清除它们并从头开始。停止 Pipeline 不会删除目标端数据。",
       "cancel": "取消",
@@ -552,8 +552,6 @@
       "skipToCanvas": "跳到 Pipeline 画布",
       "loading": "正在加载 Pipeline 画布",
       "readOnly": {
-        "title": "请先停止 Pipeline，再编辑",
-        "description": "当前运行状态：{{state}}。请先停止 Pipeline，再修改配置。",
         "editorStatus": "停止运行前，Pipeline 配置为只读。"
       },
       "back": "Pipelines",
@@ -609,7 +607,19 @@
         "monitoring": "监控",
         "addNode": "添加节点",
         "collapse": "收起工作区导航",
-        "expand": "展开工作区导航"
+        "expand": "展开工作区导航",
+        "editBasicInfo": "编辑 Pipeline 信息",
+        "editTitle": "编辑 Pipeline 信息",
+        "editDescription": "修改此工作区中显示的名称和描述。",
+        "nameLabel": "名称",
+        "descriptionLabel": "描述",
+        "nameRequired": "请输入 Pipeline 名称。",
+        "save": "保存",
+        "saving": "保存中…",
+        "cancel": "取消",
+        "closeEditor": "关闭 Pipeline 信息编辑",
+        "saveFailed": "无法保存 Pipeline 信息。",
+        "editorLoading": "Pipeline 编辑器仍在加载。"
       },
       "nodeSelector": {
         "title": "添加节点",
@@ -912,7 +922,6 @@
       "runtime": {
         "eyebrow": "运行信息",
         "loading": "正在加载观测数据",
-        "checkingBeforeEdit": "正在确认运行状态，确认后将打开编辑器…",
         "state": "状态",
         "offsets": "Source 位点",
         "emptyMetrics": "此 Pipeline 尚未发布指标。",
@@ -1261,11 +1270,25 @@
     "autosaving": "正在保存草稿…",
     "autosaved": "草稿已保存",
     "autosaveError": "草稿保存失败",
+    "unsavedChanges": "有未保存的更改",
+    "actionSummary": "{{relatedCount}} 个关联表 · {{transformCount}} 个处理步骤",
     "savePipeline": "保存",
     "startPipeline": "保存并启动",
     "starting": "正在启动 Pipeline…",
+    "startPhases": {
+      "saving": "正在保存草稿…",
+      "validating": "正在检查配置…",
+      "publishing": "正在发布 Pipeline…",
+      "starting": "正在启动 Pipeline…",
+      "checking": "正在确认运行状态…"
+    },
+    "checkingRuntime": "正在确认运行状态…",
+    "runtimeStatusError": "无法确认运行状态。",
     "alreadyRunning": "草稿已保存并发布，但此 Pipeline 已在运行。请先停止当前运行，再启动新版本。",
-    "errors": { "save": "无法创建 Pipeline，请重试。" },
+    "errors": {
+      "save": "无法创建 Pipeline，请重试。",
+      "upsertNeedsKey": "{{sourceId}}.{{table}} 没有主键。若目标支持追加写入，请将写入模式改为 Append；否则请先为源表添加主键。"
+    },
     "transforms": {
       "filter": "过滤行",
       "map": "映射字段",
@@ -1309,43 +1332,62 @@
       "transform": "转换"
     }
   },
-  "destinations": {
-    "eyebrow": "写入目标",
-    "title": "目的地",
-    "subtitle": "用于承载 Pipeline 物化数据的唯一 Atlas 目的地。",
-    "manageSources": "管理连接",
-    "manageAtlas": "管理 Atlas",
-    "configure": "配置 Atlas",
-    "atlas": "MongoDB Atlas",
-    "refresh": "刷新 Schema",
-    "selectedTable": "当前表",
-    "noTablesBody": "连接 Atlas 集群后刷新 Schema。",
-    "schemaEmpty": "这个表暂时还没有发现字段。",
-    "all": "全部目的地",
-    "ready": "可写入",
-    "openSource": "打开连接",
-    "endpoint": "地址",
-    "endpointUnavailable": "地址已隐藏",
-    "tables": "表",
-    "connector": "连接器",
-    "catalogEyebrow": "目标目录",
-    "tableTitle": "可用表",
-    "schemaUnavailable": "Schema 暂不可用，请在数据源页面刷新此连接。",
-    "noTables": "没有可用的目标表配置。",
-    "unnamedTable": "未命名表",
-    "fields": "{{count}} 个字段",
-    "fieldsUnknown": "尚未发现字段",
-    "search": { "label": "搜索目的地", "placeholder": "搜索目的地..." },
+  "views": {
+    "title": "Views",
+    "subtitle": "查看 Tapstate 在云版状态存储中持续维护的集合。",
+    "refresh": "刷新",
+    "materialized": "已物化",
+    "explorer": "VIEW 集合",
+    "detailTabs": "View 详情",
+    "search": {
+      "label": "搜索 Views",
+      "placeholder": "搜索 Views...",
+      "empty": "没有匹配的 View。"
+    },
     "empty": {
-      "title": "连接你的 Atlas 目的地",
-      "body": "创建 Pipeline 前，请先配置一个 MongoDB Atlas 连接。",
-      "selectTitle": "选择一个目的地",
-      "selectBody": "选择一个连接以查看它的目标表。"
+      "title": "还没有物化 View",
+      "body": "创建并启动 Pipeline，即可在云版状态存储中持续维护一个集合。",
+      "action": "打开 Pipelines"
     },
     "states": {
-      "loading": "正在加载目的地",
-      "error": "目的地不可用",
-      "errorBody": "无法加载连接目录。"
+      "loading": "正在加载 Views...",
+      "error": "无法加载 Views。"
+    },
+    "stats": {
+      "documents": "预计文档数",
+      "storage": "存储大小",
+      "loading": "正在加载...",
+      "error": "无法获取集合统计信息。"
+    },
+    "tabs": {
+      "preview": "数据预览",
+      "model": "模型",
+      "lineage": "血缘"
+    },
+    "preview": {
+      "title": "最近文档",
+      "loading": "正在读取文档样例...",
+      "error": "无法预览文档。",
+      "empty": "此集合暂无可预览的文档。",
+      "rows": "{{count}} 行样例",
+      "moreAvailable": "还有更多文档"
+    },
+    "model": {
+      "title": "集合字段",
+      "description": "当前发现的物化 View 字段。",
+      "fieldCount": "{{count}} 个字段",
+      "field": "字段",
+      "sampleType": "样例类型",
+      "empty": "当前样例中没有字段。",
+      "undiscovered": "服务器尚未发现此 View 的字段。"
+    },
+    "lineage": {
+      "title": "维护 Pipeline",
+      "description": "维护此 View 的 Pipeline 上游数据表。",
+      "feeds": "读取自",
+      "loading": "正在加载 Pipeline 血缘...",
+      "unavailable": "此服务器暂未提供该 View 的 Pipeline 血缘。",
+      "noSources": "没有上游数据表信息。"
     }
   },
   "notFound": {

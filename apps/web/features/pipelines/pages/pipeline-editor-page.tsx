@@ -10,6 +10,7 @@ import {
   LoaderCircle,
   PanelLeftClose,
   PanelLeftOpen,
+  Pencil,
   Radio,
   ScrollText,
   Workflow,
@@ -21,13 +22,26 @@ import {
   useMemo,
   useRef,
   useState,
+  type FormEvent,
   type CSSProperties,
   type ReactNode,
 } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import {
+  createPipelineDraft,
   getPipelineDraft,
   getPipeline,
   getPipelineLayout,
@@ -35,8 +49,11 @@ import {
   previewPipelineDraft,
   publishPipelineDraft,
   runPipeline,
+  updatePipelineDraft,
   type PipelineLayout,
   PipelineClientError,
+  type PipelineDraft,
+  type PipelineDraftMutation,
   type PipelineRuntimeState,
 } from '@/service/pipelines/pipeline-client'
 import { getSourceSchema, listConnectors, listSources } from '@/service/source-client'
@@ -61,10 +78,18 @@ import type {
 
 import { PipelineLifecycleMenu } from '../components/pipeline-lifecycle-menu'
 import { PipelineStatusBadge } from '../components/pipeline-status-badge'
-import { usePipelineDraftAutosave } from '../hooks/use-pipeline-draft-autosave'
+import {
+  usePipelineDraftAutosave,
+  type PipelineDraftSaveResult,
+} from '../hooks/use-pipeline-draft-autosave'
 import { PipelineLogsPage } from '../logs/pipeline-logs-page'
 import { getDeploymentProfile } from '../model/deployment-profile'
-import { buildPipelineDraftMutation, pipelineDraftDocument } from '../model/pipeline-draft-document'
+import {
+  buildPipelineDraftMutation,
+  pipelineDraftDocument,
+  type PipelineDraftBasicInfo,
+  type SavePipelineDraftBasicInfo,
+} from '../model/pipeline-draft-document'
 import {
   addPipelineNodes,
   createPipelineGraphDraft,
@@ -298,121 +323,278 @@ function WorkspaceNavLink({
 
 function PipelineWorkspaceNav({
   pipelineId,
+  basicInfo,
   activeSection,
   collapsed,
   onCollapsedChange,
   status,
+  canEditBasicInfo,
+  onSaveBasicInfo,
 }: {
   pipelineId: string
+  basicInfo: PipelineDraftBasicInfo
   activeSection: PipelineWorkspaceSection
   collapsed: boolean
   onCollapsedChange: (collapsed: boolean) => void
   status?: PipelineRuntimeState
+  canEditBasicInfo: boolean
+  onSaveBasicInfo: SavePipelineDraftBasicInfo
 }) {
   const { t } = useTranslation()
+  const [editOpen, setEditOpen] = useState(false)
+  const [name, setName] = useState(basicInfo.name)
+  const [description, setDescription] = useState(basicInfo.description ?? '')
+  const [savePending, setSavePending] = useState(false)
+  const [saveError, setSaveError] = useState('')
+
+  function openBasicInfoEditor() {
+    setName(basicInfo.name)
+    setDescription(basicInfo.description ?? '')
+    setSaveError('')
+    setEditOpen(true)
+  }
+
+  async function saveBasicInfo(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const normalizedName = name.trim()
+    if (!normalizedName) {
+      setSaveError(t('pipelines.workspace.navigation.nameRequired'))
+      return
+    }
+
+    const nextBasicInfo = {
+      name: normalizedName,
+      description: description.trim() || null,
+    }
+    if (
+      nextBasicInfo.name === basicInfo.name &&
+      nextBasicInfo.description === basicInfo.description
+    ) {
+      setEditOpen(false)
+      return
+    }
+
+    setSavePending(true)
+    setSaveError('')
+    try {
+      await onSaveBasicInfo(nextBasicInfo)
+      setEditOpen(false)
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : t('pipelines.workspace.navigation.saveFailed'),
+      )
+    } finally {
+      setSavePending(false)
+    }
+  }
 
   return (
-    <aside
-      className={cn(
-        'pipeline-workspace__navigation relative flex h-full shrink-0 overflow-hidden transition-[width] duration-150 motion-reduce:transition-none',
-        collapsed ? 'w-14' : 'w-62 max-md:w-52 max-sm:w-14',
-      )}
-      data-testid="workspace-navigation"
-      data-collapsed={collapsed}
-    >
-      <div className="pipeline-workspace__navigation-panel flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg px-3 py-3">
-        <div
-          className={cn('flex h-10 items-center', collapsed ? 'justify-center' : 'justify-between')}
-        >
-          <Link
-            to="/pipelines"
+    <>
+      <aside
+        className={cn(
+          'pipeline-workspace__navigation relative flex h-full shrink-0 overflow-hidden transition-[width] duration-150 motion-reduce:transition-none',
+          collapsed ? 'w-14' : 'w-62 max-md:w-52 max-sm:w-14',
+        )}
+        data-testid="workspace-navigation"
+        data-collapsed={collapsed}
+      >
+        <div className="pipeline-workspace__navigation-panel flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg px-3 py-3">
+          <div
             className={cn(
-              'inline-flex h-8 shrink-0 items-center rounded-lg text-slate-700 transition-[background-color,transform] hover:bg-slate-100 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95',
-              collapsed
-                ? 'size-8 justify-center'
-                : 'max-w-full gap-1 px-1.5 max-sm:size-8 max-sm:justify-center max-sm:gap-0 max-sm:px-0',
+              'flex h-10 items-center',
+              collapsed ? 'justify-center' : 'justify-between',
             )}
-            aria-label={t('pipelines.workspace.back')}
           >
-            <ChevronLeft className="size-4 shrink-0" aria-hidden="true" />
+            <Link
+              to="/pipelines"
+              className={cn(
+                'inline-flex h-8 shrink-0 items-center rounded-lg text-slate-700 transition-[background-color,transform] hover:bg-slate-100 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95',
+                collapsed
+                  ? 'size-8 justify-center'
+                  : 'max-w-full gap-1 px-1.5 max-sm:size-8 max-sm:justify-center max-sm:gap-0 max-sm:px-0',
+              )}
+              aria-label={t('pipelines.workspace.back')}
+            >
+              <ChevronLeft className="size-4 shrink-0" aria-hidden="true" />
+              {!collapsed && (
+                <span
+                  className="min-w-0 truncate text-[13px] font-semibold text-slate-800 max-sm:sr-only"
+                  data-testid="workspace-navigation-title"
+                >
+                  {t('nav.pipelines')}
+                </span>
+              )}
+            </Link>
             {!collapsed && (
-              <span
-                className="min-w-0 truncate text-[13px] font-semibold text-slate-800 max-sm:sr-only"
-                data-testid="workspace-navigation-title"
+              <button
+                type="button"
+                className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-[background-color,color,transform] hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-sm:hidden"
+                aria-label={t('pipelines.workspace.navigation.collapse')}
+                onClick={() => onCollapsedChange(true)}
               >
-                {t('nav.pipelines')}
-              </span>
+                <PanelLeftClose className="size-4" aria-hidden="true" />
+              </button>
             )}
-          </Link>
-          {!collapsed && (
+          </div>
+
+          {collapsed && (
             <button
               type="button"
-              className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-[background-color,color,transform] hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-sm:hidden"
-              aria-label={t('pipelines.workspace.navigation.collapse')}
-              onClick={() => onCollapsedChange(true)}
+              className="mt-1 inline-flex size-10 shrink-0 items-center justify-center self-center rounded-lg text-slate-400 transition-[background-color,color,transform] hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-sm:hidden"
+              aria-label={t('pipelines.workspace.navigation.expand')}
+              onClick={() => onCollapsedChange(false)}
             >
-              <PanelLeftClose className="size-4" aria-hidden="true" />
+              <PanelLeftOpen className="size-4" aria-hidden="true" />
             </button>
           )}
-        </div>
 
-        {collapsed && (
-          <button
-            type="button"
-            className="mt-1 inline-flex size-10 shrink-0 items-center justify-center self-center rounded-lg text-slate-400 transition-[background-color,color,transform] hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95 max-sm:hidden"
-            aria-label={t('pipelines.workspace.navigation.expand')}
-            onClick={() => onCollapsedChange(false)}
+          <div
+            className={cn(
+              'mt-5 flex items-start gap-3 px-2 max-sm:justify-center max-sm:px-0',
+              collapsed && 'justify-center px-0',
+            )}
           >
-            <PanelLeftOpen className="size-4" aria-hidden="true" />
-          </button>
-        )}
-
-        <div
-          className={cn(
-            'mt-5 flex items-start gap-3 px-2 max-sm:justify-center max-sm:px-0',
-            collapsed && 'justify-center px-0',
-          )}
-        >
-          <span className="pipeline-workspace__identity-mark mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg">
-            <Workflow className="size-4" aria-hidden="true" />
-          </span>
-          {!collapsed && (
-            <div className="flex min-w-0 flex-1 flex-col gap-1 max-sm:sr-only">
-              <span className="block max-w-full min-w-0 truncate text-[13px] leading-5 font-semibold text-slate-800">
-                {pipelineId}
-              </span>
-              <PipelineStatusBadge status={status} />
-            </div>
-          )}
-        </div>
-
-        <nav className="mt-7 space-y-1" aria-label={t('pipelines.workspace.navigation.label')}>
-          {workspaceNavigation.map((item) => {
-            const Icon = item.icon
-            return (
-              <div
-                key={item.section}
-                className={cn(
-                  'pipeline-workspace__nav-row flex h-10 items-center gap-1 rounded-lg',
-                  item.section === activeSection && 'pipeline-workspace__nav-row--active',
-                )}
-              >
-                <WorkspaceNavLink
-                  pipelineId={pipelineId}
-                  section={item.section}
-                  activeSection={activeSection}
-                >
-                  <Icon className="size-4 shrink-0" aria-hidden="true" />
-                  <span className={cn('max-sm:sr-only', collapsed && 'sr-only')}>
-                    {t(item.labelKey)}
+            <span className="pipeline-workspace__identity-mark mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg max-sm:hidden">
+              <Workflow className="size-4" aria-hidden="true" />
+            </span>
+            {!collapsed && (
+              <div className="flex min-w-0 flex-1 items-start justify-between gap-1 max-sm:sr-only">
+                <div className="flex min-w-0 flex-col gap-1">
+                  <span
+                    className="block max-w-full min-w-0 truncate text-[13px] leading-5 font-semibold text-slate-800"
+                    title={basicInfo.name}
+                  >
+                    {basicInfo.name}
                   </span>
-                </WorkspaceNavLink>
+                  <PipelineStatusBadge status={status} />
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="-mt-1 shrink-0"
+                  aria-label={t('pipelines.workspace.navigation.editBasicInfo')}
+                  disabled={!canEditBasicInfo}
+                  onClick={openBasicInfoEditor}
+                >
+                  <Pencil aria-hidden="true" />
+                </Button>
               </div>
-            )
-          })}
-        </nav>
-      </div>
-    </aside>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="hidden shrink-0 max-sm:inline-flex"
+              aria-label={t('pipelines.workspace.navigation.editBasicInfo')}
+              disabled={!canEditBasicInfo}
+              onClick={openBasicInfoEditor}
+            >
+              <Pencil aria-hidden="true" />
+            </Button>
+          </div>
+
+          <nav className="mt-7 space-y-1" aria-label={t('pipelines.workspace.navigation.label')}>
+            {workspaceNavigation.map((item) => {
+              const Icon = item.icon
+              return (
+                <div
+                  key={item.section}
+                  className={cn(
+                    'pipeline-workspace__nav-row flex h-10 items-center gap-1 rounded-lg',
+                    item.section === activeSection && 'pipeline-workspace__nav-row--active',
+                  )}
+                >
+                  <WorkspaceNavLink
+                    pipelineId={pipelineId}
+                    section={item.section}
+                    activeSection={activeSection}
+                  >
+                    <Icon className="size-4 shrink-0" aria-hidden="true" />
+                    <span className={cn('max-sm:sr-only', collapsed && 'sr-only')}>
+                      {t(item.labelKey)}
+                    </span>
+                  </WorkspaceNavLink>
+                </div>
+              )
+            })}
+          </nav>
+        </div>
+      </aside>
+
+      <Dialog
+        open={editOpen}
+        onOpenChange={(open) => {
+          if (!savePending) setEditOpen(open)
+        }}
+      >
+        <DialogContent
+          className="sm:max-w-md"
+          closeDisabled={savePending}
+          closeLabel={t('pipelines.workspace.navigation.closeEditor')}
+        >
+          <form className="contents" onSubmit={(event) => void saveBasicInfo(event)}>
+            <DialogHeader>
+              <DialogTitle>{t('pipelines.workspace.navigation.editTitle')}</DialogTitle>
+              <DialogDescription>
+                {t('pipelines.workspace.navigation.editDescription')}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <label className="text-sm font-medium" htmlFor="pipeline-basic-info-name">
+                  {t('pipelines.workspace.navigation.nameLabel')}
+                </label>
+                <Input
+                  id="pipeline-basic-info-name"
+                  autoFocus
+                  autoComplete="off"
+                  required
+                  maxLength={120}
+                  value={name}
+                  aria-invalid={Boolean(saveError) && !name.trim()}
+                  disabled={savePending}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-sm font-medium" htmlFor="pipeline-basic-info-description">
+                  {t('pipelines.workspace.navigation.descriptionLabel')}
+                </label>
+                <Textarea
+                  id="pipeline-basic-info-description"
+                  rows={4}
+                  value={description}
+                  disabled={savePending}
+                  onChange={(event) => setDescription(event.target.value)}
+                />
+              </div>
+              {saveError && (
+                <p className="text-destructive text-sm" role="alert">
+                  {saveError}
+                </p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={savePending}
+                onClick={() => setEditOpen(false)}
+              >
+                {t('pipelines.workspace.navigation.cancel')}
+              </Button>
+              <Button type="submit" disabled={savePending || !name.trim()}>
+                {savePending && <LoaderCircle className="animate-spin" aria-hidden="true" />}
+                {savePending
+                  ? t('pipelines.workspace.navigation.saving')
+                  : t('pipelines.workspace.navigation.save')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
@@ -422,12 +604,14 @@ function PipelineOrchestrationPage({
   runtimeObservationPending,
   runtimeObservationError,
   onRetryRuntimeObservation,
+  onRegisterBasicInfoSaver,
 }: {
   pipelineId: string
   runtimeStatus?: PipelineRuntimeState
   runtimeObservationPending: boolean
   runtimeObservationError: boolean
   onRetryRuntimeObservation: () => void
+  onRegisterBasicInfoSaver: (save: SavePipelineDraftBasicInfo | null) => void
 }) {
   const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
@@ -440,26 +624,43 @@ function PipelineOrchestrationPage({
   const [layoutDraft, setLayoutDraft] = useState<Pick<PipelineLayout, 'nodes' | 'viewport'> | null>(
     null,
   )
+  const [basicInfoRevision, setBasicInfoRevision] = useState(0)
   const surfaceRef = useRef<HTMLElement>(null)
   const draftRef = useRef<PipelineGraphDraft | null>(null)
+  const layoutDraftRef = useRef<Pick<PipelineLayout, 'nodes' | 'viewport'> | null>(null)
+  const basicInfoRef = useRef<PipelineDraftBasicInfo | null>(null)
   const actionErrorSequence = useRef(0)
   const pipelineDraft = useQuery({
     queryKey: ['pipelines', pipelineId, 'draft'],
     queryFn: async () => {
       try {
         const response = await getPipelineDraft(pipelineId, apiFetch)
+        const basicInfo = {
+          name: response.draft.name?.trim() || pipelineId,
+          description: response.draft.description,
+        }
         if (response.draft.mode === 'wizard') {
-          return { mode: 'wizard' as const, draft: response.draft, etag: response.etag }
+          return {
+            mode: 'wizard' as const,
+            draft: response.draft,
+            etag: response.etag,
+            basicInfo,
+          }
         }
         return {
           mode: 'dag' as const,
           document: pipelineDraftDocument(response.draft),
+          draft: response.draft,
           etag: response.etag,
+          basicInfo,
         }
       } catch (error) {
         if (!(error instanceof PipelineClientError) || error.status !== 404) throw error
         const [pipeline, layout] = await Promise.all([
-          getPipeline(pipelineId, apiFetch),
+          queryClient.ensureQueryData({
+            queryKey: ['pipelines', pipelineId],
+            queryFn: () => getPipeline(pipelineId, apiFetch),
+          }),
           getPipelineLayout(pipelineId, apiFetch),
         ])
         return {
@@ -469,13 +670,27 @@ function PipelineOrchestrationPage({
             layout,
             hasPublishedRevision: true,
           },
+          draft: null,
           etag: null,
+          basicInfo: {
+            name: pipelineId,
+            description: pipeline.metadata?.description ?? null,
+          },
         }
       }
     },
     retry: false,
   })
+  if (basicInfoRef.current === null && pipelineDraft.data) {
+    basicInfoRef.current = pipelineDraft.data.basicInfo
+  }
   const serverDocument = pipelineDraft.data?.mode === 'dag' ? pipelineDraft.data.document : null
+  const isReadOnly =
+    isPipelineReadOnly(runtimeStatus) ||
+    Boolean(
+      serverDocument?.hasPublishedRevision &&
+        (runtimeObservationPending || runtimeObservationError),
+    )
 
   const sources = useQuery({
     queryKey: ['sources'],
@@ -507,7 +722,9 @@ function PipelineOrchestrationPage({
     if (!nextDraft) return
     draftRef.current = nextDraft
     setDraft(nextDraft)
-    setLayoutDraft({ nodes: layoutData.nodes, viewport: layoutData.viewport })
+    const nextLayoutDraft = { nodes: layoutData.nodes, viewport: layoutData.viewport }
+    layoutDraftRef.current = nextLayoutDraft
+    setLayoutDraft(nextLayoutDraft)
     setIsDirty(false)
     setDiagnostics([])
     setActionErrors([])
@@ -516,6 +733,7 @@ function PipelineOrchestrationPage({
 
   function scheduleLayoutSave(next: Pick<PipelineLayout, 'nodes' | 'viewport'>) {
     if (isReadOnly) return
+    layoutDraftRef.current = next
     setLayoutDraft(next)
     setIsDirty(true)
   }
@@ -537,11 +755,21 @@ function PipelineOrchestrationPage({
     }
   }, [layoutData, layoutDraft])
   const autosaveMutation = useMemo(
-    () => (draft && canvasLayout ? buildPipelineDraftMutation(draft, canvasLayout) : null),
-    [canvasLayout, draft],
+    () =>
+      draft && canvasLayout
+        ? buildPipelineDraftMutation(
+            draft,
+            canvasLayout,
+            basicInfoRef.current ?? {
+              name: draft.pipeline.id,
+              description: draft.pipeline.metadata?.description ?? null,
+            },
+          )
+        : null,
+    [basicInfoRevision, canvasLayout, draft],
   )
   const autosave = usePipelineDraftAutosave({
-    enabled: Boolean(draft && canvasLayout) && !isPipelineReadOnly(runtimeStatus),
+    enabled: Boolean(draft && canvasLayout) && !isReadOnly,
     mutation: autosaveMutation,
     initialEtag: pipelineDraft.data?.etag ?? null,
     fetcher: apiFetch,
@@ -595,7 +823,79 @@ function PipelineOrchestrationPage({
   const run = useMutation({
     mutationFn: () => runPipeline(pipelineId, apiFetch),
   })
-  const isReadOnly = isPipelineReadOnly(runtimeStatus)
+  const wizardDocument =
+    pipelineDraft.data?.mode === 'wizard' && pipelineDraft.data.draft && pipelineDraft.data.etag
+      ? { draft: pipelineDraft.data.draft, etag: pipelineDraft.data.etag }
+      : null
+  const isWizard = wizardDocument !== null
+  const wizardReadOnly =
+    isReadOnly ||
+    (isWizard &&
+      (runtimeObservationPending ||
+        runtimeObservationError ||
+        (wizardDocument?.draft.publishedDraftRevision !== null && !runtimeStatus)))
+  const stopAction = isReadOnly ? (
+    <PipelineLifecycleMenu
+      pipelineId={pipelineId}
+      status={runtimeStatus}
+      apiFetch={apiFetch}
+      contentHash="published"
+      presentation="stop-button"
+      onMutationError={(_action, cause) =>
+        pushActionError(
+          cause instanceof Error ? cause.message : t('pipelines.lifecycle.stopFailed'),
+        )
+      }
+    />
+  ) : undefined
+  const saveBasicInfo = useCallback(
+    async (basicInfo: PipelineDraftBasicInfo) => {
+      if (isReadOnly) throw new Error(t('pipelines.workspace.readOnly.editorStatus'))
+      const editor = draftRef.current
+      const baseLayout = layoutData
+      if (!editor || !baseLayout) throw new Error(t('pipelines.workspace.actions.saveFailed'))
+
+      const currentLayoutDraft = layoutDraftRef.current
+      const layout = {
+        ...baseLayout,
+        ...currentLayoutDraft,
+        nodes: { ...baseLayout.nodes, ...currentLayoutDraft?.nodes },
+      }
+      const mutation = buildPipelineDraftMutation(editor, layout, basicInfo)
+      const previousBasicInfo = basicInfoRef.current
+      basicInfoRef.current = basicInfo
+      let result: Awaited<ReturnType<typeof autosaveRef.current.saveMutation>>
+      try {
+        result = await autosaveRef.current.saveMutation(mutation)
+        if (!result) throw new Error(t('pipelines.workspace.actions.saveFailed'))
+      } catch (error) {
+        basicInfoRef.current = previousBasicInfo
+        setBasicInfoRevision((revision) => revision + 1)
+        throw error
+      }
+
+      queryClient.setQueryData(['pipelines', pipelineId, 'draft'], {
+        mode: 'dag' as const,
+        draft: result.draft,
+        document: pipelineDraftDocument(result.draft),
+        etag: result.etag,
+        basicInfo,
+      })
+      queryClient.setQueryData(['pipelines', pipelineId, 'draft-status'], result)
+      return result
+    },
+    [isReadOnly, layoutData, pipelineId, queryClient, t],
+  )
+
+  useEffect(() => {
+    if (pipelineDraft.data?.mode === 'wizard') return
+    if (pipelineDraft.data?.mode !== 'dag' || !layoutData || !draftRef.current || isReadOnly) {
+      onRegisterBasicInfoSaver(null)
+      return
+    }
+    onRegisterBasicInfoSaver(saveBasicInfo)
+    return () => onRegisterBasicInfoSaver(null)
+  }, [isReadOnly, layoutData, onRegisterBasicInfoSaver, pipelineDraft.data?.mode, saveBasicInfo])
   const sourceOptions = useMemo<PipelineSchemaOption[]>(
     () =>
       (sources.data ?? []).map((source) => ({
@@ -747,9 +1047,9 @@ function PipelineOrchestrationPage({
     setIsDirty(true)
   }
 
-  async function handleSave(): Promise<boolean> {
-    if (isReadOnly) return false
-    if (!draft || autosave.isSaving) return false
+  async function handleSave(): Promise<PipelineDraftSaveResult | null> {
+    if (isReadOnly) return null
+    if (!draft || autosave.isSaving) return null
     const nextDiagnostics = validatePipelineGraph(
       draft,
       sources.data,
@@ -759,30 +1059,31 @@ function PipelineOrchestrationPage({
     if (!sources.isSuccess) {
       setDiagnostics([])
       pushActionError(t('pipelines.workspace.nodeSelector.sourcesError'))
-      return false
+      return null
     }
     setDiagnostics(nextDiagnostics)
-    if (nextDiagnostics.length > 0) return false
+    if (nextDiagnostics.length > 0) return null
     try {
       const result = await autosave.saveLatest()
       if (!result) throw new Error('The Pipeline draft is not ready to save.')
       await previewPipelineDraft(pipelineId, result.draft.revision, apiFetch)
       setIsDirty(false)
       setDiagnostics([])
-      return true
+      return result
     } catch (error) {
       pushActionError(
         error instanceof Error ? error.message : t('pipelines.workspace.actions.saveFailed'),
       )
-      return false
+      return null
     }
   }
 
   async function handleRun() {
     if (isReadOnly) return
-    if (isDirty && !(await handleSave())) return
     try {
-      const result = autosave.lastResult ?? (await autosave.saveLatest())
+      const saved = isDirty ? await handleSave() : await autosave.saveLatest()
+      if (isDirty && !saved) return
+      const result = saved ?? (await getPipelineDraft(pipelineId, apiFetch))
       if (!result) throw new Error('The Pipeline draft is not ready to start.')
       await previewPipelineDraft(pipelineId, result.draft.revision, apiFetch)
       await publishPipelineDraft(
@@ -821,58 +1122,13 @@ function PipelineOrchestrationPage({
         {t('pipelines.workspace.skipToCanvas')}
       </a>
 
-      {isReadOnly && (
-        <div
-          className="pipeline-workspace__readonly-banner"
-          role="status"
-          aria-live="polite"
-          data-testid="pipeline-readonly-banner"
-        >
-          <div className="min-w-0">
-            <p className="text-foreground text-[13px] font-semibold">
-              {t('pipelines.workspace.readOnly.title')}
-            </p>
-            <p className="text-muted-foreground text-[12px]">
-              {t('pipelines.workspace.readOnly.description', { state: runtimeStatus })}
-            </p>
-          </div>
-          <PipelineLifecycleMenu
-            pipelineId={pipelineId}
-            status={runtimeStatus}
-            apiFetch={apiFetch}
-            contentHash="published"
-            presentation="stop-button"
-            onMutationError={(_action, cause) =>
-              pushActionError(
-                cause instanceof Error ? cause.message : t('pipelines.lifecycle.stopFailed'),
-              )
-            }
-          />
-        </div>
-      )}
-
-      <section
-        id="pipeline-canvas"
-        className={cn('absolute inset-x-0 bottom-0 min-h-0', isReadOnly ? 'top-14' : 'top-0')}
-      >
-        {(isLoading || runtimeObservationPending) && (
+      <section id="pipeline-canvas" className="absolute inset-0 min-h-0">
+        {isLoading && (
           <div className="pipeline-canvas-state flex h-full items-center justify-center text-sm font-medium text-slate-500">
-            {runtimeObservationPending ? (
-              <span className="inline-flex items-center gap-2" role="status">
-                <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
-                {t('pipelines.workspace.runtime.checkingBeforeEdit')}
-              </span>
-            ) : (
-              t('pipelines.workspace.loading')
-            )}
+            {t('pipelines.workspace.loading')}
           </div>
         )}
-        {runtimeObservationError && !isLoading && (
-          <div className="pipeline-canvas-state flex h-full items-center justify-center">
-            <QueryIssue unavailable={false} onRetry={onRetryRuntimeObservation} />
-          </div>
-        )}
-        {error && !runtimeObservationPending && (
+        {error && (
           <div className="pipeline-canvas-state flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
             <p className="text-sm font-semibold text-slate-800">
               {t('pipelines.workspace.error.title')}
@@ -888,20 +1144,24 @@ function PipelineOrchestrationPage({
             </button>
           </div>
         )}
-        {!runtimeObservationPending &&
-        !runtimeObservationError &&
-        pipelineDraft.data?.mode === 'wizard' ? (
+        {wizardDocument ? (
           <ReactFlowProvider>
             <PipelineWorkflow>
               <WizardBuilder
                 pipelineId={pipelineId}
-                draft={pipelineDraft.data.draft}
-                etag={pipelineDraft.data.etag}
-                readOnly={isReadOnly}
+                draft={wizardDocument.draft}
+                etag={wizardDocument.etag}
+                readOnly={wizardReadOnly}
+                runtimeStatus={runtimeStatus}
+                runtimeObservationPending={runtimeObservationPending}
+                runtimeObservationError={runtimeObservationError}
+                onRetryRuntimeObservation={onRetryRuntimeObservation}
+                onRegisterBasicInfoSaver={onRegisterBasicInfoSaver}
+                stopAction={stopAction}
               />
             </PipelineWorkflow>
           </ReactFlowProvider>
-        ) : !runtimeObservationPending && !runtimeObservationError && draft && canvasLayout ? (
+        ) : draft && canvasLayout ? (
           <PipelineWorkflowWithInnerContext
             canvas={{
               dag: draft.dag,
@@ -947,6 +1207,7 @@ function PipelineOrchestrationPage({
                 runtimeStatus === 'RUNNING' ||
                 runtimeStatus === 'PAUSED' ||
                 runtimeStatus === 'FAILED',
+              stopAction,
               onSave: () => void handleSave(),
               onRun: () => void handleRun(),
             }}
@@ -969,8 +1230,25 @@ function PipelineOrchestrationPage({
         ) : null}
       </section>
 
-      {(diagnostics.length > 0 || actionErrors.length > 0) && (
+      {(diagnostics.length > 0 ||
+        actionErrors.length > 0 ||
+        (!isWizard && (runtimeObservationPending || runtimeObservationError))) && (
         <div className="pipeline-canvas__alerts" aria-live="assertive">
+          {!isWizard && runtimeObservationPending && (
+            <div className="pipeline-workflow-feedback" role="status">
+              <LoaderCircle className="size-4 shrink-0 animate-spin" aria-hidden="true" />
+              <span>{t('wizard.checkingRuntime')}</span>
+            </div>
+          )}
+          {!isWizard && runtimeObservationError && (
+            <div className="pipeline-workflow-feedback" role="alert">
+              <AlertCircle className="size-4 shrink-0" aria-hidden="true" />
+              <span className="min-w-0 flex-1">{t('wizard.runtimeStatusError')}</span>
+              <Button type="button" variant="outline" size="sm" onClick={onRetryRuntimeObservation}>
+                {t('pipelines.workspace.actions.retry')}
+              </Button>
+            </div>
+          )}
           {actionErrors.map((actionError) => (
             <PipelineWorkflowFeedback
               key={actionError.id}
@@ -1174,7 +1452,11 @@ export function PipelineWorkspacePage({
   section: PipelineWorkspaceSection
 }) {
   const [navigationCollapsed, setNavigationCollapsed] = useState(false)
+  const [basicInfoSaverReady, setBasicInfoSaverReady] = useState(false)
+  const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
+  const queryClient = useQueryClient()
+  const basicInfoSaverRef = useRef<SavePipelineDraftBasicInfo | null>(null)
   const pipelineDraft = useQuery({
     queryKey: ['pipelines', pipelineId, 'draft-status'],
     queryFn: async () => {
@@ -1187,6 +1469,16 @@ export function PipelineWorkspacePage({
     },
     retry: false,
   })
+  const pipelineInfo = useQuery({
+    queryKey: ['pipelines', pipelineId],
+    queryFn: () => getPipeline(pipelineId, apiFetch),
+    enabled: pipelineDraft.isSuccess && pipelineDraft.data === null,
+    retry: false,
+  })
+  const registerBasicInfoSaver = useCallback((save: SavePipelineDraftBasicInfo | null) => {
+    basicInfoSaverRef.current = save
+    setBasicInfoSaverReady(Boolean(save))
+  }, [])
   const statusEnabled =
     pipelineDraft.isSuccess &&
     (pipelineDraft.data === null || pipelineDraft.data?.draft.publishedDraftRevision !== null)
@@ -1198,8 +1490,104 @@ export function PipelineWorkspacePage({
     refetchInterval: (query) => pipelineStatusRefetchInterval(query.state.error),
     refetchIntervalInBackground: false,
   })
-  const runtimeObservationMissing =
-    status.error instanceof PipelineClientError && status.error.code === 'monitor.no-observation'
+  const basicInfo = useMemo<PipelineDraftBasicInfo>(() => {
+    const draft = pipelineDraft.data?.draft
+    if (draft) {
+      return {
+        name: draft.name?.trim() || pipelineId,
+        description: draft.description,
+      }
+    }
+    return {
+      name: pipelineId,
+      description: pipelineInfo.data?.metadata?.description ?? null,
+    }
+  }, [pipelineDraft.data, pipelineId, pipelineInfo.data])
+
+  const saveBasicInfo = useCallback(
+    async (nextBasicInfo: PipelineDraftBasicInfo) => {
+      let result: { draft: PipelineDraft; etag: string }
+      const editorSave = section === 'orchestrate' ? basicInfoSaverRef.current : null
+      if (section === 'orchestrate') {
+        if (!editorSave) throw new Error(t('pipelines.workspace.navigation.editorLoading'))
+        result = await editorSave(nextBasicInfo)
+      } else {
+        let current: { draft: PipelineDraft; etag: string } | null
+        try {
+          current = await getPipelineDraft(pipelineId, apiFetch)
+        } catch (error) {
+          if (!(error instanceof PipelineClientError) || error.status !== 404) throw error
+          current = null
+        }
+
+        const mutationFor = (draft: PipelineDraft): PipelineDraftMutation => ({
+          pipelineId,
+          mode: draft.mode,
+          name: nextBasicInfo.name,
+          description: nextBasicInfo.description,
+          graph: draft.graph,
+          wizard: draft.wizard,
+          baseArtifactHash: draft.baseArtifactHash,
+        })
+
+        if (current) {
+          try {
+            result = await updatePipelineDraft(
+              pipelineId,
+              mutationFor(current.draft),
+              current.etag,
+              apiFetch,
+            )
+          } catch (error) {
+            if (!(error instanceof PipelineClientError) || error.status !== 412) throw error
+            current = await getPipelineDraft(pipelineId, apiFetch)
+            result = await updatePipelineDraft(
+              pipelineId,
+              mutationFor(current.draft),
+              current.etag,
+              apiFetch,
+            )
+          }
+        } else {
+          const [pipeline, layout] = await Promise.all([
+            getPipeline(pipelineId, apiFetch),
+            getPipelineLayout(pipelineId, apiFetch),
+          ])
+          const mutation = buildPipelineDraftMutation(
+            createPipelineGraphDraft(pipeline),
+            layout,
+            nextBasicInfo,
+          )
+          try {
+            result = await createPipelineDraft(pipelineId, mutation, apiFetch)
+          } catch (error) {
+            if (!(error instanceof PipelineClientError) || error.status !== 409) throw error
+            current = await getPipelineDraft(pipelineId, apiFetch)
+            result = await updatePipelineDraft(
+              pipelineId,
+              mutationFor(current.draft),
+              current.etag,
+              apiFetch,
+            )
+          }
+        }
+      }
+
+      queryClient.setQueryData(['pipelines', pipelineId, 'draft-status'], result)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['pipelines'], exact: true }),
+        queryClient.invalidateQueries({ queryKey: ['pipelines', 'drafts'], exact: true }),
+      ])
+      return result
+    },
+    [apiFetch, pipelineId, queryClient, section, t],
+  )
+  const canEditBasicInfo =
+    pipelineDraft.isSuccess &&
+    (pipelineDraft.data !== null || pipelineInfo.isSuccess) &&
+    (!statusEnabled || status.isSuccess) &&
+    !isPipelineReadOnly(status.data?.state) &&
+    (section !== 'orchestrate' || basicInfoSaverReady)
 
   return (
     <main
@@ -1208,20 +1596,22 @@ export function PipelineWorkspacePage({
     >
       <PipelineWorkspaceNav
         pipelineId={pipelineId}
+        basicInfo={basicInfo}
         activeSection={section}
         collapsed={navigationCollapsed}
         onCollapsedChange={setNavigationCollapsed}
         status={status.data?.state}
+        canEditBasicInfo={canEditBasicInfo}
+        onSaveBasicInfo={saveBasicInfo}
       />
       {section === 'orchestrate' ? (
         <PipelineOrchestrationPage
           pipelineId={pipelineId}
           runtimeStatus={status.data?.state}
-          runtimeObservationPending={
-            statusEnabled && (status.isPending || runtimeObservationMissing)
-          }
-          runtimeObservationError={statusEnabled && status.isError && !runtimeObservationMissing}
+          runtimeObservationPending={statusEnabled && status.isPending}
+          runtimeObservationError={statusEnabled && status.isError}
           onRetryRuntimeObservation={() => void status.refetch()}
+          onRegisterBasicInfoSaver={registerBasicInfoSaver}
         />
       ) : (
         <WorkspacePageFrame

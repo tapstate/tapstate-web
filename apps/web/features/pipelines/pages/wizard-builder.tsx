@@ -1,5 +1,5 @@
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -12,9 +12,15 @@ import {
   type PipelineDraft,
   type PipelineDraftMutation,
   type PipelineDraftPreview,
+  type PipelineRuntimeState,
 } from '@/service/pipelines/pipeline-client'
 import { getSourceSchema, listConnectors, listSources } from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
+
+import type {
+  PipelineDraftBasicInfo,
+  SavePipelineDraftBasicInfo,
+} from '../model/pipeline-draft-document'
 
 import {
   ReferenceWizardBuilder,
@@ -25,6 +31,7 @@ import {
   readWizard,
   writeWizard,
   wizardPublicationIssue,
+  wizardUpsertKeylessInput,
 } from '../components/reference-wizard/wizard-adapter'
 import { getDeploymentProfile } from '../model/deployment-profile'
 import { targetSources } from '../model/pipeline-target-connectors'
@@ -36,11 +43,23 @@ export function WizardBuilder({
   draft,
   etag,
   readOnly = false,
+  runtimeStatus,
+  runtimeObservationPending = false,
+  runtimeObservationError = false,
+  onRetryRuntimeObservation,
+  onRegisterBasicInfoSaver,
+  stopAction,
 }: {
   pipelineId: string
   draft: PipelineDraft
   etag: string
   readOnly?: boolean
+  runtimeStatus?: PipelineRuntimeState
+  runtimeObservationPending?: boolean
+  runtimeObservationError?: boolean
+  onRetryRuntimeObservation?: () => void
+  onRegisterBasicInfoSaver?: (save: SavePipelineDraftBasicInfo | null) => void
+  stopAction?: ReactNode
 }) {
   const { t } = useTranslation()
   const apiFetch = useAuthStore((s) => s.apiFetch)
@@ -87,6 +106,7 @@ export function WizardBuilder({
               name,
               primaryKey: detail?.primaryKey?.[0] || '',
               keys: detail?.primaryKey || [],
+              discovered: Boolean(detail),
               rowCount: '—',
               columns: (detail?.fields || []).map((f) => f.name),
             }
@@ -101,7 +121,11 @@ export function WizardBuilder({
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
   const [action, setAction] = useState<'save' | 'start' | null>(null)
+  const [startPhase, setStartPhase] = useState<
+    'saving' | 'validating' | 'publishing' | 'starting' | 'checking' | null
+  >(null)
   const [preview, setPreview] = useState<PipelineDraftPreview | null>(null)
+  const editorReadOnly = readOnly || (busy && action === 'start')
   const currentDraft = useRef(draft)
   const currentEtag = useRef(etag)
   const pending = useRef<Promise<void> | null>(null)
@@ -152,49 +176,77 @@ export function WizardBuilder({
       }
     })
   }, [destination, destinationConnector, deploymentProfile, readOnly])
-  const persist = useCallback(async () => {
-    if (readOnly) return currentDraft.current
-    while (JSON.stringify(currentWizard.current) !== savedFingerprint.current) {
-      if (pending.current) {
-        await pending.current
-        continue
+  const persist = useCallback(
+    async (basicInfo?: PipelineDraftBasicInfo) => {
+      if (readOnly) return currentDraft.current
+      const basicInfoIsDirty = () =>
+        Boolean(
+          basicInfo &&
+          (currentDraft.current.name !== basicInfo.name ||
+            currentDraft.current.description !== basicInfo.description),
+        )
+      while (
+        JSON.stringify(currentWizard.current) !== savedFingerprint.current ||
+        basicInfoIsDirty()
+      ) {
+        if (pending.current) {
+          await pending.current
+          continue
+        }
+        const snapshot = currentWizard.current
+        const fingerprint = JSON.stringify(snapshot)
+        const mutation: PipelineDraftMutation = {
+          pipelineId,
+          mode: 'wizard',
+          name: basicInfo?.name ?? currentDraft.current.name,
+          description: basicInfo ? basicInfo.description : currentDraft.current.description,
+          graph: null,
+          wizard: snapshot,
+          baseArtifactHash: currentDraft.current.baseArtifactHash,
+        }
+        setStatus('saving')
+        const save = updatePipelineDraft(pipelineId, mutation, currentEtag.current, apiFetch).then(
+          (result) => {
+            currentDraft.current = result.draft
+            currentEtag.current = result.etag
+            savedFingerprint.current = fingerprint
+            setStatus('saved')
+            queryClient.setQueryData(['pipelines', pipelineId, 'draft'], {
+              mode: 'wizard',
+              ...result,
+            })
+            queryClient.setQueryData(['pipelines', pipelineId, 'draft-status'], result)
+          },
+        )
+        pending.current = save
+        try {
+          await save
+        } catch (cause) {
+          setStatus('error')
+          throw cause
+        } finally {
+          if (pending.current === save) pending.current = null
+        }
       }
-      const snapshot = currentWizard.current
-      const fingerprint = JSON.stringify(snapshot)
-      const mutation: PipelineDraftMutation = {
-        pipelineId,
-        mode: 'wizard',
-        name: currentDraft.current.name,
-        description: currentDraft.current.description,
-        graph: null,
-        wizard: snapshot,
-        baseArtifactHash: currentDraft.current.baseArtifactHash,
-      }
-      setStatus('saving')
-      const save = updatePipelineDraft(pipelineId, mutation, currentEtag.current, apiFetch).then(
-        (result) => {
-          currentDraft.current = result.draft
-          currentEtag.current = result.etag
-          savedFingerprint.current = fingerprint
-          setStatus('saved')
-          queryClient.setQueryData(['pipelines', pipelineId, 'draft'], {
-            mode: 'wizard',
-            ...result,
-          })
-        },
-      )
-      pending.current = save
-      try {
-        await save
-      } catch (cause) {
-        setStatus('error')
-        throw cause
-      } finally {
-        if (pending.current === save) pending.current = null
-      }
+      return currentDraft.current
+    },
+    [apiFetch, pipelineId, queryClient, readOnly],
+  )
+  const saveBasicInfo = useCallback(
+    async (basicInfo: PipelineDraftBasicInfo) => {
+      await persist(basicInfo)
+      return { draft: currentDraft.current, etag: currentEtag.current }
+    },
+    [persist],
+  )
+  useEffect(() => {
+    if (readOnly) {
+      onRegisterBasicInfoSaver?.(null)
+      return
     }
-    return currentDraft.current
-  }, [apiFetch, pipelineId, queryClient, readOnly])
+    onRegisterBasicInfoSaver?.(saveBasicInfo)
+    return () => onRegisterBasicInfoSaver?.(null)
+  }, [onRegisterBasicInfoSaver, readOnly, saveBasicInfo])
   useEffect(() => {
     if (readOnly) return
     if (JSON.stringify(wizard) === savedFingerprint.current) return
@@ -207,7 +259,7 @@ export function WizardBuilder({
   }, [persist, readOnly, t, wizard])
   const onChange = useCallback(
     (state: WizardViewState) => {
-      if (readOnly) return
+      if (editorReadOnly) return
       setError('')
       setNotice('')
       setPreview(null)
@@ -220,26 +272,38 @@ export function WizardBuilder({
         ),
       )
     },
-    [destination?.id, deploymentProfile, readOnly],
+    [destination?.id, deploymentProfile, editorReadOnly],
   )
-  async function publish(start: boolean) {
+  async function savePipeline(start: boolean) {
     if (busy || readOnly) return
     setBusy(true)
     setAction(start ? 'start' : 'save')
+    setStartPhase(start ? 'saving' : null)
     setError('')
     setNotice('')
     try {
       const saved = await persist()
+      if (!start) {
+        await queryClient.invalidateQueries({ queryKey: ['pipelines', 'drafts'] })
+        return
+      }
+
+      setStartPhase('validating')
       const issue = wizardPublicationIssue(currentWizard.current)
       if (issue) throw new Error(issue)
+      const keylessInput = wizardUpsertKeylessInput(currentWizard.current, catalog)
+      if (keylessInput) throw new Error(t('wizard.errors.upsertNeedsKey', keylessInput))
       const result = await previewPipelineDraft(pipelineId, saved.revision, apiFetch)
       setPreview(result)
+      setStartPhase('publishing')
       await publishPipelineDraft(pipelineId, saved.revision, saved.publishedArtifactHash, apiFetch)
       const published = await getPipelineDraft(pipelineId, apiFetch)
       currentDraft.current = published.draft
       currentEtag.current = published.etag
       queryClient.setQueryData(['pipelines', pipelineId, 'draft'], { mode: 'wizard', ...published })
+      queryClient.setQueryData(['pipelines', pipelineId, 'draft-status'], published)
       if (start) {
+        setStartPhase('starting')
         let alreadyRunning = false
         try {
           await runPipeline(pipelineId, apiFetch)
@@ -256,6 +320,7 @@ export function WizardBuilder({
         }
         if (alreadyRunning) setNotice(t('wizard.alreadyRunning'))
       }
+      setStartPhase('checking')
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId, 'status'] }),
         queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId] }),
@@ -264,6 +329,7 @@ export function WizardBuilder({
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('wizard.errors.save'))
     } finally {
+      setStartPhase(null)
       setAction(null)
       setBusy(false)
     }
@@ -274,6 +340,33 @@ export function WizardBuilder({
         {t('wizard.loading')}
       </div>
     )
+  const isDirty = JSON.stringify(wizard) !== savedFingerprint.current
+  const runtimeCheckPending =
+    runtimeObservationPending ||
+    (draft.publishedDraftRevision !== null && !runtimeStatus && !runtimeObservationError)
+  const saveStatusLabel = error
+    ? error
+    : runtimeStatus === 'RUNNING' && startPhase === 'checking'
+      ? t('pipelines.workspace.runtime.states.RUNNING')
+      : startPhase
+        ? t(`wizard.startPhases.${startPhase}`)
+        : runtimeObservationError
+          ? t('wizard.runtimeStatusError')
+          : runtimeCheckPending
+            ? t('wizard.checkingRuntime')
+            : runtimeStatus
+              ? t(`pipelines.workspace.runtime.states.${runtimeStatus}`)
+              : readOnly
+                ? t('pipelines.workspace.readOnly.editorStatus')
+                : t(
+                    status === 'saving' || action === 'save'
+                      ? 'wizard.autosaving'
+                      : status === 'error'
+                        ? 'wizard.autosaveError'
+                        : isDirty
+                          ? 'wizard.unsavedChanges'
+                          : 'wizard.autosaved',
+                  )
   return (
     <>
       <ReferenceWizardBuilder
@@ -295,11 +388,45 @@ export function WizardBuilder({
             : ''
         }
         deploymentProfile={deploymentProfile}
-        readOnly={readOnly}
+        readOnly={editorReadOnly}
         actions={
           <PipelineWorkflowHeader
             placement="sticky"
-            isDirty={JSON.stringify(wizard) !== savedFingerprint.current}
+            dockStatus={
+              <div className="wizard-reference-action-dock__status min-w-0 flex-1 text-[11px] text-[var(--pipeline-text-muted)]">
+                <span
+                  className={
+                    error ||
+                    runtimeObservationError ||
+                    runtimeStatus === 'FAILED' ||
+                    status === 'error'
+                      ? 'bg-destructive size-2 shrink-0 rounded-full'
+                      : status === 'saving' ||
+                          action === 'start' ||
+                          runtimeCheckPending ||
+                          runtimeStatus === 'RUNNING' ||
+                          isDirty
+                        ? 'bg-primary size-2 shrink-0 rounded-full'
+                        : 'bg-muted-foreground size-2 shrink-0 rounded-full'
+                  }
+                  aria-hidden="true"
+                />
+                <span className="truncate" role="status" title={saveStatusLabel}>
+                  {saveStatusLabel}
+                </span>
+                {runtimeObservationError && onRetryRuntimeObservation && (
+                  <button
+                    type="button"
+                    className="text-primary shrink-0 font-medium underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none"
+                    onClick={onRetryRuntimeObservation}
+                  >
+                    {t('pipelines.workspace.actions.retry')}
+                  </button>
+                )}
+              </div>
+            }
+            stopAction={stopAction}
+            isDirty={isDirty}
             isSaving={busy && action === 'save'}
             isRunning={busy && action === 'start'}
             isBusy={busy}
@@ -309,8 +436,8 @@ export function WizardBuilder({
             savePendingLabel={t('pipelines.workspace.actions.saving')}
             runLabel={t('wizard.startPipeline')}
             runPendingLabel={t('wizard.starting')}
-            onSave={() => void publish(false)}
-            onRun={() => void publish(true)}
+            onSave={() => void savePipeline(false)}
+            onRun={() => void savePipeline(true)}
           />
         }
         sourceError={sourcesQuery.error?.message || schemas.find((s) => s.error)?.error?.message}
@@ -333,19 +460,6 @@ export function WizardBuilder({
                 {notice}
               </p>
             )}
-            <span role="status" className="text-gray-500">
-              {readOnly
-                ? t('pipelines.workspace.readOnly.editorStatus')
-                : action === 'start'
-                  ? t('wizard.starting')
-                  : t(
-                      status === 'saving'
-                        ? 'wizard.autosaving'
-                        : status === 'error'
-                          ? 'wizard.autosaveError'
-                          : 'wizard.autosaved',
-                    )}
-            </span>
           </div>
         }
       />
