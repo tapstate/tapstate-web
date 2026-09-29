@@ -262,7 +262,7 @@ describe('WizardBuilder publish flow', () => {
     expect(container?.querySelector('[data-workflow-header]')?.textContent).not.toContain('Retry')
   })
 
-  it('does not allow edits, autosave, or publish while the runtime is active', async () => {
+  it('hides save and start actions while the runtime is active', async () => {
     container = document.createElement('div')
     document.body.append(container)
     root = createRoot(container)
@@ -296,10 +296,9 @@ describe('WizardBuilder publish flow', () => {
     expect(
       container?.querySelector('.wizard-reference-editor-column [data-workflow-header]'),
     ).not.toBe(null)
-    expect(actionButtons).toHaveLength(2)
-    expect(Array.from(actionButtons || []).every((button) => button.disabled)).toBe(true)
-    expect(container?.textContent).toContain('Save')
-    expect(container?.textContent).toContain('Save & start')
+    expect(actionButtons).toHaveLength(0)
+    expect(container?.textContent).not.toContain('Save')
+    expect(container?.textContent).not.toContain('Save & start')
     expect(updatePipelineDraft).not.toHaveBeenCalled()
     expect(previewPipelineDraft).not.toHaveBeenCalled()
     expect(publishPipelineDraft).not.toHaveBeenCalled()
