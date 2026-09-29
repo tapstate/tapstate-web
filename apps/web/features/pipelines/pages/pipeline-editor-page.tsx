@@ -689,7 +689,7 @@ function PipelineOrchestrationPage({
     isPipelineReadOnly(runtimeStatus) ||
     Boolean(
       serverDocument?.hasPublishedRevision &&
-        (runtimeObservationPending || runtimeObservationError),
+      (runtimeObservationPending || runtimeObservationError),
     )
 
   const sources = useQuery({
