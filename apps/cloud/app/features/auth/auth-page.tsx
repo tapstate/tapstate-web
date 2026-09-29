@@ -109,8 +109,7 @@ export function AuthPage({
       </header>
 
       <main className="z-10 my-auto flex w-full items-center justify-center py-8">
-        <div className="flowing-card-container material-fusion w-full max-w-[400px]">
-          <div aria-hidden="true" className="flowing-border-aura" />
+        <div className="auth-card flowing-card-container material-fusion w-full max-w-[400px]">
           <div aria-hidden="true" className="flowing-border-glow" />
 
           <section className="liquid-glass-card relative z-10 w-full overflow-hidden p-7 transition-all duration-200 sm:p-8">

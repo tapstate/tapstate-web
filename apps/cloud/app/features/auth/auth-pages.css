@@ -345,3 +345,16 @@
     transparent 360deg
   );
 }
+
+/* Keep the animated beam on the auth card's rim, away from its translucent surface. */
+.auth-card .flowing-border-glow {
+  padding: 1.5px;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
