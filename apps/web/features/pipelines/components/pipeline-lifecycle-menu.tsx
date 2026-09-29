@@ -162,7 +162,10 @@ export function PipelineLifecycleMenu({
             type="button"
             variant="ghost"
             size="icon-sm"
-            className={cn('pipeline-list__lifecycle-trigger', triggerClassName)}
+            className={cn(
+              'pipeline-list__lifecycle-trigger rounded-none border-0',
+              triggerClassName,
+            )}
             aria-label={triggerLabel}
             disabled={pending}
           >
