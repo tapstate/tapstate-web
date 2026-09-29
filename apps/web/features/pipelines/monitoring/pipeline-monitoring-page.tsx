@@ -1,12 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Pause, Play, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import { PipelineClientError, type PipelineRuntimeState } from '@/service/pipelines/pipeline-client'
 
+import { PipelineRefreshControls } from '../components/pipeline-refresh-controls'
 import { PipelineMetricChart } from './pipeline-metric-chart'
 import { usePipelineMonitoringQueries } from './pipeline-monitoring-queries'
 import { PipelineReadSurface } from './pipeline-read-surface'
@@ -38,6 +36,16 @@ export function PipelineMonitoringPage({ pipelineId }: { pipelineId: string }) {
     void queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId, 'metrics-history'] })
     void queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId, 'explain'] })
   }
+  const refreshLabels = {
+    refresh: t('pipelines.workspace.runtime.monitoring.refresh'),
+    refreshAria: t('pipelines.workspace.runtime.monitoring.refreshAria'),
+    active: t('pipelines.workspace.runtime.monitoring.active'),
+    paused: t('pipelines.workspace.runtime.monitoring.paused'),
+    pause: t('pipelines.workspace.runtime.monitoring.pause'),
+    pauseAria: t('pipelines.workspace.runtime.monitoring.pauseAria'),
+    resume: t('pipelines.workspace.runtime.monitoring.resume'),
+    resumeAria: t('pipelines.workspace.runtime.monitoring.resumeAria'),
+  }
 
   if (isLoading) {
     return (
@@ -65,18 +73,15 @@ export function PipelineMonitoringPage({ pipelineId }: { pipelineId: string }) {
               : 'pipelines.workspace.runtime.monitoring.errorBody',
           )}
         </p>
-        <Button
-          className="mt-4"
-          size="sm"
-          onClick={refreshMonitoring}
-          disabled={status.isFetching || metrics.isFetching}
-        >
-          <RefreshCw
-            className={cn('size-3.5', (status.isFetching || metrics.isFetching) && 'animate-spin')}
-            aria-hidden="true"
+        <div className="mt-4">
+          <PipelineRefreshControls
+            autoRefresh={autoRefresh}
+            isFetching={status.isFetching || metrics.isFetching}
+            onRefresh={refreshMonitoring}
+            onToggle={() => setAutoRefresh((current) => !current)}
+            labels={refreshLabels}
           />
-          {t('pipelines.workspace.runtime.monitoring.refresh')}
-        </Button>
+        </div>
       </section>
     )
   }
@@ -103,43 +108,13 @@ export function PipelineMonitoringPage({ pipelineId }: { pipelineId: string }) {
           </p>
         </div>
         <div className="pipeline-monitoring__actions">
-          <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label={t('pipelines.workspace.runtime.monitoring.refreshAria')}
-            title={t('pipelines.workspace.runtime.monitoring.refresh')}
-            onClick={refreshMonitoring}
-            disabled={status.isFetching || metrics.isFetching}
-          >
-            <RefreshCw
-              className={cn(
-                'size-3.5',
-                (status.isFetching || metrics.isFetching) && 'animate-spin',
-              )}
-              aria-hidden="true"
-            />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            aria-label={t(
-              autoRefresh
-                ? 'pipelines.workspace.runtime.monitoring.pauseAria'
-                : 'pipelines.workspace.runtime.monitoring.resumeAria',
-            )}
-            onClick={() => setAutoRefresh((current) => !current)}
-          >
-            {autoRefresh ? (
-              <Pause className="size-3.5" aria-hidden="true" />
-            ) : (
-              <Play className="size-3.5" aria-hidden="true" />
-            )}
-            {t(
-              autoRefresh
-                ? 'pipelines.workspace.runtime.monitoring.pause'
-                : 'pipelines.workspace.runtime.monitoring.resume',
-            )}
-          </Button>
+          <PipelineRefreshControls
+            autoRefresh={autoRefresh}
+            isFetching={status.isFetching || metrics.isFetching}
+            onRefresh={refreshMonitoring}
+            onToggle={() => setAutoRefresh((current) => !current)}
+            labels={refreshLabels}
+          />
         </div>
       </div>
 

@@ -396,6 +396,20 @@
       "error": "无法加载已存储的流水线。",
       "loading": "正在加载已存储的流水线。"
     },
+    "list": {
+      "searchAria": "搜索流水线",
+      "searchPlaceholder": "搜索流水线...",
+      "noResults": "没有匹配的流水线。",
+      "lastRefreshed": "上次刷新 {{time}}",
+      "refreshActive": "自动刷新已开启",
+      "refreshPaused": "自动刷新已暂停",
+      "refresh": "刷新流水线",
+      "refreshAria": "刷新流水线列表",
+      "pauseRefresh": "暂停更新",
+      "pauseRefreshAria": "暂停自动刷新流水线",
+      "resumeRefresh": "恢复更新",
+      "resumeRefreshAria": "恢复自动刷新流水线"
+    },
     "createMenu": {
       "title": "创建方式",
       "wizard": "使用向导构建",
@@ -1001,11 +1015,16 @@
         },
         "states": {
           "NEW": "新建",
+          "STARTING": "正在启动",
           "RUNNING": "运行中",
+          "PAUSING": "正在暂停",
           "PAUSED": "已暂停",
+          "RESUMING": "正在恢复",
+          "STOPPING": "正在停止",
           "STOPPED": "已停止",
           "COMPLETED": "已完成",
-          "FAILED": "失败"
+          "FAILED": "失败",
+          "UNAVAILABLE": "不可用"
         }
       },
       "apiAccess": {

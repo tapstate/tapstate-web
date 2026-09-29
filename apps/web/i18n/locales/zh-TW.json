@@ -396,6 +396,20 @@
       "error": "無法載入已儲存的流水線。",
       "loading": "正在載入已儲存的流水線。"
     },
+    "list": {
+      "searchAria": "搜尋流水線",
+      "searchPlaceholder": "搜尋流水線...",
+      "noResults": "沒有符合搜尋條件的流水線。",
+      "lastRefreshed": "上次更新 {{time}}",
+      "refreshActive": "自動更新已開啟",
+      "refreshPaused": "自動更新已暫停",
+      "refresh": "更新流水線",
+      "refreshAria": "更新流水線清單",
+      "pauseRefresh": "暫停更新",
+      "pauseRefreshAria": "暫停自動更新流水線",
+      "resumeRefresh": "恢復更新",
+      "resumeRefreshAria": "恢復自動更新流水線"
+    },
     "createMenu": {
       "title": "建立方式",
       "wizard": "使用向導構建",
@@ -1001,11 +1015,16 @@
         },
         "states": {
           "NEW": "新增",
+          "STARTING": "正在啟動",
           "RUNNING": "執行中",
+          "PAUSING": "正在暫停",
           "PAUSED": "已暫停",
+          "RESUMING": "正在恢復",
+          "STOPPING": "正在停止",
           "STOPPED": "已停止",
           "COMPLETED": "已完成",
-          "FAILED": "失敗"
+          "FAILED": "失敗",
+          "UNAVAILABLE": "無法使用"
         }
       },
       "apiAccess": {

@@ -179,6 +179,35 @@ export interface PipelineStatus {
   failure?: PipelineStatusFailure | null
 }
 
+export type PipelineCatalogState =
+  | PipelineRuntimeState
+  | 'STARTING'
+  | 'PAUSING'
+  | 'RESUMING'
+  | 'STOPPING'
+  | 'UNAVAILABLE'
+
+export interface PipelineCatalogStatus {
+  state: PipelineCatalogState
+  desiredState?: PipelineRuntimeState | null
+  observedState?: PipelineRuntimeState | null
+  failure?: PipelineStatusFailure | null
+  observedAt?: string | null
+}
+
+/** Unified list projection across saved editor documents, applied artifacts, and runtime state. */
+export interface PipelineCatalogItem {
+  id: string
+  name: string
+  description?: string | null
+  mode?: PipelineDraftMode | null
+  revision?: number | null
+  updatedAt?: string | null
+  contentHash?: string | null
+  hasArtifact: boolean
+  status: PipelineCatalogStatus
+}
+
 export interface PipelineMetrics {
   pipelineId: string
   metrics: Record<string, number>
@@ -411,6 +440,54 @@ function isPipelineStatus(value: unknown): value is PipelineStatus {
     (value.failure === undefined ||
       value.failure === null ||
       isPipelineStatusFailure(value.failure))
+  )
+}
+
+function isPipelineCatalogStatus(value: unknown): value is PipelineCatalogStatus {
+  const runtimeStates = ['NEW', 'RUNNING', 'PAUSED', 'STOPPED', 'COMPLETED', 'FAILED']
+  return (
+    isRecord(value) &&
+    [...runtimeStates, 'STARTING', 'PAUSING', 'RESUMING', 'STOPPING', 'UNAVAILABLE'].includes(
+      value.state as string,
+    ) &&
+    (value.desiredState === undefined ||
+      value.desiredState === null ||
+      runtimeStates.includes(value.desiredState as string)) &&
+    (value.observedState === undefined ||
+      value.observedState === null ||
+      runtimeStates.includes(value.observedState as string)) &&
+    (value.failure === undefined ||
+      value.failure === null ||
+      isPipelineStatusFailure(value.failure)) &&
+    (value.observedAt === undefined ||
+      value.observedAt === null ||
+      typeof value.observedAt === 'string')
+  )
+}
+
+function isPipelineCatalogItem(value: unknown): value is PipelineCatalogItem {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.name === 'string' &&
+    (value.description === undefined ||
+      value.description === null ||
+      typeof value.description === 'string') &&
+    (value.mode === undefined ||
+      value.mode === null ||
+      value.mode === 'dag' ||
+      value.mode === 'wizard') &&
+    (value.revision === undefined ||
+      value.revision === null ||
+      (typeof value.revision === 'number' && Number.isInteger(value.revision))) &&
+    (value.updatedAt === undefined ||
+      value.updatedAt === null ||
+      typeof value.updatedAt === 'string') &&
+    (value.contentHash === undefined ||
+      value.contentHash === null ||
+      typeof value.contentHash === 'string') &&
+    typeof value.hasArtifact === 'boolean' &&
+    isPipelineCatalogStatus(value.status)
   )
 }
 
@@ -884,9 +961,13 @@ export async function getPipeline(id: string, fetcher: ApiFetcher = fetch): Prom
   return payload
 }
 
-export async function listPipelines(fetcher: ApiFetcher = fetch): Promise<PipelineView[]> {
+export async function listPipelines(fetcher: ApiFetcher = fetch): Promise<PipelineCatalogItem[]> {
   const payload = await request('/pipelines', fetcher)
-  if (!isRecord(payload) || !Array.isArray(payload.items) || !payload.items.every(isPipelineView)) {
+  if (
+    !isRecord(payload) ||
+    !Array.isArray(payload.items) ||
+    !payload.items.every(isPipelineCatalogItem)
+  ) {
     throw new PipelineClientError('protocol', 'Tapstate returned an invalid Pipeline list.')
   }
   return payload.items

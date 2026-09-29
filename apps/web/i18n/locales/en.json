@@ -396,6 +396,20 @@
       "error": "We couldn't load stored pipelines.",
       "loading": "Loading stored pipelines."
     },
+    "list": {
+      "searchAria": "Search pipelines",
+      "searchPlaceholder": "Search pipelines...",
+      "noResults": "No pipelines match this search.",
+      "lastRefreshed": "Last refreshed {{time}}",
+      "refreshActive": "Auto-refresh on",
+      "refreshPaused": "Auto-refresh paused",
+      "refresh": "Refresh pipelines",
+      "refreshAria": "Refresh pipeline list",
+      "pauseRefresh": "Pause updates",
+      "pauseRefreshAria": "Pause automatic pipeline refresh",
+      "resumeRefresh": "Resume updates",
+      "resumeRefreshAria": "Resume automatic pipeline refresh"
+    },
     "createMenu": {
       "title": "Creation mode",
       "wizard": "Build with Wizard",
@@ -1026,11 +1040,16 @@
         },
         "states": {
           "NEW": "New",
+          "STARTING": "Starting",
           "RUNNING": "Running",
+          "PAUSING": "Pausing",
           "PAUSED": "Paused",
+          "RESUMING": "Resuming",
+          "STOPPING": "Stopping",
           "STOPPED": "Stopped",
           "COMPLETED": "Completed",
-          "FAILED": "Failed"
+          "FAILED": "Failed",
+          "UNAVAILABLE": "Unavailable"
         }
       },
       "apiAccess": {

@@ -28,12 +28,12 @@ import {
   getPipelineDraft,
   runPipeline,
   stopPipeline,
-  type PipelineRuntimeState,
+  type PipelineCatalogState,
 } from '@/service/pipelines/pipeline-client'
 
 export type PipelineLifecycleAction = 'start' | 'stop'
 
-const lifecycleActionByState: Partial<Record<PipelineRuntimeState, PipelineLifecycleAction>> = {
+const lifecycleActionByState: Partial<Record<PipelineCatalogState, PipelineLifecycleAction>> = {
   NEW: 'start',
   STOPPED: 'start',
   COMPLETED: 'start',
@@ -54,7 +54,7 @@ export function PipelineLifecycleMenu({
   onMutationStart,
 }: {
   pipelineId: string
-  status?: PipelineRuntimeState
+  status?: PipelineCatalogState
   apiFetch: ApiFetcher
   contentHash: string | null
   presentation?: 'list' | 'stop-button'
@@ -75,13 +75,8 @@ export function PipelineLifecycleMenu({
   const pending = pendingAction !== null || deletePending
 
   async function refreshProjections() {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['pipelines'] }),
-      queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId] }),
-      queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId, 'status'] }),
-      queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId, 'metrics'] }),
-      queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId, 'logs'] }),
-    ])
+    // The shared key prefix refreshes the catalog and any open detail projections.
+    await queryClient.invalidateQueries({ queryKey: ['pipelines'] })
   }
 
   async function execute(nextAction: PipelineLifecycleAction, purgeState = false) {

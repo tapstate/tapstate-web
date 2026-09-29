@@ -42,6 +42,24 @@ const pipeline = {
   contentHash: 'a'.repeat(64),
 } as const
 
+const catalogItem = {
+  id: 'orders_to_warehouse',
+  name: 'Orders to warehouse',
+  description: 'Stream orders into analytics',
+  mode: 'wizard',
+  revision: 3,
+  updatedAt: '2026-09-21T00:01:00Z',
+  contentHash: null,
+  hasArtifact: false,
+  status: {
+    state: 'NEW',
+    desiredState: null,
+    observedState: null,
+    failure: null,
+    observedAt: null,
+  },
+} as const
+
 const layout = {
   pipelineId: 'orders_to_warehouse',
   nodes: { 'source:orders': { x: 64, y: 80 } },
@@ -151,15 +169,16 @@ describe('Pipeline client', () => {
     })
   })
 
-  it('reads the backend semantic DAG without adding canvas geometry to PipelineView', async () => {
+  it('reads the merged Pipeline catalog projection from the single list endpoint', async () => {
     const requests: Request[] = []
 
     await expect(
-      listPipelines(fetcherFor(jsonResponse({ items: [pipeline] }), requests)),
-    ).resolves.toEqual([pipeline])
+      listPipelines(fetcherFor(jsonResponse({ items: [catalogItem] }), requests)),
+    ).resolves.toEqual([catalogItem])
 
     expect(new URL(requests[0].url).pathname).toBe('/api/pipelines')
-    expect(pipeline.dag.nodes[0]).not.toHaveProperty('position')
+    expect(catalogItem).not.toHaveProperty('dag')
+    expect(catalogItem.hasArtifact).toBe(false)
   })
 
   it('uses revision ETags for the durable draft contract', async () => {
@@ -290,56 +309,41 @@ describe('Pipeline client', () => {
     })
   })
 
-  it('keeps Pipelines readable when a referenced Source is unresolved', async () => {
-    const unresolvedPipeline = {
-      ...pipeline,
-      sources: [
-        {
-          id: 'missing_source',
-          metadata: null,
-          connector: null,
-          resolved: false,
-        },
-      ],
-    } as const
-
-    await expect(
-      listPipelines(fetcherFor(jsonResponse({ items: [unresolvedPipeline] }))),
-    ).resolves.toEqual([unresolvedPipeline])
-  })
-
-  it('accepts failed pipeline status projections without a rendered message', async () => {
-    const failedPipeline = {
-      ...pipeline,
-      id: 'failed_pipeline',
-      status: {
-        pipelineId: 'failed_pipeline',
-        state: 'FAILED',
-        failure: {
-          code: 'engine.job-failed',
-          params: { cause: 'sink refused' },
+  it('accepts transitional and failed states in the Pipeline catalog', async () => {
+    const items = [
+      {
+        ...catalogItem,
+        hasArtifact: true,
+        contentHash: 'a'.repeat(64),
+        status: {
+          state: 'STARTING',
+          desiredState: 'RUNNING',
+          observedState: 'STOPPED',
+          failure: null,
+          observedAt: '2026-09-21T00:01:00Z',
         },
       },
-    } as const
+      {
+        ...catalogItem,
+        id: 'failed_pipeline',
+        name: 'Failed pipeline',
+        status: {
+          state: 'FAILED',
+          desiredState: 'RUNNING',
+          observedState: 'FAILED',
+          failure: { code: 'engine.job-failed', params: { cause: 'sink refused' } },
+          observedAt: '2026-09-21T00:01:00Z',
+        },
+      },
+    ] as const
 
-    await expect(
-      listPipelines(fetcherFor(jsonResponse({ items: [failedPipeline] }))),
-    ).resolves.toEqual([failedPipeline])
+    await expect(listPipelines(fetcherFor(jsonResponse({ items })))).resolves.toEqual(items)
   })
 
-  it('accepts healthy pipeline status projections with a null failure', async () => {
-    const runningPipeline = {
-      ...pipeline,
-      status: {
-        pipelineId: pipeline.id,
-        state: 'RUNNING',
-        failure: null,
-      },
-    } as const
-
+  it('rejects artifact detail objects from the catalog endpoint', async () => {
     await expect(
-      listPipelines(fetcherFor(jsonResponse({ items: [runningPipeline] }))),
-    ).resolves.toEqual([runningPipeline])
+      listPipelines(fetcherFor(jsonResponse({ items: [pipeline] }))),
+    ).rejects.toMatchObject({ kind: 'protocol' })
   })
 
   it('encodes an individual Pipeline id when loading its semantic graph', async () => {

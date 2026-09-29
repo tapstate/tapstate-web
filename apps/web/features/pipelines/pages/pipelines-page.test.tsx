@@ -83,33 +83,45 @@ beforeEach(() => {
   listPipelines.mockResolvedValue([
     {
       id: 'orders_to_warehouse',
-      dag: { nodes: [], edges: [] },
+      name: 'orders_to_warehouse',
+      mode: 'dag',
+      revision: 1,
       contentHash: 'a'.repeat(64),
-      status: { pipelineId: 'orders_to_warehouse', state: 'RUNNING' },
+      hasArtifact: true,
+      status: { state: 'RUNNING' },
     },
     {
       id: 'customer_360',
-      dag: { nodes: [], edges: [] },
+      name: 'customer_360',
+      mode: 'wizard',
+      revision: 2,
       contentHash: 'b'.repeat(64),
-      status: { pipelineId: 'customer_360', state: 'PAUSED' },
+      hasArtifact: true,
+      status: { state: 'PAUSED' },
     },
     {
       id: 'failed_import',
-      dag: { nodes: [], edges: [] },
+      name: 'failed_import',
+      revision: 4,
       contentHash: 'c'.repeat(64),
-      status: { pipelineId: 'failed_import', state: 'FAILED' },
+      hasArtifact: true,
+      status: { state: 'FAILED' },
     },
     {
       id: 'new_import',
-      dag: { nodes: [], edges: [] },
+      name: 'new_import',
+      revision: 1,
       contentHash: 'd'.repeat(64),
-      status: { pipelineId: 'new_import', state: 'NEW' },
+      hasArtifact: true,
+      status: { state: 'NEW' },
     },
     {
       id: 'offline_import',
-      dag: { nodes: [], edges: [] },
+      name: 'offline_import',
+      revision: 1,
       contentHash: 'e'.repeat(64),
-      status: null,
+      hasArtifact: true,
+      status: { state: 'UNAVAILABLE' },
     },
   ])
   listPipelineDrafts.mockResolvedValue([])
@@ -141,6 +153,7 @@ describe('PipelinesPage', () => {
     expect(container?.textContent).not.toContain('User Data Sync')
     expect(container?.textContent).not.toContain('2 hours ago')
     expect(listPipelines).toHaveBeenCalledTimes(1)
+    expect(listPipelineDrafts).not.toHaveBeenCalled()
     expect(document.querySelector('[data-testid="pipeline-canvas"]')).toBeNull()
 
     expect(elementWithText('button', 'Create')).toBeDefined()
@@ -161,23 +174,16 @@ describe('PipelinesPage', () => {
     expect(elementWithText('a', 'Edit')).toBeUndefined()
   })
 
-  it('lists durable Wizard drafts as resumable drafts without lifecycle controls', async () => {
-    listPipelineDrafts.mockResolvedValue([
+  it('lists draft-only catalog rows as resumable drafts without lifecycle controls', async () => {
+    listPipelines.mockResolvedValueOnce([
       {
-        pipelineId: 'unfinished_wizard',
-        schemaVersion: 1,
-        revision: 3,
-        mode: 'wizard',
+        id: 'unfinished_wizard',
         name: 'unfinished_wizard',
-        description: null,
-        graph: null,
-        wizard: {},
-        baseArtifactHash: null,
-        publishedDraftRevision: null,
-        publishedArtifactHash: null,
-        createdAt: '2026-09-24T00:00:00Z',
-        updatedAt: '2026-09-24T00:00:00Z',
-        updatedBy: 'admin',
+        mode: 'wizard',
+        revision: 3,
+        contentHash: null,
+        hasArtifact: false,
+        status: { state: 'NEW' },
       },
     ])
 
@@ -218,26 +224,61 @@ describe('PipelinesPage', () => {
     expect(deletePipelineDraft).toHaveBeenCalledWith('unfinished_wizard', '"3"', apiFetch)
   })
 
-  it('shows an unavailable state when a Pipeline has no runtime observation', async () => {
+  it('filters the merged catalog and exposes auto-refresh state on the refresh control', async () => {
+    await renderPage()
+    await vi.waitFor(() => expect(container?.textContent).toContain('orders_to_warehouse'))
+
+    const search = document.querySelector<HTMLInputElement>(
+      'input[placeholder="Search pipelines..."]',
+    )
+    expect(search).not.toBeNull()
+    await act(async () => {
+      if (!search) return
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(
+        search,
+        'customer',
+      )
+      search.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect(document.querySelectorAll('tbody tr')).toHaveLength(1)
+    expect(document.querySelector('tbody')?.textContent).toContain('customer_360')
+
+    const refresh = document.querySelector<HTMLButtonElement>(
+      '[aria-label="Refresh pipeline list"]',
+    )
+    expect(refresh?.dataset.autoRefresh).toBe('on')
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>('[aria-label="Pause automatic pipeline refresh"]')
+        ?.click(),
+    )
+    expect(refresh?.dataset.autoRefresh).toBe('off')
+    await act(async () => refresh?.click())
+    await vi.waitFor(() => expect(listPipelines).toHaveBeenCalledTimes(2))
+  })
+
+  it('shows transitional and unavailable runtime catalog states', async () => {
     listPipelines.mockResolvedValueOnce([
       {
         id: 'orders_to_warehouse',
-        dag: { nodes: [], edges: [] },
+        name: 'orders_to_warehouse',
+        hasArtifact: true,
         contentHash: 'a'.repeat(64),
-        status: null,
+        status: { state: 'STARTING' },
       },
       {
         id: 'customer_360',
-        dag: { nodes: [], edges: [] },
+        name: 'customer_360',
+        hasArtifact: true,
         contentHash: 'b'.repeat(64),
-        status: { pipelineId: 'customer_360', state: 'PAUSED' },
+        status: { state: 'UNAVAILABLE' },
       },
     ])
 
     await renderPage()
 
-    await vi.waitFor(() => expect(container?.textContent).toContain('Unavailable'))
-    expect(container?.textContent).toContain('Paused')
+    await vi.waitFor(() => expect(container?.textContent).toContain('Starting'))
+    expect(container?.textContent).toContain('Unavailable')
     expect(listPipelines).toHaveBeenCalledTimes(1)
   })
 
@@ -273,16 +314,6 @@ describe('PipelinesPage', () => {
     )
     await vi.waitFor(() => expect(listPipelines).toHaveBeenCalledTimes(2))
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['pipelines'] })
-    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['pipelines', 'new_import'] })
-    expect(invalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['pipelines', 'new_import', 'status'],
-    })
-    expect(invalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['pipelines', 'new_import', 'metrics'],
-    })
-    expect(invalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['pipelines', 'new_import', 'logs'],
-    })
   })
 
   it('refreshes a stale lifecycle state and surfaces the server transition reason', async () => {
