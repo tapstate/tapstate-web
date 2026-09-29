@@ -166,7 +166,9 @@ function OverviewContent({ overview, guidance, current, onDefer }: OverviewConte
                 description={t('overview.setup.sources.description')}
                 actions={
                   <Button asChild nativeButton={false} size="sm" variant="secondary">
-                    <Link to="/sources">{t('overview.setup.sources.action')}</Link>
+                    <Link to="/sources" search={{ create: true }}>
+                      {t('overview.setup.sources.action')}
+                    </Link>
                   </Button>
                 }
               />

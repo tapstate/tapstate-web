@@ -72,6 +72,10 @@ export interface SourcesPageRoute {
 interface SourcesPageProps {
   route?: SourcesPageRoute
   onNavigate?: (route: SourcesPageRoute) => void
+  /** Opens the new-source form when the page first shows. */
+  createOnArrival?: boolean
+  /** Called once the arrival form has closed, so the caller can drop the request from the URL. */
+  onArrivalCreateClosed?: () => void
 }
 
 interface SourceTable {
@@ -139,7 +143,12 @@ function schemaErrorMessage(error: unknown, t: ReturnType<typeof useTranslation>
   return t('sources.schema.loadError')
 }
 
-export function SourcesPage({ route, onNavigate }: SourcesPageProps = {}) {
+export function SourcesPage({
+  route,
+  onNavigate,
+  createOnArrival = false,
+  onArrivalCreateClosed,
+}: SourcesPageProps = {}) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const apiFetch = useAuthStore((state) => state.apiFetch)
@@ -147,7 +156,7 @@ export function SourcesPage({ route, onNavigate }: SourcesPageProps = {}) {
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null)
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null)
   const [activeTabState, setActiveTabState] = useState<SourceTab>('data')
-  const [createOpen, setCreateOpen] = useState(false)
+  const [createOpen, setCreateOpen] = useState(createOnArrival)
   const [editingSourceId, setEditingSourceId] = useState<string | null>(null)
   const [deletingSource, setDeletingSource] = useState<Source | null>(null)
   const [successMessage, setSuccessMessage] = useState('')
@@ -802,7 +811,14 @@ export function SourcesPage({ route, onNavigate }: SourcesPageProps = {}) {
           }
         }}
       />
-      <SourceCreateDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={onCreated} />
+      <SourceCreateDialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open)
+          if (!open) onArrivalCreateClosed?.()
+        }}
+        onCreated={onCreated}
+      />
       {editingSourceId &&
         editingSourceQuery.data &&
         !editingSourceQuery.isFetching &&
