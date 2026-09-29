@@ -1,4 +1,5 @@
 import type { PipelineRuntimeState, PipelineView } from '@/service/pipelines/pipeline-client'
+import type { ViewListResult } from '@/service/view-client'
 
 import { MANAGED_VIEW_STORE_SOURCE_ID, type SourceView } from '@/service/source-client'
 
@@ -13,10 +14,23 @@ export interface OverviewSourceItem {
   connector: string
 }
 
-export interface OverviewAttentionItem {
-  kind: 'pipelineFailed'
-  pipelineId: string
-  code: string | null
+export type OverviewAttentionItem =
+  | { kind: 'pipelineFailed'; pipelineId: string; code: string | null }
+  | {
+      kind: 'viewStale'
+      viewId: string
+      collection: string
+      pipelineId: string
+      pipelineHealth: PipelineHealth | null
+      /** Epoch milliseconds of the last change applied, or null when none was. */
+      lastAppliedAt: number | null
+    }
+
+/** Freshness counts from the server's view list; null while the server does not list views. */
+export interface OverviewViewCounts {
+  total: number
+  fresh: number
+  stale: number
 }
 
 export interface OverviewModel {
@@ -24,11 +38,14 @@ export interface OverviewModel {
     ready: boolean
     /** Id of the source the store is registered as, when it is the server's managed store. */
     managedSourceId: string | null
+    views: OverviewViewCounts | null
   }
   sources: {
     count: number
     /** The first few sources, for the diagram; the rest are only counted. */
     preview: OverviewSourceItem[]
+    /** Every data source, sorted by id. */
+    all: OverviewSourceItem[]
   }
   pipelines: Record<PipelineHealth, number> & { total: number }
   setup: {
@@ -50,8 +67,15 @@ export function pipelineHealth(state: PipelineRuntimeState | undefined): Pipelin
   return 'idle'
 }
 
-/** Builds the overview from the source and pipeline lists the server already returns. */
-export function buildOverview(sources: SourceView[], pipelines: PipelineView[]): OverviewModel {
+/**
+ * Builds the overview from the source and pipeline lists the server already returns, plus the
+ * view list when the server offers one. Freshness is the server's; nothing here derives it.
+ */
+export function buildOverview(
+  sources: SourceView[],
+  pipelines: PipelineView[],
+  views: ViewListResult | null = null,
+): OverviewModel {
   const managed = sources.find((source) => source.id === MANAGED_VIEW_STORE_SOURCE_ID) ?? null
   const dataSources = sources
     .filter((source) => source.id !== MANAGED_VIEW_STORE_SOURCE_ID)
@@ -60,14 +84,37 @@ export function buildOverview(sources: SourceView[], pipelines: PipelineView[]):
 
   const counts: Record<PipelineHealth, number> = { running: 0, idle: 0, error: 0 }
   const attention: OverviewAttentionItem[] = []
+  const healthById = new Map<string, PipelineHealth>()
   for (const pipeline of [...pipelines].sort((left, right) => left.id.localeCompare(right.id))) {
     const health = pipelineHealth(pipeline.status?.state)
+    healthById.set(pipeline.id, health)
     counts[health] += 1
     if (health === 'error') {
       attention.push({
         kind: 'pipelineFailed',
         pipelineId: pipeline.id,
         code: pipeline.status?.failure?.code ?? null,
+      })
+    }
+  }
+
+  let viewCounts: OverviewViewCounts | null = null
+  if (views?.available) {
+    viewCounts = { total: views.views.length, fresh: 0, stale: 0 }
+    const sorted = [...views.views].sort((left, right) =>
+      left.location.collection.localeCompare(right.location.collection),
+    )
+    for (const view of sorted) {
+      if (view.status.state === 'fresh') viewCounts.fresh += 1
+      if (view.status.state !== 'stale') continue
+      viewCounts.stale += 1
+      attention.push({
+        kind: 'viewStale',
+        viewId: view.id,
+        collection: view.location.collection,
+        pipelineId: view.pipelineId,
+        pipelineHealth: healthById.get(view.pipelineId) ?? null,
+        lastAppliedAt: view.lastAppliedAt,
       })
     }
   }
@@ -79,8 +126,16 @@ export function buildOverview(sources: SourceView[], pipelines: PipelineView[]):
   }
 
   return {
-    stateStore: { ready: done.stateStore, managedSourceId: managed?.id ?? null },
-    sources: { count: dataSources.length, preview: dataSources.slice(0, SOURCE_PREVIEW_LIMIT) },
+    stateStore: {
+      ready: done.stateStore,
+      managedSourceId: managed?.id ?? null,
+      views: viewCounts,
+    },
+    sources: {
+      count: dataSources.length,
+      preview: dataSources.slice(0, SOURCE_PREVIEW_LIMIT),
+      all: dataSources,
+    },
     pipelines: { ...counts, total: pipelines.length },
     setup: {
       done,

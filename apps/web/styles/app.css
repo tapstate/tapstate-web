@@ -118,6 +118,10 @@
     padding: 0 4px;
   }
 
+  .app-sidebar__nav--footer {
+    flex: none;
+  }
+
   .app-sidebar__link {
     display: flex;
     width: 100%;

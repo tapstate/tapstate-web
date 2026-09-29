@@ -19,6 +19,48 @@
   padding: 0 1.5rem;
 }
 
+.settings-page .settings-page__layout {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+}
+
+.settings-page .settings-sections {
+  display: flex;
+  width: 12rem;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 0.125rem;
+  border-right: 1px solid var(--border);
+  padding: 1rem 0.75rem;
+}
+
+.settings-page .settings-sections__item {
+  border-radius: var(--radius);
+  padding: 0.375rem 0.625rem;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+
+.settings-page .settings-sections__item--active {
+  background: var(--muted);
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.settings-page .settings-sections__item--disabled {
+  opacity: 0.6;
+}
+
+.settings-page .settings-page__section-header {
+  display: flex;
+  max-width: 48rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .settings-page .settings-page__body {
   display: flex;
   min-height: 0;
@@ -99,6 +141,19 @@
 }
 
 @media (max-width: 767px) {
+  .settings-page .settings-page__layout {
+    flex-direction: column;
+  }
+
+  .settings-page .settings-sections {
+    width: auto;
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+  }
+
   .settings-page .settings-page__header,
   .settings-page .settings-page__body {
     padding-right: 1rem;

@@ -17,7 +17,8 @@
     "user": {
       "avatar": "用户头像",
       "initial": "U"
-    }
+    },
+    "secondaryNavigation": "次要导航"
   },
   "nav": {
     "views": "视图",
@@ -1012,27 +1013,31 @@
       "later": "跳过，稍后再做",
       "stateStore": {
         "title": "选择视图存放的位置",
-        "description": "Tapstate 把 pipeline 构建的视图保存在 state store 中。此服务器尚未配置，需要管理员配置。"
+        "description": "此服务器还没有 state store，需要管理员配置。"
       },
       "sources": {
-        "title": "添加数据源",
-        "description": "连接一个你要用来构建的数据库。",
+        "title": "添加用来构建的数据库",
         "action": "添加数据源"
       },
       "pipeline": {
-        "title": "构建第一条 pipeline",
-        "description": "把表镜像到 Atlas，或构建一个随源数据变化持续更新的视图。",
-        "action": "创建 pipeline"
+        "title": "开始第一条 pipeline",
+        "action": "构建第一条 pipeline"
+      },
+      "complete": {
+        "title": "设置完成。",
+        "body": "State store、数据源与第一条 pipeline 都已就绪。此提示不会再显示。",
+        "close": "关闭"
       }
     },
     "sources": {
       "title": "数据源",
       "metric_one": "{{count}} 个数据源",
       "metric_other": "{{count}} 个数据源",
-      "none": "还没有数据源",
+      "none": "还没有数据源。",
       "more_one": "还有 {{count}} 个",
       "more_other": "还有 {{count}} 个",
-      "open": "打开数据源"
+      "open": "数据源 →",
+      "add": "添加数据源"
     },
     "pipelines": {
       "title": "Pipelines",
@@ -1041,26 +1046,61 @@
       "running": "运行中",
       "idle": "空闲",
       "error": "出错",
-      "open": "打开 Pipelines"
+      "open": "Pipelines →",
+      "none": "还没有 pipeline。",
+      "build": "构建第一条 pipeline",
+      "idleValue_one": "{{count}} · 已停止或从未启动",
+      "idleValue_other": "{{count}} · 已停止或从未启动"
     },
     "stateStore": {
       "title": "State store",
       "ready": "就绪",
-      "missing": "未设置",
+      "missing": "尚未设置。",
       "location": "位置",
       "managed": "Tapstate state store",
       "views": "视图",
-      "open": "打开 State store"
+      "open": "设置 → State store",
+      "metric_one": "{{count}} 个视图",
+      "metric_other": "{{count}} 个视图",
+      "fresh": "最新",
+      "stale": "过期",
+      "missingDetail": "视图存放在 state store 中。构建视图前先选一个。",
+      "openViews": "视图 →"
     },
     "attention": {
       "title": "需要关注",
-      "clear": "一切正常",
-      "pipelineFailed": "Pipeline {{pipeline}} 失败"
+      "clear": "一切正常。没有失败的 pipeline 或过期的视图。",
+      "pipelineFailed": "失败的 pipeline",
+      "viewStale": "过期的视图",
+      "lastApplied_one": "最近一次变更在 {{count}} 分钟前",
+      "lastApplied_other": "最近一次变更在 {{count}} 分钟前",
+      "neverApplied": "尚未应用任何变更",
+      "pipelineIs": {
+        "running": "其 pipeline {{pipeline}} 正在运行",
+        "idle": "其 pipeline {{pipeline}} 已停止",
+        "error": "其 pipeline {{pipeline}} 已失败",
+        "unknown": "由 {{pipeline}} 维护"
+      },
+      "openPipeline": "在 Pipelines 中打开",
+      "openView": "在视图中打开"
+    },
+    "subtitle": "数据从数据源经 pipeline 流入 state store。",
+    "addSources": {
+      "title": "添加数据源",
+      "description": "添加你要用来构建的数据库。",
+      "connect": {
+        "title": "连接你自己的数据库",
+        "description": "Oracle、SQL Server、MySQL、PostgreSQL 或 MongoDB。添加时会运行连接测试。",
+        "action": "连接数据库"
+      },
+      "added_one": "你的数据源（{{count}}）",
+      "added_other": "你的数据源（{{count}}）",
+      "done": "完成"
     }
   },
   "stateStorePage": {
     "title": "State store",
-    "intro": "Tapstate 把 pipeline 构建的视图保存在 state store 中。新视图存到默认 store。",
+    "intro": "Tapstate 保存视图的地方。pipeline 构建的每个视图都写入默认 store。",
     "listLabel": "State store 列表",
     "add": "添加 store",
     "addLimit": "本版本只支持一个 store",
@@ -1074,14 +1114,21 @@
     },
     "managed": {
       "name": "Tapstate state store",
-      "type": "服务器自身的 MongoDB",
-      "access": "由服务器管理",
+      "type": "MongoDB · 服务器元数据库",
+      "access": "与此服务器已使用的 MongoDB 共用。生产环境请使用单独的 MongoDB。",
       "deleteReason": "此 store 由服务器管理"
     },
     "states": {
       "loading": "正在加载 state store…",
       "error": "state store 加载失败。",
-      "empty": "此服务器没有配置 state store。"
+      "empty": "还没有 state store。设置之前 pipeline 无法启动。"
+    },
+    "settings": "设置",
+    "sectionsLabel": "设置分区",
+    "sections": {
+      "stateStore": "State store",
+      "members": "成员",
+      "apiKeys": "API 密钥"
     }
   },
   "views": {
@@ -1114,7 +1161,11 @@
       "fresh_other": "{{count}} 个最新",
       "stale_one": "{{count}} 个过期",
       "stale_other": "{{count}} 个过期",
-      "slowest": "最慢落后 {{behind}}"
+      "slowest": "最慢落后 {{behind}}",
+      "loading_one": "{{count}} 个加载中",
+      "loading_other": "{{count}} 个加载中",
+      "notLoaded_one": "{{count}} 个未加载",
+      "notLoaded_other": "{{count}} 个未加载"
     },
     "table": {
       "name": "名称",
@@ -1122,7 +1173,7 @@
       "storedIn": "存放于",
       "status": "状态",
       "documents": "文档数",
-      "lastChange": "最近变更",
+      "lastChange": "最近应用的变更",
       "maintainedBy": "维护者"
     },
     "storedIn": {
@@ -1135,17 +1186,17 @@
       "notReported": "此服务器暂不提供视图列表。每条 pipeline 的页面仍会显示它写到哪里。"
     },
     "explainer": {
-      "empty": "还没有视图。视图是 Tapstate 根据源表持续保持最新的 collection。",
+      "empty": "还没有视图",
       "what": "视图是 Tapstate 根据源表持续保持最新的 collection。",
       "flowLabel": "视图如何产生",
       "sources": "数据源",
       "pipeline": "Pipeline",
       "view": "视图",
       "storedIn": "视图将存放于",
-      "storeMissing": "尚未设置",
+      "storeMissing": "视图存放在 state store 中。构建视图前先选一个。",
       "setUp": "去设置",
       "build": "构建视图",
-      "replicas": "镜像的表也会作为副本列在这里。"
+      "replicas": "镜像表会产生副本，也会列在这里。"
     },
     "detail": {
       "maintainedBy": "维护者",
@@ -1166,7 +1217,25 @@
       },
       "size": "大小",
       "largestDocument": "最大文档",
-      "collection": "Collection"
-    }
+      "collection": "collection {{name}}",
+      "storedIn": "存放于",
+      "siblings": "此 pipeline 还写入：",
+      "freshness": "新鲜度",
+      "lastApplied": "最近一次变更在 {{age}}前",
+      "neverApplied": "尚未应用任何变更",
+      "documentLimit": "单个文档上限 16 MB",
+      "initialLoad": "初次加载",
+      "upToDate": "已是最新",
+      "streaming": "初次加载已完成；变更捕获持续保持最新。",
+      "pipelineState": {
+        "NEW": "从未启动",
+        "RUNNING": "运行中",
+        "PAUSED": "已暂停",
+        "STOPPED": "已停止",
+        "COMPLETED": "已完成",
+        "FAILED": "已失败"
+      }
+    },
+    "footnote": "状态综合了 pipeline 的状态与视图落后于源的程度。视图是构建出的文档；副本是一张表的镜像。"
   }
 }

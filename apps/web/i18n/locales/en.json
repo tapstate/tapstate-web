@@ -17,7 +17,8 @@
     "user": {
       "avatar": "User avatar",
       "initial": "U"
-    }
+    },
+    "secondaryNavigation": "Secondary navigation"
   },
   "nav": {
     "views": "Views",
@@ -1030,27 +1031,31 @@
       "later": "Skip, I'll do it later",
       "stateStore": {
         "title": "Choose where your views live",
-        "description": "Tapstate keeps the views your pipelines build in a state store. This server has none yet; an administrator needs to configure one."
+        "description": "This server has no state store yet; an administrator needs to set one up."
       },
       "sources": {
-        "title": "Add a data source",
-        "description": "Connect a database you want to build from.",
-        "action": "Add a source"
+        "title": "Add the databases you build from",
+        "action": "Add data sources"
       },
       "pipeline": {
-        "title": "Build your first pipeline",
-        "description": "Mirror tables into Atlas, or build a view that stays up to date as source rows change.",
-        "action": "Create a pipeline"
+        "title": "Start your first pipeline",
+        "action": "Build your first pipeline"
+      },
+      "complete": {
+        "title": "Setup complete.",
+        "body": "Your state store, sources and first pipeline are ready. This note will not show again.",
+        "close": "Close"
       }
     },
     "sources": {
       "title": "Sources",
       "metric_one": "{{count}} source",
       "metric_other": "{{count}} sources",
-      "none": "No sources yet",
+      "none": "No sources yet.",
       "more_one": "and {{count}} more",
       "more_other": "and {{count}} more",
-      "open": "Open Data Sources"
+      "open": "Data Sources →",
+      "add": "Add data sources"
     },
     "pipelines": {
       "title": "Pipelines",
@@ -1059,26 +1064,61 @@
       "running": "Running",
       "idle": "Idle",
       "error": "Error",
-      "open": "Open Pipelines"
+      "open": "Pipelines →",
+      "none": "No pipeline yet.",
+      "build": "Build your first pipeline",
+      "idleValue_one": "{{count}} · stopped or never started",
+      "idleValue_other": "{{count}} · stopped or never started"
     },
     "stateStore": {
       "title": "State store",
       "ready": "Ready",
-      "missing": "Not set up",
+      "missing": "Not set up yet.",
       "location": "Location",
       "managed": "Tapstate state store",
       "views": "Views",
-      "open": "Open State stores"
+      "open": "Settings → State store",
+      "metric_one": "{{count}} view",
+      "metric_other": "{{count}} views",
+      "fresh": "Fresh",
+      "stale": "Stale",
+      "missingDetail": "Views live in a state store. Pick one before building a view.",
+      "openViews": "Views →"
     },
     "attention": {
       "title": "Needs attention",
-      "clear": "All clear",
-      "pipelineFailed": "Pipeline {{pipeline}} failed"
+      "clear": "All clear. No failed pipelines or stale views.",
+      "pipelineFailed": "Failed pipeline",
+      "viewStale": "Stale view",
+      "lastApplied_one": "last change applied {{count}} min ago",
+      "lastApplied_other": "last change applied {{count}} min ago",
+      "neverApplied": "no change applied yet",
+      "pipelineIs": {
+        "running": "its pipeline {{pipeline}} is running",
+        "idle": "its pipeline {{pipeline}} is stopped",
+        "error": "its pipeline {{pipeline}} has failed",
+        "unknown": "maintained by {{pipeline}}"
+      },
+      "openPipeline": "Open in Pipelines",
+      "openView": "Open in Views"
+    },
+    "subtitle": "Data flows from your sources, through pipelines, into the state store.",
+    "addSources": {
+      "title": "Add data sources",
+      "description": "Add the databases you want to build from.",
+      "connect": {
+        "title": "Connect your own database",
+        "description": "Oracle, SQL Server, MySQL, PostgreSQL or MongoDB. The connection test runs as you add it.",
+        "action": "Connect a database"
+      },
+      "added_one": "Your source ({{count}})",
+      "added_other": "Your sources ({{count}})",
+      "done": "Done"
     }
   },
   "stateStorePage": {
     "title": "State stores",
-    "intro": "Tapstate keeps the views your pipelines build in a state store. New views go to the default store.",
+    "intro": "Where Tapstate keeps your views. Every view a pipeline builds is written to the default store.",
     "listLabel": "State stores",
     "add": "Add store",
     "addLimit": "One store in this release",
@@ -1092,14 +1132,21 @@
     },
     "managed": {
       "name": "Tapstate state store",
-      "type": "The server's own MongoDB",
-      "access": "Managed by the server",
+      "type": "MongoDB · server metadata database",
+      "access": "Shares the MongoDB this server already uses. For production, use a separate MongoDB.",
       "deleteReason": "The server manages this store"
     },
     "states": {
       "loading": "Loading state stores…",
       "error": "State stores could not be loaded.",
-      "empty": "No state store is configured on this server."
+      "empty": "No state store yet. Pipelines cannot start until one is set."
+    },
+    "settings": "Settings",
+    "sectionsLabel": "Settings sections",
+    "sections": {
+      "stateStore": "State store",
+      "members": "Members",
+      "apiKeys": "API keys"
     }
   },
   "views": {
@@ -1132,7 +1179,11 @@
       "fresh_other": "{{count}} fresh",
       "stale_one": "{{count}} stale",
       "stale_other": "{{count}} stale",
-      "slowest": "slowest {{behind}} behind"
+      "slowest": "slowest {{behind}} behind",
+      "loading_one": "{{count}} loading",
+      "loading_other": "{{count}} loading",
+      "notLoaded_one": "{{count}} not loaded",
+      "notLoaded_other": "{{count}} not loaded"
     },
     "table": {
       "name": "Name",
@@ -1140,7 +1191,7 @@
       "storedIn": "Stored in",
       "status": "Status",
       "documents": "Documents",
-      "lastChange": "Last change",
+      "lastChange": "Last change applied",
       "maintainedBy": "Maintained by"
     },
     "storedIn": {
@@ -1153,17 +1204,17 @@
       "notReported": "This server does not list views yet. Each pipeline still shows where it writes on its own page."
     },
     "explainer": {
-      "empty": "No views yet. A view is a collection Tapstate keeps current from your source tables.",
+      "empty": "No views yet",
       "what": "A view is a collection Tapstate keeps current from your source tables.",
       "flowLabel": "How a view is made",
       "sources": "Sources",
       "pipeline": "Pipeline",
       "view": "View",
       "storedIn": "Views will be stored in",
-      "storeMissing": "Not set up yet",
+      "storeMissing": "Views live in a state store. Pick one before building a view.",
       "setUp": "Set up",
       "build": "Build a view",
-      "replicas": "Tables you mirror are listed here too, as replicas."
+      "replicas": "Mirroring tables creates replicas; they appear here too."
     },
     "detail": {
       "maintainedBy": "Maintained by",
@@ -1184,7 +1235,25 @@
       },
       "size": "Size",
       "largestDocument": "Largest document",
-      "collection": "Collection"
-    }
+      "collection": "collection {{name}}",
+      "storedIn": "Stored in",
+      "siblings": "Also written by this pipeline:",
+      "freshness": "Freshness",
+      "lastApplied": "last change applied {{age}} ago",
+      "neverApplied": "no change applied yet",
+      "documentLimit": "limit 16 MB per document",
+      "initialLoad": "Initial load",
+      "upToDate": "Up to date",
+      "streaming": "Initial load finished; change capture keeps it current.",
+      "pipelineState": {
+        "NEW": "never started",
+        "RUNNING": "running",
+        "PAUSED": "paused",
+        "STOPPED": "stopped",
+        "COMPLETED": "completed",
+        "FAILED": "failed"
+      }
+    },
+    "footnote": "Status combines the pipeline's state with how far the view is behind its sources. A View is a built document; a Replica is a mirrored copy of one table."
   }
 }

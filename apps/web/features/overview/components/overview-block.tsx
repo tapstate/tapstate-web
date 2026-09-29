@@ -16,6 +16,8 @@ interface OverviewBlockProps {
   /** The count line, such as "2 sources". */
   metric: string
   details: OverviewBlockDetail[]
+  /** Shown in place of the details while the block has nothing yet, such as an Add button. */
+  emptyAction?: ReactNode
   footer: ReactNode
   /** Setup step number shown while guidance is on; null hides it. */
   step: number | null
@@ -33,6 +35,7 @@ export function OverviewBlock({
   icon: Icon,
   metric,
   details,
+  emptyAction,
   footer,
   step,
   stepDone,
@@ -74,14 +77,18 @@ export function OverviewBlock({
           )}
         </header>
         <p className="overview-block__metric">{metric}</p>
-        <dl className="overview-block__details">
-          {details.map((detail) => (
-            <div key={detail.label} className="overview-block__detail">
-              <dt>{detail.label}</dt>
-              <dd>{detail.value}</dd>
-            </div>
-          ))}
-        </dl>
+        {emptyAction ? (
+          <div className="overview-block__details overview-block__empty">{emptyAction}</div>
+        ) : (
+          <dl className="overview-block__details">
+            {details.map((detail) => (
+              <div key={detail.label} className="overview-block__detail">
+                <dt>{detail.label}</dt>
+                <dd>{detail.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
         <footer className="overview-block__footer">{footer}</footer>
       </section>
       {callout}

@@ -28,6 +28,10 @@ const navigation: NavigationItem[] = [
   { labelKey: 'nav.pipelines', to: '/pipelines', icon: GitMerge },
   { labelKey: 'nav.views', to: '/views', icon: Layers },
   { labelKey: 'nav.explorations', to: '/explorations', icon: MessageSquareText },
+]
+
+/** Kept apart from the places above, at the foot of the sidebar. */
+const footerNavigation: NavigationItem[] = [
   { labelKey: 'nav.settings', to: '/settings', icon: Settings },
 ]
 
@@ -45,25 +49,32 @@ export function AppSidebar() {
       </div>
 
       <nav className="app-sidebar__nav" aria-label={t('app.primaryNavigation')}>
-        {navigation.map((item) => {
-          const Icon = item.icon
-          return (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={cn(
-                'app-sidebar__link',
-                pathname.startsWith(item.to) && 'app-sidebar__link--active',
-              )}
-            >
-              <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span>{t(item.labelKey)}</span>
-            </Link>
-          )
-        })}
+        {navigation.map((item) => (
+          <SidebarLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
+        ))}
+      </nav>
+
+      <nav
+        className="app-sidebar__nav app-sidebar__nav--footer"
+        aria-label={t('app.secondaryNavigation')}
+      >
+        {footerNavigation.map((item) => (
+          <SidebarLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
+        ))}
       </nav>
 
       <AppHeader />
     </aside>
+  )
+}
+
+function SidebarLink({ item, active }: { item: NavigationItem; active: boolean }) {
+  const { t } = useTranslation()
+  const Icon = item.icon
+  return (
+    <Link to={item.to} className={cn('app-sidebar__link', active && 'app-sidebar__link--active')}>
+      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <span>{t(item.labelKey)}</span>
+    </Link>
   )
 }

@@ -83,7 +83,9 @@ describe('StateStorePage', () => {
 
     await render()
 
-    expect(container.textContent).toContain('No state store is configured on this server')
+    expect(container.textContent).toContain(
+      'No state store yet. Pipelines cannot start until one is set.',
+    )
     expect(container.querySelector('li')).toBeNull()
   })
 

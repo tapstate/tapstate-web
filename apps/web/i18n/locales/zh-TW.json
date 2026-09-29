@@ -17,7 +17,8 @@
     "user": {
       "avatar": "使用者頭像",
       "initial": "U"
-    }
+    },
+    "secondaryNavigation": "次要導覽"
   },
   "nav": {
     "views": "檢視",
@@ -1012,27 +1013,31 @@
       "later": "略過，稍後再做",
       "stateStore": {
         "title": "選擇檢視存放的位置",
-        "description": "Tapstate 把 pipeline 建立的檢視保存在 state store 中。此伺服器尚未設定，需要管理員設定。"
+        "description": "此伺服器還沒有 state store，需要管理員設定。"
       },
       "sources": {
-        "title": "新增資料來源",
-        "description": "連接一個你要用來建立的資料庫。",
+        "title": "新增用來建立的資料庫",
         "action": "新增資料來源"
       },
       "pipeline": {
-        "title": "建立第一條 pipeline",
-        "description": "把資料表鏡像到 Atlas，或建立一個隨來源資料變化持續更新的檢視。",
-        "action": "建立 pipeline"
+        "title": "開始第一條 pipeline",
+        "action": "建立第一條 pipeline"
+      },
+      "complete": {
+        "title": "設定完成。",
+        "body": "State store、資料來源與第一條 pipeline 都已就緒。此提示不會再顯示。",
+        "close": "關閉"
       }
     },
     "sources": {
       "title": "資料來源",
       "metric_one": "{{count}} 個資料來源",
       "metric_other": "{{count}} 個資料來源",
-      "none": "還沒有資料來源",
+      "none": "還沒有資料來源。",
       "more_one": "還有 {{count}} 個",
       "more_other": "還有 {{count}} 個",
-      "open": "開啟資料來源"
+      "open": "資料來源 →",
+      "add": "新增資料來源"
     },
     "pipelines": {
       "title": "Pipelines",
@@ -1041,26 +1046,61 @@
       "running": "執行中",
       "idle": "閒置",
       "error": "錯誤",
-      "open": "開啟 Pipelines"
+      "open": "Pipelines →",
+      "none": "還沒有 pipeline。",
+      "build": "建立第一條 pipeline",
+      "idleValue_one": "{{count}} · 已停止或從未啟動",
+      "idleValue_other": "{{count}} · 已停止或從未啟動"
     },
     "stateStore": {
       "title": "State store",
       "ready": "就緒",
-      "missing": "未設定",
+      "missing": "尚未設定。",
       "location": "位置",
       "managed": "Tapstate state store",
       "views": "檢視",
-      "open": "開啟 State store"
+      "open": "設定 → State store",
+      "metric_one": "{{count}} 個檢視",
+      "metric_other": "{{count}} 個檢視",
+      "fresh": "最新",
+      "stale": "過期",
+      "missingDetail": "檢視存放在 state store 中。建立檢視前先選一個。",
+      "openViews": "檢視 →"
     },
     "attention": {
       "title": "需要關注",
-      "clear": "一切正常",
-      "pipelineFailed": "Pipeline {{pipeline}} 失敗"
+      "clear": "一切正常。沒有失敗的 pipeline 或過期的檢視。",
+      "pipelineFailed": "失敗的 pipeline",
+      "viewStale": "過期的檢視",
+      "lastApplied_one": "最近一次變更在 {{count}} 分鐘前",
+      "lastApplied_other": "最近一次變更在 {{count}} 分鐘前",
+      "neverApplied": "尚未套用任何變更",
+      "pipelineIs": {
+        "running": "其 pipeline {{pipeline}} 正在執行",
+        "idle": "其 pipeline {{pipeline}} 已停止",
+        "error": "其 pipeline {{pipeline}} 已失敗",
+        "unknown": "由 {{pipeline}} 維護"
+      },
+      "openPipeline": "在 Pipelines 中開啟",
+      "openView": "在檢視中開啟"
+    },
+    "subtitle": "資料從資料來源經 pipeline 流入 state store。",
+    "addSources": {
+      "title": "新增資料來源",
+      "description": "新增你要用來建立的資料庫。",
+      "connect": {
+        "title": "連接你自己的資料庫",
+        "description": "Oracle、SQL Server、MySQL、PostgreSQL 或 MongoDB。新增時會執行連線測試。",
+        "action": "連接資料庫"
+      },
+      "added_one": "你的資料來源（{{count}}）",
+      "added_other": "你的資料來源（{{count}}）",
+      "done": "完成"
     }
   },
   "stateStorePage": {
     "title": "State store",
-    "intro": "Tapstate 把 pipeline 建立的檢視保存在 state store 中。新檢視存到預設 store。",
+    "intro": "Tapstate 保存檢視的地方。pipeline 建立的每個檢視都寫入預設 store。",
     "listLabel": "State store 清單",
     "add": "新增 store",
     "addLimit": "此版本只支援一個 store",
@@ -1074,14 +1114,21 @@
     },
     "managed": {
       "name": "Tapstate state store",
-      "type": "伺服器自身的 MongoDB",
-      "access": "由伺服器管理",
+      "type": "MongoDB · 伺服器中繼資料庫",
+      "access": "與此伺服器已使用的 MongoDB 共用。正式環境請使用獨立的 MongoDB。",
       "deleteReason": "此 store 由伺服器管理"
     },
     "states": {
       "loading": "正在載入 state store…",
       "error": "state store 載入失敗。",
-      "empty": "此伺服器沒有設定 state store。"
+      "empty": "還沒有 state store。設定之前 pipeline 無法啟動。"
+    },
+    "settings": "設定",
+    "sectionsLabel": "設定分區",
+    "sections": {
+      "stateStore": "State store",
+      "members": "成員",
+      "apiKeys": "API 金鑰"
     }
   },
   "views": {
@@ -1114,7 +1161,11 @@
       "fresh_other": "{{count}} 個最新",
       "stale_one": "{{count}} 個過期",
       "stale_other": "{{count}} 個過期",
-      "slowest": "最慢落後 {{behind}}"
+      "slowest": "最慢落後 {{behind}}",
+      "loading_one": "{{count}} 個載入中",
+      "loading_other": "{{count}} 個載入中",
+      "notLoaded_one": "{{count}} 個未載入",
+      "notLoaded_other": "{{count}} 個未載入"
     },
     "table": {
       "name": "名稱",
@@ -1122,7 +1173,7 @@
       "storedIn": "存放於",
       "status": "狀態",
       "documents": "文件數",
-      "lastChange": "最近變更",
+      "lastChange": "最近套用的變更",
       "maintainedBy": "維護者"
     },
     "storedIn": {
@@ -1135,17 +1186,17 @@
       "notReported": "此伺服器暫不提供檢視清單。每條 pipeline 的頁面仍會顯示它寫到哪裡。"
     },
     "explainer": {
-      "empty": "還沒有檢視。檢視是 Tapstate 依據來源表持續保持最新的 collection。",
+      "empty": "還沒有檢視",
       "what": "檢視是 Tapstate 依據來源表持續保持最新的 collection。",
       "flowLabel": "檢視如何產生",
       "sources": "資料來源",
       "pipeline": "Pipeline",
       "view": "檢視",
       "storedIn": "檢視將存放於",
-      "storeMissing": "尚未設定",
+      "storeMissing": "檢視存放在 state store 中。建立檢視前先選一個。",
       "setUp": "去設定",
       "build": "建立檢視",
-      "replicas": "鏡像的表也會以副本列在這裡。"
+      "replicas": "鏡像表會產生副本，也會列在這裡。"
     },
     "detail": {
       "maintainedBy": "維護者",
@@ -1166,7 +1217,25 @@
       },
       "size": "大小",
       "largestDocument": "最大文件",
-      "collection": "Collection"
-    }
+      "collection": "collection {{name}}",
+      "storedIn": "存放於",
+      "siblings": "此 pipeline 還寫入：",
+      "freshness": "新鮮度",
+      "lastApplied": "最近一次變更在 {{age}}前",
+      "neverApplied": "尚未套用任何變更",
+      "documentLimit": "單一文件上限 16 MB",
+      "initialLoad": "初次載入",
+      "upToDate": "已是最新",
+      "streaming": "初次載入已完成；變更擷取持續保持最新。",
+      "pipelineState": {
+        "NEW": "從未啟動",
+        "RUNNING": "執行中",
+        "PAUSED": "已暫停",
+        "STOPPED": "已停止",
+        "COMPLETED": "已完成",
+        "FAILED": "已失敗"
+      }
+    },
+    "footnote": "狀態綜合了 pipeline 的狀態與檢視落後於來源的程度。檢視是建立出的文件；副本是一張表的鏡像。"
   }
 }

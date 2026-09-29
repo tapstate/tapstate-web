@@ -99,7 +99,7 @@ describe('ViewsPage', () => {
 
     page = await renderPage(<ViewsPage />)
 
-    expect(page.container.textContent).toContain('Not set up yet')
+    expect(page.container.textContent).toContain('Views live in a state store')
     expect(page.container.querySelector('a[href="/overview"]')?.textContent).toBe('Set up')
   })
 
@@ -136,7 +136,10 @@ describe('ViewsPage', () => {
       JSON.stringify({ pipelineId: 'mirror-core' }),
       JSON.stringify({ pipelineId: 'mirror-core' }),
     ])
-    expect(page.container.textContent).toContain('4 views · 2 fresh · 1 stale · slowest 4 s behind')
+    expect(page.container.textContent).toContain(
+      '4 views · 2 fresh · 1 stale · 1 loading · slowest 4 s behind',
+    )
+    expect(page.container.textContent).toContain('a Replica is a mirrored copy of one table')
     expect(page.container.textContent).toContain('Tapstate state store')
   })
 })

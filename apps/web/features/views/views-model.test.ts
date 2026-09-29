@@ -27,7 +27,14 @@ describe('summarizeViews', () => {
       view('e', { state: 'not-loaded' }),
     ])
 
-    expect(summary).toEqual({ total: 5, fresh: 2, stale: 1, slowestBehindSeconds: 4 })
+    expect(summary).toEqual({
+      total: 5,
+      fresh: 2,
+      stale: 1,
+      loading: 1,
+      notLoaded: 1,
+      slowestBehindSeconds: 4,
+    })
   })
 
   it('has no slowest lag when nothing is fresh', () => {

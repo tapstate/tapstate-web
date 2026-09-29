@@ -1,28 +1,64 @@
-import { useQuery } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
+
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { AlertTriangle, ArrowDown, ArrowRight, Database, GitMerge, HardDrive } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { ArrowDown, ArrowRight, CheckCircle2, Database, GitMerge, HardDrive } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { listPipelines } from '@/service/pipelines/pipeline-client'
-import { listSources } from '@/service/source-client'
+import { listSources, type SourceView } from '@/service/source-client'
+import { listViews } from '@/service/view-client'
 import { useAuthStore } from '@/stores/auth-store'
 
+import { AddSourcesDialog } from './components/add-sources-dialog'
 import { OverviewBlock } from './components/overview-block'
 import { SetupCallout } from './components/setup-callout'
 import {
   buildOverview,
   SETUP_STEP_ORDER,
+  type OverviewAttentionItem,
   type OverviewModel,
   type SetupStepId,
 } from './overview-model'
 
-export function OverviewPage() {
+/** The new-source form, supplied by the route so this feature does not reach into Data Sources. */
+export type SourceFormSlot = (props: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onCreated: (source: SourceView) => void
+}) => ReactNode
+
+interface OverviewPageProps {
+  sourceForm?: SourceFormSlot
+}
+
+/** Remembers, per browser, that the one-time "Setup complete" note has been shown. */
+const SETUP_COMPLETE_SEEN_KEY = 'tapstate.overview.setupCompleteSeen'
+
+function readSeen(): boolean {
+  try {
+    return window.localStorage.getItem(SETUP_COMPLETE_SEEN_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function writeSeen() {
+  try {
+    window.localStorage.setItem(SETUP_COMPLETE_SEEN_KEY, '1')
+  } catch {
+    // Storage can be unavailable (private windows); the note then shows again next visit.
+  }
+}
+
+export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
   const { t } = useTranslation()
+  const queryClient = useQueryClient()
   const apiFetch = useAuthStore((state) => state.apiFetch)
-  // Same keys as the Data Sources and Pipelines pages, so the three share one cache.
+  // Same keys as the Data Sources, Pipelines and Views pages, so they share one cache.
   const sourcesQuery = useQuery({ queryKey: ['sources'], queryFn: () => listSources(apiFetch) })
   const pipelinesQuery = useQuery({
     queryKey: ['pipelines'],
@@ -30,26 +66,54 @@ export function OverviewPage() {
     refetchInterval: 5000,
     refetchIntervalInBackground: false,
   })
+  const viewsQuery = useQuery({
+    queryKey: ['views'],
+    queryFn: () => listViews(apiFetch),
+    refetchInterval: (query) => (query.state.data?.available === false ? false : 5000),
+    refetchIntervalInBackground: false,
+  })
   const [hintsHidden, setHintsHidden] = useState(false)
   const [deferred, setDeferred] = useState<SetupStepId[]>([])
+  const [addSourcesOpen, setAddSourcesOpen] = useState(false)
+  const [sourceFormOpen, setSourceFormOpen] = useState(false)
+  const [completeNote, setCompleteNote] = useState<'unknown' | 'show' | 'hidden'>('unknown')
 
+  // The view list only adds detail; when it fails or is missing, the overview still shows.
+  const views = viewsQuery.data ?? null
   const overview = useMemo(
     () =>
       sourcesQuery.data && pipelinesQuery.data
-        ? buildOverview(sourcesQuery.data, pipelinesQuery.data)
+        ? buildOverview(sourcesQuery.data, pipelinesQuery.data, views)
         : null,
-    [sourcesQuery.data, pipelinesQuery.data],
+    [sourcesQuery.data, pipelinesQuery.data, views],
   )
   const failed = sourcesQuery.isError || pipelinesQuery.isError
+  const setupDone = overview !== null && overview.setup.next === null
+
+  useEffect(() => {
+    if (!setupDone || completeNote !== 'unknown') return
+    if (readSeen()) {
+      setCompleteNote('hidden')
+    } else {
+      writeSeen()
+      setCompleteNote('show')
+    }
+  }, [setupDone, completeNote])
 
   return (
     <section className="overview-page">
       <header className="overview-page__header">
-        <h1 className="text-foreground text-[15px] font-semibold">{t('overview.title')}</h1>
+        <div className="flex min-w-0 flex-col">
+          <h1 className="text-foreground text-[15px] font-semibold">{t('overview.title')}</h1>
+          <p className="text-muted-foreground truncate text-[12px]">{t('overview.subtitle')}</p>
+        </div>
         {overview && overview.setup.next !== null && (
           <div className="flex items-center gap-2">
             <span className="overview-page__chip">
               {t('overview.setup.progress', { completed: overview.setup.completed, total: 3 })}
+              <span className="overview-page__chip-bar" aria-hidden="true">
+                <span style={{ width: `${(overview.setup.completed / 3) * 100}%` }} />
+              </span>
             </span>
             <Button
               type="button"
@@ -64,6 +128,23 @@ export function OverviewPage() {
       </header>
 
       <div className="overview-page__body">
+        {completeNote === 'show' && (
+          <div className="overview-complete" role="status">
+            <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <p className="min-w-0 flex-1">
+              <span className="font-semibold">{t('overview.setup.complete.title')}</span>{' '}
+              {t('overview.setup.complete.body')}
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => setCompleteNote('hidden')}
+            >
+              {t('overview.setup.complete.close')}
+            </Button>
+          </div>
+        )}
         {failed ? (
           <div className="overview-page__state" role="alert">
             <p>{t('overview.states.error')}</p>
@@ -88,9 +169,35 @@ export function OverviewPage() {
             guidance={!hintsHidden && overview.setup.next !== null}
             current={nextStep(overview, deferred)}
             onDefer={(step) => setDeferred((steps) => [...steps, step])}
+            onAddSources={() => setAddSourcesOpen(true)}
           />
         )}
       </div>
+
+      <AddSourcesDialog
+        open={addSourcesOpen}
+        onOpenChange={setAddSourcesOpen}
+        sources={overview?.sources.all ?? []}
+        onConnect={() => {
+          setAddSourcesOpen(false)
+          setSourceFormOpen(true)
+        }}
+      />
+      {sourceForm?.({
+        open: sourceFormOpen,
+        onOpenChange: (open) => {
+          setSourceFormOpen(open)
+          // Back to the step dialog, which now lists the new source.
+          if (!open) setAddSourcesOpen(true)
+        },
+        onCreated: (created) => {
+          queryClient.setQueryData<SourceView[]>(['sources'], (current) =>
+            [...(current ?? []).filter((item) => item.id !== created.id), created].sort(
+              (left, right) => left.id.localeCompare(right.id),
+            ),
+          )
+        },
+      })}
     </section>
   )
 }
@@ -107,9 +214,16 @@ interface OverviewContentProps {
   guidance: boolean
   current: SetupStepId | null
   onDefer: (step: SetupStepId) => void
+  onAddSources: () => void
 }
 
-function OverviewContent({ overview, guidance, current, onDefer }: OverviewContentProps) {
+function OverviewContent({
+  overview,
+  guidance,
+  current,
+  onDefer,
+  onAddSources,
+}: OverviewContentProps) {
   const { t } = useTranslation()
   const stepNumber = (step: SetupStepId) => (guidance ? SETUP_STEP_ORDER.indexOf(step) + 1 : null)
   const isCurrent = (step: SetupStepId) => guidance && current === step
@@ -120,6 +234,7 @@ function OverviewContent({ overview, guidance, current, onDefer }: OverviewConte
       <ArrowDown className="overview-arrow__narrow h-4 w-4" />
     </div>
   )
+  const storeViews = overview.stateStore.views
 
   return (
     <>
@@ -127,26 +242,33 @@ function OverviewContent({ overview, guidance, current, onDefer }: OverviewConte
         <OverviewBlock
           title={t('overview.sources.title')}
           icon={Database}
-          metric={t('overview.sources.metric', { count: overview.sources.count })}
-          details={
-            overview.sources.preview.length > 0
+          metric={
+            overview.sources.count === 0
+              ? t('overview.sources.none')
+              : t('overview.sources.metric', { count: overview.sources.count })
+          }
+          details={[
+            ...overview.sources.preview.map((source) => ({
+              label: source.connector,
+              value: source.id,
+            })),
+            ...(overview.sources.count > overview.sources.preview.length
               ? [
-                  ...overview.sources.preview.map((source) => ({
-                    label: source.id,
-                    value: source.connector,
-                  })),
-                  ...(overview.sources.count > overview.sources.preview.length
-                    ? [
-                        {
-                          label: t('overview.sources.more', {
-                            count: overview.sources.count - overview.sources.preview.length,
-                          }),
-                          value: '',
-                        },
-                      ]
-                    : []),
+                  {
+                    label: t('overview.sources.more', {
+                      count: overview.sources.count - overview.sources.preview.length,
+                    }),
+                    value: '',
+                  },
                 ]
-              : [{ label: t('overview.sources.none'), value: '' }]
+              : []),
+          ]}
+          emptyAction={
+            overview.sources.count === 0 && (
+              <Button type="button" size="sm" variant="outline" onClick={onAddSources}>
+                {t('overview.sources.add')}
+              </Button>
+            )
           }
           footer={
             <Link to="/sources" className="overview-link">
@@ -163,12 +285,9 @@ function OverviewContent({ overview, guidance, current, onDefer }: OverviewConte
               <SetupCallout
                 step={2}
                 title={t('overview.setup.sources.title')}
-                description={t('overview.setup.sources.description')}
                 actions={
-                  <Button asChild nativeButton={false} size="sm" variant="secondary">
-                    <Link to="/sources" search={{ create: true }}>
-                      {t('overview.setup.sources.action')}
-                    </Link>
+                  <Button type="button" size="sm" variant="secondary" onClick={onAddSources}>
+                    {t('overview.setup.sources.action')}
                   </Button>
                 }
               />
@@ -179,12 +298,26 @@ function OverviewContent({ overview, guidance, current, onDefer }: OverviewConte
         <OverviewBlock
           title={t('overview.pipelines.title')}
           icon={GitMerge}
-          metric={t('overview.pipelines.metric', { count: overview.pipelines.total })}
+          metric={
+            overview.pipelines.total === 0
+              ? t('overview.pipelines.none')
+              : t('overview.pipelines.metric', { count: overview.pipelines.total })
+          }
           details={[
             { label: t('overview.pipelines.running'), value: overview.pipelines.running },
-            { label: t('overview.pipelines.idle'), value: overview.pipelines.idle },
+            {
+              label: t('overview.pipelines.idle'),
+              value: t('overview.pipelines.idleValue', { count: overview.pipelines.idle }),
+            },
             { label: t('overview.pipelines.error'), value: overview.pipelines.error },
           ]}
+          emptyAction={
+            overview.pipelines.total === 0 && (
+              <Button asChild nativeButton={false} size="sm" variant="outline">
+                <Link to="/pipelines">{t('overview.pipelines.build')}</Link>
+              </Button>
+            )
+          }
           footer={
             <Link to="/pipelines" className="overview-link">
               {t('overview.pipelines.open')}
@@ -200,7 +333,6 @@ function OverviewContent({ overview, guidance, current, onDefer }: OverviewConte
               <SetupCallout
                 step={3}
                 title={t('overview.setup.pipeline.title')}
-                description={t('overview.setup.pipeline.description')}
                 actions={
                   <>
                     <Button asChild nativeButton={false} size="sm" variant="secondary">
@@ -226,26 +358,49 @@ function OverviewContent({ overview, guidance, current, onDefer }: OverviewConte
           title={t('overview.stateStore.title')}
           icon={HardDrive}
           metric={
-            overview.stateStore.ready
-              ? t('overview.stateStore.ready')
-              : t('overview.stateStore.missing')
+            !overview.stateStore.ready
+              ? t('overview.stateStore.missing')
+              : storeViews
+                ? t('overview.stateStore.metric', { count: storeViews.total })
+                : t('overview.stateStore.ready')
           }
           details={[
             {
               label: t('overview.stateStore.location'),
-              value: overview.stateStore.managedSourceId ? t('overview.stateStore.managed') : '—',
+              value: (
+                <Link to="/settings" className="overview-link">
+                  {t('overview.stateStore.managed')}
+                </Link>
+              ),
             },
-            { label: t('overview.stateStore.views'), value: t('overview.notReported') },
+            ...(storeViews
+              ? [
+                  { label: t('overview.stateStore.fresh'), value: storeViews.fresh },
+                  { label: t('overview.stateStore.stale'), value: storeViews.stale },
+                ]
+              : [{ label: t('overview.stateStore.views'), value: t('overview.notReported') }]),
           ]}
+          emptyAction={
+            !overview.stateStore.ready && (
+              <p className="text-muted-foreground text-[12px]">
+                {t('overview.stateStore.missingDetail')}
+              </p>
+            )
+          }
           footer={
-            <Link to="/settings" className="overview-link">
-              {t('overview.stateStore.open')}
-            </Link>
+            <span className="flex flex-wrap gap-x-3">
+              <Link to="/views" className="overview-link">
+                {t('overview.stateStore.openViews')}
+              </Link>
+              <Link to="/settings" className="overview-link">
+                {t('overview.stateStore.open')}
+              </Link>
+            </span>
           }
           step={stepNumber('stateStore')}
           stepDone={overview.setup.done.stateStore}
           current={isCurrent('stateStore')}
-          problems={0}
+          problems={storeViews?.stale ?? 0}
           problemTone="warning"
           callout={
             isCurrent('stateStore') && (
@@ -269,23 +424,70 @@ function OverviewContent({ overview, guidance, current, onDefer }: OverviewConte
         ) : (
           <ul className="overview-attention__list">
             {overview.attention.map((item) => (
-              <li key={`${item.kind}-${item.pipelineId}`} className="overview-attention__item">
-                <AlertTriangle className="text-destructive h-4 w-4 shrink-0" aria-hidden="true" />
-                <Link
-                  to="/pipelines/$pipelineId/edit/monitoring"
-                  params={{ pipelineId: item.pipelineId }}
-                  className="overview-link"
-                >
-                  {t('overview.attention.pipelineFailed', { pipeline: item.pipelineId })}
-                </Link>
-                {item.code && (
-                  <code className="text-muted-foreground text-[12px]">{item.code}</code>
-                )}
-              </li>
+              <AttentionRow key={attentionKey(item)} item={item} />
             ))}
           </ul>
         )}
       </section>
     </>
+  )
+}
+
+function attentionKey(item: OverviewAttentionItem) {
+  return item.kind === 'pipelineFailed' ? `pipeline-${item.pipelineId}` : `view-${item.viewId}`
+}
+
+function AttentionRow({ item }: { item: OverviewAttentionItem }) {
+  const { t } = useTranslation()
+  if (item.kind === 'pipelineFailed') {
+    return (
+      <li className="overview-attention__item">
+        <span
+          className="overview-attention__dot overview-attention__dot--error"
+          aria-hidden="true"
+        />
+        <span className="overview-attention__kind">{t('overview.attention.pipelineFailed')}</span>
+        <span className="text-foreground font-medium">{item.pipelineId}</span>
+        {item.code && <code className="text-muted-foreground text-[12px]">{item.code}</code>}
+        <Link
+          to="/pipelines/$pipelineId/edit/monitoring"
+          params={{ pipelineId: item.pipelineId }}
+          className="overview-link overview-attention__open"
+        >
+          {t('overview.attention.openPipeline')}
+        </Link>
+      </li>
+    )
+  }
+  const minutes =
+    item.lastAppliedAt === null
+      ? null
+      : Math.max(0, Math.floor((Date.now() - item.lastAppliedAt) / 60000))
+  return (
+    <li className="overview-attention__item">
+      <span
+        className="overview-attention__dot overview-attention__dot--warning"
+        aria-hidden="true"
+      />
+      <span className="overview-attention__kind">{t('overview.attention.viewStale')}</span>
+      <span className="text-foreground font-medium">{item.collection}</span>
+      <span className="text-muted-foreground">
+        {[
+          minutes === null
+            ? t('overview.attention.neverApplied')
+            : t('overview.attention.lastApplied', { count: minutes }),
+          t(`overview.attention.pipelineIs.${item.pipelineHealth ?? 'unknown'}`, {
+            pipeline: item.pipelineId,
+          }),
+        ].join('; ')}
+      </span>
+      <Link
+        to="/views/$viewId"
+        params={{ viewId: item.viewId }}
+        className="overview-link overview-attention__open"
+      >
+        {t('overview.attention.openView')}
+      </Link>
+    </li>
   )
 }

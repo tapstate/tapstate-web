@@ -4,6 +4,8 @@ export interface ViewsSummary {
   total: number
   fresh: number
   stale: number
+  loading: number
+  notLoaded: number
   /** Largest lag among fresh views, or null when none is fresh. */
   slowestBehindSeconds: number | null
 }
@@ -11,6 +13,8 @@ export interface ViewsSummary {
 export function summarizeViews(views: ViewSummary[]): ViewsSummary {
   let fresh = 0
   let stale = 0
+  let loading = 0
+  let notLoaded = 0
   let slowest: number | null = null
   for (const view of views) {
     if (view.status.state === 'fresh') {
@@ -18,9 +22,13 @@ export function summarizeViews(views: ViewSummary[]): ViewsSummary {
       slowest = Math.max(slowest ?? 0, view.status.behindSeconds)
     } else if (view.status.state === 'stale') {
       stale += 1
+    } else if (view.status.state === 'loading') {
+      loading += 1
+    } else {
+      notLoaded += 1
     }
   }
-  return { total: views.length, fresh, stale, slowestBehindSeconds: slowest }
+  return { total: views.length, fresh, stale, loading, notLoaded, slowestBehindSeconds: slowest }
 }
 
 /** Views sorted by collection name, so the list reads the same on every refresh. */

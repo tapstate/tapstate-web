@@ -73,7 +73,10 @@ function ViewsList({ views }: { views: ViewSummary[] }) {
   const parts = [
     t('views.summary.total', { count: summary.total }),
     t('views.summary.fresh', { count: summary.fresh }),
-    t('views.summary.stale', { count: summary.stale }),
+    // Zero counts stay out of the line; only what is there is worth reading.
+    ...(summary.stale > 0 ? [t('views.summary.stale', { count: summary.stale })] : []),
+    ...(summary.loading > 0 ? [t('views.summary.loading', { count: summary.loading })] : []),
+    ...(summary.notLoaded > 0 ? [t('views.summary.notLoaded', { count: summary.notLoaded })] : []),
     ...(summary.slowestBehindSeconds === null
       ? []
       : [t('views.summary.slowest', { behind: duration(summary.slowestBehindSeconds) })]),
@@ -134,6 +137,7 @@ function ViewsList({ views }: { views: ViewSummary[] }) {
           </TableBody>
         </Table>
       </div>
+      <p className="text-muted-foreground text-[12px]">{t('views.footnote')}</p>
     </>
   )
 }
@@ -155,9 +159,10 @@ function ViewsExplainer({ notice }: { notice: string | null }) {
           {notice}
         </p>
       )}
-      <p className="text-foreground text-[13px] font-medium">
-        {notice ? t('views.explainer.what') : t('views.explainer.empty')}
-      </p>
+      {!notice && (
+        <h2 className="text-foreground text-[15px] font-semibold">{t('views.explainer.empty')}</h2>
+      )}
+      <p className="text-foreground text-[13px]">{t('views.explainer.what')}</p>
       <ol className="views-explainer__flow" aria-label={t('views.explainer.flowLabel')}>
         <li>
           <Database className="h-4 w-4" aria-hidden="true" />
@@ -180,13 +185,15 @@ function ViewsExplainer({ notice }: { notice: string | null }) {
       </ol>
       <div className="views-explainer__store">
         <HardDrive className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden="true" />
-        <span className="text-muted-foreground">{t('views.explainer.storedIn')}</span>
         {sourcesQuery.data === undefined ? (
-          <span className="text-muted-foreground">—</span>
+          <span className="text-muted-foreground">{t('views.explainer.storedIn')} —</span>
         ) : storeReady ? (
-          <Link to="/settings" className="views-link">
-            {t('views.storedIn.managed')}
-          </Link>
+          <>
+            <span className="text-muted-foreground">{t('views.explainer.storedIn')}</span>
+            <Link to="/settings" className="views-link">
+              {t('views.storedIn.managed')}
+            </Link>
+          </>
         ) : (
           <>
             <span>{t('views.explainer.storeMissing')}</span>

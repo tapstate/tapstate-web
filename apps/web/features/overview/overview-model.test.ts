@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { PipelineRuntimeState, PipelineView } from '@/service/pipelines/pipeline-client'
+import type { ViewSummary } from '@/service/view-client'
 
 import { MANAGED_VIEW_STORE_SOURCE_ID, type SourceView } from '@/service/source-client'
 
@@ -54,6 +55,7 @@ describe('buildOverview', () => {
     expect(overview.stateStore).toEqual({
       ready: true,
       managedSourceId: MANAGED_VIEW_STORE_SOURCE_ID,
+      views: null,
     })
     expect(overview.sources.count).toBe(0)
     expect(overview.setup.next).toBe('sources')
@@ -95,6 +97,57 @@ describe('buildOverview', () => {
       { kind: 'pipelineFailed', pipelineId: 'a_sync', code: 'runtime.connector-failed' },
     ])
     expect(overview.setup).toMatchObject({ completed: 3, next: null })
+  })
+})
+
+describe('buildOverview with the view list', () => {
+  const view = (
+    collection: string,
+    pipelineId: string,
+    status: ViewSummary['status'],
+  ): ViewSummary => ({
+    id: `views/${collection}`,
+    kind: 'view',
+    location: { storeId: 'views', database: null, collection },
+    pipelineId,
+    status,
+    documents: null,
+    sizeBytes: null,
+    lastAppliedAt: 1000,
+  })
+
+  it('counts fresh and stale views and lists stale ones after failed pipelines', () => {
+    const overview = buildOverview(
+      [source(MANAGED_VIEW_STORE_SOURCE_ID), source('orders')],
+      [pipeline('a_sync', 'FAILED'), pipeline('b_sync', 'STOPPED'), pipeline('c_sync', 'RUNNING')],
+      {
+        available: true,
+        views: [
+          view('orders_360', 'c_sync', { state: 'fresh', behindSeconds: 3 }),
+          view('loans', 'b_sync', { state: 'stale', staleSeconds: 720 }),
+          view('cards', 'c_sync', { state: 'loading', percent: 10 }),
+        ],
+      },
+    )
+
+    expect(overview.stateStore.views).toEqual({ total: 3, fresh: 1, stale: 1 })
+    expect(overview.attention).toEqual([
+      { kind: 'pipelineFailed', pipelineId: 'a_sync', code: null },
+      {
+        kind: 'viewStale',
+        viewId: 'views/loans',
+        collection: 'loans',
+        pipelineId: 'b_sync',
+        pipelineHealth: 'idle',
+        lastAppliedAt: 1000,
+      },
+    ])
+  })
+
+  it('reports no view counts when the server does not list views', () => {
+    const overview = buildOverview([], [], { available: false })
+
+    expect(overview.stateStore.views).toBeNull()
   })
 })
 
