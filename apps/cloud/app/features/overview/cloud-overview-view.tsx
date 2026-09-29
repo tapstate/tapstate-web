@@ -8,6 +8,9 @@ interface CloudOverviewViewProps {
   clusters: Cluster[]
   onNavigate: (tab: 'clusters') => void
   onOpenProvisionModal: () => void
+  onEnterCluster: (cluster: Cluster) => void
+  enteringClusterId: string | null
+  entryError: string | null
 }
 
 function statusLabel(status: string) {
@@ -30,6 +33,9 @@ export function CloudOverviewView({
   clusters,
   onNavigate,
   onOpenProvisionModal,
+  onEnterCluster,
+  enteringClusterId,
+  entryError,
 }: CloudOverviewViewProps) {
   const activeRegions = new Set(
     clusters.filter((cluster) => cluster.state === 'READY').map((cluster) => cluster.region),
@@ -105,6 +111,11 @@ export function CloudOverviewView({
         </div>
 
         <div className="space-y-2">
+          {entryError && (
+            <p className="text-xs text-red-600 dark:text-red-400" role="alert">
+              {entryError}
+            </p>
+          )}
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-semibold tracking-wider text-neutral-400 uppercase">
               Managed Clusters
@@ -128,8 +139,9 @@ export function CloudOverviewView({
               clusters.map((cluster) => (
                 <button
                   key={cluster.id}
-                  onClick={() => onNavigate('clusters')}
-                  className="group flex w-full cursor-pointer items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
+                  onClick={() => onEnterCluster(cluster)}
+                  className="group flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-black/[0.02] disabled:cursor-default disabled:hover:bg-transparent dark:hover:bg-white/[0.02] dark:disabled:hover:bg-transparent"
+                  disabled={cluster.state !== 'READY' || enteringClusterId !== null}
                   type="button"
                 >
                   <span className="flex items-center gap-3">
@@ -157,7 +169,9 @@ export function CloudOverviewView({
                         {dateLabel(cluster.createdAt)}
                       </span>
                     </span>
-                    <ArrowUpRight className="h-4 w-4 text-neutral-400 transition-colors group-hover:text-neutral-800 dark:group-hover:text-white" />
+                    {cluster.state === 'READY' && (
+                      <ArrowUpRight className="h-4 w-4 text-neutral-400 transition-colors group-hover:text-neutral-800 dark:group-hover:text-white" />
+                    )}
                   </span>
                 </button>
               ))

@@ -34,11 +34,14 @@ async function createWorkspace(input: OnboardingInput): Promise<{
 
   if (!cluster) {
     try {
-      cluster = await cloudApi.createCluster(organization.id, {
+      await cloudApi.createSubscription(organization.id, {
         region: input.region.code,
-        name: input.clusterName,
+        clusterName: input.clusterName,
         specKey: input.region.defaultSpecKey,
       })
+      cluster = (await cloudApi.clusters(organization.id)).find(
+        (item) => item.region === input.region.code && item.name === input.clusterName,
+      )
     } catch (error) {
       if (!(error instanceof CloudApiError) || error.status !== 409) throw error
       const latestClusters = await cloudApi.clusters(organization.id)
@@ -46,6 +49,12 @@ async function createWorkspace(input: OnboardingInput): Promise<{
         (item) => item.region === input.region.code && item.name === input.clusterName,
       )
       if (!cluster) throw error
+    }
+    if (!cluster) {
+      throw new CloudApiError(
+        'Cluster provisioning started, but its record is not visible yet.',
+        202,
+      )
     }
   }
 

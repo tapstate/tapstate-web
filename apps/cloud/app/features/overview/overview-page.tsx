@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 
 import { cloudApi, type Subscription } from '../../service/cloud-api'
 import { useCloudAppState } from '../../state/cloud-app-state'
+import { useClusterEntry } from '../clusters/use-cluster-entry'
 import { CloudOverviewView } from './cloud-overview-view'
 
 function statusLabel(status: string) {
@@ -17,6 +18,7 @@ export function OverviewPage() {
   const navigate = useNavigate()
   const { activeOrganization, clusters } = useCloudAppState()
   const [subscription, setSubscription] = useState<Subscription | null>(null)
+  const { enterCluster, enteringId, entryError } = useClusterEntry()
 
   useEffect(() => {
     setSubscription(null)
@@ -42,6 +44,11 @@ export function OverviewPage() {
       clusters={clusters}
       onNavigate={() => void navigate({ to: '/clusters' })}
       onOpenProvisionModal={() => void navigate({ to: '/onboarding' })}
+      onEnterCluster={(cluster) => {
+        if (activeOrganization) void enterCluster(cluster, activeOrganization.id)
+      }}
+      enteringClusterId={enteringId}
+      entryError={entryError}
     />
   )
 }

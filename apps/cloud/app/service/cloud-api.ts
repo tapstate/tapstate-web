@@ -105,9 +105,9 @@ export interface CreateOrganizationInput {
   slug: string
 }
 
-export interface CreateClusterInput {
+export interface CreateSubscriptionInput {
   region: string
-  name: string
+  clusterName: string
   specKey?: string
 }
 
@@ -190,44 +190,50 @@ function jsonBody(body: unknown): Pick<RequestInit, 'body' | 'method'> {
 }
 
 const post: Pick<RequestInit, 'method'> = { method: 'POST' }
+const apiPrefix = '/v1/api'
 
 export const cloudApi = {
-  register: (input: RegisterInput) => request<RegisteredUser>('/v1/auth/register', jsonBody(input)),
-  login: (input: LoginInput) => request<LoginResult>('/v1/auth/login', jsonBody(input)),
-  logout: () => request<unknown>('/v1/auth/logout', post),
-  me: () => request<LoginResult>('/v1/auth/me'),
-  organizations: async () => asList<Organization>(await request<unknown>('/v1/orgs')),
+  register: (input: RegisterInput) =>
+    request<RegisteredUser>(`${apiPrefix}/auth/register`, jsonBody(input)),
+  login: (input: LoginInput) => request<LoginResult>(`${apiPrefix}/auth/login`, jsonBody(input)),
+  logout: () => request<unknown>(`${apiPrefix}/auth/logout`, post),
+  me: () => request<LoginResult>(`${apiPrefix}/auth/me`),
+  organizations: async () => asList<Organization>(await request<unknown>(`${apiPrefix}/orgs`)),
   createOrganization: (input: CreateOrganizationInput) =>
-    request<Organization>('/v1/orgs', jsonBody(input)),
-  organization: (orgId: string) => request<Organization>(`/v1/orgs/${encodeURIComponent(orgId)}`),
-  regions: async () => asList<Region>(await request<unknown>('/v1/regions')),
-  region: (code: string) => request<Region>(`/v1/regions/${encodeURIComponent(code)}`),
+    request<Organization>(`${apiPrefix}/orgs`, jsonBody(input)),
+  organization: (orgId: string) =>
+    request<Organization>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}`),
+  regions: async () => asList<Region>(await request<unknown>(`${apiPrefix}/regions`)),
+  region: (code: string) => request<Region>(`${apiPrefix}/regions/${encodeURIComponent(code)}`),
   clusters: async (orgId: string) =>
-    asList<Cluster>(await request<unknown>(`/v1/orgs/${encodeURIComponent(orgId)}/clusters`)),
+    asList<Cluster>(
+      await request<unknown>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/clusters`),
+    ),
   cluster: (orgId: string, clusterId: string) =>
     request<Cluster>(
-      `/v1/orgs/${encodeURIComponent(orgId)}/clusters/${encodeURIComponent(clusterId)}`,
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/clusters/${encodeURIComponent(clusterId)}`,
     ),
-  createCluster: (orgId: string, input: CreateClusterInput) =>
-    request<Cluster>(`/v1/orgs/${encodeURIComponent(orgId)}/clusters`, jsonBody(input)),
+  createSubscription: (orgId: string, input: CreateSubscriptionInput) =>
+    request<Subscription>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscription`,
+      jsonBody(input),
+    ),
   retryCluster: (orgId: string, clusterId: string) =>
     request<Cluster>(
-      `/v1/orgs/${encodeURIComponent(orgId)}/clusters/${encodeURIComponent(clusterId)}/retry`,
-      post,
-    ),
-  cancelCluster: (orgId: string, clusterId: string) =>
-    request<Cluster>(
-      `/v1/orgs/${encodeURIComponent(orgId)}/clusters/${encodeURIComponent(clusterId)}/cancel`,
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/clusters/${encodeURIComponent(clusterId)}/retry`,
       post,
     ),
   subscription: (orgId: string) =>
-    request<Subscription>(`/v1/orgs/${encodeURIComponent(orgId)}/subscription`),
+    request<Subscription>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscription`),
   cancelSubscription: (orgId: string) =>
-    request<Subscription>(`/v1/orgs/${encodeURIComponent(orgId)}/subscription/cancel`, post),
+    request<Subscription>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscription/cancel`,
+      post,
+    ),
   resolveCluster: (clusterId: string, orgId: string) => {
     const query = new URLSearchParams({ orgId })
     return request<ResolveResponse>(
-      `/v1/clusters/${encodeURIComponent(clusterId)}/resolve?${query}`,
+      `${apiPrefix}/clusters/${encodeURIComponent(clusterId)}/resolve?${query}`,
     )
   },
 }

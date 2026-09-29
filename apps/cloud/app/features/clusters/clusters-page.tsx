@@ -3,6 +3,7 @@ import { Plus, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { useCloudAppState } from '../../state/cloud-app-state'
+import { useClusterEntry } from './use-cluster-entry'
 
 function statusLabel(status: string) {
   return status
@@ -27,7 +28,8 @@ function statusColor(status: string) {
 
 export function ClustersPage() {
   const navigate = useNavigate()
-  const { clusters } = useCloudAppState()
+  const { activeOrganization, clusters } = useCloudAppState()
+  const { enterCluster, enteringId, entryError } = useClusterEntry()
   const [searchQuery, setSearchQuery] = useState('')
   const filteredClusters = useMemo(
     () =>
@@ -82,6 +84,11 @@ export function ClustersPage() {
       </div>
 
       <div className="flex-1 overflow-auto">
+        {entryError && (
+          <p className="px-6 py-3 text-xs text-red-600 dark:text-red-400" role="alert">
+            {entryError}
+          </p>
+        )}
         <table className="w-full border-collapse text-left text-xs">
           <thead>
             <tr className="border-b border-black/[0.05] font-medium text-neutral-400 dark:border-white/[0.05] dark:text-neutral-500">
@@ -99,7 +106,18 @@ export function ClustersPage() {
                 key={cluster.id}
               >
                 <td className="px-6 py-3.5 font-mono font-semibold text-neutral-900 dark:text-white">
-                  {cluster.name}
+                  <button
+                    className="text-left enabled:cursor-pointer enabled:hover:underline disabled:cursor-default"
+                    disabled={
+                      cluster.state !== 'READY' || enteringId !== null || !activeOrganization
+                    }
+                    onClick={() => {
+                      if (activeOrganization) void enterCluster(cluster, activeOrganization.id)
+                    }}
+                    type="button"
+                  >
+                    {cluster.name}
+                  </button>
                 </td>
                 <td className="px-6 py-3.5">
                   <span className="flex items-center gap-1.5">

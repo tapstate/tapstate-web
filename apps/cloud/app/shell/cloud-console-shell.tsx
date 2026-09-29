@@ -20,7 +20,8 @@ import { useState } from 'react'
 import type { Cluster, Organization } from '../service/cloud-api'
 import type { UserProfile } from '../types'
 
-import { cloudApi } from '../service/cloud-api'
+import { useClusterEntry } from '../features/clusters/use-cluster-entry'
+import { CloudApiError, cloudApi } from '../service/cloud-api'
 import { useCloudAppState } from '../state/cloud-app-state'
 
 const navigation = [
@@ -58,6 +59,7 @@ export function CloudConsoleShell({
   const [showOrganizationMenu, setShowOrganizationMenu] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [search, setSearch] = useState('')
+  const { enterCluster, enteringId, entryError } = useClusterEntry()
 
   const currentOrganization = activeOrganization ?? organization
   const currentClusters = activeOrganization ? stateClusters : loaderClusters
@@ -72,7 +74,12 @@ export function CloudConsoleShell({
     setShowOrganizationMenu(false)
     try {
       setClusters(await cloudApi.clusters(nextOrganization.id))
-    } catch {
+    } catch (error) {
+      if (error instanceof CloudApiError && error.status === 401) {
+        clearIdentity()
+        await navigate({ to: '/auth' })
+        return
+      }
       setClusters([])
     }
   }
@@ -80,8 +87,8 @@ export function CloudConsoleShell({
   const signOut = async () => {
     try {
       await cloudApi.logout()
-    } catch {
-      return
+    } catch (error) {
+      if (!(error instanceof CloudApiError) || error.status !== 401) return
     }
     clearIdentity()
     await navigate({ to: '/auth' })
@@ -186,10 +193,18 @@ export function CloudConsoleShell({
             </Link>
           </div>
           {visibleClusters.map((cluster) => (
-            <Link
-              className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs text-neutral-600 transition-colors hover:bg-black/[0.04] hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-white/[0.05] dark:hover:text-white"
+            <button
+              className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs text-neutral-600 transition-colors hover:bg-black/[0.04] hover:text-neutral-900 disabled:cursor-wait dark:text-neutral-400 dark:hover:bg-white/[0.05] dark:hover:text-white"
+              disabled={enteringId !== null}
               key={cluster.id}
-              to="/clusters"
+              onClick={() => {
+                if (cluster.state === 'READY' && currentOrganization) {
+                  void enterCluster(cluster, currentOrganization.id)
+                } else {
+                  void navigate({ to: '/clusters' })
+                }
+              }}
+              type="button"
             >
               <span className="flex min-w-0 items-center gap-2 truncate">
                 <span
@@ -198,8 +213,13 @@ export function CloudConsoleShell({
                 <span className="truncate font-mono">{cluster.name}</span>
               </span>
               <ChevronRight className="h-3 w-3 shrink-0 text-neutral-400 opacity-60" />
-            </Link>
+            </button>
           ))}
+          {entryError && (
+            <p className="px-2.5 py-1 text-xs text-red-600 dark:text-red-400" role="alert">
+              {entryError}
+            </p>
+          )}
         </div>
 
         <div className="shrink-0 space-y-1 border-t border-black/[0.05] px-1 pt-2 dark:border-white/[0.05]">
