@@ -9,12 +9,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PipelineView } from '@/service/pipelines/pipeline-client'
 import type { SourceView } from '@/service/source-client'
 
-const { apiFetch, listPipelines, listSources, listViews } = vi.hoisted(() => ({
-  listViews: vi.fn(),
-  apiFetch: vi.fn(),
-  listPipelines: vi.fn(),
-  listSources: vi.fn(),
-}))
+const { addSampleSources, apiFetch, listPipelines, listSources, listViews, loadSampleSources } =
+  vi.hoisted(() => ({
+    addSampleSources: vi.fn(),
+    loadSampleSources: vi.fn(),
+    listViews: vi.fn(),
+    apiFetch: vi.fn(),
+    listPipelines: vi.fn(),
+    listSources: vi.fn(),
+  }))
 
 vi.mock('@/service/source-client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/service/source-client')>()),
@@ -23,6 +26,11 @@ vi.mock('@/service/source-client', async (importOriginal) => ({
 vi.mock('@/service/pipelines/pipeline-client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/service/pipelines/pipeline-client')>()),
   listPipelines,
+}))
+vi.mock('@/service/sample-source-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/service/sample-source-client')>()),
+  addSampleSources,
+  loadSampleSources,
 }))
 vi.mock('@/service/view-client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/service/view-client')>()),
@@ -99,6 +107,8 @@ beforeEach(() => {
   listSources.mockReset()
   listPipelines.mockReset()
   listViews.mockReset().mockResolvedValue({ available: false })
+  loadSampleSources.mockReset().mockResolvedValue(null)
+  addSampleSources.mockReset()
   // jsdom here has no storage; a small in-memory one stands in for the browser's.
   const entries = new Map<string, string>()
   Object.defineProperty(window, 'localStorage', {
@@ -272,5 +282,69 @@ describe('OverviewPage', () => {
     )
     expect(row?.querySelector('a')?.getAttribute('href')).toBe('/views/$viewId')
     expect(container.textContent).toContain('1 view')
+  })
+
+  it('offers the sample sources when the deployment has them, and tags them once added', async () => {
+    listSources.mockResolvedValue([source('views', 'mongodb')])
+    listPipelines.mockResolvedValue([])
+    loadSampleSources.mockResolvedValue([
+      {
+        id: 'sample_core_banking',
+        name: 'Core banking',
+        description: '',
+        connector: 'mysql',
+        mode: 'cdc',
+        config: {},
+      },
+      {
+        id: 'sample_cards_crm',
+        name: 'Cards & CRM',
+        description: '',
+        connector: 'postgres',
+        mode: 'cdc',
+        config: {},
+      },
+    ])
+    const added = (id: string, connector: string) => ({
+      ...source(id, connector),
+      metadata: { labels: { sample: 'true' }, description: id },
+    })
+    addSampleSources.mockResolvedValue({
+      added: [added('sample_core_banking', 'mysql'), added('sample_cards_crm', 'postgres')],
+      existing: [],
+    })
+
+    await render()
+    await settle()
+    await act(async () => buttonNamed('Add data sources', container)?.click())
+    await settle()
+
+    expect(document.body.textContent).toContain(
+      'Core banking and Cards & CRM, prepared for change capture',
+    )
+    await act(async () => buttonNamed('Add sample sources')?.click())
+    await settle()
+
+    expect(addSampleSources).toHaveBeenCalledTimes(1)
+    const rows = [...document.querySelectorAll('.overview-add-sources__list li')]
+    expect(rows.map((row) => row.textContent)).toEqual([
+      'sample_cards_crmSamplepostgres',
+      'sample_core_bankingSamplemysql',
+    ])
+    expect(buttonNamed('Added')?.disabled).toBe(true)
+    expect(container.textContent).toContain('2 sources')
+  })
+
+  it('hides the sample offer when the deployment has none', async () => {
+    listSources.mockResolvedValue([source('views', 'mongodb')])
+    listPipelines.mockResolvedValue([])
+
+    await render()
+    await settle()
+    await act(async () => buttonNamed('Add data sources', container)?.click())
+    await settle()
+
+    expect(document.body.textContent).toContain('Connect your own database')
+    expect(document.body.textContent).not.toContain('Use the sample bank sources')
   })
 })

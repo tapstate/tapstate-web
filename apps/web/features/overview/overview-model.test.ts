@@ -75,9 +75,9 @@ describe('buildOverview', () => {
 
     expect(overview.sources.count).toBe(4)
     expect(overview.sources.preview).toEqual([
-      { id: 'billing', connector: 'postgres' },
-      { id: 'cards', connector: 'postgres' },
-      { id: 'crm', connector: 'oracle' },
+      { id: 'billing', connector: 'postgres', sample: false },
+      { id: 'cards', connector: 'postgres', sample: false },
+      { id: 'crm', connector: 'oracle', sample: false },
     ])
   })
 

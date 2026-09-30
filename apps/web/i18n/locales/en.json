@@ -386,6 +386,16 @@
       "lineage": "Lineage",
       "log": "Log",
       "settings": "Settings"
+    },
+    "samples": {
+      "tag": "Sample",
+      "remove": "Remove sample sources",
+      "removing": "Removing…",
+      "removed_one": "Removed {{count}} sample source.",
+      "removed_other": "Removed {{count}} sample sources.",
+      "inUse": "Sample source {{id}} is still read by: {{pipelines}}. Delete those pipelines first; the samples not yet removed were kept.",
+      "error": "The sample sources could not be removed. Try again.",
+      "dismiss": "Dismiss"
     }
   },
   "pipelines": {
@@ -1113,7 +1123,17 @@
       },
       "added_one": "Your source ({{count}})",
       "added_other": "Your sources ({{count}})",
-      "done": "Done"
+      "done": "Done",
+      "tag": "Sample",
+      "sample": {
+        "title": "Use the sample bank sources",
+        "description": "{{names}}, prepared for change capture. They are tagged Sample and can be removed from Data Sources.",
+        "and": " and ",
+        "action": "Add sample sources",
+        "adding": "Adding…",
+        "added": "Added",
+        "error": "The sample sources could not be added. Try again, or connect your own database."
+      }
     }
   },
   "stateStorePage": {

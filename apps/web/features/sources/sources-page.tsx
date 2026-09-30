@@ -34,6 +34,7 @@ import type {
 } from '@/service/source-client'
 
 import { ConnectorIcon } from '@/components/connector-icon'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { RouteTabs } from '@/components/ui/route-tabs'
 import {
@@ -44,6 +45,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { isSampleSource, removeSampleSources } from '@/service/sample-source-client'
 import {
   discoverSourceSchema,
   getSource,
@@ -160,6 +162,8 @@ export function SourcesPage({
   const [editingSourceId, setEditingSourceId] = useState<string | null>(null)
   const [deletingSource, setDeletingSource] = useState<Source | null>(null)
   const [successMessage, setSuccessMessage] = useState('')
+  const [removingSamples, setRemovingSamples] = useState(false)
+  const [sampleRemoveError, setSampleRemoveError] = useState('')
   const [testingSourceId, setTestingSourceId] = useState<string | null>(null)
   const [testReport, setTestReport] = useState<ConnectionTestReport | null>(null)
   const [testError, setTestError] = useState('')
@@ -369,6 +373,32 @@ export function SourcesPage({
     setSuccessMessage(t('sources.edit.success', { id: result.source.id }))
   }
 
+  async function removeSamples() {
+    setRemovingSamples(true)
+    setSampleRemoveError('')
+    try {
+      const result = await removeSampleSources(sourcesQuery.data ?? [], apiFetch)
+      queryClient.setQueryData<SourceView[]>(['sources'], (current) =>
+        (current ?? []).filter((item) => !result.removed.includes(item.id)),
+      )
+      if (selectedSource && result.removed.includes(selectedSource.id)) selectSource(null)
+      if (result.refused) {
+        setSampleRemoveError(
+          t('sources.samples.inUse', {
+            id: result.refused.sourceId,
+            pipelines: result.refused.referrers.join(', '),
+          }),
+        )
+      } else {
+        setSuccessMessage(t('sources.samples.removed', { count: result.removed.length }))
+      }
+    } catch {
+      setSampleRemoveError(t('sources.samples.error'))
+    } finally {
+      setRemovingSamples(false)
+    }
+  }
+
   function onDeleted(source: Source) {
     queryClient.setQueryData<SourceView[]>(['sources'], (current) =>
       (current ?? []).filter((item) => item.id !== source.id),
@@ -401,15 +431,39 @@ export function SourcesPage({
         <h1 className="min-w-0 truncate text-[15px] font-semibold text-gray-900">
           {t('sources.title')}
         </h1>
-        <Button
-          type="button"
-          className="px-3 text-[13px] font-medium shadow-sm"
-          onClick={() => setCreateOpen(true)}
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          {t('sources.actions.create')}
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          {(sourcesQuery.data ?? []).some(isSampleSource) && (
+            <Button
+              type="button"
+              variant="outline"
+              className="px-3 text-[13px] font-medium"
+              disabled={removingSamples}
+              onClick={() => void removeSamples()}
+            >
+              {removingSamples ? t('sources.samples.removing') : t('sources.samples.remove')}
+            </Button>
+          )}
+          <Button
+            type="button"
+            className="px-3 text-[13px] font-medium shadow-sm"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            {t('sources.actions.create')}
+          </Button>
+        </div>
       </header>
+      {sampleRemoveError && (
+        <div
+          className="text-destructive flex items-start justify-between gap-3 border-b border-gray-100/70 px-4 py-2 text-[13px] md:px-6"
+          role="alert"
+        >
+          <p>{sampleRemoveError}</p>
+          <Button type="button" variant="ghost" size="sm" onClick={() => setSampleRemoveError('')}>
+            {t('sources.samples.dismiss')}
+          </Button>
+        </div>
+      )}
 
       {successMessage && (
         <div
@@ -496,6 +550,9 @@ export function SourcesPage({
                   className="size-4 rounded-md border-0 bg-transparent"
                 />
                 <span className="truncate">{source.name}</span>
+                {isSampleSource(source.raw) && (
+                  <Badge variant="secondary">{t('sources.samples.tag')}</Badge>
+                )}
                 <span
                   className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300"
                   aria-hidden="true"
@@ -1074,6 +1131,9 @@ function AllSourcesView({
                         />
                       </span>
                       <span className="font-medium text-gray-900">{source.name}</span>
+                      {isSampleSource(source.raw) && (
+                        <Badge variant="secondary">{t('sources.samples.tag')}</Badge>
+                      )}
                     </Button>
                   </td>
                   <td className="px-4 py-3 text-gray-600">{source.type}</td>

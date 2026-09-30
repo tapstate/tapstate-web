@@ -386,6 +386,16 @@
       "lineage": "血缘",
       "log": "日志",
       "settings": "设置"
+    },
+    "samples": {
+      "tag": "样例",
+      "remove": "移除样例数据源",
+      "removing": "正在移除…",
+      "removed_one": "已移除 {{count}} 个样例数据源。",
+      "removed_other": "已移除 {{count}} 个样例数据源。",
+      "inUse": "样例数据源 {{id}} 仍被以下 pipeline 读取：{{pipelines}}。请先删除这些 pipeline；尚未移除的样例已保留。",
+      "error": "样例数据源移除失败。请重试。",
+      "dismiss": "关闭"
     }
   },
   "pipelines": {
@@ -1095,7 +1105,17 @@
       },
       "added_one": "你的数据源（{{count}}）",
       "added_other": "你的数据源（{{count}}）",
-      "done": "完成"
+      "done": "完成",
+      "tag": "样例",
+      "sample": {
+        "title": "使用样例银行数据源",
+        "description": "{{names}}，已为变更捕获准备好。它们带有「样例」标签，可在数据源页移除。",
+        "and": "与",
+        "action": "添加样例数据源",
+        "adding": "正在添加…",
+        "added": "已添加",
+        "error": "样例数据源添加失败。请重试，或连接你自己的数据库。"
+      }
     }
   },
   "stateStorePage": {

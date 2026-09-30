@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { ArrowDown, ArrowRight, CheckCircle2, Database, GitMerge, HardDrive } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { listPipelines } from '@/service/pipelines/pipeline-client'
+import { addSampleSources, loadSampleSources } from '@/service/sample-source-client'
 import { listSources, type SourceView } from '@/service/source-client'
 import { listViews } from '@/service/view-client'
 import { useAuthStore } from '@/stores/auth-store'
@@ -71,6 +72,23 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
     queryFn: () => listViews(apiFetch),
     refetchInterval: (query) => (query.state.data?.available === false ? false : 5000),
     refetchIntervalInBackground: false,
+  })
+  // A deployment without sample settings serves no file; the offer then stays hidden.
+  const samplesQuery = useQuery({
+    queryKey: ['sample-sources'],
+    queryFn: () => loadSampleSources(apiFetch),
+    staleTime: Infinity,
+  })
+  const addSamples = useMutation({
+    mutationFn: () => addSampleSources(samplesQuery.data ?? [], sourcesQuery.data ?? [], apiFetch),
+    onSuccess: ({ added }) => {
+      queryClient.setQueryData<SourceView[]>(['sources'], (current) =>
+        [
+          ...(current ?? []).filter((item) => !added.some((source) => source.id === item.id)),
+          ...added,
+        ].sort((left, right) => left.id.localeCompare(right.id)),
+      )
+    },
   })
   const [hintsHidden, setHintsHidden] = useState(false)
   const [deferred, setDeferred] = useState<SetupStepId[]>([])
@@ -178,6 +196,19 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
         open={addSourcesOpen}
         onOpenChange={setAddSourcesOpen}
         sources={overview?.sources.all ?? []}
+        sample={
+          samplesQuery.data
+            ? {
+                names: samplesQuery.data.map((sample) => sample.name),
+                added: samplesQuery.data.every((sample) =>
+                  (sourcesQuery.data ?? []).some((source) => source.id === sample.id),
+                ),
+                adding: addSamples.isPending,
+                error: addSamples.isError ? t('overview.addSources.sample.error') : null,
+                onAdd: () => addSamples.mutate(),
+              }
+            : null
+        }
         onConnect={() => {
           setAddSourcesOpen(false)
           setSourceFormOpen(true)

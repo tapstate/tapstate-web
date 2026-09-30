@@ -1,6 +1,7 @@
 import type { PipelineRuntimeState, PipelineView } from '@/service/pipelines/pipeline-client'
 import type { ViewListResult } from '@/service/view-client'
 
+import { isSampleSource } from '@/service/sample-source-client'
 import { MANAGED_VIEW_STORE_SOURCE_ID, type SourceView } from '@/service/source-client'
 
 /** The three setup steps, in the order a new workspace is guided through them. */
@@ -12,6 +13,7 @@ export type PipelineHealth = 'running' | 'idle' | 'error'
 export interface OverviewSourceItem {
   id: string
   connector: string
+  sample: boolean
 }
 
 export type OverviewAttentionItem =
@@ -79,7 +81,11 @@ export function buildOverview(
   const managed = sources.find((source) => source.id === MANAGED_VIEW_STORE_SOURCE_ID) ?? null
   const dataSources = sources
     .filter((source) => source.id !== MANAGED_VIEW_STORE_SOURCE_ID)
-    .map((source) => ({ id: source.id, connector: source.connector }))
+    .map((source) => ({
+      id: source.id,
+      connector: source.connector,
+      sample: isSampleSource(source),
+    }))
     .sort((left, right) => left.id.localeCompare(right.id))
 
   const counts: Record<PipelineHealth, number> = { running: 0, idle: 0, error: 0 }

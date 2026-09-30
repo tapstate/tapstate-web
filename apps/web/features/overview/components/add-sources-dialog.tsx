@@ -1,4 +1,4 @@
-import { Database } from 'lucide-react'
+import { Database, Landmark } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
@@ -20,6 +20,18 @@ interface AddSourcesDialogProps {
   sources: OverviewSourceItem[]
   /** Opens the new-source form. */
   onConnect: () => void
+  /** The sample offer, when this deployment has one. */
+  sample?: SampleOffer | null
+}
+
+export interface SampleOffer {
+  /** Names of the sample sources, such as "Core banking". */
+  names: string[]
+  /** Every sample source is already added. */
+  added: boolean
+  adding: boolean
+  error: string | null
+  onAdd: () => void
 }
 
 /** The sources step of setup: add databases without leaving Overview, then Done. */
@@ -28,6 +40,7 @@ export function AddSourcesDialog({
   onOpenChange,
   sources,
   onConnect,
+  sample,
 }: AddSourcesDialogProps) {
   const { t } = useTranslation()
   return (
@@ -38,6 +51,39 @@ export function AddSourcesDialog({
           <DialogDescription>{t('overview.addSources.description')}</DialogDescription>
         </DialogHeader>
         <div className="overview-add-sources">
+          {sample && (
+            <section className="overview-add-sources__option">
+              <Landmark className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden="true" />
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <h3 className="text-foreground flex items-center gap-2 text-[13px] font-semibold">
+                  {t('overview.addSources.sample.title')}
+                  <span className="overview-add-sources__tag">{t('overview.addSources.tag')}</span>
+                </h3>
+                <p className="text-muted-foreground text-[12px] leading-relaxed">
+                  {t('overview.addSources.sample.description', {
+                    names: sample.names.join(t('overview.addSources.sample.and')),
+                  })}
+                </p>
+                {sample.error && (
+                  <p className="text-destructive text-[12px]" role="alert">
+                    {sample.error}
+                  </p>
+                )}
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                disabled={sample.added || sample.adding}
+                onClick={sample.onAdd}
+              >
+                {sample.added
+                  ? t('overview.addSources.sample.added')
+                  : sample.adding
+                    ? t('overview.addSources.sample.adding')
+                    : t('overview.addSources.sample.action')}
+              </Button>
+            </section>
+          )}
           <section className="overview-add-sources__option">
             <Database className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden="true" />
             <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -63,7 +109,14 @@ export function AddSourcesDialog({
               <ul className="overview-add-sources__list">
                 {sources.map((source) => (
                   <li key={source.id}>
-                    <span className="text-foreground font-medium">{source.id}</span>
+                    <span className="flex items-center gap-2">
+                      <span className="text-foreground font-medium">{source.id}</span>
+                      {source.sample && (
+                        <span className="overview-add-sources__tag">
+                          {t('overview.addSources.tag')}
+                        </span>
+                      )}
+                    </span>
                     <span className="text-muted-foreground">{source.connector}</span>
                   </li>
                 ))}

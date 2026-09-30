@@ -50,6 +50,13 @@ const {
   }
 })
 
+const { removeSampleSources } = vi.hoisted(() => ({ removeSampleSources: vi.fn() }))
+
+vi.mock('@/service/sample-source-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/service/sample-source-client')>()),
+  removeSampleSources,
+}))
+
 vi.mock('@/service/source-client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/service/source-client')>()),
   discoverSourceSchema,
@@ -619,5 +626,69 @@ describe('SourcesPage', () => {
       expect(container?.querySelector('[role="status"]')?.textContent).toBe('Source orders updated')
       expect(queryClient.getQueryData(['source', 'orders'])).toEqual(saved)
     })
+  })
+
+  it('tags sample sources and removes them as a set, naming a pipeline that still reads one', async () => {
+    const sample = (id: string): SourceView => ({
+      ...source,
+      id,
+      metadata: { labels: { sample: 'true' }, description: id },
+    })
+    listSources.mockResolvedValue([
+      source,
+      sample('sample_cards_crm'),
+      sample('sample_core_banking'),
+    ])
+    removeSampleSources.mockResolvedValue({
+      removed: ['sample_core_banking'],
+      refused: { sourceId: 'sample_cards_crm', referrers: ['c360_pipeline'] },
+    })
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <SourcesPage />
+        </QueryClientProvider>,
+      )
+    })
+    await waitForPage(() => expect(buttonWithText('Remove sample sources')).toBeDefined())
+
+    const rows = [...(container.querySelectorAll('tbody tr') ?? [])].map(
+      (row) => row.textContent ?? '',
+    )
+    expect(rows.filter((row) => row.includes('Sample'))).toHaveLength(2)
+    expect(rows.find((row) => row.includes('orders'))).not.toContain('Sample')
+
+    await act(async () => buttonWithText('Remove sample sources')?.click())
+    await waitForPage(() =>
+      expect(container?.querySelector('[role="alert"]')?.textContent).toContain(
+        'Sample source sample_cards_crm is still read by: c360_pipeline',
+      ),
+    )
+    expect(removeSampleSources).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ id: 'orders' })]),
+      expect.anything(),
+    )
+    expect(container.textContent).not.toContain('sample_core_banking')
+  })
+
+  it('offers no sample removal when there are no sample sources', async () => {
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <SourcesPage />
+        </QueryClientProvider>,
+      )
+    })
+    await waitForPage(() => expect(container?.textContent).toContain('orders'))
+
+    expect(buttonWithText('Remove sample sources')).toBeUndefined()
   })
 })
