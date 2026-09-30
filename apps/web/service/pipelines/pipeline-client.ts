@@ -141,6 +141,8 @@ export interface PipelineDraft {
   updatedBy: string
 }
 
+export type PipelineDraftSummary = Omit<PipelineDraft, 'schemaVersion' | 'graph' | 'wizard'>
+
 export interface PipelineDraftMutation {
   pipelineId: string
   mode: PipelineDraftMode
@@ -410,6 +412,25 @@ function isPipelineDraft(value: unknown): value is PipelineDraft {
     (value.publishedDraftRevision === null ||
       (typeof value.publishedDraftRevision === 'number' &&
         Number.isInteger(value.publishedDraftRevision))) &&
+    (value.publishedArtifactHash === null || typeof value.publishedArtifactHash === 'string') &&
+    typeof value.createdAt === 'string' &&
+    typeof value.updatedAt === 'string' &&
+    typeof value.updatedBy === 'string'
+  )
+}
+
+function isPipelineDraftSummary(value: unknown): value is PipelineDraftSummary {
+  return (
+    isRecord(value) &&
+    typeof value.pipelineId === 'string' &&
+    typeof value.revision === 'number' &&
+    Number.isInteger(value.revision) &&
+    value.revision > 0 &&
+    (value.mode === 'dag' || value.mode === 'wizard') &&
+    (value.name === null || typeof value.name === 'string') &&
+    (value.description === null || typeof value.description === 'string') &&
+    (value.baseArtifactHash === null || typeof value.baseArtifactHash === 'string') &&
+    (value.publishedDraftRevision === null || Number.isInteger(value.publishedDraftRevision)) &&
     (value.publishedArtifactHash === null || typeof value.publishedArtifactHash === 'string') &&
     typeof value.createdAt === 'string' &&
     typeof value.updatedAt === 'string' &&
@@ -759,12 +780,14 @@ async function requestDraftMutation(
   return { draft: payload, etag }
 }
 
-export async function listPipelineDrafts(fetcher: ApiFetcher = fetch): Promise<PipelineDraft[]> {
-  const payload = await request('/pipelines/drafts', fetcher)
+export async function listPipelineDrafts(
+  fetcher: ApiFetcher = fetch,
+): Promise<PipelineDraftSummary[]> {
+  const payload = await request('/pipeline-drafts', fetcher)
   if (
     !isRecord(payload) ||
     !Array.isArray(payload.items) ||
-    !payload.items.every(isPipelineDraft)
+    !payload.items.every(isPipelineDraftSummary)
   ) {
     throw new PipelineClientError('protocol', 'Tapstate returned an invalid Pipeline draft list.')
   }

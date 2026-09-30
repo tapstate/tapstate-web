@@ -61,7 +61,9 @@ export function buildPipelineDraftMutation(
       viewport: layout.viewport ?? DEFAULT_VIEWPORT,
     },
     wizard: null,
-    baseArtifactHash: null,
+    baseArtifactHash: editor.pipeline.contentHash.startsWith('draft:')
+      ? null
+      : editor.pipeline.contentHash,
   }
 }
 

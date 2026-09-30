@@ -183,10 +183,11 @@ describe('Pipeline client', () => {
 
   it('uses revision ETags for the durable draft contract', async () => {
     const listRequests: Request[] = []
+    const { schemaVersion: _schemaVersion, graph: _graph, wizard: _wizard, ...summary } = draft
     await expect(
-      listPipelineDrafts(fetcherFor(jsonResponse({ items: [draft] }), listRequests)),
-    ).resolves.toEqual([draft])
-    expect(new URL(listRequests[0]!.url).pathname).toBe('/api/pipelines/drafts')
+      listPipelineDrafts(fetcherFor(jsonResponse({ items: [summary] }), listRequests)),
+    ).resolves.toEqual([summary])
+    expect(new URL(listRequests[0]!.url).pathname).toBe('/api/pipeline-drafts')
 
     const getRequests: Request[] = []
     await expect(

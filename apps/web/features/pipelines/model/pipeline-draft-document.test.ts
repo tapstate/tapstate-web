@@ -91,6 +91,15 @@ const editor: PipelineGraphDraft = {
 }
 
 describe('Pipeline draft document', () => {
+  it('uses the current Artifact hash when first editing an existing Pipeline', () => {
+    const hash = 'a'.repeat(64)
+    const mutation = buildPipelineDraftMutation(
+      { ...editor, pipeline: { ...editor.pipeline, contentHash: hash } },
+      { nodes: {}, viewport: { x: 0, y: 0, zoom: 1 } },
+    )
+    expect(mutation.baseArtifactHash).toBe(hash)
+  })
+
   it('persists graph coordinates with the draft instead of the legacy layout resource', () => {
     const mutation = buildPipelineDraftMutation(editor, {
       nodes: {
