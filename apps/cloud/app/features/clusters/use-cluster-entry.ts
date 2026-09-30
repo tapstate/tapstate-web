@@ -23,8 +23,6 @@ export function useClusterEntry() {
       if (
         !success ||
         !exchangeCode ||
-        !cluster.publicDns ||
-        origin.hostname !== cluster.publicDns ||
         origin.username ||
         origin.password ||
         (origin.protocol !== 'https:' && !(localApp && localTarget && origin.protocol === 'http:'))
