@@ -395,7 +395,9 @@
       "removed_other": "已移除 {{count}} 個範例資料來源。",
       "inUse": "範例資料來源 {{id}} 仍被以下 pipeline 讀取：{{pipelines}}。請先刪除這些 pipeline；尚未移除的範例已保留。",
       "error": "範例資料來源移除失敗。請重試。",
-      "dismiss": "關閉"
+      "dismiss": "關閉",
+      "added_one": "已新增 {{count}} 個範例資料來源。",
+      "added_other": "已新增 {{count}} 個範例資料來源。"
     }
   },
   "pipelines": {

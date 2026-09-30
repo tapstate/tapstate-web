@@ -45,7 +45,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { isSampleSource, removeSampleSources } from '@/service/sample-source-client'
+import {
+  addSampleSources,
+  isSampleSource,
+  loadSampleSources,
+  removeSampleSources,
+} from '@/service/sample-source-client'
 import {
   discoverSourceSchema,
   getSource,
@@ -163,6 +168,13 @@ export function SourcesPage({
   const [deletingSource, setDeletingSource] = useState<Source | null>(null)
   const [successMessage, setSuccessMessage] = useState('')
   const [removingSamples, setRemovingSamples] = useState(false)
+  const [addingSamples, setAddingSamples] = useState(false)
+  // Same key as Overview; a deployment without sample settings leaves this null.
+  const samplesQuery = useQuery({
+    queryKey: ['sample-sources'],
+    queryFn: () => loadSampleSources(apiFetch),
+    staleTime: Infinity,
+  })
   const [sampleRemoveError, setSampleRemoveError] = useState('')
   const [testingSourceId, setTestingSourceId] = useState<string | null>(null)
   const [testReport, setTestReport] = useState<ConnectionTestReport | null>(null)
@@ -373,6 +385,33 @@ export function SourcesPage({
     setSuccessMessage(t('sources.edit.success', { id: result.source.id }))
   }
 
+  const samplesMissing = (samplesQuery.data ?? []).some(
+    (sample) => !(sourcesQuery.data ?? []).some((source) => source.id === sample.id),
+  )
+
+  async function addSamples() {
+    setAddingSamples(true)
+    setSampleRemoveError('')
+    try {
+      const result = await addSampleSources(
+        samplesQuery.data ?? [],
+        sourcesQuery.data ?? [],
+        apiFetch,
+      )
+      queryClient.setQueryData<SourceView[]>(['sources'], (current) =>
+        [
+          ...(current ?? []).filter((item) => !result.added.some((added) => added.id === item.id)),
+          ...result.added,
+        ].sort((left, right) => left.id.localeCompare(right.id)),
+      )
+      setSuccessMessage(t('sources.samples.added', { count: result.added.length }))
+    } catch {
+      setSampleRemoveError(t('overview.addSources.sample.error'))
+    } finally {
+      setAddingSamples(false)
+    }
+  }
+
   async function removeSamples() {
     setRemovingSamples(true)
     setSampleRemoveError('')
@@ -432,6 +471,19 @@ export function SourcesPage({
           {t('sources.title')}
         </h1>
         <div className="flex shrink-0 items-center gap-2">
+          {samplesMissing && (
+            <Button
+              type="button"
+              variant="outline"
+              className="px-3 text-[13px] font-medium"
+              disabled={addingSamples}
+              onClick={() => void addSamples()}
+            >
+              {addingSamples
+                ? t('overview.addSources.sample.adding')
+                : t('overview.addSources.sample.action')}
+            </Button>
+          )}
           {(sourcesQuery.data ?? []).some(isSampleSource) && (
             <Button
               type="button"

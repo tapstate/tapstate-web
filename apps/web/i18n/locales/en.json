@@ -395,7 +395,9 @@
       "removed_other": "Removed {{count}} sample sources.",
       "inUse": "Sample source {{id}} is still read by: {{pipelines}}. Delete those pipelines first; the samples not yet removed were kept.",
       "error": "The sample sources could not be removed. Try again.",
-      "dismiss": "Dismiss"
+      "dismiss": "Dismiss",
+      "added_one": "Added {{count}} sample source.",
+      "added_other": "Added {{count}} sample sources."
     }
   },
   "pipelines": {

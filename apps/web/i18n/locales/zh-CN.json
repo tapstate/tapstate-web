@@ -395,7 +395,9 @@
       "removed_other": "已移除 {{count}} 个样例数据源。",
       "inUse": "样例数据源 {{id}} 仍被以下 pipeline 读取：{{pipelines}}。请先删除这些 pipeline；尚未移除的样例已保留。",
       "error": "样例数据源移除失败。请重试。",
-      "dismiss": "关闭"
+      "dismiss": "关闭",
+      "added_one": "已添加 {{count}} 个样例数据源。",
+      "added_other": "已添加 {{count}} 个样例数据源。"
     }
   },
   "pipelines": {
