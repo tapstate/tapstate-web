@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as PipelineEditorRouteImport } from './routes/_pipeline-editor'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as SignedOutRouteImport } from './routes/signed-out'
 import { Route as AuthenticatedDestinationsRouteImport } from './routes/_authenticated.destinations'
 import { Route as AuthenticatedExplorationsRouteImport } from './routes/_authenticated.explorations'
 import { Route as AuthenticatedPipelinesRouteImport } from './routes/_authenticated.pipelines'
@@ -44,6 +45,11 @@ const PipelineEditorRoute = PipelineEditorRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignedOutRoute = SignedOutRouteImport.update({
+  id: '/signed-out',
+  path: '/signed-out',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedDestinationsRoute =
@@ -141,6 +147,7 @@ const PipelineEditorPipelinesPipelineIdEditMonitoringRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/signed-out': typeof SignedOutRoute
   '/destinations': typeof AuthenticatedDestinationsRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
@@ -159,6 +166,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/signed-out': typeof SignedOutRoute
   '/destinations': typeof AuthenticatedDestinationsRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
@@ -177,6 +185,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_pipeline-editor': typeof PipelineEditorRouteWithChildren
   '/login': typeof LoginRoute
+  '/signed-out': typeof SignedOutRoute
   '/_authenticated/destinations': typeof AuthenticatedDestinationsRoute
   '/_authenticated/explorations': typeof AuthenticatedExplorationsRoute
   '/_authenticated/pipelines': typeof AuthenticatedPipelinesRoute
@@ -197,6 +206,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/signed-out'
     | '/destinations'
     | '/explorations'
     | '/pipelines'
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/signed-out'
     | '/destinations'
     | '/explorations'
     | '/pipelines'
@@ -232,6 +243,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/_pipeline-editor'
     | '/login'
+    | '/signed-out'
     | '/_authenticated/destinations'
     | '/_authenticated/explorations'
     | '/_authenticated/pipelines'
@@ -253,6 +265,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   PipelineEditorRoute: typeof PipelineEditorRouteWithChildren
   LoginRoute: typeof LoginRoute
+  SignedOutRoute: typeof SignedOutRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -283,6 +296,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signed-out': {
+      id: '/signed-out'
+      path: '/signed-out'
+      fullPath: '/signed-out'
+      preLoaderRoute: typeof SignedOutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/destinations': {
@@ -480,6 +500,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   PipelineEditorRoute: PipelineEditorRouteWithChildren,
   LoginRoute: LoginRoute,
+  SignedOutRoute: SignedOutRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

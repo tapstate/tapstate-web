@@ -62,7 +62,7 @@ pnpm lint         # oxlint diagnostics + repo-wide format check
 
 - Vite 负责本地开发服务器、预览与打包产物。
 - Web 部署形态由 Vite mode 决定：本地默认 mode 和 `onprem` 使用 on-prem 行为，`cloud` 启用云版专属行为。分别用 `pnpm --filter web dev --mode onprem`、`pnpm --filter web dev --mode cloud` 启动；打包时对应使用 `pnpm --filter web build --mode onprem` 或 `pnpm --filter web build --mode cloud`。
-- Cloud build 的 401、退出和 `/login` 会整页返回 `VITE_CLOUD_CONSOLE_URL`；Week 2 预览默认值为 `https://dev.cloud.tapstate.com/`，其他环境打包时必须显式覆盖。
+- Cloud build 的 401 和 `/login` 会整页返回 `VITE_CLOUD_CONSOLE_URL`；显式退出只结束当前 Cluster 会话并停留在 Cluster 的退出完成页。Week 2 预览默认值为 `https://dev.cloud.tapstate.com/`，其他环境打包时必须显式覆盖。
 - TanStack Router 负责 SPA 路由；路由源码按 File Routes 形态维护在 `apps/web/app/routes/`，由 `@tanstack/router-plugin` 生成 `apps/web/app/routeTree.gen.ts`。
 - 当前仍按 SPA / client-first 落地；不引入 SSR、Server Actions、API Routes 或 BFF。
 

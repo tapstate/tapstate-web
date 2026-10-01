@@ -47,6 +47,11 @@
     "separator": "/"
   },
   "auth": {
+    "signedOut": {
+      "title": "Cluster 工作階段已結束",
+      "description": "目前 Cluster 工作階段已關閉。需要再次進入 Cluster 時，請返回 Tapstate Cloud。",
+      "returnToCloud": "返回 Tapstate Cloud"
+    },
     "login": {
       "eyebrow": "即時上下文",
       "signalTitle": "讓每個決策保持最新。",

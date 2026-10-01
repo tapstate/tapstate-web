@@ -47,6 +47,11 @@
     "separator": "/"
   },
   "auth": {
+    "signedOut": {
+      "title": "Cluster session ended",
+      "description": "This Cluster session has been closed. Return to Tapstate Cloud when you want to enter a Cluster again.",
+      "returnToCloud": "Return to Tapstate Cloud"
+    },
     "login": {
       "eyebrow": "REAL-TIME CONTEXT",
       "signalTitle": "Make every decision current.",
