@@ -53,11 +53,7 @@ export function createAuthStore(options: AuthStoreOptions = {}) {
     },
     logout: async () => {
       if (profile === 'cloud') {
-        try {
-          await logoutCloudSession(fetcher, options.origin)
-        } finally {
-          set({ token: null, isAuthenticated: false })
-        }
+        await logoutCloudSession(fetcher, options.origin)
         return
       }
       get().clear()
