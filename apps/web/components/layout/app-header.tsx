@@ -14,6 +14,7 @@ import {
 import { SUPPORTED_LOCALES } from '@/i18n'
 import { useAuthStore } from '@/stores/auth-store'
 import { useUiStore } from '@/stores/ui-store'
+import { replaceWithCloudConsole } from '@/utils/cloud-console'
 
 export function AppHeader() {
   const navigate = useNavigate()
@@ -31,7 +32,7 @@ export function AppHeader() {
       await logoutSession()
     } finally {
       if (authProfile === 'cloud') {
-        window.location.replace('/signed-out')
+        replaceWithCloudConsole()
       } else {
         void navigate({ replace: true, to: '/login' })
       }
