@@ -30,7 +30,11 @@ export function AppHeader() {
     try {
       await logoutSession()
     } finally {
-      void navigate({ replace: true, to: authProfile === 'cloud' ? '/signed-out' : '/login' })
+      if (authProfile === 'cloud') {
+        window.location.replace('/signed-out')
+      } else {
+        void navigate({ replace: true, to: '/login' })
+      }
     }
   }
 
