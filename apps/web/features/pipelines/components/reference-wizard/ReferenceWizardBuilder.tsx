@@ -313,6 +313,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     })
   }
 
+  const updateRelationType = (id: string, type: RelationNode['type']) => {
+    setActiveContext(id)
+    updateRelation(id, (relation) => ({ ...relation, type }))
+  }
+
   const handleAddCondition = (rel: RelationNode) => {
     const conds = [...getConditions(rel)]
     const childCols = getColumnsForTable(rel.source, rel.table)
@@ -485,6 +490,10 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   }
 
   const removeRelation = (id: string) => {
+    const removed = flattenRelations(relations).find((relation) => relation.id === id)
+    if (removed && flattenRelations([removed]).some((relation) => relation.id === activeContext)) {
+      setActiveContext('root')
+    }
     const remove = (nodes: RelationNode[]): RelationNode[] =>
       nodes.filter((r) => r.id !== id).map((r) => ({ ...r, children: remove(r.children || []) }))
     setRelations(remove)
@@ -914,7 +923,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
-                    updateRelation(rel.id, (r) => ({ ...r, type: 'sub_doc' }))
+                    updateRelationType(rel.id, 'sub_doc')
                   }}
                   className={cn(
                     'flex cursor-pointer items-center gap-1 rounded-lg px-2 py-0.5 transition-all',
@@ -931,7 +940,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
-                    updateRelation(rel.id, (r) => ({ ...r, type: 'sub_array' }))
+                    updateRelationType(rel.id, 'sub_array')
                   }}
                   className={cn(
                     'flex cursor-pointer items-center gap-1 rounded-lg px-2 py-0.5 transition-all',
@@ -948,7 +957,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
-                    updateRelation(rel.id, (r) => ({ ...r, type: 'flatten' }))
+                    updateRelationType(rel.id, 'flatten')
                   }}
                   className={cn(
                     'flex cursor-pointer items-center gap-1 rounded-lg px-2 py-0.5 transition-all',
@@ -1252,7 +1261,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                 <div className="grid grid-cols-3 gap-1">
                   <button
                     type="button"
-                    onClick={() => updateRelation(rel.id, (r) => ({ ...r, type: 'sub_doc' }))}
+                    onClick={() => updateRelationType(rel.id, 'sub_doc')}
                     className={cn(
                       'cursor-pointer rounded-lg border px-1 py-1 text-center text-[10px] transition-colors',
                       rel.type === 'sub_doc'
@@ -1264,7 +1273,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => updateRelation(rel.id, (r) => ({ ...r, type: 'sub_array' }))}
+                    onClick={() => updateRelationType(rel.id, 'sub_array')}
                     className={cn(
                       'cursor-pointer rounded-lg border px-1 py-1 text-center text-[10px] transition-colors',
                       rel.type === 'sub_array'
@@ -1276,7 +1285,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => updateRelation(rel.id, (r) => ({ ...r, type: 'flatten' }))}
+                    onClick={() => updateRelationType(rel.id, 'flatten')}
                     className={cn(
                       'cursor-pointer rounded-lg border px-1 py-1 text-center text-[10px] transition-colors',
                       rel.type === 'flatten'

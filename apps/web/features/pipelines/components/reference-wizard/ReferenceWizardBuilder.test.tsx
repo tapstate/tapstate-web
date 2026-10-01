@@ -162,6 +162,24 @@ describe('ReferenceWizardBuilder preview panel', () => {
 
     act(() => {
       host
+        ?.querySelector<HTMLButtonElement>(
+          '.wizard-reference-relation-radius button[title="Embed as nested document object {}"]',
+        )
+        ?.click()
+    })
+    expect(panel?.textContent).toContain('Document: orders')
+
+    act(() => {
+      host
+        ?.querySelector<HTMLButtonElement>(
+          '.wizard-reference-relation-radius button[title="Remove relation"]',
+        )
+        ?.click()
+    })
+    expect(panel?.textContent).toContain('Root Table: crm_customers')
+
+    act(() => {
+      host
         ?.querySelector('#step-doc-process')
         ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
