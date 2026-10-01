@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import type { PipelineView } from '@/service/pipelines/pipeline-client'
 
+import { buildPipelineDraftMutation } from './pipeline-draft-document'
+import { createPipelineGraphDraft } from './pipeline-graph-edit'
 import { pipelineNodeConfigurations } from './pipeline-node-model'
 
 const pipeline = {
@@ -73,6 +75,24 @@ describe('pipelineNodeConfigurations', () => {
       transformType: 'filter',
       body: { expr: 'active == true' },
     })
+  })
+
+  it('retains step experimental settings on an Artifact to draft round trip', () => {
+    const withExperimental: PipelineView = {
+      ...pipeline,
+      transforms: [
+        { ...pipeline.transforms[0], experimental: { 'field-mode': 'permissive' } },
+        pipeline.transforms[1],
+      ],
+    }
+    const mutation = buildPipelineDraftMutation(createPipelineGraphDraft(withExperimental), {
+      nodes: {},
+      viewport: { x: 0, y: 0, zoom: 1 },
+    })
+
+    expect(
+      mutation.graph?.nodes.find((node) => node.metadata.stepId === 'normalize')?.config,
+    ).toMatchObject({ experimental: { 'field-mode': 'permissive' } })
   })
 
   it('accepts snake_case write mode values from the PipelineView projection', () => {

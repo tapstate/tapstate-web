@@ -13,5 +13,7 @@ export function usePipelineLogsQuery(pipelineId: string, autoRefresh: boolean) {
     queryFn: () => getPipelineLogs(pipelineId, apiFetch),
     retry: false,
     refetchInterval: autoRefresh ? PIPELINE_LOGS_REFRESH_INTERVAL : false,
+    refetchOnReconnect: autoRefresh,
+    refetchOnWindowFocus: autoRefresh,
   })
 }

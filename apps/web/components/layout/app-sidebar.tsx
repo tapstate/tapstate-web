@@ -1,10 +1,11 @@
 import type { ComponentType, SVGProps } from 'react'
 
 import { Link, useRouterState } from '@tanstack/react-router'
-import { Database, GitMerge, MessageSquareText, Terminal } from 'lucide-react'
+import { Database, GitMerge, MessageSquareText, Table2, Terminal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
+import { getDeploymentProfile } from '@/utils/deployment-profile'
 
 import { AppHeader } from './app-header'
 
@@ -17,6 +18,9 @@ interface NavigationItem {
 const navigation: NavigationItem[] = [
   { labelKey: 'nav.sources', to: '/sources', icon: Database },
   { labelKey: 'nav.pipelines', to: '/pipelines', icon: GitMerge },
+  ...(getDeploymentProfile() === 'cloud'
+    ? [{ labelKey: 'nav.views', to: '/views', icon: Table2 }]
+    : []),
   { labelKey: 'nav.explorations', to: '/explorations', icon: MessageSquareText },
 ]
 
@@ -40,12 +44,13 @@ export function AppSidebar() {
             <Link
               key={item.to}
               to={item.to}
+              aria-current={pathname.startsWith(item.to) ? 'page' : undefined}
               className={cn(
                 'app-sidebar__link',
                 pathname.startsWith(item.to) && 'app-sidebar__link--active',
               )}
             >
-              <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
               <span>{t(item.labelKey)}</span>
             </Link>
           )

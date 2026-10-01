@@ -1,11 +1,12 @@
-import { Input, Select } from 'antd'
 import { Boxes, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 import { TransformEditorShell } from './transform-editor-shell'
+import { TransformSelect } from './transform-select'
 import { mergeBody, type TransformEditorProps } from './types'
 
 type EmbedEntry = {
@@ -155,7 +156,6 @@ export function NestEditor({ config, onChange }: TransformEditorProps) {
       from={config.from}
       icon={Boxes}
       title={t('pipelines.workspace.transform.nest.title')}
-      description={t('pipelines.workspace.transform.nest.description')}
     >
       <div className="pipeline-transform__section-heading">
         {t('pipelines.workspace.transform.root')}
@@ -173,23 +173,23 @@ export function NestEditor({ config, onChange }: TransformEditorProps) {
         onChange={(event) => update({ ...draft, rootKey: event.target.value })}
       />
       <div className="pipeline-transform__two-column">
-        <Select
-          aria-label={t('pipelines.workspace.transform.rootMode')}
+        <TransformSelect
+          label={t('pipelines.workspace.transform.rootMode')}
           value={draft.rootMode}
           options={[
             { value: 'upsert', label: t('pipelines.workspace.transform.upsert') },
             { value: 'append', label: t('pipelines.workspace.transform.append') },
           ]}
-          onChange={(rootMode: string) => update({ ...draft, rootMode })}
+          onChange={(rootMode) => update({ ...draft, rootMode })}
         />
-        <Select
-          aria-label={t('pipelines.workspace.transform.order')}
+        <TransformSelect
+          label={t('pipelines.workspace.transform.order')}
           value={draft.order}
           options={[
             { value: 'main_first', label: t('pipelines.workspace.transform.mainFirst') },
             { value: 'sub_first', label: t('pipelines.workspace.transform.subFirst') },
           ]}
-          onChange={(order: string) => update({ ...draft, order })}
+          onChange={(order) => update({ ...draft, order })}
         />
       </div>
       <div className="pipeline-transform__section-heading">
@@ -225,14 +225,14 @@ export function NestEditor({ config, onChange }: TransformEditorProps) {
               }
             />
             <div className="pipeline-transform__two-column">
-              <Select
-                aria-label={t('pipelines.workspace.transform.embedShape')}
+              <TransformSelect
+                label={t('pipelines.workspace.transform.embedShape')}
                 value={embed.as}
                 options={[
                   { value: 'array', label: t('pipelines.workspace.transform.arrayShape') },
                   { value: 'object', label: t('pipelines.workspace.transform.objectShape') },
                 ]}
-                onChange={(as: EmbedEntry['as']) =>
+                onChange={(as) =>
                   update({
                     ...draft,
                     embeds: draft.embeds.map((item, itemIndex) =>

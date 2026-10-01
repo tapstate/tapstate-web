@@ -1,13 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
-import { GitMerge, Plus } from 'lucide-react'
+import { GitMerge, Plus, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { ApiFetcher } from '@/service/source-client'
 
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { listPipelines, type PipelineView } from '@/service/pipelines/pipeline-client'
+import { listPipelines, type PipelineCatalogItem } from '@/service/pipelines/pipeline-client'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { PipelineCreationDialog } from '../components/create/pipeline-creation-dialog'
@@ -17,12 +18,18 @@ import {
   type PipelineLifecycleAction,
 } from '../components/pipeline-lifecycle-menu'
 import { PipelineMutationFeedback } from '../components/pipeline-mutation-feedback'
+import {
+  PipelineRefreshControls,
+  PIPELINE_AUTO_REFRESH_INTERVAL_MS,
+} from '../components/pipeline-refresh-controls'
 import { PipelineStatusBadge } from '../components/pipeline-status-badge'
 
 export function PipelinesPage() {
-  const { t } = useTranslation()
+  const { i18n, t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [autoRefresh, setAutoRefresh] = useState(true)
   const [isCreationDialogOpen, setIsCreationDialogOpen] = useState(false)
   const [lifecycleFeedback, setLifecycleFeedback] = useState<{
     pipelineId: string
@@ -32,14 +39,24 @@ export function PipelinesPage() {
   const pipelinesQuery = useQuery({
     queryKey: ['pipelines'],
     queryFn: () => listPipelines(apiFetch),
-    // Runtime state is mutable outside this screen. Keep lifecycle actions
-    // aligned with the control plane instead of allowing a stale Start action
-    // to remain visible after another worker has already started the Pipeline.
-    refetchInterval: 5000,
+    // The catalog is one server projection for documents, artifacts, and runtime state.
+    refetchInterval: autoRefresh ? PIPELINE_AUTO_REFRESH_INTERVAL_MS : false,
     refetchIntervalInBackground: false,
+    refetchOnReconnect: autoRefresh,
+    refetchOnWindowFocus: autoRefresh,
   })
   const pipelines = pipelinesQuery.data ?? []
-  const selectedPipeline = useMemo(
+  const filteredPipelines = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase(i18n.language)
+    if (!query) return pipelines
+
+    return pipelines.filter((pipeline) =>
+      [pipeline.id, pipeline.name, pipeline.description, pipeline.mode, pipeline.status.state]
+        .filter((value): value is string => typeof value === 'string')
+        .some((value) => value.toLocaleLowerCase(i18n.language).includes(query)),
+    )
+  }, [i18n.language, pipelines, search])
+  const selectedRow = useMemo(
     () => pipelines.find((pipeline) => pipeline.id === selectedId) ?? null,
     [pipelines, selectedId],
   )
@@ -91,7 +108,7 @@ export function PipelinesPage() {
               pipelines.map((pipeline) => (
                 <TreeItem
                   key={pipeline.id}
-                  node={{ id: pipeline.id, name: pipeline.id, type: 'pipeline' }}
+                  node={{ id: pipeline.id, name: pipeline.name, type: 'pipeline' }}
                   expandedIds={new Set()}
                   selectedId={selectedId}
                   onToggle={() => undefined}
@@ -103,8 +120,54 @@ export function PipelinesPage() {
         </aside>
 
         <main className="flex min-w-0 flex-1 flex-col bg-white">
-          {selectedPipeline && <PipelineHeader pipeline={selectedPipeline} />}
+          {selectedRow && <PipelineHeader pipeline={selectedRow} />}
           <div className="min-h-0 flex-1 overflow-auto bg-white p-4 md:p-6">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <label className="relative min-w-52 flex-1 sm:max-w-sm">
+                <Search
+                  className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2"
+                  aria-hidden="true"
+                />
+                <span className="sr-only">{t('pipelines.list.searchAria')}</span>
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={t('pipelines.list.searchPlaceholder')}
+                  className="pl-9"
+                />
+              </label>
+              <div className="flex items-center gap-3">
+                <p className="text-muted-foreground hidden text-xs sm:block" aria-live="polite">
+                  {pipelinesQuery.dataUpdatedAt > 0
+                    ? t('pipelines.list.lastRefreshed', {
+                        time: new Intl.DateTimeFormat(i18n.language, {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                        }).format(pipelinesQuery.dataUpdatedAt),
+                      })
+                    : autoRefresh
+                      ? t('pipelines.list.refreshActive')
+                      : t('pipelines.list.refreshPaused')}
+                </p>
+                <PipelineRefreshControls
+                  autoRefresh={autoRefresh}
+                  isFetching={pipelinesQuery.isFetching}
+                  onRefresh={() => void pipelinesQuery.refetch()}
+                  onToggle={() => setAutoRefresh((current) => !current)}
+                  labels={{
+                    refresh: t('pipelines.list.refresh'),
+                    refreshAria: t('pipelines.list.refreshAria'),
+                    active: t('pipelines.list.refreshActive'),
+                    paused: t('pipelines.list.refreshPaused'),
+                    pause: t('pipelines.list.pauseRefresh'),
+                    pauseAria: t('pipelines.list.pauseRefreshAria'),
+                    resume: t('pipelines.list.resumeRefresh'),
+                    resumeAria: t('pipelines.list.resumeRefreshAria'),
+                  }}
+                />
+              </div>
+            </div>
             {pipelinesQuery.isLoading ? (
               <PipelineListState message={t('pipelines.states.loading')} />
             ) : pipelinesQuery.isError ? (
@@ -122,9 +185,11 @@ export function PipelinesPage() {
               />
             ) : pipelines.length === 0 ? (
               <PipelineListState message={t('pipelines.states.empty')} />
+            ) : filteredPipelines.length === 0 ? (
+              <PipelineListState message={t('pipelines.list.noResults')} />
             ) : (
               <PipelineTable
-                pipelines={pipelines}
+                pipelines={filteredPipelines}
                 apiFetch={apiFetch}
                 onMutationError={(pipelineId, action, error) => {
                   const message = serverErrorMessage(error)
@@ -159,18 +224,22 @@ function serverErrorMessage(error: unknown): string | undefined {
     : undefined
 }
 
-function PipelineHeader({ pipeline }: { pipeline: PipelineView }) {
+function PipelineHeader({ pipeline }: { pipeline: PipelineCatalogItem }) {
   return (
     <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-gray-100/70 px-4 md:px-6">
       <div className="flex min-w-0 items-center gap-2">
         <GitMerge className="h-4 w-4 shrink-0 text-blue-500" aria-hidden="true" />
-        <h2 className="truncate text-[14px] font-semibold text-gray-900">{pipeline.id}</h2>
-        <code
-          className="hidden shrink-0 rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] text-gray-500 sm:inline"
-          title={pipeline.contentHash}
-        >
-          {pipeline.contentHash.slice(0, 12)}
-        </code>
+        <h2 className="truncate text-[14px] font-semibold text-gray-900">{pipeline.name}</h2>
+        {(pipeline.revision != null || pipeline.contentHash) && (
+          <code
+            className="hidden shrink-0 rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] text-gray-500 sm:inline"
+            title={pipeline.contentHash ?? undefined}
+          >
+            {pipeline.revision != null
+              ? `r${pipeline.revision}`
+              : pipeline.contentHash?.slice(0, 12)}
+          </code>
+        )}
       </div>
     </div>
   )
@@ -192,7 +261,7 @@ function PipelineTable({
   onMutationError,
   onMutationStart,
 }: {
-  pipelines: PipelineView[]
+  pipelines: PipelineCatalogItem[]
   apiFetch: ApiFetcher
   onMutationError: (pipelineId: string, action: PipelineLifecycleAction, error?: unknown) => void
   onMutationStart: () => void
@@ -234,7 +303,7 @@ function PipelineTable({
                     className="min-w-0 text-[13px] font-medium break-words text-gray-900"
                     title={pipeline.id}
                   >
-                    {pipeline.id}
+                    {pipeline.name}
                   </span>
                 </a>
               </td>
@@ -242,18 +311,33 @@ function PipelineTable({
                 {t('pipelines.type.pipeline')}
               </td>
               <td className="hidden px-4 py-3 md:table-cell">
-                <code className="font-mono text-[12px] text-gray-400" title={pipeline.contentHash}>
-                  {pipeline.contentHash.slice(0, 12)}
-                </code>
+                {pipeline.revision != null ? (
+                  <code
+                    className="font-mono text-[12px] text-gray-400"
+                    title={pipeline.contentHash ?? undefined}
+                  >
+                    r{pipeline.revision}
+                  </code>
+                ) : (
+                  <span className="font-mono text-[12px] text-gray-500">
+                    {pipeline.contentHash?.slice(0, 12) ?? '—'}
+                  </span>
+                )}
               </td>
               <td className="px-4 py-3">
-                <PipelineStatusBadge status={pipeline.status?.state} />
+                {pipeline.hasArtifact ? (
+                  <PipelineStatusBadge status={pipeline.status.state} />
+                ) : (
+                  <span className="inline-flex h-6 items-center rounded-md border border-amber-200 bg-amber-50 px-2 text-[11px] font-semibold text-amber-800">
+                    {t('wizard.draft')}
+                  </span>
+                )}
               </td>
               <td className="relative w-20 px-4 py-3">
                 <PipelineLifecycleMenu
                   pipelineId={pipeline.id}
-                  status={pipeline.status?.state}
-                  contentHash={pipeline.contentHash}
+                  status={pipeline.status.state}
+                  contentHash={pipeline.contentHash ?? null}
                   apiFetch={apiFetch}
                   onMutationStart={onMutationStart}
                   onMutationError={(action, error) => onMutationError(pipeline.id, action, error)}

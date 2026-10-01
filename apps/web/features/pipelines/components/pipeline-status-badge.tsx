@@ -1,24 +1,29 @@
 import { useTranslation } from 'react-i18next'
 
-import type { PipelineRuntimeState } from '@/service/pipelines/pipeline-client'
+import type { PipelineCatalogState } from '@/service/pipelines/pipeline-client'
 
 import { cn } from '@/lib/utils'
 
-const pipelineStatusClasses: Record<PipelineRuntimeState, string> = {
+const pipelineStatusClasses: Record<PipelineCatalogState, string> = {
   NEW: 'pipeline-list__status--new text-sky-700 bg-sky-50/80 border-sky-200/50',
+  STARTING: 'pipeline-list__status--starting text-blue-700 bg-blue-50/80 border-blue-200/50',
   RUNNING: 'pipeline-list__status--running text-blue-700 bg-blue-50/80 border-blue-200/50',
+  PAUSING: 'pipeline-list__status--pausing text-amber-700 bg-amber-50/80 border-amber-200/50',
   PAUSED: 'pipeline-list__status--paused text-slate-600 bg-slate-100 border-slate-200',
+  RESUMING: 'pipeline-list__status--resuming text-blue-700 bg-blue-50/80 border-blue-200/50',
+  STOPPING: 'pipeline-list__status--stopping text-amber-700 bg-amber-50/80 border-amber-200/50',
   STOPPED: 'pipeline-list__status--stopped text-slate-600 bg-slate-100 border-slate-200',
   COMPLETED:
     'pipeline-list__status--completed text-emerald-700 bg-emerald-50/80 border-emerald-200/50',
   FAILED: 'pipeline-list__status--failed text-rose-700 bg-rose-50/80 border-rose-200/50',
+  UNAVAILABLE: 'pipeline-list__status--unavailable text-slate-600 bg-slate-100 border-slate-200',
 }
 
 export function PipelineStatusBadge({
   status,
   className,
 }: {
-  status?: PipelineRuntimeState
+  status?: PipelineCatalogState
   className?: string
 }) {
   const { t } = useTranslation()

@@ -3,8 +3,7 @@ import type { Field } from '@formily/core'
 import { connect, mapProps } from '@formily/react'
 import * as AntdFormily from '@potop/formily-antd-v6'
 import { FormilySchema, useFormilyForm, type FormilyComponentMap } from '@tapstate-web/formily'
-import { Select as AntdSelect } from 'antd'
-import { Check, Regex, X } from 'lucide-react'
+import { Check, Regex, Search, X } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -271,6 +270,7 @@ function sourceTablePickerOptions(
   sourceId: string | undefined,
   sources: readonly SourceView[] | undefined,
   options: readonly PipelineSchemaOption[] | undefined,
+  allowPatterns: boolean,
 ) {
   const source = sources?.find((candidate) => candidate.id === sourceId)
   const catalogOptions = (options ?? [])
@@ -293,7 +293,7 @@ function sourceTablePickerOptions(
       tableKind: 'literal' as const,
     }))
   const regexOptions =
-    source?.tables === null
+    !allowPatterns || source?.tables === null
       ? []
       : (source?.tables ?? []).flatMap((table) => {
           if (!table.pattern) return []
@@ -311,13 +311,15 @@ function sourceTablePickerOptions(
   )
 }
 
-function PipelineSourceTablePicker({
+export function PipelineSourceTablePicker({
   value,
   options,
   loading = false,
   sourceId,
   sources,
   onChange,
+  selectionMode = 'toggle',
+  allowPatterns = true,
 }: {
   value?: unknown
   options?: readonly PipelineSchemaOption[]
@@ -325,6 +327,8 @@ function PipelineSourceTablePicker({
   sourceId?: string
   sources?: readonly SourceView[]
   onChange?: (value: string[]) => void
+  selectionMode?: 'single' | 'multiple' | 'toggle'
+  allowPatterns?: boolean
 }) {
   const { t } = useTranslation()
   const currentValue = Array.isArray(value)
@@ -332,29 +336,35 @@ function PipelineSourceTablePicker({
     : typeof value === 'string'
       ? [value]
       : []
-  const [mode, setMode] = useState<'single' | 'multiple'>(
-    currentValue.length > 1 ? 'multiple' : 'single',
+  const [mode, setMode] = useState<'single' | 'multiple'>(() =>
+    selectionMode === 'toggle' ? (currentValue.length > 1 ? 'multiple' : 'single') : selectionMode,
   )
   const [selected, setSelected] = useState<string[]>(currentValue)
+  const [tableQuery, setTableQuery] = useState('')
   const [pattern, setPattern] = useState('')
   const [patternError, setPatternError] = useState(false)
   const tableOptions = useMemo(
-    () => sourceTablePickerOptions(sourceId, sources, options),
-    [options, sourceId, sources],
+    () => sourceTablePickerOptions(sourceId, sources, options, allowPatterns),
+    [allowPatterns, options, sourceId, sources],
   )
 
   useEffect(() => {
     setSelected(currentValue)
-    if (currentValue.length > 1) setMode('multiple')
-  }, [sourceId, value])
+    setTableQuery('')
+    if (selectionMode === 'toggle') {
+      if (currentValue.length > 1) setMode('multiple')
+    } else {
+      setMode(selectionMode)
+    }
+  }, [selectionMode, sourceId, value])
 
-  const selectOptions = tableOptions.map((option) => ({
-    label:
-      option.tableKind === 'regex'
-        ? `${t('pipelines.workspace.config.regexPrefix')}${option.label}`
-        : option.label,
-    value: optionValue(option),
-  }))
+  const normalizedTableQuery = tableQuery.trim().toLocaleLowerCase()
+  const filteredTableOptions = normalizedTableQuery
+    ? tableOptions.filter((option) =>
+        option.label.toLocaleLowerCase().includes(normalizedTableQuery),
+      )
+    : tableOptions
+  const showTableSearch = tableOptions.length > 6
 
   function optionValue(option: PipelineSourceTablePickerOption) {
     return option.tableKind === 'regex' ? regexReference(option.value) : option.value
@@ -365,6 +375,12 @@ function PipelineSourceTablePicker({
     const next = selected.includes(valueToToggle)
       ? selected.filter((valueItem) => valueItem !== valueToToggle)
       : [...selected, valueToToggle]
+    setSelected(next)
+    onChange?.(next)
+  }
+
+  function selectSingle(option: PipelineSourceTablePickerOption) {
+    const next = [optionValue(option)]
     setSelected(next)
     onChange?.(next)
   }
@@ -391,56 +407,92 @@ function PipelineSourceTablePicker({
 
   return (
     <div className="space-y-2" data-pipeline-source-table-picker>
-      <div
-        className="inline-flex w-full gap-1 rounded-lg bg-[var(--pipeline-surface-subtle)] p-1"
-        role="tablist"
-        aria-label={t('pipelines.workspace.config.tableSelectionMode')}
-      >
-        {(['single', 'multiple'] as const).map((nextMode) => (
-          <button
-            key={nextMode}
-            type="button"
-            role="tab"
-            aria-selected={mode === nextMode}
-            data-pipeline-source-table-picker-mode={nextMode}
-            className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-[var(--pipeline-selection)] focus-visible:outline-none ${mode === nextMode ? 'bg-[var(--pipeline-surface)] text-[var(--pipeline-text)] shadow-xs' : 'text-[var(--pipeline-text-muted)] hover:text-[var(--pipeline-text)]'}`}
-            onClick={() => setMode(nextMode)}
-          >
-            {t(`pipelines.workspace.config.${nextMode}Table`)}
-          </button>
-        ))}
-      </div>
+      {selectionMode === 'toggle' && (
+        <div
+          className="inline-flex w-full gap-1 rounded-lg bg-[var(--pipeline-surface-subtle)] p-1"
+          role="tablist"
+          aria-label={t('pipelines.workspace.config.tableSelectionMode')}
+        >
+          {(['single', 'multiple'] as const).map((nextMode) => (
+            <button
+              key={nextMode}
+              type="button"
+              role="tab"
+              aria-selected={mode === nextMode}
+              data-pipeline-source-table-picker-mode={nextMode}
+              className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-[var(--pipeline-selection)] focus-visible:outline-none ${mode === nextMode ? 'bg-[var(--pipeline-surface)] text-[var(--pipeline-text)] shadow-xs' : 'text-[var(--pipeline-text-muted)] hover:text-[var(--pipeline-text)]'}`}
+              onClick={() => setMode(nextMode)}
+            >
+              {t(`pipelines.workspace.config.${nextMode}Table`)}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {mode === 'single' ? (
-        <AntdSelect
-          allowClear={false}
-          className="w-full"
-          loading={loading}
-          options={selectOptions}
-          showSearch
-          optionFilterProp="label"
-          value={currentValue[0] || undefined}
-          onChange={(nextValue) => {
-            onChange?.([nextValue])
-          }}
-        />
-      ) : (
-        <>
-          <div
-            className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-[var(--pipeline-border)] p-1"
-            data-pipeline-source-table-picker-options
-          >
-            {tableOptions.map((option) => (
+      {showTableSearch && (
+        <label className="flex h-9 items-center gap-2 rounded-lg border border-[var(--pipeline-border)] bg-[var(--pipeline-surface)] px-3 text-[var(--pipeline-text-muted)]">
+          <Search className="size-3.5 shrink-0" aria-hidden="true" />
+          <input
+            className="min-w-0 flex-1 bg-transparent text-xs text-[var(--pipeline-text)] outline-none placeholder:text-[var(--pipeline-form-placeholder)]"
+            aria-label={t('pipelines.workspace.config.tableSearch')}
+            placeholder={t('pipelines.workspace.config.tableSearch')}
+            value={tableQuery}
+            onChange={(event) => setTableQuery(event.target.value)}
+          />
+        </label>
+      )}
+
+      <div
+        className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-[var(--pipeline-border)] p-1"
+        data-pipeline-source-table-picker-options
+        role={mode === 'single' ? 'radiogroup' : undefined}
+        aria-label={mode === 'single' ? t('pipelines.workspace.config.table') : undefined}
+      >
+        {loading ? (
+          <p className="flex min-h-9 items-center px-3 py-2 text-xs leading-4 font-normal text-[var(--pipeline-text-muted)]">
+            {t('pipelines.workspace.config.loadingTables')}
+          </p>
+        ) : filteredTableOptions.length > 0 ? (
+          filteredTableOptions.map((option) => {
+            const optionValueForSelection = optionValue(option)
+            const isSelected = selected.includes(optionValueForSelection)
+            const optionLabel =
+              option.tableKind === 'regex' ? regexReference(option.value) : option.label
+
+            if (mode === 'single') {
+              return (
+                <button
+                  key={`${option.tableKind}:${option.value}`}
+                  type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  className={`flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--pipeline-selection)] ${isSelected ? 'bg-[var(--pipeline-surface-subtle)] text-[var(--pipeline-text)]' : 'text-[var(--pipeline-text-muted)] hover:bg-[var(--pipeline-surface-subtle)] hover:text-[var(--pipeline-text)]'}`}
+                  data-pipeline-source-table-option={option.value}
+                  onClick={() => selectSingle(option)}
+                >
+                  <span
+                    className={`flex size-4 shrink-0 items-center justify-center rounded-full border ${isSelected ? 'border-[var(--pipeline-selection)] bg-[var(--pipeline-selection)] text-white' : 'border-[var(--pipeline-border)]'}`}
+                    aria-hidden="true"
+                  >
+                    {isSelected && <Check className="size-2.5" />}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{optionLabel}</span>
+                  {option.tableKind === 'regex' && (
+                    <span className="text-[10px] tracking-wide text-[var(--pipeline-text-muted)] uppercase">
+                      {t('pipelines.workspace.config.regexRule')}
+                    </span>
+                  )}
+                </button>
+              )
+            }
+
+            return (
               <label
                 key={`${option.tableKind}:${option.value}`}
                 className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-[var(--pipeline-text)] transition-colors hover:bg-[var(--pipeline-surface-subtle)]"
                 data-pipeline-source-table-option={option.value}
               >
-                <input
-                  type="checkbox"
-                  checked={selected.includes(optionValue(option))}
-                  onChange={() => toggle(option)}
-                />
+                <input type="checkbox" checked={isSelected} onChange={() => toggle(option)} />
                 {option.tableKind === 'regex' ? (
                   <Regex
                     className="size-3 shrink-0 text-[var(--pipeline-text-muted)]"
@@ -449,22 +501,26 @@ function PipelineSourceTablePicker({
                 ) : (
                   <Check className="size-3 shrink-0 text-transparent" aria-hidden="true" />
                 )}
-                <span className="min-w-0 flex-1 truncate">
-                  {option.tableKind === 'regex' ? regexReference(option.value) : option.label}
-                </span>
+                <span className="min-w-0 flex-1 truncate">{optionLabel}</span>
                 {option.tableKind === 'regex' && (
                   <span className="text-[10px] tracking-wide text-[var(--pipeline-text-muted)] uppercase">
                     {t('pipelines.workspace.config.regexRule')}
                   </span>
                 )}
               </label>
-            ))}
-            {tableOptions.length === 0 && (
-              <p className="px-2 py-2 text-xs text-[var(--pipeline-text-muted)]">
-                {t('pipelines.workspace.config.noSourceTableOptions')}
-              </p>
-            )}
-          </div>
+            )
+          })
+        ) : (
+          <p className="flex min-h-9 items-center px-3 py-2 text-xs leading-4 text-[var(--pipeline-text-muted)]">
+            {tableOptions.length === 0
+              ? t('pipelines.workspace.config.noSourceTableOptions')
+              : t('pipelines.workspace.config.noMatchingTables')}
+          </p>
+        )}
+      </div>
+
+      {mode === 'multiple' && (
+        <>
           <p
             className="text-[11px] text-[var(--pipeline-text-muted)]"
             data-pipeline-source-table-picker-selection
@@ -713,6 +769,7 @@ function transformPatchValues(patch: PipelineTransformConfigurationPatch): Pipel
 export function PipelineNodeConfigPanel({
   selection,
   onClose,
+  isReadOnly = false,
   onConfigurationChange,
   onDescriptionChange,
   sourceOptions,
@@ -723,6 +780,7 @@ export function PipelineNodeConfigPanel({
 }: {
   selection: PipelineCanvasSelection
   onClose: () => void
+  isReadOnly?: boolean
   onConfigurationChange?: (change: PipelineNodeConfigurationChange) => void
   onDescriptionChange?: (description: string) => void
   sourceOptions?: readonly PipelineSchemaOption[]
@@ -772,6 +830,8 @@ export function PipelineNodeConfigPanel({
             <X className="size-4" />
           </Button>
         </div>
+      </div>
+      <fieldset disabled={isReadOnly} className="contents">
         <div className="p-2">
           <div className="group flex max-h-[3.75rem] overflow-y-auto rounded-[8px] bg-transparent px-2 py-[5px] leading-none focus-within:shadow-xs">
             <Textarea
@@ -789,36 +849,36 @@ export function PipelineNodeConfigPanel({
             />
           </div>
         </div>
-      </div>
-      <div className="pipeline-node-config__scroll">
-        {configuration?.kind === 'source' || configuration?.kind === 'target' ? (
-          <DataNodeForm
-            configuration={configuration}
-            sourceOptions={sourceOptions}
-            tableOptions={tableOptions}
-            loadTables={loadTables}
-            sources={sources}
-            upstreamSourceTables={upstreamSourceTables}
-            onChange={emit}
-          />
-        ) : null}
-        {configuration?.kind === 'transform' ? (
-          <TransformEditor
-            config={configuration}
-            onChange={(patch) => emit(transformPatchValues(patch))}
-          />
-        ) : null}
-        {configuration?.kind === 'view' ? (
-          <div className="pipeline-node-config__empty">
-            {t('pipelines.workspace.config.viewReadOnly')}
-          </div>
-        ) : null}
-        {!configuration ? (
-          <div className="pipeline-node-config__empty">
-            {t('pipelines.workspace.inspector.emptyBody')}
-          </div>
-        ) : null}
-      </div>
+        <div className="pipeline-node-config__scroll">
+          {configuration?.kind === 'source' || configuration?.kind === 'target' ? (
+            <DataNodeForm
+              configuration={configuration}
+              sourceOptions={sourceOptions}
+              tableOptions={tableOptions}
+              loadTables={loadTables}
+              sources={sources}
+              upstreamSourceTables={upstreamSourceTables}
+              onChange={emit}
+            />
+          ) : null}
+          {configuration?.kind === 'transform' ? (
+            <TransformEditor
+              config={configuration}
+              onChange={(patch) => emit(transformPatchValues(patch))}
+            />
+          ) : null}
+          {configuration?.kind === 'view' ? (
+            <div className="pipeline-node-config__empty">
+              {t('pipelines.workspace.config.viewReadOnly')}
+            </div>
+          ) : null}
+          {!configuration ? (
+            <div className="pipeline-node-config__empty">
+              {t('pipelines.workspace.inspector.emptyBody')}
+            </div>
+          ) : null}
+        </div>
+      </fieldset>
     </>
   )
 }
