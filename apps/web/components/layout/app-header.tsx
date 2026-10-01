@@ -30,7 +30,7 @@ export function AppHeader() {
     try {
       await logoutSession()
     } finally {
-      if (authProfile === 'on-prem') void navigate({ replace: true, to: '/login' })
+      void navigate({ replace: true, to: authProfile === 'cloud' ? '/signed-out' : '/login' })
     }
   }
 

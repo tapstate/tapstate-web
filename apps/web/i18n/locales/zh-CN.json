@@ -47,6 +47,11 @@
     "separator": "/"
   },
   "auth": {
+    "signedOut": {
+      "title": "Cluster 会话已结束",
+      "description": "当前 Cluster 会话已关闭。需要再次进入 Cluster 时，请返回 Tapstate Cloud。",
+      "returnToCloud": "返回 Tapstate Cloud"
+    },
     "login": {
       "eyebrow": "实时上下文",
       "signalTitle": "让每个决策保持最新。",

@@ -63,7 +63,7 @@ describe('auth store deployment profiles', () => {
     expect(redirectToCloudConsole).toHaveBeenCalledWith('https://dev.cloud.tapstate.com/')
   })
 
-  it('posts cloud logout with the same-origin session and clears local state', async () => {
+  it('posts cloud logout with the same-origin session without returning to Console', async () => {
     const fetcher = vi.fn<typeof fetch>(async () => new Response(null, { status: 204 }))
     const redirectToCloudConsole = vi.fn()
     const store = createAuthStore({
@@ -81,6 +81,6 @@ describe('auth store deployment profiles', () => {
       expect.objectContaining({ credentials: 'same-origin', method: 'POST' }),
     )
     expect(store.getState().isAuthenticated).toBe(false)
-    expect(redirectToCloudConsole).toHaveBeenCalledWith('https://dev.cloud.tapstate.com/')
+    expect(redirectToCloudConsole).not.toHaveBeenCalled()
   })
 })
