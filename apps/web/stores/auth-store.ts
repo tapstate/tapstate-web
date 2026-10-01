@@ -57,7 +57,6 @@ export function createAuthStore(options: AuthStoreOptions = {}) {
           await logoutCloudSession(fetcher, options.origin)
         } finally {
           set({ token: null, isAuthenticated: false })
-          redirectToCloud(consoleUrl)
         }
         return
       }
