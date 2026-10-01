@@ -18,6 +18,7 @@ const {
   getSourceSchema,
   listConnectors,
   listSources,
+  apiFetch,
 } = vi.hoisted(() => ({
   getPipelineDraft: vi.fn(),
   previewPipelineDraft: vi.fn(),
@@ -28,6 +29,7 @@ const {
   getSourceSchema: vi.fn(),
   listConnectors: vi.fn(),
   listSources: vi.fn(),
+  apiFetch: vi.fn() as unknown as typeof fetch,
 }))
 
 vi.mock('@/service/pipelines/pipeline-client', () => ({
@@ -53,8 +55,7 @@ vi.mock('@/service/pipelines/pipeline-client', () => ({
 vi.mock('@/service/source-client', () => ({ getSourceSchema, listConnectors, listSources }))
 
 vi.mock('@/stores/auth-store', () => ({
-  useAuthStore: <T,>(selector: (state: { apiFetch: typeof fetch }) => T) =>
-    selector({ apiFetch: vi.fn() as unknown as typeof fetch }),
+  useAuthStore: <T,>(selector: (state: { apiFetch: typeof fetch }) => T) => selector({ apiFetch }),
 }))
 
 vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
