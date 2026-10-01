@@ -7,11 +7,13 @@ import {
   previewPipelineDraft,
   publishPipelineDraft,
   runPipeline,
+  streamPipelinePreview,
   updatePipelineDraft,
   PipelineClientError,
   type PipelineDraft,
   type PipelineDraftMutation,
   type PipelineDraftPreview,
+  type PipelinePreviewRun,
   type PipelineRuntimeState,
 } from '@/service/pipelines/pipeline-client'
 import { getSourceSchema, listConnectors, listSources } from '@/service/source-client'
@@ -125,10 +127,18 @@ export function WizardBuilder({
     'saving' | 'validating' | 'publishing' | 'starting' | 'checking' | null
   >(null)
   const [preview, setPreview] = useState<PipelineDraftPreview | null>(null)
+  const [livePreview, setLivePreview] = useState<PipelinePreviewRun | null>(null)
+  const [livePreviewStatus, setLivePreviewStatus] = useState<
+    'idle' | 'loading' | 'stale' | 'complete' | 'error'
+  >('idle')
+  const [livePreviewError, setLivePreviewError] = useState('')
   const editorReadOnly = readOnly || (busy && action === 'start')
   const currentDraft = useRef(draft)
   const currentEtag = useRef(etag)
   const pending = useRef<Promise<void> | null>(null)
+  const previewAbort = useRef<AbortController | null>(null)
+  const previewGeneration = useRef(0)
+  const reusableSampleId = useRef<string | null>(null)
   const savedFingerprint = useRef(JSON.stringify(draft.wizard))
   const currentWizard = useRef(wizard)
   currentWizard.current = wizard
@@ -260,9 +270,14 @@ export function WizardBuilder({
   const onChange = useCallback(
     (state: WizardViewState) => {
       if (editorReadOnly) return
+      previewGeneration.current += 1
+      previewAbort.current?.abort()
+      previewAbort.current = null
       setError('')
       setNotice('')
       setPreview(null)
+      setLivePreviewError('')
+      setLivePreviewStatus((current) => (current === 'idle' ? 'idle' : 'stale'))
       setWizard((previous) =>
         writeWizard(
           state,
@@ -334,6 +349,79 @@ export function WizardBuilder({
       setBusy(false)
     }
   }
+
+  useEffect(() => {
+    if (readOnly) return
+    const root = wizard?.root as { sourceId?: unknown; table?: unknown } | undefined
+    const output = wizard?.output as
+      | { config?: { sourceId?: unknown; table?: unknown } }
+      | undefined
+    if (
+      typeof root?.sourceId !== 'string' ||
+      !root.sourceId ||
+      typeof root.table !== 'string' ||
+      !root.table ||
+      typeof output?.config?.sourceId !== 'string' ||
+      !output.config.sourceId ||
+      typeof output.config.table !== 'string' ||
+      !output.config.table
+    ) {
+      setLivePreviewStatus((current) => (current === 'idle' ? 'idle' : 'stale'))
+      return
+    }
+
+    const controller = new AbortController()
+    previewAbort.current = controller
+    const generation = ++previewGeneration.current
+    const timer = window.setTimeout(() => {
+      setLivePreviewStatus((current) => (current === 'idle' ? 'loading' : 'stale'))
+      setLivePreviewError('')
+      void (async () => {
+        try {
+          const saved = await persist()
+          if (controller.signal.aborted || generation !== previewGeneration.current) return
+          const compiled = await previewPipelineDraft(
+            pipelineId,
+            saved.revision,
+            apiFetch,
+            controller.signal,
+          )
+          if (controller.signal.aborted || generation !== previewGeneration.current) return
+          if (!compiled.dsl)
+            throw new Error('The candidate did not compile to a Pipeline DSL document.')
+          const result = await streamPipelinePreview(
+            {
+              pipelineId,
+              drafts: [{ content: compiled.dsl }],
+              rootLimit: 100,
+              sampleId: reusableSampleId.current || undefined,
+              signal: controller.signal,
+            },
+            apiFetch,
+          )
+          if (controller.signal.aborted || generation !== previewGeneration.current) return
+          if (result.failure) {
+            setLivePreviewError(result.failure.code)
+            setLivePreviewStatus('error')
+            return
+          }
+          reusableSampleId.current = result.sampleId
+          setLivePreview(result)
+          setLivePreviewStatus('complete')
+        } catch (cause) {
+          if (controller.signal.aborted || generation !== previewGeneration.current) return
+          setLivePreviewError(cause instanceof Error ? cause.message : 'preview-failed')
+          setLivePreviewStatus('error')
+        }
+      })()
+    }, 250)
+
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+      if (previewAbort.current === controller) previewAbort.current = null
+    }
+  }, [apiFetch, persist, pipelineId, readOnly, wizard])
   if (sourcesQuery.isPending || connectorsQuery.isPending || schemas.some((s) => s.isPending))
     return (
       <div className="text-muted-foreground p-8 text-sm" role="status">
@@ -441,7 +529,14 @@ export function WizardBuilder({
           />
         }
         sourceError={sourcesQuery.error?.message || schemas.find((s) => s.error)?.error?.message}
-        compiledSpec={preview?.dsl || JSON.stringify(wizard, null, 2)}
+        compiledSpec={
+          livePreview
+            ? JSON.stringify(livePreview.executionSpec, null, 2)
+            : preview?.dsl || JSON.stringify(wizard, null, 2)
+        }
+        livePreview={livePreview}
+        livePreviewStatus={livePreviewStatus}
+        livePreviewError={livePreviewError}
         footer={
           <div className="mt-5 flex flex-wrap items-center justify-end gap-3 text-[11px]">
             {error && (
