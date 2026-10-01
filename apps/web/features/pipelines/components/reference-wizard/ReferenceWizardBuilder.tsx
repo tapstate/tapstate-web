@@ -717,6 +717,24 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   const previewTableColumns = Array.from(
     new Set(documents.flatMap((document) => Object.keys(document))),
   ).slice(0, 32)
+  const isExtendedJsonScalar = (value: unknown) =>
+    isObjectRecord(value) &&
+    Object.keys(value).length === 1 &&
+    [
+      '$binary',
+      '$date',
+      '$maxKey',
+      '$minKey',
+      '$numberDecimal',
+      '$numberDouble',
+      '$numberInt',
+      '$numberLong',
+      '$oid',
+      '$regularExpression',
+      '$timestamp',
+      '$undefined',
+      '$uuid',
+    ].some((key) => key in value)
 
   const focusContains = (path: string) =>
     Boolean(path) &&
@@ -2689,7 +2707,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                           const display =
                             relation && Array.isArray(value)
                               ? t('wizard.previewPanel.embeddedArray', { count: value.length })
-                              : relation && isObjectRecord(value)
+                              : relation && isObjectRecord(value) && !isExtendedJsonScalar(value)
                                 ? t('wizard.previewPanel.embeddedDocument')
                                 : typeof value === 'string'
                                   ? value
@@ -2754,7 +2772,12 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
 
           <div className="border-border bg-muted/30 text-muted-foreground flex items-center justify-between gap-3 border-t px-3 py-2 text-[11px]">
             <span className="truncate">
-              {t('wizard.previewPanel.logicalJsonTarget', { destination: destinationName })}
+              {t(
+                livePreview?.format === 'mongo-extended-json'
+                  ? 'wizard.previewPanel.mongoExtendedJsonTarget'
+                  : 'wizard.previewPanel.logicalJsonTarget',
+                { destination: destinationName },
+              )}
             </span>
             <button
               type="button"

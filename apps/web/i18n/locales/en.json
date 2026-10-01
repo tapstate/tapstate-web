@@ -1249,6 +1249,7 @@
       "copyFailed": "Copy failed",
       "viewSpec": "View JSON spec",
       "logicalJsonTarget": "Logical JSON · {{destination}}",
+      "mongoExtendedJsonTarget": "Mongo Extended JSON · {{destination}}",
       "expand": "Expand node",
       "collapse": "Collapse node",
       "documentCount": "Document {{current}} of {{count}}",

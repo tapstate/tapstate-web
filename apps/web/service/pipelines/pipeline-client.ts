@@ -181,6 +181,7 @@ export interface PipelinePreviewEvent {
 export interface PipelinePreviewRun {
   runId: string
   candidateHash: string
+  format: 'logical-json' | 'mongo-extended-json' | null
   executionSpec: Record<string, unknown>
   contexts: Record<string, unknown>[]
   sample: Record<string, unknown> | null
@@ -1027,6 +1028,7 @@ export async function streamPipelinePreview(
   let contexts: Record<string, unknown>[] = []
   let sample: Record<string, unknown> | null = null
   let documents: Record<string, unknown>[] = []
+  let format: PipelinePreviewRun['format'] = null
   let trace: Record<string, unknown>[] = []
   let sampleId: string | null = null
   let rowCount = 0
@@ -1223,11 +1225,12 @@ export async function streamPipelinePreview(
           }
         }
         break
-      case 'result.completed':
+      case 'result.completed': {
+        const resultFormat = payload.format
         if (
           !sampleCompleted ||
           resultCompleted ||
-          payload.format !== 'logical-json' ||
+          (resultFormat !== 'logical-json' && resultFormat !== 'mongo-extended-json') ||
           payload.complete !== true ||
           payload.truncated !== false ||
           !Array.isArray(payload.documents) ||
@@ -1238,9 +1241,11 @@ export async function streamPipelinePreview(
           throw new PipelineClientError('protocol', 'Tapstate returned invalid preview documents.')
         }
         resultCompleted = true
+        format = resultFormat
         documents = payload.documents
         rowCount = payload.rowCount
         break
+      }
       case 'run.completed':
         if (
           !resultCompleted ||
@@ -1335,6 +1340,7 @@ export async function streamPipelinePreview(
   return {
     runId,
     candidateHash,
+    format,
     executionSpec,
     contexts,
     sample,

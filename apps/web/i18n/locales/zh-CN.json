@@ -1224,6 +1224,7 @@
       "copyFailed": "复制失败",
       "viewSpec": "查看 JSON 规范",
       "logicalJsonTarget": "逻辑 JSON · {{destination}}",
+      "mongoExtendedJsonTarget": "Mongo Extended JSON（保留目标类型）· {{destination}}",
       "expand": "展开节点",
       "collapse": "折叠节点",
       "documentCount": "文档 {{current}} / {{count}}",
