@@ -117,70 +117,73 @@ function StartChecksBody({
         <AlertDialogDescription>{t(description)}</AlertDialogDescription>
       </AlertDialogHeader>
 
-      {session.changedWhileConfirming ? (
-        <p
-          role="alert"
-          className="border-warning/40 bg-warning/10 text-foreground flex items-start gap-2 rounded-lg border px-3 py-2 text-[13px] leading-relaxed"
-          data-start-checks-changed
-        >
-          <TriangleAlert className="text-warning mt-1 size-3.5 shrink-0" aria-hidden="true" />
-          <span>{t('pipelines.startChecks.changedWhileConfirming', { id: pipelineId })}</span>
-        </p>
-      ) : null}
-
-      {session.staleDecisions.length > 0 ? (
-        <div className="grid gap-1" data-start-checks-stale>
-          <p className="text-muted-foreground text-xs font-medium">
-            {t('pipelines.startChecks.staleTitle')}
-          </p>
-          <ul className="grid">
-            {session.staleDecisions.map((decision) => (
-              <li key={`${decision.finding}:${decision.action}`} className={plainText}>
-                {decisionLine(decision)}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      <CheckList
-        groups={groups}
-        disabled={submitting}
-        onChoose={(findingKey, actionId) =>
-          setChoices((current) => ({ ...current, [findingKey]: actionId }))
-        }
-      />
-
-      {findings.pass.length > 0 ? (
-        <div className="grid gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="justify-self-start"
-            aria-expanded={showPassed}
-            onClick={() => setShowPassed((current) => !current)}
+      {/* Only the findings scroll, so the question stays titled and Cancel / Start stay in reach. */}
+      <div className="-mx-4 grid min-h-0 flex-1 gap-4 overflow-y-auto px-4" data-start-checks-body>
+        {session.changedWhileConfirming ? (
+          <p
+            role="alert"
+            className="border-warning/40 bg-warning/10 text-foreground flex items-start gap-2 rounded-lg border px-3 py-2 text-[13px] leading-relaxed"
+            data-start-checks-changed
           >
-            {showPassed ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
-            {showPassed
-              ? t('pipelines.startChecks.hidePassed')
-              : t('pipelines.startChecks.showPassed', { count: findings.pass.length })}
-          </Button>
-          {showPassed ? (
-            <CheckList
-              groups={[
-                {
-                  id: 'pass',
-                  title: t('pipelines.startChecks.groups.pass'),
-                  items: findings.pass.map((finding) => startCheckItem(finding, t)),
-                },
-              ]}
-            />
-          ) : null}
-        </div>
-      ) : null}
+            <TriangleAlert className="text-warning mt-1 size-3.5 shrink-0" aria-hidden="true" />
+            <span>{t('pipelines.startChecks.changedWhileConfirming', { id: pipelineId })}</span>
+          </p>
+        ) : null}
 
-      {report.plan.length > 0 ? <StartCheckPlan plan={report.plan} /> : null}
+        {session.staleDecisions.length > 0 ? (
+          <div className="grid gap-1" data-start-checks-stale>
+            <p className="text-muted-foreground text-xs font-medium">
+              {t('pipelines.startChecks.staleTitle')}
+            </p>
+            <ul className="grid">
+              {session.staleDecisions.map((decision) => (
+                <li key={`${decision.finding}:${decision.action}`} className={plainText}>
+                  {decisionLine(decision)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        <CheckList
+          groups={groups}
+          disabled={submitting}
+          onChoose={(findingKey, actionId) =>
+            setChoices((current) => ({ ...current, [findingKey]: actionId }))
+          }
+        />
+
+        {findings.pass.length > 0 ? (
+          <div className="grid gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="-ml-2 justify-self-start"
+              aria-expanded={showPassed}
+              onClick={() => setShowPassed((current) => !current)}
+            >
+              {showPassed ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
+              {showPassed
+                ? t('pipelines.startChecks.hidePassed')
+                : t('pipelines.startChecks.showPassed', { count: findings.pass.length })}
+            </Button>
+            {showPassed ? (
+              <CheckList
+                groups={[
+                  {
+                    id: 'pass',
+                    title: t('pipelines.startChecks.groups.pass'),
+                    items: findings.pass.map((finding) => startCheckItem(finding, t)),
+                  },
+                ]}
+              />
+            ) : null}
+          </div>
+        ) : null}
+
+        {report.plan.length > 0 ? <StartCheckPlan plan={report.plan} /> : null}
+      </div>
 
       <AlertDialogFooter>
         {blocked ? (
@@ -232,7 +235,7 @@ export function StartChecksDialog({ open, session, onConfirm, onCancel }: StartC
       }}
     >
       <AlertDialogContent
-        className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-[560px]"
+        className="flex max-h-[calc(100dvh-2rem)] flex-col sm:max-w-[560px]"
         data-testid="start-checks-dialog"
       >
         {session ? (
