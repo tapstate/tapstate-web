@@ -253,6 +253,7 @@ export function WizardBuilder({
     setWizard(reloaded.draft.wizard)
     queryClient.setQueryData(['pipelines', pipelineId, 'draft'], { mode: 'wizard', ...reloaded })
     queryClient.setQueryData(['pipelines', pipelineId, 'draft-status'], reloaded)
+    await queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId], exact: true })
   }, [apiFetch, pipelineId, queryClient])
   const starter = useStartPipeline({ apiFetch, onDefinitionChanged: reloadDraft })
   useEffect(() => {
