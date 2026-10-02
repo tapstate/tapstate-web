@@ -266,16 +266,128 @@ export interface PipelineLayout {
   viewport: PipelineLayoutViewport | null
 }
 
+/** Which start a start-check preview is asked about. */
+export type StartCheckIntent = 'start' | 'rerun'
+
+/** One change an answer makes to the definition. */
+export interface StartCheckChange {
+  element: string
+  field: string
+  from?: string | null
+  to: string
+}
+
+/** One answer a finding offers. `kind` is an open set: show it as text, never branch on it. */
+export interface StartCheckAction {
+  id: string
+  kind: string
+  destructive: boolean
+  code: string
+  message: string
+  changes: StartCheckChange[]
+}
+
+/** What a finding is about. `kind` is an open set, for example TARGET. */
+export interface StartCheckSubject {
+  kind: string
+  id: string
+  element?: string | null
+  label: string
+}
+
+/**
+ * One finding, rendered by the server. `behavior` is PASS, WARN, CONFIRM or BLOCK today; any other
+ * value refuses the start. `check` and `evaluation` are open sets shown as text.
+ */
+export interface StartCheckFinding {
+  key: string
+  check: string
+  subject: StartCheckSubject
+  behavior: string
+  evaluation: string
+  code: string
+  params: Record<string, unknown>
+  message: string
+  actions: StartCheckAction[]
+}
+
+/** How a start loads one target. `load` is an open set, for example FULL_LOAD. */
+export interface StartCheckPlanEntry {
+  element: string
+  target: { connection: string; table: string }
+  load: string
+  onFullLoad: string
+}
+
+/**
+ * The start checks of one start, the same shape from the preview, a start that went ahead and a
+ * start that was stopped to ask. `outcome` is READY, NEEDS_CONFIRMATION or BLOCKED today; any other
+ * value refuses the start.
+ */
+export interface StartCheckReport {
+  pipelineId: string
+  intent: string
+  contentHash: string
+  evaluatedAt: string
+  outcome: string
+  plan: StartCheckPlanEntry[]
+  findings: StartCheckFinding[]
+}
+
+/** An answer to one start-check question. */
+export interface StartDecision {
+  finding: string
+  action: string
+}
+
+/** An answer a start took; `contentHash` is the new definition hash when the answer rewrote it. */
+export interface StartDecisionApplied {
+  finding: string
+  action: string
+  kind: string
+  changes: StartCheckChange[]
+  contentHash?: string | null
+}
+
+/** What a start that went ahead answers, beside the intent fields it has always returned. */
+export interface PipelineStartResult {
+  pipelineId?: string
+  targetState?: string
+  startChecks: StartCheckReport | null
+  decisionsApplied: StartDecisionApplied[]
+  staleDecisions: StartDecision[]
+}
+
+export interface PipelineStartOptions {
+  /** Answers to the start checks; sent with the definition hash they were given against. */
+  decisions?: readonly StartDecision[]
+  /** The quoted content hash of the start-check report the answers belong to. */
+  ifMatch?: string
+}
+
+export interface PipelineClientErrorDetails {
+  /** What the start checks said, when a start was stopped by them. */
+  startChecks?: StartCheckReport | null
+  /** Changes a start made to the definition before it was refused. */
+  decisionsApplied?: StartDecisionApplied[]
+}
+
 export class PipelineClientError extends Error {
+  readonly startChecks: StartCheckReport | null
+  readonly decisionsApplied: StartDecisionApplied[]
+
   constructor(
     readonly kind: 'network' | 'server' | 'protocol',
     message: string,
     readonly status: number | null = null,
     readonly code: string | null = null,
     readonly params: Record<string, unknown> = {},
+    details: PipelineClientErrorDetails = {},
   ) {
     super(message)
     this.name = 'PipelineClientError'
+    this.startChecks = details.startChecks ?? null
+    this.decisionsApplied = details.decisionsApplied ?? []
   }
 }
 
@@ -618,6 +730,113 @@ function isPipelineLayout(value: unknown): value is PipelineLayout {
   )
 }
 
+function isNullableString(value: unknown): value is string | null | undefined {
+  return value === undefined || value === null || typeof value === 'string'
+}
+
+function isStartCheckChange(value: unknown): value is StartCheckChange {
+  return (
+    isRecord(value) &&
+    typeof value.element === 'string' &&
+    typeof value.field === 'string' &&
+    isNullableString(value.from) &&
+    typeof value.to === 'string'
+  )
+}
+
+function isStartCheckAction(value: unknown): value is StartCheckAction {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.kind === 'string' &&
+    typeof value.destructive === 'boolean' &&
+    typeof value.code === 'string' &&
+    typeof value.message === 'string' &&
+    Array.isArray(value.changes) &&
+    value.changes.every(isStartCheckChange)
+  )
+}
+
+function isStartCheckFinding(value: unknown): value is StartCheckFinding {
+  return (
+    isRecord(value) &&
+    typeof value.key === 'string' &&
+    typeof value.check === 'string' &&
+    isRecord(value.subject) &&
+    typeof value.subject.kind === 'string' &&
+    typeof value.subject.id === 'string' &&
+    isNullableString(value.subject.element) &&
+    typeof value.subject.label === 'string' &&
+    typeof value.behavior === 'string' &&
+    typeof value.evaluation === 'string' &&
+    typeof value.code === 'string' &&
+    isRecord(value.params) &&
+    typeof value.message === 'string' &&
+    Array.isArray(value.actions) &&
+    value.actions.every(isStartCheckAction)
+  )
+}
+
+function isStartCheckPlanEntry(value: unknown): value is StartCheckPlanEntry {
+  return (
+    isRecord(value) &&
+    typeof value.element === 'string' &&
+    isRecord(value.target) &&
+    typeof value.target.connection === 'string' &&
+    typeof value.target.table === 'string' &&
+    typeof value.load === 'string' &&
+    typeof value.onFullLoad === 'string'
+  )
+}
+
+/**
+ * Checks the report's shape only. Behaviors, outcomes and the other open sets are accepted as any
+ * string: deciding what an unknown value means belongs to the client rules, not to transport.
+ */
+function isStartCheckReport(value: unknown): value is StartCheckReport {
+  return (
+    isRecord(value) &&
+    typeof value.pipelineId === 'string' &&
+    typeof value.intent === 'string' &&
+    typeof value.contentHash === 'string' &&
+    typeof value.evaluatedAt === 'string' &&
+    typeof value.outcome === 'string' &&
+    Array.isArray(value.plan) &&
+    value.plan.every(isStartCheckPlanEntry) &&
+    Array.isArray(value.findings) &&
+    value.findings.every(isStartCheckFinding)
+  )
+}
+
+function isStartDecision(value: unknown): value is StartDecision {
+  return isRecord(value) && typeof value.finding === 'string' && typeof value.action === 'string'
+}
+
+function isStartDecisionApplied(value: unknown): value is StartDecisionApplied {
+  return (
+    isRecord(value) &&
+    typeof value.finding === 'string' &&
+    typeof value.action === 'string' &&
+    typeof value.kind === 'string' &&
+    Array.isArray(value.changes) &&
+    value.changes.every(isStartCheckChange) &&
+    isNullableString(value.contentHash)
+  )
+}
+
+function startDecisionsApplied(value: unknown): StartDecisionApplied[] {
+  return Array.isArray(value) && value.every(isStartDecisionApplied) ? value : []
+}
+
+/** The structured parts a refused start carries beside the coded error, when they are well formed. */
+function errorDetails(payload: unknown): PipelineClientErrorDetails {
+  if (!isRecord(payload)) return {}
+  return {
+    startChecks: isStartCheckReport(payload.startChecks) ? payload.startChecks : null,
+    decisionsApplied: startDecisionsApplied(payload.decisionsApplied),
+  }
+}
+
 async function request(path: string, fetcher: ApiFetcher, init?: RequestInit): Promise<unknown> {
   let response: Response
   try {
@@ -639,6 +858,7 @@ async function request(path: string, fetcher: ApiFetcher, init?: RequestInit): P
       response.status,
       code,
       params,
+      errorDetails(payload),
     )
   }
   if (payload === null)
@@ -960,8 +1180,75 @@ export async function publishPipelineDraft(
   return payload as unknown as PipelineDraftPublishResult
 }
 
-export async function runPipeline(id: string, fetcher: ApiFetcher = fetch): Promise<unknown> {
-  return request(`/pipelines/${encodeURIComponent(id)}:start`, fetcher, { method: 'POST' })
+/**
+ * Reads what a start answered. The start already happened, so a part that is not well formed is
+ * dropped rather than reported as a failed start.
+ */
+function pipelineStartResult(payload: unknown): PipelineStartResult {
+  const value = isRecord(payload) ? payload : {}
+  return {
+    ...(typeof value.pipelineId === 'string' ? { pipelineId: value.pipelineId } : {}),
+    ...(typeof value.targetState === 'string' ? { targetState: value.targetState } : {}),
+    startChecks: isStartCheckReport(value.startChecks) ? value.startChecks : null,
+    decisionsApplied: startDecisionsApplied(value.decisionsApplied),
+    staleDecisions:
+      Array.isArray(value.staleDecisions) && value.staleDecisions.every(isStartDecision)
+        ? value.staleDecisions
+        : [],
+  }
+}
+
+/**
+ * Starts a Pipeline. Without options the request carries no body, which answers no start-check
+ * question. Answers travel with the quoted content hash of the report they were given against.
+ */
+export async function runPipeline(
+  id: string,
+  fetcher: ApiFetcher = fetch,
+  options: PipelineStartOptions = {},
+): Promise<PipelineStartResult> {
+  const decisions = options.decisions ?? []
+  const answered = decisions.length > 0 || options.ifMatch !== undefined
+  const ifMatch = options.ifMatch ?? null
+  if (answered && !quotedHash(ifMatch)) {
+    throw new PipelineClientError(
+      'protocol',
+      'Start-check answers require the quoted content hash they were given against.',
+      428,
+      'pipeline.precondition-required',
+      { id },
+    )
+  }
+  const payload = await request(
+    `/pipelines/${encodeURIComponent(id)}:start`,
+    fetcher,
+    answered
+      ? {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'If-Match': ifMatch ?? '' },
+          body: JSON.stringify({
+            decisions: decisions.map(({ finding, action }) => ({ finding, action })),
+          }),
+        }
+      : { method: 'POST' },
+  )
+  return pipelineStartResult(payload)
+}
+
+/** Evaluates the start checks a start would be asked now; writes nothing. */
+export async function getStartChecks(
+  id: string,
+  intent: StartCheckIntent = 'start',
+  fetcher: ApiFetcher = fetch,
+): Promise<StartCheckReport> {
+  const payload = await request(
+    `/pipelines/${encodeURIComponent(id)}/start-checks?intent=${encodeURIComponent(intent)}`,
+    fetcher,
+  )
+  if (!isStartCheckReport(payload)) {
+    throw new PipelineClientError('protocol', 'Tapstate returned invalid start checks.')
+  }
+  return payload
 }
 
 export async function stopPipeline(
