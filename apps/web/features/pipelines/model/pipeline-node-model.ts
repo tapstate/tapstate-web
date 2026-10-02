@@ -171,7 +171,10 @@ export function pipelineNodeConfigurations(view: PipelineView) {
         transformType: transformType(step),
         from: step.from,
         options: isRecord(step.options) ? step.options : null,
-        body: stepBody(step),
+        body: {
+          ...stepBody(step),
+          ...(isRecord(step.experimental) ? { experimental: step.experimental } : {}),
+        },
       })
       continue
     }

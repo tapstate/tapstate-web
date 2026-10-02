@@ -1,5 +1,7 @@
 import type { ComponentProps } from 'react'
+
 import { cva, type VariantProps } from 'class-variance-authority'
+
 import { cn } from '@/lib/utils'
 
 const alertVariants = cva('relative w-full rounded-lg border px-4 py-3 text-[13px]', {
@@ -30,7 +32,7 @@ export function Alert({ className, variant, ...props }: AlertProps) {
 export function AlertTitle({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
-      className={cn('mb-1 font-medium leading-none tracking-tight', className)}
+      className={cn('mb-1 leading-none font-medium tracking-tight', className)}
       data-slot="alert-title"
       {...props}
     />

@@ -3,6 +3,8 @@ import type { ISchema } from '@formily/json-schema'
 
 import type { SourceView } from '@/service/source-client'
 
+import { sourceAllowsTable } from '../../model/source-table-scope'
+
 export type PipelineFormilySchema = ISchema & {
   properties?: Record<string, PipelineFormilySchema>
   enum?: Array<{ label: string; value: string }>
@@ -146,19 +148,6 @@ function sourceTableSelect(
   }
 
   return field
-}
-
-function sourceAllowsTable(source: SourceView | undefined, table: string) {
-  if (!source || source.tables === null) return true
-  return source.tables.some((configuredTable) => {
-    if (configuredTable.name === table) return true
-    if (!configuredTable.pattern) return false
-    try {
-      return new RegExp(configuredTable.pattern).test(table)
-    } catch {
-      return false
-    }
-  })
 }
 
 function isRegexReference(value: string) {

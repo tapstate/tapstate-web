@@ -60,7 +60,7 @@ Dify 把所有原子级 UI（button、dialog、popover、select、tooltip 等）
 
 **落地到 Tapstate：**
 
-你已经在用 shadcn 风格组件 + Radix primitives，这条正好补齐你 UI 工程边界里缺的部分：
+你已经在用 shadcn/ui + Base UI，这条正好补齐你 UI 工程边界里缺的部分：
 
 - 在 `apps/web/components/ui/` 下建一份 `AGENTS.md`（或加进现有 tech-stack.md 的对应章节），写清楚：
   - overlay 类组件（Select / Dropdown / Dialog / Popover）禁止在调用点传 z-index，统一由 `components/ui` 内部管理；
@@ -74,10 +74,10 @@ Dify 团队在做无障碍/交互规范时，明确引用了 Vercel 的 Web Inte
 
 ## 已定结论（严格对齐 Dify 标准）
 
-| 事项 | 结论 | 对齐 Dify 的依据 |
-| ---- | ---- | ---- |
-| 裸值 token 重构方式 | **渐进式、按作用域拆 PR**，不做一次性大重构，也不强制先产出完整映射表 | Dify 的 v4 CSS-first 迁移本身就是分多个 PR 完成的（先落地 `@theme` 体系，再有专门的"清理失效 class"收尾 PR），每个 PR 聚焦一类组件或一个目录，而不是一次性全量替换 |
-| 失效 class 检查 | **接入 CI 门禁**，作为 PR 必须通过的检查项，而非可选的手动脚本 | Dify 的 PR 机器人清单里明确把"PostCSS/Tailwind compile check for `globals.css`"列为自动检查项之一，和 type-check、test 同级，不是手动跑 |
+| 事项                 | 结论                                                                                                                                                       | 对齐 Dify 的依据                                                                                                                                                     |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 裸值 token 重构方式  | **渐进式、按作用域拆 PR**，不做一次性大重构，也不强制先产出完整映射表                                                                                      | Dify 的 v4 CSS-first 迁移本身就是分多个 PR 完成的（先落地 `@theme` 体系，再有专门的"清理失效 class"收尾 PR），每个 PR 聚焦一类组件或一个目录，而不是一次性全量替换   |
+| 失效 class 检查      | **接入 CI 门禁**，作为 PR 必须通过的检查项，而非可选的手动脚本                                                                                             | Dify 的 PR 机器人清单里明确把"PostCSS/Tailwind compile check for `globals.css`"列为自动检查项之一，和 type-check、test 同级，不是手动跑                              |
 | overlay 契约文档位置 | **独立文档，不并入主工程指南**：组件包级放 `components/ui/AGENTS.md`，overlay 专项契约（z-index、受控模式）另起一份 `apps/web/docs/overlay-conventions.md` | Dify 同时维护了 `packages/dify-ui/AGENTS.md`（组件包契约）和 `web/docs/overlay-migration.md`（overlay 专项文档），两者分开，没有塞进它们的主 CONTRIBUTING/工程指南里 |
 
 **具体落地：**

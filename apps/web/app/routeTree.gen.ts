@@ -13,9 +13,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as PipelineEditorRouteImport } from './routes/_pipeline-editor'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as SignedOutRouteImport } from './routes/signed-out'
+import { Route as AuthenticatedDestinationsRouteImport } from './routes/_authenticated.destinations'
 import { Route as AuthenticatedExplorationsRouteImport } from './routes/_authenticated.explorations'
 import { Route as AuthenticatedPipelinesRouteImport } from './routes/_authenticated.pipelines'
 import { Route as AuthenticatedSourcesRouteImport } from './routes/_authenticated.sources'
+import { Route as AuthenticatedViewsRouteImport } from './routes/_authenticated.views'
 import { Route as AuthenticatedSourcesIndexRouteImport } from './routes/_authenticated.sources.index'
 import { Route as AuthenticatedSourcesSourceIdRouteImport } from './routes/_authenticated.sources.$sourceId'
 import { Route as AuthenticatedSourcesSourceIdIndexRouteImport } from './routes/_authenticated.sources.$sourceId.index'
@@ -44,6 +47,17 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignedOutRoute = SignedOutRouteImport.update({
+  id: '/signed-out',
+  path: '/signed-out',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedDestinationsRoute =
+  AuthenticatedDestinationsRouteImport.update({
+    id: '/destinations',
+    path: '/destinations',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedExplorationsRoute =
   AuthenticatedExplorationsRouteImport.update({
     id: '/explorations',
@@ -58,6 +72,11 @@ const AuthenticatedPipelinesRoute = AuthenticatedPipelinesRouteImport.update({
 const AuthenticatedSourcesRoute = AuthenticatedSourcesRouteImport.update({
   id: '/sources',
   path: '/sources',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedViewsRoute = AuthenticatedViewsRouteImport.update({
+  id: '/views',
+  path: '/views',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedSourcesIndexRoute =
@@ -128,9 +147,12 @@ const PipelineEditorPipelinesPipelineIdEditMonitoringRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/signed-out': typeof SignedOutRoute
+  '/destinations': typeof AuthenticatedDestinationsRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
   '/sources': typeof AuthenticatedSourcesRouteWithChildren
+  '/views': typeof AuthenticatedViewsRoute
   '/sources/$sourceId': typeof AuthenticatedSourcesSourceIdRouteWithChildren
   '/sources/': typeof AuthenticatedSourcesIndexRoute
   '/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
@@ -144,8 +166,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/signed-out': typeof SignedOutRoute
+  '/destinations': typeof AuthenticatedDestinationsRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
+  '/views': typeof AuthenticatedViewsRoute
   '/sources': typeof AuthenticatedSourcesIndexRoute
   '/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
   '/sources/$sourceId': typeof AuthenticatedSourcesSourceIdIndexRoute
@@ -160,9 +185,12 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_pipeline-editor': typeof PipelineEditorRouteWithChildren
   '/login': typeof LoginRoute
+  '/signed-out': typeof SignedOutRoute
+  '/_authenticated/destinations': typeof AuthenticatedDestinationsRoute
   '/_authenticated/explorations': typeof AuthenticatedExplorationsRoute
   '/_authenticated/pipelines': typeof AuthenticatedPipelinesRoute
   '/_authenticated/sources': typeof AuthenticatedSourcesRouteWithChildren
+  '/_authenticated/views': typeof AuthenticatedViewsRoute
   '/_authenticated/sources/$sourceId': typeof AuthenticatedSourcesSourceIdRouteWithChildren
   '/_authenticated/sources/': typeof AuthenticatedSourcesIndexRoute
   '/_authenticated/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
@@ -178,9 +206,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/signed-out'
+    | '/destinations'
     | '/explorations'
     | '/pipelines'
     | '/sources'
+    | '/views'
     | '/sources/$sourceId'
     | '/sources/'
     | '/sources/$sourceId/$tableName'
@@ -194,8 +225,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/signed-out'
+    | '/destinations'
     | '/explorations'
     | '/pipelines'
+    | '/views'
     | '/sources'
     | '/sources/$sourceId/$tableName'
     | '/sources/$sourceId'
@@ -209,9 +243,12 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/_pipeline-editor'
     | '/login'
+    | '/signed-out'
+    | '/_authenticated/destinations'
     | '/_authenticated/explorations'
     | '/_authenticated/pipelines'
     | '/_authenticated/sources'
+    | '/_authenticated/views'
     | '/_authenticated/sources/$sourceId'
     | '/_authenticated/sources/'
     | '/_authenticated/sources/$sourceId/$tableName'
@@ -228,6 +265,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   PipelineEditorRoute: typeof PipelineEditorRouteWithChildren
   LoginRoute: typeof LoginRoute
+  SignedOutRoute: typeof SignedOutRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -260,6 +298,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/signed-out': {
+      id: '/signed-out'
+      path: '/signed-out'
+      fullPath: '/signed-out'
+      preLoaderRoute: typeof SignedOutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/destinations': {
+      id: '/_authenticated/destinations'
+      path: '/destinations'
+      fullPath: '/destinations'
+      preLoaderRoute: typeof AuthenticatedDestinationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/explorations': {
       id: '/_authenticated/explorations'
       path: '/explorations'
@@ -279,6 +331,13 @@ declare module '@tanstack/react-router' {
       path: '/sources'
       fullPath: '/sources'
       preLoaderRoute: typeof AuthenticatedSourcesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/views': {
+      id: '/_authenticated/views'
+      path: '/views'
+      fullPath: '/views'
+      preLoaderRoute: typeof AuthenticatedViewsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/sources/': {
@@ -380,15 +439,19 @@ const AuthenticatedSourcesRouteWithChildren =
   AuthenticatedSourcesRoute._addFileChildren(AuthenticatedSourcesRouteChildren)
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedDestinationsRoute: typeof AuthenticatedDestinationsRoute
   AuthenticatedExplorationsRoute: typeof AuthenticatedExplorationsRoute
   AuthenticatedPipelinesRoute: typeof AuthenticatedPipelinesRoute
   AuthenticatedSourcesRoute: typeof AuthenticatedSourcesRouteWithChildren
+  AuthenticatedViewsRoute: typeof AuthenticatedViewsRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedDestinationsRoute: AuthenticatedDestinationsRoute,
   AuthenticatedExplorationsRoute: AuthenticatedExplorationsRoute,
   AuthenticatedPipelinesRoute: AuthenticatedPipelinesRoute,
   AuthenticatedSourcesRoute: AuthenticatedSourcesRouteWithChildren,
+  AuthenticatedViewsRoute: AuthenticatedViewsRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -437,6 +500,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   PipelineEditorRoute: PipelineEditorRouteWithChildren,
   LoginRoute: LoginRoute,
+  SignedOutRoute: SignedOutRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

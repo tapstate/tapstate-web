@@ -1,7 +1,8 @@
-import { Input } from 'antd'
 import { Code2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+
+import { Textarea } from '@/components/ui/textarea'
 
 import type { TransformEditorProps } from './types'
 
@@ -9,28 +10,19 @@ import { getPipelineTransformDefinition } from './registry'
 import { TransformEditorShell } from './transform-editor-shell'
 
 export function TransformEditor({ config, onChange }: TransformEditorProps) {
-  const { t } = useTranslation()
   const definition = getPipelineTransformDefinition(config.transformType)
   if (definition) {
     const Editor = definition.editor
     return <Editor config={config} onChange={onChange} />
   }
-  return (
-    <UnknownTransformEditor
-      config={config}
-      onChange={onChange}
-      title={config.transformType}
-      description={t('pipelines.workspace.transform.customDescription')}
-    />
-  )
+  return <UnknownTransformEditor config={config} onChange={onChange} title={config.transformType} />
 }
 
 function UnknownTransformEditor({
   config,
   onChange,
   title,
-  description,
-}: TransformEditorProps & { title: string; description: string }) {
+}: TransformEditorProps & { title: string }) {
   const { t } = useTranslation()
   const [raw, setRaw] = useState(() => JSON.stringify(config.body, null, 2))
   const [invalid, setInvalid] = useState(false)
@@ -55,11 +47,11 @@ function UnknownTransformEditor({
   }
 
   return (
-    <TransformEditorShell from={config.from} icon={Code2} title={title} description={description}>
-      <Input.TextArea
+    <TransformEditorShell from={config.from} icon={Code2} title={title}>
+      <Textarea
         value={raw}
         onChange={(event) => updateRaw(event.target.value)}
-        autoSize={{ minRows: 8, maxRows: 16 }}
+        rows={9}
         className="pipeline-transform__code-editor"
         aria-invalid={invalid}
       />

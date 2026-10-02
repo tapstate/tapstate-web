@@ -26,6 +26,7 @@ function clampPanelWidth(width: number) {
 
 export interface PipelineWorkflowPanelProps {
   selection: PipelineCanvasSelection
+  isReadOnly?: boolean
   onClose: () => void
   onConfigurationChange: (change: PipelineNodeConfigurationChange) => void
   onDescriptionChange: (description: string) => void
@@ -40,6 +41,7 @@ export interface PipelineWorkflowPanelProps {
 /** Owns the resizable inspector shell; form rendering remains in the node-config feature. */
 export function PipelineWorkflowPanel({
   selection,
+  isReadOnly = false,
   onClose,
   onConfigurationChange,
   onDescriptionChange,
@@ -125,6 +127,7 @@ export function PipelineWorkflowPanel({
         <PipelineNodeConfigPanel
           selection={selection}
           onClose={onClose}
+          isReadOnly={isReadOnly}
           onConfigurationChange={onConfigurationChange}
           onDescriptionChange={onDescriptionChange}
           sourceOptions={sourceOptions}

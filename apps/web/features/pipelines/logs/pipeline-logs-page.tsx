@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Pause, Play, RefreshCw, Search } from 'lucide-react'
+import { ArrowDown, ArrowUp, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
+import { PipelineRefreshControls } from '../components/pipeline-refresh-controls'
 import { PipelineLogDetailPanel } from './pipeline-log-detail-panel'
 import { usePipelineLogsQuery } from './pipeline-logs-queries'
 
@@ -80,6 +81,16 @@ export function PipelineLogsPage({ pipelineId }: { pipelineId: string }) {
 
   const hasLines = (logs.data?.lines.length ?? 0) > 0
   const hasFilters = selectedLevel !== null || search.trim().length > 0
+  const refreshLabels = {
+    refresh: t('pipelines.workspace.runtime.logs.refresh'),
+    refreshAria: t('pipelines.workspace.runtime.logs.refreshAria'),
+    active: t('pipelines.workspace.runtime.logs.active'),
+    paused: t('pipelines.workspace.runtime.logs.paused'),
+    pause: t('pipelines.workspace.runtime.logs.pause'),
+    pauseAria: t('pipelines.workspace.runtime.logs.pauseAria'),
+    resume: t('pipelines.workspace.runtime.logs.resume'),
+    resumeAria: t('pipelines.workspace.runtime.logs.resumeAria'),
+  }
 
   return (
     <section className="pipeline-logs" aria-label={t('pipelines.workspace.navigation.logs')}>
@@ -102,40 +113,13 @@ export function PipelineLogsPage({ pipelineId }: { pipelineId: string }) {
               </p>
             </div>
             <div className="pipeline-logs__actions">
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label={t('pipelines.workspace.runtime.logs.refreshAria')}
-                title={t('pipelines.workspace.runtime.logs.refresh')}
-                onClick={() => void logs.refetch()}
-                disabled={logs.isFetching}
-              >
-                <RefreshCw
-                  className={cn('size-3.5', logs.isFetching && 'animate-spin')}
-                  aria-hidden="true"
-                />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                aria-label={t(
-                  autoRefresh
-                    ? 'pipelines.workspace.runtime.logs.pauseAria'
-                    : 'pipelines.workspace.runtime.logs.resumeAria',
-                )}
-                onClick={() => setAutoRefresh((current) => !current)}
-              >
-                {autoRefresh ? (
-                  <Pause className="size-3.5" aria-hidden="true" />
-                ) : (
-                  <Play className="size-3.5" aria-hidden="true" />
-                )}
-                {t(
-                  autoRefresh
-                    ? 'pipelines.workspace.runtime.logs.pause'
-                    : 'pipelines.workspace.runtime.logs.resume',
-                )}
-              </Button>
+              <PipelineRefreshControls
+                autoRefresh={autoRefresh}
+                isFetching={logs.isFetching}
+                onRefresh={() => void logs.refetch()}
+                onToggle={() => setAutoRefresh((current) => !current)}
+                labels={refreshLabels}
+              />
             </div>
           </div>
 
@@ -194,18 +178,15 @@ export function PipelineLogsPage({ pipelineId }: { pipelineId: string }) {
             <p className="pipeline-logs__state-description">
               {t('pipelines.workspace.runtime.logs.errorBody')}
             </p>
-            <Button
-              className="mt-4"
-              size="sm"
-              onClick={() => void logs.refetch()}
-              disabled={logs.isFetching}
-            >
-              <RefreshCw
-                className={cn('size-3.5', logs.isFetching && 'animate-spin')}
-                aria-hidden="true"
+            <div className="mt-4">
+              <PipelineRefreshControls
+                autoRefresh={autoRefresh}
+                isFetching={logs.isFetching}
+                onRefresh={() => void logs.refetch()}
+                onToggle={() => setAutoRefresh((current) => !current)}
+                labels={refreshLabels}
               />
-              {t('pipelines.workspace.runtime.logs.refresh')}
-            </Button>
+            </div>
           </section>
         ) : !hasLines ? (
           <section className="pipeline-logs__state">

@@ -1,11 +1,12 @@
-import { Input, Select } from 'antd'
 import { Braces, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 import { TransformEditorShell } from './transform-editor-shell'
+import { TransformSelect } from './transform-select'
 import { mergeBody, type TransformEditorProps } from './types'
 
 type MapMode = 'reference' | 'drop' | 'expression' | 'literal'
@@ -67,7 +68,6 @@ export function MapEditor({ config, onChange }: TransformEditorProps) {
       from={config.from}
       icon={Braces}
       title={t('pipelines.workspace.transform.map.title')}
-      description={t('pipelines.workspace.transform.map.description')}
     >
       <div className="pipeline-transform__mapping-list">
         {entries.map((entry, index) => (
@@ -84,8 +84,8 @@ export function MapEditor({ config, onChange }: TransformEditorProps) {
                 )
               }
             />
-            <Select
-              aria-label={t('pipelines.workspace.transform.mappingMode')}
+            <TransformSelect
+              label={t('pipelines.workspace.transform.mappingMode')}
               value={entry.mode}
               options={[
                 { value: 'reference', label: t('pipelines.workspace.transform.referenceMode') },
@@ -93,7 +93,7 @@ export function MapEditor({ config, onChange }: TransformEditorProps) {
                 { value: 'expression', label: t('pipelines.workspace.transform.expressionMode') },
                 { value: 'literal', label: t('pipelines.workspace.transform.literalMode') },
               ]}
-              onChange={(mode: MapMode) =>
+              onChange={(mode) =>
                 update(
                   entries.map((item, itemIndex) =>
                     itemIndex === index

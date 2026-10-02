@@ -1,11 +1,12 @@
-import { Input, Select } from 'antd'
 import { GitBranch, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 import { TransformEditorShell } from './transform-editor-shell'
+import { TransformSelect } from './transform-select'
 import { mergeBody, type TransformEditorProps } from './types'
 
 interface ConditionRow {
@@ -103,20 +104,19 @@ export function FilterEditor({ config, onChange }: TransformEditorProps) {
       from={config.from}
       icon={GitBranch}
       title={t('pipelines.workspace.transform.filter.title')}
-      description={t('pipelines.workspace.transform.filter.description')}
     >
       <div className="pipeline-transform__toolbar">
         <span className="pipeline-transform__toolbar-label">
           {t('pipelines.workspace.transform.logic')}
         </span>
-        <Select
-          aria-label={t('pipelines.workspace.transform.logic')}
+        <TransformSelect
+          label={t('pipelines.workspace.transform.logic')}
           value={logic}
           options={[
             { value: 'all', label: t('pipelines.workspace.transform.all') },
             { value: 'any', label: t('pipelines.workspace.transform.any') },
           ]}
-          onChange={updateLogic}
+          onChange={(value) => updateLogic(value as 'all' | 'any')}
         />
       </div>
       <div className="pipeline-transform__conditions">
@@ -134,15 +134,18 @@ export function FilterEditor({ config, onChange }: TransformEditorProps) {
                 )
               }
             />
-            <Select
-              aria-label={t('pipelines.workspace.transform.operator')}
+            <TransformSelect
+              label={t('pipelines.workspace.transform.operator')}
               value={row.operator}
               options={[
                 { value: 'equals', label: '=' },
                 { value: 'notEquals', label: '≠' },
-                { value: 'contains', label: 'contains' },
+                {
+                  value: 'contains',
+                  label: t('pipelines.workspace.transform.containsOperator'),
+                },
               ]}
-              onChange={(operator: ConditionRow['operator']) =>
+              onChange={(operator) =>
                 updateRows(
                   rows.map((item, itemIndex) =>
                     itemIndex === index ? { ...item, operator } : item,

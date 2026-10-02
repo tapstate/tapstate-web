@@ -4,9 +4,21 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { apiFetch, listPipelines, listSources, runPipeline, stopPipeline } = vi.hoisted(() => ({
+const {
+  apiFetch,
+  deletePipelineDraft,
+  getPipelineDraft,
+  listPipelines,
+  listPipelineDrafts,
+  listSources,
+  runPipeline,
+  stopPipeline,
+} = vi.hoisted(() => ({
   apiFetch: vi.fn(),
+  deletePipelineDraft: vi.fn(),
+  getPipelineDraft: vi.fn(),
   listPipelines: vi.fn(),
+  listPipelineDrafts: vi.fn(),
   listSources: vi.fn(),
   runPipeline: vi.fn(),
   stopPipeline: vi.fn(),
@@ -14,6 +26,9 @@ const { apiFetch, listPipelines, listSources, runPipeline, stopPipeline } = vi.h
 
 vi.mock('@/service/source-client', () => ({ listSources }))
 vi.mock('@/service/pipelines/pipeline-client', () => ({
+  deletePipelineDraft,
+  getPipelineDraft,
+  listPipelineDrafts,
   listPipelines,
   runPipeline,
   stopPipeline,
@@ -68,37 +83,52 @@ beforeEach(() => {
   listPipelines.mockResolvedValue([
     {
       id: 'orders_to_warehouse',
-      dag: { nodes: [], edges: [] },
+      name: 'orders_to_warehouse',
+      mode: 'dag',
+      revision: 1,
       contentHash: 'a'.repeat(64),
-      status: { pipelineId: 'orders_to_warehouse', state: 'RUNNING' },
+      hasArtifact: true,
+      status: { state: 'RUNNING' },
     },
     {
       id: 'customer_360',
-      dag: { nodes: [], edges: [] },
+      name: 'customer_360',
+      mode: 'wizard',
+      revision: 2,
       contentHash: 'b'.repeat(64),
-      status: { pipelineId: 'customer_360', state: 'PAUSED' },
+      hasArtifact: true,
+      status: { state: 'PAUSED' },
     },
     {
       id: 'failed_import',
-      dag: { nodes: [], edges: [] },
+      name: 'failed_import',
+      revision: 4,
       contentHash: 'c'.repeat(64),
-      status: { pipelineId: 'failed_import', state: 'FAILED' },
+      hasArtifact: true,
+      status: { state: 'FAILED' },
     },
     {
       id: 'new_import',
-      dag: { nodes: [], edges: [] },
+      name: 'new_import',
+      revision: 1,
       contentHash: 'd'.repeat(64),
-      status: { pipelineId: 'new_import', state: 'NEW' },
+      hasArtifact: true,
+      status: { state: 'NEW' },
     },
     {
       id: 'offline_import',
-      dag: { nodes: [], edges: [] },
+      name: 'offline_import',
+      revision: 1,
       contentHash: 'e'.repeat(64),
-      status: null,
+      hasArtifact: true,
+      status: { state: 'UNAVAILABLE' },
     },
   ])
+  listPipelineDrafts.mockResolvedValue([])
   runPipeline.mockResolvedValue({})
   stopPipeline.mockResolvedValue({})
+  getPipelineDraft.mockResolvedValue({ etag: '"3"' })
+  deletePipelineDraft.mockResolvedValue(undefined)
   apiFetch.mockResolvedValue({ ok: true })
 })
 
@@ -123,6 +153,7 @@ describe('PipelinesPage', () => {
     expect(container?.textContent).not.toContain('User Data Sync')
     expect(container?.textContent).not.toContain('2 hours ago')
     expect(listPipelines).toHaveBeenCalledTimes(1)
+    expect(listPipelineDrafts).not.toHaveBeenCalled()
     expect(document.querySelector('[data-testid="pipeline-canvas"]')).toBeNull()
 
     expect(elementWithText('button', 'Create')).toBeDefined()
@@ -143,26 +174,111 @@ describe('PipelinesPage', () => {
     expect(elementWithText('a', 'Edit')).toBeUndefined()
   })
 
-  it('shows an unavailable state when a Pipeline has no runtime observation', async () => {
+  it('lists draft-only catalog rows as resumable drafts without lifecycle controls', async () => {
     listPipelines.mockResolvedValueOnce([
       {
-        id: 'orders_to_warehouse',
-        dag: { nodes: [], edges: [] },
-        contentHash: 'a'.repeat(64),
-        status: null,
-      },
-      {
-        id: 'customer_360',
-        dag: { nodes: [], edges: [] },
-        contentHash: 'b'.repeat(64),
-        status: { pipelineId: 'customer_360', state: 'PAUSED' },
+        id: 'unfinished_wizard',
+        name: 'unfinished_wizard',
+        mode: 'wizard',
+        revision: 3,
+        contentHash: null,
+        hasArtifact: false,
+        status: { state: 'NEW' },
       },
     ])
 
     await renderPage()
 
-    await vi.waitFor(() => expect(container?.textContent).toContain('Unavailable'))
-    expect(container?.textContent).toContain('Paused')
+    const link = await vi.waitFor(() => {
+      const candidate = document.querySelector<HTMLAnchorElement>(
+        'a[href="/pipelines/unfinished_wizard/edit"]',
+      )
+      expect(candidate).not.toBeNull()
+      return candidate
+    })
+    const row = link?.closest('tr')
+    expect(row?.textContent).toContain('Draft')
+    expect(row?.textContent).toContain('r3')
+    expect(row?.textContent).not.toContain('Edit')
+    expect(row?.querySelectorAll('a[href="/pipelines/unfinished_wizard/edit"]')).toHaveLength(2)
+    expect(row?.querySelector('.pipeline-list__lifecycle-menu')).not.toBeNull()
+    expect(row?.querySelector('.pipeline-list__actions-hover')).not.toBeNull()
+    expect(row?.querySelector('[aria-label="More actions for unfinished_wizard"]')).not.toBeNull()
+    expect(row?.querySelector('[aria-label="Start unfinished_wizard"]')).toBeNull()
+    expect(row?.querySelector('[aria-label="Stop unfinished_wizard"]')).toBeNull()
+
+    await act(async () => {
+      row
+        ?.querySelector<HTMLButtonElement>('[aria-label="More actions for unfinished_wizard"]')
+        ?.click()
+    })
+    expect(elementWithText('[role="menuitem"]', 'Edit unfinished_wizard')).toBeDefined()
+    expect(elementWithText('[role="menuitem"]', 'Copy pipeline ID')).toBeDefined()
+    expect(elementWithText('[role="menuitem"]', 'Delete')).toBeDefined()
+
+    await act(async () => elementWithText('[role="menuitem"]', 'Delete')?.click())
+    await act(async () => elementWithText('button', 'Delete Pipeline')?.click())
+    await vi.waitFor(() =>
+      expect(getPipelineDraft).toHaveBeenCalledWith('unfinished_wizard', apiFetch),
+    )
+    expect(deletePipelineDraft).toHaveBeenCalledWith('unfinished_wizard', '"3"', apiFetch)
+  })
+
+  it('filters the merged catalog and exposes auto-refresh state on the refresh control', async () => {
+    await renderPage()
+    await vi.waitFor(() => expect(container?.textContent).toContain('orders_to_warehouse'))
+
+    const search = document.querySelector<HTMLInputElement>(
+      'input[placeholder="Search pipelines..."]',
+    )
+    expect(search).not.toBeNull()
+    await act(async () => {
+      if (!search) return
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(
+        search,
+        'customer',
+      )
+      search.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect(document.querySelectorAll('tbody tr')).toHaveLength(1)
+    expect(document.querySelector('tbody')?.textContent).toContain('customer_360')
+
+    const refresh = document.querySelector<HTMLButtonElement>(
+      '[aria-label="Refresh pipeline list"]',
+    )
+    expect(refresh?.dataset.autoRefresh).toBe('on')
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>('[aria-label="Pause automatic pipeline refresh"]')
+        ?.click(),
+    )
+    expect(refresh?.dataset.autoRefresh).toBe('off')
+    await act(async () => refresh?.click())
+    await vi.waitFor(() => expect(listPipelines).toHaveBeenCalledTimes(2))
+  })
+
+  it('shows transitional and unavailable runtime catalog states', async () => {
+    listPipelines.mockResolvedValueOnce([
+      {
+        id: 'orders_to_warehouse',
+        name: 'orders_to_warehouse',
+        hasArtifact: true,
+        contentHash: 'a'.repeat(64),
+        status: { state: 'STARTING' },
+      },
+      {
+        id: 'customer_360',
+        name: 'customer_360',
+        hasArtifact: true,
+        contentHash: 'b'.repeat(64),
+        status: { state: 'UNAVAILABLE' },
+      },
+    ])
+
+    await renderPage()
+
+    await vi.waitFor(() => expect(container?.textContent).toContain('Starting'))
+    expect(container?.textContent).toContain('Unavailable')
     expect(listPipelines).toHaveBeenCalledTimes(1)
   })
 
@@ -198,16 +314,6 @@ describe('PipelinesPage', () => {
     )
     await vi.waitFor(() => expect(listPipelines).toHaveBeenCalledTimes(2))
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['pipelines'] })
-    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['pipelines', 'new_import'] })
-    expect(invalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['pipelines', 'new_import', 'status'],
-    })
-    expect(invalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['pipelines', 'new_import', 'metrics'],
-    })
-    expect(invalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['pipelines', 'new_import', 'logs'],
-    })
   })
 
   it('refreshes a stale lifecycle state and surfaces the server transition reason', async () => {
@@ -267,10 +373,44 @@ describe('PipelinesPage', () => {
     await vi.waitFor(() => expect(document.body.textContent).toContain('Stop orders_to_warehouse?'))
     expect(stopPipeline).not.toHaveBeenCalled()
 
-    await act(async () => elementWithText('button', 'Stop Pipeline')?.click())
+    expect(elementWithText('button', 'Stop and keep state')).toBeDefined()
+    expect(elementWithText('button', 'Stop and clear state')).toBeDefined()
+    await act(async () => elementWithText('button', 'Stop and keep state')?.click())
     await vi.waitFor(() =>
-      expect(stopPipeline).toHaveBeenCalledWith('orders_to_warehouse', expect.anything()),
+      expect(stopPipeline).toHaveBeenCalledWith('orders_to_warehouse', false, expect.anything()),
     )
+  })
+
+  it('sends an explicit clear-state choice and closes confirmation before showing a failure', async () => {
+    stopPipeline.mockRejectedValueOnce(
+      Object.assign(
+        new Error('Stopping pipeline p3 did not say whether to clear what it has accumulated.'),
+        { code: 'lifecycle.purge-state-not-stated' },
+      ),
+    )
+    await renderPage()
+    await vi.waitFor(() => expect(container?.textContent).toContain('orders_to_warehouse'))
+
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="Pipeline lifecycle actions for orders_to_warehouse"]',
+        )
+        ?.click(),
+    )
+    await act(async () => elementWithText('[role="menuitem"]', 'Stop')?.click())
+    await vi.waitFor(() => expect(document.body.textContent).toContain('Stop orders_to_warehouse?'))
+    await act(async () => elementWithText('button', 'Stop and clear state')?.click())
+
+    await vi.waitFor(() =>
+      expect(stopPipeline).toHaveBeenCalledWith('orders_to_warehouse', true, expect.anything()),
+    )
+    await vi.waitFor(() => {
+      expect(document.querySelector('[data-slot="dialog-content"]')).toBeNull()
+      expect(document.querySelector('[role="alert"]')?.textContent).toContain(
+        'Stopping pipeline p3 did not say whether to clear',
+      )
+    })
   })
 
   it('shows lifecycle request failures in a fixed feedback surface', async () => {

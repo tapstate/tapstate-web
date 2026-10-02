@@ -107,6 +107,66 @@ export interface PipelineMutation {
   experimental?: PipelineJsonObject | null
 }
 
+export type PipelineDraftMode = 'dag' | 'wizard'
+
+export interface PipelineDraftNode {
+  id: string
+  type: string
+  sourceId?: string | null
+  table?: string | null
+  config: PipelineJsonObject
+  metadata: PipelineJsonObject
+}
+
+export interface PipelineDraftGraph {
+  nodes: readonly PipelineDraftNode[]
+  edges: readonly { id: string; source: string; target: string }[]
+  viewport: { x: number; y: number; zoom: number }
+}
+
+export interface PipelineDraft {
+  pipelineId: string
+  schemaVersion: number
+  revision: number
+  mode: PipelineDraftMode
+  name: string | null
+  description: string | null
+  graph: PipelineDraftGraph | null
+  wizard: PipelineJsonObject | null
+  baseArtifactHash: string | null
+  publishedDraftRevision: number | null
+  publishedArtifactHash: string | null
+  createdAt: string
+  updatedAt: string
+  updatedBy: string
+}
+
+export type PipelineDraftSummary = Omit<PipelineDraft, 'schemaVersion' | 'graph' | 'wizard'>
+
+export interface PipelineDraftMutation {
+  pipelineId: string
+  mode: PipelineDraftMode
+  name?: string | null
+  description?: string | null
+  graph?: PipelineDraftGraph | null
+  wizard?: PipelineJsonObject | null
+  baseArtifactHash?: string | null
+}
+
+export interface PipelineDraftPreview {
+  pipelineId: string
+  revision: number
+  dsl?: string
+  artifact: PipelineJsonObject
+}
+
+export interface PipelineDraftPublishResult {
+  pipelineId: string
+  revision: number
+  artifactHash: string
+  published: true
+}
+
 export type PipelineRuntimeState = 'NEW' | 'RUNNING' | 'PAUSED' | 'STOPPED' | 'COMPLETED' | 'FAILED'
 
 export interface PipelineStatusFailure {
@@ -121,10 +181,61 @@ export interface PipelineStatus {
   failure?: PipelineStatusFailure | null
 }
 
+export type PipelineCatalogState =
+  | PipelineRuntimeState
+  | 'STARTING'
+  | 'PAUSING'
+  | 'RESUMING'
+  | 'STOPPING'
+  | 'UNAVAILABLE'
+
+export interface PipelineCatalogStatus {
+  state: PipelineCatalogState
+  desiredState?: PipelineRuntimeState | null
+  observedState?: PipelineRuntimeState | null
+  failure?: PipelineStatusFailure | null
+  observedAt?: string | null
+}
+
+/** Unified list projection across saved editor documents, applied artifacts, and runtime state. */
+export interface PipelineCatalogItem {
+  id: string
+  name: string
+  description?: string | null
+  mode?: PipelineDraftMode | null
+  revision?: number | null
+  updatedAt?: string | null
+  contentHash?: string | null
+  hasArtifact: boolean
+  status: PipelineCatalogStatus
+}
+
 export interface PipelineMetrics {
   pipelineId: string
   metrics: Record<string, number>
+  targetAckedPosition?: Record<string, string>
+  positionsNotCollected?: string[]
+  facts?: PipelineMetricFact[]
+  /** Retained for older servers during the transition to targetAckedPosition. */
   perTableOffset?: Record<string, string>
+}
+
+export interface PipelineMetricFactPoint {
+  attributes: Record<string, string>
+  observedAt: string
+  value?: number
+  startTime?: string
+  count?: number
+  sum?: number
+  bounds?: number[]
+  bucketCounts?: number[]
+}
+
+export interface PipelineMetricFact {
+  name: string
+  type: 'counter' | 'gauge' | 'histogram'
+  unit: string
+  points: PipelineMetricFactPoint[]
 }
 
 export interface PipelineLogLine {
@@ -242,6 +353,91 @@ function isJsonObject(value: unknown): value is PipelineJsonObject {
   return isRecord(value)
 }
 
+function isDraftViewport(value: unknown): value is PipelineDraftGraph['viewport'] {
+  return (
+    isRecord(value) &&
+    typeof value.x === 'number' &&
+    typeof value.y === 'number' &&
+    typeof value.zoom === 'number' &&
+    value.zoom > 0
+  )
+}
+
+function isDraftNode(value: unknown): value is PipelineDraftNode {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.type === 'string' &&
+    (value.sourceId === undefined ||
+      value.sourceId === null ||
+      typeof value.sourceId === 'string') &&
+    (value.table === undefined || value.table === null || typeof value.table === 'string') &&
+    isJsonObject(value.config) &&
+    isJsonObject(value.metadata)
+  )
+}
+
+function isDraftGraph(value: unknown): value is PipelineDraftGraph {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.nodes) &&
+    value.nodes.every(isDraftNode) &&
+    Array.isArray(value.edges) &&
+    value.edges.every(
+      (edge) =>
+        isRecord(edge) &&
+        typeof edge.id === 'string' &&
+        typeof edge.source === 'string' &&
+        typeof edge.target === 'string',
+    ) &&
+    isDraftViewport(value.viewport)
+  )
+}
+
+function isPipelineDraft(value: unknown): value is PipelineDraft {
+  return (
+    isRecord(value) &&
+    typeof value.pipelineId === 'string' &&
+    typeof value.schemaVersion === 'number' &&
+    Number.isInteger(value.schemaVersion) &&
+    typeof value.revision === 'number' &&
+    Number.isInteger(value.revision) &&
+    value.revision > 0 &&
+    (value.mode === 'dag' || value.mode === 'wizard') &&
+    (value.name === null || typeof value.name === 'string') &&
+    (value.description === null || typeof value.description === 'string') &&
+    (value.graph === null || isDraftGraph(value.graph)) &&
+    (value.wizard === null || isJsonObject(value.wizard)) &&
+    (value.baseArtifactHash === null || typeof value.baseArtifactHash === 'string') &&
+    (value.publishedDraftRevision === null ||
+      (typeof value.publishedDraftRevision === 'number' &&
+        Number.isInteger(value.publishedDraftRevision))) &&
+    (value.publishedArtifactHash === null || typeof value.publishedArtifactHash === 'string') &&
+    typeof value.createdAt === 'string' &&
+    typeof value.updatedAt === 'string' &&
+    typeof value.updatedBy === 'string'
+  )
+}
+
+function isPipelineDraftSummary(value: unknown): value is PipelineDraftSummary {
+  return (
+    isRecord(value) &&
+    typeof value.pipelineId === 'string' &&
+    typeof value.revision === 'number' &&
+    Number.isInteger(value.revision) &&
+    value.revision > 0 &&
+    (value.mode === 'dag' || value.mode === 'wizard') &&
+    (value.name === null || typeof value.name === 'string') &&
+    (value.description === null || typeof value.description === 'string') &&
+    (value.baseArtifactHash === null || typeof value.baseArtifactHash === 'string') &&
+    (value.publishedDraftRevision === null || Number.isInteger(value.publishedDraftRevision)) &&
+    (value.publishedArtifactHash === null || typeof value.publishedArtifactHash === 'string') &&
+    typeof value.createdAt === 'string' &&
+    typeof value.updatedAt === 'string' &&
+    typeof value.updatedBy === 'string'
+  )
+}
+
 function isTransformStep(value: unknown): value is PipelineTransformStep {
   return isRecord(value) && typeof value.id === 'string' && 'from' in value
 }
@@ -268,12 +464,91 @@ function isPipelineStatus(value: unknown): value is PipelineStatus {
   )
 }
 
+function isPipelineCatalogStatus(value: unknown): value is PipelineCatalogStatus {
+  const runtimeStates = ['NEW', 'RUNNING', 'PAUSED', 'STOPPED', 'COMPLETED', 'FAILED']
+  return (
+    isRecord(value) &&
+    [...runtimeStates, 'STARTING', 'PAUSING', 'RESUMING', 'STOPPING', 'UNAVAILABLE'].includes(
+      value.state as string,
+    ) &&
+    (value.desiredState === undefined ||
+      value.desiredState === null ||
+      runtimeStates.includes(value.desiredState as string)) &&
+    (value.observedState === undefined ||
+      value.observedState === null ||
+      runtimeStates.includes(value.observedState as string)) &&
+    (value.failure === undefined ||
+      value.failure === null ||
+      isPipelineStatusFailure(value.failure)) &&
+    (value.observedAt === undefined ||
+      value.observedAt === null ||
+      typeof value.observedAt === 'string')
+  )
+}
+
+function isPipelineCatalogItem(value: unknown): value is PipelineCatalogItem {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.name === 'string' &&
+    (value.description === undefined ||
+      value.description === null ||
+      typeof value.description === 'string') &&
+    (value.mode === undefined ||
+      value.mode === null ||
+      value.mode === 'dag' ||
+      value.mode === 'wizard') &&
+    (value.revision === undefined ||
+      value.revision === null ||
+      (typeof value.revision === 'number' && Number.isInteger(value.revision))) &&
+    (value.updatedAt === undefined ||
+      value.updatedAt === null ||
+      typeof value.updatedAt === 'string') &&
+    (value.contentHash === undefined ||
+      value.contentHash === null ||
+      typeof value.contentHash === 'string') &&
+    typeof value.hasArtifact === 'boolean' &&
+    isPipelineCatalogStatus(value.status)
+  )
+}
+
 function isNumberMap(value: unknown): value is Record<string, number> {
   return isRecord(value) && Object.values(value).every((item) => typeof item === 'number')
 }
 
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string')
+}
+
 function isStringMap(value: unknown): value is Record<string, string> {
   return isRecord(value) && Object.values(value).every((item) => typeof item === 'string')
+}
+
+function isMetricFactPoint(value: unknown): value is PipelineMetricFactPoint {
+  return (
+    isRecord(value) &&
+    isStringMap(value.attributes) &&
+    typeof value.observedAt === 'string' &&
+    (value.value === undefined || typeof value.value === 'number') &&
+    (value.startTime === undefined || typeof value.startTime === 'string') &&
+    (value.count === undefined || typeof value.count === 'number') &&
+    (value.sum === undefined || typeof value.sum === 'number') &&
+    (value.bounds === undefined ||
+      (Array.isArray(value.bounds) && value.bounds.every((n) => typeof n === 'number'))) &&
+    (value.bucketCounts === undefined ||
+      (Array.isArray(value.bucketCounts) && value.bucketCounts.every((n) => typeof n === 'number')))
+  )
+}
+
+function isPipelineMetricFact(value: unknown): value is PipelineMetricFact {
+  return (
+    isRecord(value) &&
+    typeof value.name === 'string' &&
+    ['counter', 'gauge', 'histogram'].includes(value.type as string) &&
+    typeof value.unit === 'string' &&
+    Array.isArray(value.points) &&
+    value.points.every(isMetricFactPoint)
+  )
 }
 
 function isPipelineMetrics(value: unknown): value is PipelineMetrics {
@@ -281,6 +556,10 @@ function isPipelineMetrics(value: unknown): value is PipelineMetrics {
     isRecord(value) &&
     typeof value.pipelineId === 'string' &&
     isNumberMap(value.metrics) &&
+    (value.targetAckedPosition === undefined || isStringMap(value.targetAckedPosition)) &&
+    (value.positionsNotCollected === undefined || isStringArray(value.positionsNotCollected)) &&
+    (value.facts === undefined ||
+      (Array.isArray(value.facts) && value.facts.every(isPipelineMetricFact))) &&
     (value.perTableOffset === undefined || isStringMap(value.perTableOffset))
   )
 }
@@ -375,6 +654,10 @@ function quotedHash(value: string | null): value is `"${string}"` {
   return value !== null && /^"[0-9a-f]{64}"$/.test(value)
 }
 
+function quotedRevision(value: string | null): value is `"${string}"` {
+  return value !== null && /^"[1-9][0-9]*"$/.test(value)
+}
+
 async function requestMutation(
   path: string,
   body: PipelineMutation,
@@ -454,12 +737,243 @@ export async function createPipeline(
   return requestMutation('/pipelines', mutation, fetcher, { method: 'POST' })
 }
 
+async function requestDraftMutation(
+  path: string,
+  body: PipelineDraftMutation,
+  fetcher: ApiFetcher,
+  init: RequestInit,
+): Promise<{ draft: PipelineDraft; etag: string }> {
+  let response: Response
+  try {
+    response = await fetcher(`/api${path}`, {
+      ...init,
+      headers: { 'content-type': 'application/json', ...init.headers },
+      body: JSON.stringify(body),
+    })
+  } catch (error) {
+    throw new PipelineClientError(
+      'network',
+      error instanceof Error ? error.message : 'Pipeline draft request failed.',
+    )
+  }
+
+  const payload = response.status === 204 ? null : await response.json().catch(() => null)
+  if (!response.ok) {
+    const code = isRecord(payload) && typeof payload.code === 'string' ? payload.code : null
+    const params = isRecord(payload) && isRecord(payload.params) ? payload.params : {}
+    throw new PipelineClientError(
+      'server',
+      responseMessage(payload, 'Tapstate refused the Pipeline draft mutation.'),
+      response.status,
+      code,
+      params,
+    )
+  }
+  const etag = response.headers.get('ETag')
+  if (!isPipelineDraft(payload) || !quotedRevision(etag)) {
+    throw new PipelineClientError(
+      'protocol',
+      'Tapstate returned an invalid Pipeline draft mutation response.',
+      response.status,
+    )
+  }
+  return { draft: payload, etag }
+}
+
+export async function listPipelineDrafts(
+  fetcher: ApiFetcher = fetch,
+): Promise<PipelineDraftSummary[]> {
+  const payload = await request('/pipeline-drafts', fetcher)
+  if (
+    !isRecord(payload) ||
+    !Array.isArray(payload.items) ||
+    !payload.items.every(isPipelineDraftSummary)
+  ) {
+    throw new PipelineClientError('protocol', 'Tapstate returned an invalid Pipeline draft list.')
+  }
+  return payload.items
+}
+
+export async function getPipelineDraft(
+  id: string,
+  fetcher: ApiFetcher = fetch,
+): Promise<{ draft: PipelineDraft; etag: string }> {
+  let response: Response
+  try {
+    response = await fetcher(`/api/pipelines/${encodeURIComponent(id)}/draft`)
+  } catch (error) {
+    throw new PipelineClientError(
+      'network',
+      error instanceof Error ? error.message : 'Pipeline draft request failed.',
+    )
+  }
+  const payload = await response.json().catch(() => null)
+  if (!response.ok) {
+    const code = isRecord(payload) && typeof payload.code === 'string' ? payload.code : null
+    const params = isRecord(payload) && isRecord(payload.params) ? payload.params : {}
+    throw new PipelineClientError(
+      'server',
+      responseMessage(payload, 'Tapstate refused the Pipeline draft request.'),
+      response.status,
+      code,
+      params,
+    )
+  }
+  const etag = response.headers.get('ETag')
+  if (!isPipelineDraft(payload) || !quotedRevision(etag)) {
+    throw new PipelineClientError(
+      'protocol',
+      'Tapstate returned an invalid Pipeline draft.',
+      response.status,
+    )
+  }
+  return { draft: payload, etag }
+}
+
+export async function createPipelineDraft(
+  id: string,
+  mutation: PipelineDraftMutation,
+  fetcher: ApiFetcher = fetch,
+  options: { keepalive?: boolean } = {},
+): Promise<{ draft: PipelineDraft; etag: string }> {
+  if (mutation.pipelineId !== id) {
+    throw new PipelineClientError('protocol', 'Pipeline draft id does not match the route.', 400)
+  }
+  return requestDraftMutation(`/pipelines/${encodeURIComponent(id)}/draft`, mutation, fetcher, {
+    method: 'POST',
+    keepalive: options.keepalive,
+  })
+}
+
+export async function updatePipelineDraft(
+  id: string,
+  mutation: PipelineDraftMutation,
+  etag: string,
+  fetcher: ApiFetcher = fetch,
+  options: { keepalive?: boolean } = {},
+): Promise<{ draft: PipelineDraft; etag: string }> {
+  if (!quotedRevision(etag)) {
+    throw new PipelineClientError(
+      'protocol',
+      'Pipeline draft mutations require a quoted revision ETag.',
+      428,
+      'pipeline-draft.precondition-required',
+      { id },
+    )
+  }
+  if (mutation.pipelineId !== id) {
+    throw new PipelineClientError('protocol', 'Pipeline draft id does not match the route.', 400)
+  }
+  return requestDraftMutation(`/pipelines/${encodeURIComponent(id)}/draft`, mutation, fetcher, {
+    method: 'PUT',
+    headers: { 'If-Match': etag },
+    keepalive: options.keepalive,
+  })
+}
+
+export async function deletePipelineDraft(
+  id: string,
+  etag: string,
+  fetcher: ApiFetcher = fetch,
+): Promise<void> {
+  if (!quotedRevision(etag)) {
+    throw new PipelineClientError(
+      'protocol',
+      'Pipeline draft deletion requires a quoted revision ETag.',
+      428,
+      'pipeline-draft.precondition-required',
+      { id },
+    )
+  }
+  const response = await fetcher(`/api/pipelines/${encodeURIComponent(id)}/draft`, {
+    method: 'DELETE',
+    headers: { 'If-Match': etag },
+  })
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null)
+    const code = isRecord(payload) && typeof payload.code === 'string' ? payload.code : null
+    const params = isRecord(payload) && isRecord(payload.params) ? payload.params : {}
+    throw new PipelineClientError(
+      'server',
+      responseMessage(payload, 'Tapstate refused the Pipeline draft deletion.'),
+      response.status,
+      code,
+      params,
+    )
+  }
+  if (response.status !== 204) {
+    throw new PipelineClientError(
+      'protocol',
+      'Tapstate returned an invalid Pipeline draft deletion response.',
+      response.status,
+    )
+  }
+}
+
+export async function previewPipelineDraft(
+  id: string,
+  revision: number,
+  fetcher: ApiFetcher = fetch,
+): Promise<PipelineDraftPreview> {
+  const payload = await request(`/pipelines/${encodeURIComponent(id)}/draft:preview`, fetcher, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ revision }),
+  })
+  if (
+    !isRecord(payload) ||
+    payload.pipelineId !== id ||
+    payload.revision !== revision ||
+    !isJsonObject(payload.artifact)
+  ) {
+    throw new PipelineClientError(
+      'protocol',
+      'Tapstate returned an invalid Pipeline draft preview.',
+    )
+  }
+  return payload as unknown as PipelineDraftPreview
+}
+
+export async function publishPipelineDraft(
+  id: string,
+  revision: number,
+  artifactHash?: string | null,
+  fetcher: ApiFetcher = fetch,
+): Promise<PipelineDraftPublishResult> {
+  const payload = await request(`/pipelines/${encodeURIComponent(id)}/draft:publish`, fetcher, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ revision, ...(artifactHash ? { artifactHash } : {}) }),
+  })
+  if (
+    !isRecord(payload) ||
+    payload.pipelineId !== id ||
+    payload.revision !== revision ||
+    typeof payload.artifactHash !== 'string' ||
+    payload.published !== true
+  ) {
+    throw new PipelineClientError(
+      'protocol',
+      'Tapstate returned an invalid Pipeline draft publish.',
+    )
+  }
+  return payload as unknown as PipelineDraftPublishResult
+}
+
 export async function runPipeline(id: string, fetcher: ApiFetcher = fetch): Promise<unknown> {
   return request(`/pipelines/${encodeURIComponent(id)}:start`, fetcher, { method: 'POST' })
 }
 
-export async function stopPipeline(id: string, fetcher: ApiFetcher = fetch): Promise<unknown> {
-  return request(`/pipelines/${encodeURIComponent(id)}:stop`, fetcher, { method: 'POST' })
+export async function stopPipeline(
+  id: string,
+  purgeState: boolean,
+  fetcher: ApiFetcher = fetch,
+): Promise<unknown> {
+  return request(`/pipelines/${encodeURIComponent(id)}:stop`, fetcher, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ purgeState }),
+  })
 }
 
 export async function getPipeline(id: string, fetcher: ApiFetcher = fetch): Promise<PipelineView> {
@@ -470,9 +984,13 @@ export async function getPipeline(id: string, fetcher: ApiFetcher = fetch): Prom
   return payload
 }
 
-export async function listPipelines(fetcher: ApiFetcher = fetch): Promise<PipelineView[]> {
+export async function listPipelines(fetcher: ApiFetcher = fetch): Promise<PipelineCatalogItem[]> {
   const payload = await request('/pipelines', fetcher)
-  if (!isRecord(payload) || !Array.isArray(payload.items) || !payload.items.every(isPipelineView)) {
+  if (
+    !isRecord(payload) ||
+    !Array.isArray(payload.items) ||
+    !payload.items.every(isPipelineCatalogItem)
+  ) {
     throw new PipelineClientError('protocol', 'Tapstate returned an invalid Pipeline list.')
   }
   return payload.items

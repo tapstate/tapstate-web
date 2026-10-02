@@ -18,7 +18,7 @@
 | 路由模型    | TanStack Router File Routes                                  | KEEP | 路由源码放 `apps/web/app/routes/`，由 `@tanstack/router-plugin` 生成 `apps/web/app/routeTree.gen.ts`                                                 |
 | 开发 / 打包 | Vite 8                                                       | KEEP | `vite` / `vite build` / `vite preview`                                                                                                               |
 | 仓库形态    | pnpm monorepo                                                | KEEP | root scripts 直接覆盖 repo root；子包命令保留包内入口并向上发现根配置                                                                                |
-| UI 基座     | shadcn/ui 风格组件 + Radix primitives                        | KEEP | 本地维护 primitives，避免引入大型 UI 套件；视觉与组件契约见 `design-system.md` / `components/ui/AGENTS.md`                                           |
+| UI 基座     | shadcn/ui + Base UI                                          | KEEP | 基于 Base UI primitives 本地维护 shadcn 风格组件，避免引入大型 UI 套件；视觉与组件契约见 `design-system.md` / `components/ui/AGENTS.md`              |
 | 动效        | Motion                                                       | KEEP | 轻量进入/退出动效，优先用于 floating surface、状态切换和局部过渡                                                                                     |
 | 图标        | lucide-react                                                 | KEEP | 不手写复杂一次性 SVG                                                                                                                                 |
 | 服务端状态  | TanStack Query                                               | KEEP | API list/detail/create 等 server state                                                                                                               |
