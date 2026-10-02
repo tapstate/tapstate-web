@@ -8,6 +8,7 @@ const {
   apiFetch,
   deletePipelineDraft,
   getPipelineDraft,
+  getStartChecks,
   listPipelines,
   listPipelineDrafts,
   listSources,
@@ -17,6 +18,7 @@ const {
   apiFetch: vi.fn(),
   deletePipelineDraft: vi.fn(),
   getPipelineDraft: vi.fn(),
+  getStartChecks: vi.fn(),
   listPipelines: vi.fn(),
   listPipelineDrafts: vi.fn(),
   listSources: vi.fn(),
@@ -28,6 +30,7 @@ vi.mock('@/service/source-client', () => ({ listSources }))
 vi.mock('@/service/pipelines/pipeline-client', () => ({
   deletePipelineDraft,
   getPipelineDraft,
+  getStartChecks,
   listPipelineDrafts,
   listPipelines,
   runPipeline,
@@ -48,7 +51,42 @@ vi.mock('./wizard-builder', () => ({
   WizardBuilder: () => <div data-testid="wizard-builder">Wizard builder</div>,
 }))
 
+import type { StartCheckReport } from '@/service/pipelines/pipeline-client'
+
+import fixture from '../start-checks/__fixtures__/client-fixture-v1.json'
 import { PipelinesPage } from './pipelines-page'
+
+const answerable: StartCheckReport = fixture.answerable
+const leadFinding = 'target-not-empty/views/lead'
+const driftFinding = 'derived-schema-drift/join_orders'
+
+/** The error a start stopped by its start checks rejects with, as the Pipeline client builds it. */
+function startRefusal(report: StartCheckReport) {
+  return Object.assign(new Error('Starting new_import needs an answer to 2 questions.'), {
+    kind: 'server',
+    status: 409,
+    code: 'lifecycle.start-needs-confirmation',
+    params: { pipeline: 'new_import', count: 2 },
+    startChecks: report,
+    decisionsApplied: [],
+  })
+}
+
+function startChecksDialog() {
+  return document.querySelector<HTMLElement>('[data-testid="start-checks-dialog"]')
+}
+
+function dialogButton(text: string) {
+  return [...(startChecksDialog()?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find(
+    (candidate) => candidate.textContent?.trim() === text,
+  )
+}
+
+function answerRadio(finding: string, action: string) {
+  return startChecksDialog()?.querySelector<HTMLElement>(
+    `[data-check-item="${finding}"] [data-check-choice="${action}"] [role="radio"]`,
+  )
+}
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
@@ -484,5 +522,164 @@ describe('PipelinesPage', () => {
     await vi.waitFor(() =>
       expect(container?.textContent).toContain('No pipelines have been stored in this workspace.'),
     )
+  })
+
+  it('asks start checks in the shared dialog and re-sends the answers with the report hash', async () => {
+    const warning = answerable.findings.find(({ behavior }) => behavior === 'WARN')!
+    runPipeline.mockRejectedValueOnce(startRefusal(answerable)).mockResolvedValueOnce({
+      pipelineId: 'new_import',
+      startChecks: { ...answerable, outcome: 'READY', findings: [warning] },
+      decisionsApplied: [
+        {
+          finding: leadFinding,
+          action: 'clear',
+          kind: 'CHANGE_DEFINITION',
+          changes: [{ element: 'lead', field: 'on_full_load', from: 'append', to: 'clear' }],
+          contentHash: 'e'.repeat(64),
+        },
+        { finding: driftFinding, action: 'accept', kind: 'RUN_OPERATION', changes: [] },
+      ],
+      staleDecisions: [],
+    })
+    await renderPage()
+    await vi.waitFor(() => expect(container?.textContent).toContain('new_import'))
+
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="Pipeline lifecycle actions for new_import"]',
+        )
+        ?.click(),
+    )
+    await act(async () => elementWithText('[role="menuitem"]', 'Start')?.click())
+
+    await vi.waitFor(() => expect(startChecksDialog()).not.toBeNull())
+    expect(startChecksDialog()?.getAttribute('role')).toBe('alertdialog')
+    expect(runPipeline).toHaveBeenCalledTimes(1)
+    expect(runPipeline).toHaveBeenLastCalledWith('new_import', apiFetch)
+    expect(startChecksDialog()?.textContent).toContain(answerable.findings[0]!.message)
+    expect(dialogButton('Start')?.disabled).toBe(true)
+
+    await act(async () => answerRadio(leadFinding, 'clear')?.click())
+    expect(
+      startChecksDialog()?.querySelector(
+        `[data-check-item="${leadFinding}"] [data-check-choice="clear"] [data-check-choice-preview]`,
+      )?.textContent,
+    ).toContain('lead: on_full_load append → clear')
+    expect(dialogButton('Start')?.disabled).toBe(true)
+    await act(async () => answerRadio(driftFinding, 'accept')?.click())
+    expect(dialogButton('Start')?.disabled).toBe(false)
+    await act(async () => dialogButton('Start')?.click())
+
+    await vi.waitFor(() => expect(runPipeline).toHaveBeenCalledTimes(2))
+    expect(runPipeline).toHaveBeenLastCalledWith('new_import', apiFetch, {
+      decisions: [
+        { finding: leadFinding, action: 'clear' },
+        { finding: driftFinding, action: 'accept' },
+      ],
+      ifMatch: `"${answerable.contentHash}"`,
+    })
+    await vi.waitFor(() => expect(startChecksDialog()).toBeNull())
+
+    const notice = document.querySelector<HTMLElement>('[data-testid="pipeline-start-notice"]')
+    expect(notice?.getAttribute('role')).toBe('status')
+    expect(notice?.textContent).toContain('new_import started with warnings')
+    expect(notice?.textContent).toContain(warning.message)
+    expect(notice?.textContent).toContain('lead: on_full_load append → clear')
+    expect(container?.querySelector('td [data-testid="pipeline-start-notice"]')).toBeNull()
+
+    await act(async () => new Promise((resolve) => window.setTimeout(resolve, 50)))
+    expect(document.querySelector('[data-testid="pipeline-start-notice"]')).not.toBeNull()
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>('[aria-label="Dismiss start notice for new_import"]')
+        ?.click(),
+    )
+    expect(document.querySelector('[data-testid="pipeline-start-notice"]')).toBeNull()
+  })
+
+  it('re-reads the start checks after a version conflict and lists the answers no longer asked', async () => {
+    const fresh: StartCheckReport = {
+      ...answerable,
+      contentHash: 'd'.repeat(64),
+      findings: answerable.findings.filter(({ key }) => key !== driftFinding),
+    }
+    runPipeline
+      .mockRejectedValueOnce(startRefusal(answerable))
+      .mockRejectedValueOnce(
+        Object.assign(new Error('Pipeline new_import changed.'), {
+          status: 412,
+          code: 'pipeline.version-conflict',
+          params: { id: 'new_import' },
+          startChecks: null,
+          decisionsApplied: [],
+        }),
+      )
+      .mockResolvedValueOnce({ pipelineId: 'new_import' })
+    getStartChecks.mockResolvedValueOnce(fresh)
+    await renderPage()
+    await vi.waitFor(() => expect(container?.textContent).toContain('new_import'))
+
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="Pipeline lifecycle actions for new_import"]',
+        )
+        ?.click(),
+    )
+    await act(async () => elementWithText('[role="menuitem"]', 'Start')?.click())
+    await vi.waitFor(() => expect(startChecksDialog()).not.toBeNull())
+    await act(async () => answerRadio(leadFinding, 'keep')?.click())
+    await act(async () => answerRadio(driftFinding, 'accept')?.click())
+    await act(async () => dialogButton('Start')?.click())
+
+    await vi.waitFor(() =>
+      expect(getStartChecks).toHaveBeenCalledWith('new_import', 'start', apiFetch),
+    )
+    await vi.waitFor(() =>
+      expect(
+        startChecksDialog()?.querySelector('[data-start-checks-changed]')?.textContent,
+      ).toContain('new_import changed while you were confirming.'),
+    )
+    expect(startChecksDialog()?.querySelector('[data-start-checks-stale]')?.textContent).toContain(
+      `${driftFinding} → accept`,
+    )
+    expect(startChecksDialog()?.querySelector(`[data-check-item="${driftFinding}"]`)).toBeNull()
+    expect(answerRadio(leadFinding, 'keep')?.getAttribute('aria-checked')).toBe('true')
+    expect(document.querySelector('[role="alert"].pipeline-mutation-feedback')).toBeNull()
+
+    await act(async () => dialogButton('Start')?.click())
+    await vi.waitFor(() => expect(runPipeline).toHaveBeenCalledTimes(3))
+    expect(runPipeline).toHaveBeenLastCalledWith('new_import', apiFetch, {
+      decisions: [{ finding: leadFinding, action: 'keep' }],
+      ifMatch: `"${fresh.contentHash}"`,
+    })
+    await vi.waitFor(() => expect(startChecksDialog()).toBeNull())
+  })
+
+  it('cancels a start from the start-check dialog without reporting a failure', async () => {
+    runPipeline.mockRejectedValueOnce(startRefusal(answerable))
+    await renderPage()
+    await vi.waitFor(() => expect(container?.textContent).toContain('new_import'))
+
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="Pipeline lifecycle actions for new_import"]',
+        )
+        ?.click(),
+    )
+    await act(async () => elementWithText('[role="menuitem"]', 'Start')?.click())
+    await vi.waitFor(() => expect(startChecksDialog()).not.toBeNull())
+    await act(async () => dialogButton('Cancel')?.click())
+
+    await vi.waitFor(() => expect(startChecksDialog()).toBeNull())
+    expect(runPipeline).toHaveBeenCalledTimes(1)
+    expect(document.querySelector('.pipeline-mutation-feedback')).toBeNull()
+    expect(
+      document.querySelector<HTMLButtonElement>(
+        '[aria-label="Pipeline lifecycle actions for new_import"]',
+      )?.disabled,
+    ).toBe(false)
   })
 })
