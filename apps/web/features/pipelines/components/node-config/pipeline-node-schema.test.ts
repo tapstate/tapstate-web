@@ -22,6 +22,16 @@ describe('pipelineDataNodeSchema', () => {
     expect(pipelineDataNodeSchema.target.properties?.writeMode?.default).toBe('upsert')
   })
 
+  it('offers the target full-load policy without a default the draft would then carry', () => {
+    expect(pipelineDataNodeSchema.target.properties?.onFullLoad?.enum).toEqual([
+      { label: 'Keep existing rows', value: 'append' },
+      { label: 'Clear first', value: 'clear' },
+      { label: 'Refuse if not empty', value: 'fail' },
+    ])
+    expect(pipelineDataNodeSchema.target.properties?.onFullLoad?.default).toBeUndefined()
+    expect(pipelineDataNodeSchema.source.properties?.onFullLoad).toBeUndefined()
+  })
+
   it('keeps source editing available while table remains a catalog selector', () => {
     const schema = createPipelineDataNodeSchema('source')
 

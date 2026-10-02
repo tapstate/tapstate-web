@@ -765,6 +765,14 @@
         "noTableOptions": "没有匹配的已有表，你可以输入新表名。",
         "noUpstreamTables": "尚未选择上游表。",
         "writeMode": "写入模式",
+        "onFullLoad": "全量加载时",
+        "onFullLoadPlaceholder": "保留已有数据（默认）",
+        "onFullLoadOptions": {
+          "append": "保留已有数据",
+          "clear": "先清空",
+          "fail": "非空时拒绝"
+        },
+        "writeModeDefault": "更新或插入（默认）",
         "sourceScope": "Source 表范围",
         "openSourceScope": "全部表",
         "configuredSourceScope": "范围内 {{count}} 项",

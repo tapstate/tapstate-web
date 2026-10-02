@@ -765,6 +765,14 @@
         "noTableOptions": "沒有符合的現有資料表，你可以輸入新的名稱。",
         "noUpstreamTables": "尚未選擇上游資料表。",
         "writeMode": "寫入模式",
+        "onFullLoad": "全量載入時",
+        "onFullLoadPlaceholder": "保留現有資料（預設）",
+        "onFullLoadOptions": {
+          "append": "保留現有資料",
+          "clear": "先清空",
+          "fail": "非空時拒絕"
+        },
+        "writeModeDefault": "更新或插入（預設）",
         "sourceScope": "Source 資料表範圍",
         "openSourceScope": "全部資料表",
         "configuredSourceScope": "範圍內 {{count}} 項",

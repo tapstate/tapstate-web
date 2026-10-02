@@ -765,6 +765,14 @@
         "noTableOptions": "No existing tables match. You can enter a new name.",
         "noUpstreamTables": "No upstream tables are selected.",
         "writeMode": "Write mode",
+        "onFullLoad": "On full load",
+        "onFullLoadPlaceholder": "Keep existing rows (default)",
+        "onFullLoadOptions": {
+          "append": "Keep existing rows",
+          "clear": "Clear first",
+          "fail": "Refuse if not empty"
+        },
+        "writeModeDefault": "Upsert (default)",
         "sourceScope": "Source scope",
         "openSourceScope": "All tables",
         "configuredSourceScope": "{{count}} in scope",
