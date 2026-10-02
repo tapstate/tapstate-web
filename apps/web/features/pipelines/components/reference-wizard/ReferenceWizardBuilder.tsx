@@ -42,6 +42,8 @@ export interface WizardBuilderProps {
   deploymentProfile: DeploymentProfile
   footer: React.ReactNode
   actions?: React.ReactNode
+  /** Notices kept above the editor, outside its read-only fieldset so they can be dismissed. */
+  notices?: React.ReactNode
   compiledSpec: string
   sourceError?: string
   readOnly?: boolean
@@ -125,6 +127,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   deploymentProfile,
   footer,
   actions,
+  notices,
   compiledSpec,
   sourceError,
   readOnly = false,
@@ -1382,6 +1385,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       <div className="wizard-reference-workspace flex min-h-0 flex-1 overflow-hidden">
         {/* Left / Center Canvas */}
         <div className="wizard-reference-editor-column">
+          {notices ? <div className="wizard-reference-notices">{notices}</div> : null}
           <fieldset
             disabled={readOnly}
             className="contents"

@@ -66,6 +66,11 @@ function PipelineStartNoticePanel({
           <X aria-hidden="true" />
         </Button>
       </div>
+      {notice.failure ? (
+        <p className="text-destructive leading-relaxed break-words" data-start-notice-failure>
+          {notice.failure}
+        </p>
+      ) : null}
       <CheckList
         groups={[
           {

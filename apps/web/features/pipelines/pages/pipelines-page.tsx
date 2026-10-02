@@ -23,6 +23,9 @@ import {
   PIPELINE_AUTO_REFRESH_INTERVAL_MS,
 } from '../components/pipeline-refresh-controls'
 import { PipelineStatusBadge } from '../components/pipeline-status-badge'
+import { PipelineStartNotices } from '../start-checks/pipeline-start-notice'
+import { StartChecksDialog } from '../start-checks/start-checks-dialog'
+import { useStartPipeline, type PipelineStartOutcome } from '../start-checks/use-start-pipeline'
 
 export function PipelinesPage() {
   const { i18n, t } = useTranslation()
@@ -36,6 +39,7 @@ export function PipelinesPage() {
     action: PipelineLifecycleAction
     message?: string
   } | null>(null)
+  const starter = useStartPipeline({ apiFetch })
   const pipelinesQuery = useQuery({
     queryKey: ['pipelines'],
     queryFn: () => listPipelines(apiFetch),
@@ -122,6 +126,11 @@ export function PipelinesPage() {
         <main className="flex min-w-0 flex-1 flex-col bg-white">
           {selectedRow && <PipelineHeader pipeline={selectedRow} />}
           <div className="min-h-0 flex-1 overflow-auto bg-white p-4 md:p-6">
+            <PipelineStartNotices
+              notices={starter.notices}
+              onDismiss={starter.dismissNotice}
+              className="mb-4"
+            />
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <label className="relative min-w-52 flex-1 sm:max-w-sm">
                 <Search
@@ -191,6 +200,7 @@ export function PipelinesPage() {
               <PipelineTable
                 pipelines={filteredPipelines}
                 apiFetch={apiFetch}
+                startPipeline={starter.startPipeline}
                 onMutationError={(pipelineId, action, error) => {
                   const message = serverErrorMessage(error)
                   setLifecycleFeedback({ pipelineId, action, message })
@@ -209,6 +219,7 @@ export function PipelinesPage() {
           onDismiss={() => setLifecycleFeedback(null)}
         />
       )}
+      <StartChecksDialog {...starter.dialog} />
       {isCreationDialogOpen && (
         <PipelineCreationDialog open onClose={() => setIsCreationDialogOpen(false)} />
       )}
@@ -258,11 +269,13 @@ function PipelineListState({ message, action }: { message: string; action?: Reac
 function PipelineTable({
   pipelines,
   apiFetch,
+  startPipeline,
   onMutationError,
   onMutationStart,
 }: {
   pipelines: PipelineCatalogItem[]
   apiFetch: ApiFetcher
+  startPipeline: (pipelineId: string) => Promise<PipelineStartOutcome>
   onMutationError: (pipelineId: string, action: PipelineLifecycleAction, error?: unknown) => void
   onMutationStart: () => void
 }) {
@@ -339,6 +352,7 @@ function PipelineTable({
                   status={pipeline.status.state}
                   contentHash={pipeline.contentHash ?? null}
                   apiFetch={apiFetch}
+                  startPipeline={startPipeline}
                   onMutationStart={onMutationStart}
                   onMutationError={(action, error) => onMutationError(pipeline.id, action, error)}
                 />

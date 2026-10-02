@@ -117,9 +117,7 @@ describe('Start-check client fixture', () => {
     expect(text()).toContain(passed.message)
 
     const warning = dialog()?.querySelector('[data-check-item="source-retention/src_pg"]')
-    expect(warning?.querySelector('[data-check-tone-label="warning"]')?.textContent).toBe(
-      'Warning',
-    )
+    expect(warning?.querySelector('[data-check-tone-label="warning"]')?.textContent).toBe('Warning')
     expect(warning?.querySelector('svg')).not.toBeNull()
     expect(dialog()?.querySelector('button[aria-label*="Close"]')).toBeNull()
   })
@@ -136,7 +134,9 @@ describe('Start-check client fixture', () => {
     )
     expect(
       dialog()
-        ?.querySelector('[data-check-item="target-not-empty/views/lead"] [data-check-choice="keep"]')
+        ?.querySelector(
+          '[data-check-item="target-not-empty/views/lead"] [data-check-choice="keep"]',
+        )
         ?.getAttribute('data-destructive'),
     ).toBeNull()
   })

@@ -31,6 +31,8 @@ export interface PipelineStartNotice {
   pipelineId: string
   /** False when the start was refused after it had already changed the definition. */
   started: boolean
+  /** Why a start that changed the definition was then refused, as the server said it. */
+  failure?: string
   warnings: StartCheckFinding[]
   changes: StartCheckChange[]
   staleDecisions: StartDecision[]
@@ -193,14 +195,19 @@ export function useStartPipeline({ apiFetch, onDefinitionChanged }: StartPipelin
     }
   }, [])
 
-  /** Records what a refused start had already changed in the definition before it failed. */
+  /**
+   * Records what a refused start had already changed in the definition, with the reason it was
+   * refused, so both stay in front of the person after the surface reloads its draft.
+   */
   const noteRefusedChanges = useCallback(
     async (pipelineId: string, error: unknown) => {
       const applied = decisionsAppliedBy(error)
       if (!definitionRewritten(applied)) return
+      const failure = isRecord(error) && typeof error.message === 'string' ? error.message : ''
       pushNotice({
         pipelineId,
         started: false,
+        ...(failure ? { failure } : {}),
         warnings: [],
         changes: appliedChanges(applied),
         staleDecisions: [],

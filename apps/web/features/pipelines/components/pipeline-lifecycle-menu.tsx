@@ -26,10 +26,11 @@ import { cn } from '@/lib/utils'
 import {
   deletePipelineDraft,
   getPipelineDraft,
-  runPipeline,
   stopPipeline,
   type PipelineCatalogState,
 } from '@/service/pipelines/pipeline-client'
+
+import type { PipelineStartOutcome } from '../start-checks/use-start-pipeline'
 
 export type PipelineLifecycleAction = 'start' | 'stop'
 
@@ -50,6 +51,7 @@ export function PipelineLifecycleMenu({
   apiFetch,
   contentHash,
   presentation = 'list',
+  startPipeline,
   onMutationError,
   onMutationStart,
 }: {
@@ -58,6 +60,8 @@ export function PipelineLifecycleMenu({
   apiFetch: ApiFetcher
   contentHash: string | null
   presentation?: 'list' | 'stop-button'
+  /** The host's shared start flow; without it the menu offers no start. */
+  startPipeline?: (pipelineId: string) => Promise<PipelineStartOutcome>
   onMutationError?: (action: PipelineLifecycleAction, error?: unknown) => void
   onMutationStart?: () => void
 }) {
@@ -70,7 +74,7 @@ export function PipelineLifecycleMenu({
   const [deleteError, setDeleteError] = useState(false)
   const isDraft = contentHash === null
   const action = !isDraft && status ? lifecycleActionByState[status] : undefined
-  const resolvedAction = action
+  const resolvedAction = action === 'start' && !startPipeline ? undefined : action
 
   const pending = pendingAction !== null || deletePending
 
@@ -85,7 +89,8 @@ export function PipelineLifecycleMenu({
 
     try {
       if (nextAction === 'start') {
-        await runPipeline(pipelineId, apiFetch)
+        // Start checks may stop the start to ask; the shared flow resolves once it is answered.
+        await startPipeline?.(pipelineId)
       } else {
         await stopPipeline(pipelineId, purgeState, apiFetch)
       }
