@@ -1207,10 +1207,13 @@ export async function runPipeline(
   fetcher: ApiFetcher = fetch,
   options: PipelineStartOptions = {},
 ): Promise<PipelineStartResult> {
+  const path = `/pipelines/${encodeURIComponent(id)}:start`
   const decisions = options.decisions ?? []
-  const answered = decisions.length > 0 || options.ifMatch !== undefined
   const ifMatch = options.ifMatch ?? null
-  if (answered && !quotedHash(ifMatch)) {
+  if (decisions.length === 0 && ifMatch === null) {
+    return pipelineStartResult(await request(path, fetcher, { method: 'POST' }))
+  }
+  if (!quotedHash(ifMatch)) {
     throw new PipelineClientError(
       'protocol',
       'Start-check answers require the quoted content hash they were given against.',
@@ -1219,19 +1222,13 @@ export async function runPipeline(
       { id },
     )
   }
-  const payload = await request(
-    `/pipelines/${encodeURIComponent(id)}:start`,
-    fetcher,
-    answered
-      ? {
-          method: 'POST',
-          headers: { 'content-type': 'application/json', 'If-Match': ifMatch ?? '' },
-          body: JSON.stringify({
-            decisions: decisions.map(({ finding, action }) => ({ finding, action })),
-          }),
-        }
-      : { method: 'POST' },
-  )
+  const payload = await request(path, fetcher, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'If-Match': ifMatch },
+    body: JSON.stringify({
+      decisions: decisions.map(({ finding, action }) => ({ finding, action })),
+    }),
+  })
   return pipelineStartResult(payload)
 }
 
