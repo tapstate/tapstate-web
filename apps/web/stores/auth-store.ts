@@ -1,6 +1,11 @@
 import { create } from 'zustand'
 
-import { authenticatedFetch, cloudSessionFetch, logoutCloudSession } from '@/service/auth-client'
+import {
+  authenticatedFetch,
+  cloudSessionFetch,
+  logoutCloudAccount,
+  logoutCloudSession,
+} from '@/service/auth-client'
 import { cloudConsoleUrl, replaceWithCloudConsole } from '@/utils/cloud-console'
 import { deploymentProfile, type DeploymentProfile } from '@/utils/deployment-profile'
 
@@ -53,7 +58,12 @@ export function createAuthStore(options: AuthStoreOptions = {}) {
     },
     logout: async () => {
       if (profile === 'cloud') {
-        await logoutCloudSession(fetcher, options.origin)
+        try {
+          await logoutCloudSession(fetcher, options.origin)
+        } catch {
+          // The Cloud control plane also revokes the Cluster session by its recorded JTIs.
+        }
+        await logoutCloudAccount(fetcher, consoleUrl)
         return
       }
       get().clear()
