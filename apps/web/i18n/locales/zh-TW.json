@@ -500,6 +500,47 @@
       "confirmStopClearState": "停止並清除狀態",
       "dismissFeedback": "關閉生命週期錯誤"
     },
+    "startChecks": {
+      "title": "啟動 {{id}} 前的檢查",
+      "descriptionBlocked": "有問題阻止了這次啟動。處理後再重新啟動 Pipeline。",
+      "descriptionConfirm": "為每個問題選擇處理方式，然後啟動。",
+      "descriptionReady": "查看檢查結果，然後啟動。",
+      "changedWhileConfirming": "你確認期間 {{id}} 已被修改。檢查已重新執行，請在啟動前重新查看。",
+      "staleTitle": "以下答覆已不再適用，未被採用：",
+      "choiceLabel": "{{subject}} 的答覆",
+      "showPassed": "顯示通過的檢查（{{count}}）",
+      "hidePassed": "隱藏通過的檢查",
+      "cancel": "取消",
+      "close": "關閉",
+      "start": "啟動",
+      "starting": "正在啟動…",
+      "groups": {
+        "block": "阻止啟動",
+        "confirm": "需要你的答覆",
+        "warn": "警告",
+        "pass": "已通過"
+      },
+      "behavior": {
+        "BLOCK": "已阻止",
+        "CONFIRM": "待答覆",
+        "WARN": "警告",
+        "PASS": "通過"
+      },
+      "plan": {
+        "title": "各目標的載入方式",
+        "target": "目標",
+        "load": "載入",
+        "onFullLoad": "全量載入時"
+      },
+      "notice": {
+        "titleWarnings": "{{id}} 已啟動，但有警告",
+        "titleStarted": "{{id}} 已啟動",
+        "titleNotStarted": "{{id}} 未啟動",
+        "definitionChanged": "定義已修改",
+        "staleTitle": "因問題已不再提出而未採用的答覆",
+        "dismiss": "關閉 {{id}} 的啟動提示"
+      }
+    },
     "table": {
       "modified": "最後修改",
       "resourceName": "資源名稱",

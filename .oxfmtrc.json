@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": [],
+  "ignorePatterns": ["apps/web/features/pipelines/start-checks/__fixtures__/*.json"],
   "semi": false,
   "singleQuote": true,
   "sortImports": {
