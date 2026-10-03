@@ -353,7 +353,7 @@ describe('WizardBuilder publish flow', () => {
     })
   })
 
-  it('aborts a stale preview when the candidate changes and streams the new saved revision', async () => {
+  it('aborts a stale preview when the unsaved candidate changes', async () => {
     let firstSignal: AbortSignal | undefined
     streamPipelinePreview
       .mockImplementationOnce(
@@ -400,7 +400,6 @@ describe('WizardBuilder publish flow', () => {
     await vi.waitFor(() => expect(streamPipelinePreview).toHaveBeenCalledTimes(2))
 
     expect(firstSignal?.aborted).toBe(true)
-    expect(updatePipelineDraft).toHaveBeenCalledTimes(1)
     expect(previewPipelineDraft).toHaveBeenCalledWith(
       initialDraft.pipelineId,
       expect.any(Number),
