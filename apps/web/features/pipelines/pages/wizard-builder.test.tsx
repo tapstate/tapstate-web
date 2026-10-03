@@ -403,9 +403,10 @@ describe('WizardBuilder publish flow', () => {
     expect(updatePipelineDraft).toHaveBeenCalledTimes(1)
     expect(previewPipelineDraft).toHaveBeenCalledWith(
       initialDraft.pipelineId,
-      2,
+      expect.any(Number),
       expect.any(Function),
       expect.any(AbortSignal),
+      expect.objectContaining({ mode: 'wizard', wizard: expect.any(Object) }),
     )
     expect(streamPipelinePreview.mock.calls[1]?.[0]).toMatchObject({
       pipelineId: initialDraft.pipelineId,

@@ -948,11 +948,12 @@ export async function previewPipelineDraft(
   revision: number,
   fetcher: ApiFetcher = fetch,
   signal?: AbortSignal,
+  candidate?: PipelineDraftMutation,
 ): Promise<PipelineDraftPreview> {
   const payload = await request(`/pipelines/${encodeURIComponent(id)}/draft:preview`, fetcher, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ revision }),
+    body: JSON.stringify({ revision, ...(candidate ? { candidate } : {}) }),
     signal,
   })
   if (

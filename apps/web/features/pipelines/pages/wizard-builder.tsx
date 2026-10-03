@@ -378,13 +378,21 @@ export function WizardBuilder({
       setLivePreviewError('')
       void (async () => {
         try {
-          const saved = await persist()
-          if (controller.signal.aborted || generation !== previewGeneration.current) return
+          const candidate: PipelineDraftMutation = {
+            pipelineId,
+            mode: 'wizard',
+            name: currentDraft.current.name,
+            description: currentDraft.current.description,
+            graph: null,
+            wizard: currentWizard.current,
+            baseArtifactHash: currentDraft.current.baseArtifactHash,
+          }
           const compiled = await previewPipelineDraft(
             pipelineId,
-            saved.revision,
+            currentDraft.current.revision,
             apiFetch,
             controller.signal,
+            candidate,
           )
           if (controller.signal.aborted || generation !== previewGeneration.current) return
           if (!compiled.dsl)
@@ -421,7 +429,7 @@ export function WizardBuilder({
       controller.abort()
       if (previewAbort.current === controller) previewAbort.current = null
     }
-  }, [apiFetch, persist, pipelineId, readOnly, wizard])
+  }, [apiFetch, pipelineId, readOnly, wizard])
   if (sourcesQuery.isPending || connectorsQuery.isPending || schemas.some((s) => s.isPending))
     return (
       <div className="text-muted-foreground p-8 text-sm" role="status">
