@@ -10,6 +10,8 @@ import { SUPPORTED_LOCALES } from '@/i18n'
 import { cn } from '@/lib/utils'
 import { AuthClientError, login } from '@/service/auth-client'
 import { useAuthStore } from '@/stores/auth-store'
+import { replaceWithCloudConsole } from '@/utils/cloud-console'
+import { deploymentProfile } from '@/utils/deployment-profile'
 
 export const Route = createFileRoute('/login')({
   component: LoginRouteComponent,
@@ -27,6 +29,19 @@ function localeBadge(nextLocale: AppLocale) {
 }
 
 function LoginRouteComponent() {
+  if (deploymentProfile === 'cloud') return <CloudLoginRouteComponent />
+  return <OnPremLoginRouteComponent />
+}
+
+function CloudLoginRouteComponent() {
+  useEffect(() => {
+    replaceWithCloudConsole()
+  }, [])
+
+  return null
+}
+
+function OnPremLoginRouteComponent() {
   const navigate = useNavigate()
   const { t, i18n } = useTranslation()
   const setToken = useAuthStore((state) => state.setToken)

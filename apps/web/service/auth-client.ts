@@ -111,3 +111,33 @@ export async function authenticatedFetch(
 
   return fetcher(input, { ...init, headers })
 }
+
+function requestUrl(input: RequestInfo | URL, origin: string): URL {
+  if (input instanceof Request) return new URL(input.url, origin)
+  return new URL(input.toString(), origin)
+}
+
+export async function cloudSessionFetch(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  fetcher: typeof fetch = fetch,
+  origin: string | undefined = typeof window === 'undefined' ? undefined : window.location.origin,
+): Promise<Response> {
+  if (!origin || requestUrl(input, origin).origin !== origin) {
+    throw new AuthClientError(
+      'protocol',
+      'cloud session requests must use the current Cluster origin',
+    )
+  }
+
+  const headers = new Headers(init.headers)
+  headers.delete('Authorization')
+  return fetcher(input, { ...init, credentials: 'same-origin', headers })
+}
+
+export async function logoutCloudSession(
+  fetcher: typeof fetch = fetch,
+  origin?: string,
+): Promise<Response> {
+  return cloudSessionFetch('/auth/logout', { method: 'POST' }, fetcher, origin)
+}

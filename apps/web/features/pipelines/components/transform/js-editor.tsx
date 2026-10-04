@@ -1,9 +1,11 @@
-import { Input, Select } from 'antd'
 import { Code2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { Textarea } from '@/components/ui/textarea'
+
 import { TransformEditorShell } from './transform-editor-shell'
+import { TransformSelect } from './transform-select'
 import { mergeBody, type TransformEditorProps } from './types'
 
 export function JsEditor({ config, onChange }: TransformEditorProps) {
@@ -34,10 +36,9 @@ export function JsEditor({ config, onChange }: TransformEditorProps) {
       from={config.from}
       icon={Code2}
       title={t('pipelines.workspace.transform.js.title')}
-      description={t('pipelines.workspace.transform.js.description')}
     >
-      <Select
-        aria-label={t('pipelines.workspace.transform.language')}
+      <TransformSelect
+        label={t('pipelines.workspace.transform.language')}
         value={language}
         options={[
           { value: 'javascript', label: 'JavaScript' },
@@ -45,10 +46,10 @@ export function JsEditor({ config, onChange }: TransformEditorProps) {
         ]}
         onChange={updateLanguage}
       />
-      <Input.TextArea
+      <Textarea
         aria-label={t('pipelines.workspace.transform.script')}
         value={script}
-        autoSize={{ minRows: 9, maxRows: 18 }}
+        rows={10}
         placeholder={t('pipelines.workspace.transform.script')}
         className="pipeline-transform__code-editor"
         onChange={(event) => {

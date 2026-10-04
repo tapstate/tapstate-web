@@ -6,8 +6,10 @@ import type {
   PipelineMutation,
   PipelineView,
 } from '@/service/pipelines/pipeline-client'
+import type { ConnectorSummary } from '@/service/source-client'
 
 import type { PipelineNodeChoice } from '../components/node-library/pipeline-node-library-types'
+import type { DeploymentProfile } from './deployment-profile'
 import type {
   PipelineNodeConfiguration,
   PipelineNodeConfigurationChange,
@@ -636,6 +638,8 @@ function detailForConfiguration(configuration: PipelineNodeConfiguration, fallba
 export function validatePipelineGraph(
   draft: PipelineGraphDraft,
   availableSources?: readonly (string | SourceIdentity)[],
+  connectorCatalog: readonly ConnectorSummary[] = [],
+  deploymentProfile: DeploymentProfile = 'on-prem',
 ): PipelineGraphDiagnostic[] {
   const diagnostics: PipelineGraphDiagnostic[] = []
   const availableSourceIds = availableSources?.map((source) =>
@@ -754,13 +758,17 @@ export function validatePipelineGraph(
         messageKey: 'pipelines.workspace.diagnostics.invalidSourceReference',
       })
     }
-    // A target writes through the one supported connector. Judged only when the catalog says
-    // which connector this Source uses: an unknown one is deferred, never passed.
+    // A target must resolve to a connector declared sink-capable in the catalog. The server repeats
+    // this check before publication; unknown metadata is never treated as proof of sink support.
     if (
       config.kind === 'target' &&
       config.sourceId &&
       connectorBySourceId.has(config.sourceId) &&
-      !isTargetConnector(connectorBySourceId.get(config.sourceId))
+      !isTargetConnector(
+        connectorBySourceId.get(config.sourceId),
+        deploymentProfile,
+        connectorCatalog,
+      )
     ) {
       diagnostics.push({
         code: 'unsupported-target-connector',

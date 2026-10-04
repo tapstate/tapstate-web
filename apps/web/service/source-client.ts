@@ -69,6 +69,7 @@ export interface ConnectorSummary {
   modes: string[]
   discovery: string
   sink: boolean
+  writeModes?: string[]
   pushOut: boolean
   origin: string
 }
@@ -216,6 +217,9 @@ function isConnectorSummary(value: unknown): value is ConnectorSummary {
     value.modes.every((mode) => typeof mode === 'string') &&
     typeof value.discovery === 'string' &&
     typeof value.sink === 'boolean' &&
+    (value.writeModes === undefined ||
+      (Array.isArray(value.writeModes) &&
+        value.writeModes.every((mode) => typeof mode === 'string'))) &&
     typeof value.pushOut === 'boolean' &&
     typeof value.origin === 'string'
   )

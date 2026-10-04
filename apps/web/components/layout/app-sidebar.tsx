@@ -4,15 +4,16 @@ import { Link, useRouterState } from '@tanstack/react-router'
 import {
   Database,
   GitMerge,
-  Layers,
   LayoutDashboard,
   MessageSquareText,
   Settings,
+  Table2,
   Terminal,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
+import { getDeploymentProfile } from '@/utils/deployment-profile'
 
 import { AppHeader } from './app-header'
 
@@ -26,7 +27,9 @@ const navigation: NavigationItem[] = [
   { labelKey: 'nav.overview', to: '/overview', icon: LayoutDashboard },
   { labelKey: 'nav.sources', to: '/sources', icon: Database },
   { labelKey: 'nav.pipelines', to: '/pipelines', icon: GitMerge },
-  { labelKey: 'nav.views', to: '/views', icon: Layers },
+  ...(getDeploymentProfile() === 'cloud'
+    ? [{ labelKey: 'nav.views', to: '/views', icon: Table2 }]
+    : []),
   { labelKey: 'nav.explorations', to: '/explorations', icon: MessageSquareText },
 ]
 
@@ -72,8 +75,12 @@ function SidebarLink({ item, active }: { item: NavigationItem; active: boolean }
   const { t } = useTranslation()
   const Icon = item.icon
   return (
-    <Link to={item.to} className={cn('app-sidebar__link', active && 'app-sidebar__link--active')}>
-      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+    <Link
+      to={item.to}
+      aria-current={active ? 'page' : undefined}
+      className={cn('app-sidebar__link', active && 'app-sidebar__link--active')}
+    >
+      <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
       <span>{t(item.labelKey)}</span>
     </Link>
   )

@@ -36,9 +36,14 @@ export function ViewsPage() {
     <section className="views-page">
       <header className="views-page__header">
         <h1 className="text-foreground text-[15px] font-semibold">{t('views.title')}</h1>
-        <Button asChild nativeButton={false} size="sm" variant="outline">
-          <Link to="/pipelines">{t('views.newView')}</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild nativeButton={false} size="sm" variant="outline">
+            <Link to="/views/collections">{t('views.browseCollections')}</Link>
+          </Button>
+          <Button asChild nativeButton={false} size="sm" variant="outline">
+            <Link to="/pipelines">{t('views.newView')}</Link>
+          </Button>
+        </div>
       </header>
       <div className="views-page__body">
         <p className="text-muted-foreground text-[13px]">{t('views.intro')}</p>

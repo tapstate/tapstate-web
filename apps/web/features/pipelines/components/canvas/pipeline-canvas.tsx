@@ -84,6 +84,7 @@ export function PipelineCanvasContent({
   onAddNodes,
   loadTables,
   onSelectionChange,
+  readOnly = false,
 }: {
   dag: PipelineDag
   layout: PipelineLayout | null
@@ -102,6 +103,7 @@ export function PipelineCanvasContent({
   ) => void
   loadTables?: PipelineTableLoader
   onSelectionChange: (selection: PipelineCanvasSelection | null) => void
+  readOnly?: boolean
 }) {
   const [nodeInsertion, setNodeInsertion] = useState<PipelineNodeInsertionContext | null>(null)
   const openNodeSelector = useCallback((context: PipelineNodeInsertionContext) => {
@@ -110,6 +112,7 @@ export function PipelineCanvasContent({
   const [nodes, setNodes] = useNodesState<CanvasNode>([])
   const [edges, setEdges] = useEdgesState<CanvasEdge>([])
   const [viewport, setViewport] = useState<PipelineLayout['viewport']>(null)
+  const [fitView, setFitView] = useState(() => !layout?.viewport)
   const [interactionMode, setInteractionMode] = useState<'pointer' | 'hand'>('hand')
   const nodesRef = useRef(nodes)
   const edgesRef = useRef(edges)
@@ -239,6 +242,7 @@ export function PipelineCanvasContent({
   }, [edges, setNodes])
 
   function handleNodesChange(changes: NodeChange<CanvasNode>[]) {
+    if (readOnly && changes.some((change) => change.type !== 'select')) return
     setNodes((currentNodes) => {
       const isPaneDeselection =
         preserveSelectionOnPaneClickRef.current &&
@@ -267,6 +271,7 @@ export function PipelineCanvasContent({
   }
 
   function handleEdgesChange(changes: EdgeChange<CanvasEdge>[]) {
+    if (readOnly) return
     setEdges((currentEdges) => {
       const nextEdges = applyEdgeChanges(changes, currentEdges) as CanvasEdge[]
       edgesRef.current = nextEdges
@@ -280,6 +285,7 @@ export function PipelineCanvasContent({
   }
 
   function handleConnect(connection: Connection) {
+    if (readOnly) return
     if (!isValidConnection(connection) || !connection.source || !connection.target) return
     setEdges((currentEdges) => {
       const nextEdges = addEdge(
@@ -302,6 +308,7 @@ export function PipelineCanvasContent({
         interactionMode={interactionMode}
         onInteractionModeChange={setInteractionMode}
         onRequestNodeSelector={openNodeSelector}
+        disabled={readOnly}
       />
       <PipelineNodeSelector
         open={nodeInsertion !== null}
@@ -324,6 +331,7 @@ export function PipelineCanvasContent({
         onOpenChange={(open) => {
           if (!open) setNodeInsertion(null)
         }}
+        disabled={readOnly}
       />
       <PipelineCanvasOperator />
       <ReactFlow
@@ -334,12 +342,15 @@ export function PipelineCanvasContent({
         connectionLineComponent={PipelineConnectionLine}
         connectionLineType={ConnectionLineType.Bezier}
         defaultViewport={graph.viewport ?? undefined}
-        fitView={!graph.viewport}
+        fitView={fitView}
         fitViewOptions={{ padding: 0.36, maxZoom: 0.92 }}
         minZoom={0.2}
         maxZoom={1.6}
+        onInit={() => setFitView(false)}
         panOnDrag={interactionMode === 'hand'}
         selectionOnDrag={interactionMode === 'pointer'}
+        nodesDraggable={!readOnly}
+        nodesConnectable={!readOnly}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={handleConnect}
@@ -362,10 +373,12 @@ export function PipelineCanvasContent({
           })
         }}
         onMoveEnd={(_, nextViewport) => {
+          if (readOnly) return
           setViewport(nextViewport)
           onLayoutChange(toLayout(nodesRef.current, nextViewport))
         }}
         onNodeDragStop={(_, node) => {
+          if (readOnly) return
           const nextNodes = nodesRef.current.map((current) =>
             current.id === node.id ? { ...current, position: node.position } : current,
           )
@@ -374,6 +387,7 @@ export function PipelineCanvasContent({
           onLayoutChange(toLayout(nextNodes, viewport ?? graph.viewport))
         }}
         onPaneContextMenu={(event) => {
+          if (readOnly) return
           event.preventDefault()
           openNodeSelector({
             position: screenToFlowPosition({ x: event.clientX, y: event.clientY }),

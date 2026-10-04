@@ -13,6 +13,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as PipelineEditorRouteImport } from './routes/_pipeline-editor'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as SignedOutRouteImport } from './routes/signed-out'
+import { Route as AuthenticatedDestinationsRouteImport } from './routes/_authenticated.destinations'
 import { Route as AuthenticatedExplorationsRouteImport } from './routes/_authenticated.explorations'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated.overview'
 import { Route as AuthenticatedPipelinesRouteImport } from './routes/_authenticated.pipelines'
@@ -23,6 +25,7 @@ import { Route as AuthenticatedSourcesIndexRouteImport } from './routes/_authent
 import { Route as AuthenticatedSourcesSourceIdRouteImport } from './routes/_authenticated.sources.$sourceId'
 import { Route as AuthenticatedViewsIndexRouteImport } from './routes/_authenticated.views.index'
 import { Route as AuthenticatedViewsViewIdRouteImport } from './routes/_authenticated.views.$viewId'
+import { Route as AuthenticatedViewsCollectionsRouteImport } from './routes/_authenticated.views.collections'
 import { Route as AuthenticatedSourcesSourceIdIndexRouteImport } from './routes/_authenticated.sources.$sourceId.index'
 import { Route as AuthenticatedSourcesSourceIdTableNameRouteImport } from './routes/_authenticated.sources.$sourceId.$tableName'
 import { Route as PipelineEditorPipelinesPipelineIdEditRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit'
@@ -49,6 +52,17 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignedOutRoute = SignedOutRouteImport.update({
+  id: '/signed-out',
+  path: '/signed-out',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedDestinationsRoute =
+  AuthenticatedDestinationsRouteImport.update({
+    id: '/destinations',
+    path: '/destinations',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedExplorationsRoute =
   AuthenticatedExplorationsRouteImport.update({
     id: '/explorations',
@@ -105,6 +119,12 @@ const AuthenticatedViewsViewIdRoute =
     path: '/$viewId',
     getParentRoute: () => AuthenticatedViewsRoute,
   } as any)
+const AuthenticatedViewsCollectionsRoute =
+  AuthenticatedViewsCollectionsRouteImport.update({
+    id: '/collections',
+    path: '/collections',
+    getParentRoute: () => AuthenticatedViewsRoute,
+  } as any)
 const AuthenticatedSourcesSourceIdIndexRoute =
   AuthenticatedSourcesSourceIdIndexRouteImport.update({
     id: '/',
@@ -159,6 +179,8 @@ const PipelineEditorPipelinesPipelineIdEditMonitoringRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/signed-out': typeof SignedOutRoute
+  '/destinations': typeof AuthenticatedDestinationsRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
@@ -167,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/views': typeof AuthenticatedViewsRouteWithChildren
   '/sources/$sourceId': typeof AuthenticatedSourcesSourceIdRouteWithChildren
   '/views/$viewId': typeof AuthenticatedViewsViewIdRoute
+  '/views/collections': typeof AuthenticatedViewsCollectionsRoute
   '/sources/': typeof AuthenticatedSourcesIndexRoute
   '/views/': typeof AuthenticatedViewsIndexRoute
   '/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
@@ -180,11 +203,14 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/signed-out': typeof SignedOutRoute
+  '/destinations': typeof AuthenticatedDestinationsRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/views/$viewId': typeof AuthenticatedViewsViewIdRoute
+  '/views/collections': typeof AuthenticatedViewsCollectionsRoute
   '/sources': typeof AuthenticatedSourcesIndexRoute
   '/views': typeof AuthenticatedViewsIndexRoute
   '/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
@@ -200,6 +226,8 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_pipeline-editor': typeof PipelineEditorRouteWithChildren
   '/login': typeof LoginRoute
+  '/signed-out': typeof SignedOutRoute
+  '/_authenticated/destinations': typeof AuthenticatedDestinationsRoute
   '/_authenticated/explorations': typeof AuthenticatedExplorationsRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
   '/_authenticated/pipelines': typeof AuthenticatedPipelinesRoute
@@ -208,6 +236,7 @@ export interface FileRoutesById {
   '/_authenticated/views': typeof AuthenticatedViewsRouteWithChildren
   '/_authenticated/sources/$sourceId': typeof AuthenticatedSourcesSourceIdRouteWithChildren
   '/_authenticated/views/$viewId': typeof AuthenticatedViewsViewIdRoute
+  '/_authenticated/views/collections': typeof AuthenticatedViewsCollectionsRoute
   '/_authenticated/sources/': typeof AuthenticatedSourcesIndexRoute
   '/_authenticated/views/': typeof AuthenticatedViewsIndexRoute
   '/_authenticated/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
@@ -223,6 +252,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/signed-out'
+    | '/destinations'
     | '/explorations'
     | '/overview'
     | '/pipelines'
@@ -231,6 +262,7 @@ export interface FileRouteTypes {
     | '/views'
     | '/sources/$sourceId'
     | '/views/$viewId'
+    | '/views/collections'
     | '/sources/'
     | '/views/'
     | '/sources/$sourceId/$tableName'
@@ -244,11 +276,14 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/signed-out'
+    | '/destinations'
     | '/explorations'
     | '/overview'
     | '/pipelines'
     | '/settings'
     | '/views/$viewId'
+    | '/views/collections'
     | '/sources'
     | '/views'
     | '/sources/$sourceId/$tableName'
@@ -263,6 +298,8 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/_pipeline-editor'
     | '/login'
+    | '/signed-out'
+    | '/_authenticated/destinations'
     | '/_authenticated/explorations'
     | '/_authenticated/overview'
     | '/_authenticated/pipelines'
@@ -271,6 +308,7 @@ export interface FileRouteTypes {
     | '/_authenticated/views'
     | '/_authenticated/sources/$sourceId'
     | '/_authenticated/views/$viewId'
+    | '/_authenticated/views/collections'
     | '/_authenticated/sources/'
     | '/_authenticated/views/'
     | '/_authenticated/sources/$sourceId/$tableName'
@@ -287,6 +325,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   PipelineEditorRoute: typeof PipelineEditorRouteWithChildren
   LoginRoute: typeof LoginRoute
+  SignedOutRoute: typeof SignedOutRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -318,6 +357,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/signed-out': {
+      id: '/signed-out'
+      path: '/signed-out'
+      fullPath: '/signed-out'
+      preLoaderRoute: typeof SignedOutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/destinations': {
+      id: '/_authenticated/destinations'
+      path: '/destinations'
+      fullPath: '/destinations'
+      preLoaderRoute: typeof AuthenticatedDestinationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/explorations': {
       id: '/_authenticated/explorations'
@@ -387,6 +440,13 @@ declare module '@tanstack/react-router' {
       path: '/$viewId'
       fullPath: '/views/$viewId'
       preLoaderRoute: typeof AuthenticatedViewsViewIdRouteImport
+      parentRoute: typeof AuthenticatedViewsRoute
+    }
+    '/_authenticated/views/collections': {
+      id: '/_authenticated/views/collections'
+      path: '/collections'
+      fullPath: '/views/collections'
+      preLoaderRoute: typeof AuthenticatedViewsCollectionsRouteImport
       parentRoute: typeof AuthenticatedViewsRoute
     }
     '/_authenticated/sources/$sourceId/': {
@@ -475,11 +535,13 @@ const AuthenticatedSourcesRouteWithChildren =
 
 interface AuthenticatedViewsRouteChildren {
   AuthenticatedViewsViewIdRoute: typeof AuthenticatedViewsViewIdRoute
+  AuthenticatedViewsCollectionsRoute: typeof AuthenticatedViewsCollectionsRoute
   AuthenticatedViewsIndexRoute: typeof AuthenticatedViewsIndexRoute
 }
 
 const AuthenticatedViewsRouteChildren: AuthenticatedViewsRouteChildren = {
   AuthenticatedViewsViewIdRoute: AuthenticatedViewsViewIdRoute,
+  AuthenticatedViewsCollectionsRoute: AuthenticatedViewsCollectionsRoute,
   AuthenticatedViewsIndexRoute: AuthenticatedViewsIndexRoute,
 }
 
@@ -487,6 +549,7 @@ const AuthenticatedViewsRouteWithChildren =
   AuthenticatedViewsRoute._addFileChildren(AuthenticatedViewsRouteChildren)
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedDestinationsRoute: typeof AuthenticatedDestinationsRoute
   AuthenticatedExplorationsRoute: typeof AuthenticatedExplorationsRoute
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
   AuthenticatedPipelinesRoute: typeof AuthenticatedPipelinesRoute
@@ -496,6 +559,7 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedDestinationsRoute: AuthenticatedDestinationsRoute,
   AuthenticatedExplorationsRoute: AuthenticatedExplorationsRoute,
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
   AuthenticatedPipelinesRoute: AuthenticatedPipelinesRoute,
@@ -550,6 +614,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   PipelineEditorRoute: PipelineEditorRouteWithChildren,
   LoginRoute: LoginRoute,
+  SignedOutRoute: SignedOutRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

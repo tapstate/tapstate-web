@@ -21,7 +21,7 @@
     "secondaryNavigation": "次要導覽"
   },
   "nav": {
-    "views": "檢視",
+    "views": "Views",
     "overview": "概覽",
     "settings": "設定",
     "resources": "資源",
@@ -49,6 +49,11 @@
     "separator": "/"
   },
   "auth": {
+    "signedOut": {
+      "title": "Cluster 工作階段已結束",
+      "description": "目前 Cluster 工作階段已關閉。需要再次進入 Cluster 時，請返回 Tapstate Cloud。",
+      "returnToCloud": "返回 Tapstate Cloud"
+    },
     "login": {
       "eyebrow": "即時上下文",
       "signalTitle": "讓每個決策保持最新。",
@@ -410,10 +415,24 @@
       "error": "無法載入已儲存的流水線。",
       "loading": "正在載入已儲存的流水線。"
     },
+    "list": {
+      "searchAria": "搜尋流水線",
+      "searchPlaceholder": "搜尋流水線...",
+      "noResults": "沒有符合搜尋條件的流水線。",
+      "lastRefreshed": "上次更新 {{time}}",
+      "refreshActive": "自動更新已開啟",
+      "refreshPaused": "自動更新已暫停",
+      "refresh": "更新流水線",
+      "refreshAria": "更新流水線清單",
+      "pauseRefresh": "暫停更新",
+      "pauseRefreshAria": "暫停自動更新流水線",
+      "resumeRefresh": "恢復更新",
+      "resumeRefreshAria": "恢復自動更新流水線"
+    },
     "createMenu": {
       "title": "建立方式",
-      "wizard": "使用向導構建",
-      "wizardDescription": "一步步完成引導式設定",
+      "wizard": "Pipeline 建構器",
+      "wizardDescription": "逐步設定資料來源、轉換與目標端",
       "sql": "使用 DuckDB SQL 構建",
       "sqlDescription": "編寫 SQL 轉換資料",
       "dag": "使用 DAG 設計器構建",
@@ -449,14 +468,14 @@
       "dagStep": "DAG 步驟",
       "sqlTransform": "SQL 轉換",
       "aiDraft": "AI 草稿",
-      "wizardPreviewLabel": "精靈步驟預覽",
+      "wizardPreviewLabel": "Pipeline 建構預覽",
       "wizardSource": "選擇資料來源",
       "wizardSourceHint": "選擇資料表與欄位",
       "wizardTransform": "設定轉換",
       "wizardTransformHint": "在節點之間新增引導步驟",
       "wizardOutput": "選擇輸出",
       "wizardOutputHint": "發布檢視或 API",
-      "wizardAddStep": "新增精靈步驟",
+      "wizardAddStep": "新增 Pipeline 步驟",
       "wizardHint": "由上而下逐步建立資料管線。",
       "continue": "繼續",
       "cancel": "取消",
@@ -468,6 +487,7 @@
       "collapseNode": "折疊 {{name}}",
       "expandNode": "展開 {{name}}",
       "editPipeline": "編輯 {{id}}",
+      "edit": "編輯",
       "copyPipeline": "複製流水線 ID",
       "deletePipeline": "刪除",
       "morePipeline": "{{id}} 的更多操作"
@@ -486,10 +506,12 @@
       "stop": "停止",
       "startFailed": "流水線啟動失敗。",
       "stopFailed": "流水線停止失敗。",
+      "stopping": "正在停止…",
       "confirmStopTitle": "停止 {{id}}？",
-      "confirmStopBody": "此請求會停止正在執行的工作。",
+      "confirmStopBody": "選擇保留已儲存的進度和算子狀態供下次執行續接，或清除它們並從頭開始。停止 Pipeline 不會刪除目標端資料。",
       "cancel": "取消",
-      "confirmStop": "停止流水線",
+      "confirmStopKeepState": "停止並保留狀態",
+      "confirmStopClearState": "停止並清除狀態",
       "dismissFeedback": "關閉生命週期錯誤"
     },
     "table": {
@@ -497,7 +519,8 @@
       "resourceName": "資源名稱",
       "status": "狀態",
       "type": "類型",
-      "version": "版本"
+      "version": "版本",
+      "draftRevision": "草稿 · r{{revision}}"
     },
     "type": {
       "api": "API",
@@ -547,6 +570,9 @@
     "workspace": {
       "skipToCanvas": "跳至 Pipeline 畫布",
       "loading": "正在載入 Pipeline 畫布",
+      "readOnly": {
+        "editorStatus": "停止執行前，Pipeline 設定為唯讀。"
+      },
       "back": "Pipelines",
       "layout": {
         "saving": "正在儲存版面配置",
@@ -600,7 +626,19 @@
         "monitoring": "監控",
         "addNode": "新增節點",
         "collapse": "收合工作區導覽",
-        "expand": "展開工作區導覽"
+        "expand": "展開工作區導覽",
+        "editBasicInfo": "編輯 Pipeline 資訊",
+        "editTitle": "編輯 Pipeline 資訊",
+        "editDescription": "修改此工作區中顯示的名稱和描述。",
+        "nameLabel": "名稱",
+        "descriptionLabel": "描述",
+        "nameRequired": "請輸入 Pipeline 名稱。",
+        "save": "儲存",
+        "saving": "儲存中…",
+        "cancel": "取消",
+        "closeEditor": "關閉 Pipeline 資訊編輯",
+        "saveFailed": "無法儲存 Pipeline 資訊。",
+        "editorLoading": "Pipeline 編輯器仍在載入。"
       },
       "nodeSelector": {
         "title": "新增節點",
@@ -682,9 +720,12 @@
         "tableSelectionMode": "資料表選擇模式",
         "singleTable": "單表",
         "multipleTable": "多表",
+        "tableSearch": "搜尋資料表",
+        "loadingTables": "正在載入資料表…",
         "regexPrefix": "規則：",
         "regexRule": "規則",
         "noSourceTableOptions": "目前 Source 範圍內沒有可用的資料表。",
+        "noMatchingTables": "沒有符合的資料表。",
         "selectedTables": "此 Source 節點已選擇 {{count}} 張資料表",
         "regexPlaceholder": "新增資料表匹配規則，例如 player_*",
         "addRegexRule": "新增規則",
@@ -712,6 +753,7 @@
       "transform": {
         "field": "欄位",
         "operator": "運算子",
+        "containsOperator": "包含",
         "value": "值",
         "removeCondition": "移除條件",
         "addCondition": "新增條件",
@@ -757,6 +799,7 @@
         "removeAlias": "移除輸入",
         "addAlias": "新增輸入",
         "engine": "查詢引擎",
+        "builtinEngine": "內建引擎",
         "leftAlias": "左側別名",
         "rightAlias": "右側別名",
         "joinType": "連接類型",
@@ -776,12 +819,146 @@
         "customDescription": "以 JSON 編輯投影後的處理配置。",
         "invalidObjectJson": "請輸入有效的 JSON 物件。",
         "invalidInteger": "請輸入整數，也可以留白。",
-        "filter": { "title": "篩選記錄", "description": "使用結構化條件保留符合要求的記錄。" },
-        "map": { "title": "對映欄位", "description": "透過欄位引用或常數重新組織每筆記錄。" },
-        "join": { "title": "連接資料流", "description": "使用明確的連接條件合併兩個輸入。" },
-        "union": { "title": "合併輸入", "description": "將結構相容的分支合併為一條資料流。" },
-        "nest": { "title": "巢狀記錄", "description": "將相關欄位聚合到巢狀文件中。" },
-        "js": { "title": "執行指令碼", "description": "使用程式碼執行自訂的逐筆記錄轉換。" }
+        "filter": {
+          "title": "篩選記錄",
+          "description": "使用結構化條件保留符合要求的記錄。"
+        },
+        "map": {
+          "title": "對映欄位",
+          "description": "透過欄位引用或常數重新組織每筆記錄。"
+        },
+        "join": {
+          "title": "連接資料流",
+          "description": "使用明確的連接條件合併兩個輸入。"
+        },
+        "union": {
+          "title": "合併輸入",
+          "description": "將結構相容的分支合併為一條資料流。"
+        },
+        "nest": {
+          "title": "巢狀記錄",
+          "description": "將相關欄位聚合到巢狀文件中。"
+        },
+        "js": {
+          "title": "執行指令碼",
+          "description": "使用程式碼執行自訂的逐筆記錄轉換。"
+        },
+        "unwind": {
+          "title": "展開陣列",
+          "description": "將陣列元素展開為個別記錄。"
+        },
+        "wizard": {
+          "transformsHeading": "Transform",
+          "stepsCount": "{{count}} 個步驟",
+          "addTransform": "新增 Transform",
+          "addThisStep": "新增此步驟",
+          "chooseTransformType": "選擇 Transform 類型",
+          "chooseTransformDescription": "依照處理目標選擇，並在此處直接設定。",
+          "closeTransformPicker": "關閉 Transform 選擇器",
+          "configureStep": "設定步驟",
+          "moveStepUp": "上移步驟",
+          "moveStepDown": "下移步驟",
+          "removeStep": "刪除步驟",
+          "collapseStep": "摺疊步驟",
+          "expandStep": "展開步驟",
+          "stepName": "步驟名稱",
+          "stepNamePlaceholder": "例如：篩除已取消訂單 / 格式化收件人",
+          "dslId": "系統 DSL ID",
+          "addNextStep": "新增下一個 Transform",
+          "filterDescription": "只讓符合 CEL 布林運算式的資料列或事件繼續流向下游。",
+          "mapDescription": "重新命名、移除、計算或新增欄位。未列出的欄位預設會自動傳遞。",
+          "unwindDescription": "將陣列展開為多筆個別記錄，並為每個元素建立獨立識別。",
+          "jsDescription": "使用 process(record, ctx) 篩選、轉換並傳送事件。",
+          "unionDescription": "將多個輸入資料流合併為一路；不會自動對齊欄位或去重。",
+          "filterConditions": "篩選條件",
+          "visualConditionBuilder": "切換至視覺化條件",
+          "rawCelEditor": "編輯 CEL 運算式",
+          "and": "AND",
+          "schemaFields": "已偵測的 Schema 欄位",
+          "cdcEnvelopeFields": "CDC 事件 Envelope 欄位",
+          "operationType": "op（操作類型：c/u/d/r）",
+          "eventTimestamp": "ts（事件時間戳記）",
+          "sourceMetadata": "src（資料來源中繼資料）",
+          "equals": "等於",
+          "notEquals": "不等於",
+          "greaterThan": "大於",
+          "lessThan": "小於",
+          "greaterOrEqual": "大於或等於",
+          "lessOrEqual": "小於或等於",
+          "contains": "包含",
+          "startsWith": "前綴符合",
+          "filterValuePlaceholder": "例如：'ACTIVE' 或 100",
+          "addFilterCondition": "新增篩選條件（AND）",
+          "generatedCel": "產生的 CEL",
+          "celExpression": "CEL（通用運算式語言）",
+          "celPlaceholder": "例如：op != 'd' && after.amount > 0",
+          "celEnvelopeHelp": "運算式會套用至事件 Envelope，可使用：",
+          "mapRules": "欄位整理與對映規則",
+          "applyInOrder": "依序套用",
+          "passthroughSummary": "未在下方宣告的輸入欄位會自動完整傳遞。",
+          "mapRuleHelp": "只需為重新命名（$old）、移除（false）、計算（=expr）或設定常數的欄位新增規則。",
+          "outputField": "輸出欄位（目標）",
+          "ruleType": "處理規則",
+          "renameRule": "重新命名 / 引用（$field）",
+          "computeRule": "CEL 計算（=expr）",
+          "deleteRule": "移除欄位（false）",
+          "literalRule": "設定固定值",
+          "ruleValue": "規則值 / 運算式",
+          "fieldWillBeDropped": "此欄位不會包含在輸出中",
+          "literalValuePlaceholder": "例如：'west' 或 100",
+          "removeRule": "移除規則",
+          "addFieldRule": "新增欄位對映",
+          "passthroughDisabledHelp": "目前伺服器一律會傳遞未宣告的欄位。",
+          "passthroughUnlisted": "自動傳遞未宣告欄位（固定啟用）",
+          "unwindSettings": "陣列展開設定",
+          "singleLevel": "單層展開",
+          "arrayField": "要展開的陣列欄位（path）",
+          "customField": "自訂欄位",
+          "topLevelArrayHelp": "僅支援展開頂層陣列欄位，不支援巢狀路徑。",
+          "elementKey": "元素識別欄位（element_key）",
+          "elementKeyPlaceholder": "例如：sku、item_id、id",
+          "elementKeyHelp": "用來識別每個元素，並與父記錄主鍵組合成目標資料列鍵。",
+          "arrayIndexField": "陣列索引欄位（include_array_index）",
+          "arrayIndexPlaceholder": "例如：item_no、idx（從 0 開始）",
+          "arrayIndexHelp": "未設定 element_key 時，可用索引區分陣列元素。",
+          "elementType": "展開欄位類型（element_type）",
+          "structuredObjectDefault": "預設為結構化物件",
+          "elementTypeHelp": "只宣告輸出欄位類型，不會轉換實際實體值。",
+          "preserveEmptyArrays": "保留空陣列或缺失值（preserve_null_and_empty_arrays）",
+          "preserveEmptyArraysHelp": "陣列為空或 null 時，仍保留一筆父記錄，展開欄位留空。",
+          "unwindRequirements": "Unwind 執行前提與風險",
+          "writeMode": "下游寫入模式",
+          "writeModeHelp": "必須使用 {{upsert}} 寫入目標端，不支援 {{append}} 模式。",
+          "cdcImages": "完整 CDC 映像",
+          "cdcImagesHelp": "MySQL 需要完整 row image；MongoDB 需要啟用 collection pre-images。",
+          "keyCollision": "避免鍵值衝突",
+          "keyCollisionHelp": "請確保 {{field}} 在每筆父記錄範圍內唯一，以避免覆寫目標資料。",
+          "javascriptScript": "自訂處理指令碼（JavaScript process）",
+          "multilineScript": "支援多行 {{language}}。",
+          "recordObject": "record 事件物件",
+          "operationTypeDetail": "操作類型",
+          "beforeImage": "變更前映像資料",
+          "afterImage": "變更後映像資料",
+          "eventTimestampDetail": "事件時間戳記",
+          "sourceMetadataDetail": "上游資料來源中繼資料",
+          "contextMethods": "ctx 上下文方法",
+          "emitRecord": "傳送一筆記錄（可呼叫多次）",
+          "writeDebugLog": "輸出診斷日誌",
+          "discardRecord": "捨棄目前記錄",
+          "emitRecordDirectly": "直接傳送此記錄",
+          "unionStreams": "合併資料流來源",
+          "fanIn": "多路匯聚",
+          "unionSemanticsTitle": "Union 語意與欄位對齊說明",
+          "unionSemanticsLead": "Union 會將多個輸入資料流彙整為一路並繼續流向下游。",
+          "unionSemanticsLimitation": "它不會重新命名或對齊欄位，也不會移除重複記錄。",
+          "unionSemanticsAdvice": "如果各資料流的 Schema 不一致，請在 Union 前使用",
+          "unionSemanticsMapAdvice": "統一欄位格式。",
+          "unionInputList": "目前彙整的輸入資料流（from）：",
+          "currentTable": "目前資料表",
+          "removeUnionInput": "移除輸入資料流",
+          "addUpstreamInput": "新增上游資料流",
+          "selectAnotherInput": "選擇其他可用資料流"
+        }
       },
       "runtime": {
         "eyebrow": "執行資訊",
@@ -833,8 +1010,8 @@
           "metricsBody": "Pipeline 觀測介面目前回報的數值。",
           "metricCount": "{{count}} 個指標",
           "chartLabel": "Pipeline 目前指標比較圖",
-          "offsetsTitle": "Source 位點",
-          "offsetsBody": "Pipeline 最近回報的 Source 位置。",
+          "offsetsTitle": "目標確認位置",
+          "offsetsBody": "Pipeline 目標端最近確認的位置。",
           "noOffsets": "尚未回報 Source 位點。",
           "active": "每 5 秒重新整理一次",
           "paused": "已暫停更新",
@@ -847,6 +1024,49 @@
           "resumeAria": "恢復監控自動重新整理",
           "noMetricsTitle": "暫無指標",
           "noMetricsBody": "此 Pipeline 尚未回報數值指標。",
+          "historyTitle": "輸出歷史",
+          "historyDescription": "伺服器計算速率 · {{resolution}} 解析度 · 最終一致",
+          "historyLoading": "正在載入歷史資料",
+          "historyError": "無法載入輸出歷史。請檢查控制平面後重試。",
+          "noRetainedSamples": "此時間範圍內沒有保留的取樣資料。這無法說明 Pipeline 過去是否曾執行。",
+          "rangeLabel": "歷史時間範圍",
+          "ranges": {
+            "1h": "1 小時",
+            "6h": "6 小時",
+            "24h": "24 小時",
+            "7d": "7 天"
+          },
+          "recordsRate": "每秒記錄數",
+          "bytesRate": "每秒位元組數",
+          "rateUnavailable": "此範圍內沒有可用的 {{metric}} 取樣。",
+          "gapsNote": "取樣有 {{count}} 處空隙，圖中以斷線表示。",
+          "resetsNote": "計數器重設 {{count}} 次，每次都會開始新的線段。",
+          "lagTitle": "目標確認延遲",
+          "lagTableLimit": "顯示前 {{count}} 個資料表。",
+          "noLagSamples": "所選資料表和時間範圍內沒有可用的延遲取樣。",
+          "unavailableSeries": "無法提供的序列：{{metrics}}",
+          "loadMore": "載入更早的歷史",
+          "explainTitle": "Pipeline 診斷",
+          "explainLoading": "正在載入診斷",
+          "explainError": "無法載入 Pipeline 診斷。",
+          "retry": "重試",
+          "evidence": "依據",
+          "cannotSay": "目前無法判斷",
+          "nextAction": "建議的下一步",
+          "observationAge": "{{seconds}} 秒前觀測",
+          "freshness": {
+            "FRESH": "觀測新鮮",
+            "STALE": "觀測已過期",
+            "UNKNOWN": "觀測時間未知"
+          },
+          "explainKind": {
+            "OBSERVATION_STALE": "觀測已過期",
+            "CODED_FAILURE": "已回報故障",
+            "RECONCILE_FAILURES": "協調失敗",
+            "NO_MOVEMENT": "未觀測到資料變化",
+            "FRONTIER_STALLED": "處理位點停滯",
+            "NO_MATCH": "沒有相符的診斷"
+          },
           "unavailableTitle": "監控資料無法使用",
           "unavailableBody": "此 Pipeline 尚未發布執行時監控資料。",
           "errorTitle": "無法載入監控資料",
@@ -854,11 +1074,16 @@
         },
         "states": {
           "NEW": "新增",
+          "STARTING": "正在啟動",
           "RUNNING": "執行中",
+          "PAUSING": "正在暫停",
           "PAUSED": "已暫停",
+          "RESUMING": "正在恢復",
+          "STOPPING": "正在停止",
           "STOPPED": "已停止",
           "COMPLETED": "已完成",
-          "FAILED": "失敗"
+          "FAILED": "失敗",
+          "UNAVAILABLE": "無法使用"
         }
       },
       "apiAccess": {
@@ -967,6 +1192,169 @@
     }
   },
   "wizard": {
+    "eyebrow": "Pipeline 建立器",
+    "draft": "草稿",
+    "dslMode": "DSL 引導模式",
+    "backToPipelines": "返回 Pipelines",
+    "pipelineLabel": "Pipeline",
+    "kicker": "引導式建立",
+    "heading": "建立資料路徑",
+    "subtitle": "選擇資料來源，加入需要的步驟，再將結果寫入目的地。",
+    "flowLabel": "Pipeline 步驟",
+    "sourceTitle": "選擇資料來源",
+    "sourceHint": "從一個已連接的資料表開始。",
+    "rootTableLabel": "根表",
+    "selectRootTable": "選擇根表",
+    "editRootTable": "編輯根表",
+    "rootAnchorHint": "文件組裝的主表；每列產生一筆結果文件。",
+    "postAssemblyLabel": "組裝後處理",
+    "targetDestinationLabel": "目標端",
+    "postAssemblyTitle": "轉換與計算文件欄位",
+    "postAssemblyHint": "關聯資料表組裝完成後執行處理。",
+    "noPostSteps": "尚未設定組裝後處理步驟（可選）。",
+    "rootTableMetadata": "資料來源：{{source}} · 主鍵：{{primaryKey}} · {{count}} 個欄位",
+    "setupRequired": "需要設定",
+    "switchTable": "切換資料表",
+    "confirmRootTable": "確認根表",
+    "saveRootChanges": "儲存根表變更",
+    "cancelRootEdit": "取消",
+    "confirmRootFirst": "請先確認根表，再新增關聯資料表或處理步驟。",
+    "rootChangeWarning": "變更根表會清除草稿中的關聯資料表和處理步驟。",
+    "columnsLabel": "欄位",
+    "moreColumns": "另有 {{count}} 個",
+    "sourceSelect": "選擇資料來源",
+    "tableSelect": "選擇來源資料表",
+    "tablePlaceholder": "輸入來源資料表名稱",
+    "selectSourceFirst": "請先選擇資料來源",
+    "outputTitle": "選擇目的地",
+    "outputHint": "將結果寫入目前部署設定允許的目標端。",
+    "destinationSelect": "Atlas 目的地",
+    "destinationTableSelect": "Atlas 資料表",
+    "destinationTablePlaceholder": "輸入目標資料表名稱",
+    "destinationContext": "目標端",
+    "configureDestination": "設定目標端",
+    "destinationAtlasSource": "Atlas 目標連線",
+    "destinationTargetSource": "目標資料來源",
+    "destinationSourcePlaceholder": "選擇可寫入的資料來源",
+    "destinationTable": "目標資料表",
+    "writeStrategy": "寫入策略",
+    "awaitingTable": "選擇資料表後繼續",
+    "relations": {
+      "addRelatedTable": "新增關聯資料表",
+      "addAs": {
+        "flat": "平鋪至父文件",
+        "object": "作為子文件",
+        "array": "作為子陣列"
+      },
+      "newTable": "新關聯資料表",
+      "editTable": "(編輯)",
+      "relationship": "關聯資料表",
+      "shape": "關係輸出形態",
+      "shapes": {
+        "flat": "平鋪",
+        "object": "文件",
+        "array": "陣列"
+      },
+      "preprocess": "預處理",
+      "closeTablePicker": "收合資料表選擇",
+      "as": "作為",
+      "editOutputField": "編輯輸出欄位名稱",
+      "parentTable": "父資料表",
+      "rootTable": "根資料表",
+      "remove": "移除關聯資料表",
+      "source": "資料來源",
+      "chooseSource": "選擇資料來源",
+      "table": "資料表",
+      "chooseSourceFirst": "請先選擇資料來源",
+      "chooseTable": "選擇資料表",
+      "noTables": "此資料來源沒有可用的資料表。",
+      "outputField": "輸出欄位名稱",
+      "outputFieldPlaceholder": "例如 orders",
+      "flatHint": "欄位會直接寫入父文件，不需要設定輸出欄位名稱。",
+      "documentKey": "根文件識別欄位",
+      "chooseDocumentKey": "選擇根表識別欄位",
+      "rowKey": "資料列識別欄位",
+      "chooseRowKey": "選擇資料列識別欄位",
+      "schemaRequired": "需要取得資料表欄位後才能選擇文件識別欄位。",
+      "loadingSchema": "正在載入資料表欄位…",
+      "schemaUnavailable": "無法取得資料表欄位，請檢查資料來源 Schema 與存取權限。",
+      "parentSchemaUnavailable": "所選資料表的欄位資訊暫時無法使用。",
+      "completeRelationship": "請選擇資料列識別欄位，並為關聯條件選擇兩側匹配欄位。",
+      "conditions": "關聯條件",
+      "conditionsHint": "右側可從 Pipeline 中任一已新增資料表選擇欄位。",
+      "childField": "關聯表欄位",
+      "parentField": "Pipeline 既有資料表欄位",
+      "chooseChildField": "選擇目前資料表欄位",
+      "chooseParentField": "選擇 Pipeline 資料表欄位",
+      "chooseTarget": "選擇既有資料表作為關聯目標",
+      "addCondition": "新增條件",
+      "removeCondition": "移除條件",
+      "preprocessing": "處理關聯資料列",
+      "preprocessingHint": "將此資料表掛入父表前，可以篩選資料列或整理欄位。",
+      "noPreprocessing": "尚未新增局部處理步驟。",
+      "addTransform": "新增處理",
+      "nestedSubRelations": "巢狀關聯資料表",
+      "addSubRelation": "新增至 {{table}}",
+      "noNestedRelations": "在這裡新增關聯資料表，繼續建立下一層文件結構。",
+      "requiredFieldsHint": "關聯完成前，請保留此資料表的資料列識別欄位與關聯欄位。"
+    },
+    "dslStep": "DSL 步驟",
+    "atlasNotConfigured": "尚未設定 Atlas",
+    "atlasHint": "設定一個 MongoDB Atlas 目的地",
+    "configureAtlas": "設定 Atlas",
+    "mongodbFallbackHint": "暫以 MongoDB 資料來源 {{source}} 作為目標",
+    "mongodbFallbackTableHint": "Atlas 尚未準備好，目前使用這個 MongoDB 資料來源測試建立流程。",
+    "previewTarget": "測試目標",
+    "loadingTables": "正在載入目標資料表",
+    "addPipelineStep": "新增 Pipeline 步驟",
+    "addProcessor": "新增資料處理",
+    "chooseTransform": "選擇步驟",
+    "transformHint": "資料路徑中的引導步驟。",
+    "input": "輸入",
+    "stepNeedsConfiguration": "建立 Pipeline 前請先完成此步驟設定。",
+    "transformDescriptions": {
+      "filter": "保留符合條件的記錄。",
+      "map": "選擇、重新命名或計算欄位。",
+      "join": "使用 SQL 合併兩個輸入流。",
+      "union": "合併結構相容的輸入流。",
+      "nest": "將相關記錄組織成文件。",
+      "js": "執行自訂的逐筆記錄程式碼。"
+    },
+    "transformDescription": "建立後可在 Pipeline 編輯器中設定此步驟。",
+    "removeStep": "移除步驟",
+    "loading": "正在載入資料來源",
+    "saving": "正在建立 Pipeline",
+    "create": "建立 Pipeline",
+    "autosaving": "正在儲存草稿…",
+    "autosaved": "草稿已儲存",
+    "autosaveError": "草稿儲存失敗",
+    "unsavedChanges": "有未儲存的變更",
+    "actionSummary": "{{relatedCount}} 個關聯資料表 · {{transformCount}} 個處理步驟",
+    "savePipeline": "儲存",
+    "startPipeline": "儲存並啟動",
+    "starting": "正在啟動 Pipeline…",
+    "startPhases": {
+      "saving": "正在儲存草稿…",
+      "validating": "正在檢查設定…",
+      "publishing": "正在發佈 Pipeline…",
+      "starting": "正在啟動 Pipeline…",
+      "checking": "正在確認執行狀態…"
+    },
+    "checkingRuntime": "正在確認執行狀態…",
+    "runtimeStatusError": "無法確認執行狀態。",
+    "alreadyRunning": "草稿已儲存並發布，但此 Pipeline 已在執行。請先停止目前的執行，再啟動新版本。",
+    "errors": {
+      "save": "無法建立 Pipeline，請重試。",
+      "upsertNeedsKey": "{{sourceId}}.{{table}} 沒有主鍵。若目標支援追加寫入，請將寫入模式改為 Append；否則請先為來源資料表新增主鍵。"
+    },
+    "transforms": {
+      "filter": "篩選資料列",
+      "map": "映射欄位",
+      "join": "連接資料",
+      "union": "合併資料來源",
+      "nest": "巢狀欄位",
+      "js": "執行 JavaScript"
+    },
     "addOutput": "新增輸出",
     "addStep": "新增步驟",
     "createView": "建立視圖",
@@ -977,10 +1365,21 @@
     "sourceName": "0426-01",
     "title": "untitled_view_3",
     "preview": {
-      "empty": "暫無資料。點擊預覽後產生樣例列。",
+      "eyebrow": "即時投影",
+      "empty": "暫時無法預覽樣例列。",
+      "emptyHint": "伺服器目前只回傳已驗證的 DSL 預覽，不回傳結果列。",
       "grid": "表格預覽",
       "json": "JSON 預覽",
-      "title": "結果預覽"
+      "note": "修改會自動儲存至草稿；預覽由伺服器編譯並驗證。",
+      "live": "DSL 草稿",
+      "codeLabel": "Pipeline DSL 預覽",
+      "ready": "已選擇資料來源",
+      "steps": "已加入 {{count}} 個引導步驟",
+      "title": "結果預覽",
+      "compiling": "正在編譯並驗證草稿…",
+      "failed": "伺服器無法編譯這個草稿。",
+      "awaitingConfiguration": "請先完成來源與目標設定",
+      "awaitingConfigurationHint": "Pipeline 設定完成後會在此顯示 DSL 預覽。"
     },
     "rename": {
       "field": "欄位名",
@@ -991,6 +1390,165 @@
       "transform": "轉換"
     }
   },
+  "views": {
+    "title": "檢視",
+    "subtitle": "瀏覽 Tapstate 在雲端版狀態儲存中持續維護的集合。",
+    "refresh": "重新整理",
+    "materialized": "已物化",
+    "explorer": "VIEW 集合",
+    "detailTabs": "View 詳情",
+    "search": {
+      "label": "搜尋 Views",
+      "placeholder": "搜尋 Views...",
+      "empty": "沒有符合的 View。"
+    },
+    "empty": {
+      "title": "尚無物化 View",
+      "body": "建立並啟動 Pipeline，即可在雲端版狀態儲存中持續維護一個集合。",
+      "action": "開啟 Pipelines"
+    },
+    "states": {
+      "loading": "正在載入檢視…",
+      "error": "檢視載入失敗。",
+      "notReported": "此伺服器暫不提供檢視清單。每條 pipeline 的頁面仍會顯示它寫到哪裡。"
+    },
+    "stats": {
+      "documents": "預估文件數",
+      "storage": "儲存大小",
+      "loading": "正在載入...",
+      "error": "無法取得集合統計資料。"
+    },
+    "tabs": {
+      "preview": "資料預覽",
+      "model": "模型",
+      "lineage": "血緣"
+    },
+    "preview": {
+      "title": "最近文件",
+      "loading": "正在讀取文件樣例...",
+      "error": "無法預覽文件。",
+      "empty": "此集合目前沒有可預覽的文件。",
+      "rows": "{{count}} 筆樣例",
+      "moreAvailable": "還有更多文件"
+    },
+    "model": {
+      "title": "集合欄位",
+      "description": "目前已發現的物化 View 欄位。",
+      "fieldCount": "{{count}} 個欄位",
+      "field": "欄位",
+      "sampleType": "樣例型別",
+      "empty": "目前樣例中沒有欄位。",
+      "undiscovered": "伺服器尚未發現此 View 的欄位。"
+    },
+    "lineage": {
+      "title": "維護 Pipeline",
+      "description": "維護此 View 的 Pipeline 上游資料表。",
+      "feeds": "讀取自",
+      "loading": "正在載入 Pipeline 血緣...",
+      "unavailable": "此伺服器尚未提供該 View 的 Pipeline 血緣。",
+      "noSources": "沒有上游資料表資訊。"
+    },
+    "newView": "新增檢視",
+    "intro": "你的即時營運狀態：Tapstate 持續保持最新的每一個檢視。",
+    "kind": {
+      "view": "檢視",
+      "replica": "副本"
+    },
+    "status": {
+      "fresh": "最新 · 落後 {{behind}}",
+      "stale": "過期 · {{age}}",
+      "staleUnknown": "過期",
+      "loading": "載入中 {{percent}}%",
+      "loadingUnknown": "載入中",
+      "notLoaded": "未載入"
+    },
+    "duration": {
+      "s": "{{value}} 秒",
+      "min": "{{value}} 分鐘",
+      "h": "{{value}} 小時",
+      "d": "{{value}} 天"
+    },
+    "ago": "{{age}}前",
+    "summary": {
+      "total_one": "{{count}} 個檢視",
+      "total_other": "{{count}} 個檢視",
+      "fresh_one": "{{count}} 個最新",
+      "fresh_other": "{{count}} 個最新",
+      "stale_one": "{{count}} 個過期",
+      "stale_other": "{{count}} 個過期",
+      "slowest": "最慢落後 {{behind}}",
+      "loading_one": "{{count}} 個載入中",
+      "loading_other": "{{count}} 個載入中",
+      "notLoaded_one": "{{count}} 個未載入",
+      "notLoaded_other": "{{count}} 個未載入"
+    },
+    "table": {
+      "name": "名稱",
+      "type": "類型",
+      "storedIn": "存放於",
+      "status": "狀態",
+      "documents": "文件數",
+      "lastChange": "最近套用的變更",
+      "maintainedBy": "維護者"
+    },
+    "storedIn": {
+      "managed": "Tapstate state store",
+      "store": "{{store}} / {{database}}"
+    },
+    "explainer": {
+      "empty": "還沒有檢視",
+      "what": "檢視是 Tapstate 依據來源表持續保持最新的 collection。",
+      "flowLabel": "檢視如何產生",
+      "sources": "資料來源",
+      "pipeline": "Pipeline",
+      "view": "檢視",
+      "storedIn": "檢視將存放於",
+      "storeMissing": "檢視存放在 state store 中。建立檢視前先選一個。",
+      "setUp": "去設定",
+      "build": "建立檢視",
+      "replicas": "鏡像表會產生副本，也會列在這裡。"
+    },
+    "detail": {
+      "maintainedBy": "維護者",
+      "notFound": "此伺服器上沒有名為 {{id}} 的檢視。",
+      "tabsLabel": "檢視分區",
+      "tabs": {
+        "overview": "概覽",
+        "documents": "文件",
+        "shape": "形狀",
+        "lineage": "血緣",
+        "indexes": "索引"
+      },
+      "pending": {
+        "documents": "此伺服器暫不支援瀏覽文件。",
+        "shape": "此伺服器暫不提供文件形狀。",
+        "lineage": "此伺服器暫不提供欄位血緣。",
+        "indexes": "此伺服器暫不提供索引詳情。"
+      },
+      "size": "大小",
+      "largestDocument": "最大文件",
+      "collection": "collection {{name}}",
+      "storedIn": "存放於",
+      "siblings": "此 pipeline 還寫入：",
+      "freshness": "新鮮度",
+      "lastApplied": "最近一次變更在 {{age}}前",
+      "neverApplied": "尚未套用任何變更",
+      "documentLimit": "單一文件上限 16 MB",
+      "initialLoad": "初次載入",
+      "upToDate": "已是最新",
+      "streaming": "初次載入已完成；變更擷取持續保持最新。",
+      "pipelineState": {
+        "NEW": "從未啟動",
+        "RUNNING": "執行中",
+        "PAUSED": "已暫停",
+        "STOPPED": "已停止",
+        "COMPLETED": "已完成",
+        "FAILED": "已失敗"
+      }
+    },
+    "footnote": "狀態綜合了 pipeline 的狀態與檢視落後於來源的程度。檢視是建立出的文件；副本是一張表的鏡像。",
+    "browseCollections": "瀏覽集合"
+  },
   "notFound": {
     "back": "返回工作區",
     "description": "目前 Tapstate 工作區預覽中不存在這個路由。",
@@ -998,13 +1556,34 @@
     "title": "頁面不存在"
   },
   "view": {
-    "overview": { "title": "概覽", "placeholder": "工作區健康概覽。" },
-    "resources": { "title": "資源", "placeholder": "按 kind 篩選全部資產。" },
-    "develop": { "title": "開發", "placeholder": "DAG 畫布與 SQL 編輯器。" },
-    "operations": { "title": "運行", "placeholder": "任務運行、集群和 Share CDC。" },
-    "governance": { "title": "治理", "placeholder": "血緣、校驗和監控。" },
-    "services": { "title": "資料服務", "placeholder": "已發布 API 和 Token。" },
-    "admin": { "title": "管理", "placeholder": "使用者、角色、租戶和設定。" }
+    "overview": {
+      "title": "概覽",
+      "placeholder": "工作區健康概覽。"
+    },
+    "resources": {
+      "title": "資源",
+      "placeholder": "按 kind 篩選全部資產。"
+    },
+    "develop": {
+      "title": "開發",
+      "placeholder": "DAG 畫布與 SQL 編輯器。"
+    },
+    "operations": {
+      "title": "運行",
+      "placeholder": "任務運行、集群和 Share CDC。"
+    },
+    "governance": {
+      "title": "治理",
+      "placeholder": "血緣、校驗和監控。"
+    },
+    "services": {
+      "title": "資料服務",
+      "placeholder": "已發布 API 和 Token。"
+    },
+    "admin": {
+      "title": "管理",
+      "placeholder": "使用者、角色、租戶和設定。"
+    }
   },
   "overview": {
     "title": "概覽",
@@ -1152,112 +1731,5 @@
       "members": "成員",
       "apiKeys": "API 金鑰"
     }
-  },
-  "views": {
-    "title": "檢視",
-    "newView": "新增檢視",
-    "intro": "你的即時營運狀態：Tapstate 持續保持最新的每一個檢視。",
-    "kind": {
-      "view": "檢視",
-      "replica": "副本"
-    },
-    "status": {
-      "fresh": "最新 · 落後 {{behind}}",
-      "stale": "過期 · {{age}}",
-      "staleUnknown": "過期",
-      "loading": "載入中 {{percent}}%",
-      "loadingUnknown": "載入中",
-      "notLoaded": "未載入"
-    },
-    "duration": {
-      "s": "{{value}} 秒",
-      "min": "{{value}} 分鐘",
-      "h": "{{value}} 小時",
-      "d": "{{value}} 天"
-    },
-    "ago": "{{age}}前",
-    "summary": {
-      "total_one": "{{count}} 個檢視",
-      "total_other": "{{count}} 個檢視",
-      "fresh_one": "{{count}} 個最新",
-      "fresh_other": "{{count}} 個最新",
-      "stale_one": "{{count}} 個過期",
-      "stale_other": "{{count}} 個過期",
-      "slowest": "最慢落後 {{behind}}",
-      "loading_one": "{{count}} 個載入中",
-      "loading_other": "{{count}} 個載入中",
-      "notLoaded_one": "{{count}} 個未載入",
-      "notLoaded_other": "{{count}} 個未載入"
-    },
-    "table": {
-      "name": "名稱",
-      "type": "類型",
-      "storedIn": "存放於",
-      "status": "狀態",
-      "documents": "文件數",
-      "lastChange": "最近套用的變更",
-      "maintainedBy": "維護者"
-    },
-    "storedIn": {
-      "managed": "Tapstate state store",
-      "store": "{{store}} / {{database}}"
-    },
-    "states": {
-      "loading": "正在載入檢視…",
-      "error": "檢視載入失敗。",
-      "notReported": "此伺服器暫不提供檢視清單。每條 pipeline 的頁面仍會顯示它寫到哪裡。"
-    },
-    "explainer": {
-      "empty": "還沒有檢視",
-      "what": "檢視是 Tapstate 依據來源表持續保持最新的 collection。",
-      "flowLabel": "檢視如何產生",
-      "sources": "資料來源",
-      "pipeline": "Pipeline",
-      "view": "檢視",
-      "storedIn": "檢視將存放於",
-      "storeMissing": "檢視存放在 state store 中。建立檢視前先選一個。",
-      "setUp": "去設定",
-      "build": "建立檢視",
-      "replicas": "鏡像表會產生副本，也會列在這裡。"
-    },
-    "detail": {
-      "maintainedBy": "維護者",
-      "notFound": "此伺服器上沒有名為 {{id}} 的檢視。",
-      "tabsLabel": "檢視分區",
-      "tabs": {
-        "overview": "概覽",
-        "documents": "文件",
-        "shape": "形狀",
-        "lineage": "血緣",
-        "indexes": "索引"
-      },
-      "pending": {
-        "documents": "此伺服器暫不支援瀏覽文件。",
-        "shape": "此伺服器暫不提供文件形狀。",
-        "lineage": "此伺服器暫不提供欄位血緣。",
-        "indexes": "此伺服器暫不提供索引詳情。"
-      },
-      "size": "大小",
-      "largestDocument": "最大文件",
-      "collection": "collection {{name}}",
-      "storedIn": "存放於",
-      "siblings": "此 pipeline 還寫入：",
-      "freshness": "新鮮度",
-      "lastApplied": "最近一次變更在 {{age}}前",
-      "neverApplied": "尚未套用任何變更",
-      "documentLimit": "單一文件上限 16 MB",
-      "initialLoad": "初次載入",
-      "upToDate": "已是最新",
-      "streaming": "初次載入已完成；變更擷取持續保持最新。",
-      "pipelineState": {
-        "NEW": "從未啟動",
-        "RUNNING": "執行中",
-        "PAUSED": "已暫停",
-        "STOPPED": "已停止",
-        "COMPLETED": "已完成",
-        "FAILED": "已失敗"
-      }
-    },
-    "footnote": "狀態綜合了 pipeline 的狀態與檢視落後於來源的程度。檢視是建立出的文件；副本是一張表的鏡像。"
   }
 }

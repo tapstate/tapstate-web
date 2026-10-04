@@ -1,4 +1,4 @@
-import type { PipelineRuntimeState, PipelineView } from '@/service/pipelines/pipeline-client'
+import type { PipelineCatalogItem, PipelineCatalogState } from '@/service/pipelines/pipeline-client'
 import type { ViewListResult } from '@/service/view-client'
 
 import { isSampleSource } from '@/service/sample-source-client'
@@ -63,8 +63,8 @@ export interface OverviewModel {
 export const SOURCE_PREVIEW_LIMIT = 3
 
 /** Idle covers every state in which the pipeline is not moving data and has not failed. */
-export function pipelineHealth(state: PipelineRuntimeState | undefined): PipelineHealth {
-  if (state === 'RUNNING') return 'running'
+export function pipelineHealth(state: PipelineCatalogState | undefined): PipelineHealth {
+  if (state === 'RUNNING' || state === 'STARTING' || state === 'RESUMING') return 'running'
   if (state === 'FAILED') return 'error'
   return 'idle'
 }
@@ -75,7 +75,7 @@ export function pipelineHealth(state: PipelineRuntimeState | undefined): Pipelin
  */
 export function buildOverview(
   sources: SourceView[],
-  pipelines: PipelineView[],
+  pipelines: PipelineCatalogItem[],
   views: ViewListResult | null = null,
 ): OverviewModel {
   const managed = sources.find((source) => source.id === MANAGED_VIEW_STORE_SOURCE_ID) ?? null

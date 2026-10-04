@@ -6,7 +6,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { PipelineView } from '@/service/pipelines/pipeline-client'
+import type { PipelineCatalogItem } from '@/service/pipelines/pipeline-client'
 import type { SourceView } from '@/service/source-client'
 
 const { addSampleSources, apiFetch, listPipelines, listSources, listViews, loadSampleSources } =
@@ -63,13 +63,12 @@ function source(id: string, connector = 'postgres'): SourceView {
   }
 }
 
-function pipeline(id: string, state: 'RUNNING' | 'FAILED' | 'STOPPED'): PipelineView {
+function pipeline(id: string, state: 'RUNNING' | 'FAILED' | 'STOPPED'): PipelineCatalogItem {
   return {
     id,
-    dag: { nodes: [], edges: [] },
-    contentHash: `hash-${id}`,
+    name: id,
+    hasArtifact: true,
     status: {
-      pipelineId: id,
       state,
       failure: state === 'FAILED' ? { code: 'runtime.failed', params: {} } : null,
     },

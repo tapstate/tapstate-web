@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { PipelineRuntimeState, PipelineView } from '@/service/pipelines/pipeline-client'
+import type { PipelineCatalogItem, PipelineCatalogState } from '@/service/pipelines/pipeline-client'
 import type { ViewSummary } from '@/service/view-client'
 
 import { MANAGED_VIEW_STORE_SOURCE_ID, type SourceView } from '@/service/source-client'
@@ -21,18 +21,15 @@ function source(id: string, connector = 'postgres'): SourceView {
   }
 }
 
-function pipeline(id: string, state?: PipelineRuntimeState, code?: string): PipelineView {
+function pipeline(id: string, state?: PipelineCatalogState, code?: string): PipelineCatalogItem {
   return {
     id,
-    dag: { nodes: [], edges: [] },
-    contentHash: `hash-${id}`,
-    status: state
-      ? {
-          pipelineId: id,
-          state,
-          failure: code ? { code, params: {} } : null,
-        }
-      : null,
+    name: id,
+    hasArtifact: true,
+    status: {
+      state: state ?? 'NEW',
+      failure: code ? { code, params: {} } : null,
+    },
   }
 }
 

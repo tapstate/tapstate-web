@@ -49,6 +49,11 @@
     "separator": "/"
   },
   "auth": {
+    "signedOut": {
+      "title": "Cluster session ended",
+      "description": "This Cluster session has been closed. Return to Tapstate Cloud when you want to enter a Cluster again.",
+      "returnToCloud": "Return to Tapstate Cloud"
+    },
     "login": {
       "eyebrow": "REAL-TIME CONTEXT",
       "signalTitle": "Make every decision current.",
@@ -410,10 +415,24 @@
       "error": "We couldn't load stored pipelines.",
       "loading": "Loading stored pipelines."
     },
+    "list": {
+      "searchAria": "Search pipelines",
+      "searchPlaceholder": "Search pipelines...",
+      "noResults": "No pipelines match this search.",
+      "lastRefreshed": "Last refreshed {{time}}",
+      "refreshActive": "Auto-refresh on",
+      "refreshPaused": "Auto-refresh paused",
+      "refresh": "Refresh pipelines",
+      "refreshAria": "Refresh pipeline list",
+      "pauseRefresh": "Pause updates",
+      "pauseRefreshAria": "Pause automatic pipeline refresh",
+      "resumeRefresh": "Resume updates",
+      "resumeRefreshAria": "Resume automatic pipeline refresh"
+    },
     "createMenu": {
       "title": "Creation mode",
-      "wizard": "Build with Wizard",
-      "wizardDescription": "Step-by-step guided setup",
+      "wizard": "Pipeline builder",
+      "wizardDescription": "Build a pipeline step by step",
       "sql": "Build with DuckDB SQL",
       "sqlDescription": "Write SQL to transform data",
       "dag": "Build with DAG Designer",
@@ -449,14 +468,14 @@
       "dagStep": "DAG step",
       "sqlTransform": "SQL transform",
       "aiDraft": "AI draft",
-      "wizardPreviewLabel": "Wizard step preview",
+      "wizardPreviewLabel": "Pipeline builder preview",
       "wizardSource": "Choose a source",
       "wizardSourceHint": "Select a table and fields",
       "wizardTransform": "Configure a transform",
       "wizardTransformHint": "Add a guided step between nodes",
       "wizardOutput": "Choose an output",
       "wizardOutputHint": "Publish a view or API",
-      "wizardAddStep": "Add a wizard step",
+      "wizardAddStep": "Add a pipeline step",
       "wizardHint": "Build the pipeline from top to bottom.",
       "continue": "Continue",
       "cancel": "Cancel",
@@ -468,6 +487,7 @@
       "collapseNode": "Collapse {{name}}",
       "expandNode": "Expand {{name}}",
       "editPipeline": "Edit {{id}}",
+      "edit": "Edit",
       "copyPipeline": "Copy pipeline ID",
       "deletePipeline": "Delete",
       "morePipeline": "More actions for {{id}}"
@@ -480,10 +500,12 @@
       "stop": "Stop",
       "startFailed": "Pipeline could not be started.",
       "stopFailed": "Pipeline could not be stopped.",
+      "stopping": "Stopping…",
       "confirmStopTitle": "Stop {{id}}?",
-      "confirmStopBody": "Running work will stop after this request.",
+      "confirmStopBody": "Choose whether to keep saved progress and operator state for the next run, or clear them and start fresh. Pipeline stop never deletes data from the destination.",
       "cancel": "Cancel",
-      "confirmStop": "Stop Pipeline",
+      "confirmStopKeepState": "Stop and keep state",
+      "confirmStopClearState": "Stop and clear state",
       "dismissFeedback": "Dismiss lifecycle error"
     },
     "delete": {
@@ -497,7 +519,8 @@
       "resourceName": "Resource name",
       "status": "Status",
       "type": "Type",
-      "version": "Version"
+      "version": "Version",
+      "draftRevision": "Draft · r{{revision}}"
     },
     "type": {
       "api": "API",
@@ -547,6 +570,9 @@
     "workspace": {
       "skipToCanvas": "Skip to Pipeline canvas",
       "loading": "Loading Pipeline canvas",
+      "readOnly": {
+        "editorStatus": "Pipeline configuration is read-only until the runtime is stopped."
+      },
       "back": "Pipelines",
       "layout": {
         "saving": "Saving layout",
@@ -600,7 +626,19 @@
         "monitoring": "Monitoring",
         "addNode": "Add node",
         "collapse": "Collapse workspace navigation",
-        "expand": "Expand workspace navigation"
+        "expand": "Expand workspace navigation",
+        "editBasicInfo": "Edit pipeline details",
+        "editTitle": "Edit pipeline details",
+        "editDescription": "Update the name and description shown in this workspace.",
+        "nameLabel": "Name",
+        "descriptionLabel": "Description",
+        "nameRequired": "Enter a pipeline name.",
+        "save": "Save",
+        "saving": "Saving…",
+        "cancel": "Cancel",
+        "closeEditor": "Close pipeline details",
+        "saveFailed": "Could not save pipeline details.",
+        "editorLoading": "The Pipeline editor is still loading."
       },
       "nodeSelector": {
         "title": "Add node",
@@ -682,9 +720,12 @@
         "tableSelectionMode": "Table selection mode",
         "singleTable": "Single table",
         "multipleTable": "Multiple tables",
+        "tableSearch": "Search tables",
+        "loadingTables": "Loading tables…",
         "regexPrefix": "Rule: ",
         "regexRule": "Rule",
         "noSourceTableOptions": "No tables are available in this Source scope.",
+        "noMatchingTables": "No matching tables.",
         "selectedTables": "{{count}} tables selected for this Source node",
         "regexPlaceholder": "Add a table pattern, e.g. player_*",
         "addRegexRule": "Add rule",
@@ -712,6 +753,7 @@
       "transform": {
         "field": "Field",
         "operator": "Operator",
+        "containsOperator": "Contains",
         "value": "Value",
         "removeCondition": "Remove condition",
         "addCondition": "Add condition",
@@ -757,6 +799,7 @@
         "removeAlias": "Remove input",
         "addAlias": "Add input",
         "engine": "Query engine",
+        "builtinEngine": "Built-in",
         "leftAlias": "Left alias",
         "rightAlias": "Right alias",
         "joinType": "Join type",
@@ -799,6 +842,122 @@
         "js": {
           "title": "Run script",
           "description": "Apply a custom record-level transform with code."
+        },
+        "unwind": {
+          "title": "Unwind arrays",
+          "description": "Expand array elements into individual records."
+        },
+        "wizard": {
+          "transformsHeading": "Transforms",
+          "stepsCount": "{{count}} steps",
+          "addTransform": "Add transform",
+          "addThisStep": "Add this step",
+          "chooseTransformType": "Choose a transform type",
+          "chooseTransformDescription": "Choose what you want to do; configure it inline.",
+          "closeTransformPicker": "Close transform picker",
+          "configureStep": "Configure step",
+          "moveStepUp": "Move step up",
+          "moveStepDown": "Move step down",
+          "removeStep": "Remove step",
+          "collapseStep": "Collapse step",
+          "expandStep": "Expand step",
+          "stepName": "Step name",
+          "stepNamePlaceholder": "e.g. Exclude cancelled orders / Format recipient",
+          "dslId": "System DSL ID",
+          "addNextStep": "Add next transform",
+          "filterDescription": "Pass only rows or events that match a CEL boolean expression.",
+          "mapDescription": "Rename, drop, compute, or add fields. Unlisted fields pass through by default.",
+          "unwindDescription": "Expand an array into separate records, each with its own element identity.",
+          "jsDescription": "Use process(record, ctx) to filter, transform, and emit events.",
+          "unionDescription": "Merge input streams into one; fields are not aligned or deduplicated.",
+          "filterConditions": "Filter conditions",
+          "visualConditionBuilder": "Switch to visual conditions",
+          "rawCelEditor": "Edit CEL expression",
+          "and": "AND",
+          "schemaFields": "Discovered schema fields",
+          "cdcEnvelopeFields": "CDC event envelope fields",
+          "operationType": "op (operation: c/u/d/r)",
+          "eventTimestamp": "ts (event timestamp)",
+          "sourceMetadata": "src (source metadata)",
+          "equals": "equals",
+          "notEquals": "does not equal",
+          "greaterThan": "greater than",
+          "lessThan": "less than",
+          "greaterOrEqual": "greater than or equal to",
+          "lessOrEqual": "less than or equal to",
+          "contains": "contains",
+          "startsWith": "starts with",
+          "filterValuePlaceholder": "e.g. 'ACTIVE' or 100",
+          "addFilterCondition": "Add filter condition (AND)",
+          "generatedCel": "Generated CEL",
+          "celExpression": "CEL (Common Expression Language) expression",
+          "celPlaceholder": "e.g. op != 'd' && after.amount > 0",
+          "celEnvelopeHelp": "Evaluated against the event envelope. Available fields:",
+          "mapRules": "Field mapping rules",
+          "applyInOrder": "Applied in order",
+          "passthroughSummary": "Fields not listed below pass through automatically.",
+          "mapRuleHelp": "Add rules only for fields to rename ($old), drop (false), compute (=expr), or set to a literal.",
+          "outputField": "Output field (target)",
+          "ruleType": "Rule type",
+          "renameRule": "Rename / reference ($field)",
+          "computeRule": "CEL expression (=expr)",
+          "deleteRule": "Drop field (false)",
+          "literalRule": "Set literal value",
+          "ruleValue": "Rule value / expression",
+          "fieldWillBeDropped": "field will be omitted from output",
+          "literalValuePlaceholder": "e.g. 'west' or 100",
+          "removeRule": "Remove rule",
+          "addFieldRule": "Add field mapping",
+          "passthroughDisabledHelp": "The current server always passes through unlisted fields.",
+          "passthroughUnlisted": "Pass through unlisted fields (always on)",
+          "unwindSettings": "Array unwind settings",
+          "singleLevel": "Single-level expansion",
+          "arrayField": "Array field to expand (path)",
+          "customField": "custom field",
+          "topLevelArrayHelp": "Only top-level array fields are supported; nested paths are not supported.",
+          "elementKey": "Element identifier field (element_key)",
+          "elementKeyPlaceholder": "e.g. sku, item_id, id",
+          "elementKeyHelp": "Identifies each element and combines with the parent key to form the target row key.",
+          "arrayIndexField": "Array index column (include_array_index)",
+          "arrayIndexPlaceholder": "e.g. item_no, idx (zero-based)",
+          "arrayIndexHelp": "Use an index to distinguish elements when element_key is not available.",
+          "elementType": "Expanded column type (element_type)",
+          "structuredObjectDefault": "structured object by default",
+          "elementTypeHelp": "Declares the output column type; it does not convert the physical value.",
+          "preserveEmptyArrays": "Preserve empty arrays or missing values (preserve_null_and_empty_arrays)",
+          "preserveEmptyArraysHelp": "When the array is empty or null, keep one parent record with an empty expanded value.",
+          "unwindRequirements": "Unwind prerequisites and risks",
+          "writeMode": "Downstream write mode",
+          "writeModeHelp": "{{upsert}} must be used for the target; {{append}} mode is not supported.",
+          "cdcImages": "Complete CDC images",
+          "cdcImagesHelp": "MySQL requires full row images; MongoDB requires collection pre-images.",
+          "keyCollision": "Prevent key collisions",
+          "keyCollisionHelp": "Keep {{field}} unique within each parent record to prevent target-side overwrites.",
+          "javascriptScript": "Custom processing script (JavaScript process)",
+          "multilineScript": "Supports multi-line {{language}}.",
+          "recordObject": "record event object",
+          "operationTypeDetail": "operation type",
+          "beforeImage": "data before the change",
+          "afterImage": "data after the change",
+          "eventTimestampDetail": "event timestamp",
+          "sourceMetadataDetail": "upstream source metadata",
+          "contextMethods": "ctx context methods",
+          "emitRecord": "emit a record (can be called multiple times)",
+          "writeDebugLog": "write a diagnostic log",
+          "discardRecord": "discard the current record",
+          "emitRecordDirectly": "emit this record directly",
+          "unionStreams": "Union input streams",
+          "fanIn": "Fan-in",
+          "unionSemanticsTitle": "Union semantics and alignment",
+          "unionSemanticsLead": "Union merges multiple input streams into one downstream stream.",
+          "unionSemanticsLimitation": "It does not rename or align fields, or deduplicate records.",
+          "unionSemanticsAdvice": "If schemas differ, use",
+          "unionSemanticsMapAdvice": "before Union to align the fields.",
+          "unionInputList": "Current input streams (from):",
+          "currentTable": "Current table",
+          "removeUnionInput": "Remove input stream",
+          "addUpstreamInput": "Add upstream stream",
+          "selectAnotherInput": "Select another available stream"
         }
       },
       "runtime": {
@@ -851,8 +1010,8 @@
           "metricsBody": "Values reported by the Pipeline observation endpoint.",
           "metricCount": "{{count}} metrics",
           "chartLabel": "Current Pipeline metrics comparison",
-          "offsetsTitle": "Source offsets",
-          "offsetsBody": "The latest source positions reported by the Pipeline.",
+          "offsetsTitle": "Target acknowledged positions",
+          "offsetsBody": "The latest positions confirmed by the Pipeline's targets.",
           "noOffsets": "No source offsets have been reported.",
           "active": "Refreshing every 5 seconds",
           "paused": "Updates paused",
@@ -865,6 +1024,49 @@
           "resumeAria": "Resume automatic monitoring refresh",
           "noMetricsTitle": "No metrics available",
           "noMetricsBody": "This Pipeline has not reported any numeric metrics yet.",
+          "historyTitle": "Output history",
+          "historyDescription": "Server-calculated rates · {{resolution}} resolution · eventual consistency",
+          "historyLoading": "Loading history",
+          "historyError": "We couldn't load output history. Check the control plane and retry.",
+          "noRetainedSamples": "No samples are retained for this time range. This does not indicate whether the Pipeline has run before.",
+          "rangeLabel": "History time range",
+          "ranges": {
+            "1h": "1h",
+            "6h": "6h",
+            "24h": "24h",
+            "7d": "7d"
+          },
+          "recordsRate": "Records per second",
+          "bytesRate": "Bytes per second",
+          "rateUnavailable": "No {{metric}} samples are available in this range.",
+          "gapsNote": "{{count}} sampling gaps are shown as breaks.",
+          "resetsNote": "{{count}} counter resets start new line segments.",
+          "lagTitle": "Target acknowledgement lag",
+          "lagTableLimit": "Showing the first {{count}} tables.",
+          "noLagSamples": "No lag samples are available for the selected tables and range.",
+          "unavailableSeries": "Unavailable series: {{metrics}}",
+          "loadMore": "Load more history",
+          "explainTitle": "Pipeline diagnosis",
+          "explainLoading": "Loading diagnosis",
+          "explainError": "We couldn't load the Pipeline diagnosis.",
+          "retry": "Retry",
+          "evidence": "Evidence",
+          "cannotSay": "What this cannot establish",
+          "nextAction": "Suggested next step",
+          "observationAge": "Observed {{seconds}} seconds ago",
+          "freshness": {
+            "FRESH": "Fresh observation",
+            "STALE": "Stale observation",
+            "UNKNOWN": "Observation age unknown"
+          },
+          "explainKind": {
+            "OBSERVATION_STALE": "Observation stale",
+            "CODED_FAILURE": "Reported failure",
+            "RECONCILE_FAILURES": "Reconciliation failures",
+            "NO_MOVEMENT": "No movement observed",
+            "FRONTIER_STALLED": "Processing frontier stalled",
+            "NO_MATCH": "No matching diagnosis"
+          },
           "unavailableTitle": "Monitoring unavailable",
           "unavailableBody": "This Pipeline has not published runtime monitoring yet.",
           "errorTitle": "We couldn't load monitoring",
@@ -872,11 +1074,16 @@
         },
         "states": {
           "NEW": "New",
+          "STARTING": "Starting",
           "RUNNING": "Running",
+          "PAUSING": "Pausing",
           "PAUSED": "Paused",
+          "RESUMING": "Resuming",
+          "STOPPING": "Stopping",
           "STOPPED": "Stopped",
           "COMPLETED": "Completed",
-          "FAILED": "Failed"
+          "FAILED": "Failed",
+          "UNAVAILABLE": "Unavailable"
         }
       },
       "apiAccess": {
@@ -985,6 +1192,169 @@
     }
   },
   "wizard": {
+    "eyebrow": "Pipeline builder",
+    "draft": "Draft",
+    "dslMode": "DSL guided",
+    "backToPipelines": "Back to Pipelines",
+    "pipelineLabel": "Pipeline",
+    "kicker": "Guided build",
+    "heading": "Shape the data path",
+    "subtitle": "Choose a source, add the steps you need, then write the result to a destination.",
+    "flowLabel": "Pipeline steps",
+    "sourceTitle": "Choose a source",
+    "sourceHint": "Start with one connected table.",
+    "rootTableLabel": "Root table",
+    "selectRootTable": "Select root table",
+    "editRootTable": "Edit root table",
+    "rootAnchorHint": "Anchor table for document assembly. Each row becomes a result document.",
+    "postAssemblyLabel": "Post-assembly",
+    "targetDestinationLabel": "Target destination",
+    "postAssemblyTitle": "Transform & computed document fields",
+    "postAssemblyHint": "Apply processing after the related tables are assembled.",
+    "noPostSteps": "No post-assembly steps configured. Optional.",
+    "rootTableMetadata": "Source: {{source}} · PK: {{primaryKey}} · {{count}} columns",
+    "setupRequired": "Setup required",
+    "switchTable": "Switch table",
+    "confirmRootTable": "Confirm root table",
+    "saveRootChanges": "Save root changes",
+    "cancelRootEdit": "Cancel",
+    "confirmRootFirst": "Confirm the root table before adding related tables or transforms.",
+    "rootChangeWarning": "Changing the root table will clear the related tables and transforms in this draft.",
+    "columnsLabel": "Columns",
+    "moreColumns": "+{{count}} more",
+    "sourceSelect": "Select a source",
+    "tableSelect": "Select a source table",
+    "tablePlaceholder": "Enter a source table",
+    "selectSourceFirst": "Select a source first",
+    "outputTitle": "Choose a destination",
+    "outputHint": "Write the result to the destination configured for this deployment.",
+    "destinationSelect": "Atlas destination",
+    "destinationTableSelect": "Atlas table",
+    "destinationTablePlaceholder": "Enter a destination table",
+    "destinationContext": "Destination",
+    "configureDestination": "Configure destination",
+    "destinationAtlasSource": "Atlas destination",
+    "destinationTargetSource": "Target source",
+    "destinationSourcePlaceholder": "Select a writable source",
+    "destinationTable": "Target table",
+    "writeStrategy": "Write strategy",
+    "awaitingTable": "Choose a table to continue",
+    "relations": {
+      "addRelatedTable": "Add related table",
+      "addAs": {
+        "flat": "Flatten into parent",
+        "object": "As sub-document",
+        "array": "As sub-array"
+      },
+      "newTable": "New related table",
+      "editTable": "(edit)",
+      "relationship": "Related table",
+      "shape": "Relationship shape",
+      "shapes": {
+        "flat": "Flatten",
+        "object": "Document",
+        "array": "Array"
+      },
+      "preprocess": "Pre-process",
+      "closeTablePicker": "Close table selection",
+      "as": "as",
+      "editOutputField": "Edit output field",
+      "parentTable": "Parent table",
+      "rootTable": "Root",
+      "remove": "Remove related table",
+      "source": "Data source",
+      "chooseSource": "Select a data source",
+      "table": "Table",
+      "chooseSourceFirst": "Select a source first",
+      "chooseTable": "Select a table",
+      "noTables": "No tables are available for this source.",
+      "outputField": "Output field",
+      "outputFieldPlaceholder": "e.g. orders",
+      "flatHint": "Fields are added directly to the parent document, so no output field is needed.",
+      "documentKey": "Root document key",
+      "chooseDocumentKey": "Select a root key field",
+      "rowKey": "Row identity",
+      "chooseRowKey": "Select a row identity field",
+      "schemaRequired": "Table fields are needed to choose a document key.",
+      "loadingSchema": "Loading table fields…",
+      "schemaUnavailable": "Table fields are unavailable. Check the source schema and permissions.",
+      "parentSchemaUnavailable": "Field metadata for the selected table is not available yet.",
+      "completeRelationship": "Choose a row key and matching fields on both sides of the association.",
+      "conditions": "Association conditions",
+      "conditionsHint": "Choose a field from any existing Pipeline table on the right.",
+      "childField": "Related table field",
+      "parentField": "Existing Pipeline field",
+      "chooseChildField": "Choose a field from this table",
+      "chooseParentField": "Choose a field from a Pipeline table",
+      "chooseTarget": "Choose an existing table",
+      "addCondition": "Add condition",
+      "removeCondition": "Remove condition",
+      "preprocessing": "Prepare related rows",
+      "preprocessingHint": "Filter records or shape fields before adding this table to its parent.",
+      "noPreprocessing": "No local processing steps yet.",
+      "addTransform": "Add processing",
+      "nestedSubRelations": "Nested sub-relations",
+      "addSubRelation": "Add sub-relation to {{table}}",
+      "noNestedRelations": "Add a related table here to build another level of the document.",
+      "requiredFieldsHint": "Keep this table's row key and association fields until it has been added to its parent."
+    },
+    "dslStep": "DSL step",
+    "atlasNotConfigured": "Atlas is not configured",
+    "atlasHint": "Configure one MongoDB Atlas destination",
+    "configureAtlas": "Configure Atlas",
+    "mongodbFallbackHint": "Using MongoDB source {{source}} as a temporary target",
+    "mongodbFallbackTableHint": "Atlas is not available yet; this MongoDB source is used to test creation.",
+    "previewTarget": "Preview target",
+    "loadingTables": "Loading destination tables",
+    "addPipelineStep": "Add a pipeline step",
+    "addProcessor": "Add a transform",
+    "chooseTransform": "Choose a step",
+    "transformHint": "A guided step in the data path.",
+    "input": "Input",
+    "stepNeedsConfiguration": "Complete this step before creating the Pipeline.",
+    "transformDescriptions": {
+      "filter": "Keep records that match conditions.",
+      "map": "Select, rename, or derive fields.",
+      "join": "Combine two input streams with SQL.",
+      "union": "Merge compatible input streams.",
+      "nest": "Group related records into a document.",
+      "js": "Apply custom record-level code."
+    },
+    "transformDescription": "Configure this step in the Pipeline editor after creation.",
+    "removeStep": "Remove step",
+    "loading": "Loading sources",
+    "saving": "Creating pipeline",
+    "create": "Create pipeline",
+    "autosaving": "Saving changes to draft…",
+    "autosaved": "Draft saved",
+    "autosaveError": "Draft save failed",
+    "unsavedChanges": "Unsaved changes",
+    "actionSummary": "{{relatedCount}} related tables · {{transformCount}} Transform steps",
+    "savePipeline": "Save",
+    "startPipeline": "Save & start",
+    "starting": "Starting pipeline…",
+    "startPhases": {
+      "saving": "Saving draft…",
+      "validating": "Checking configuration…",
+      "publishing": "Publishing pipeline…",
+      "starting": "Starting pipeline…",
+      "checking": "Checking runtime status…"
+    },
+    "checkingRuntime": "Checking runtime status…",
+    "runtimeStatusError": "Could not confirm runtime status.",
+    "alreadyRunning": "The draft is saved and published, but this Pipeline is already running. Stop the current run before starting the new revision.",
+    "errors": {
+      "save": "The pipeline could not be created. Try again.",
+      "upsertNeedsKey": "{{sourceId}}.{{table}} has no primary key. Choose Append for the destination if it supports Append, or add a primary key before starting."
+    },
+    "transforms": {
+      "filter": "Filter rows",
+      "map": "Map fields",
+      "join": "Join data",
+      "union": "Union sources",
+      "nest": "Nest fields",
+      "js": "Run JavaScript"
+    },
     "addOutput": "Add output",
     "addStep": "Add step",
     "createView": "Create View",
@@ -995,10 +1365,21 @@
     "sourceName": "0426-01",
     "title": "untitled_view_3",
     "preview": {
-      "empty": "No data. Click preview to generate sample rows.",
+      "eyebrow": "Live projection",
+      "empty": "Sample rows are not available yet.",
+      "emptyHint": "The server currently returns a validated DSL preview, not result rows.",
       "grid": "Grid preview",
       "json": "JSON preview",
-      "title": "Result Preview"
+      "note": "Changes save to this draft. The server compiles and validates this preview.",
+      "live": "DSL draft",
+      "codeLabel": "Pipeline DSL preview",
+      "ready": "Source selected",
+      "steps": "{{count}} guided steps queued",
+      "title": "Result Preview",
+      "compiling": "Compiling and validating the draft…",
+      "failed": "The server could not compile this draft.",
+      "awaitingConfiguration": "Complete the source and destination",
+      "awaitingConfigurationHint": "A DSL preview appears after the pipeline is complete."
     },
     "rename": {
       "field": "Field name",
@@ -1009,6 +1390,165 @@
       "transform": "Transform"
     }
   },
+  "views": {
+    "title": "Views",
+    "subtitle": "Browse the collections Tapstate materializes in your Cloud state store.",
+    "refresh": "Refresh",
+    "materialized": "Materialized",
+    "explorer": "VIEW COLLECTIONS",
+    "detailTabs": "View details",
+    "search": {
+      "label": "Search views",
+      "placeholder": "Search views...",
+      "empty": "No views match this search."
+    },
+    "empty": {
+      "title": "No materialized views yet",
+      "body": "Create and start a Pipeline to keep a collection current in your Cloud state store.",
+      "action": "Open Pipelines"
+    },
+    "states": {
+      "loading": "Loading views…",
+      "error": "Views could not be loaded.",
+      "notReported": "This server does not list views yet. Each pipeline still shows where it writes on its own page."
+    },
+    "stats": {
+      "documents": "Estimated documents",
+      "storage": "Storage size",
+      "loading": "Loading...",
+      "error": "Collection statistics are unavailable."
+    },
+    "tabs": {
+      "preview": "Data preview",
+      "model": "Model",
+      "lineage": "Lineage"
+    },
+    "preview": {
+      "title": "Recent documents",
+      "loading": "Loading a sample of documents...",
+      "error": "Document preview is unavailable.",
+      "empty": "This collection has no documents to preview.",
+      "rows": "{{count}} sample rows",
+      "moreAvailable": "More documents exist"
+    },
+    "model": {
+      "title": "Collection fields",
+      "description": "Fields discovered for this materialized view.",
+      "fieldCount": "{{count}} fields",
+      "field": "Field",
+      "sampleType": "Sample type",
+      "empty": "No fields were found in the current sample.",
+      "undiscovered": "The server has not discovered this view's fields yet."
+    },
+    "lineage": {
+      "title": "Maintained by",
+      "description": "Upstream source tables from the Pipeline that maintains this view.",
+      "feeds": "reads from",
+      "loading": "Loading Pipeline lineage...",
+      "unavailable": "Pipeline lineage is not available for this view on this server.",
+      "noSources": "No upstream source tables were reported."
+    },
+    "newView": "New view",
+    "intro": "Your live operational state: every view Tapstate keeps current.",
+    "kind": {
+      "view": "View",
+      "replica": "Replica"
+    },
+    "status": {
+      "fresh": "Fresh · {{behind}} behind",
+      "stale": "Stale · {{age}}",
+      "staleUnknown": "Stale",
+      "loading": "Loading {{percent}}%",
+      "loadingUnknown": "Loading",
+      "notLoaded": "Not loaded"
+    },
+    "duration": {
+      "s": "{{value}} s",
+      "min": "{{value}} min",
+      "h": "{{value}} h",
+      "d": "{{value}} d"
+    },
+    "ago": "{{age}} ago",
+    "summary": {
+      "total_one": "{{count}} view",
+      "total_other": "{{count}} views",
+      "fresh_one": "{{count}} fresh",
+      "fresh_other": "{{count}} fresh",
+      "stale_one": "{{count}} stale",
+      "stale_other": "{{count}} stale",
+      "slowest": "slowest {{behind}} behind",
+      "loading_one": "{{count}} loading",
+      "loading_other": "{{count}} loading",
+      "notLoaded_one": "{{count}} not loaded",
+      "notLoaded_other": "{{count}} not loaded"
+    },
+    "table": {
+      "name": "Name",
+      "type": "Type",
+      "storedIn": "Stored in",
+      "status": "Status",
+      "documents": "Documents",
+      "lastChange": "Last change applied",
+      "maintainedBy": "Maintained by"
+    },
+    "storedIn": {
+      "managed": "Tapstate state store",
+      "store": "{{store}} / {{database}}"
+    },
+    "explainer": {
+      "empty": "No views yet",
+      "what": "A view is a collection Tapstate keeps current from your source tables.",
+      "flowLabel": "How a view is made",
+      "sources": "Sources",
+      "pipeline": "Pipeline",
+      "view": "View",
+      "storedIn": "Views will be stored in",
+      "storeMissing": "Views live in a state store. Pick one before building a view.",
+      "setUp": "Set up",
+      "build": "Build a view",
+      "replicas": "Mirroring tables creates replicas; they appear here too."
+    },
+    "detail": {
+      "maintainedBy": "Maintained by",
+      "notFound": "No view named {{id}} on this server.",
+      "tabsLabel": "View sections",
+      "tabs": {
+        "overview": "Overview",
+        "documents": "Documents",
+        "shape": "Shape",
+        "lineage": "Lineage",
+        "indexes": "Indexes"
+      },
+      "pending": {
+        "documents": "Browsing documents is not available on this server yet.",
+        "shape": "The document shape is not available on this server yet.",
+        "lineage": "Field lineage is not available on this server yet.",
+        "indexes": "Index details are not available on this server yet."
+      },
+      "size": "Size",
+      "largestDocument": "Largest document",
+      "collection": "collection {{name}}",
+      "storedIn": "Stored in",
+      "siblings": "Also written by this pipeline:",
+      "freshness": "Freshness",
+      "lastApplied": "last change applied {{age}} ago",
+      "neverApplied": "no change applied yet",
+      "documentLimit": "limit 16 MB per document",
+      "initialLoad": "Initial load",
+      "upToDate": "Up to date",
+      "streaming": "Initial load finished; change capture keeps it current.",
+      "pipelineState": {
+        "NEW": "never started",
+        "RUNNING": "running",
+        "PAUSED": "paused",
+        "STOPPED": "stopped",
+        "COMPLETED": "completed",
+        "FAILED": "failed"
+      }
+    },
+    "footnote": "Status combines the pipeline's state with how far the view is behind its sources. A View is a built document; a Replica is a mirrored copy of one table.",
+    "browseCollections": "Browse collections"
+  },
   "notFound": {
     "back": "Back to workspace",
     "description": "The route does not exist in this Tapstate workspace preview.",
@@ -1016,13 +1556,34 @@
     "title": "Page not found"
   },
   "view": {
-    "overview": { "title": "Overview", "placeholder": "Workspace health at a glance." },
-    "resources": { "title": "Resources", "placeholder": "All assets, filterable by kind." },
-    "develop": { "title": "Develop", "placeholder": "DAG canvas & SQL editor." },
-    "operations": { "title": "Operations", "placeholder": "Task runs, cluster, Share CDC." },
-    "governance": { "title": "Governance", "placeholder": "Lineage, verification, monitoring." },
-    "services": { "title": "Data Services", "placeholder": "Published APIs & tokens." },
-    "admin": { "title": "Admin", "placeholder": "Users, roles, tenants, settings." }
+    "overview": {
+      "title": "Overview",
+      "placeholder": "Workspace health at a glance."
+    },
+    "resources": {
+      "title": "Resources",
+      "placeholder": "All assets, filterable by kind."
+    },
+    "develop": {
+      "title": "Develop",
+      "placeholder": "DAG canvas & SQL editor."
+    },
+    "operations": {
+      "title": "Operations",
+      "placeholder": "Task runs, cluster, Share CDC."
+    },
+    "governance": {
+      "title": "Governance",
+      "placeholder": "Lineage, verification, monitoring."
+    },
+    "services": {
+      "title": "Data Services",
+      "placeholder": "Published APIs & tokens."
+    },
+    "admin": {
+      "title": "Admin",
+      "placeholder": "Users, roles, tenants, settings."
+    }
   },
   "overview": {
     "title": "Overview",
@@ -1170,112 +1731,5 @@
       "members": "Members",
       "apiKeys": "API keys"
     }
-  },
-  "views": {
-    "title": "Views",
-    "newView": "New view",
-    "intro": "Your live operational state: every view Tapstate keeps current.",
-    "kind": {
-      "view": "View",
-      "replica": "Replica"
-    },
-    "status": {
-      "fresh": "Fresh · {{behind}} behind",
-      "stale": "Stale · {{age}}",
-      "staleUnknown": "Stale",
-      "loading": "Loading {{percent}}%",
-      "loadingUnknown": "Loading",
-      "notLoaded": "Not loaded"
-    },
-    "duration": {
-      "s": "{{value}} s",
-      "min": "{{value}} min",
-      "h": "{{value}} h",
-      "d": "{{value}} d"
-    },
-    "ago": "{{age}} ago",
-    "summary": {
-      "total_one": "{{count}} view",
-      "total_other": "{{count}} views",
-      "fresh_one": "{{count}} fresh",
-      "fresh_other": "{{count}} fresh",
-      "stale_one": "{{count}} stale",
-      "stale_other": "{{count}} stale",
-      "slowest": "slowest {{behind}} behind",
-      "loading_one": "{{count}} loading",
-      "loading_other": "{{count}} loading",
-      "notLoaded_one": "{{count}} not loaded",
-      "notLoaded_other": "{{count}} not loaded"
-    },
-    "table": {
-      "name": "Name",
-      "type": "Type",
-      "storedIn": "Stored in",
-      "status": "Status",
-      "documents": "Documents",
-      "lastChange": "Last change applied",
-      "maintainedBy": "Maintained by"
-    },
-    "storedIn": {
-      "managed": "Tapstate state store",
-      "store": "{{store}} / {{database}}"
-    },
-    "states": {
-      "loading": "Loading views…",
-      "error": "Views could not be loaded.",
-      "notReported": "This server does not list views yet. Each pipeline still shows where it writes on its own page."
-    },
-    "explainer": {
-      "empty": "No views yet",
-      "what": "A view is a collection Tapstate keeps current from your source tables.",
-      "flowLabel": "How a view is made",
-      "sources": "Sources",
-      "pipeline": "Pipeline",
-      "view": "View",
-      "storedIn": "Views will be stored in",
-      "storeMissing": "Views live in a state store. Pick one before building a view.",
-      "setUp": "Set up",
-      "build": "Build a view",
-      "replicas": "Mirroring tables creates replicas; they appear here too."
-    },
-    "detail": {
-      "maintainedBy": "Maintained by",
-      "notFound": "No view named {{id}} on this server.",
-      "tabsLabel": "View sections",
-      "tabs": {
-        "overview": "Overview",
-        "documents": "Documents",
-        "shape": "Shape",
-        "lineage": "Lineage",
-        "indexes": "Indexes"
-      },
-      "pending": {
-        "documents": "Browsing documents is not available on this server yet.",
-        "shape": "The document shape is not available on this server yet.",
-        "lineage": "Field lineage is not available on this server yet.",
-        "indexes": "Index details are not available on this server yet."
-      },
-      "size": "Size",
-      "largestDocument": "Largest document",
-      "collection": "collection {{name}}",
-      "storedIn": "Stored in",
-      "siblings": "Also written by this pipeline:",
-      "freshness": "Freshness",
-      "lastApplied": "last change applied {{age}} ago",
-      "neverApplied": "no change applied yet",
-      "documentLimit": "limit 16 MB per document",
-      "initialLoad": "Initial load",
-      "upToDate": "Up to date",
-      "streaming": "Initial load finished; change capture keeps it current.",
-      "pipelineState": {
-        "NEW": "never started",
-        "RUNNING": "running",
-        "PAUSED": "paused",
-        "STOPPED": "stopped",
-        "COMPLETED": "completed",
-        "FAILED": "failed"
-      }
-    },
-    "footnote": "Status combines the pipeline's state with how far the view is behind its sources. A View is a built document; a Replica is a mirrored copy of one table."
   }
 }

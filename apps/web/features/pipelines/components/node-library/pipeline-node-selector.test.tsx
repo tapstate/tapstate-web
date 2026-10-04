@@ -26,14 +26,6 @@ const sources = [
   },
 ] as SourceView[]
 
-const openSource = [
-  {
-    id: 'postgres_open',
-    connector: 'postgres',
-    tables: null,
-  },
-] as SourceView[]
-
 const connectors = [
   { id: 'mysql', name: 'MySQL', icon: '/connectors/mysql.svg' },
 ] as ConnectorSummary[]
@@ -79,112 +71,28 @@ async function renderSelector(
 }
 
 describe('PipelineNodeSelector', () => {
-  it('expands a Source and returns a catalog-backed Source choice', async () => {
+  it('selects a Source without exposing tables in the selector', async () => {
     const { onChoose } = await renderSelector()
 
     expect(document.querySelector('[role="dialog"]')).not.toBeNull()
     await act(async () =>
       document.querySelector<HTMLElement>('[data-node-selector-source="mysql_feynman"]')?.click(),
     )
-    await act(async () =>
-      document
-        .querySelector<HTMLElement>('[data-node-selector-table="mysql_feynman:Player"]')
-        ?.click(),
-    )
-
     expect(onChoose).toHaveBeenCalledWith({
       kind: 'source',
       sourceId: 'mysql_feynman',
-      table: 'Player',
+      table: '',
       connectorId: 'mysql',
     })
+    expect(document.querySelector('[data-node-selector-table]')).toBeNull()
   })
 
-  it('offers all literal tables in a Source scope as one multi-table action', async () => {
-    const onChooseMany = vi.fn()
-    await renderSelector({ onChooseMany })
+  it('shows only the configured table count for a Source', async () => {
+    await renderSelector()
 
-    await act(async () =>
-      document.querySelector<HTMLElement>('[data-node-selector-source="mysql_feynman"]')?.click(),
-    )
-    await act(async () =>
-      document.querySelector<HTMLElement>('[data-node-selector-add-all="mysql_feynman"]')?.click(),
-    )
-
-    expect(onChooseMany).toHaveBeenCalledWith([
-      {
-        kind: 'source',
-        sourceId: 'mysql_feynman',
-        table: 'Player',
-        connectorId: 'mysql',
-      },
-      {
-        kind: 'source',
-        sourceId: 'mysql_feynman',
-        table: 'Match',
-        connectorId: 'mysql',
-      },
-    ])
-  })
-
-  it('offers Source patterns as dynamic references instead of concrete table nodes', async () => {
-    const { onChoose } = await renderSelector()
-
-    await act(async () =>
-      document.querySelector<HTMLElement>('[data-node-selector-source="mysql_feynman"]')?.click(),
-    )
-
-    expect(document.querySelector('[data-node-selector-scope-rule="player_*"]')).not.toBeNull()
-    expect(document.querySelector('[data-node-selector-table="mysql_feynman:player_*"]')).toBeNull()
-
-    await act(async () =>
-      document.querySelector<HTMLElement>('[data-node-selector-scope-rule="player_*"]')?.click(),
-    )
-
-    expect(onChoose).toHaveBeenCalledWith({
-      kind: 'source',
-      sourceId: 'mysql_feynman',
-      table: 'player_*',
-      tableKind: 'regex',
-      connectorId: 'mysql',
-    })
-  })
-
-  it('discovers tables for an open Source scope before offering the multi-table action', async () => {
-    const onChooseMany = vi.fn()
-    const loadTables = vi.fn(async () => [
-      { label: 'orders', value: 'orders' },
-      { label: 'customers', value: 'customers' },
-    ])
-    await renderSelector({ sources: openSource, onChooseMany, loadTables })
-
-    await act(async () =>
-      document.querySelector<HTMLElement>('[data-node-selector-source="postgres_open"]')?.click(),
-    )
-    await vi.waitFor(() => {
-      expect(
-        document.querySelector('[data-node-selector-table="postgres_open:orders"]'),
-      ).not.toBeNull()
-    })
-    await act(async () =>
-      document.querySelector<HTMLElement>('[data-node-selector-add-all="postgres_open"]')?.click(),
-    )
-
-    expect(loadTables).toHaveBeenCalledWith('postgres_open')
-    expect(onChooseMany).toHaveBeenCalledWith([
-      {
-        kind: 'source',
-        sourceId: 'postgres_open',
-        table: 'orders',
-        connectorId: 'postgres',
-      },
-      {
-        kind: 'source',
-        sourceId: 'postgres_open',
-        table: 'customers',
-        connectorId: 'postgres',
-      },
-    ])
+    const source = document.querySelector('[data-node-selector-source="mysql_feynman"]')
+    expect(source?.textContent).toContain('3')
+    expect(document.querySelector('[data-node-selector-tables]')).toBeNull()
   })
 
   it('keeps transform choices available when loading Sources failed', async () => {
@@ -225,6 +133,31 @@ describe('PipelineNodeSelector', () => {
     )
 
     expect(onChoose).toHaveBeenCalledWith({ kind: 'target' })
+  })
+
+  it('hides Sources when adding after an existing node', async () => {
+    const { onChoose } = await renderSelector({
+      insertion: { ...insertion, connectFrom: 'source:mysql_feynman' },
+    })
+
+    expect(document.querySelector('[data-node-selector-source]')).toBeNull()
+    expect(document.querySelector('[data-node-choice="transform:filter"]')).not.toBeNull()
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-node-choice="transform:filter"]')?.click(),
+    )
+    expect(onChoose).toHaveBeenCalledWith({ kind: 'transform', transformType: 'filter' })
+  })
+
+  it('hides Sources when replacing an existing connection', async () => {
+    await renderSelector({
+      insertion: {
+        ...insertion,
+        insertEdge: { id: 'edge:source:target', source: 'source', target: 'target' },
+      },
+    })
+
+    expect(document.querySelector('[data-node-selector-source]')).toBeNull()
+    expect(document.querySelector('[data-node-choice="target"]')).not.toBeNull()
   })
 
   it('closes on Escape and resets the search term on the next open', async () => {
