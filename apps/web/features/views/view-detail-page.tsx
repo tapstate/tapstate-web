@@ -11,6 +11,7 @@ import type { ViewSummary } from '@/service/view-client'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { previewSourceCollection } from '@/service/data-browser-client'
 import { listPipelines } from '@/service/pipelines/pipeline-client'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -138,11 +139,51 @@ function ViewTabs({ view }: { view: ViewSummary }) {
       <div role="tabpanel" id={`view-panel-${tab}`} aria-labelledby={`view-tab-${tab}`}>
         {tab === 'overview' ? (
           <ViewOverview view={view} />
+        ) : tab === 'documents' ? (
+          <ViewDocuments view={view} />
         ) : (
           <p className="text-muted-foreground text-[13px]">{t(`views.detail.pending.${tab}`)}</p>
         )}
       </div>
     </>
+  )
+}
+
+function ViewDocuments({ view }: { view: ViewSummary }) {
+  const { t } = useTranslation()
+  const apiFetch = useAuthStore((state) => state.apiFetch)
+  const preview = useQuery({
+    queryKey: ['view-documents', view.location.storeId, view.location.collection, 5],
+    queryFn: () => previewSourceCollection(view.location.storeId, view.location.collection, apiFetch, 5),
+  })
+
+  if (preview.isPending) return <p className="text-muted-foreground text-[13px]">{t('views.preview.loading')}</p>
+  if (preview.isError) {
+    return (
+      <div className="space-y-3" role="alert">
+        <p className="text-muted-foreground text-[13px]">{t('views.preview.error')}</p>
+        <Button type="button" variant="outline" onClick={() => void preview.refetch()}>
+          {t('state.error.retry')}
+        </Button>
+      </div>
+    )
+  }
+  if (preview.data.rows.length === 0) return <p className="text-muted-foreground text-[13px]">{t('views.preview.empty')}</p>
+
+  return (
+    <section className="space-y-3" aria-label={t('views.preview.title')}>
+      <p className="text-muted-foreground text-xs">
+        {t('views.preview.rows', { count: preview.data.rows.length })}
+        {preview.data.moreAvailable ? ` · ${t('views.preview.moreAvailable')}` : ''}
+      </p>
+      <div className="grid gap-3 lg:grid-cols-2">
+        {preview.data.rows.map((row, index) => (
+          <pre key={`${index}-${String(row._id ?? '')}`} className="border-border bg-muted/20 max-h-72 overflow-auto rounded-lg border p-4 text-xs leading-5">
+            {JSON.stringify(row, null, 2)}
+          </pre>
+        ))}
+      </div>
+    </section>
   )
 }
 

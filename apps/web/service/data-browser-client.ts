@@ -109,13 +109,22 @@ export async function previewViewCollection(
   collection: string,
   fetcher: ApiFetcher = fetch,
 ): Promise<ViewPreview> {
+  return previewSourceCollection('views', collection, fetcher)
+}
+
+export async function previewSourceCollection(
+  sourceId: string,
+  collection: string,
+  fetcher: ApiFetcher = fetch,
+  limit = 25,
+): Promise<ViewPreview> {
   const payload = await requestJson(
-    `/sources/views/collections/${encodeURIComponent(collection)}:find`,
+    `/sources/${encodeURIComponent(sourceId)}/collections/${encodeURIComponent(collection)}:find`,
     fetcher,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ limit: 25 }),
+      body: JSON.stringify({ limit }),
     },
   )
   if (
