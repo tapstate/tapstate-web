@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 
-import { Link } from '@tanstack/react-router'
 import { Plus, Sparkles } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useEffect, useState } from 'react'
@@ -37,6 +36,7 @@ const MORE_SOURCE: SourceConnector = {
 interface OverviewTopologyProps {
   overview: OverviewModel
   connectors: ConnectorSummary[]
+  onConnectAtlas: () => void
   onAddSources: () => void
   onBuildPipeline: () => void
   children: ReactNode
@@ -45,6 +45,7 @@ interface OverviewTopologyProps {
 export function OverviewTopology({
   overview,
   connectors,
+  onConnectAtlas,
   onAddSources,
   onBuildPipeline,
   children,
@@ -439,8 +440,9 @@ export function OverviewTopology({
             onBlur={() => setIsStoreHovered(false)}
           >
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.96 }}>
-              <Link
-                to="/settings"
+              <button
+                type="button"
+                onClick={onConnectAtlas}
                 style={{
                   width: 52,
                   height: 52,
@@ -471,7 +473,7 @@ export function OverviewTopology({
                     <path d="M12 21V9" stroke="#00684A" strokeWidth="1.6" strokeLinecap="round" />
                   </svg>
                 </div>
-              </Link>
+              </button>
             </motion.div>
 
             {isStoreHovered && (

@@ -22,6 +22,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { getDeploymentProfile } from '@/utils/deployment-profile'
 
 import { AddSourcesDialog } from './components/add-sources-dialog'
+import { AtlasStoreDialog } from './components/atlas-store-dialog'
 import { OverviewTopology } from './components/overview-topology'
 import { buildOverview, type OverviewModel } from './overview-model'
 
@@ -58,7 +59,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
     refetchInterval: (query) => (query.state.data?.available === false ? false : 5000),
     refetchIntervalInBackground: false,
   })
-  // A deployment without sample settings serves no file; the offer then stays hidden.
+  // The server exposes only non-secret sample metadata when sample credentials are configured.
   const samplesQuery = useQuery({
     queryKey: ['sample-sources'],
     queryFn: () => loadSampleSources(apiFetch),
@@ -76,6 +77,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
     },
   })
   const [addSourcesOpen, setAddSourcesOpen] = useState(false)
+  const [atlasOpen, setAtlasOpen] = useState(false)
   const [sourceFormOpen, setSourceFormOpen] = useState(false)
   const [pipelineCreationOpen, setPipelineCreationOpen] = useState(false)
 
@@ -127,8 +129,22 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
                 (sample) => !(sourcesQuery.data ?? []).some((source) => source.id === sample.id),
               ),
             )}
-            onAddSources={() => setAddSourcesOpen(true)}
-            onBuildPipeline={() => setPipelineCreationOpen(true)}
+            onConnectAtlas={() => {
+              if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready)
+                setAtlasOpen(true)
+              else window.location.assign('/settings')
+            }}
+            onAddSources={() => {
+              if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready)
+                setAtlasOpen(true)
+              else setAddSourcesOpen(true)
+            }}
+            onBuildPipeline={() => {
+              if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready)
+                setAtlasOpen(true)
+              else if (!overview.setup.done.sources) setAddSourcesOpen(true)
+              else setPipelineCreationOpen(true)
+            }}
           />
         )}
       </div>
@@ -137,6 +153,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
         open={addSourcesOpen}
         onOpenChange={setAddSourcesOpen}
         sources={overview?.sources.all ?? []}
+        connectors={connectorsQuery.data ?? []}
         sample={
           samplesQuery.data
             ? {
@@ -153,6 +170,17 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
         onConnect={() => {
           setAddSourcesOpen(false)
           setSourceFormOpen(true)
+        }}
+      />
+      <AtlasStoreDialog
+        open={atlasOpen}
+        onOpenChange={setAtlasOpen}
+        onCreated={(created) => {
+          queryClient.setQueryData<SourceView[]>(['sources'], (current) => [
+            ...(current ?? []).filter((item) => item.id !== created.id),
+            created,
+          ])
+          setAddSourcesOpen(true)
         }}
       />
       {pipelineCreationOpen && (
@@ -185,6 +213,7 @@ interface OverviewContentProps {
   overview: OverviewModel
   connectors: ConnectorSummary[]
   sampleAvailable: boolean
+  onConnectAtlas: () => void
   onAddSources: () => void
   onBuildPipeline: () => void
 }
@@ -193,6 +222,7 @@ function OverviewContent({
   overview,
   connectors,
   sampleAvailable,
+  onConnectAtlas,
   onAddSources,
   onBuildPipeline,
 }: OverviewContentProps) {
@@ -201,12 +231,14 @@ function OverviewContent({
       <OverviewTopology
         overview={overview}
         connectors={connectors}
+        onConnectAtlas={onConnectAtlas}
         onAddSources={onAddSources}
         onBuildPipeline={onBuildPipeline}
       >
         <OverviewMilestoneDock
           overview={overview}
           sampleAvailable={sampleAvailable}
+          onConnectAtlas={onConnectAtlas}
           onAddSources={onAddSources}
           onBuildPipeline={onBuildPipeline}
         />
@@ -247,11 +279,13 @@ function OverviewRuntimeMetrics({ overview }: { overview: OverviewModel }) {
 function OverviewMilestoneDock({
   overview,
   sampleAvailable,
+  onConnectAtlas,
   onAddSources,
   onBuildPipeline,
 }: {
   overview: OverviewModel
   sampleAvailable: boolean
+  onConnectAtlas: () => void
   onAddSources: () => void
   onBuildPipeline: () => void
 }) {
@@ -267,8 +301,9 @@ function OverviewMilestoneDock({
     >
       <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-slate-200/90 bg-white/95 px-5 py-3 shadow-[0_8px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl transition-all sm:flex-row">
         <div className="flex max-w-full items-center gap-2 overflow-x-auto text-[12px] font-medium select-none sm:gap-3 sm:text-[13px]">
-          <Link
-            to="/settings"
+          <button
+            type="button"
+            onClick={onConnectAtlas}
             aria-current={!storeDone ? 'step' : undefined}
             className={cn(
               'flex cursor-pointer items-center gap-1.5 whitespace-nowrap transition-colors',
@@ -287,7 +322,7 @@ function OverviewMilestoneDock({
               {storeDone ? '✓' : '1'}
             </span>
             <span>{t('overview.milestones.stateStoreShort', 'State Store')}</span>
-          </Link>
+          </button>
 
           <span className="text-slate-300" aria-hidden="true">
             ➔
@@ -368,13 +403,14 @@ function OverviewMilestoneDock({
             </button>
           )}
           {!storeDone ? (
-            <Link
-              to="/settings"
+            <button
+              type="button"
+              onClick={onConnectAtlas}
               className="flex h-8.5 cursor-pointer items-center gap-1.5 rounded-xl bg-[#4F46E5] px-4 text-[12.5px] font-semibold whitespace-nowrap text-white shadow-xs transition-all hover:scale-[1.01] hover:bg-[#4338CA]"
             >
               <span>{t('overview.milestones.connectStateStore', 'Connect State Store')}</span>
               <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </Link>
+            </button>
           ) : !sourcesDone ? (
             <div className="flex items-center gap-2.5">
               <button

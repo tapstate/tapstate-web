@@ -1,21 +1,13 @@
 import {
-  createSource,
   deleteSource,
   getSource,
   SourceClientError,
   type ApiFetcher,
-  type JsonValue,
   type SourceView,
 } from './source-client'
 
-/**
- * The sample bank sources a deployment offers, read from a settings file served next to the web
- * app. A deployment that offers none serves no file, and the sample option stays hidden.
- *
- * The file carries a read-only account for the sample databases. It reaches the browser once, to
- * create the sources through the normal API; the page never displays it.
- */
-export const SAMPLE_SOURCES_PATH = '/assets/sample-sources.json'
+/** Server-owned sample inventory; credentials never enter the browser. */
+export const SAMPLE_SOURCES_PATH = '/api/sample-sources'
 
 /** Label that marks a source as one of the samples, so it can be tagged and removed as a set. */
 export const SAMPLE_LABEL = 'sample'
@@ -25,8 +17,6 @@ export interface SampleSourceSetting {
   name: string
   description: string
   connector: string
-  mode: string
-  config: Record<string, JsonValue>
 }
 
 export function isSampleSource(source: SourceView): boolean {
@@ -67,33 +57,19 @@ export interface SampleAddResult {
   existing: string[]
 }
 
-/** Creates every sample not yet present. Stops at the first refusal and reports it. */
+/** The server installs both sample connections using its private deployment configuration. */
 export async function addSampleSources(
-  samples: SampleSourceSetting[],
-  present: SourceView[],
+  _samples: SampleSourceSetting[],
+  _present: SourceView[],
   fetcher: ApiFetcher = fetch,
 ): Promise<SampleAddResult> {
-  const presentIds = new Set(present.map((source) => source.id))
-  const added: SourceView[] = []
-  const existing: string[] = []
-  for (const sample of samples) {
-    if (presentIds.has(sample.id)) {
-      existing.push(sample.id)
-      continue
-    }
-    const created = await createSource(
-      {
-        id: sample.id,
-        connector: sample.connector,
-        mode: sample.mode,
-        config: sample.config,
-        metadata: { labels: { [SAMPLE_LABEL]: 'true' }, description: sample.name },
-      },
-      fetcher,
-    )
-    added.push(created.source)
-  }
-  return { added, existing }
+  const response = await fetcher('/api/sample-sources:install', { method: 'POST' })
+  if (!response.ok)
+    throw new SourceClientError('server', 'sample installation failed', null, response.status)
+  const result: unknown = await response.json()
+  if (!isRecord(result) || !Array.isArray(result.added) || !Array.isArray(result.existing))
+    throw new SourceClientError('protocol', 'malformed sample installation response')
+  return { added: result.added as SourceView[], existing: result.existing as string[] }
 }
 
 export type SampleRemoveResult =
@@ -137,8 +113,6 @@ function isSampleSetting(value: unknown): value is SampleSourceSetting {
     typeof value.id === 'string' &&
     typeof value.name === 'string' &&
     typeof value.description === 'string' &&
-    typeof value.connector === 'string' &&
-    typeof value.mode === 'string' &&
-    isRecord(value.config)
+    typeof value.connector === 'string'
   )
 }

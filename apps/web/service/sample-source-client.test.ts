@@ -29,8 +29,6 @@ const coreBanking: SampleSourceSetting = {
   name: 'Core banking',
   description: 'Customers, accounts and transactions',
   connector: 'mysql',
-  mode: 'cdc',
-  config: { host: 'demo-mysql.tapstate.dev', port: '3306', password: 'read-only' },
 }
 
 function json(body: unknown, status = 200, headers: Record<string, string> = {}) {
@@ -41,14 +39,14 @@ function json(body: unknown, status = 200, headers: Record<string, string> = {})
 }
 
 describe('loadSampleSources', () => {
-  it('reads the settings file', async () => {
+  it('reads non-secret sample metadata from the server', async () => {
     const fetcher = vi.fn(async () => json({ sources: [coreBanking] }))
 
     await expect(loadSampleSources(fetcher)).resolves.toEqual([coreBanking])
-    expect(fetcher).toHaveBeenCalledWith('/assets/sample-sources.json', expect.anything())
+    expect(fetcher).toHaveBeenCalledWith('/api/sample-sources', expect.anything())
   })
 
-  it('offers nothing when the deployment serves no file or a malformed one', async () => {
+  it('offers nothing when the server has no samples or returns malformed metadata', async () => {
     await expect(loadSampleSources(vi.fn(async () => json({}, 404)))).resolves.toBeNull()
     await expect(
       loadSampleSources(vi.fn(async () => json({ sources: [{ id: 1 }] }))),
@@ -60,13 +58,13 @@ describe('loadSampleSources', () => {
 })
 
 describe('addSampleSources', () => {
-  it('creates missing samples with the sample label and skips present ones', async () => {
-    const bodies: unknown[] = []
-    const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body))
-      bodies.push(body)
-      return json({ ...view(body.id, true) }, 201, { ETag: `"${'b'.repeat(64)}"` })
-    })
+  it('asks the server to install both samples without sending credentials', async () => {
+    const fetcher = vi.fn(async () =>
+      json({
+        added: [view('sample_cards_crm', true)],
+        existing: ['sample_core_banking'],
+      }),
+    )
     const cards = { ...coreBanking, id: 'sample_cards_crm', name: 'Cards & CRM' }
 
     const result = await addSampleSources(
@@ -77,14 +75,7 @@ describe('addSampleSources', () => {
 
     expect(result.existing).toEqual(['sample_core_banking'])
     expect(result.added.map((source) => source.id)).toEqual(['sample_cards_crm'])
-    expect(bodies).toEqual([
-      expect.objectContaining({
-        id: 'sample_cards_crm',
-        connector: 'mysql',
-        mode: 'cdc',
-        metadata: { labels: { sample: 'true' }, description: 'Cards & CRM' },
-      }),
-    ])
+    expect(fetcher).toHaveBeenCalledWith('/api/sample-sources:install', { method: 'POST' })
   })
 })
 

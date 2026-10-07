@@ -2,7 +2,7 @@ import type { DeploymentProfile } from '@/utils/deployment-profile'
 
 import { MANAGED_VIEW_STORE_SOURCE_ID, type SourceView } from './source-client'
 
-export function hasStoreMarker(source: SourceView): boolean {
+export function hasStoreMarker(source: Pick<SourceView, 'metadata'>): boolean {
   const labels = source.metadata?.labels
   if (!labels || typeof labels !== 'object' || Array.isArray(labels)) return false
   return labels.store === 'true' || labels.store === true

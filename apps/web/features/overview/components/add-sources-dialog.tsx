@@ -1,135 +1,172 @@
-import { Database, Landmark } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { ArrowRight, Plus, Sparkles, X } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import type { ConnectorSummary } from '@/service/source-client'
+
+import { ConnectorIcon } from '@/components/connector-icon'
 
 import type { OverviewSourceItem } from '../overview-model'
 
 interface AddSourcesDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** Every data source added so far, so the user sees each one land. */
   sources: OverviewSourceItem[]
-  /** Opens the new-source form. */
+  connectors?: ConnectorSummary[]
   onConnect: () => void
-  /** The sample offer, when this deployment has one. */
   sample?: SampleOffer | null
 }
 
 export interface SampleOffer {
-  /** Names of the sample sources, such as "Core banking". */
   names: string[]
-  /** Every sample source is already added. */
   added: boolean
   adding: boolean
   error: string | null
   onAdd: () => void
 }
 
-/** The sources step of setup: add databases without leaving Overview, then Done. */
+/** The prototype source step with live connector icons and server-owned samples. */
 export function AddSourcesDialog({
   open,
   onOpenChange,
   sources,
+  connectors = [],
   onConnect,
   sample,
 }: AddSourcesDialogProps) {
-  const { t } = useTranslation()
+  if (!open) return null
+  const choices = connectors.filter(
+    (connector) =>
+      connector.modes.length > 0 &&
+      ['mysql', 'postgres', 'mongodb', 'oracle', 'sqlserver'].some((family) =>
+        connector.id.toLowerCase().includes(family),
+      ),
+  )
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{t('overview.addSources.title')}</DialogTitle>
-          <DialogDescription>{t('overview.addSources.description')}</DialogDescription>
-        </DialogHeader>
-        <div className="overview-add-sources">
-          {sample && (
-            <section className="overview-add-sources__option">
-              <Landmark className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden="true" />
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <h3 className="text-foreground flex items-center gap-2 text-[13px] font-semibold">
-                  {t('overview.addSources.sample.title')}
-                  <span className="overview-add-sources__tag">{t('overview.addSources.tag')}</span>
-                </h3>
-                <p className="text-muted-foreground text-[12px] leading-relaxed">
-                  {t('overview.addSources.sample.description', {
-                    names: sample.names.join(t('overview.addSources.sample.and')),
-                  })}
-                </p>
-                {sample.error && (
-                  <p className="text-destructive text-[12px]" role="alert">
-                    {sample.error}
-                  </p>
-                )}
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                disabled={sample.added || sample.adding}
-                onClick={sample.onAdd}
-              >
-                {sample.added
-                  ? t('overview.addSources.sample.added')
-                  : sample.adding
-                    ? t('overview.addSources.sample.adding')
-                    : t('overview.addSources.sample.action')}
-              </Button>
-            </section>
-          )}
-          <section className="overview-add-sources__option">
-            <Database className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden="true" />
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <h3 className="text-foreground text-[13px] font-semibold">
-                {t('overview.addSources.connect.title')}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div
+        className="animate-in fade-in zoom-in-95 w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Add databases"
+      >
+        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-6 py-4">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#4F46E5] text-white shadow-xs">
+              <Plus className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-[14px] font-bold text-slate-900">
+                Add the databases you build from (Step 2)
               </h3>
-              <p className="text-muted-foreground text-[12px] leading-relaxed">
-                {t('overview.addSources.connect.description')}
+              <p className="text-[11px] text-slate-500">
+                Connect operational databases and event streams to replicate CDC mutations into
+                MongoDB Atlas.
               </p>
             </div>
-            <Button type="button" size="sm" variant="outline" onClick={onConnect}>
-              {t('overview.addSources.connect.action')}
-            </Button>
-          </section>
-          {sources.length > 0 && (
-            <section aria-labelledby="overview-added-sources">
-              <h3
-                id="overview-added-sources"
-                className="text-muted-foreground mb-2 text-[12px] font-medium"
-              >
-                {t('overview.addSources.added', { count: sources.length })}
-              </h3>
-              <ul className="overview-add-sources__list">
-                {sources.map((source) => (
-                  <li key={source.id}>
+          </div>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="cursor-pointer rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="max-h-[420px] space-y-3 overflow-y-auto p-6">
+          {sample && (
+            <button
+              type="button"
+              disabled={sample.added || sample.adding}
+              onClick={sample.onAdd}
+              className="group w-full cursor-pointer rounded-2xl border-2 border-indigo-500/30 bg-gradient-to-r from-indigo-50/80 via-purple-50/50 to-white p-3.5 text-left transition-all hover:border-indigo-500 hover:shadow-md disabled:cursor-default"
+            >
+              <span className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 text-white shadow-xs">
+                    <Sparkles className="h-5 w-5" />
+                  </span>
+                  <span>
                     <span className="flex items-center gap-2">
-                      <span className="text-foreground font-medium">{source.id}</span>
-                      {source.sample && (
-                        <span className="overview-add-sources__tag">
-                          {t('overview.addSources.tag')}
-                        </span>
-                      )}
+                      <span className="text-[13.5px] font-bold text-slate-900 transition-colors group-hover:text-indigo-600">
+                        Sample bank sources
+                      </span>
+                      <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold tracking-wide text-indigo-700 uppercase">
+                        Recommended
+                      </span>
                     </span>
-                    <span className="text-muted-foreground">{source.connector}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
+                    <span className="mt-0.5 block text-[11.5px] leading-snug text-slate-500">
+                      {sample.names.join(' & ')}. Ready for the guided pipeline builder.
+                    </span>
+                  </span>
+                </span>
+                <span className="flex shrink-0 items-center gap-1 rounded-xl bg-[#4F46E5] px-3.5 py-1.5 text-[11px] font-bold whitespace-nowrap text-white shadow-xs transition-colors group-hover:bg-[#4338CA]">
+                  {sample.added ? 'Added' : sample.adding ? 'Adding…' : 'Initialize'}{' '}
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </span>
+              </span>
+              {sample.error && (
+                <span className="mt-2 block text-[11px] text-red-600" role="alert">
+                  {sample.error}
+                </span>
+              )}
+            </button>
+          )}
+          <div className="px-1 pt-1 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
+            Or connect self-hosted / cloud database
+          </div>
+          {choices.map((connector) => (
+            <button
+              key={connector.id}
+              type="button"
+              onClick={onConnect}
+              className="group flex w-full cursor-pointer items-center justify-between rounded-2xl border border-slate-200 bg-white p-3.5 text-left transition-all hover:border-indigo-400 hover:bg-indigo-50/30"
+            >
+              <span className="flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 transition-colors group-hover:bg-indigo-100">
+                  <ConnectorIcon
+                    connectorId={connector.id}
+                    name={connector.name}
+                    iconPath={connector.icon}
+                    size={28}
+                  />
+                </span>
+                <span>
+                  <span className="block text-[13px] font-bold text-slate-900 transition-colors group-hover:text-indigo-600">
+                    {connector.name}
+                  </span>
+                  <span className="text-[11px] text-slate-400">{connector.group}</span>
+                </span>
+              </span>
+              <span className="flex items-center gap-1.5 text-[11px] font-semibold text-[#4F46E5] group-hover:underline">
+                Connect <ArrowRight className="h-3.5 w-3.5" />
+              </span>
+            </button>
+          ))}
+          {choices.length === 0 && (
+            <button
+              type="button"
+              onClick={onConnect}
+              className="text-[12px] font-semibold text-[#4F46E5]"
+            >
+              Connect a source
+            </button>
+          )}
+          {sources.length > 0 && (
+            <p className="text-[11px] text-slate-500">
+              Connected: {sources.map((source) => source.id).join(', ')}
+            </p>
           )}
         </div>
-        <DialogFooter>
-          <Button type="button" size="sm" onClick={() => onOpenChange(false)}>
-            {t('overview.addSources.done')}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <div className="flex items-center justify-end border-t border-slate-100 bg-slate-50 px-6 py-3 text-[11px] text-slate-500">
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="cursor-pointer font-semibold text-[#4F46E5] hover:underline"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
