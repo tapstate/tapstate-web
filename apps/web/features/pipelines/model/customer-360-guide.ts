@@ -24,13 +24,15 @@ const LINE_KEYS = ['ol_w_id', 'ol_d_id', 'ol_o_id']
 /** Finds a connected MySQL/Postgres sample schema that can form a customer/order document. */
 export function findCustomer360Preset(catalog: DataSourceMeta[]): Customer360Preset | null {
   const candidates = catalog
-    .filter((source) => !source.sink && /mysql|postgres|postgresql/i.test(source.connector || ''))
+    .filter((source) => /mysql|postgres|postgresql/i.test(source.connector || ''))
     .sort((left, right) => connectorPriority(left.connector) - connectorPriority(right.connector))
 
   for (const source of candidates) {
     const root = source.tables.find((table) => isCustomerTable(table.name))
-    const orders = source.tables.find((table) => isOrderTable(table.name))
-    const items = source.tables.find((table) => isOrderLineTable(table.name))
+    const orders = source.tables.find((table) => basename(table.name).endsWith('bmsql_oorder'))
+      ?? source.tables.find((table) => isOrderTable(table.name))
+    const items = source.tables.find((table) => basename(table.name).endsWith('bmsql_order_line'))
+      ?? source.tables.find((table) => isOrderLineTable(table.name))
     if (!root || !orders || !items) continue
     const rootKeys = tableKeys(root)
 
