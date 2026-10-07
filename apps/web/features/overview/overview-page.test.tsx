@@ -180,15 +180,19 @@ describe('OverviewPage', () => {
     expect(container.textContent).toContain(
       'Data flows from your sources, through pipelines, into the state store.',
     )
-    expect(container.querySelectorAll('.overview-topology__source-track')).toHaveLength(4)
-    expect(container.querySelectorAll('.overview-topology__source[aria-pressed]')).toHaveLength(2)
+    expect(container.querySelectorAll('button[aria-pressed]')).toHaveLength(3)
+    expect(container.querySelectorAll('path.overview-flow-motion')).toHaveLength(6)
+    expect(container.querySelectorAll('circle.overview-flow-motion')).toHaveLength(3)
+    expect(container.querySelector('path.overview-flow-motion')?.getAttribute('style')).toContain(
+      'pipeline-stage-flow 1.8s linear infinite',
+    )
     expect(container.querySelector('[aria-current="step"]')?.textContent).toContain(
-      'Build a pipeline',
+      'Build Pipeline',
     )
     expect(container.textContent).toContain('No pipeline yet.')
   })
 
-  it('keeps the selected source highlighted and only animates a running pipeline', async () => {
+  it('switches the copied laser paths with the selected source and reports running state', async () => {
     listSources.mockResolvedValue([
       source('views', 'mongodb'),
       source('core_banking', 'mysql'),
@@ -199,17 +203,20 @@ describe('OverviewPage', () => {
     await render()
     await settle()
     const sourceButton = container.querySelector<HTMLButtonElement>(
-      'button[aria-label="postgres: cards"]',
+      'button[aria-label="PostgreSQL"]',
     )
     await act(async () => sourceButton?.click())
 
-    expect(sourceButton?.getAttribute('aria-pressed')).toBe('true')
-    expect(container.querySelectorAll('.overview-topology__source-beam')).toHaveLength(2)
+    expect(
+      container.querySelector('button[aria-label="PostgreSQL"]')?.getAttribute('aria-pressed'),
+    ).toBe('true')
+    expect(container.querySelectorAll('path.overview-flow-motion')).toHaveLength(6)
     expect(
       container
-        .querySelectorAll('.overview-topology__source-track')[0]
-        ?.getAttribute('data-focused'),
-    ).toBe('true')
+        .querySelector('path.overview-flow-motion[stroke="url(#selectedSourceBeam)"]')
+        ?.getAttribute('d'),
+    ).toBe('M0 116H34C48 116 62 122 72 133L79 141C89 152 103 165 118 165H178')
+    expect(container.textContent).toContain('1 pipeline streaming')
   })
 
   it('shows counts, failures and no setup guidance once setup is complete', async () => {
@@ -273,7 +280,7 @@ describe('OverviewPage', () => {
 
     await render()
     await settle()
-    expect(buttonNamed('New pipeline', container)).toBeTruthy()
+    expect(buttonNamed('New Pipeline', container)).toBeTruthy()
   })
 
   it('opens pipeline creation in wizard mode from the guided build action', async () => {
@@ -282,7 +289,7 @@ describe('OverviewPage', () => {
 
     await render()
     await settle()
-    await act(async () => buttonNamed('Build pipeline', container)?.click())
+    await act(async () => buttonNamed('Build Pipeline', container)?.click())
 
     expect(
       container

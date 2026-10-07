@@ -1648,6 +1648,7 @@
       "active_one": "{{count}} pipeline streaming",
       "active_other": "{{count}} pipelines streaming",
       "none": "No pipeline is streaming right now",
+      "preview": "Flow preview",
       "sources_one": "{{count}} connected source",
       "sources_other": "{{count}} connected sources",
       "destination": "State store: {{name}}",
@@ -1656,12 +1657,17 @@
     "milestones": {
       "title": "Setup milestones",
       "stateStore": "Set up the state store",
+      "stateStoreShort": "State Store",
       "sources": "Connect data sources",
+      "sourcesShort": "Add Databases",
       "pipeline": "Build a pipeline",
+      "pipelineShort": "Build Pipeline",
       "configure": "Open settings",
+      "connectStateStore": "Connect State Store",
+      "trySample": "Try sample",
       "addSources": "Add sources",
-      "build": "Build pipeline",
-      "newPipeline": "New pipeline",
+      "build": "Build Pipeline",
+      "newPipeline": "New Pipeline",
       "open": "Open"
     },
     "problems_one": "{{count}} problem",
@@ -1705,6 +1711,8 @@
       "more_other": "and {{count}} more",
       "open": "Data Sources →",
       "add": "Add data sources",
+      "connected": "Connected",
+      "connect": "Connect to {{name}}",
       "tooltip": "Select {{connector}} source {{id}}"
     },
     "pipelines": {

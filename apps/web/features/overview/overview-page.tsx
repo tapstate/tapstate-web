@@ -2,20 +2,16 @@ import type { ReactNode } from 'react'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { ArrowRight, CheckCircle2 } from 'lucide-react'
+import { ArrowRight, Sparkles } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { PipelineCreationDialog } from '@/features/pipelines/components/create/pipeline-creation-dialog'
+import { cn } from '@/lib/utils'
 import { listPipelines } from '@/service/pipelines/pipeline-client'
 import { addSampleSources, loadSampleSources } from '@/service/sample-source-client'
-import {
-  listConnectors,
-  listSources,
-  type ConnectorSummary,
-  type SourceView,
-} from '@/service/source-client'
+import { listSources, type SourceView } from '@/service/source-client'
 import { listViews } from '@/service/view-client'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -39,11 +35,6 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
   const queryClient = useQueryClient()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   // Same keys as the Data Sources, Pipelines and Views pages, so they share one cache.
-  const connectorsQuery = useQuery({
-    queryKey: ['connectors'],
-    queryFn: () => listConnectors(apiFetch),
-    staleTime: Infinity,
-  })
   const sourcesQuery = useQuery({ queryKey: ['sources'], queryFn: () => listSources(apiFetch) })
   const pipelinesQuery = useQuery({
     queryKey: ['pipelines'],
@@ -90,9 +81,11 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
   const failed = sourcesQuery.isError || pipelinesQuery.isError
   return (
     <section className="overview-page">
-      <header className="overview-page__header">
-        <div className="flex min-w-0 flex-col">
-          <h1 className="text-foreground text-[15px] font-semibold">{t('overview.title')}</h1>
+      <header className="overview-page__header z-30 flex shrink-0 items-center justify-between border-b border-slate-200/80 bg-white/80 px-8 py-3.5 backdrop-blur-xl">
+        <div className="flex items-center gap-3">
+          <h1 className="text-[17px] font-bold tracking-tight text-slate-900">
+            {t('overview.title')}
+          </h1>
         </div>
       </header>
 
@@ -118,7 +111,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
         ) : (
           <OverviewContent
             overview={overview}
-            connectors={connectorsQuery.data ?? []}
+            sampleAvailable={Boolean(samplesQuery.data?.length)}
             onAddSources={() => setAddSourcesOpen(true)}
             onBuildPipeline={() => setPipelineCreationOpen(true)}
           />
@@ -175,14 +168,14 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
 
 interface OverviewContentProps {
   overview: OverviewModel
-  connectors: ConnectorSummary[]
+  sampleAvailable: boolean
   onAddSources: () => void
   onBuildPipeline: () => void
 }
 
 function OverviewContent({
   overview,
-  connectors,
+  sampleAvailable,
   onAddSources,
   onBuildPipeline,
 }: OverviewContentProps) {
@@ -190,112 +183,209 @@ function OverviewContent({
     <>
       <OverviewTopology
         overview={overview}
-        connectors={connectors}
         onAddSources={onAddSources}
         onBuildPipeline={onBuildPipeline}
-      />
-      <OverviewMilestoneDock
-        overview={overview}
-        onAddSources={onAddSources}
-        onBuildPipeline={onBuildPipeline}
-      />
+      >
+        <OverviewMilestoneDock
+          overview={overview}
+          sampleAvailable={sampleAvailable}
+          onAddSources={onAddSources}
+          onBuildPipeline={onBuildPipeline}
+        />
+      </OverviewTopology>
+      <OverviewRuntimeMetrics overview={overview} />
       <OverviewAttention items={overview.attention} />
     </>
   )
 }
 
+function OverviewRuntimeMetrics({ overview }: { overview: OverviewModel }) {
+  const { t } = useTranslation()
+  return (
+    <div className="overview-runtime-metrics" aria-label={t('overview.streamStatus.label')}>
+      <span>{t('overview.streamStatus.sources', { count: overview.sources.count })}</span>
+      <span aria-hidden="true">·</span>
+      <span>
+        {overview.pipelines.total === 0
+          ? t('overview.pipelines.none')
+          : t('overview.pipelines.metric', { count: overview.pipelines.total })}
+      </span>
+      <span aria-hidden="true">·</span>
+      <span>
+        {overview.stateStore.ready
+          ? t('overview.stateStore.managed')
+          : t('overview.stateStore.missing')}
+      </span>
+      {overview.stateStore.views && (
+        <>
+          <span aria-hidden="true">·</span>
+          <span>{t('overview.stateStore.metric', { count: overview.stateStore.views.total })}</span>
+        </>
+      )}
+    </div>
+  )
+}
+
 function OverviewMilestoneDock({
   overview,
+  sampleAvailable,
   onAddSources,
   onBuildPipeline,
 }: {
   overview: OverviewModel
+  sampleAvailable: boolean
   onAddSources: () => void
   onBuildPipeline: () => void
 }) {
   const { t } = useTranslation()
-  const current = overview.setup.next ?? 'pipeline'
-  const milestones = [
-    {
-      id: 'stateStore',
-      done: overview.setup.done.stateStore,
-      title: t('overview.milestones.stateStore'),
-    },
-    {
-      id: 'sources',
-      done: overview.setup.done.sources,
-      title: t('overview.milestones.sources'),
-    },
-    {
-      id: 'pipeline',
-      done: overview.setup.done.pipeline,
-      title: t('overview.milestones.pipeline'),
-    },
-  ]
-  const actionLabel =
-    overview.setup.next === 'stateStore'
-      ? t('overview.milestones.configure')
-      : overview.setup.next === 'sources'
-        ? t('overview.milestones.addSources')
-        : overview.setup.next === 'pipeline'
-          ? t('overview.milestones.build')
-          : t('overview.milestones.newPipeline')
-  const runCurrentAction = () => {
-    if (current === 'sources') onAddSources()
-    else if (current === 'pipeline') onBuildPipeline()
-  }
+  const storeDone = overview.setup.done.stateStore
+  const sourcesDone = overview.setup.done.sources
+  const pipelineDone = overview.setup.done.pipeline
 
   return (
-    <section className="overview-milestones" aria-label={t('overview.milestones.title')}>
-      <div className="overview-milestones__surface">
-        <ol className="overview-milestones__list">
-          {milestones.map((milestone, index) => (
-            <li
-              key={milestone.id}
-              className="overview-milestones__item"
-              data-complete={milestone.done}
-              data-current={!milestone.done && overview.setup.next === milestone.id}
+    <section
+      className="z-20 mx-auto mt-6 w-full max-w-3xl"
+      aria-label={t('overview.milestones.title')}
+    >
+      <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-slate-200/90 bg-white/95 px-5 py-3 shadow-[0_8px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl transition-all sm:flex-row">
+        <div className="flex max-w-full items-center gap-2 overflow-x-auto text-[12px] font-medium select-none sm:gap-3 sm:text-[13px]">
+          <Link
+            to="/settings"
+            aria-current={!storeDone ? 'step' : undefined}
+            className={cn(
+              'flex cursor-pointer items-center gap-1.5 whitespace-nowrap transition-colors',
+              storeDone ? 'font-semibold text-emerald-700' : 'font-semibold text-indigo-600',
+            )}
+          >
+            <span
+              className={cn(
+                'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold',
+                storeDone
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-500/20',
+              )}
+              aria-hidden="true"
             >
-              {milestone.id === 'stateStore' ? (
-                <Link
-                  to="/settings"
-                  className="overview-milestones__step-link"
-                  aria-current={current === milestone.id ? 'step' : undefined}
-                >
-                  <span className="overview-milestones__step" aria-hidden="true">
-                    {milestone.done ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
-                  </span>
-                  <span>{milestone.title}</span>
-                </Link>
-              ) : (
+              {storeDone ? '✓' : '1'}
+            </span>
+            <span>{t('overview.milestones.stateStoreShort', 'State Store')}</span>
+          </Link>
+
+          <span className="text-slate-300" aria-hidden="true">
+            ➔
+          </span>
+
+          <button
+            type="button"
+            onClick={onAddSources}
+            aria-current={storeDone && !sourcesDone ? 'step' : undefined}
+            className={cn(
+              'flex cursor-pointer items-center gap-1.5 whitespace-nowrap transition-colors',
+              sourcesDone
+                ? 'font-semibold text-emerald-700'
+                : storeDone
+                  ? 'font-semibold text-indigo-600'
+                  : 'text-slate-400 hover:text-slate-600',
+            )}
+          >
+            <span
+              className={cn(
+                'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold',
+                sourcesDone
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : storeDone
+                    ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-500/20'
+                    : 'bg-slate-100 text-slate-400',
+              )}
+              aria-hidden="true"
+            >
+              {sourcesDone ? '✓' : '2'}
+            </span>
+            <span>{t('overview.milestones.sourcesShort', 'Add Databases')}</span>
+          </button>
+
+          <span className="text-slate-300" aria-hidden="true">
+            ➔
+          </span>
+
+          <button
+            type="button"
+            onClick={onBuildPipeline}
+            aria-current={storeDone && sourcesDone && !pipelineDone ? 'step' : undefined}
+            className={cn(
+              'flex cursor-pointer items-center gap-1.5 whitespace-nowrap transition-colors',
+              pipelineDone
+                ? 'font-semibold text-emerald-700'
+                : storeDone && sourcesDone
+                  ? 'font-semibold text-indigo-600'
+                  : 'text-slate-400 hover:text-slate-600',
+            )}
+          >
+            <span
+              className={cn(
+                'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold',
+                pipelineDone
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : storeDone && sourcesDone
+                    ? 'animate-pulse bg-indigo-100 text-indigo-700 ring-2 ring-indigo-500/20'
+                    : 'bg-slate-100 text-slate-400',
+              )}
+              aria-hidden="true"
+            >
+              {pipelineDone ? '✓' : '3'}
+            </span>
+            <span>{t('overview.milestones.pipelineShort', 'Build Pipeline')}</span>
+          </button>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2.5">
+          {!storeDone ? (
+            <Link
+              to="/settings"
+              className="flex h-8.5 cursor-pointer items-center gap-1.5 rounded-xl bg-[#4F46E5] px-4 text-[12.5px] font-semibold whitespace-nowrap text-white shadow-xs transition-all hover:scale-[1.01] hover:bg-[#4338CA]"
+            >
+              <span>{t('overview.milestones.connectStateStore', 'Connect State Store')}</span>
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          ) : !sourcesDone ? (
+            <div className="flex items-center gap-2.5">
+              {sampleAvailable && (
                 <button
                   type="button"
-                  className="overview-milestones__step-link"
-                  aria-current={current === milestone.id ? 'step' : undefined}
-                  onClick={milestone.id === 'sources' ? onAddSources : onBuildPipeline}
+                  onClick={onAddSources}
+                  className="flex cursor-pointer items-center gap-1 text-[11.5px] font-medium whitespace-nowrap text-indigo-600 transition-colors hover:text-indigo-800 hover:underline"
                 >
-                  <span className="overview-milestones__step" aria-hidden="true">
-                    {milestone.done ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
-                  </span>
-                  <span>{milestone.title}</span>
+                  <Sparkles className="h-3 w-3 text-indigo-500" aria-hidden="true" />
+                  <span>{t('overview.milestones.trySample', 'Try sample')}</span>
                 </button>
               )}
-            </li>
-          ))}
-        </ol>
-        <div className="overview-milestones__action">
-          {current === 'stateStore' ? (
-            <Button asChild nativeButton={false} size="sm">
-              <Link to="/settings">
-                {actionLabel}
+              <button
+                type="button"
+                onClick={onAddSources}
+                className="flex h-8.5 cursor-pointer items-center gap-1.5 rounded-xl bg-[#4F46E5] px-3.5 text-[12.5px] font-semibold whitespace-nowrap text-white shadow-xs transition-all hover:scale-[1.01] hover:bg-[#4338CA]"
+              >
+                <span>{t('overview.milestones.sourcesShort', 'Add Databases')}</span>
                 <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-              </Link>
-            </Button>
-          ) : (
-            <Button type="button" size="sm" onClick={runCurrentAction}>
-              {actionLabel}
+              </button>
+            </div>
+          ) : !pipelineDone ? (
+            <button
+              type="button"
+              onClick={onBuildPipeline}
+              className="flex h-8.5 cursor-pointer items-center gap-1.5 rounded-xl bg-[#4F46E5] px-4 text-[12.5px] font-semibold whitespace-nowrap text-white shadow-xs transition-all hover:scale-[1.01] hover:bg-[#4338CA]"
+            >
+              <span>{t('overview.milestones.build')}</span>
               <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </Button>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onBuildPipeline}
+              className="flex h-8.5 cursor-pointer items-center gap-1.5 rounded-xl bg-slate-900 px-4 text-[12.5px] font-semibold whitespace-nowrap text-white shadow-xs transition-all hover:scale-[1.01] hover:bg-black"
+            >
+              <span>{t('overview.milestones.newPipeline', 'New Pipeline')}</span>
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
           )}
         </div>
       </div>

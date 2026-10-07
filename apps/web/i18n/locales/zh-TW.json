@@ -1648,6 +1648,7 @@
       "active_one": "{{count}} 條 Pipeline 正在同步",
       "active_other": "{{count}} 條 Pipeline 正在同步",
       "none": "目前沒有執行中的 Pipeline",
+      "preview": "資料流預覽",
       "sources_one": "{{count}} 個已連線資料來源",
       "sources_other": "{{count}} 個已連線資料來源",
       "destination": "狀態儲存：{{name}}",
@@ -1656,9 +1657,14 @@
     "milestones": {
       "title": "設定進度",
       "stateStore": "設定狀態儲存",
+      "stateStoreShort": "狀態儲存",
       "sources": "連線資料來源",
+      "sourcesShort": "新增資料庫",
       "pipeline": "建立 Pipeline",
+      "pipelineShort": "建立 Pipeline",
       "configure": "開啟設定",
+      "connectStateStore": "連線狀態儲存",
+      "trySample": "試用範例",
       "addSources": "新增資料來源",
       "build": "建立 Pipeline",
       "newPipeline": "建立 Pipeline",
@@ -1705,6 +1711,8 @@
       "more_other": "還有 {{count}} 個",
       "open": "資料來源 →",
       "add": "新增資料來源",
+      "connected": "已連線",
+      "connect": "連線 {{name}}",
       "tooltip": "選擇 {{connector}} 資料來源 {{id}}"
     },
     "pipelines": {
