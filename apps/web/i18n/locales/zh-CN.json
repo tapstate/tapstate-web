@@ -1640,6 +1640,8 @@
   },
   "overview": {
     "title": "概览",
+    "pipelineHub": "Tapstate Pipeline",
+    "pipelineHubSubtitle": "持续 CDC 同步",
     "notReported": "此服务器暂未提供",
     "streamStatus": {
       "label": "Pipeline 实时状态",
@@ -1659,6 +1661,7 @@
       "configure": "打开设置",
       "addSources": "添加数据源",
       "build": "构建 Pipeline",
+      "newPipeline": "新建 Pipeline",
       "open": "打开"
     },
     "problems_one": "{{count}} 个问题",
@@ -1701,7 +1704,8 @@
       "more_one": "还有 {{count}} 个",
       "more_other": "还有 {{count}} 个",
       "open": "数据源 →",
-      "add": "添加数据源"
+      "add": "添加数据源",
+      "tooltip": "选择 {{connector}} 数据源 {{id}}"
     },
     "pipelines": {
       "title": "Pipelines",

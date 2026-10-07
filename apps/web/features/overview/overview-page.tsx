@@ -2,27 +2,26 @@ import type { ReactNode } from 'react'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { CheckCircle2, Database, GitMerge, HardDrive } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { ArrowRight, CheckCircle2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
+import { PipelineCreationDialog } from '@/features/pipelines/components/create/pipeline-creation-dialog'
 import { listPipelines } from '@/service/pipelines/pipeline-client'
 import { addSampleSources, loadSampleSources } from '@/service/sample-source-client'
-import { listSources, type SourceView } from '@/service/source-client'
+import {
+  listConnectors,
+  listSources,
+  type ConnectorSummary,
+  type SourceView,
+} from '@/service/source-client'
 import { listViews } from '@/service/view-client'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { AddSourcesDialog } from './components/add-sources-dialog'
-import { OverviewBlock } from './components/overview-block'
-import { SetupCallout } from './components/setup-callout'
-import {
-  buildOverview,
-  SETUP_STEP_ORDER,
-  type OverviewAttentionItem,
-  type OverviewModel,
-  type SetupStepId,
-} from './overview-model'
+import { OverviewTopology } from './components/overview-topology'
+import { buildOverview, type OverviewModel } from './overview-model'
 
 /** The new-source form, supplied by the route so this feature does not reach into Data Sources. */
 export type SourceFormSlot = (props: {
@@ -35,30 +34,16 @@ interface OverviewPageProps {
   sourceForm?: SourceFormSlot
 }
 
-/** Remembers, per browser, that the one-time "Setup complete" note has been shown. */
-const SETUP_COMPLETE_SEEN_KEY = 'tapstate.overview.setupCompleteSeen'
-
-function readSeen(): boolean {
-  try {
-    return window.localStorage.getItem(SETUP_COMPLETE_SEEN_KEY) === '1'
-  } catch {
-    return false
-  }
-}
-
-function writeSeen() {
-  try {
-    window.localStorage.setItem(SETUP_COMPLETE_SEEN_KEY, '1')
-  } catch {
-    // Storage can be unavailable (private windows); the note then shows again next visit.
-  }
-}
-
 export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   // Same keys as the Data Sources, Pipelines and Views pages, so they share one cache.
+  const connectorsQuery = useQuery({
+    queryKey: ['connectors'],
+    queryFn: () => listConnectors(apiFetch),
+    staleTime: Infinity,
+  })
   const sourcesQuery = useQuery({ queryKey: ['sources'], queryFn: () => listSources(apiFetch) })
   const pipelinesQuery = useQuery({
     queryKey: ['pipelines'],
@@ -89,11 +74,9 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
       )
     },
   })
-  const [hintsHidden, setHintsHidden] = useState(false)
-  const [deferred, setDeferred] = useState<SetupStepId[]>([])
   const [addSourcesOpen, setAddSourcesOpen] = useState(false)
   const [sourceFormOpen, setSourceFormOpen] = useState(false)
-  const [completeNote, setCompleteNote] = useState<'unknown' | 'show' | 'hidden'>('unknown')
+  const [pipelineCreationOpen, setPipelineCreationOpen] = useState(false)
 
   // The view list only adds detail; when it fails or is missing, the overview still shows.
   const views = viewsQuery.data ?? null
@@ -105,63 +88,15 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
     [sourcesQuery.data, pipelinesQuery.data, views],
   )
   const failed = sourcesQuery.isError || pipelinesQuery.isError
-  const setupDone = overview !== null && overview.setup.next === null
-
-  useEffect(() => {
-    if (!setupDone || completeNote !== 'unknown') return
-    if (readSeen()) {
-      setCompleteNote('hidden')
-    } else {
-      writeSeen()
-      setCompleteNote('show')
-    }
-  }, [setupDone, completeNote])
-
   return (
     <section className="overview-page">
       <header className="overview-page__header">
         <div className="flex min-w-0 flex-col">
           <h1 className="text-foreground text-[15px] font-semibold">{t('overview.title')}</h1>
-          <p className="text-muted-foreground truncate text-[12px]">{t('overview.subtitle')}</p>
         </div>
-        {overview && overview.setup.next !== null && (
-          <div className="flex items-center gap-2">
-            <span className="overview-page__chip">
-              {t('overview.setup.progress', { completed: overview.setup.completed, total: 3 })}
-              <span className="overview-page__chip-bar" aria-hidden="true">
-                <span style={{ width: `${(overview.setup.completed / 3) * 100}%` }} />
-              </span>
-            </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setHintsHidden((hidden) => !hidden)}
-            >
-              {hintsHidden ? t('overview.setup.showHints') : t('overview.setup.hideHints')}
-            </Button>
-          </div>
-        )}
       </header>
 
       <div className="overview-page__body">
-        {completeNote === 'show' && (
-          <div className="overview-complete" role="status">
-            <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <p className="min-w-0 flex-1">
-              <span className="font-semibold">{t('overview.setup.complete.title')}</span>{' '}
-              {t('overview.setup.complete.body')}
-            </p>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => setCompleteNote('hidden')}
-            >
-              {t('overview.setup.complete.close')}
-            </Button>
-          </div>
-        )}
         {failed ? (
           <div className="overview-page__state" role="alert">
             <p>{t('overview.states.error')}</p>
@@ -183,10 +118,9 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
         ) : (
           <OverviewContent
             overview={overview}
-            guidance={!hintsHidden && overview.setup.next !== null}
-            current={nextStep(overview, deferred)}
-            onDefer={(step) => setDeferred((steps) => [...steps, step])}
+            connectors={connectorsQuery.data ?? []}
             onAddSources={() => setAddSourcesOpen(true)}
+            onBuildPipeline={() => setPipelineCreationOpen(true)}
           />
         )}
       </div>
@@ -213,6 +147,13 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
           setSourceFormOpen(true)
         }}
       />
+      {pipelineCreationOpen && (
+        <PipelineCreationDialog
+          open
+          defaultMode="wizard"
+          onClose={() => setPipelineCreationOpen(false)}
+        />
+      )}
       {sourceForm?.({
         open: sourceFormOpen,
         onOpenChange: (open) => {
@@ -232,368 +173,159 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
   )
 }
 
-/** The step to point at: the first undone step the user has not put off for now. */
-function nextStep(overview: OverviewModel, deferred: SetupStepId[]): SetupStepId | null {
-  return (
-    SETUP_STEP_ORDER.find((step) => !overview.setup.done[step] && !deferred.includes(step)) ?? null
-  )
-}
-
 interface OverviewContentProps {
   overview: OverviewModel
-  guidance: boolean
-  current: SetupStepId | null
-  onDefer: (step: SetupStepId) => void
+  connectors: ConnectorSummary[]
   onAddSources: () => void
+  onBuildPipeline: () => void
 }
 
 function OverviewContent({
   overview,
-  guidance,
-  current,
-  onDefer,
+  connectors,
   onAddSources,
+  onBuildPipeline,
 }: OverviewContentProps) {
-  const { t } = useTranslation()
-  const stepNumber = (step: SetupStepId) => (guidance ? SETUP_STEP_ORDER.indexOf(step) + 1 : null)
-  const isCurrent = (step: SetupStepId) => guidance && current === step
-  const flowing = overview.pipelines.running > 0
-  const arrow = <OverviewFlowArrow active={flowing} />
-  const storeViews = overview.stateStore.views
-
   return (
     <>
-      <div
-        className="overview-stream-status"
-        data-active={flowing}
-        aria-label={t('overview.streamStatus.label')}
-      >
-        <span className="overview-stream-status__indicator" aria-hidden="true" />
-        <strong>
-          {flowing
-            ? t('overview.streamStatus.active', { count: overview.pipelines.running })
-            : t('overview.streamStatus.none')}
-        </strong>
-        <span className="overview-stream-status__separator" aria-hidden="true">
-          ·
-        </span>
-        <span>{t('overview.streamStatus.sources', { count: overview.sources.count })}</span>
-        <span className="overview-stream-status__separator" aria-hidden="true">
-          ·
-        </span>
-        <span>
-          {t('overview.streamStatus.destination', {
-            name: overview.stateStore.ready
-              ? t('overview.stateStore.managed')
-              : t('overview.stateStore.missing'),
-          })}
-        </span>
-        <Link to="/pipelines" className="overview-link">
-          {t('overview.streamStatus.open')}
-        </Link>
-      </div>
-      <div className="overview-flow">
-        <OverviewBlock
-          title={t('overview.sources.title')}
-          icon={Database}
-          metric={
-            overview.sources.count === 0
-              ? t('overview.sources.none')
-              : t('overview.sources.metric', { count: overview.sources.count })
-          }
-          details={[
-            ...overview.sources.preview.map((source) => ({
-              label: source.connector,
-              value: source.id,
-            })),
-            ...(overview.sources.count > overview.sources.preview.length
-              ? [
-                  {
-                    label: t('overview.sources.more', {
-                      count: overview.sources.count - overview.sources.preview.length,
-                    }),
-                    value: '',
-                  },
-                ]
-              : []),
-          ]}
-          emptyAction={
-            overview.sources.count === 0 && (
-              <Button type="button" size="sm" variant="outline" onClick={onAddSources}>
-                {t('overview.sources.add')}
-              </Button>
-            )
-          }
-          footer={
-            <Link to="/sources" className="overview-link">
-              {t('overview.sources.open')}
-            </Link>
-          }
-          step={stepNumber('sources')}
-          stepDone={overview.setup.done.sources}
-          current={isCurrent('sources')}
-          problems={0}
-          problemTone="warning"
-          callout={
-            isCurrent('sources') && (
-              <SetupCallout
-                step={2}
-                title={t('overview.setup.sources.title')}
-                actions={
-                  <Button type="button" size="sm" variant="secondary" onClick={onAddSources}>
-                    {t('overview.setup.sources.action')}
-                  </Button>
-                }
-              />
-            )
-          }
-        />
-        {arrow}
-        <OverviewBlock
-          title={t('overview.pipelines.title')}
-          icon={GitMerge}
-          metric={
-            overview.pipelines.total === 0
-              ? t('overview.pipelines.none')
-              : t('overview.pipelines.metric', { count: overview.pipelines.total })
-          }
-          details={[
-            { label: t('overview.pipelines.running'), value: overview.pipelines.running },
-            {
-              label: t('overview.pipelines.idle'),
-              value: t('overview.pipelines.idleValue', { count: overview.pipelines.idle }),
-            },
-            { label: t('overview.pipelines.error'), value: overview.pipelines.error },
-          ]}
-          emptyAction={
-            overview.pipelines.total === 0 && (
-              <Button asChild nativeButton={false} size="sm" variant="outline">
-                <Link to="/pipelines">{t('overview.pipelines.build')}</Link>
-              </Button>
-            )
-          }
-          footer={
-            <Link to="/pipelines" className="overview-link">
-              {t('overview.pipelines.open')}
-            </Link>
-          }
-          step={stepNumber('pipeline')}
-          stepDone={overview.setup.done.pipeline}
-          current={isCurrent('pipeline')}
-          problems={overview.pipelines.error}
-          problemTone="destructive"
-          callout={
-            isCurrent('pipeline') && (
-              <SetupCallout
-                step={3}
-                title={t('overview.setup.pipeline.title')}
-                actions={
-                  <>
-                    <Button asChild nativeButton={false} size="sm" variant="secondary">
-                      <Link to="/pipelines">{t('overview.setup.pipeline.action')}</Link>
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="overview-callout__skip"
-                      onClick={() => onDefer('pipeline')}
-                    >
-                      {t('overview.setup.later')}
-                    </Button>
-                  </>
-                }
-              />
-            )
-          }
-        />
-        {arrow}
-        <OverviewBlock
-          title={t('overview.stateStore.title')}
-          icon={HardDrive}
-          metric={
-            !overview.stateStore.ready
-              ? t('overview.stateStore.missing')
-              : storeViews
-                ? t('overview.stateStore.metric', { count: storeViews.total })
-                : t('overview.stateStore.ready')
-          }
-          details={[
-            {
-              label: t('overview.stateStore.location'),
-              value: (
-                <Link to="/settings" className="overview-link">
-                  {t('overview.stateStore.managed')}
-                </Link>
-              ),
-            },
-            ...(storeViews
-              ? [
-                  { label: t('overview.stateStore.fresh'), value: storeViews.fresh },
-                  { label: t('overview.stateStore.stale'), value: storeViews.stale },
-                ]
-              : [{ label: t('overview.stateStore.views'), value: t('overview.notReported') }]),
-          ]}
-          emptyAction={
-            !overview.stateStore.ready && (
-              <p className="text-muted-foreground text-[12px]">
-                {t('overview.stateStore.missingDetail')}
-              </p>
-            )
-          }
-          footer={
-            <span className="flex flex-wrap gap-x-3">
-              <Link to="/views" className="overview-link">
-                {t('overview.stateStore.openViews')}
-              </Link>
-              <Link to="/settings" className="overview-link">
-                {t('overview.stateStore.open')}
-              </Link>
-            </span>
-          }
-          step={stepNumber('stateStore')}
-          stepDone={overview.setup.done.stateStore}
-          current={isCurrent('stateStore')}
-          problems={storeViews?.stale ?? 0}
-          problemTone="warning"
-          callout={
-            isCurrent('stateStore') && (
-              <SetupCallout
-                step={1}
-                title={t('overview.setup.stateStore.title')}
-                description={t('overview.setup.stateStore.description')}
-                actions={null}
-              />
-            )
-          }
-        />
-      </div>
-
-      <section className="overview-attention" aria-labelledby="overview-attention-title">
-        <h2 id="overview-attention-title" className="text-foreground text-[13px] font-semibold">
-          {t('overview.attention.title')}
-        </h2>
-        {overview.attention.length === 0 ? (
-          <p className="text-muted-foreground text-[13px]">{t('overview.attention.clear')}</p>
-        ) : (
-          <ul className="overview-attention__list">
-            {overview.attention.map((item) => (
-              <AttentionRow key={attentionKey(item)} item={item} />
-            ))}
-          </ul>
-        )}
-      </section>
-      <OverviewMilestoneDock overview={overview} onAddSources={onAddSources} />
+      <OverviewTopology
+        overview={overview}
+        connectors={connectors}
+        onAddSources={onAddSources}
+        onBuildPipeline={onBuildPipeline}
+      />
+      <OverviewMilestoneDock
+        overview={overview}
+        onAddSources={onAddSources}
+        onBuildPipeline={onBuildPipeline}
+      />
+      <OverviewAttention items={overview.attention} />
     </>
-  )
-}
-
-function OverviewFlowArrow({ active }: { active: boolean }) {
-  return (
-    <div className="overview-arrow" data-active={active} aria-hidden="true">
-      <svg className="overview-arrow__wide" viewBox="0 0 48 32" fill="none">
-        <path className="overview-arrow__track" d="M2 16C14 16 30 16 43 16" />
-        <path className="overview-arrow__beam" d="M2 16C14 16 30 16 43 16" />
-        <path className="overview-arrow__head" d="m37 9 7 7-7 7" />
-      </svg>
-      <svg className="overview-arrow__narrow" viewBox="0 0 32 48" fill="none">
-        <path className="overview-arrow__track" d="M16 2c0 12 0 30 0 43" />
-        <path className="overview-arrow__beam" d="M16 2c0 12 0 30 0 43" />
-        <path className="overview-arrow__head" d="m9 37 7 7 7-7" />
-      </svg>
-    </div>
   )
 }
 
 function OverviewMilestoneDock({
   overview,
   onAddSources,
+  onBuildPipeline,
 }: {
   overview: OverviewModel
   onAddSources: () => void
+  onBuildPipeline: () => void
 }) {
   const { t } = useTranslation()
+  const current = overview.setup.next ?? 'pipeline'
   const milestones = [
     {
       id: 'stateStore',
       done: overview.setup.done.stateStore,
       title: t('overview.milestones.stateStore'),
-      action: (
-        <Button asChild nativeButton={false} size="sm" variant="ghost">
-          <Link to="/settings">
-            {t(
-              overview.setup.done.stateStore
-                ? 'overview.milestones.open'
-                : 'overview.milestones.configure',
-            )}
-          </Link>
-        </Button>
-      ),
     },
     {
       id: 'sources',
       done: overview.setup.done.sources,
       title: t('overview.milestones.sources'),
-      action: overview.setup.done.sources ? (
-        <Button asChild nativeButton={false} size="sm" variant="ghost">
-          <Link to="/sources">{t('overview.milestones.open')}</Link>
-        </Button>
-      ) : (
-        <Button type="button" size="sm" variant="secondary" onClick={onAddSources}>
-          {t('overview.milestones.addSources')}
-        </Button>
-      ),
     },
     {
       id: 'pipeline',
       done: overview.setup.done.pipeline,
       title: t('overview.milestones.pipeline'),
-      action: (
-        <Button asChild nativeButton={false} size="sm" variant="ghost">
-          <Link to="/pipelines">
-            {t(
-              overview.setup.done.pipeline
-                ? 'overview.milestones.open'
-                : 'overview.milestones.build',
-            )}
-          </Link>
-        </Button>
-      ),
     },
   ]
+  const actionLabel =
+    overview.setup.next === 'stateStore'
+      ? t('overview.milestones.configure')
+      : overview.setup.next === 'sources'
+        ? t('overview.milestones.addSources')
+        : overview.setup.next === 'pipeline'
+          ? t('overview.milestones.build')
+          : t('overview.milestones.newPipeline')
+  const runCurrentAction = () => {
+    if (current === 'sources') onAddSources()
+    else if (current === 'pipeline') onBuildPipeline()
+  }
 
   return (
-    <section className="overview-milestones" aria-labelledby="overview-milestones-title">
-      <h2 id="overview-milestones-title" className="text-foreground text-[13px] font-semibold">
-        {t('overview.milestones.title')}
-      </h2>
-      <ol className="overview-milestones__list">
-        {milestones.map((milestone, index) => (
-          <li
-            key={milestone.id}
-            className="overview-milestones__item"
-            data-complete={milestone.done}
-            data-current={!milestone.done && overview.setup.next === milestone.id}
-          >
-            <div className="overview-milestones__heading">
-              <span className="overview-milestones__step" aria-hidden="true">
-                {milestone.done ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
-              </span>
-              <span className="text-foreground text-[12px] font-medium">{milestone.title}</span>
-            </div>
-            {milestone.action}
-          </li>
-        ))}
-      </ol>
+    <section className="overview-milestones" aria-label={t('overview.milestones.title')}>
+      <div className="overview-milestones__surface">
+        <ol className="overview-milestones__list">
+          {milestones.map((milestone, index) => (
+            <li
+              key={milestone.id}
+              className="overview-milestones__item"
+              data-complete={milestone.done}
+              data-current={!milestone.done && overview.setup.next === milestone.id}
+            >
+              {milestone.id === 'stateStore' ? (
+                <Link
+                  to="/settings"
+                  className="overview-milestones__step-link"
+                  aria-current={current === milestone.id ? 'step' : undefined}
+                >
+                  <span className="overview-milestones__step" aria-hidden="true">
+                    {milestone.done ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
+                  </span>
+                  <span>{milestone.title}</span>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  className="overview-milestones__step-link"
+                  aria-current={current === milestone.id ? 'step' : undefined}
+                  onClick={milestone.id === 'sources' ? onAddSources : onBuildPipeline}
+                >
+                  <span className="overview-milestones__step" aria-hidden="true">
+                    {milestone.done ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
+                  </span>
+                  <span>{milestone.title}</span>
+                </button>
+              )}
+            </li>
+          ))}
+        </ol>
+        <div className="overview-milestones__action">
+          {current === 'stateStore' ? (
+            <Button asChild nativeButton={false} size="sm">
+              <Link to="/settings">
+                {actionLabel}
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </Link>
+            </Button>
+          ) : (
+            <Button type="button" size="sm" onClick={runCurrentAction}>
+              {actionLabel}
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Button>
+          )}
+        </div>
+      </div>
     </section>
   )
 }
 
-function attentionKey(item: OverviewAttentionItem) {
+function OverviewAttention({ items }: { items: OverviewModel['attention'] }) {
+  const { t } = useTranslation()
+  if (items.length === 0) return null
+
+  return (
+    <section className="overview-attention" aria-labelledby="overview-attention-title">
+      <h2 id="overview-attention-title" className="text-foreground text-[13px] font-semibold">
+        {t('overview.attention.title')}
+      </h2>
+      <ul className="overview-attention__list">
+        {items.map((item) => (
+          <OverviewAttentionRow key={attentionKey(item)} item={item} />
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+function attentionKey(item: OverviewModel['attention'][number]) {
   return item.kind === 'pipelineFailed' ? `pipeline-${item.pipelineId}` : `view-${item.viewId}`
 }
 
-function AttentionRow({ item }: { item: OverviewAttentionItem }) {
+function OverviewAttentionRow({ item }: { item: OverviewModel['attention'][number] }) {
   const { t } = useTranslation()
   if (item.kind === 'pipelineFailed') {
     return (
@@ -615,6 +347,7 @@ function AttentionRow({ item }: { item: OverviewAttentionItem }) {
       </li>
     )
   }
+
   const minutes =
     item.lastAppliedAt === null
       ? null

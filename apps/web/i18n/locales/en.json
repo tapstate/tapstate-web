@@ -1640,6 +1640,8 @@
   },
   "overview": {
     "title": "Overview",
+    "pipelineHub": "Tapstate Pipeline",
+    "pipelineHubSubtitle": "Continuous CDC Sync",
     "notReported": "Not reported by this server yet",
     "streamStatus": {
       "label": "Pipeline stream status",
@@ -1659,6 +1661,7 @@
       "configure": "Open settings",
       "addSources": "Add sources",
       "build": "Build pipeline",
+      "newPipeline": "New pipeline",
       "open": "Open"
     },
     "problems_one": "{{count}} problem",
@@ -1701,7 +1704,8 @@
       "more_one": "and {{count}} more",
       "more_other": "and {{count}} more",
       "open": "Data Sources →",
-      "add": "Add data sources"
+      "add": "Add data sources",
+      "tooltip": "Select {{connector}} source {{id}}"
     },
     "pipelines": {
       "title": "Pipelines",

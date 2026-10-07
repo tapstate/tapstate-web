@@ -9,18 +9,27 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PipelineCatalogItem } from '@/service/pipelines/pipeline-client'
 import type { SourceView } from '@/service/source-client'
 
-const { addSampleSources, apiFetch, listPipelines, listSources, listViews, loadSampleSources } =
-  vi.hoisted(() => ({
-    addSampleSources: vi.fn(),
-    loadSampleSources: vi.fn(),
-    listViews: vi.fn(),
-    apiFetch: vi.fn(),
-    listPipelines: vi.fn(),
-    listSources: vi.fn(),
-  }))
+const {
+  addSampleSources,
+  apiFetch,
+  listConnectors,
+  listPipelines,
+  listSources,
+  listViews,
+  loadSampleSources,
+} = vi.hoisted(() => ({
+  addSampleSources: vi.fn(),
+  loadSampleSources: vi.fn(),
+  listViews: vi.fn(),
+  apiFetch: vi.fn(),
+  listConnectors: vi.fn(),
+  listPipelines: vi.fn(),
+  listSources: vi.fn(),
+}))
 
 vi.mock('@/service/source-client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/service/source-client')>()),
+  listConnectors,
   listSources,
 }))
 vi.mock('@/service/pipelines/pipeline-client', async (importOriginal) => ({
@@ -38,6 +47,11 @@ vi.mock('@/service/view-client', async (importOriginal) => ({
 }))
 vi.mock('@/stores/auth-store', () => ({
   useAuthStore: <T,>(selector: (state: { apiFetch: typeof fetch }) => T) => selector({ apiFetch }),
+}))
+vi.mock('@/features/pipelines/components/create/pipeline-creation-dialog', () => ({
+  PipelineCreationDialog: ({ defaultMode }: { defaultMode?: string }) => (
+    <div data-testid="pipeline-creation-dialog" data-default-mode={defaultMode} />
+  ),
 }))
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ to, children, className }: { to: string; children: ReactNode; className?: string }) => (
@@ -90,7 +104,9 @@ async function render(sourceForm?: SourceFormSlot) {
 }
 
 function buttonNamed(name: string, scope: ParentNode = document.body) {
-  return [...scope.querySelectorAll('button')].find((button) => button.textContent === name)
+  return [...scope.querySelectorAll('button')].find(
+    (button) => button.textContent === name || button.getAttribute('aria-label') === name,
+  )
 }
 
 async function settle() {
@@ -105,6 +121,7 @@ beforeEach(() => {
   root = createRoot(container)
   listSources.mockReset()
   listPipelines.mockReset()
+  listConnectors.mockReset().mockResolvedValue([])
   listViews.mockReset().mockResolvedValue({ available: false })
   loadSampleSources.mockReset().mockResolvedValue(null)
   addSampleSources.mockReset()
@@ -149,36 +166,50 @@ describe('OverviewPage', () => {
     expect(container.textContent).toContain('Retry')
   })
 
-  it('points a new workspace at its first open step', async () => {
-    listSources.mockResolvedValue([source('views', 'mongodb')])
+  it('renders the source-to-pipeline topology and setup dock from live records', async () => {
+    listSources.mockResolvedValue([
+      source('views', 'mongodb'),
+      source('core_banking', 'mysql'),
+      source('cards', 'postgres'),
+    ])
     listPipelines.mockResolvedValue([])
 
     await render()
     await settle()
 
-    expect(container.textContent).toContain('Setup 1 of 3')
-    expect(container.querySelector('[aria-current="step"]')?.getAttribute('aria-label')).toBe(
-      'Sources',
+    expect(container.textContent).toContain(
+      'Data flows from your sources, through pipelines, into the state store.',
     )
-    expect(container.textContent).toContain('Step 2 of 3')
-    expect(container.textContent).toContain('Add the databases you build from')
-    expect(container.textContent).toContain('No sources yet.')
+    expect(container.querySelectorAll('.overview-topology__source-track')).toHaveLength(4)
+    expect(container.querySelectorAll('.overview-topology__source[aria-pressed]')).toHaveLength(2)
+    expect(container.querySelector('[aria-current="step"]')?.textContent).toContain(
+      'Build a pipeline',
+    )
     expect(container.textContent).toContain('No pipeline yet.')
   })
 
-  it('moves on when the user puts the pipeline step off, without marking it done', async () => {
-    listSources.mockResolvedValue([source('views', 'mongodb'), source('orders')])
-    listPipelines.mockResolvedValue([])
+  it('keeps the selected source highlighted and only animates a running pipeline', async () => {
+    listSources.mockResolvedValue([
+      source('views', 'mongodb'),
+      source('core_banking', 'mysql'),
+      source('cards', 'postgres'),
+    ])
+    listPipelines.mockResolvedValue([pipeline('bank_sync', 'RUNNING')])
 
     await render()
     await settle()
-    const later = [...container.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes("Skip, I'll do it later"),
+    const sourceButton = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="postgres: cards"]',
     )
-    await act(async () => later?.click())
+    await act(async () => sourceButton?.click())
 
-    expect(container.querySelector('[aria-current="step"]')).toBeNull()
-    expect(container.textContent).toContain('Setup 2 of 3')
+    expect(sourceButton?.getAttribute('aria-pressed')).toBe('true')
+    expect(container.querySelectorAll('.overview-topology__source-beam')).toHaveLength(2)
+    expect(
+      container
+        .querySelectorAll('.overview-topology__source-track')[0]
+        ?.getAttribute('data-focused'),
+    ).toBe('true')
   })
 
   it('shows counts, failures and no setup guidance once setup is complete', async () => {
@@ -193,7 +224,7 @@ describe('OverviewPage', () => {
     await settle()
 
     expect(container.querySelector('.overview-page__chip')).toBeNull()
-    expect(container.textContent).toContain('2 sources')
+    expect(container.textContent).toContain('2 connected sources')
     expect(container.textContent).toContain('2 pipelines')
     const failed = container.querySelector('.overview-attention__item')
     expect(failed?.textContent).toContain('Failed pipeline')
@@ -233,22 +264,31 @@ describe('OverviewPage', () => {
 
     expect(document.body.textContent).toContain('Your source (1)')
     expect(document.body.textContent).toContain('orders')
-    expect(container.textContent).toContain('1 source')
+    expect(container.textContent).toContain('1 connected source')
   })
 
-  it('shows the setup complete note once per browser', async () => {
+  it('shows the next-pipeline action when setup is complete', async () => {
     listSources.mockResolvedValue([source('views', 'mongodb'), source('orders')])
     listPipelines.mockResolvedValue([pipeline('a_sync', 'RUNNING')])
 
     await render()
     await settle()
-    expect(container.querySelector('[role="status"]')?.textContent).toContain('Setup complete.')
+    expect(buttonNamed('New pipeline', container)).toBeTruthy()
+  })
 
-    act(() => root.unmount())
-    root = createRoot(container)
+  it('opens pipeline creation in wizard mode from the guided build action', async () => {
+    listSources.mockResolvedValue([source('views', 'mongodb'), source('orders')])
+    listPipelines.mockResolvedValue([])
+
     await render()
     await settle()
-    expect(container.textContent).not.toContain('Setup complete.')
+    await act(async () => buttonNamed('Build pipeline', container)?.click())
+
+    expect(
+      container
+        .querySelector('[data-testid="pipeline-creation-dialog"]')
+        ?.getAttribute('data-default-mode'),
+    ).toBe('wizard')
   })
 
   it('lists a stale view under Needs attention and counts views in the store block', async () => {
@@ -331,7 +371,7 @@ describe('OverviewPage', () => {
       'sample_core_bankingSamplemysql',
     ])
     expect(buttonNamed('Added')?.disabled).toBe(true)
-    expect(container.textContent).toContain('2 sources')
+    expect(container.textContent).toContain('2 connected sources')
   })
 
   it('hides the sample offer when the deployment has none', async () => {

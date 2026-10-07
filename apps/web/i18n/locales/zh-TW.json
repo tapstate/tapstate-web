@@ -1640,6 +1640,8 @@
   },
   "overview": {
     "title": "概覽",
+    "pipelineHub": "Tapstate Pipeline",
+    "pipelineHubSubtitle": "持續 CDC 同步",
     "notReported": "此伺服器尚未提供",
     "streamStatus": {
       "label": "Pipeline 即時狀態",
@@ -1659,6 +1661,7 @@
       "configure": "開啟設定",
       "addSources": "新增資料來源",
       "build": "建立 Pipeline",
+      "newPipeline": "建立 Pipeline",
       "open": "開啟"
     },
     "problems_one": "{{count}} 個問題",
@@ -1701,7 +1704,8 @@
       "more_one": "還有 {{count}} 個",
       "more_other": "還有 {{count}} 個",
       "open": "資料來源 →",
-      "add": "新增資料來源"
+      "add": "新增資料來源",
+      "tooltip": "選擇 {{connector}} 資料來源 {{id}}"
     },
     "pipelines": {
       "title": "Pipelines",

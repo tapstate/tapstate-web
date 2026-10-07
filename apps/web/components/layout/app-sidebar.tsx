@@ -13,7 +13,6 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
-import { getDeploymentProfile } from '@/utils/deployment-profile'
 
 import { AppHeader } from './app-header'
 
@@ -27,9 +26,7 @@ const navigation: NavigationItem[] = [
   { labelKey: 'nav.overview', to: '/overview', icon: LayoutDashboard },
   { labelKey: 'nav.sources', to: '/sources', icon: Database },
   { labelKey: 'nav.pipelines', to: '/pipelines', icon: GitMerge },
-  ...(getDeploymentProfile() === 'cloud'
-    ? [{ labelKey: 'nav.views', to: '/views', icon: Table2 }]
-    : []),
+  { labelKey: 'nav.views', to: '/views', icon: Table2 },
   { labelKey: 'nav.explorations', to: '/explorations', icon: MessageSquareText },
 ]
 

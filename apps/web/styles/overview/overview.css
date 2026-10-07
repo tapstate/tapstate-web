@@ -1,11 +1,7 @@
-/*
- * Overview page. Every selector starts at the feature root. The three flow blocks share one
- * row grid (title, count, details, footer) so they line up whatever their content.
- */
 .overview-page {
   display: flex;
-  height: 100%;
   width: 100%;
+  height: 100%;
   flex-direction: column;
   overflow: hidden;
   background: var(--background);
@@ -16,58 +12,8 @@
   height: 3.5rem;
   flex-shrink: 0;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
   border-bottom: 1px solid var(--border);
   padding: 0 1.5rem;
-}
-
-.overview-page .overview-page__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  border-radius: 9999px;
-  background: var(--muted);
-  padding: 0.125rem 0.625rem;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-  color: var(--muted-foreground);
-}
-
-.overview-page .overview-page__chip-bar {
-  display: inline-block;
-  height: 0.25rem;
-  width: 2.5rem;
-  overflow: hidden;
-  border-radius: 9999px;
-  background: var(--border);
-}
-
-.overview-page .overview-page__chip-bar > span {
-  display: block;
-  height: 100%;
-  background: var(--primary);
-}
-
-.overview-page .overview-complete {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  border: 1px solid var(--success);
-  border-radius: var(--radius);
-  padding: 0.5rem 0.75rem;
-  font-size: 13px;
-  color: var(--foreground);
-}
-
-.overview-page .overview-complete > svg {
-  color: var(--success);
-}
-
-.overview-page .overview-block__empty {
-  display: flex;
-  align-items: flex-start;
 }
 
 .overview-page .overview-page__body {
@@ -75,7 +21,7 @@
   min-height: 0;
   flex: 1;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
   overflow: auto;
   padding: 1.5rem;
 }
@@ -89,18 +35,64 @@
   color: var(--muted-foreground);
 }
 
+.overview-page .overview-stage {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 0.5rem 0 0.75rem;
+}
+
+.overview-page .overview-stage::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: -1;
+  width: min(540px, 90%);
+  height: 340px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    45deg,
+    rgb(79 70 229 / 8%),
+    rgb(6 182 212 / 5%),
+    rgb(16 185 129 / 8%)
+  );
+  content: '';
+  filter: blur(90px);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.overview-page .overview-stage__title {
+  max-width: 54rem;
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: clamp(15px, 1.5vw, 20px);
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: center;
+}
+
 .overview-page .overview-stream-status {
   display: flex;
+  width: fit-content;
+  max-width: min(100%, 840px);
   min-height: 2.5rem;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 9999px;
   background: var(--card);
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 0.875rem;
   font-size: 12px;
   color: var(--muted-foreground);
+  box-shadow: 0 2px 8px rgb(15 23 42 / 4%);
 }
 
 .overview-page .overview-stream-status strong {
@@ -129,6 +121,369 @@
   margin-left: auto;
 }
 
+.overview-page .overview-link {
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 500;
+  text-underline-offset: 3px;
+}
+
+.overview-page .overview-link:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.overview-page .overview-topology {
+  display: grid;
+  width: min(100%, 840px);
+  height: 330px;
+  flex: 0 0 auto;
+  grid-template-columns: 52px minmax(0, 520px) 52px;
+  justify-content: center;
+  align-items: start;
+  overflow: visible;
+}
+
+.overview-page .overview-topology__source-column,
+.overview-page .overview-topology__store-column {
+  position: relative;
+  width: 52px;
+  height: 330px;
+}
+
+.overview-page .overview-topology__column-title {
+  position: absolute;
+  top: -1.5rem;
+  left: 50%;
+  margin: 0;
+  transform: translateX(-50%);
+  color: var(--muted-foreground);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.overview-page .overview-topology__source-wrap {
+  position: absolute;
+  left: 0;
+  z-index: 2;
+  width: 52px;
+  height: 52px;
+}
+
+.overview-page .overview-topology__source {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  width: 52px;
+  height: 52px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 15px;
+  background: var(--card);
+  padding: 0;
+  color: var(--foreground);
+  text-align: center;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 5%);
+  cursor: pointer;
+}
+
+.overview-page .overview-topology__source-icon,
+.overview-page .overview-topology__store-icon {
+  display: flex;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 15px;
+  background: transparent;
+  color: var(--muted-foreground);
+}
+
+.overview-page .overview-topology__source-icon svg,
+.overview-page .overview-topology__store-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.overview-page .overview-topology__source[aria-pressed='true'] .overview-topology__source-icon {
+  border-color: color-mix(in srgb, var(--primary) 36%, var(--border));
+  color: var(--primary);
+}
+
+.overview-page .overview-topology__source:focus-visible,
+.overview-page .overview-topology__hub:focus-visible,
+.overview-page .overview-topology__store-node:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+
+.overview-page .overview-topology__source:active,
+.overview-page .overview-topology__hub:active {
+  transform: scale(0.96);
+}
+
+.overview-page .overview-topology__source--add {
+  top: 270px;
+  left: 0;
+  color: var(--primary);
+}
+
+.overview-page .overview-topology__source--add .overview-topology__source-icon {
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.overview-page .overview-topology__tooltip {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 14px);
+  z-index: 5;
+  border-radius: 8px;
+  background: #1e1b4b;
+  padding: 0.375rem 0.75rem;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 8px 18px rgb(15 23 42 / 16%);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.overview-page .overview-topology__tooltip::before {
+  position: absolute;
+  top: 50%;
+  left: -0.25rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  background: #1e1b4b;
+  content: '';
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.overview-page .overview-topology__network {
+  position: relative;
+  width: 100%;
+  height: 330px;
+}
+
+.overview-page .overview-topology__network > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.overview-page .overview-topology__source-track,
+.overview-page .overview-topology__store-track,
+.overview-page .overview-topology__store-glow,
+.overview-page .overview-topology__store-beam {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.overview-page .overview-topology__source-track {
+  stroke: #aeb8c6;
+  stroke-dasharray: 4 6;
+  stroke-width: 1.6;
+  opacity: 0.55;
+}
+
+.overview-page .overview-topology__source-track[data-focused='true'] {
+  stroke: var(--primary);
+  stroke-width: 2.2;
+  opacity: 0.88;
+}
+
+.overview-page .overview-topology__source-beam,
+.overview-page .overview-topology__store-track {
+  stroke: var(--success);
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.overview-page .overview-topology__source-beam {
+  fill: none;
+  stroke-dasharray: 13 200;
+  stroke-width: 6;
+  opacity: 0.55;
+  animation: overview-topology-flow 1.8s linear infinite;
+}
+
+.overview-page .overview-topology__source-beam--core {
+  stroke-width: 2.5;
+  opacity: 1;
+  filter: none;
+}
+
+.overview-page .overview-topology__store-track {
+  stroke-width: 1.8;
+  opacity: 0.3;
+}
+
+.overview-page .overview-topology__store-glow {
+  stroke: var(--success);
+  stroke-dasharray: 16 200;
+  stroke-width: 8;
+  opacity: 0.35;
+  animation: overview-topology-flow 1.8s linear infinite;
+}
+
+.overview-page .overview-topology__store-beam {
+  stroke: url(#overview-stream-gradient);
+  stroke-dasharray: 16 200;
+  stroke-width: 2.5;
+  animation: overview-topology-flow 1.8s linear infinite;
+}
+
+.overview-page .overview-topology__hub {
+  position: absolute;
+  top: 115px;
+  left: 34.23%;
+  display: flex;
+  width: min(164px, 31.54%);
+  height: 100px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, var(--border));
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: 0 8px 24px rgb(15 23 42 / 8%);
+  color: var(--foreground);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.overview-page .overview-topology__hub-icon {
+  display: flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, var(--border));
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+  color: var(--primary);
+}
+
+.overview-page .overview-topology__hub-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.overview-page .overview-topology__hub-icon-inner {
+  display: flex;
+  animation: overview-reactor-spin 1.8s ease-in-out infinite;
+}
+
+.overview-page .overview-topology__hub[data-streaming='false'] .overview-topology__hub-icon-inner {
+  animation: none;
+}
+
+.overview-page .overview-topology__hub > strong {
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.overview-page .overview-topology__hub-subtitle {
+  color: var(--muted-foreground);
+  font-size: 9px;
+}
+
+.overview-page .overview-topology__hub-count {
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+
+.overview-page .overview-topology__problem-count {
+  position: absolute;
+  top: -0.45rem;
+  right: -0.45rem;
+  display: inline-flex;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--destructive);
+  padding: 0 0.3rem;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.overview-page .overview-topology__problem-count--warning {
+  background: var(--warning);
+}
+
+.overview-page .overview-topology__store-node {
+  position: absolute;
+  top: 139px;
+  left: 0;
+  display: flex;
+  width: 52px;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  color: var(--foreground);
+  font-size: 10px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.overview-page .overview-topology__store-node[data-ready='false'] .overview-topology__store-icon {
+  border-color: color-mix(in srgb, var(--warning) 52%, var(--border));
+  color: var(--warning);
+}
+
+.overview-page .overview-topology__store-node[data-ready='true'] .overview-topology__store-icon {
+  border-color: color-mix(in srgb, var(--success) 42%, var(--border));
+  color: var(--success);
+}
+
+.overview-page .overview-topology__store-icon {
+  position: relative;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 5%);
+}
+
+.overview-page .overview-topology__store-node > strong {
+  width: 88px;
+  margin-top: 0.35rem;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.overview-page .overview-topology__store-count {
+  width: 88px;
+  color: var(--muted-foreground);
+  font-size: 9px;
+}
+
+.overview-page .overview-topology__views-link {
+  position: absolute;
+  top: 238px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
 @keyframes overview-stream-pulse {
   50% {
     box-shadow: 0 0 0 5px color-mix(in srgb, var(--success) 18%, transparent);
@@ -136,51 +491,121 @@
   }
 }
 
+@keyframes overview-topology-flow {
+  to {
+    stroke-dashoffset: -200;
+  }
+}
+
+@keyframes overview-reactor-spin {
+  50% {
+    transform: rotate(180deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .overview-page .overview-stream-status[data-active='true'] .overview-stream-status__indicator {
+  .overview-page .overview-stream-status[data-active='true'] .overview-stream-status__indicator,
+  .overview-page .overview-topology__source-beam,
+  .overview-page .overview-topology__store-beam,
+  .overview-page .overview-topology__store-glow,
+  .overview-page .overview-topology__hub-icon-inner {
     animation: none;
+  }
+
+  .overview-page .overview-topology__source-beam,
+  .overview-page .overview-topology__store-beam,
+  .overview-page .overview-topology__store-glow {
+    stroke-dasharray: 4 6;
   }
 }
 
 .overview-page .overview-milestones {
-  margin-top: 1.25rem;
+  width: min(100%, 768px);
+  flex: 0 0 auto;
+  margin: 0 auto;
+}
+
+.overview-page .overview-milestones__surface {
+  display: flex;
+  min-height: 4.25rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: 16px;
   background: var(--card);
-  padding: 0.875rem;
+  padding: 0.625rem 1rem;
+  box-shadow: 0 4px 18px rgb(15 23 42 / 5%);
 }
 
 .overview-page .overview-milestones__list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.625rem;
-  margin: 0.75rem 0 0;
+  min-width: 0;
+  flex: 1;
+  gap: 0.25rem;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .overview-page .overview-milestones__item {
   display: flex;
+  position: relative;
   min-width: 0;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--background);
-  padding: 0.5rem 0.625rem;
 }
 
-.overview-page .overview-milestones__item[data-current='true'] {
-  border-color: color-mix(in srgb, var(--primary) 48%, var(--border));
-  background: color-mix(in srgb, var(--primary) 4%, var(--background));
+.overview-page .overview-milestones__item:not(:last-child)::after {
+  position: absolute;
+  top: 50%;
+  right: -0.2rem;
+  color: var(--border);
+  content: '→';
+  font-size: 12px;
+  transform: translate(50%, -50%);
 }
 
-.overview-page .overview-milestones__heading {
+.overview-page .overview-milestones__step-link {
   display: flex;
+  width: 100%;
   min-width: 0;
+  min-height: 2.5rem;
   align-items: center;
   gap: 0.5rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 0.375rem 0.5rem;
+  color: var(--foreground);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.overview-page .overview-milestones__step-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.overview-page .overview-milestones__step-link:active {
+  transform: scale(0.98);
+}
+
+.overview-page .overview-milestones__item[data-current='true'] .overview-milestones__step-link {
+  background: color-mix(in srgb, var(--primary) 6%, var(--card));
+  color: var(--primary);
+}
+
+.overview-page .overview-milestones__action {
+  flex: 0 0 auto;
+}
+
+.overview-page .overview-milestones__action button {
+  gap: 0.4rem;
+  white-space: nowrap;
 }
 
 .overview-page .overview-milestones__step {
@@ -202,236 +627,40 @@
   color: var(--success);
 }
 
-@media (max-width: 760px) {
-  .overview-page .overview-milestones__list {
-    grid-template-columns: 1fr;
-  }
-}
-
-.overview-page .overview-flow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 2.5rem minmax(0, 1fr) 2.5rem minmax(0, 1fr);
-  align-items: start;
-}
-
-.overview-page .overview-block-slot {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.overview-page .overview-block {
-  display: grid;
-  grid-template-rows: 1.5rem 1.75rem 5.5rem 1.25rem;
-  gap: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card);
-  padding: 1rem;
-}
-
-.overview-page .overview-block--current {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 12%, transparent);
-}
-
-.overview-page .overview-block__title {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.overview-page .overview-block__step {
-  display: inline-flex;
-  height: 1.25rem;
-  width: 1.25rem;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  background: var(--primary);
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--primary-foreground);
-}
-
-.overview-page .overview-block__step--done {
-  background: var(--success);
-}
-
-.overview-page .overview-block__problems {
-  margin-left: auto;
-  border-radius: 9999px;
-  padding: 0 0.5rem;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.25rem;
-  color: var(--background);
-}
-
-.overview-page .overview-block__problems--warning {
-  background: var(--warning);
-}
-
-.overview-page .overview-block__problems--destructive {
-  background: var(--destructive);
-}
-
-.overview-page .overview-block__metric {
-  align-self: center;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.overview-page .overview-block__details {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  overflow: hidden;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.overview-page .overview-block__detail {
-  display: flex;
-  min-width: 0;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.overview-page .overview-block__detail dt {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--foreground);
-}
-
-.overview-page .overview-block__detail dd {
-  flex-shrink: 0;
-  color: var(--muted-foreground);
-}
-
-.overview-page .overview-block__footer {
-  display: flex;
-  align-items: center;
-}
-
-.overview-page .overview-link {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--primary);
-  text-underline-offset: 3px;
-}
-
-.overview-page .overview-link:hover {
-  text-decoration: underline;
-}
-
-.overview-page .overview-link:focus-visible {
-  border-radius: 4px;
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-}
-
-/* The arrow sits level with the count row of the blocks beside it. */
-.overview-page .overview-arrow {
-  display: flex;
-  height: 8.25rem;
-  align-items: center;
-  justify-content: center;
-}
-
-.overview-page .overview-arrow svg {
-  width: 2.5rem;
-  height: 2rem;
-  overflow: visible;
-}
-
-.overview-page .overview-arrow__track {
-  stroke: var(--border);
-  stroke-width: 2;
-  stroke-linecap: round;
-}
-
-.overview-page .overview-arrow__beam {
-  stroke: var(--success);
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-dasharray: 2 8;
-  opacity: 0;
-}
-
-.overview-page .overview-arrow__head {
-  stroke: var(--muted-foreground);
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.overview-page .overview-arrow[data-active='true'] .overview-arrow__beam {
-  opacity: 1;
-  animation: overview-rail-flow 1s linear infinite;
-}
-
-@keyframes overview-rail-flow {
-  to {
-    stroke-dashoffset: -20;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .overview-page .overview-arrow[data-active='true'] .overview-arrow__beam {
-    animation: none;
-    stroke-dasharray: 4 5;
-  }
-}
-
-.overview-page .overview-arrow__narrow {
-  display: none;
-}
-
-.overview-page .overview-callout {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  border-radius: var(--radius);
-  background: var(--primary);
-  padding: 0.75rem 1rem;
-  color: var(--primary-foreground);
-}
-
-.overview-page .overview-callout .overview-callout__skip {
-  color: var(--primary-foreground);
-}
-
 .overview-page .overview-attention {
   display: flex;
+  width: min(100%, 840px);
+  flex: 0 0 auto;
   flex-direction: column;
   gap: 0.5rem;
+  margin: 0 auto;
+  padding-bottom: 0.5rem;
 }
 
 .overview-page .overview-attention__list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .overview-page .overview-attention__item {
   display: flex;
+  min-width: 0;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.25rem 0.5rem;
+  border-top: 1px solid var(--border);
+  padding: 0.625rem 0;
   font-size: 13px;
 }
 
 .overview-page .overview-attention__dot {
-  height: 0.5rem;
   width: 0.5rem;
-  flex-shrink: 0;
+  height: 0.5rem;
+  flex: 0 0 auto;
   border-radius: 9999px;
 }
 
@@ -444,9 +673,9 @@
 }
 
 .overview-page .overview-attention__kind {
+  color: var(--muted-foreground);
   font-size: 12px;
   font-weight: 500;
-  color: var(--muted-foreground);
 }
 
 .overview-page .overview-attention__open {
@@ -498,28 +727,63 @@
   border-top: 1px solid var(--border);
 }
 
-@media (max-width: 767px) {
+@media (max-width: 760px) {
   .overview-page .overview-page__header,
   .overview-page .overview-page__body {
     padding-right: 1rem;
     padding-left: 1rem;
   }
 
-  .overview-page .overview-flow {
-    grid-template-columns: minmax(0, 1fr);
+  .overview-page .overview-topology {
+    grid-template-columns: 52px minmax(180px, 1fr) 52px;
+    justify-content: start;
+    overflow-x: auto;
   }
 
-  .overview-page .overview-arrow {
-    height: 2rem;
+  .overview-page .overview-topology__hub {
+    width: clamp(112px, 31.54%, 164px);
   }
 
-  .overview-page .overview-arrow__wide {
+  .overview-page .overview-milestones__surface {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .overview-page .overview-milestones__list {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .overview-page .overview-milestones__item:not(:last-child)::after {
     display: none;
   }
 
-  .overview-page .overview-arrow__narrow {
-    display: block;
-    width: 2rem;
-    height: 2rem;
+  .overview-page .overview-milestones__action {
+    align-self: flex-start;
+  }
+
+  .overview-page .overview-attention__open {
+    margin-left: 1rem;
+  }
+}
+
+@media (hover: hover) {
+  .overview-page .overview-link:hover {
+    text-decoration: underline;
+  }
+
+  .overview-page .overview-topology__source:hover .overview-topology__source-icon,
+  .overview-page .overview-topology__store-node:hover .overview-topology__store-icon {
+    border-color: color-mix(in srgb, var(--primary) 28%, var(--border));
+    color: var(--primary);
+  }
+
+  .overview-page .overview-topology__hub:hover {
+    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+    box-shadow: 0 10px 28px rgb(15 23 42 / 12%);
+  }
+
+  .overview-page .overview-milestones__step-link:hover {
+    background: var(--muted);
   }
 }
