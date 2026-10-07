@@ -1795,6 +1795,7 @@
     "delete": "刪除",
     "fields": {
       "type": "類型",
+      "location": "資料庫",
       "checks": "檢查",
       "usage": "用量",
       "access": "存取"
@@ -1804,6 +1805,11 @@
       "type": "MongoDB · 伺服器中繼資料庫",
       "access": "與此伺服器已使用的 MongoDB 共用。正式環境請使用獨立的 MongoDB。",
       "deleteReason": "此 store 由伺服器管理"
+    },
+    "cloud": {
+      "name": "Atlas state store",
+      "type": "MongoDB Atlas",
+      "access": "此組織唯一的 Atlas 目標，由 Tapstate 管理連線資訊。"
     },
     "states": {
       "loading": "正在載入 state store…",

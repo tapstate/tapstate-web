@@ -3,19 +3,18 @@ import { HardDrive } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
-import { listSources, MANAGED_VIEW_STORE_SOURCE_ID } from '@/service/source-client'
+import { listSources } from '@/service/source-client'
+import { stateStoreSource } from '@/service/state-store-source'
 import { useAuthStore } from '@/stores/auth-store'
+import { getDeploymentProfile } from '@/utils/deployment-profile'
 
-/**
- * Settings, State stores: where views are kept. Today the only store is the server's managed
- * one, found among the sources; its connection details are deliberately not shown, since the
- * managed store is derived from the server's own connection string.
- */
+/** Settings, State stores: one deployment-managed destination, never a data source. */
 export function StateStorePage() {
   const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const sourcesQuery = useQuery({ queryKey: ['sources'], queryFn: () => listSources(apiFetch) })
-  const managed = sourcesQuery.data?.find((source) => source.id === MANAGED_VIEW_STORE_SOURCE_ID)
+  const profile = getDeploymentProfile()
+  const managed = stateStoreSource(sourcesQuery.data ?? [], profile)
 
   return (
     <section className="settings-page">
@@ -72,7 +71,7 @@ export function StateStorePage() {
                 {t('state.error.retry')}
               </Button>
             </div>
-          ) : managed === undefined ? (
+          ) : managed === null ? (
             <p className="text-muted-foreground text-[13px]">{t('stateStorePage.states.empty')}</p>
           ) : (
             <ul className="settings-store-list" aria-label={t('stateStorePage.listLabel')}>
@@ -83,14 +82,32 @@ export function StateStorePage() {
                     aria-hidden="true"
                   />
                   <h2 className="text-foreground text-[13px] font-semibold">
-                    {t('stateStorePage.managed.name')}
+                    {t(
+                      profile === 'cloud'
+                        ? 'stateStorePage.cloud.name'
+                        : 'stateStorePage.managed.name',
+                    )}
                   </h2>
                   <span className="settings-store__badge">{t('stateStorePage.default')}</span>
                 </div>
                 <dl className="settings-store__details">
                   <div>
                     <dt>{t('stateStorePage.fields.type')}</dt>
-                    <dd>{t('stateStorePage.managed.type')}</dd>
+                    <dd>
+                      {t(
+                        profile === 'cloud'
+                          ? 'stateStorePage.cloud.type'
+                          : 'stateStorePage.managed.type',
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{t('stateStorePage.fields.location')}</dt>
+                    <dd>
+                      {typeof managed.config.database === 'string'
+                        ? managed.config.database
+                        : t('overview.notReported')}
+                    </dd>
                   </div>
                   <div>
                     <dt>{t('stateStorePage.fields.checks')}</dt>
@@ -102,7 +119,13 @@ export function StateStorePage() {
                   </div>
                   <div>
                     <dt>{t('stateStorePage.fields.access')}</dt>
-                    <dd>{t('stateStorePage.managed.access')}</dd>
+                    <dd>
+                      {t(
+                        profile === 'cloud'
+                          ? 'stateStorePage.cloud.access'
+                          : 'stateStorePage.managed.access',
+                      )}
+                    </dd>
                   </div>
                 </dl>
                 <div className="settings-store__actions">

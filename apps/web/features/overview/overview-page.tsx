@@ -11,9 +11,15 @@ import { PipelineCreationDialog } from '@/features/pipelines/components/create/p
 import { cn } from '@/lib/utils'
 import { listPipelines } from '@/service/pipelines/pipeline-client'
 import { addSampleSources, loadSampleSources } from '@/service/sample-source-client'
-import { listSources, type SourceView } from '@/service/source-client'
+import {
+  listConnectors,
+  listSources,
+  type ConnectorSummary,
+  type SourceView,
+} from '@/service/source-client'
 import { listViews } from '@/service/view-client'
 import { useAuthStore } from '@/stores/auth-store'
+import { getDeploymentProfile } from '@/utils/deployment-profile'
 
 import { AddSourcesDialog } from './components/add-sources-dialog'
 import { OverviewTopology } from './components/overview-topology'
@@ -36,6 +42,10 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
   const apiFetch = useAuthStore((state) => state.apiFetch)
   // Same keys as the Data Sources, Pipelines and Views pages, so they share one cache.
   const sourcesQuery = useQuery({ queryKey: ['sources'], queryFn: () => listSources(apiFetch) })
+  const connectorsQuery = useQuery({
+    queryKey: ['connectors'],
+    queryFn: () => listConnectors(apiFetch),
+  })
   const pipelinesQuery = useQuery({
     queryKey: ['pipelines'],
     queryFn: () => listPipelines(apiFetch),
@@ -74,7 +84,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
   const overview = useMemo(
     () =>
       sourcesQuery.data && pipelinesQuery.data
-        ? buildOverview(sourcesQuery.data, pipelinesQuery.data, views)
+        ? buildOverview(sourcesQuery.data, pipelinesQuery.data, views, getDeploymentProfile())
         : null,
     [sourcesQuery.data, pipelinesQuery.data, views],
   )
@@ -111,7 +121,12 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
         ) : (
           <OverviewContent
             overview={overview}
-            sampleAvailable={Boolean(samplesQuery.data?.length)}
+            connectors={connectorsQuery.data ?? []}
+            sampleAvailable={Boolean(
+              samplesQuery.data?.some(
+                (sample) => !(sourcesQuery.data ?? []).some((source) => source.id === sample.id),
+              ),
+            )}
             onAddSources={() => setAddSourcesOpen(true)}
             onBuildPipeline={() => setPipelineCreationOpen(true)}
           />
@@ -168,6 +183,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
 
 interface OverviewContentProps {
   overview: OverviewModel
+  connectors: ConnectorSummary[]
   sampleAvailable: boolean
   onAddSources: () => void
   onBuildPipeline: () => void
@@ -175,6 +191,7 @@ interface OverviewContentProps {
 
 function OverviewContent({
   overview,
+  connectors,
   sampleAvailable,
   onAddSources,
   onBuildPipeline,
@@ -183,6 +200,7 @@ function OverviewContent({
     <>
       <OverviewTopology
         overview={overview}
+        connectors={connectors}
         onAddSources={onAddSources}
         onBuildPipeline={onBuildPipeline}
       >
@@ -339,6 +357,16 @@ function OverviewMilestoneDock({
         </div>
 
         <div className="flex shrink-0 items-center gap-2.5">
+          {sampleAvailable && (
+            <button
+              type="button"
+              onClick={onAddSources}
+              className="flex cursor-pointer items-center gap-1 text-[11.5px] font-medium whitespace-nowrap text-indigo-600 transition-colors hover:text-indigo-800 hover:underline"
+            >
+              <Sparkles className="h-3 w-3 text-indigo-500" aria-hidden="true" />
+              <span>{t('overview.milestones.trySample', 'Try sample')}</span>
+            </button>
+          )}
           {!storeDone ? (
             <Link
               to="/settings"
@@ -349,16 +377,6 @@ function OverviewMilestoneDock({
             </Link>
           ) : !sourcesDone ? (
             <div className="flex items-center gap-2.5">
-              {sampleAvailable && (
-                <button
-                  type="button"
-                  onClick={onAddSources}
-                  className="flex cursor-pointer items-center gap-1 text-[11.5px] font-medium whitespace-nowrap text-indigo-600 transition-colors hover:text-indigo-800 hover:underline"
-                >
-                  <Sparkles className="h-3 w-3 text-indigo-500" aria-hidden="true" />
-                  <span>{t('overview.milestones.trySample', 'Try sample')}</span>
-                </button>
-              )}
               <button
                 type="button"
                 onClick={onAddSources}

@@ -1,8 +1,10 @@
 import type { PipelineCatalogItem, PipelineCatalogState } from '@/service/pipelines/pipeline-client'
+import type { SourceView } from '@/service/source-client'
 import type { ViewListResult } from '@/service/view-client'
+import type { DeploymentProfile } from '@/utils/deployment-profile'
 
 import { isSampleSource } from '@/service/sample-source-client'
-import { MANAGED_VIEW_STORE_SOURCE_ID, type SourceView } from '@/service/source-client'
+import { isDataSource, stateStoreSource } from '@/service/state-store-source'
 
 /** The three setup steps, in the order a new workspace is guided through them. */
 export const SETUP_STEP_ORDER = ['stateStore', 'sources', 'pipeline'] as const
@@ -77,10 +79,11 @@ export function buildOverview(
   sources: SourceView[],
   pipelines: PipelineCatalogItem[],
   views: ViewListResult | null = null,
+  profile: DeploymentProfile = 'on-prem',
 ): OverviewModel {
-  const managed = sources.find((source) => source.id === MANAGED_VIEW_STORE_SOURCE_ID) ?? null
+  const managed = stateStoreSource(sources, profile)
   const dataSources = sources
-    .filter((source) => source.id !== MANAGED_VIEW_STORE_SOURCE_ID)
+    .filter(isDataSource)
     .map((source) => ({
       id: source.id,
       connector: source.connector,

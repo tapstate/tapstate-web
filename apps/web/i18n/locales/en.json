@@ -1795,6 +1795,7 @@
     "delete": "Delete",
     "fields": {
       "type": "Type",
+      "location": "Database",
       "checks": "Checks",
       "usage": "Usage",
       "access": "Access"
@@ -1804,6 +1805,11 @@
       "type": "MongoDB · server metadata database",
       "access": "Shares the MongoDB this server already uses. For production, use a separate MongoDB.",
       "deleteReason": "The server manages this store"
+    },
+    "cloud": {
+      "name": "Atlas state store",
+      "type": "MongoDB Atlas",
+      "access": "The single Atlas destination for this organization. Connection details are managed by Tapstate."
     },
     "states": {
       "loading": "Loading state stores…",

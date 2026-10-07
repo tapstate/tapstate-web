@@ -1795,6 +1795,7 @@
     "delete": "删除",
     "fields": {
       "type": "类型",
+      "location": "数据库",
       "checks": "检查",
       "usage": "用量",
       "access": "访问"
@@ -1804,6 +1805,11 @@
       "type": "MongoDB · 服务器元数据库",
       "access": "与此服务器已使用的 MongoDB 共用。生产环境请使用单独的 MongoDB。",
       "deleteReason": "此 store 由服务器管理"
+    },
+    "cloud": {
+      "name": "Atlas state store",
+      "type": "MongoDB Atlas",
+      "access": "此组织唯一的 Atlas 目标，由 Tapstate 管理连接信息。"
     },
     "states": {
       "loading": "正在加载 state store…",

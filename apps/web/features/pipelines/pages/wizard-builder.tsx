@@ -15,6 +15,7 @@ import {
   type PipelineRuntimeState,
 } from '@/service/pipelines/pipeline-client'
 import { getSourceSchema, listConnectors, listSources } from '@/service/source-client'
+import { isDataSource } from '@/service/state-store-source'
 import { useAuthStore } from '@/stores/auth-store'
 
 import type {
@@ -84,9 +85,10 @@ export function WizardBuilder({
   })
   const connectors = connectorsQuery.data || []
   const sources = sourcesQuery.data || []
+  const inputSources = useMemo(() => sources.filter(isDataSource), [sources])
   const deploymentProfile = getDeploymentProfile()
   const schemas = useQueries({
-    queries: sources.map((s) => ({
+    queries: inputSources.map((s) => ({
       queryKey: ['wizard', 'source-schema', s.id],
       queryFn: () => getSourceSchema(s.id, apiFetch),
       retry: false,
@@ -94,7 +96,7 @@ export function WizardBuilder({
   })
   const catalog = useMemo<DataSourceMeta[]>(
     () =>
-      sources.map((s, i) => {
+      inputSources.map((s, i) => {
         const details = schemas[i]?.data?.tables || []
         const names = sourceScopedTableNames(
           s,
@@ -123,7 +125,7 @@ export function WizardBuilder({
           }),
         }
       }),
-    [connectors, sources, schemas],
+    [connectors, inputSources, schemas],
   )
   const customer360Preset = useMemo(() => findCustomer360Preset(catalog), [catalog])
   const [wizard, setWizard] = useState(draft.wizard)

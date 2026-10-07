@@ -1,5 +1,9 @@
 import * as React from 'react'
 
+import type { ConnectorSummary } from '@/service/source-client'
+
+import type { OverviewSourceItem } from '../overview-model'
+
 export interface SourceConnector {
   id: string
   name: string
@@ -8,6 +12,7 @@ export interface SourceConnector {
   accentColor: string
   gradientColors: [string, string]
   icon: React.ReactNode
+  iconPath?: string | null
 }
 
 export const SOURCES: SourceConnector[] = [
@@ -64,3 +69,62 @@ export const SOURCES: SourceConnector[] = [
     ),
   },
 ]
+
+const preferred = ['mysql', 'postgres', 'oracle']
+
+function family(id: string) {
+  if (id.includes('mysql')) return 'mysql'
+  if (id.includes('postgres')) return 'postgres'
+  if (id.includes('mongodb')) return 'mongodb'
+  if (id.includes('oracle')) return 'oracle'
+  if (id.includes('sqlserver')) return 'sqlserver'
+  return id
+}
+
+/** Connected sources lead; remaining pins come from the server's registerable catalog. */
+export function sourceConnectors(
+  connected: OverviewSourceItem[],
+  catalog: ConnectorSummary[],
+): SourceConnector[] {
+  const available = new Map(catalog.map((item) => [item.id, item]))
+  const connectedIds = [...new Set(connected.map((item) => item.connector))].sort((a, b) => {
+    const left = preferred.indexOf(family(a))
+    const right = preferred.indexOf(family(b))
+    return (left < 0 ? preferred.length : left) - (right < 0 ? preferred.length : right)
+  })
+  const ids = connectedIds.slice(0, 3)
+  const candidates = catalog.length
+    ? [...preferred, ...catalog.map((item) => item.id)].filter((id) => available.has(id))
+    : preferred
+  for (const id of candidates) {
+    if (ids.length >= 3) break
+    if (ids.some((existing) => family(existing) === family(id))) continue
+    if (catalog.length && !available.get(id)?.modes.length) continue
+    ids.push(id)
+  }
+
+  return ids.map((id) => {
+    const connector = available.get(id)
+    const base = SOURCES.find((source) => source.id === family(id))
+    const colors: [string, string] =
+      family(id) === 'mongodb'
+        ? ['#00684A', '#00ED64']
+        : family(id) === 'sqlserver'
+          ? ['#CC2927', '#EB5A52']
+          : (base?.gradientColors ?? ['#4F46E5', '#6366F1'])
+    return {
+      id,
+      name: connector?.name ?? base?.name ?? id,
+      engine: base?.engine ?? 'CDC Stream',
+      tag: base?.tag ?? 'CDC',
+      accentColor: colors[0],
+      gradientColors: colors,
+      iconPath: connector?.icon ?? null,
+      icon: base?.icon ?? (
+        <span className="text-sm font-bold" style={{ color: colors[0] }}>
+          {id[0]?.toUpperCase()}
+        </span>
+      ),
+    }
+  })
+}

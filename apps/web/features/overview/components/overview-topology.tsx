@@ -6,11 +6,14 @@ import { motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import type { ConnectorSummary } from '@/service/source-client'
+
+import { ConnectorIcon } from '@/components/connector-icon'
 import { cn } from '@/lib/utils'
 
 import type { OverviewModel } from '../overview-model'
 
-import { SOURCES, type SourceConnector } from './overview-source-connectors'
+import { sourceConnectors, type SourceConnector } from './overview-source-connectors'
 
 const SOURCE_PATHS = [
   'M0 26H18C42 26 62 42 68 65L85 125C91 148 111 165 135 165H178',
@@ -33,6 +36,7 @@ const MORE_SOURCE: SourceConnector = {
 
 interface OverviewTopologyProps {
   overview: OverviewModel
+  connectors: ConnectorSummary[]
   onAddSources: () => void
   onBuildPipeline: () => void
   children: ReactNode
@@ -40,6 +44,7 @@ interface OverviewTopologyProps {
 
 export function OverviewTopology({
   overview,
+  connectors,
   onAddSources,
   onBuildPipeline,
   children,
@@ -49,9 +54,11 @@ export function OverviewTopology({
   const [hoveredTooltipIdx, setHoveredTooltipIdx] = useState<number | null>(null)
   const [isStoreHovered, setIsStoreHovered] = useState(false)
   const [pipelineSyncKey, setPipelineSyncKey] = useState(0)
-  const activeSource = SOURCES[selectedSourceIdx] ?? SOURCES[0]
-  const leftDash = selectedSourceIdx === 0 || selectedSourceIdx === 3 ? 13 : 15.5
-  const leftBead = selectedSourceIdx === 0 || selectedSourceIdx === 3 ? 6.5 : 7.8
+  const sourceSlots = sourceConnectors(overview.sources.all, connectors)
+  const activeSourceIdx = Math.min(selectedSourceIdx, sourceSlots.length - 1)
+  const activeSource = sourceSlots[activeSourceIdx]
+  const leftDash = activeSourceIdx === 0 || activeSourceIdx === 3 ? 13 : 15.5
+  const leftBead = activeSourceIdx === 0 || activeSourceIdx === 3 ? 6.5 : 7.8
   const rightDash = 16
   const rightBead = 8
 
@@ -105,17 +112,17 @@ export function OverviewTopology({
       </div>
 
       <div
-        key={'pipeline-stage-' + pipelineSyncKey + '-' + selectedSourceIdx}
+        key={'pipeline-stage-' + pipelineSyncKey + '-' + activeSourceIdx}
         className="overview-arena relative mt-2 mb-4 flex min-h-[340px] w-full max-w-[840px] items-center justify-center select-none"
       >
         <div className="relative z-20 h-[330px] w-[52px] shrink-0">
           <div className="pointer-events-none absolute -top-7 right-0 left-0 text-center text-[11px] font-semibold tracking-wider text-slate-400 uppercase select-none">
             Sources
           </div>
-          {[...SOURCES, MORE_SOURCE].map((src, idx) => {
-            const isSelected = selectedSourceIdx === idx
+          {[...sourceSlots, MORE_SOURCE].map((src, idx) => {
+            const isSelected = activeSourceIdx === idx
             const isHovered = hoveredTooltipIdx === idx
-            const isMore = idx === 3
+            const isMore = idx === sourceSlots.length
             const connected = overview.sources.all.some(
               (source) => source.connector.trim().toLowerCase() === src.id,
             )
@@ -154,7 +161,18 @@ export function OverviewTopology({
                     'border border-slate-200 shadow-[0_4px_16px_rgba(0,0,0,0.05)] hover:border-slate-300 hover:shadow-md',
                   )}
                 >
-                  {isMore ? <Plus className="h-5 w-5 stroke-[2.5] text-[#4F46E5]" /> : src.icon}
+                  {isMore ? (
+                    <Plus className="h-5 w-5 stroke-[2.5] text-[#4F46E5]" />
+                  ) : src.iconPath ? (
+                    <ConnectorIcon
+                      connectorId={src.id}
+                      name={src.name}
+                      iconPath={src.iconPath}
+                      size={28}
+                    />
+                  ) : (
+                    src.icon
+                  )}
                 </motion.button>
 
                 {isHovered && (
@@ -233,7 +251,7 @@ export function OverviewTopology({
             </defs>
 
             {SOURCE_PATHS.map((pathD, idx) =>
-              idx === selectedSourceIdx ? null : (
+              idx === activeSourceIdx ? null : (
                 <path
                   key={'inactive-' + idx}
                   d={pathD}
@@ -255,7 +273,7 @@ export function OverviewTopology({
               strokeWidth="1.4"
             />
             <path
-              d={SOURCE_PATHS[selectedSourceIdx]}
+              d={SOURCE_PATHS[activeSourceIdx]}
               strokeLinejoin="round"
               strokeLinecap="round"
               stroke={activeSource.accentColor}
@@ -266,7 +284,7 @@ export function OverviewTopology({
             <g>
               <g>
                 <path
-                  d={SOURCE_PATHS[selectedSourceIdx]}
+                  d={SOURCE_PATHS[activeSourceIdx]}
                   pathLength="100"
                   stroke="url(#selectedSourceBeam)"
                   strokeOpacity="0.65"
@@ -278,7 +296,7 @@ export function OverviewTopology({
                   style={{ animation: 'pipeline-stage-flow 1.8s linear infinite' }}
                 />
                 <path
-                  d={SOURCE_PATHS[selectedSourceIdx]}
+                  d={SOURCE_PATHS[activeSourceIdx]}
                   pathLength="100"
                   stroke="url(#selectedSourceBeam)"
                   strokeWidth="3.2"
@@ -288,7 +306,7 @@ export function OverviewTopology({
                   style={{ animation: 'pipeline-stage-flow 1.8s linear infinite' }}
                 />
                 <path
-                  d={SOURCE_PATHS[selectedSourceIdx]}
+                  d={SOURCE_PATHS[activeSourceIdx]}
                   pathLength="100"
                   stroke="#FFFFFF"
                   strokeWidth="1.8"

@@ -61,6 +61,7 @@ import {
   testConnection,
   type ConnectionTestReport,
 } from '@/service/source-client'
+import { isDataSource } from '@/service/state-store-source'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { ConnectionTestResultDialog } from './connection-test-result'
@@ -248,9 +249,9 @@ export function SourcesPage({
   const connectorsById = new Map(
     (connectorsQuery.data ?? []).map((connector) => [connector.id, connector]),
   )
-  const sources = (sourcesQuery.data ?? []).map((source) =>
-    toSource(source, connectorsById.get(source.connector)),
-  )
+  const sources = (sourcesQuery.data ?? [])
+    .filter(isDataSource)
+    .map((source) => toSource(source, connectorsById.get(source.connector)))
   const sourceSearchQuery = searchText.trim().toLowerCase()
   const filteredSources = sourceSearchQuery
     ? sources.filter(

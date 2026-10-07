@@ -15,8 +15,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { listSources, MANAGED_VIEW_STORE_SOURCE_ID } from '@/service/source-client'
+import { listSources } from '@/service/source-client'
+import { stateStoreSource } from '@/service/state-store-source'
 import { useAuthStore } from '@/stores/auth-store'
+import { getDeploymentProfile } from '@/utils/deployment-profile'
 
 import { StoredIn, useDurationText, ViewStatus } from './components/view-status'
 import { sortViews, summarizeViews } from './views-model'
@@ -155,7 +157,7 @@ function ViewsExplainer({ notice }: { notice: string | null }) {
   const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const sourcesQuery = useQuery({ queryKey: ['sources'], queryFn: () => listSources(apiFetch) })
-  const storeReady = sourcesQuery.data?.some((source) => source.id === MANAGED_VIEW_STORE_SOURCE_ID)
+  const storeReady = stateStoreSource(sourcesQuery.data ?? [], getDeploymentProfile()) !== null
 
   return (
     <div className="views-explainer">
