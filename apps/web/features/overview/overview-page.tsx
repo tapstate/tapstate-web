@@ -2,12 +2,11 @@ import type { ReactNode } from 'react'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { ArrowDown, ArrowRight, CheckCircle2, Database, GitMerge, HardDrive } from 'lucide-react'
+import { CheckCircle2, Database, GitMerge, HardDrive } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import { listPipelines } from '@/service/pipelines/pipeline-client'
 import { addSampleSources, loadSampleSources } from '@/service/sample-source-client'
 import { listSources, type SourceView } from '@/service/source-client'
@@ -259,12 +258,7 @@ function OverviewContent({
   const stepNumber = (step: SetupStepId) => (guidance ? SETUP_STEP_ORDER.indexOf(step) + 1 : null)
   const isCurrent = (step: SetupStepId) => guidance && current === step
   const flowing = overview.pipelines.running > 0
-  const arrow = (
-    <div className={cn('overview-arrow', !flowing && 'overview-arrow--idle')} aria-hidden="true">
-      <ArrowRight className="overview-arrow__wide h-4 w-4" />
-      <ArrowDown className="overview-arrow__narrow h-4 w-4" />
-    </div>
-  )
+  const arrow = <OverviewFlowArrow active={flowing} />
   const storeViews = overview.stateStore.views
 
   return (
@@ -491,6 +485,23 @@ function OverviewContent({
       </section>
       <OverviewMilestoneDock overview={overview} onAddSources={onAddSources} />
     </>
+  )
+}
+
+function OverviewFlowArrow({ active }: { active: boolean }) {
+  return (
+    <div className="overview-arrow" data-active={active} aria-hidden="true">
+      <svg className="overview-arrow__wide" viewBox="0 0 48 32" fill="none">
+        <path className="overview-arrow__track" d="M2 16C14 16 30 16 43 16" />
+        <path className="overview-arrow__beam" d="M2 16C14 16 30 16 43 16" />
+        <path className="overview-arrow__head" d="m37 9 7 7-7 7" />
+      </svg>
+      <svg className="overview-arrow__narrow" viewBox="0 0 32 48" fill="none">
+        <path className="overview-arrow__track" d="M16 2c0 12 0 30 0 43" />
+        <path className="overview-arrow__beam" d="M16 2c0 12 0 30 0 43" />
+        <path className="overview-arrow__head" d="m9 37 7 7 7-7" />
+      </svg>
+    </div>
   )
 }
 

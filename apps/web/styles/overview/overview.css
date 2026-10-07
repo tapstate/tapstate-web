@@ -343,11 +343,51 @@
   height: 8.25rem;
   align-items: center;
   justify-content: center;
-  color: var(--muted-foreground);
 }
 
-.overview-page .overview-arrow--idle {
-  opacity: 0.5;
+.overview-page .overview-arrow svg {
+  width: 2.5rem;
+  height: 2rem;
+  overflow: visible;
+}
+
+.overview-page .overview-arrow__track {
+  stroke: var(--border);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.overview-page .overview-arrow__beam {
+  stroke: var(--success);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 2 8;
+  opacity: 0;
+}
+
+.overview-page .overview-arrow__head {
+  stroke: var(--muted-foreground);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.overview-page .overview-arrow[data-active='true'] .overview-arrow__beam {
+  opacity: 1;
+  animation: overview-rail-flow 1s linear infinite;
+}
+
+@keyframes overview-rail-flow {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overview-page .overview-arrow[data-active='true'] .overview-arrow__beam {
+    animation: none;
+    stroke-dasharray: 4 5;
+  }
 }
 
 .overview-page .overview-arrow__narrow {
@@ -479,5 +519,7 @@
 
   .overview-page .overview-arrow__narrow {
     display: block;
+    width: 2rem;
+    height: 2rem;
   }
 }
