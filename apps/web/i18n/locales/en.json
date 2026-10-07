@@ -1402,6 +1402,7 @@
       "stepOf": "Step {{step}} of {{total}}",
       "previous": "Previous",
       "next": "Next",
+      "launch": "Launch Pipeline",
       "noSample": "Connect a MySQL or PostgreSQL source with customer, order, and line item tables to prefill these steps.",
       "primaryKey": "Key: {{keys}}",
       "joinCount": "Join fields: {{first}} + {{second}}",

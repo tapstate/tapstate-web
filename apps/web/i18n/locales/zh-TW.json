@@ -1402,6 +1402,7 @@
       "stepOf": "第 {{step}} 步，共 {{total}} 步",
       "previous": "上一步",
       "next": "下一步",
+      "launch": "啟動 Pipeline",
       "noSample": "連接包含客戶、訂單和訂單明細資料表的 MySQL 或 PostgreSQL 資料來源後，可自動填入這些步驟。",
       "primaryKey": "主鍵：{{keys}}",
       "joinCount": "關聯欄位數：{{first}} + {{second}}",

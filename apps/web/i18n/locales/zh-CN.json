@@ -1402,6 +1402,7 @@
       "stepOf": "第 {{step}} 步，共 {{total}} 步",
       "previous": "上一步",
       "next": "下一步",
+      "launch": "启动 Pipeline",
       "noSample": "连接包含客户、订单和订单明细表的 MySQL 或 PostgreSQL 数据源后，可自动填入这些步骤。",
       "primaryKey": "主键：{{keys}}",
       "joinCount": "关联字段数：{{first}} + {{second}}",

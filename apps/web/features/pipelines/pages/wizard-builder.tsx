@@ -441,6 +441,7 @@ export function WizardBuilder({
         onApplyPreset={applyCustomer360Preset}
         onAddFormula={addCustomerLifetimeValue}
         onSaveDraft={() => void savePipeline(false)}
+        onLaunch={() => void savePipeline(true)}
       />
       <ReferenceWizardBuilder
         key={builderRevision}
