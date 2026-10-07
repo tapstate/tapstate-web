@@ -45,6 +45,7 @@ export interface WizardBuilderProps {
   compiledSpec: string
   sourceError?: string
   readOnly?: boolean
+  activeGuideTarget?: string
 }
 
 export interface JoinCondition {
@@ -128,6 +129,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   compiledSpec,
   sourceError,
   readOnly = false,
+  activeGuideTarget,
 }) => {
   const { t } = useTranslation()
   const [activeContext, setActiveContext] = React.useState('root')
@@ -1396,6 +1398,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                 {/* ================================================================= */}
                 <section
                   id="step-root-table"
+                  data-guide-active={activeGuideTarget === 'step-root-table' || undefined}
                   onClick={() => setActiveContext('root')}
                   className={cn(
                     'wizard-reference-root-card cursor-pointer border bg-white p-4 shadow-xs transition-all duration-150',
@@ -1715,7 +1718,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                 {/* ============================================================= */}
                 {/* STEP 2: RELATIONS LIST (动态子表树 - 精致虚线导轨，精准分支) */}
                 {/* ============================================================= */}
-                <div className="relative ml-8 space-y-3.5 border-l border-dashed border-gray-300 pl-6">
+                <div
+                  id="step-first-relation"
+                  data-guide-active={activeGuideTarget === 'step-first-relation' || undefined}
+                  className="relative ml-8 space-y-3.5 border-l border-dashed border-gray-300 pl-6"
+                >
                   {/* Dynamically Render Each Relation Node */}
                   {relations.map((rel) => renderRelation(rel))}
 
@@ -1988,6 +1995,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                 {/* ============================================================= */}
                 <section
                   id="step-doc-process"
+                  data-guide-active={activeGuideTarget === 'step-doc-process' || undefined}
                   onClick={() => setActiveContext('doc_process')}
                   className={cn(
                     'cursor-pointer rounded-xl border bg-white p-4 shadow-xs transition-all duration-150',
@@ -2187,7 +2195,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
         </div>
 
         {/* Right Side: Real-time Live Result Preview (Original w-[440px]) */}
-        <aside className="wizard-reference-preview flex flex-col rounded-xl bg-white">
+        <aside
+          id="step-preview-panel"
+          data-guide-active={activeGuideTarget === 'step-preview-panel' || undefined}
+          className="wizard-reference-preview flex flex-col rounded-xl bg-white"
+        >
           {/* Preview Header */}
           <div className="flex h-11 shrink-0 items-center justify-between border-b border-gray-200 bg-gray-50/50 px-4">
             <div className="flex items-center gap-2">

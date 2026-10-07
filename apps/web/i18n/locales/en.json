@@ -1388,6 +1388,59 @@
       "revert": "Revert field",
       "title": "Field Rename",
       "transform": "Transform"
+    },
+    "guide": {
+      "eyebrow": "CUSTOMER 360 GUIDE",
+      "title": "Build a customer 360 view",
+      "collapsed": "A guided Customer 360 walkthrough is available.",
+      "open": "Open guide",
+      "mode": "Guide mode",
+      "storyboard": "Storyboard",
+      "inSitu": "In place",
+      "close": "Close guide",
+      "stepsLabel": "Customer 360 guide steps",
+      "stepOf": "Step {{step}} of {{total}}",
+      "previous": "Previous",
+      "next": "Next",
+      "noSample": "Connect a MySQL or PostgreSQL source with customer, order, and line item tables to prefill these steps.",
+      "primaryKey": "Key: {{keys}}",
+      "joinCount": "Join fields: {{first}} + {{second}}",
+      "applyPreset": "Use detected sample",
+      "presetApplied": "Sample structure added",
+      "applyBeforeFormula": "Apply the detected sample structure first.",
+      "addFormula": "Add expression to draft",
+      "formulaAdded": "Added to draft",
+      "formulaUnavailable": "This server does not compile computed map expressions yet. The expression stays in the draft and blocks publishing; remove it to run the nested view.",
+      "previewNote": "This preview shows document structure from discovered schema. It does not fetch sample row values.",
+      "saveOnly": "Computed fields are not publishable on this server yet. Save the draft, then remove this expression before running.",
+      "saveDraft": "Save draft",
+      "steps": {
+        "root": {
+          "shortTitle": "Customer root",
+          "title": "Choose the customer root",
+          "body": "Each customer row becomes a root document. The guide uses the connected table and its discovered primary key."
+        },
+        "relations": {
+          "shortTitle": "Nest orders",
+          "title": "Nest orders and line items",
+          "body": "Embed {{ordersTable}} as orders[] and {{itemsTable}} as items[] using discovered keys, including composite joins."
+        },
+        "transform": {
+          "shortTitle": "Lifetime value",
+          "title": "Calculate lifetime value",
+          "body": "Sum {{amountField}} across nested order lines. Add the expression to the draft to inspect how this calculation is represented."
+        },
+        "preview": {
+          "shortTitle": "Document preview",
+          "title": "Review the document shape",
+          "body": "Inspect the customer fields and nested order arrays in the JSON or table preview."
+        },
+        "launch": {
+          "shortTitle": "Save and run",
+          "title": "Save and start the pipeline",
+          "body": "Save the configured draft, review any compiler messages, then start the pipeline from the action dock."
+        }
+      }
     }
   },
   "views": {
@@ -1588,6 +1641,26 @@
   "overview": {
     "title": "Overview",
     "notReported": "Not reported by this server yet",
+    "streamStatus": {
+      "label": "Pipeline stream status",
+      "active_one": "{{count}} pipeline streaming",
+      "active_other": "{{count}} pipelines streaming",
+      "none": "No pipeline is streaming right now",
+      "sources_one": "{{count}} connected source",
+      "sources_other": "{{count}} connected sources",
+      "destination": "State store: {{name}}",
+      "open": "View pipelines"
+    },
+    "milestones": {
+      "title": "Setup milestones",
+      "stateStore": "Set up the state store",
+      "sources": "Connect data sources",
+      "pipeline": "Build a pipeline",
+      "configure": "Open settings",
+      "addSources": "Add sources",
+      "build": "Build pipeline",
+      "open": "Open"
+    },
     "problems_one": "{{count}} problem",
     "problems_other": "{{count}} problems",
     "states": {

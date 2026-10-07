@@ -23,6 +23,11 @@ import type {
 } from '../model/pipeline-draft-document'
 
 import {
+  CUSTOMER_360_GUIDE_STEPS,
+  PipelineBuilderGuide,
+  type Customer360GuideMode,
+} from '../components/pipeline-builder-guide'
+import {
   ReferenceWizardBuilder,
   type DataSourceMeta,
   type WizardViewState,
@@ -33,6 +38,11 @@ import {
   wizardPublicationIssue,
   wizardUpsertKeylessInput,
 } from '../components/reference-wizard/wizard-adapter'
+import {
+  createCustomer360Wizard,
+  createCustomerLifetimeValueTransform,
+  findCustomer360Preset,
+} from '../model/customer-360-guide'
 import { getDeploymentProfile } from '../model/deployment-profile'
 import { targetSources } from '../model/pipeline-target-connectors'
 import { sourceScopedTableNames } from '../model/source-table-scope'
@@ -115,7 +125,12 @@ export function WizardBuilder({
       }),
     [connectors, sources, schemas],
   )
+  const customer360Preset = useMemo(() => findCustomer360Preset(catalog), [catalog])
   const [wizard, setWizard] = useState(draft.wizard)
+  const [builderRevision, setBuilderRevision] = useState(0)
+  const [guideOpen, setGuideOpen] = useState(() => !readOnly && isEmptyWizard(draft.wizard))
+  const [guideStep, setGuideStep] = useState(0)
+  const [guideMode, setGuideMode] = useState<Customer360GuideMode>('storyboard')
   const [status, setStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -132,6 +147,9 @@ export function WizardBuilder({
   const savedFingerprint = useRef(JSON.stringify(draft.wizard))
   const currentWizard = useRef(wizard)
   currentWizard.current = wizard
+  const emptyWizardDraft = isEmptyWizard(wizard)
+  const presetApplied = hasCustomer360Preset(wizard, customer360Preset)
+  const formulaAdded = hasCustomerLifetimeValue(wizard)
   const outputConfig = draft.wizard?.output as
     | { kind?: string; config?: { sourceId?: string; writeMode?: string } }
     | undefined
@@ -142,6 +160,45 @@ export function WizardBuilder({
   const destinationConnector = connectors.find(
     (connector) => connector.id === destination?.connector,
   )
+  useEffect(() => {
+    if (!guideOpen || readOnly) return
+    const targetId = CUSTOMER_360_GUIDE_STEPS[guideStep]?.targetId
+    if (!targetId) return
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(targetId)
+      if (!target) return
+      const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'auto'
+        : 'smooth'
+      target.scrollIntoView({ behavior, block: 'center', inline: 'nearest' })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [builderRevision, guideMode, guideOpen, guideStep, readOnly])
+
+  function applyCustomer360Preset() {
+    if (!customer360Preset || !emptyWizardDraft) return
+    setWizard(
+      createCustomer360Wizard(
+        customer360Preset,
+        destination?.id ?? '',
+        destinationConnector?.writeModes?.[0] ?? 'upsert',
+        deploymentProfile,
+      ),
+    )
+    setBuilderRevision((revision) => revision + 1)
+    setGuideStep(0)
+  }
+
+  function addCustomerLifetimeValue() {
+    if (!customer360Preset || formulaAdded) return
+    const transform = createCustomerLifetimeValueTransform(customer360Preset)
+    if (!transform) return
+    setWizard((current) => ({
+      ...current,
+      transforms: [...(Array.isArray(current?.transforms) ? current.transforms : []), transform],
+    }))
+    setBuilderRevision((revision) => revision + 1)
+  }
   useEffect(() => {
     if (!destination || readOnly) return
     const expectedKind = deploymentProfile === 'cloud' ? 'atlas' : 'source'
@@ -368,8 +425,25 @@ export function WizardBuilder({
                           : 'wizard.autosaved',
                   )
   return (
-    <>
+    <div className="flex h-full min-h-0 flex-col">
+      <PipelineBuilderGuide
+        open={guideOpen}
+        step={guideStep}
+        mode={guideMode}
+        preset={customer360Preset}
+        emptyDraft={emptyWizardDraft}
+        presetApplied={presetApplied}
+        formulaAdded={formulaAdded}
+        onOpen={() => setGuideOpen(true)}
+        onClose={() => setGuideOpen(false)}
+        onStepChange={setGuideStep}
+        onModeChange={setGuideMode}
+        onApplyPreset={applyCustomer360Preset}
+        onAddFormula={addCustomerLifetimeValue}
+        onSaveDraft={() => void savePipeline(false)}
+      />
       <ReferenceWizardBuilder
+        key={builderRevision}
         catalog={catalog}
         initial={readWizard(
           wizard,
@@ -389,9 +463,12 @@ export function WizardBuilder({
         }
         deploymentProfile={deploymentProfile}
         readOnly={editorReadOnly}
+        activeGuideTarget={guideOpen ? CUSTOMER_360_GUIDE_STEPS[guideStep]?.targetId : undefined}
         actions={
           <PipelineWorkflowHeader
             placement="sticky"
+            runButtonId="step-publish-action"
+            runButtonActiveGuide={guideOpen && guideStep === 4}
             dockStatus={
               <div className="wizard-reference-action-dock__status min-w-0 flex-1 text-[11px] text-[var(--pipeline-text-muted)]">
                 <span
@@ -463,6 +540,55 @@ export function WizardBuilder({
           </div>
         }
       />
-    </>
+    </div>
   )
+}
+
+function isEmptyWizard(value: PipelineDraft['wizard']) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return true
+  const root = value.root
+  const related = value.related
+  const transforms = value.transforms
+  const rootTable = isObjectRecord(root) ? root.table : null
+  return (
+    (typeof rootTable !== 'string' || rootTable.length === 0) &&
+    (!Array.isArray(related) || related.length === 0) &&
+    (!Array.isArray(transforms) || transforms.length === 0)
+  )
+}
+
+function hasCustomer360Preset(
+  value: PipelineDraft['wizard'],
+  preset: ReturnType<typeof findCustomer360Preset>,
+) {
+  if (!value || !preset) return false
+  const root = value.root
+  const relations = value.related
+  if (!isObjectRecord(root) || !Array.isArray(relations)) return false
+  const hasTable = (table: string) =>
+    relations.some((relation) => isObjectRecord(relation) && relation.table === table)
+  return (
+    root.sourceId === preset.sourceId &&
+    root.table === preset.root.name &&
+    hasTable(preset.orders.name) &&
+    hasTable(preset.items.name)
+  )
+}
+
+function hasCustomerLifetimeValue(value: PipelineDraft['wizard']) {
+  if (!value || !Array.isArray(value.transforms)) return false
+  return value.transforms.some((transform) => {
+    if (!isObjectRecord(transform)) return false
+    const fields = transform.fields
+    if (!isObjectRecord(fields)) return false
+    return (
+      transform.type === 'map' &&
+      typeof fields.lifetime_value === 'string' &&
+      fields.lifetime_value.startsWith('=')
+    )
+  })
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }

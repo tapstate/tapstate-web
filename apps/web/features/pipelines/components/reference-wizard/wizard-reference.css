@@ -54,6 +54,11 @@
 .wizard-reference .font-mono {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
+.wizard-reference [data-guide-active='true'] {
+  outline: 2px solid color-mix(in oklab, var(--primary) 58%, transparent);
+  outline-offset: 4px;
+  scroll-margin-block: 1.5rem;
+}
 .wizard-reference .wizard-reference-preview {
   width: var(--wizard-preview-width);
   flex: 0 0 var(--wizard-preview-width);

@@ -1388,6 +1388,59 @@
       "revert": "还原字段",
       "title": "字段重命名",
       "transform": "转换"
+    },
+    "guide": {
+      "eyebrow": "客户 360 引导",
+      "title": "构建客户 360 视图",
+      "collapsed": "可使用客户 360 分步引导。",
+      "open": "打开引导",
+      "mode": "引导模式",
+      "storyboard": "步骤总览",
+      "inSitu": "就地引导",
+      "close": "关闭引导",
+      "stepsLabel": "客户 360 引导步骤",
+      "stepOf": "第 {{step}} 步，共 {{total}} 步",
+      "previous": "上一步",
+      "next": "下一步",
+      "noSample": "连接包含客户、订单和订单明细表的 MySQL 或 PostgreSQL 数据源后，可自动填入这些步骤。",
+      "primaryKey": "主键：{{keys}}",
+      "joinCount": "关联字段数：{{first}} + {{second}}",
+      "applyPreset": "使用检测到的样本",
+      "presetApplied": "已填入样本结构",
+      "applyBeforeFormula": "请先填入检测到的样本结构。",
+      "addFormula": "将表达式加入草稿",
+      "formulaAdded": "已加入草稿",
+      "formulaUnavailable": "当前服务端尚不能编译计算型 map 表达式。该表达式会保留在草稿中并阻止发布；移除表达式后才能运行嵌套视图。",
+      "previewNote": "此预览根据已发现的 schema 展示文档结构，不会读取样本行数据。",
+      "saveOnly": "当前服务端暂不支持发布计算字段。请保存草稿，并在运行前移除此表达式。",
+      "saveDraft": "保存草稿",
+      "steps": {
+        "root": {
+          "shortTitle": "客户根表",
+          "title": "选择客户根表",
+          "body": "每条客户记录都会成为一篇根文档。引导使用已连接的数据表和检测到的主键。"
+        },
+        "relations": {
+          "shortTitle": "嵌套订单",
+          "title": "嵌套订单和明细",
+          "body": "将 {{ordersTable}} 嵌入为 orders[]，将 {{itemsTable}} 嵌入为 items[]，关联字段取自已发现的 schema，也支持复合键。"
+        },
+        "transform": {
+          "shortTitle": "客户终身价值",
+          "title": "计算客户终身价值",
+          "body": "汇总嵌套订单明细中的 {{amountField}}。可将表达式加入草稿，查看这个计算在配置中的表示方式。"
+        },
+        "preview": {
+          "shortTitle": "文档预览",
+          "title": "检查文档结构",
+          "body": "在 JSON 或表格预览中检查客户字段和嵌套订单数组。"
+        },
+        "launch": {
+          "shortTitle": "保存并运行",
+          "title": "保存并启动 Pipeline",
+          "body": "保存配置草稿，检查编译消息，然后从底部操作栏启动 Pipeline。"
+        }
+      }
     }
   },
   "views": {
@@ -1588,6 +1641,26 @@
   "overview": {
     "title": "概览",
     "notReported": "此服务器暂未提供",
+    "streamStatus": {
+      "label": "Pipeline 实时状态",
+      "active_one": "{{count}} 条 Pipeline 正在同步",
+      "active_other": "{{count}} 条 Pipeline 正在同步",
+      "none": "当前没有正在同步的 Pipeline",
+      "sources_one": "{{count}} 个已连接数据源",
+      "sources_other": "{{count}} 个已连接数据源",
+      "destination": "状态存储：{{name}}",
+      "open": "查看 Pipelines"
+    },
+    "milestones": {
+      "title": "设置进度",
+      "stateStore": "配置状态存储",
+      "sources": "连接数据源",
+      "pipeline": "构建 Pipeline",
+      "configure": "打开设置",
+      "addSources": "添加数据源",
+      "build": "构建 Pipeline",
+      "open": "打开"
+    },
     "problems_one": "{{count}} 个问题",
     "problems_other": "{{count}} 个问题",
     "states": {

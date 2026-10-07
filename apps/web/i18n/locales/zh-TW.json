@@ -1388,6 +1388,59 @@
       "revert": "還原欄位",
       "title": "欄位重新命名",
       "transform": "轉換"
+    },
+    "guide": {
+      "eyebrow": "客戶 360 引導",
+      "title": "建立客戶 360 檢視",
+      "collapsed": "可使用客戶 360 分步引導。",
+      "open": "開啟引導",
+      "mode": "引導模式",
+      "storyboard": "步驟總覽",
+      "inSitu": "就地引導",
+      "close": "關閉引導",
+      "stepsLabel": "客戶 360 引導步驟",
+      "stepOf": "第 {{step}} 步，共 {{total}} 步",
+      "previous": "上一步",
+      "next": "下一步",
+      "noSample": "連接包含客戶、訂單和訂單明細資料表的 MySQL 或 PostgreSQL 資料來源後，可自動填入這些步驟。",
+      "primaryKey": "主鍵：{{keys}}",
+      "joinCount": "關聯欄位數：{{first}} + {{second}}",
+      "applyPreset": "使用偵測到的樣本",
+      "presetApplied": "已填入樣本結構",
+      "applyBeforeFormula": "請先填入偵測到的樣本結構。",
+      "addFormula": "將運算式加入草稿",
+      "formulaAdded": "已加入草稿",
+      "formulaUnavailable": "目前伺服器尚無法編譯計算型 map 運算式。此運算式會保留在草稿中並阻止發布；移除運算式後才能執行巢狀檢視。",
+      "previewNote": "此預覽依據已探索的 schema 顯示文件結構，不會讀取樣本資料列。",
+      "saveOnly": "目前伺服器暫不支援發布計算欄位。請儲存草稿，並在執行前移除此運算式。",
+      "saveDraft": "儲存草稿",
+      "steps": {
+        "root": {
+          "shortTitle": "客戶根資料表",
+          "title": "選擇客戶根資料表",
+          "body": "每筆客戶資料都會成為一份根文件。引導會使用已連線的資料表和探索到的主鍵。"
+        },
+        "relations": {
+          "shortTitle": "巢狀訂單",
+          "title": "巢狀訂單和明細",
+          "body": "將 {{ordersTable}} 嵌入為 orders[]，將 {{itemsTable}} 嵌入為 items[]，關聯欄位取自已探索的 schema，也支援複合鍵。"
+        },
+        "transform": {
+          "shortTitle": "客戶終身價值",
+          "title": "計算客戶終身價值",
+          "body": "加總巢狀訂單明細中的 {{amountField}}。可將運算式加入草稿，查看此計算在設定中的表示方式。"
+        },
+        "preview": {
+          "shortTitle": "文件預覽",
+          "title": "檢視文件結構",
+          "body": "在 JSON 或表格預覽中檢查客戶欄位和巢狀訂單陣列。"
+        },
+        "launch": {
+          "shortTitle": "儲存並執行",
+          "title": "儲存並啟動 Pipeline",
+          "body": "儲存設定草稿、檢查編譯訊息，再從底部操作列啟動 Pipeline。"
+        }
+      }
     }
   },
   "views": {
@@ -1588,6 +1641,26 @@
   "overview": {
     "title": "概覽",
     "notReported": "此伺服器尚未提供",
+    "streamStatus": {
+      "label": "Pipeline 即時狀態",
+      "active_one": "{{count}} 條 Pipeline 正在同步",
+      "active_other": "{{count}} 條 Pipeline 正在同步",
+      "none": "目前沒有執行中的 Pipeline",
+      "sources_one": "{{count}} 個已連線資料來源",
+      "sources_other": "{{count}} 個已連線資料來源",
+      "destination": "狀態儲存：{{name}}",
+      "open": "查看 Pipelines"
+    },
+    "milestones": {
+      "title": "設定進度",
+      "stateStore": "設定狀態儲存",
+      "sources": "連線資料來源",
+      "pipeline": "建立 Pipeline",
+      "configure": "開啟設定",
+      "addSources": "新增資料來源",
+      "build": "建立 Pipeline",
+      "open": "開啟"
+    },
     "problems_one": "{{count}} 個問題",
     "problems_other": "{{count}} 個問題",
     "states": {

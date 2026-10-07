@@ -269,6 +269,35 @@ function OverviewContent({
 
   return (
     <>
+      <div
+        className="overview-stream-status"
+        data-active={flowing}
+        aria-label={t('overview.streamStatus.label')}
+      >
+        <span className="overview-stream-status__indicator" aria-hidden="true" />
+        <strong>
+          {flowing
+            ? t('overview.streamStatus.active', { count: overview.pipelines.running })
+            : t('overview.streamStatus.none')}
+        </strong>
+        <span className="overview-stream-status__separator" aria-hidden="true">
+          ·
+        </span>
+        <span>{t('overview.streamStatus.sources', { count: overview.sources.count })}</span>
+        <span className="overview-stream-status__separator" aria-hidden="true">
+          ·
+        </span>
+        <span>
+          {t('overview.streamStatus.destination', {
+            name: overview.stateStore.ready
+              ? t('overview.stateStore.managed')
+              : t('overview.stateStore.missing'),
+          })}
+        </span>
+        <Link to="/pipelines" className="overview-link">
+          {t('overview.streamStatus.open')}
+        </Link>
+      </div>
       <div className="overview-flow">
         <OverviewBlock
           title={t('overview.sources.title')}
@@ -460,7 +489,92 @@ function OverviewContent({
           </ul>
         )}
       </section>
+      <OverviewMilestoneDock overview={overview} onAddSources={onAddSources} />
     </>
+  )
+}
+
+function OverviewMilestoneDock({
+  overview,
+  onAddSources,
+}: {
+  overview: OverviewModel
+  onAddSources: () => void
+}) {
+  const { t } = useTranslation()
+  const milestones = [
+    {
+      id: 'stateStore',
+      done: overview.setup.done.stateStore,
+      title: t('overview.milestones.stateStore'),
+      action: (
+        <Button asChild nativeButton={false} size="sm" variant="ghost">
+          <Link to="/settings">
+            {t(
+              overview.setup.done.stateStore
+                ? 'overview.milestones.open'
+                : 'overview.milestones.configure',
+            )}
+          </Link>
+        </Button>
+      ),
+    },
+    {
+      id: 'sources',
+      done: overview.setup.done.sources,
+      title: t('overview.milestones.sources'),
+      action: overview.setup.done.sources ? (
+        <Button asChild nativeButton={false} size="sm" variant="ghost">
+          <Link to="/sources">{t('overview.milestones.open')}</Link>
+        </Button>
+      ) : (
+        <Button type="button" size="sm" variant="secondary" onClick={onAddSources}>
+          {t('overview.milestones.addSources')}
+        </Button>
+      ),
+    },
+    {
+      id: 'pipeline',
+      done: overview.setup.done.pipeline,
+      title: t('overview.milestones.pipeline'),
+      action: (
+        <Button asChild nativeButton={false} size="sm" variant="ghost">
+          <Link to="/pipelines">
+            {t(
+              overview.setup.done.pipeline
+                ? 'overview.milestones.open'
+                : 'overview.milestones.build',
+            )}
+          </Link>
+        </Button>
+      ),
+    },
+  ]
+
+  return (
+    <section className="overview-milestones" aria-labelledby="overview-milestones-title">
+      <h2 id="overview-milestones-title" className="text-foreground text-[13px] font-semibold">
+        {t('overview.milestones.title')}
+      </h2>
+      <ol className="overview-milestones__list">
+        {milestones.map((milestone, index) => (
+          <li
+            key={milestone.id}
+            className="overview-milestones__item"
+            data-complete={milestone.done}
+            data-current={!milestone.done && overview.setup.next === milestone.id}
+          >
+            <div className="overview-milestones__heading">
+              <span className="overview-milestones__step" aria-hidden="true">
+                {milestone.done ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
+              </span>
+              <span className="text-foreground text-[12px] font-medium">{milestone.title}</span>
+            </div>
+            {milestone.action}
+          </li>
+        ))}
+      </ol>
+    </section>
   )
 }
 
