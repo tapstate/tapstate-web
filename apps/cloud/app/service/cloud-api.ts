@@ -228,6 +228,24 @@ export const cloudApi = {
     asList<Subscription>(
       await request<unknown>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions`),
     ),
+  activeClusters: async (orgId: string) => {
+    const [clusters, subscriptions] = await Promise.all([
+      cloudApi.clusters(orgId),
+      cloudApi.subscriptions(orgId),
+    ])
+    const cancelledClusterIds = new Set(
+      subscriptions
+        .filter((subscription) => subscription.status === 'CANCELLED')
+        .flatMap((subscription) => [
+          subscription.clusterId,
+          ...(subscription.items?.map((item) => item.clusterId) ?? []),
+        ])
+        .filter((id): id is string => Boolean(id)),
+    )
+    return clusters.filter(
+      (cluster) => cluster.state !== 'TERMINATED' && !cancelledClusterIds.has(cluster.id),
+    )
+  },
   subscriptionById: (orgId: string, subscriptionId: string) =>
     request<Subscription>(
       `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions/${encodeURIComponent(subscriptionId)}`,

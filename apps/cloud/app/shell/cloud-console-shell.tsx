@@ -78,7 +78,7 @@ export function CloudConsoleShell({
     setActiveOrganization(nextOrganization)
     setShowOrganizationMenu(false)
     try {
-      const nextClusters = await cloudApi.clusters(nextOrganization.id)
+      const nextClusters = await cloudApi.activeClusters(nextOrganization.id)
       if (requestId === organizationRequestId.current) setClusters(nextClusters)
     } catch (error) {
       if (error instanceof CloudApiError && error.status === 401) {
