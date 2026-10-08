@@ -90,11 +90,15 @@ export function ProvisioningView({
     </p>
   ) : null
 
-  if (mode === 'provisioning') {
+  if (mode === 'provisioning' || mode === 'failed') {
+    const failed = mode === 'failed'
     const stages = deploymentProgress?.operations ?? []
-    const runningStage = stages.findIndex((item) =>
-      ['RUNNING', 'RETRYING', 'FAILED'].includes(item.status),
-    )
+    const failedStage = stages.findIndex((item) => item.status === 'FAILED')
+    const failedOperation = failedStage >= 0 ? stages[failedStage] : null
+    const runningStage =
+      failed && failedStage >= 0
+        ? failedStage
+        : stages.findIndex((item) => ['RUNNING', 'RETRYING', 'FAILED'].includes(item.status))
     const currentStage =
       runningStage >= 0
         ? runningStage
@@ -105,22 +109,57 @@ export function ProvisioningView({
     return (
       <div className="mx-auto w-full max-w-[480px] space-y-7">
         <div className="space-y-2 text-center">
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-3 py-1 font-mono text-[11.5px] font-medium text-blue-600 dark:text-blue-400">
-            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-            <span>{t('onboarding.progressBadge')}</span>
+          <div
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[11.5px] font-medium ${
+              failed
+                ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+                : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+            }`}
+          >
+            {failed ? (
+              <AlertCircle className="h-3.5 w-3.5" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+            )}
+            <span>{t(failed ? 'onboarding.failedBadge' : 'onboarding.progressBadge')}</span>
           </div>
           <h1 className="text-[26px] font-semibold tracking-[-0.03em] text-[#111827] dark:text-white">
-            {t('onboarding.progressTitle')}
+            {t(failed ? 'onboarding.failedTitle' : 'onboarding.progressTitle')}
           </h1>
           <p className="text-[13px] text-neutral-500 dark:text-neutral-400">
-            {t('onboarding.progressSubtitle', {
-              region: regionName,
-              organization: organization.name,
-            })}
+            {failed
+              ? t('onboarding.failedDescription')
+              : t('onboarding.progressSubtitle', {
+                  region: regionName,
+                  organization: organization.name,
+                })}
           </p>
         </div>
 
         {cancelErrorAlert}
+
+        {failed && (
+          <div className="space-y-1.5 rounded-xl border border-red-200/80 bg-red-50/80 p-3.5 text-left text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+            <div className="flex items-center gap-1.5 font-semibold">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              <span>{t('onboarding.failedCodeLabel')}</span>
+            </div>
+            <p className="font-mono text-[11px] leading-relaxed text-red-600 dark:text-red-400">
+              {cluster.provisionErrorCode ?? t('onboarding.failedCodeUnavailable')}
+            </p>
+            <div className="mt-3 border-t border-red-200/80 pt-3 dark:border-red-900/50">
+              <span className="font-semibold">{t('onboarding.failedStage')}</span>
+              <p className="mt-1 font-medium">
+                {failedOperation?.displayName ?? t('onboarding.loadingProgress')}
+              </p>
+              <p className="mt-1 font-mono text-[11px] leading-relaxed break-words text-red-600 dark:text-red-400">
+                {failedOperation?.message ??
+                  deploymentProgress?.message ??
+                  t('onboarding.loadingProgress')}
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between font-mono text-[12px] text-neutral-500 dark:text-neutral-400">
@@ -154,9 +193,11 @@ export function ProvisioningView({
                 className={`flex items-start gap-3.5 text-[13.5px] transition-opacity duration-300 ${
                   isDone
                     ? 'text-neutral-900 dark:text-white'
-                    : isCurrent
-                      ? 'font-medium text-[#111827] dark:text-white'
-                      : 'text-neutral-400 opacity-60 dark:text-neutral-600'
+                    : operation.status === 'FAILED'
+                      ? 'font-medium text-red-600 dark:text-red-400'
+                      : isCurrent
+                        ? 'font-medium text-[#111827] dark:text-white'
+                        : 'text-neutral-400 opacity-60 dark:text-neutral-600'
                 }`}
                 key={operation.operation}
               >
@@ -167,7 +208,7 @@ export function ProvisioningView({
                     </div>
                   ) : operation.status === 'FAILED' ? (
                     <AlertCircle className="h-4 w-4 text-red-500" />
-                  ) : isCurrent ? (
+                  ) : isCurrent && !failed ? (
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-900 border-t-transparent dark:border-white" />
                   ) : (
                     <div className="flex h-4 w-4 items-center justify-center rounded-full border border-neutral-300 font-mono text-[10px] text-neutral-400 dark:border-neutral-700">
@@ -175,32 +216,41 @@ export function ProvisioningView({
                     </div>
                   )}
                 </div>
-                <div className="min-w-0 flex-1 leading-snug">{operation.displayName}</div>
+                <div className="min-w-0 flex-1 leading-snug">
+                  <div>{operation.displayName}</div>
+                  {operation.status === 'FAILED' && operation.message && (
+                    <p className="mt-1 font-mono text-[11px] font-normal break-words text-red-600 dark:text-red-400">
+                      {operation.message}
+                    </p>
+                  )}
+                </div>
               </div>
             )
           })}
         </div>
 
-        <div className="space-y-2 rounded-xl border border-black/[0.08] bg-white p-4 text-[12px] shadow-2xs dark:border-white/[0.1] dark:bg-[#1a1b1e]">
-          <div>
-            <span className="block text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase dark:text-neutral-500">
-              {t('onboarding.currentStage')}
-            </span>
-            <p className="mt-0.5 font-mono text-[11.5px] leading-relaxed text-neutral-800 dark:text-neutral-200">
-              {stages[activeStage]?.message ??
-                stages[activeStage]?.displayName ??
-                t('onboarding.loadingProgress')}
-            </p>
+        {!failed && (
+          <div className="space-y-2 rounded-xl border border-black/[0.08] bg-white p-4 text-[12px] shadow-2xs dark:border-white/[0.1] dark:bg-[#1a1b1e]">
+            <div>
+              <span className="block text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase dark:text-neutral-500">
+                {t('onboarding.currentStage')}
+              </span>
+              <p className="mt-0.5 font-mono text-[11.5px] leading-relaxed text-neutral-800 dark:text-neutral-200">
+                {stages[activeStage]?.message ??
+                  stages[activeStage]?.displayName ??
+                  t('onboarding.loadingProgress')}
+              </p>
+            </div>
+            <div className="border-t border-black/[0.05] pt-2 dark:border-white/[0.06]">
+              <span className="block text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase dark:text-neutral-500">
+                {t('onboarding.nextUpdate')}
+              </span>
+              <p className="mt-0.5 text-[11.5px] leading-relaxed text-neutral-600 dark:text-neutral-300">
+                {t('onboarding.nextUpdateDetail')}
+              </p>
+            </div>
           </div>
-          <div className="border-t border-black/[0.05] pt-2 dark:border-white/[0.06]">
-            <span className="block text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase dark:text-neutral-500">
-              {t('onboarding.nextUpdate')}
-            </span>
-            <p className="mt-0.5 text-[11.5px] leading-relaxed text-neutral-600 dark:text-neutral-300">
-              {t('onboarding.nextUpdateDetail')}
-            </p>
-          </div>
-        </div>
+        )}
 
         {hasPollingError && (
           <div
@@ -238,6 +288,57 @@ export function ProvisioningView({
             </div>
           )}
         </div>
+        {failed && (
+          <div className="space-y-3 text-left">
+            <p className="text-[12.5px] leading-relaxed text-neutral-500 dark:text-neutral-400">
+              {t('onboarding.preservedSettings', { organization: organization.name })}
+            </p>
+            {retryError && (
+              <p
+                className="rounded-lg bg-red-50 p-3 text-xs text-red-600 dark:bg-red-950/30 dark:text-red-400"
+                role="alert"
+              >
+                {t('onboarding.retryError')}
+              </p>
+            )}
+            {cancelStatusError && (
+              <p
+                className="rounded-lg bg-red-50 p-3 text-xs text-red-600 dark:bg-red-950/30 dark:text-red-400"
+                role="alert"
+              >
+                {t('onboarding.cancelStatusError')}
+              </p>
+            )}
+            <div className="space-y-2 pt-1">
+              <button
+                className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#111827] text-[13px] font-medium text-white shadow-xs transition-colors hover:bg-[#1f2937] active:scale-[0.99] disabled:cursor-wait disabled:opacity-50 dark:bg-white dark:text-[#111827] dark:hover:bg-neutral-100"
+                disabled={isRetrying || isCancelling || cancelOutcomeUnknown}
+                onClick={onRetry}
+                type="button"
+              >
+                {isRetrying ? (
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-3.5 w-3.5" />
+                )}
+                <span>
+                  {isRetrying ? t('onboarding.retrying') : t('onboarding.retryProvisioning')}
+                </span>
+              </button>
+              <button
+                className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-black/[0.1] bg-white text-[13px] font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-wait disabled:opacity-50 dark:border-white/[0.12] dark:bg-[#1a1b1e] dark:text-neutral-300 dark:hover:bg-[#202124]"
+                disabled={isRetrying || isCancelling}
+                onClick={onCancel}
+                type="button"
+              >
+                {isCancelling && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+                {isCancelling
+                  ? t('onboarding.cancellingSubscription')
+                  : t('onboarding.cancelSubscription')}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -382,74 +483,5 @@ export function ProvisioningView({
     )
   }
 
-  return (
-    <div className="mx-auto w-full max-w-[480px] space-y-6 text-center">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600 shadow-xs dark:bg-red-950/40 dark:text-red-400">
-        <AlertCircle className="h-6 w-6 stroke-[2]" />
-      </div>
-      <div className="space-y-1.5">
-        <h1 className="text-[24px] font-semibold tracking-[-0.03em] text-[#111827] dark:text-white">
-          {t('onboarding.failedTitle')}
-        </h1>
-        <p className="text-[13px] text-neutral-500 dark:text-neutral-400">
-          {t('onboarding.failedDescription')}
-        </p>
-      </div>
-      <div className="space-y-1.5 rounded-xl border border-red-200/80 bg-red-50/80 p-3.5 text-left text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
-        <div className="flex items-center gap-1.5 font-semibold">
-          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-          <span>{t('onboarding.failedCodeLabel')}</span>
-        </div>
-        <p className="font-mono text-[11px] leading-relaxed text-red-600 dark:text-red-400">
-          {cluster.provisionErrorCode ?? t('onboarding.failedCodeUnavailable')}
-        </p>
-      </div>
-      <p className="text-left text-[12.5px] leading-relaxed text-neutral-500 dark:text-neutral-400">
-        {t('onboarding.preservedSettings', { organization: organization.name })}
-      </p>
-      {retryError && (
-        <p
-          className="rounded-lg bg-red-50 p-3 text-left text-xs text-red-600 dark:bg-red-950/30 dark:text-red-400"
-          role="alert"
-        >
-          {t('onboarding.retryError')}
-        </p>
-      )}
-      {cancelErrorAlert}
-      {cancelStatusError && (
-        <p
-          className="rounded-lg bg-red-50 p-3 text-left text-xs text-red-600 dark:bg-red-950/30 dark:text-red-400"
-          role="alert"
-        >
-          {t('onboarding.cancelStatusError')}
-        </p>
-      )}
-      <div className="space-y-2 pt-1">
-        <button
-          className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#111827] text-[13px] font-medium text-white shadow-xs transition-colors hover:bg-[#1f2937] active:scale-[0.99] disabled:cursor-wait disabled:opacity-50 dark:bg-white dark:text-[#111827] dark:hover:bg-neutral-100"
-          disabled={isRetrying || isCancelling || cancelOutcomeUnknown}
-          onClick={onRetry}
-          type="button"
-        >
-          {isRetrying ? (
-            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <RotateCcw className="h-3.5 w-3.5" />
-          )}
-          <span>{isRetrying ? t('onboarding.retrying') : t('onboarding.retryProvisioning')}</span>
-        </button>
-        <button
-          className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-black/[0.1] bg-white text-[13px] font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-wait disabled:opacity-50 dark:border-white/[0.12] dark:bg-[#1a1b1e] dark:text-neutral-300 dark:hover:bg-[#202124]"
-          disabled={isRetrying || isCancelling}
-          onClick={onCancel}
-          type="button"
-        >
-          {isCancelling && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
-          {isCancelling
-            ? t('onboarding.cancellingSubscription')
-            : t('onboarding.cancelSubscription')}
-        </button>
-      </div>
-    </div>
-  )
+  return null
 }
