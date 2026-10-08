@@ -74,7 +74,9 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
           ...added,
         ].sort((left, right) => left.id.localeCompare(right.id)),
       )
+      setAddSourcesOpen(false)
     },
+    onError: () => setAddSourcesOpen(true),
   })
   const [addSourcesOpen, setAddSourcesOpen] = useState(false)
   const [atlasOpen, setAtlasOpen] = useState(false)
@@ -129,6 +131,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
                 (sample) => !(sourcesQuery.data ?? []).some((source) => source.id === sample.id),
               ),
             )}
+            sampleAdding={addSamples.isPending}
             onConnectAtlas={() => {
               if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready)
                 setAtlasOpen(true)
@@ -138,6 +141,11 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
               if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready)
                 setAtlasOpen(true)
               else setAddSourcesOpen(true)
+            }}
+            onTrySample={() => {
+              if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready)
+                setAtlasOpen(true)
+              else addSamples.mutate()
             }}
             onBuildPipeline={() => {
               if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready)
@@ -213,8 +221,10 @@ interface OverviewContentProps {
   overview: OverviewModel
   connectors: ConnectorSummary[]
   sampleAvailable: boolean
+  sampleAdding: boolean
   onConnectAtlas: () => void
   onAddSources: () => void
+  onTrySample: () => void
   onBuildPipeline: () => void
 }
 
@@ -222,8 +232,10 @@ function OverviewContent({
   overview,
   connectors,
   sampleAvailable,
+  sampleAdding,
   onConnectAtlas,
   onAddSources,
+  onTrySample,
   onBuildPipeline,
 }: OverviewContentProps) {
   return (
@@ -238,8 +250,10 @@ function OverviewContent({
         <OverviewMilestoneDock
           overview={overview}
           sampleAvailable={sampleAvailable}
+          sampleAdding={sampleAdding}
           onConnectAtlas={onConnectAtlas}
           onAddSources={onAddSources}
+          onTrySample={onTrySample}
           onBuildPipeline={onBuildPipeline}
         />
       </OverviewTopology>
@@ -279,14 +293,18 @@ function OverviewRuntimeMetrics({ overview }: { overview: OverviewModel }) {
 function OverviewMilestoneDock({
   overview,
   sampleAvailable,
+  sampleAdding,
   onConnectAtlas,
   onAddSources,
+  onTrySample,
   onBuildPipeline,
 }: {
   overview: OverviewModel
   sampleAvailable: boolean
+  sampleAdding: boolean
   onConnectAtlas: () => void
   onAddSources: () => void
+  onTrySample: () => void
   onBuildPipeline: () => void
 }) {
   const { t } = useTranslation()
@@ -395,8 +413,9 @@ function OverviewMilestoneDock({
           {sampleAvailable && (
             <button
               type="button"
-              onClick={onAddSources}
-              className="flex cursor-pointer items-center gap-1 text-[11.5px] font-medium whitespace-nowrap text-indigo-600 transition-colors hover:text-indigo-800 hover:underline"
+              disabled={sampleAdding}
+              onClick={onTrySample}
+              className="flex cursor-pointer items-center gap-1 text-[11.5px] font-medium whitespace-nowrap text-indigo-600 transition-colors hover:text-indigo-800 hover:underline disabled:cursor-wait disabled:opacity-60"
             >
               <Sparkles className="h-3 w-3 text-indigo-500" aria-hidden="true" />
               <span>{t('overview.milestones.trySample', 'Try sample')}</span>
