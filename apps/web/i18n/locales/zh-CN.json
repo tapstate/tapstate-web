@@ -112,7 +112,8 @@
       "passwordRequired": "请输入密码。"
     },
     "session": {
-      "expired": "会话已过期，请重新登录。"
+      "expired": "会话已过期，请重新登录。",
+      "logoutFailed": "Cloud 退出未完成，请重试。"
     }
   },
   "state": {

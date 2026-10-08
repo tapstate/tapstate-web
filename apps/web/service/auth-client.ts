@@ -1,3 +1,5 @@
+import { cloudConsoleUrl } from '@/utils/cloud-console'
+
 export interface LoginCredentials {
   username: string
   password: string
@@ -140,4 +142,28 @@ export async function logoutCloudSession(
   origin?: string,
 ): Promise<Response> {
   return cloudSessionFetch('/auth/logout', { method: 'POST' }, fetcher, origin)
+}
+
+export async function logoutCloudAccount(
+  fetcher: typeof fetch = fetch,
+  consoleUrl: string = cloudConsoleUrl,
+): Promise<void> {
+  let response: Response
+
+  try {
+    response = await fetcher(new URL('/v1/api/auth/logout', consoleUrl), {
+      method: 'POST',
+      credentials: 'include',
+    })
+  } catch (error) {
+    throw new AuthClientError(
+      'network',
+      error instanceof Error ? error.message : 'Cloud account logout failed',
+    )
+  }
+
+  if (response.status === 401) return
+  if (!response.ok) {
+    throw new AuthClientError('auth', 'Cloud account logout was refused', null, response.status)
+  }
 }

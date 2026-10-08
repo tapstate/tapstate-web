@@ -112,7 +112,8 @@
       "passwordRequired": "請輸入密碼。"
     },
     "session": {
-      "expired": "工作階段已過期，請重新登入。"
+      "expired": "工作階段已過期，請重新登入。",
+      "logoutFailed": "Cloud 登出未完成，請重試。"
     }
   },
   "state": {

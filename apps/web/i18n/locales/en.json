@@ -112,7 +112,8 @@
       "passwordRequired": "Enter your password."
     },
     "session": {
-      "expired": "Your session expired. Sign in again."
+      "expired": "Your session expired. Sign in again.",
+      "logoutFailed": "Cloud sign-out did not complete. Try again."
     }
   },
   "state": {

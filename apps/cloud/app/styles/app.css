@@ -1,0 +1,313 @@
+@layer components {
+  #root {
+    min-height: 100vh;
+  }
+
+  .cloud-shell {
+    display: flex;
+    min-height: 100vh;
+  }
+  .app-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    display: flex;
+    width: var(--sidebar-width);
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    background: var(--card);
+    padding: 1.25rem 0.875rem 0.75rem;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0 0.625rem;
+    color: var(--foreground);
+    text-decoration: none;
+  }
+  .brand-mark {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: var(--radius-control);
+    background: var(--primary);
+    color: var(--primary-foreground);
+    font-weight: 700;
+  }
+  .brand-name {
+    font-size: 0.875rem;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+  }
+  .brand-name span {
+    color: var(--muted-foreground);
+    font-weight: 450;
+  }
+  .organization-context {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-top: 1.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 0.625rem;
+  }
+  .org-avatar {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    flex: none;
+    place-items: center;
+    border-radius: var(--radius-control);
+    background: var(--accent);
+    color: var(--accent-foreground);
+    font-weight: 650;
+  }
+  .org-context-copy {
+    display: grid;
+    min-width: 0;
+    flex: 1;
+    gap: 0.125rem;
+  }
+  .context-caption,
+  .nav-caption,
+  .eyebrow {
+    color: var(--muted-foreground);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.075em;
+    text-transform: uppercase;
+  }
+  .context-value {
+    overflow: hidden;
+    color: var(--foreground);
+    font-size: 0.8125rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .context-chevron {
+    color: var(--muted-foreground);
+  }
+  .primary-nav {
+    display: grid;
+    gap: 0.25rem;
+    margin-top: 2rem;
+  }
+  .nav-caption {
+    margin: 0 0 0.5rem;
+    padding: 0 0.625rem;
+  }
+  .nav-link {
+    display: flex;
+    min-height: 2.25rem;
+    align-items: center;
+    gap: 0.625rem;
+    border-radius: var(--radius-control);
+    padding: 0 0.625rem;
+    color: var(--muted-foreground);
+    font-size: 0.8125rem;
+    text-decoration: none;
+    transition:
+      background-color 120ms ease,
+      color 120ms ease;
+  }
+  .nav-link svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  .nav-link:hover,
+  .nav-link-active {
+    background: var(--accent);
+    color: var(--accent-foreground);
+  }
+  .sidebar-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: auto;
+    padding: 0.75rem 0.625rem;
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+  }
+  .preview-indicator {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    background: var(--warning);
+  }
+  .app-main {
+    display: flex;
+    min-width: 0;
+    min-height: 100vh;
+    flex: 1;
+    flex-direction: column;
+    margin-left: var(--sidebar-width);
+  }
+  .topbar {
+    display: flex;
+    height: 3.5rem;
+    flex: none;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: var(--card);
+    padding: 0 2rem;
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+  }
+  .account-chip,
+  .status-pill {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--muted);
+    padding: 0.25rem 0.625rem;
+    color: var(--muted-foreground);
+    font-size: 0.6875rem;
+  }
+  .access-page {
+    display: grid;
+    min-height: calc(100vh - 3.5rem);
+    flex: 1;
+    place-items: center;
+    padding: 2rem;
+  }
+  .access-card {
+    width: min(100%, 28rem);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-main);
+    background: var(--card);
+    padding: 2rem;
+    text-align: center;
+  }
+  .access-icon {
+    display: grid;
+    width: 3rem;
+    height: 3rem;
+    place-items: center;
+    margin: 0 auto 1.25rem;
+    border-radius: var(--radius-control);
+    background: var(--accent);
+    color: var(--accent-foreground);
+  }
+  .access-icon svg {
+    width: 1.375rem;
+    height: 1.375rem;
+  }
+  .access-card .eyebrow {
+    margin: 0;
+  }
+  .access-card h1 {
+    margin: 0.625rem 0;
+    font-size: 1.5rem;
+    letter-spacing: -0.035em;
+  }
+  .access-copy {
+    margin: 0;
+    color: var(--muted-foreground);
+    font-size: 0.875rem;
+  }
+  .access-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    border-radius: var(--radius-control);
+    background: var(--muted);
+    padding: 0.5rem 0.75rem;
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+  }
+  .access-status svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  .section-page {
+    width: min(100%, 76rem);
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  .page-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+  }
+  .page-heading h1 {
+    margin: 0.375rem 0;
+    font-size: 1.5rem;
+    letter-spacing: -0.035em;
+  }
+  .page-heading p:not(.eyebrow) {
+    margin: 0;
+    color: var(--muted-foreground);
+  }
+  .page-heading .eyebrow {
+    margin: 0;
+  }
+  .section-placeholder {
+    display: grid;
+    justify-items: center;
+    gap: 0.5rem;
+    padding: 5rem 1rem;
+    text-align: center;
+  }
+  .placeholder-mark {
+    display: grid;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    border-radius: var(--radius-control);
+    background: var(--muted);
+    color: var(--muted-foreground);
+    font-weight: 700;
+  }
+  .section-placeholder h2 {
+    margin: 0.75rem 0 0;
+    font-size: 1rem;
+  }
+  .section-placeholder p {
+    max-width: 28rem;
+    margin: 0;
+    color: var(--muted-foreground);
+  }
+
+  @media (max-width: 48rem) {
+    :root {
+      --sidebar-width: 4.25rem;
+    }
+    .app-sidebar {
+      align-items: center;
+      padding-inline: 0.5rem;
+    }
+    .brand {
+      padding: 0;
+    }
+    .brand-name,
+    .organization-context,
+    .nav-caption,
+    .nav-link span,
+    .sidebar-footer span:not(.preview-indicator) {
+      display: none;
+    }
+    .nav-link {
+      width: 2.5rem;
+      justify-content: center;
+      padding: 0;
+    }
+    .sidebar-footer {
+      padding-inline: 0;
+    }
+    .topbar {
+      padding-inline: 1rem;
+    }
+    .section-page {
+      padding: 1.25rem;
+    }
+    .access-page {
+      padding: 1rem;
+    }
+  }
+}
