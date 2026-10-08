@@ -45,6 +45,33 @@ function observedUpdate(cluster: Cluster, subscription: Subscription): Provision
   }
 }
 
+async function refreshWorkspaceState(
+  workspace: OnboardingWorkspace,
+  onUnauthorized: () => void,
+): Promise<OnboardingWorkspace> {
+  const withAuthRedirect = <T,>(request: Promise<T>) =>
+    request.catch((error: unknown) => {
+      if (error instanceof CloudApiError && error.status === 401) onUnauthorized()
+      throw error
+    })
+  const [subscription, cluster] = await Promise.all([
+    withAuthRedirect(
+      cloudApi.subscriptionById(workspace.organization.id, workspace.subscription.id),
+    ),
+    withAuthRedirect(cloudApi.cluster(workspace.organization.id, workspace.cluster.id)),
+  ])
+
+  return {
+    ...workspace,
+    subscription,
+    cluster,
+  }
+}
+
+function isSubscriptionCancelled(subscription: Subscription) {
+  return subscription.status === 'CANCELLED'
+}
+
 function toSlug(name: string) {
   return name
     .trim()
@@ -78,7 +105,18 @@ export function OnboardingPage({
   const [hasPollingError, setHasPollingError] = useState(false)
   const [isRetrying, setIsRetrying] = useState(false)
   const [hasRetryError, setHasRetryError] = useState(false)
+  const [isCancellingSubscription, setIsCancellingSubscription] = useState(false)
+  const [hasCancelSubscriptionError, setHasCancelSubscriptionError] = useState(false)
+  const [hasCancelStatusError, setHasCancelStatusError] = useState(false)
+  const [isCancelOutcomeUnknown, setIsCancelOutcomeUnknown] = useState(false)
+  const hasRedirectedToAuth = useRef(false)
   const autoEntryClusterId = useRef<string | null>(null)
+
+  const redirectToAuth = () => {
+    if (hasRedirectedToAuth.current) return
+    hasRedirectedToAuth.current = true
+    void navigate({ to: '/auth' })
+  }
 
   const selectedRegion = useMemo(
     () => regions.find((region) => region.code === selectedRegionCode) ?? null,
@@ -208,35 +246,158 @@ export function OnboardingPage({
   }
 
   const handleRetry = async () => {
-    if (!workspace || isRetrying) return
+    if (!workspace || isRetrying || isCancellingSubscription || isCancelOutcomeUnknown) return
     setIsRetrying(true)
     setHasRetryError(false)
+    setHasCancelSubscriptionError(false)
+    setIsCancelOutcomeUnknown(false)
     try {
+      const currentWorkspace = await refreshWorkspaceState(workspace, redirectToAuth)
+      const { cluster: currentCluster, subscription } = currentWorkspace
+      setWorkspace(currentWorkspace)
+      const currentUpdate = observedUpdate(currentCluster, subscription)
+      setUpdates((current) =>
+        current.some((item) => item.key === currentUpdate.key)
+          ? current
+          : [...current, currentUpdate],
+      )
+      setHasPollingError(false)
+
+      if (isSubscriptionCancelled(subscription)) {
+        setScreen('cancelled')
+        return
+      }
+      if (!isProvisioningFailed(currentCluster)) {
+        setScreen(isWorkspaceReady(currentCluster, subscription) ? 'ready' : 'provisioning')
+        return
+      }
+
       const cluster = await cloudApi.retryCluster(workspace.organization.id, workspace.cluster.id)
-      const nextWorkspace = { ...workspace, cluster }
+      const nextWorkspace = { ...currentWorkspace, cluster }
       setWorkspace(nextWorkspace)
-      const update = observedUpdate(cluster, workspace.subscription)
+      const update = observedUpdate(cluster, subscription)
       setUpdates((current) =>
         current.some((item) => item.key === update.key) ? current : [...current, update],
       )
       setHasPollingError(false)
       setScreen(
-        isProvisioningCancelled(cluster, workspace.subscription)
+        isSubscriptionCancelled(subscription)
           ? 'cancelled'
           : isProvisioningFailed(cluster)
             ? 'failed'
-            : isWorkspaceReady(cluster, workspace.subscription)
+            : isWorkspaceReady(cluster, subscription)
               ? 'ready'
               : 'provisioning',
       )
     } catch (error) {
       if (error instanceof CloudApiError && error.status === 401) {
-        void navigate({ to: '/auth' })
+        redirectToAuth()
         return
       }
       setHasRetryError(true)
     } finally {
       setIsRetrying(false)
+    }
+  }
+
+  const handleCancelFailedProvisioning = async () => {
+    if (!workspace || isCancellingSubscription || isRetrying) return
+    setIsCancellingSubscription(true)
+    setHasCancelSubscriptionError(false)
+    setHasCancelStatusError(false)
+
+    const refreshWorkspace = async () => {
+      const currentWorkspace = await refreshWorkspaceState(workspace, redirectToAuth)
+      const { cluster, subscription } = currentWorkspace
+      setWorkspace(currentWorkspace)
+      setHasPollingError(false)
+      setHasCancelStatusError(false)
+      const update = observedUpdate(cluster, subscription)
+      setUpdates((current) =>
+        current.some((item) => item.key === update.key) ? current : [...current, update],
+      )
+      return currentWorkspace
+    }
+
+    let cancellationRequestSent = false
+    try {
+      const currentWorkspace = await refreshWorkspace()
+      if (isSubscriptionCancelled(currentWorkspace.subscription)) {
+        setIsCancelOutcomeUnknown(false)
+        setScreen('cancelled')
+        return
+      }
+      if (
+        !isProvisioningFailed(currentWorkspace.cluster) &&
+        !isProvisioningCancelled(currentWorkspace.cluster, currentWorkspace.subscription)
+      ) {
+        setIsCancelOutcomeUnknown(false)
+        setScreen(
+          isWorkspaceReady(currentWorkspace.cluster, currentWorkspace.subscription)
+            ? 'ready'
+            : 'provisioning',
+        )
+        return
+      }
+
+      cancellationRequestSent = true
+      const subscription = await cloudApi.cancelSubscription(
+        workspace.organization.id,
+        workspace.subscription.id,
+      )
+      if (!isSubscriptionCancelled(subscription)) {
+        setIsCancelOutcomeUnknown(true)
+        setHasCancelSubscriptionError(true)
+        return
+      }
+      setIsCancelOutcomeUnknown(false)
+      const nextWorkspace = { ...currentWorkspace, subscription }
+      setWorkspace(nextWorkspace)
+      const update = observedUpdate(workspace.cluster, subscription)
+      setUpdates((current) =>
+        current.some((item) => item.key === update.key) ? current : [...current, update],
+      )
+      setScreen('cancelled')
+    } catch (error) {
+      if (error instanceof CloudApiError && error.status === 401) {
+        redirectToAuth()
+        return
+      }
+
+      if (cancellationRequestSent) {
+        try {
+          const currentWorkspace = await refreshWorkspace()
+          if (isSubscriptionCancelled(currentWorkspace.subscription)) {
+            setIsCancelOutcomeUnknown(false)
+            setScreen('cancelled')
+          } else if (
+            !isProvisioningFailed(currentWorkspace.cluster) &&
+            !isProvisioningCancelled(currentWorkspace.cluster, currentWorkspace.subscription)
+          ) {
+            setIsCancelOutcomeUnknown(false)
+            setScreen(
+              isWorkspaceReady(currentWorkspace.cluster, currentWorkspace.subscription)
+                ? 'ready'
+                : 'provisioning',
+            )
+          } else {
+            setIsCancelOutcomeUnknown(true)
+          }
+        } catch (refreshError) {
+          if (refreshError instanceof CloudApiError && refreshError.status === 401) {
+            redirectToAuth()
+            return
+          }
+          setIsCancelOutcomeUnknown(true)
+        }
+      }
+      if (cancellationRequestSent) {
+        setHasCancelSubscriptionError(true)
+      } else {
+        setHasCancelStatusError(true)
+      }
+    } finally {
+      setIsCancellingSubscription(false)
     }
   }
 
@@ -492,8 +653,12 @@ export function OnboardingPage({
         ) : workspace ? (
           <ProvisioningView
             cluster={workspace.cluster}
+            cancelOutcomeUnknown={isCancelOutcomeUnknown}
             entryError={entryError}
             hasPollingError={hasPollingError}
+            cancelError={hasCancelSubscriptionError}
+            cancelStatusError={hasCancelStatusError}
+            isCancelling={isCancellingSubscription}
             isOpeningCluster={isOpeningCluster}
             isRetrying={isRetrying}
             mode={screen}
@@ -502,6 +667,7 @@ export function OnboardingPage({
               setScreen('form')
             }}
             onOpenCluster={() => onComplete(workspace.organization, workspace.cluster)}
+            onCancel={() => void handleCancelFailedProvisioning()}
             onRetry={() => void handleRetry()}
             organization={workspace.organization}
             regionName={selectedRegion?.name ?? workspace.cluster.region}
