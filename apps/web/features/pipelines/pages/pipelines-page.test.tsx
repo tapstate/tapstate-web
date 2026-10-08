@@ -461,13 +461,12 @@ describe('PipelinesPage', () => {
     expect(document.querySelector('[data-testid="pipeline-creation-dialog"]')).toBeNull()
   })
 
-  it('keeps a selected Pipeline in the Explorer instead of presenting a local draft as its editor', async () => {
+  it('omits the Explorer while keeping the Pipeline table as the editor entry point', async () => {
     await renderPage()
 
-    await vi.waitFor(() => expect(elementWithText('button', 'orders_to_warehouse')).toBeDefined())
-    await act(async () => elementWithText('button', 'orders_to_warehouse')?.click())
     await vi.waitFor(() => expect(container?.textContent).toContain('orders_to_warehouse'))
-
+    expect(container?.textContent).not.toContain('Explorer')
+    expect(container?.querySelector('a[href="/pipelines/orders_to_warehouse/edit"]')).not.toBeNull()
     expect(document.querySelector('[data-testid="pipeline-canvas"]')).toBeNull()
   })
 
