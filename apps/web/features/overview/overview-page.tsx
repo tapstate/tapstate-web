@@ -108,52 +108,44 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
     try {
       const samples = (sourcesQuery.data ?? []).filter(isSampleSource)
       const storeId = overview?.stateStore.managedSourceId
-      const guided = samples.length > 0
-      let wizard: PipelineJsonObject = {
-        root: { id: 'root', sourceId: '', table: '', key: [], preTransforms: [] },
-        related: [],
-        transforms: [],
-        output: { kind: 'atlas', config: {} },
-      }
-      if (guided) {
-        if (!storeId) throw new Error('Connect MongoDB Atlas before building the sample view.')
-        const catalogs = await Promise.all(
-          samples.map(async (source): Promise<DataSourceMeta> => {
-            const schema = await getSourceSchema(source.id, apiFetch)
-            const names = sourceScopedTableNames(
-              source,
-              schema.tables.map((table) => table.name),
-            )
-            return {
-              id: source.id,
-              name: source.id,
-              badge: source.connector,
-              connector: source.connector,
-              tables: names.map((name) => {
-                const table = schema.tables.find((item) => item.name === name)
-                return {
-                  name,
-                  primaryKey: table?.primaryKey[0] ?? '',
-                  keys: table?.primaryKey ?? [],
-                  discovered: Boolean(table),
-                  rowCount: '—',
-                  columns: table?.fields.map((field) => field.name) ?? [],
-                }
-              }),
-            }
-          }),
-        )
-        const preset = findCustomer360Preset(catalogs)
-        if (!preset) throw new Error('The sample customer, order, or line item schema is missing.')
-        wizard = createCustomer360Wizard(preset, storeId, 'upsert', 'cloud')
-      }
-      const pipelineId = `${guided ? 'customer_360' : 'pipeline'}_${crypto.randomUUID().slice(0, 8)}`
+      if (samples.length === 0) return
+      if (!storeId) throw new Error('Connect MongoDB Atlas before building the sample view.')
+      const catalogs = await Promise.all(
+        samples.map(async (source): Promise<DataSourceMeta> => {
+          const schema = await getSourceSchema(source.id, apiFetch)
+          const names = sourceScopedTableNames(
+            source,
+            schema.tables.map((table) => table.name),
+          )
+          return {
+            id: source.id,
+            name: source.id,
+            badge: source.connector,
+            connector: source.connector,
+            tables: names.map((name) => {
+              const table = schema.tables.find((item) => item.name === name)
+              return {
+                name,
+                primaryKey: table?.primaryKey[0] ?? '',
+                keys: table?.primaryKey ?? [],
+                discovered: Boolean(table),
+                rowCount: '—',
+                columns: table?.fields.map((field) => field.name) ?? [],
+              }
+            }),
+          }
+        }),
+      )
+      const preset = findCustomer360Preset(catalogs)
+      if (!preset) throw new Error('The sample customer, order, or line item schema is missing.')
+      const wizard: PipelineJsonObject = createCustomer360Wizard(preset, storeId, 'upsert', 'cloud')
+      const pipelineId = `customer_360_${crypto.randomUUID().slice(0, 8)}`
       await createPipelineDraft(
         pipelineId,
         {
           pipelineId,
           mode: 'wizard',
-          name: guided ? 'Customer 360' : pipelineId,
+          name: 'Customer 360',
           description: null,
           graph: null,
           wizard,
@@ -251,9 +243,15 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
               if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready)
                 setAtlasOpen(true)
               else if (!overview.setup.done.sources) setAddSourcesOpen(true)
-              else if (getDeploymentProfile() === 'cloud') void openGuidedBuilder()
+              else if (
+                getDeploymentProfile() === 'cloud' &&
+                (sourcesQuery.data ?? []).some(isSampleSource) &&
+                !overview.setup.done.pipeline
+              )
+                void openGuidedBuilder()
               else setPipelineCreationOpen(true)
             }}
+            onCreatePipeline={() => setPipelineCreationOpen(true)}
           />
         )}
         {pipelineCreationError && (
@@ -334,6 +332,7 @@ interface OverviewContentProps {
   onAddSources: () => void
   onTrySample: () => void
   onBuildPipeline: () => void
+  onCreatePipeline: () => void
 }
 
 function OverviewContent({
@@ -345,6 +344,7 @@ function OverviewContent({
   onAddSources,
   onTrySample,
   onBuildPipeline,
+  onCreatePipeline,
 }: OverviewContentProps) {
   return (
     <>
@@ -363,6 +363,7 @@ function OverviewContent({
           onAddSources={onAddSources}
           onTrySample={onTrySample}
           onBuildPipeline={onBuildPipeline}
+          onCreatePipeline={onCreatePipeline}
         />
       </OverviewTopology>
       <OverviewRuntimeMetrics overview={overview} />
@@ -406,6 +407,7 @@ function OverviewMilestoneDock({
   onAddSources,
   onTrySample,
   onBuildPipeline,
+  onCreatePipeline,
 }: {
   overview: OverviewModel
   sampleAvailable: boolean
@@ -414,6 +416,7 @@ function OverviewMilestoneDock({
   onAddSources: () => void
   onTrySample: () => void
   onBuildPipeline: () => void
+  onCreatePipeline: () => void
 }) {
   const { t } = useTranslation()
   const storeDone = overview.setup.done.stateStore
@@ -570,7 +573,7 @@ function OverviewMilestoneDock({
           ) : (
             <button
               type="button"
-              onClick={onBuildPipeline}
+              onClick={onCreatePipeline}
               className="flex h-8.5 cursor-pointer items-center gap-1.5 rounded-xl bg-slate-900 px-4 text-[12.5px] font-semibold whitespace-nowrap text-white shadow-xs transition-all hover:scale-[1.01] hover:bg-black"
             >
               <span>{t('overview.milestones.newPipeline', 'New Pipeline')}</span>

@@ -1584,7 +1584,10 @@ export function PipelineWorkspacePage({
     [apiFetch, pipelineId, queryClient, section, t],
   )
   const canEditBasicInfo =
-    !isGuidedCustomer360Pipeline(pipelineId) &&
+    !isGuidedCustomer360Pipeline(
+      pipelineId,
+      pipelineDraft.data?.draft.mode === 'wizard' ? pipelineDraft.data.draft.wizard : null,
+    ) &&
     pipelineDraft.isSuccess &&
     (pipelineDraft.data !== null || pipelineInfo.isSuccess) &&
     (!statusEnabled || status.isSuccess) &&

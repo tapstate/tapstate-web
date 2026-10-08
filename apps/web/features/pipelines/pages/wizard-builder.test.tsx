@@ -197,6 +197,46 @@ afterEach(() => {
 })
 
 describe('WizardBuilder publish flow', () => {
+  it('keeps an ordinary empty Wizard editable and free of sample guidance', async () => {
+    const ordinaryDraft: PipelineDraft = {
+      ...initialDraft,
+      pipelineId: 'customer_360_3a1973ba',
+      wizard: {
+        root: { id: 'root', sourceId: '', table: '', key: [], preTransforms: [] },
+        related: [],
+        transforms: [],
+        output: { kind: 'atlas', config: {} },
+      },
+    }
+    listSources.mockResolvedValue([
+      { id: 'atlas-store', connector: 'mongodb-atlas', metadata: { labels: { store: 'true' } } },
+      { id: 'sample_core_banking', connector: 'mysql', metadata: { labels: { sample: 'true' } } },
+    ])
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={ordinaryDraft.pipelineId} draft={ordinaryDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await vi.waitFor(() =>
+      expect(container?.querySelector('.wizard-reference-editor-column')).not.toBeNull(),
+    )
+    expect(
+      container?.querySelector('.wizard-reference-editor-column')?.getAttribute('data-read-only'),
+    ).toBe('false')
+    expect(container?.textContent).not.toContain('Nest orders')
+    expect(container?.textContent).not.toContain('This Customer 360 sample is preconfigured')
+    expect(
+      container?.querySelector<HTMLButtonElement>('[data-testid="change-wizard"]')?.disabled,
+    ).toBe(false)
+  })
+
   it('automatically fills and locks the guided Customer 360 sample draft', async () => {
     const guidedDraft: PipelineDraft = {
       ...initialDraft,
@@ -205,7 +245,7 @@ describe('WizardBuilder publish flow', () => {
         root: { id: 'root', sourceId: '', table: '', key: [], preTransforms: [] },
         related: [],
         transforms: [],
-        output: { kind: 'atlas', config: {} },
+        output: { kind: 'atlas', config: { onboardingGuide: 'customer-360-sample' } },
       },
     }
     listSources.mockResolvedValue([

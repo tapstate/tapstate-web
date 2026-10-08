@@ -21,9 +21,27 @@ const CUSTOMER_ORDER_KEYS = ['o_w_id', 'o_d_id', 'o_c_id']
 const ORDER_KEYS = ['o_w_id', 'o_d_id', 'o_id']
 const LINE_KEYS = ['ol_w_id', 'ol_d_id', 'ol_o_id']
 
-/** IDs created by the fixed sample walkthrough, including drafts created before it was prefilled. */
-export function isGuidedCustomer360Pipeline(pipelineId: string): boolean {
-  return /^customer_360_[0-9a-f]{8}$/i.test(pipelineId)
+/** The guide marker lives in output.config, which the server preserves as an open map. */
+export function isGuidedCustomer360Pipeline(
+  pipelineId: string,
+  wizard: PipelineJsonObject | null | undefined,
+): boolean {
+  if (!wizard) return false
+  const output = wizard.output as { config?: { onboardingGuide?: string } } | undefined
+  if (output?.config?.onboardingGuide === 'customer-360-sample') return true
+  // Recognize drafts created before the marker existed only when their fixed sample structure matches.
+  const root = wizard.root as { id?: string } | undefined
+  const related = Array.isArray(wizard.related) ? wizard.related : []
+  return (
+    /^customer_360_[0-9a-f]{8}$/i.test(pipelineId) &&
+    root?.id === 'root' &&
+    related.some((entry) =>
+      Boolean(entry && typeof entry === 'object' && entry.id === 'customer-360-orders'),
+    ) &&
+    related.some((entry) =>
+      Boolean(entry && typeof entry === 'object' && entry.id === 'customer-360-items'),
+    )
+  )
 }
 
 /** Finds a connected MySQL/Postgres sample schema that can form a customer/order document. */
@@ -123,6 +141,7 @@ export function createCustomer360Wizard(
         table: 'customer_360_views',
         inputTable: preset.root.name,
         writeMode: writeMode || 'upsert',
+        onboardingGuide: 'customer-360-sample',
       },
     },
   }

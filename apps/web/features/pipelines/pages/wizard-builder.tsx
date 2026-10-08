@@ -14,6 +14,7 @@ import {
   type PipelineDraftPreview,
   type PipelineRuntimeState,
 } from '@/service/pipelines/pipeline-client'
+import { isSampleSource } from '@/service/sample-source-client'
 import { getSourceSchema, listConnectors, listSources } from '@/service/source-client'
 import { isDataSource } from '@/service/state-store-source'
 import { useAuthStore } from '@/stores/auth-store'
@@ -129,13 +130,22 @@ export function WizardBuilder({
       }),
     [connectors, inputSources, schemas],
   )
-  const customer360Preset = useMemo(() => findCustomer360Preset(catalog), [catalog])
-  const guidedPreset = isGuidedCustomer360Pipeline(pipelineId)
+  const guidedDraft = isGuidedCustomer360Pipeline(pipelineId, draft.wizard)
+  const sampleSourceIds = useMemo(
+    () => new Set(inputSources.filter(isSampleSource).map((source) => source.id)),
+    [inputSources],
+  )
+  const customer360Preset = useMemo(
+    () =>
+      guidedDraft
+        ? findCustomer360Preset(catalog.filter((source) => sampleSourceIds.has(source.id)))
+        : null,
+    [catalog, guidedDraft, sampleSourceIds],
+  )
+  const guidedPreset = guidedDraft && Boolean(customer360Preset)
   const [wizard, setWizard] = useState(draft.wizard)
   const [builderRevision, setBuilderRevision] = useState(0)
-  const [guideOpen, setGuideOpen] = useState(
-    () => !readOnly && (guidedPreset || isEmptyWizard(draft.wizard)),
-  )
+  const [guideOpen, setGuideOpen] = useState(() => !readOnly && guidedDraft)
   const [guideStep, setGuideStep] = useState(0)
   const [guideMode, setGuideMode] = useState<Customer360GuideMode>('storyboard')
   const [status, setStatus] = useState<'saved' | 'saving' | 'error'>('saved')
@@ -188,7 +198,7 @@ export function WizardBuilder({
     wizard,
   ])
   useEffect(() => {
-    if (!guideOpen || readOnly) return
+    if (!guideOpen || !guidedPreset || readOnly) return
     const targetId = CUSTOMER_360_GUIDE_STEPS[guideStep]?.targetId
     if (!targetId) return
     const frame = window.requestAnimationFrame(() => {
@@ -207,7 +217,7 @@ export function WizardBuilder({
       guidedElement.scrollIntoView({ behavior, block: 'start', inline: 'nearest' })
     })
     return () => window.cancelAnimationFrame(frame)
-  }, [builderRevision, guideMode, guideOpen, guideStep, readOnly])
+  }, [builderRevision, guideMode, guideOpen, guideStep, guidedPreset, readOnly])
 
   function applyCustomer360Preset() {
     if (!customer360Preset || !emptyWizardDraft) return
@@ -465,24 +475,26 @@ export function WizardBuilder({
         data-testid="wizard-builder-shell"
       >
         <div className="flex h-full min-h-0 flex-col">
-          <PipelineBuilderGuide
-            open={guideOpen}
-            fixedPreset={guidedPreset}
-            step={guideStep}
-            mode={guideMode}
-            preset={customer360Preset}
-            emptyDraft={emptyWizardDraft}
-            presetApplied={presetApplied}
-            formulaAdded={formulaAdded}
-            onOpen={() => setGuideOpen(true)}
-            onClose={() => setGuideOpen(false)}
-            onStepChange={setGuideStep}
-            onModeChange={setGuideMode}
-            onApplyPreset={applyCustomer360Preset}
-            onAddFormula={addCustomerLifetimeValue}
-            onSaveDraft={() => void savePipeline(false)}
-            onLaunch={() => void savePipeline(true)}
-          />
+          {guidedPreset && (
+            <PipelineBuilderGuide
+              open={guideOpen}
+              fixedPreset={guidedPreset}
+              step={guideStep}
+              mode={guideMode}
+              preset={customer360Preset}
+              emptyDraft={emptyWizardDraft}
+              presetApplied={presetApplied}
+              formulaAdded={formulaAdded}
+              onOpen={() => setGuideOpen(true)}
+              onClose={() => setGuideOpen(false)}
+              onStepChange={setGuideStep}
+              onModeChange={setGuideMode}
+              onApplyPreset={applyCustomer360Preset}
+              onAddFormula={addCustomerLifetimeValue}
+              onSaveDraft={() => void savePipeline(false)}
+              onLaunch={() => void savePipeline(true)}
+            />
+          )}
           {guidedPreset && (
             <p className="border-b border-indigo-100 bg-indigo-50 px-5 py-2 text-xs font-medium text-indigo-800">
               {t('wizard.guide.fixedNotice')}
@@ -511,31 +523,35 @@ export function WizardBuilder({
             readOnly={editorReadOnly || guidedPreset}
             readOnlyLabel={guidedPreset ? t('wizard.guide.fixedNotice') : undefined}
             activeGuideTarget={
-              guideOpen ? CUSTOMER_360_GUIDE_STEPS[guideStep]?.targetId : undefined
+              guidedPreset && guideOpen ? CUSTOMER_360_GUIDE_STEPS[guideStep]?.targetId : undefined
             }
-            renderGuideStep={(step) => (
-              <PipelineBuilderGuideStepCard
-                step={step}
-                fixedPreset={guidedPreset}
-                preset={customer360Preset}
-                targetCollection={outputConfig?.config?.table || 'customer_360_views'}
-                onClose={() => setGuideOpen(false)}
-                onPrevious={() => setGuideStep((current) => Math.max(0, current - 1))}
-                onNext={() => {
-                  if (step === 4) {
-                    setGuideOpen(false)
-                    void savePipeline(true)
-                  } else {
-                    setGuideStep(step + 1)
-                  }
-                }}
-              />
-            )}
+            renderGuideStep={
+              guidedPreset
+                ? (step) => (
+                    <PipelineBuilderGuideStepCard
+                      step={step}
+                      fixedPreset={guidedPreset}
+                      preset={customer360Preset}
+                      targetCollection={outputConfig?.config?.table || 'customer_360_views'}
+                      onClose={() => setGuideOpen(false)}
+                      onPrevious={() => setGuideStep((current) => Math.max(0, current - 1))}
+                      onNext={() => {
+                        if (step === 4) {
+                          setGuideOpen(false)
+                          void savePipeline(true)
+                        } else {
+                          setGuideStep(step + 1)
+                        }
+                      }}
+                    />
+                  )
+                : undefined
+            }
             actions={
               <PipelineWorkflowHeader
                 placement="sticky"
                 runButtonId="step-publish-action"
-                runButtonActiveGuide={guideOpen && guideStep === 4}
+                runButtonActiveGuide={guidedPreset && guideOpen && guideStep === 4}
                 dockStatus={
                   <div className="wizard-reference-action-dock__status min-w-0 flex-1 text-[11px] text-[var(--pipeline-text-muted)]">
                     <span

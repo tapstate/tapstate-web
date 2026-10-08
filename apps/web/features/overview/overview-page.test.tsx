@@ -367,6 +367,7 @@ describe('OverviewPage', () => {
             config: expect.objectContaining({
               sourceId: 'atlas-store',
               table: 'customer_360_views',
+              onboardingGuide: 'customer-360-sample',
             }),
           }),
         }),
@@ -378,6 +379,34 @@ describe('OverviewPage', () => {
       params: { pipelineId: 'customer_360_12345678' },
     })
     expect(container.querySelector('[data-testid="pipeline-creation-dialog"]')).toBeNull()
+  })
+
+  it('uses ordinary creation for a cloud database without installed samples', async () => {
+    vi.stubEnv('MODE', 'cloud')
+    listSources.mockResolvedValue([
+      { ...source('atlas-store', 'mongodb-atlas'), metadata: { labels: { store: 'true' } } },
+      source('orders', 'mysql'),
+    ])
+    listPipelines.mockResolvedValue([])
+    await render()
+    await settle()
+    await act(async () => buttonNamed('Build Pipeline', container)?.click())
+    expect(container.querySelector('[data-testid="pipeline-creation-dialog"]')).not.toBeNull()
+    expect(createPipelineDraft).not.toHaveBeenCalled()
+  })
+
+  it('uses ordinary creation for New Pipeline even after samples are installed', async () => {
+    vi.stubEnv('MODE', 'cloud')
+    listSources.mockResolvedValue([
+      { ...source('atlas-store', 'mongodb-atlas'), metadata: { labels: { store: 'true' } } },
+      { ...source('sample_core_banking', 'mysql'), metadata: { labels: { sample: 'true' } } },
+    ])
+    listPipelines.mockResolvedValue([pipeline('existing', 'RUNNING')])
+    await render()
+    await settle()
+    await act(async () => buttonNamed('New Pipeline', container)?.click())
+    expect(container.querySelector('[data-testid="pipeline-creation-dialog"]')).not.toBeNull()
+    expect(createPipelineDraft).not.toHaveBeenCalled()
   })
 
   it('lists a stale view under Needs attention and counts views in the store block', async () => {
