@@ -1,55 +1,53 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  TARGET_CONNECTOR_IDS,
-  isTargetConnector,
-  targetSources,
-} from './pipeline-target-connectors'
+import type { ConnectorSummary } from '@/service/source-client'
+
+import { isTargetConnector, targetSources } from './pipeline-target-connectors'
+
+const connectors = [
+  { id: 'mongodb-atlas', sink: true },
+  { id: 'mongodb', sink: true },
+  { id: 'postgres', sink: true },
+  { id: 'mysql', sink: false },
+  { id: 'aws-rds-mysql', sink: true },
+  { id: 'db2', sink: true },
+] as unknown as ConnectorSummary[]
 
 describe('pipeline target connectors', () => {
-  it('admits every connector of the MongoDB family and refuses every other data source type', () => {
-    // A deployment on a managed variant registers that variant's id and no other, so admitting only
-    // the bare id would leave it with no Source it could put under a target at all.
-    expect(TARGET_CONNECTOR_IDS).toEqual([
-      'mongodb',
-      'mongodb-atlas',
-      'aliyun-db-mongodb',
-      'tencent-db-mongodb',
-    ])
-    for (const connector of TARGET_CONNECTOR_IDS) {
-      expect(isTargetConnector(connector)).toBe(true)
-    }
-    for (const connector of [
-      'mysql',
-      'postgres',
-      'oracle',
-      'sqlserver',
-      'aws-rds-mysql',
-      'kafka',
-      // Not in the release's supported set: a server accepting it is one an operator widened.
-      'mongodb3',
-    ]) {
-      expect(isTargetConnector(connector)).toBe(false)
-    }
-    expect(isTargetConnector(null)).toBe(false)
-    expect(isTargetConnector(undefined)).toBe(false)
-    expect(isTargetConnector('')).toBe(false)
+  it('keeps MongoDB and Atlas cloud targets and uses declared sink capability in OP', () => {
+    expect(isTargetConnector('mongodb-atlas', 'cloud', connectors)).toBe(true)
+    expect(isTargetConnector('mongodb', 'cloud', connectors)).toBe(true)
+    expect(isTargetConnector('postgres', 'cloud', connectors)).toBe(false)
+    expect(isTargetConnector('postgres', 'on-prem', connectors)).toBe(true)
+    expect(isTargetConnector('mysql', 'on-prem', connectors)).toBe(false)
+    expect(isTargetConnector(null, 'on-prem', connectors)).toBe(false)
   })
 
-  it('keeps only the Sources a target may write to, in the order they were given', () => {
+  it('keeps source-only previews out of targets even if a catalog row declares writes', () => {
+    for (const profile of ['cloud', 'on-prem'] as const) {
+      expect(isTargetConnector('aws-rds-mysql', profile, connectors)).toBe(false)
+      expect(isTargetConnector('db2', profile, connectors)).toBe(false)
+    }
+  })
+
+  it('filters sources by deployment policy while preserving order', () => {
     const sources = [
       { id: 'mysql_orders', connector: 'mysql' },
       { id: 'rds_orders', connector: 'aws-rds-mysql' },
-      { id: 'mongo_out', connector: 'mongodb' },
+      { id: 'db2_orders', connector: 'db2' },
+      { id: 'pg_warehouse', connector: 'postgres' },
       { id: 'atlas_out', connector: 'mongodb-atlas' },
-      { id: 'legacy_out', connector: 'mongodb3' },
-      { id: 'mongo_archive', connector: 'mongodb' },
+      { id: 'mongo_out', connector: 'mongodb' },
     ]
-    expect(targetSources(sources).map((source) => source.id)).toEqual([
-      'mongo_out',
+    expect(targetSources(sources, connectors, 'on-prem').map(({ id }) => id)).toEqual([
+      'pg_warehouse',
       'atlas_out',
-      'mongo_archive',
+      'mongo_out',
     ])
-    expect(targetSources([])).toEqual([])
+    expect(targetSources(sources, connectors, 'cloud').map(({ id }) => id)).toEqual([
+      'atlas_out',
+      'mongo_out',
+    ])
+    expect(targetSources([], connectors, 'on-prem')).toEqual([])
   })
 })

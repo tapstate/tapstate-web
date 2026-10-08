@@ -1,3 +1,5 @@
+import { cloudConsoleUrl } from '@/utils/cloud-console'
+
 export interface LoginCredentials {
   username: string
   password: string
@@ -110,4 +112,58 @@ export async function authenticatedFetch(
   if (token) headers.set('Authorization', `Bearer ${token}`)
 
   return fetcher(input, { ...init, headers })
+}
+
+function requestUrl(input: RequestInfo | URL, origin: string): URL {
+  if (input instanceof Request) return new URL(input.url, origin)
+  return new URL(input.toString(), origin)
+}
+
+export async function cloudSessionFetch(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  fetcher: typeof fetch = fetch,
+  origin: string | undefined = typeof window === 'undefined' ? undefined : window.location.origin,
+): Promise<Response> {
+  if (!origin || requestUrl(input, origin).origin !== origin) {
+    throw new AuthClientError(
+      'protocol',
+      'cloud session requests must use the current Cluster origin',
+    )
+  }
+
+  const headers = new Headers(init.headers)
+  headers.delete('Authorization')
+  return fetcher(input, { ...init, credentials: 'same-origin', headers })
+}
+
+export async function logoutCloudSession(
+  fetcher: typeof fetch = fetch,
+  origin?: string,
+): Promise<Response> {
+  return cloudSessionFetch('/auth/logout', { method: 'POST' }, fetcher, origin)
+}
+
+export async function logoutCloudAccount(
+  fetcher: typeof fetch = fetch,
+  consoleUrl: string = cloudConsoleUrl,
+): Promise<void> {
+  let response: Response
+
+  try {
+    response = await fetcher(new URL('/v1/api/auth/logout', consoleUrl), {
+      method: 'POST',
+      credentials: 'include',
+    })
+  } catch (error) {
+    throw new AuthClientError(
+      'network',
+      error instanceof Error ? error.message : 'Cloud account logout failed',
+    )
+  }
+
+  if (response.status === 401) return
+  if (!response.ok) {
+    throw new AuthClientError('auth', 'Cloud account logout was refused', null, response.status)
+  }
 }

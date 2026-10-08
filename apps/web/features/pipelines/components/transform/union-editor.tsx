@@ -1,9 +1,9 @@
-import { Input } from 'antd'
 import { GitBranch, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 import type { TransformEditorProps } from './types'
 
@@ -30,7 +30,6 @@ export function UnionEditor({ config, onChange }: TransformEditorProps) {
       from={config.from}
       icon={GitBranch}
       title={t('pipelines.workspace.transform.union.title')}
-      description={t('pipelines.workspace.transform.union.description')}
     >
       <div className="pipeline-transform__branch-list">
         {branches.map((branch, index) => (

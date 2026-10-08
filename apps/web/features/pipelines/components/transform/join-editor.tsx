@@ -1,11 +1,13 @@
-import { Input, Select } from 'antd'
 import { GitMerge, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 
 import { TransformEditorShell } from './transform-editor-shell'
+import { TransformSelect } from './transform-select'
 import { mergeBody, type TransformEditorProps } from './types'
 
 type JoinAlias = { alias: string; input: string }
@@ -33,7 +35,7 @@ export function JoinEditor({ config, onChange }: TransformEditorProps) {
   const { t } = useTranslation()
   const [aliases, setAliases] = useState(() => initialAliases(config.from))
   const [engine, setEngine] = useState(() =>
-    typeof config.body.engine === 'string' ? config.body.engine : 'duckdb',
+    typeof config.body.engine === 'string' ? config.body.engine : 'builtin',
   )
   const [sql, setSql] = useState(() => (typeof config.body.sql === 'string' ? config.body.sql : ''))
   const configurationKey = JSON.stringify({
@@ -44,7 +46,7 @@ export function JoinEditor({ config, onChange }: TransformEditorProps) {
 
   useEffect(() => {
     setAliases(initialAliases(config.from))
-    setEngine(typeof config.body.engine === 'string' ? config.body.engine : 'duckdb')
+    setEngine(typeof config.body.engine === 'string' ? config.body.engine : 'builtin')
     setSql(typeof config.body.sql === 'string' ? config.body.sql : '')
   }, [configurationKey])
 
@@ -71,7 +73,6 @@ export function JoinEditor({ config, onChange }: TransformEditorProps) {
       from={config.from}
       icon={GitMerge}
       title={t('pipelines.workspace.transform.join.title')}
-      description={t('pipelines.workspace.transform.join.description')}
     >
       <div className="pipeline-transform__section-heading">
         {t('pipelines.workspace.transform.aliases')}
@@ -132,17 +133,17 @@ export function JoinEditor({ config, onChange }: TransformEditorProps) {
         <label className="pipeline-transform__field-label">
           {t('pipelines.workspace.transform.engine')}
         </label>
-        <Select
-          aria-label={t('pipelines.workspace.transform.engine')}
+        <TransformSelect
+          label={t('pipelines.workspace.transform.engine')}
           value={engine}
-          options={[{ value: 'duckdb', label: 'DuckDB' }]}
+          options={[{ value: 'builtin', label: t('pipelines.workspace.transform.builtinEngine') }]}
           onChange={updateEngine}
         />
       </div>
-      <Input.TextArea
+      <Textarea
         aria-label={t('pipelines.workspace.transform.sql')}
         value={sql}
-        autoSize={{ minRows: 6, maxRows: 14 }}
+        rows={7}
         placeholder={t('pipelines.workspace.transform.sql')}
         onChange={(event) => updateSql(event.target.value)}
       />

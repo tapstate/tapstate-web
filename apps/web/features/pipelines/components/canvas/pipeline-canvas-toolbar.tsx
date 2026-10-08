@@ -9,6 +9,7 @@ type CanvasInteractionMode = 'pointer' | 'hand'
 
 interface PipelineCanvasToolbarProps {
   interactionMode: CanvasInteractionMode
+  disabled?: boolean
   onInteractionModeChange: (mode: CanvasInteractionMode) => void
   onRequestNodeSelector?: (context: PipelineNodeInsertionContext) => void
 }
@@ -16,6 +17,7 @@ interface PipelineCanvasToolbarProps {
 /** Canvas-native controls for adding nodes, selecting, panning, and fitting the visible graph. */
 export function PipelineCanvasToolbar({
   interactionMode,
+  disabled = false,
   onInteractionModeChange,
   onRequestNodeSelector,
 }: PipelineCanvasToolbarProps) {
@@ -49,6 +51,7 @@ export function PipelineCanvasToolbar({
           aria-label={t('pipelines.workspace.navigation.addNode')}
           title={t('pipelines.workspace.navigation.addNode')}
           onClick={openNodeSelector}
+          disabled={disabled}
         >
           <Plus className="size-4" aria-hidden="true" />
         </button>
@@ -60,6 +63,7 @@ export function PipelineCanvasToolbar({
           aria-pressed={interactionMode === 'pointer'}
           title={t('pipelines.workspace.actions.pointerMode')}
           onClick={() => onInteractionModeChange('pointer')}
+          disabled={disabled}
         >
           <MousePointer2 className="size-4" aria-hidden="true" />
         </button>
@@ -70,6 +74,7 @@ export function PipelineCanvasToolbar({
           aria-pressed={interactionMode === 'hand'}
           title={t('pipelines.workspace.actions.handMode')}
           onClick={() => onInteractionModeChange('hand')}
+          disabled={disabled}
         >
           <Hand className="size-4" aria-hidden="true" />
         </button>

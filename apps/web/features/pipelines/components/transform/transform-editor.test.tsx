@@ -141,7 +141,7 @@ describe('TransformEditor', () => {
         ...base,
         transformType: 'join',
         from: { orders: 'orders', users: 'users' },
-        body: { engine: 'duckdb', sql: 'select *' },
+        body: { engine: 'builtin', sql: 'select *' },
       },
       onChange: (patch) => changes.push(patch),
     })
@@ -150,7 +150,7 @@ describe('TransformEditor', () => {
     setInput(alias!, 'order_rows')
 
     expect(changes.at(-1)).toMatchObject({
-      body: { engine: 'duckdb', sql: 'select *' },
+      body: { engine: 'builtin', sql: 'select *' },
       from: { order_rows: 'orders', users: 'users' },
     })
   })
@@ -242,6 +242,8 @@ describe('TransformEditor', () => {
     })
 
     expect(host.textContent).toContain('TypeScript')
+    expect(host.querySelector('[data-slot="select-trigger"]')).not.toBeNull()
+    expect(host.querySelector('.ant-select')).toBeNull()
     expect(host.querySelector<HTMLTextAreaElement>('textarea[aria-label="Script"]')?.value).toBe(
       'return record',
     )
