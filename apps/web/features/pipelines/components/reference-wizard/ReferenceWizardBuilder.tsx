@@ -583,6 +583,12 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
 
       {/* Relation Card */}
       <div
+        id={!nested && rel.id === relations[0]?.id ? 'step-first-relation' : undefined}
+        data-guide-active={
+          !nested && rel.id === relations[0]?.id && activeGuideTarget === 'step-first-relation'
+            ? true
+            : undefined
+        }
         onClick={(event) => {
           event.stopPropagation()
           setActiveContext(rel.id)
@@ -590,11 +596,13 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
         className={cn(
           'wizard-reference-relation-radius cursor-pointer border transition-all duration-150',
           nested ? 'bg-gray-50/80 p-3.5 shadow-2xs hover:bg-white' : 'bg-white p-4 shadow-xs',
-          activeContext === rel.id
-            ? nested
-              ? 'border-purple-500 bg-white ring-1 ring-purple-500/20'
-              : 'border-blue-500 ring-1 ring-blue-500/20'
-            : 'border-gray-200 hover:border-gray-300',
+          !nested && rel.id === relations[0]?.id && activeGuideTarget === 'step-first-relation'
+            ? 'border-indigo-500 bg-gradient-to-b from-indigo-50/15 to-white shadow-md ring-2 ring-indigo-500/40'
+            : activeContext === rel.id
+              ? nested
+                ? 'border-purple-500 bg-white ring-1 ring-purple-500/20'
+                : 'border-blue-500 ring-1 ring-blue-500/20'
+              : 'border-gray-200 hover:border-gray-300',
         )}
       >
         {/* Card Header (2-row title on the left, actions on the right) */}
@@ -1416,9 +1424,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   onClick={() => setActiveContext('root')}
                   className={cn(
                     'wizard-reference-root-card cursor-pointer border bg-white p-4 shadow-xs transition-all duration-150',
-                    activeContext === 'root'
-                      ? 'border-blue-500 ring-1 ring-blue-500/20'
-                      : 'border-gray-200 hover:border-gray-300',
+                    activeGuideTarget === 'step-root-table'
+                      ? 'border-indigo-500 bg-gradient-to-b from-indigo-50/15 to-white shadow-md ring-2 ring-indigo-500/40'
+                      : activeContext === 'root'
+                        ? 'border-blue-500 ring-1 ring-blue-500/20'
+                        : 'border-gray-200 hover:border-gray-300',
                   )}
                 >
                   {/* Card Header */}
@@ -1732,11 +1742,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                 {/* ============================================================= */}
                 {/* STEP 2: RELATIONS LIST (动态子表树 - 精致虚线导轨，精准分支) */}
                 {/* ============================================================= */}
-                <div
-                  id="step-first-relation"
-                  data-guide-active={activeGuideTarget === 'step-first-relation' || undefined}
-                  className="relative ml-8 space-y-3.5 border-l border-dashed border-gray-300 pl-6"
-                >
+                <div className="relative ml-8 space-y-3.5 border-l border-dashed border-gray-300 pl-6">
                   {/* Dynamically Render Each Relation Node */}
                   {relations.map((rel) => renderRelation(rel))}
 
@@ -2013,9 +2019,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   onClick={() => setActiveContext('doc_process')}
                   className={cn(
                     'cursor-pointer rounded-xl border bg-white p-4 shadow-xs transition-all duration-150',
-                    activeContext === 'doc_process'
-                      ? 'border-blue-500 ring-1 ring-blue-500/20'
-                      : 'border-gray-200 hover:border-gray-300',
+                    activeGuideTarget === 'step-doc-process'
+                      ? 'border-indigo-500 bg-gradient-to-b from-indigo-50/15 to-white shadow-md ring-2 ring-indigo-500/40'
+                      : activeContext === 'doc_process'
+                        ? 'border-blue-500 ring-1 ring-blue-500/20'
+                        : 'border-gray-200 hover:border-gray-300',
                   )}
                 >
                   <div className="flex items-center justify-between border-b border-gray-100 pb-3">

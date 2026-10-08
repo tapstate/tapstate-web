@@ -55,9 +55,13 @@
   font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
 .wizard-reference [data-guide-active='true'] {
-  outline: 2px solid color-mix(in oklab, var(--primary) 58%, transparent);
-  outline-offset: 4px;
   scroll-margin-block: 1.5rem;
+}
+.wizard-reference .wizard-reference-preview[data-guide-active='true'] {
+  border-color: rgb(165 180 252);
+  box-shadow:
+    0 0 0 2px rgb(99 102 241 / 40%),
+    0 20px 25px -5px rgb(17 24 39 / 10%);
 }
 .wizard-reference .wizard-reference-preview {
   width: var(--wizard-preview-width);
