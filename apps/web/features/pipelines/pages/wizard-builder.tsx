@@ -459,7 +459,7 @@ export function WizardBuilder({
                           : 'wizard.autosaved',
                   )
   return (
-    <div className="h-full min-h-0 min-w-0 p-2 sm:p-3">
+    <div className="h-full min-h-0 min-w-0 p-1">
       <section
         className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-gray-200/90 bg-white shadow-[0_1px_3px_rgba(17,24,39,0.10)]"
         data-testid="wizard-builder-shell"
