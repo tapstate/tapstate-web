@@ -50,6 +50,19 @@ export function BillingPage() {
     }
   }, [activeOrganization])
 
+  const acknowledgeCancellation = (cancelled: Subscription) => {
+    setSubscriptions((current) =>
+      current.map((item) => (item.id === cancelled.id ? cancelled : item)),
+    )
+    const cancelledClusterIds = new Set(
+      [cancelled.clusterId, ...(cancelled.items?.map((item) => item.clusterId) ?? [])].filter(
+        (id): id is string => Boolean(id),
+      ),
+    )
+    setClusters(clusters.filter((cluster) => !cancelledClusterIds.has(cluster.id)))
+    setConfirmingId(null)
+  }
+
   const cancelSubscription = async (subscriptionId: string) => {
     if (!activeOrganization || cancellingId) return
     const orgId = activeOrganization.id
@@ -62,20 +75,12 @@ export function BillingPage() {
           ? latest
           : await cloudApi.cancelSubscription(orgId, subscriptionId)
       if (cancelled.status !== 'CANCELLED') throw new Error('Cancellation not confirmed')
-      setSubscriptions((current) =>
-        current.map((item) => (item.id === subscriptionId ? cancelled : item)),
-      )
-      setConfirmingId(null)
-      setClusters(await cloudApi.clusters(orgId))
+      acknowledgeCancellation(cancelled)
     } catch {
       try {
         const latest = await cloudApi.subscriptionById(orgId, subscriptionId)
         if (latest.status === 'CANCELLED') {
-          setSubscriptions((current) =>
-            current.map((item) => (item.id === subscriptionId ? latest : item)),
-          )
-          setConfirmingId(null)
-          setClusters(await cloudApi.clusters(orgId))
+          acknowledgeCancellation(latest)
           return
         }
       } catch {
