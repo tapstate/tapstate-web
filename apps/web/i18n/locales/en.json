@@ -1665,6 +1665,7 @@
       "pipelineShort": "Build Pipeline",
       "configure": "Open settings",
       "connectStateStore": "Connect State Store",
+      "connectAtlas": "Connect Atlas",
       "trySample": "Try sample",
       "addSources": "Add sources",
       "build": "Build Pipeline",

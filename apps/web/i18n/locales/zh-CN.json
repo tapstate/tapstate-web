@@ -1665,6 +1665,7 @@
       "pipelineShort": "构建 Pipeline",
       "configure": "打开设置",
       "connectStateStore": "连接状态存储",
+      "connectAtlas": "连接 Atlas",
       "trySample": "试用样本",
       "addSources": "添加数据源",
       "build": "构建 Pipeline",

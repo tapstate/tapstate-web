@@ -323,6 +323,7 @@ function OverviewMilestoneDock({
   const storeDone = overview.setup.done.stateStore
   const sourcesDone = overview.setup.done.sources
   const pipelineDone = overview.setup.done.pipeline
+  const cloud = getDeploymentProfile() === 'cloud'
 
   return (
     <section
@@ -351,7 +352,11 @@ function OverviewMilestoneDock({
             >
               {storeDone ? '✓' : '1'}
             </span>
-            <span>{t('overview.milestones.stateStoreShort', 'State Store')}</span>
+            <span>
+              {cloud
+                ? t('overview.milestones.connectAtlas')
+                : t('overview.milestones.stateStoreShort')}
+            </span>
           </button>
 
           <span className="text-slate-300" aria-hidden="true">
@@ -422,7 +427,7 @@ function OverviewMilestoneDock({
         </div>
 
         <div className="flex shrink-0 items-center gap-2.5">
-          {sampleAvailable && (
+          {storeDone && !sourcesDone && sampleAvailable && (
             <button
               type="button"
               disabled={sampleAdding}
@@ -439,7 +444,11 @@ function OverviewMilestoneDock({
               onClick={onConnectAtlas}
               className="flex h-8.5 cursor-pointer items-center gap-1.5 rounded-xl bg-[#4F46E5] px-4 text-[12.5px] font-semibold whitespace-nowrap text-white shadow-xs transition-all hover:scale-[1.01] hover:bg-[#4338CA]"
             >
-              <span>{t('overview.milestones.connectStateStore', 'Connect State Store')}</span>
+              <span>
+                {cloud
+                  ? t('overview.milestones.connectAtlas')
+                  : t('overview.milestones.connectStateStore')}
+              </span>
               <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           ) : !sourcesDone ? (

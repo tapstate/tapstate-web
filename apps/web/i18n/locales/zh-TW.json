@@ -1665,6 +1665,7 @@
       "pipelineShort": "建立 Pipeline",
       "configure": "開啟設定",
       "connectStateStore": "連線狀態儲存",
+      "connectAtlas": "連線 Atlas",
       "trySample": "試用範例",
       "addSources": "新增資料來源",
       "build": "建立 Pipeline",
