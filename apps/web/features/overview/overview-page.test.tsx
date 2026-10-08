@@ -12,19 +12,23 @@ import type { SourceView } from '@/service/source-client'
 const {
   addSampleSources,
   apiFetch,
+  createPipelineDraft,
   listConnectors,
   listPipelines,
   listSources,
   listViews,
   loadSampleSources,
+  navigate,
 } = vi.hoisted(() => ({
   addSampleSources: vi.fn(),
+  createPipelineDraft: vi.fn(),
   loadSampleSources: vi.fn(),
   listViews: vi.fn(),
   apiFetch: vi.fn(),
   listConnectors: vi.fn(),
   listPipelines: vi.fn(),
   listSources: vi.fn(),
+  navigate: vi.fn(),
 }))
 
 vi.mock('@/service/source-client', async (importOriginal) => ({
@@ -34,6 +38,7 @@ vi.mock('@/service/source-client', async (importOriginal) => ({
 }))
 vi.mock('@/service/pipelines/pipeline-client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/service/pipelines/pipeline-client')>()),
+  createPipelineDraft,
   listPipelines,
 }))
 vi.mock('@/service/sample-source-client', async (importOriginal) => ({
@@ -54,6 +59,7 @@ vi.mock('@/features/pipelines/components/create/pipeline-creation-dialog', () =>
   ),
 }))
 vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => navigate,
   Link: ({ to, children, className }: { to: string; children: ReactNode; className?: string }) => (
     <a href={to} className={className}>
       {children}
@@ -125,6 +131,8 @@ beforeEach(() => {
   listViews.mockReset().mockResolvedValue({ available: false })
   loadSampleSources.mockReset().mockResolvedValue(null)
   addSampleSources.mockReset()
+  createPipelineDraft.mockReset().mockResolvedValue({})
+  navigate.mockReset().mockResolvedValue(undefined)
   // jsdom here has no storage; a small in-memory one stands in for the browser's.
   const entries = new Map<string, string>()
   Object.defineProperty(window, 'localStorage', {
@@ -141,6 +149,8 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root.unmount())
   container.remove()
+  vi.unstubAllEnvs()
+  vi.unstubAllGlobals()
 })
 
 describe('OverviewPage', () => {
@@ -261,16 +271,14 @@ describe('OverviewPage', () => {
     await act(async () => buttonNamed('Add data sources', container)?.click())
     await settle()
 
-    expect(document.body.textContent).toContain('Connect your own database')
-    await act(async () => buttonNamed('Connect a database')?.click())
+    expect(document.body.textContent).toContain('Or connect self-hosted / cloud database')
+    await act(async () => buttonNamed('Connect a source')?.click())
     await settle()
-    expect(document.body.textContent).not.toContain('Connect your own database')
+    expect(document.body.textContent).not.toContain('Or connect self-hosted / cloud database')
 
     await act(async () => buttonNamed('Save source')?.click())
     await settle()
 
-    expect(document.body.textContent).toContain('Your source (1)')
-    expect(document.body.textContent).toContain('orders')
     expect(container.textContent).toContain('1 connected source')
   })
 
@@ -296,6 +304,35 @@ describe('OverviewPage', () => {
         .querySelector('[data-testid="pipeline-creation-dialog"]')
         ?.getAttribute('data-default-mode'),
     ).toBe('wizard')
+  })
+
+  it('opens the cloud builder directly with a new wizard draft', async () => {
+    vi.stubEnv('MODE', 'cloud')
+    vi.stubGlobal('crypto', { randomUUID: () => '12345678-0000-0000-0000-000000000000' })
+    listSources.mockResolvedValue([
+      { ...source('atlas-store', 'mongodb-atlas'), metadata: { labels: { store: 'true' } } },
+      source('sample_core_banking', 'mysql'),
+    ])
+    listPipelines.mockResolvedValue([])
+
+    await render()
+    await settle()
+    await act(async () => buttonNamed('Build Pipeline', container)?.click())
+    await settle()
+
+    expect(createPipelineDraft).toHaveBeenCalledWith(
+      'customer_360_12345678',
+      expect.objectContaining({
+        mode: 'wizard',
+        wizard: expect.objectContaining({ output: { kind: 'atlas', config: {} } }),
+      }),
+      apiFetch,
+    )
+    expect(navigate).toHaveBeenCalledWith({
+      to: '/pipelines/$pipelineId/edit',
+      params: { pipelineId: 'customer_360_12345678' },
+    })
+    expect(container.querySelector('[data-testid="pipeline-creation-dialog"]')).toBeNull()
   })
 
   it('lists a stale view under Needs attention and counts views in the store block', async () => {
@@ -362,23 +399,12 @@ describe('OverviewPage', () => {
 
     await render()
     await settle()
-    await act(async () => buttonNamed('Add data sources', container)?.click())
-    await settle()
-
-    expect(document.body.textContent).toContain(
-      'Core banking and Cards & CRM, prepared for change capture',
-    )
-    await act(async () => buttonNamed('Add sample sources')?.click())
+    await act(async () => buttonNamed('Try sample', container)?.click())
     await settle()
 
     expect(addSampleSources).toHaveBeenCalledTimes(1)
-    const rows = [...document.querySelectorAll('.overview-add-sources__list li')]
-    expect(rows.map((row) => row.textContent)).toEqual([
-      'sample_cards_crmSamplepostgres',
-      'sample_core_bankingSamplemysql',
-    ])
-    expect(buttonNamed('Added')?.disabled).toBe(true)
     expect(container.textContent).toContain('2 connected sources')
+    expect(buttonNamed('Try sample', container)).toBeUndefined()
   })
 
   it('hides the sample offer when the deployment has none', async () => {
@@ -390,7 +416,7 @@ describe('OverviewPage', () => {
     await act(async () => buttonNamed('Add data sources', container)?.click())
     await settle()
 
-    expect(document.body.textContent).toContain('Connect your own database')
-    expect(document.body.textContent).not.toContain('Use the sample bank sources')
+    expect(document.body.textContent).toContain('Or connect self-hosted / cloud database')
+    expect(document.body.textContent).not.toContain('Sample bank sources')
   })
 })

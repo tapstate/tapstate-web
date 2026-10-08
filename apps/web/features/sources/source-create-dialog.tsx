@@ -31,6 +31,7 @@ import {
   testConnection,
 } from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
+import { getDeploymentProfile } from '@/utils/deployment-profile'
 
 import { ConnectionTestResultDialog } from './connection-test-result'
 import { ConnectorFormily } from './connector-formily'
@@ -46,6 +47,7 @@ interface SourceCreateDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreated: (source: SourceView) => void
+  initialConnectorId?: string | null
 }
 
 type CreateSourceStep = 'select' | 'configure'
@@ -76,7 +78,12 @@ function RequestError({ message }: { message: string }) {
   )
 }
 
-export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCreateDialogProps) {
+export function SourceCreateDialog({
+  open,
+  onOpenChange,
+  onCreated,
+  initialConnectorId,
+}: SourceCreateDialogProps) {
   const { i18n, t } = useTranslation()
   const currentLocale = i18n.resolvedLanguage ?? i18n.language
   const apiFetch = useAuthStore((state) => state.apiFetch)
@@ -98,13 +105,19 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
   const [testReport, setTestReport] = useState<ConnectionTestReport | null>(null)
   const [testError, setTestError] = useState('')
   const connectorButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
+  const initializedForOpen = useRef(false)
 
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      initializedForOpen.current = false
+      return
+    }
+    if (initializedForOpen.current) return
+    initializedForOpen.current = true
     setSourceId('')
-    setConnectorId('')
+    setConnectorId(initialConnectorId ?? '')
     setSearchTerm('')
-    setStep('select')
+    setStep(initialConnectorId ? 'configure' : 'select')
     setSourceMode('')
     setConnector(null)
     setSchema(null)
@@ -120,7 +133,7 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
         .catch((error) => setRequestError(errorMessage(error, t)))
         .finally(() => setLoadingConnectors(false))
     }
-  }, [apiFetch, connectors.length, open, t])
+  }, [apiFetch, connectors.length, initialConnectorId, open, t])
 
   useEffect(() => {
     setConnector(null)
@@ -256,13 +269,17 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
   }
 
   const normalizedSearch = searchTerm.trim().toLocaleLowerCase()
+  const sourceConnectors =
+    getDeploymentProfile() === 'cloud'
+      ? connectors.filter((item) => item.id !== 'mongodb-atlas')
+      : connectors
   const visibleConnectors = normalizedSearch
-    ? connectors.filter((item) =>
+    ? sourceConnectors.filter((item) =>
         [item.name, item.id, item.group, ...item.modes].some((value) =>
           value.toLocaleLowerCase().includes(normalizedSearch),
         ),
       )
-    : connectors
+    : sourceConnectors
   const selectedConnector = connectors.find((item) => item.id === connectorId)
   const configuredConnectorName = connector?.name ?? selectedConnector?.name
 

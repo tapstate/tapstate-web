@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { ArrowRight, Sparkles } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { PipelineCreationDialog } from '@/features/pipelines/components/create/pipeline-creation-dialog'
 import { cn } from '@/lib/utils'
-import { listPipelines } from '@/service/pipelines/pipeline-client'
+import { createPipelineDraft, listPipelines } from '@/service/pipelines/pipeline-client'
 import { addSampleSources, loadSampleSources } from '@/service/sample-source-client'
 import {
   listConnectors,
@@ -31,6 +31,7 @@ export type SourceFormSlot = (props: {
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreated: (source: SourceView) => void
+  initialConnectorId?: string | null
 }) => ReactNode
 
 interface OverviewPageProps {
@@ -40,6 +41,7 @@ interface OverviewPageProps {
 export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   // Same keys as the Data Sources, Pipelines and Views pages, so they share one cache.
   const sourcesQuery = useQuery({ queryKey: ['sources'], queryFn: () => listSources(apiFetch) })
@@ -81,8 +83,46 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
   const [addSourcesOpen, setAddSourcesOpen] = useState(false)
   const [atlasOpen, setAtlasOpen] = useState(false)
   const [sourceFormOpen, setSourceFormOpen] = useState(false)
+  const [sourceConnectorId, setSourceConnectorId] = useState<string | null>(null)
   const [pipelineCreationOpen, setPipelineCreationOpen] = useState(false)
+  const [pipelineCreationError, setPipelineCreationError] = useState<string | null>(null)
+  const [pipelineCreating, setPipelineCreating] = useState(false)
   const initialAtlasPromptShown = useRef(false)
+
+  async function openGuidedBuilder() {
+    if (pipelineCreating) return
+    const pipelineId = `customer_360_${crypto.randomUUID().slice(0, 8)}`
+    setPipelineCreating(true)
+    setPipelineCreationError(null)
+    try {
+      await createPipelineDraft(
+        pipelineId,
+        {
+          pipelineId,
+          mode: 'wizard',
+          name: 'Customer 360',
+          description: null,
+          graph: null,
+          wizard: {
+            root: { id: 'root', sourceId: '', table: '', key: [], preTransforms: [] },
+            related: [],
+            transforms: [],
+            output: { kind: 'atlas', config: {} },
+          },
+          baseArtifactHash: null,
+        },
+        apiFetch,
+      )
+      await queryClient.invalidateQueries({ queryKey: ['pipelines'] })
+      await navigate({ to: '/pipelines/$pipelineId/edit', params: { pipelineId } })
+    } catch (error) {
+      setPipelineCreationError(
+        error instanceof Error ? error.message : t('pipelines.workspace.actions.saveFailed'),
+      )
+    } finally {
+      setPipelineCreating(false)
+    }
+  }
 
   // The view list only adds detail; when it fails or is missing, the overview still shows.
   const views = viewsQuery.data ?? null
@@ -163,9 +203,15 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
               if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready)
                 setAtlasOpen(true)
               else if (!overview.setup.done.sources) setAddSourcesOpen(true)
+              else if (getDeploymentProfile() === 'cloud') void openGuidedBuilder()
               else setPipelineCreationOpen(true)
             }}
           />
+        )}
+        {pipelineCreationError && (
+          <p className="overview-page__create-error" role="alert">
+            {pipelineCreationError}
+          </p>
         )}
       </div>
 
@@ -187,7 +233,8 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
               }
             : null
         }
-        onConnect={() => {
+        onConnect={(connectorId) => {
+          setSourceConnectorId(connectorId)
           setAddSourcesOpen(false)
           setSourceFormOpen(true)
         }}
@@ -212,6 +259,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
       )}
       {sourceForm?.({
         open: sourceFormOpen,
+        initialConnectorId: sourceConnectorId,
         onOpenChange: (open) => {
           setSourceFormOpen(open)
           // Back to the step dialog, which now lists the new source.

@@ -131,7 +131,7 @@ export function buildOverview(
   const done: Record<SetupStepId, boolean> = {
     stateStore: managed !== null,
     sources: dataSources.length > 0,
-    pipeline: pipelines.length > 0,
+    pipeline: pipelines.some((pipeline) => pipeline.hasArtifact),
   }
 
   return {

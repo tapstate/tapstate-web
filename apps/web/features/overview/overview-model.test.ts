@@ -46,6 +46,19 @@ describe('buildOverview', () => {
     expect(overview.pipelines.total).toBe(0)
   })
 
+  it('keeps the build step active while the pipeline is only a draft', () => {
+    const draft = { ...pipeline('customer_360'), hasArtifact: false }
+    const overview = buildOverview(
+      [source(MANAGED_VIEW_STORE_SOURCE_ID), source('sample_core_banking', 'mysql')],
+      [draft],
+    )
+
+    expect(overview.setup).toMatchObject({
+      done: { stateStore: true, sources: true, pipeline: false },
+      next: 'pipeline',
+    })
+  })
+
   it('counts the managed view store as the state store and never as a data source', () => {
     const overview = buildOverview([source(MANAGED_VIEW_STORE_SOURCE_ID, 'mongodb')], [])
 

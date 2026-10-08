@@ -11,7 +11,7 @@ interface AddSourcesDialogProps {
   onOpenChange: (open: boolean) => void
   sources: OverviewSourceItem[]
   connectors?: ConnectorSummary[]
-  onConnect: () => void
+  onConnect: (connectorId: string | null) => void
   sample?: SampleOffer | null
 }
 
@@ -35,6 +35,7 @@ export function AddSourcesDialog({
   if (!open) return null
   const choices = connectors.filter(
     (connector) =>
+      connector.id !== 'mongodb-atlas' &&
       connector.modes.length > 0 &&
       ['mysql', 'postgres', 'mongodb', 'oracle', 'sqlserver'].some((family) =>
         connector.id.toLowerCase().includes(family),
@@ -118,7 +119,7 @@ export function AddSourcesDialog({
             <button
               key={connector.id}
               type="button"
-              onClick={onConnect}
+              onClick={() => onConnect(connector.id)}
               className="group flex w-full cursor-pointer items-center justify-between rounded-2xl border border-slate-200 bg-white p-3.5 text-left transition-all hover:border-indigo-400 hover:bg-indigo-50/30"
             >
               <span className="flex items-center gap-3">
@@ -145,7 +146,7 @@ export function AddSourcesDialog({
           {choices.length === 0 && (
             <button
               type="button"
-              onClick={onConnect}
+              onClick={() => onConnect(null)}
               className="text-[12px] font-semibold text-[#4F46E5]"
             >
               Connect a source
