@@ -37,6 +37,8 @@ jobs:
         run: pnpm --filter cloud i18n:check
       - name: run unit tests
         run: pnpm --filter web test
+      - name: run Cloud unit tests
+        run: pnpm --filter cloud test
       - name: build the production bundle
         run: pnpm build
       - name: require the bundle entry point

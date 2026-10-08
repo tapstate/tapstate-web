@@ -31,9 +31,14 @@ interface ProvisioningViewProps {
   hasPollingError: boolean
   isRetrying: boolean
   retryError: boolean
+  isCancelling: boolean
+  cancelError: boolean
+  cancelStatusError: boolean
+  cancelOutcomeUnknown: boolean
   isOpeningCluster: boolean
   entryError: string | null
   onRetry: () => void
+  onCancel: () => void
   onEdit: () => void
   onOpenCluster: () => void
 }
@@ -57,14 +62,27 @@ export function ProvisioningView({
   hasPollingError,
   isRetrying,
   retryError,
+  isCancelling,
+  cancelError,
+  cancelStatusError,
+  cancelOutcomeUnknown,
   isOpeningCluster,
   entryError,
   onRetry,
+  onCancel,
   onEdit,
   onOpenCluster,
 }: ProvisioningViewProps) {
   const { t } = useTranslation()
   const [showUpdates, setShowUpdates] = useState(false)
+  const cancelErrorAlert = cancelError ? (
+    <p
+      className="rounded-lg bg-red-50 p-3 text-left text-xs text-red-600 dark:bg-red-950/30 dark:text-red-400"
+      role="alert"
+    >
+      {t('onboarding.cancelSubscriptionError')}
+    </p>
+  ) : null
 
   if (mode === 'provisioning') {
     const stages = [
@@ -98,6 +116,8 @@ export function ProvisioningView({
             })}
           </p>
         </div>
+
+        {cancelErrorAlert}
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between font-mono text-[12px] text-neutral-500 dark:text-neutral-400">
@@ -260,6 +280,8 @@ export function ProvisioningView({
           </div>
         </div>
 
+        {cancelErrorAlert}
+
         {entryError && (
           <div
             className="rounded-xl border border-red-200/80 bg-red-50 p-3 text-left text-xs text-red-600 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400"
@@ -345,10 +367,19 @@ export function ProvisioningView({
           {t('onboarding.retryError')}
         </p>
       )}
+      {cancelErrorAlert}
+      {cancelStatusError && (
+        <p
+          className="rounded-lg bg-red-50 p-3 text-left text-xs text-red-600 dark:bg-red-950/30 dark:text-red-400"
+          role="alert"
+        >
+          {t('onboarding.cancelStatusError')}
+        </p>
+      )}
       <div className="space-y-2 pt-1">
         <button
           className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#111827] text-[13px] font-medium text-white shadow-xs transition-colors hover:bg-[#1f2937] active:scale-[0.99] disabled:cursor-wait disabled:opacity-50 dark:bg-white dark:text-[#111827] dark:hover:bg-neutral-100"
-          disabled={isRetrying}
+          disabled={isRetrying || isCancelling || cancelOutcomeUnknown}
           onClick={onRetry}
           type="button"
         >
@@ -360,11 +391,15 @@ export function ProvisioningView({
           <span>{isRetrying ? t('onboarding.retrying') : t('onboarding.retryProvisioning')}</span>
         </button>
         <button
-          className="flex h-10 w-full items-center justify-center rounded-lg border border-black/[0.1] bg-white text-[13px] font-medium text-neutral-700 transition-colors hover:bg-neutral-50 dark:border-white/[0.12] dark:bg-[#1a1b1e] dark:text-neutral-300 dark:hover:bg-[#202124]"
-          onClick={onEdit}
+          className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-black/[0.1] bg-white text-[13px] font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-wait disabled:opacity-50 dark:border-white/[0.12] dark:bg-[#1a1b1e] dark:text-neutral-300 dark:hover:bg-[#202124]"
+          disabled={isRetrying || isCancelling}
+          onClick={onCancel}
           type="button"
         >
-          {t('onboarding.editSettings')}
+          {isCancelling && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+          {isCancelling
+            ? t('onboarding.cancellingSubscription')
+            : t('onboarding.cancelSubscription')}
         </button>
       </div>
     </div>
