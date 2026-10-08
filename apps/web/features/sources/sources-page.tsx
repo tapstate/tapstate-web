@@ -34,6 +34,7 @@ import type {
 } from '@/service/source-client'
 
 import { ConnectorIcon } from '@/components/connector-icon'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { RouteTabs } from '@/components/ui/route-tabs'
 import {
@@ -45,6 +46,12 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import {
+  addSampleSources,
+  isSampleSource,
+  loadSampleSources,
+  removeSampleSources,
+} from '@/service/sample-source-client'
+import {
   discoverSourceSchema,
   getSource,
   getSourceSchema,
@@ -54,6 +61,7 @@ import {
   testConnection,
   type ConnectionTestReport,
 } from '@/service/source-client'
+import { isDataSource } from '@/service/state-store-source'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { ConnectionTestResultDialog } from './connection-test-result'
@@ -72,6 +80,10 @@ export interface SourcesPageRoute {
 interface SourcesPageProps {
   route?: SourcesPageRoute
   onNavigate?: (route: SourcesPageRoute) => void
+  /** Opens the new-source form when the page first shows. */
+  createOnArrival?: boolean
+  /** Called once the arrival form has closed, so the caller can drop the request from the URL. */
+  onArrivalCreateClosed?: () => void
 }
 
 interface SourceTable {
@@ -139,7 +151,12 @@ function schemaErrorMessage(error: unknown, t: ReturnType<typeof useTranslation>
   return t('sources.schema.loadError')
 }
 
-export function SourcesPage({ route, onNavigate }: SourcesPageProps = {}) {
+export function SourcesPage({
+  route,
+  onNavigate,
+  createOnArrival = false,
+  onArrivalCreateClosed,
+}: SourcesPageProps = {}) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const apiFetch = useAuthStore((state) => state.apiFetch)
@@ -147,10 +164,19 @@ export function SourcesPage({ route, onNavigate }: SourcesPageProps = {}) {
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null)
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null)
   const [activeTabState, setActiveTabState] = useState<SourceTab>('data')
-  const [createOpen, setCreateOpen] = useState(false)
+  const [createOpen, setCreateOpen] = useState(createOnArrival)
   const [editingSourceId, setEditingSourceId] = useState<string | null>(null)
   const [deletingSource, setDeletingSource] = useState<Source | null>(null)
   const [successMessage, setSuccessMessage] = useState('')
+  const [removingSamples, setRemovingSamples] = useState(false)
+  const [addingSamples, setAddingSamples] = useState(false)
+  // Same key as Overview; a deployment without sample settings leaves this null.
+  const samplesQuery = useQuery({
+    queryKey: ['sample-sources'],
+    queryFn: () => loadSampleSources(apiFetch),
+    staleTime: Infinity,
+  })
+  const [sampleRemoveError, setSampleRemoveError] = useState('')
   const [testingSourceId, setTestingSourceId] = useState<string | null>(null)
   const [testReport, setTestReport] = useState<ConnectionTestReport | null>(null)
   const [testError, setTestError] = useState('')
@@ -223,9 +249,9 @@ export function SourcesPage({ route, onNavigate }: SourcesPageProps = {}) {
   const connectorsById = new Map(
     (connectorsQuery.data ?? []).map((connector) => [connector.id, connector]),
   )
-  const sources = (sourcesQuery.data ?? []).map((source) =>
-    toSource(source, connectorsById.get(source.connector)),
-  )
+  const sources = (sourcesQuery.data ?? [])
+    .filter(isDataSource)
+    .map((source) => toSource(source, connectorsById.get(source.connector)))
   const sourceSearchQuery = searchText.trim().toLowerCase()
   const filteredSources = sourceSearchQuery
     ? sources.filter(
@@ -360,6 +386,59 @@ export function SourcesPage({ route, onNavigate }: SourcesPageProps = {}) {
     setSuccessMessage(t('sources.edit.success', { id: result.source.id }))
   }
 
+  const samplesMissing = (samplesQuery.data ?? []).some(
+    (sample) => !(sourcesQuery.data ?? []).some((source) => source.id === sample.id),
+  )
+
+  async function addSamples() {
+    setAddingSamples(true)
+    setSampleRemoveError('')
+    try {
+      const result = await addSampleSources(
+        samplesQuery.data ?? [],
+        sourcesQuery.data ?? [],
+        apiFetch,
+      )
+      queryClient.setQueryData<SourceView[]>(['sources'], (current) =>
+        [
+          ...(current ?? []).filter((item) => !result.added.some((added) => added.id === item.id)),
+          ...result.added,
+        ].sort((left, right) => left.id.localeCompare(right.id)),
+      )
+      setSuccessMessage(t('sources.samples.added', { count: result.added.length }))
+    } catch {
+      setSampleRemoveError(t('overview.addSources.sample.error'))
+    } finally {
+      setAddingSamples(false)
+    }
+  }
+
+  async function removeSamples() {
+    setRemovingSamples(true)
+    setSampleRemoveError('')
+    try {
+      const result = await removeSampleSources(sourcesQuery.data ?? [], apiFetch)
+      queryClient.setQueryData<SourceView[]>(['sources'], (current) =>
+        (current ?? []).filter((item) => !result.removed.includes(item.id)),
+      )
+      if (selectedSource && result.removed.includes(selectedSource.id)) selectSource(null)
+      if (result.refused) {
+        setSampleRemoveError(
+          t('sources.samples.inUse', {
+            id: result.refused.sourceId,
+            pipelines: result.refused.referrers.join(', '),
+          }),
+        )
+      } else {
+        setSuccessMessage(t('sources.samples.removed', { count: result.removed.length }))
+      }
+    } catch {
+      setSampleRemoveError(t('sources.samples.error'))
+    } finally {
+      setRemovingSamples(false)
+    }
+  }
+
   function onDeleted(source: Source) {
     queryClient.setQueryData<SourceView[]>(['sources'], (current) =>
       (current ?? []).filter((item) => item.id !== source.id),
@@ -392,15 +471,52 @@ export function SourcesPage({ route, onNavigate }: SourcesPageProps = {}) {
         <h1 className="min-w-0 truncate text-[15px] font-semibold text-gray-900">
           {t('sources.title')}
         </h1>
-        <Button
-          type="button"
-          className="px-3 text-[13px] font-medium shadow-sm"
-          onClick={() => setCreateOpen(true)}
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          {t('sources.actions.create')}
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          {samplesMissing && (
+            <Button
+              type="button"
+              variant="outline"
+              className="px-3 text-[13px] font-medium"
+              disabled={addingSamples}
+              onClick={() => void addSamples()}
+            >
+              {addingSamples
+                ? t('overview.addSources.sample.adding')
+                : t('overview.addSources.sample.action')}
+            </Button>
+          )}
+          {(sourcesQuery.data ?? []).some(isSampleSource) && (
+            <Button
+              type="button"
+              variant="outline"
+              className="px-3 text-[13px] font-medium"
+              disabled={removingSamples}
+              onClick={() => void removeSamples()}
+            >
+              {removingSamples ? t('sources.samples.removing') : t('sources.samples.remove')}
+            </Button>
+          )}
+          <Button
+            type="button"
+            className="px-3 text-[13px] font-medium shadow-sm"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            {t('sources.actions.create')}
+          </Button>
+        </div>
       </header>
+      {sampleRemoveError && (
+        <div
+          className="text-destructive flex items-start justify-between gap-3 border-b border-gray-100/70 px-4 py-2 text-[13px] md:px-6"
+          role="alert"
+        >
+          <p>{sampleRemoveError}</p>
+          <Button type="button" variant="ghost" size="sm" onClick={() => setSampleRemoveError('')}>
+            {t('sources.samples.dismiss')}
+          </Button>
+        </div>
+      )}
 
       {successMessage && (
         <div
@@ -487,6 +603,9 @@ export function SourcesPage({ route, onNavigate }: SourcesPageProps = {}) {
                   className="size-4 rounded-md border-0 bg-transparent"
                 />
                 <span className="truncate">{source.name}</span>
+                {isSampleSource(source.raw) && (
+                  <Badge variant="secondary">{t('sources.samples.tag')}</Badge>
+                )}
                 <span
                   className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300"
                   aria-hidden="true"
@@ -802,7 +921,14 @@ export function SourcesPage({ route, onNavigate }: SourcesPageProps = {}) {
           }
         }}
       />
-      <SourceCreateDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={onCreated} />
+      <SourceCreateDialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open)
+          if (!open) onArrivalCreateClosed?.()
+        }}
+        onCreated={onCreated}
+      />
       {editingSourceId &&
         editingSourceQuery.data &&
         !editingSourceQuery.isFetching &&
@@ -1058,6 +1184,9 @@ function AllSourcesView({
                         />
                       </span>
                       <span className="font-medium text-gray-900">{source.name}</span>
+                      {isSampleSource(source.raw) && (
+                        <Badge variant="secondary">{t('sources.samples.tag')}</Badge>
+                      )}
                     </Button>
                   </td>
                   <td className="px-4 py-3 text-gray-600">{source.type}</td>

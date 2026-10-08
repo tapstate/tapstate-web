@@ -2,6 +2,12 @@ export type JsonPrimitive = string | number | boolean | null
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue }
 export type ApiFetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 
+/**
+ * Id under which the server registers its own managed store for views. It is listed with the
+ * sources, but it is where views are kept rather than something to build pipelines from.
+ */
+export const MANAGED_VIEW_STORE_SOURCE_ID = 'views'
+
 export interface SourceTableView {
   type: string
   name: string | null

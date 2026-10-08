@@ -22,14 +22,19 @@ const CREATE_PIPELINE_HOTKEY = 'Mod+Enter'
 export interface PipelineCreationDialogProps {
   open: boolean
   onClose: () => void
+  defaultMode?: PipelineCreationMode
 }
 
-export function PipelineCreationDialog({ open, onClose }: PipelineCreationDialogProps) {
+export function PipelineCreationDialog({
+  open,
+  onClose,
+  defaultMode = 'dag',
+}: PipelineCreationDialogProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const queryClient = useQueryClient()
-  const [mode, setMode] = useState<PipelineCreationMode>('dag')
+  const [mode, setMode] = useState<PipelineCreationMode>(defaultMode)
   const [pipelineId, setPipelineId] = useState('')
   const [description, setDescription] = useState('')
   const [notice, setNotice] = useState<string | null>(null)

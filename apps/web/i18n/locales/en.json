@@ -17,10 +17,22 @@
     "user": {
       "avatar": "User avatar",
       "initial": "U"
+    },
+    "secondaryNavigation": "Secondary navigation",
+    "cloudIdentity": {
+      "label": "Cloud workspace and cluster",
+      "organizationLoading": "Loading organization…",
+      "organizationUnavailable": "Organization unavailable",
+      "clusterLoading": "Loading cluster…",
+      "clusterUnavailable": "Cluster unavailable",
+      "region": "AWS {{region}}",
+      "regionUnavailable": "Region unavailable"
     }
   },
   "nav": {
+    "views": "Views",
     "overview": "Overview",
+    "settings": "Settings",
     "resources": "Resources",
     "develop": "Develop",
     "operations": "Operations",
@@ -29,7 +41,6 @@
     "admin": "Admin",
     "sources": "Data Sources",
     "pipelines": "Pipelines",
-    "views": "Views",
     "explorations": "Explorations"
   },
   "context": {
@@ -390,6 +401,18 @@
       "lineage": "Lineage",
       "log": "Log",
       "settings": "Settings"
+    },
+    "samples": {
+      "tag": "Sample",
+      "remove": "Remove sample sources",
+      "removing": "Removing…",
+      "removed_one": "Removed {{count}} sample source.",
+      "removed_other": "Removed {{count}} sample sources.",
+      "inUse": "Sample source {{id}} is still read by: {{pipelines}}. Delete those pipelines first; the samples not yet removed were kept.",
+      "error": "The sample sources could not be removed. Try again.",
+      "dismiss": "Dismiss",
+      "added_one": "Added {{count}} sample source.",
+      "added_other": "Added {{count}} sample sources."
     }
   },
   "pipelines": {
@@ -1017,7 +1040,12 @@
           "historyError": "We couldn't load output history. Check the control plane and retry.",
           "noRetainedSamples": "No samples are retained for this time range. This does not indicate whether the Pipeline has run before.",
           "rangeLabel": "History time range",
-          "ranges": { "1h": "1h", "6h": "6h", "24h": "24h", "7d": "7d" },
+          "ranges": {
+            "1h": "1h",
+            "6h": "6h",
+            "24h": "24h",
+            "7d": "7d"
+          },
           "recordsRate": "Records per second",
           "bytesRate": "Bytes per second",
           "rateUnavailable": "No {{metric}} samples are available in this range.",
@@ -1232,7 +1260,11 @@
       "editTable": "(edit)",
       "relationship": "Related table",
       "shape": "Relationship shape",
-      "shapes": { "flat": "Flatten", "object": "Document", "array": "Array" },
+      "shapes": {
+        "flat": "Flatten",
+        "object": "Document",
+        "array": "Array"
+      },
       "preprocess": "Pre-process",
       "closeTablePicker": "Close table selection",
       "as": "as",
@@ -1309,6 +1341,10 @@
     "unsavedChanges": "Unsaved changes",
     "actionSummary": "{{relatedCount}} related tables · {{transformCount}} Transform steps",
     "savePipeline": "Save",
+    "inspectPlan": "Inspect Plan",
+    "dslPreview": "DSL Preview",
+    "dslLoading": "Compiling DSL…",
+    "dslUnavailable": "The server did not return a DSL preview.",
     "startPipeline": "Save & start",
     "starting": "Starting pipeline…",
     "startPhases": {
@@ -1366,6 +1402,77 @@
       "revert": "Revert field",
       "title": "Field Rename",
       "transform": "Transform"
+    },
+    "guide": {
+      "eyebrow": "CUSTOMER 360 GUIDE",
+      "title": "Build a customer 360 view",
+      "collapsed": "A guided Customer 360 walkthrough is available.",
+      "open": "Open guide",
+      "mode": "Guide mode",
+      "storyboard": "Storyboard",
+      "inSitu": "In place",
+      "close": "Close guide",
+      "stepsLabel": "Customer 360 guide steps",
+      "stepOf": "Step {{step}} of {{total}}",
+      "calloutBadge": "Step {{step}}/5 · {{title}}",
+      "calloutHint": "💡 Guide · Use Next to continue, or inspect the configured card",
+      "calloutLockedHint": "💡 This sample is preset and locked. Use Next to review each step.",
+      "previous": "Previous",
+      "next": "Next",
+      "launch": "Launch Pipeline",
+      "noSample": "Connect a MySQL or PostgreSQL source with customer, order, and line item tables to prefill these steps.",
+      "primaryKey": "Key: {{keys}}",
+      "joinCount": "Join fields: {{first}} + {{second}}",
+      "applyPreset": "Use detected sample",
+      "presetApplied": "Sample structure added",
+      "fixedNotice": "This Customer 360 sample is preconfigured. Review each step, then start the pipeline; its configuration is locked.",
+      "fixedTransformNote": "The preset keeps source fields unchanged. No transform is required for this nested customer view.",
+      "fixedTransform": {
+        "shortTitle": "Source fields",
+        "title": "Keep the source fields",
+        "body": "The customer, order, and line item fields flow into the nested document without an extra transform.",
+        "calloutNext": "Continue to document preview →"
+      },
+      "applyBeforeFormula": "Apply the detected sample structure first.",
+      "addFormula": "Add expression to draft",
+      "formulaAdded": "Added to draft",
+      "formulaUnavailable": "This server does not compile computed map expressions yet. The expression stays in the draft and blocks publishing; remove it to run the nested view.",
+      "previewNote": "This preview shows document structure from discovered schema. It does not fetch sample row values.",
+      "saveOnly": "Computed fields are not publishable on this server yet. Save the draft, then remove this expression before running.",
+      "saveDraft": "Save draft",
+      "steps": {
+        "root": {
+          "shortTitle": "Customer root",
+          "title": "Choose the customer root",
+          "body": "Each customer row becomes a root document. The guide uses the connected table and its discovered primary key.",
+          "calloutNext": "Continue to nested orders →"
+        },
+        "relations": {
+          "shortTitle": "Nest orders",
+          "title": "Nest orders and line items",
+          "body": "Embed {{ordersTable}} as orders[] and {{itemsTable}} as items[] using discovered keys, including composite joins.",
+          "calloutNext": "Continue to source fields →"
+        },
+        "transform": {
+          "shortTitle": "Lifetime value",
+          "title": "Calculate lifetime value",
+          "body": "Sum {{amountField}} across nested order lines. Add the expression to the draft to inspect how this calculation is represented.",
+          "calloutNext": "Continue to document preview →"
+        },
+        "preview": {
+          "shortTitle": "Document preview",
+          "title": "Review the document shape",
+          "body": "Inspect the customer fields and nested order arrays in the JSON or table preview.",
+          "calloutNext": "Continue to save and run →"
+        },
+        "launch": {
+          "shortTitle": "Save and run",
+          "title": "Save and start the pipeline",
+          "body": "Save the configured draft, review any compiler messages, then start the pipeline from the action dock.",
+          "calloutDetail": "Save draft · validate · start pipeline",
+          "calloutNext": "Start Pipeline"
+        }
+      }
     }
   },
   "views": {
@@ -1386,8 +1493,9 @@
       "action": "Open Pipelines"
     },
     "states": {
-      "loading": "Loading views...",
-      "error": "Views could not be loaded."
+      "loading": "Loading views…",
+      "error": "Views could not be loaded.",
+      "notReported": "This server does not list views yet. Each pipeline still shows where it writes on its own page."
     },
     "stats": {
       "documents": "Estimated documents",
@@ -1424,7 +1532,107 @@
       "loading": "Loading Pipeline lineage...",
       "unavailable": "Pipeline lineage is not available for this view on this server.",
       "noSources": "No upstream source tables were reported."
-    }
+    },
+    "newView": "New view",
+    "intro": "Your live operational state: every view Tapstate keeps current.",
+    "kind": {
+      "view": "View",
+      "replica": "Replica"
+    },
+    "status": {
+      "fresh": "Fresh · {{behind}} behind",
+      "stale": "Stale · {{age}}",
+      "staleUnknown": "Stale",
+      "loading": "Loading {{percent}}%",
+      "loadingUnknown": "Loading",
+      "notLoaded": "Not loaded"
+    },
+    "duration": {
+      "s": "{{value}} s",
+      "min": "{{value}} min",
+      "h": "{{value}} h",
+      "d": "{{value}} d"
+    },
+    "ago": "{{age}} ago",
+    "summary": {
+      "total_one": "{{count}} view",
+      "total_other": "{{count}} views",
+      "fresh_one": "{{count}} fresh",
+      "fresh_other": "{{count}} fresh",
+      "stale_one": "{{count}} stale",
+      "stale_other": "{{count}} stale",
+      "slowest": "slowest {{behind}} behind",
+      "loading_one": "{{count}} loading",
+      "loading_other": "{{count}} loading",
+      "notLoaded_one": "{{count}} not loaded",
+      "notLoaded_other": "{{count}} not loaded"
+    },
+    "table": {
+      "name": "Name",
+      "type": "Type",
+      "storedIn": "Stored in",
+      "status": "Status",
+      "documents": "Documents",
+      "lastChange": "Last change applied",
+      "maintainedBy": "Maintained by"
+    },
+    "storedIn": {
+      "managed": "Tapstate state store",
+      "store": "{{store}} / {{database}}"
+    },
+    "explainer": {
+      "empty": "No views yet",
+      "what": "A view is a collection Tapstate keeps current from your source tables.",
+      "flowLabel": "How a view is made",
+      "sources": "Sources",
+      "pipeline": "Pipeline",
+      "view": "View",
+      "storedIn": "Views will be stored in",
+      "storeMissing": "Views live in a state store. Pick one before building a view.",
+      "setUp": "Set up",
+      "build": "Build a view",
+      "replicas": "Mirroring tables creates replicas; they appear here too."
+    },
+    "detail": {
+      "maintainedBy": "Maintained by",
+      "notFound": "No view named {{id}} on this server.",
+      "tabsLabel": "View sections",
+      "tabs": {
+        "overview": "Overview",
+        "documents": "Documents",
+        "shape": "Shape",
+        "lineage": "Lineage",
+        "indexes": "Indexes"
+      },
+      "pending": {
+        "documents": "Browsing documents is not available on this server yet.",
+        "shape": "The document shape is not available on this server yet.",
+        "lineage": "Field lineage is not available on this server yet.",
+        "indexes": "Index details are not available on this server yet."
+      },
+      "size": "Size",
+      "largestDocument": "Largest document",
+      "collection": "collection {{name}}",
+      "storedIn": "Stored in",
+      "siblings": "Also written by this pipeline:",
+      "freshness": "Freshness",
+      "lastApplied": "last change applied {{age}} ago",
+      "neverApplied": "no change applied yet",
+      "documentLimit": "limit 16 MB per document",
+      "initialLoad": "Initial load",
+      "upToDate": "Up to date",
+      "streaming": "Initial load finished; change capture keeps it current.",
+      "pipelineState": {
+        "NEW": "never started",
+        "RUNNING": "running",
+        "PAUSED": "paused",
+        "STOPPED": "stopped",
+        "COMPLETED": "completed",
+        "FAILED": "failed"
+      }
+    },
+    "footnote": "Status combines the pipeline's state with how far the view is behind its sources. A View is a built document; a Replica is a mirrored copy of one table.",
+    "browseCollections": "Browse collections"
   },
   "notFound": {
     "back": "Back to workspace",
@@ -1433,12 +1641,222 @@
     "title": "Page not found"
   },
   "view": {
-    "overview": { "title": "Overview", "placeholder": "Workspace health at a glance." },
-    "resources": { "title": "Resources", "placeholder": "All assets, filterable by kind." },
-    "develop": { "title": "Develop", "placeholder": "DAG canvas & SQL editor." },
-    "operations": { "title": "Operations", "placeholder": "Task runs, cluster, Share CDC." },
-    "governance": { "title": "Governance", "placeholder": "Lineage, verification, monitoring." },
-    "services": { "title": "Data Services", "placeholder": "Published APIs & tokens." },
-    "admin": { "title": "Admin", "placeholder": "Users, roles, tenants, settings." }
+    "overview": {
+      "title": "Overview",
+      "placeholder": "Workspace health at a glance."
+    },
+    "resources": {
+      "title": "Resources",
+      "placeholder": "All assets, filterable by kind."
+    },
+    "develop": {
+      "title": "Develop",
+      "placeholder": "DAG canvas & SQL editor."
+    },
+    "operations": {
+      "title": "Operations",
+      "placeholder": "Task runs, cluster, Share CDC."
+    },
+    "governance": {
+      "title": "Governance",
+      "placeholder": "Lineage, verification, monitoring."
+    },
+    "services": {
+      "title": "Data Services",
+      "placeholder": "Published APIs & tokens."
+    },
+    "admin": {
+      "title": "Admin",
+      "placeholder": "Users, roles, tenants, settings."
+    }
+  },
+  "overview": {
+    "title": "Overview",
+    "pipelineHub": "Tapstate Pipeline",
+    "pipelineHubSubtitle": "Continuous CDC Sync",
+    "notReported": "Not reported by this server yet",
+    "streamStatus": {
+      "label": "Pipeline stream status",
+      "active_one": "{{count}} pipeline streaming",
+      "active_other": "{{count}} pipelines streaming",
+      "none": "No pipeline is streaming right now",
+      "preview": "Flow preview",
+      "sources_one": "{{count}} connected source",
+      "sources_other": "{{count}} connected sources",
+      "destination": "State store: {{name}}",
+      "open": "View pipelines"
+    },
+    "milestones": {
+      "title": "Setup milestones",
+      "stateStore": "Set up the state store",
+      "stateStoreShort": "State Store",
+      "sources": "Connect data sources",
+      "sourcesShort": "Add Databases",
+      "pipeline": "Build a pipeline",
+      "pipelineShort": "Build Pipeline",
+      "configure": "Open settings",
+      "connectStateStore": "Connect State Store",
+      "connectAtlas": "Connect Atlas",
+      "trySample": "Try sample",
+      "addSources": "Add sources",
+      "build": "Build Pipeline",
+      "newPipeline": "New Pipeline",
+      "open": "Open"
+    },
+    "problems_one": "{{count}} problem",
+    "problems_other": "{{count}} problems",
+    "states": {
+      "loading": "Loading the overview…",
+      "error": "The overview could not be loaded."
+    },
+    "setup": {
+      "progress": "Setup {{completed}} of {{total}}",
+      "hideHints": "Hide setup hints",
+      "showHints": "Show setup hints",
+      "stepOf": "Step {{step}} of {{total}}",
+      "stepNumber": "Setup step {{step}}",
+      "stepDone": "Setup step {{step}} done",
+      "later": "Skip, I'll do it later",
+      "stateStore": {
+        "title": "Choose where your views live",
+        "description": "This server has no state store yet; an administrator needs to set one up."
+      },
+      "sources": {
+        "title": "Add the databases you build from",
+        "action": "Add data sources"
+      },
+      "pipeline": {
+        "title": "Start your first pipeline",
+        "action": "Build your first pipeline"
+      },
+      "complete": {
+        "title": "Setup complete.",
+        "body": "Your state store, sources and first pipeline are ready. This note will not show again.",
+        "close": "Close"
+      }
+    },
+    "sources": {
+      "title": "Sources",
+      "metric_one": "{{count}} source",
+      "metric_other": "{{count}} sources",
+      "none": "No sources yet.",
+      "more_one": "and {{count}} more",
+      "more_other": "and {{count}} more",
+      "open": "Data Sources →",
+      "add": "Add data sources",
+      "connected": "Connected",
+      "connect": "Connect to {{name}}",
+      "tooltip": "Select {{connector}} source {{id}}"
+    },
+    "pipelines": {
+      "title": "Pipelines",
+      "metric_one": "{{count}} pipeline",
+      "metric_other": "{{count}} pipelines",
+      "running": "Running",
+      "idle": "Idle",
+      "error": "Error",
+      "open": "Pipelines →",
+      "none": "No pipeline yet.",
+      "build": "Build your first pipeline",
+      "idleValue_one": "{{count}} · stopped or never started",
+      "idleValue_other": "{{count}} · stopped or never started"
+    },
+    "stateStore": {
+      "title": "State store",
+      "atlasTitle": "MongoDB Atlas State Store",
+      "atlasMissing": "Click to connect your target Atlas cluster",
+      "atlasManaged": "Connected as the destination",
+      "ready": "Ready",
+      "missing": "Not set up yet.",
+      "location": "Location",
+      "managed": "Tapstate state store",
+      "views": "Views",
+      "open": "Settings → State store",
+      "metric_one": "{{count}} view",
+      "metric_other": "{{count}} views",
+      "fresh": "Fresh",
+      "stale": "Stale",
+      "missingDetail": "Views live in a state store. Pick one before building a view.",
+      "openViews": "Views →"
+    },
+    "attention": {
+      "title": "Needs attention",
+      "clear": "All clear. No failed pipelines or stale views.",
+      "pipelineFailed": "Failed pipeline",
+      "viewStale": "Stale view",
+      "lastApplied_one": "last change applied {{count}} min ago",
+      "lastApplied_other": "last change applied {{count}} min ago",
+      "neverApplied": "no change applied yet",
+      "pipelineIs": {
+        "running": "its pipeline {{pipeline}} is running",
+        "idle": "its pipeline {{pipeline}} is stopped",
+        "error": "its pipeline {{pipeline}} has failed",
+        "unknown": "maintained by {{pipeline}}"
+      },
+      "openPipeline": "Open in Pipelines",
+      "openView": "Open in Views"
+    },
+    "subtitle": "Data flows from your sources, through pipelines, into the state store.",
+    "addSources": {
+      "title": "Add data sources",
+      "description": "Add the databases you want to build from.",
+      "connect": {
+        "title": "Connect your own database",
+        "description": "Oracle, SQL Server, MySQL, PostgreSQL or MongoDB. The connection test runs as you add it.",
+        "action": "Connect a database"
+      },
+      "added_one": "Your source ({{count}})",
+      "added_other": "Your sources ({{count}})",
+      "done": "Done",
+      "tag": "Sample",
+      "sample": {
+        "title": "Use the sample bank sources",
+        "description": "{{names}}, prepared for change capture. They are tagged Sample and can be removed from Data Sources.",
+        "and": " and ",
+        "action": "Add sample sources",
+        "adding": "Adding…",
+        "added": "Added",
+        "error": "The sample sources could not be added. Try again, or connect your own database."
+      }
+    }
+  },
+  "stateStorePage": {
+    "title": "State stores",
+    "intro": "Where Tapstate keeps your views. Every view a pipeline builds is written to the default store.",
+    "listLabel": "State stores",
+    "add": "Add store",
+    "addLimit": "One store in this release",
+    "default": "Default",
+    "delete": "Delete",
+    "fields": {
+      "type": "Type",
+      "location": "Database",
+      "checks": "Checks",
+      "usage": "Usage",
+      "access": "Access"
+    },
+    "managed": {
+      "name": "Tapstate state store",
+      "type": "MongoDB · server metadata database",
+      "access": "Shares the MongoDB this server already uses. For production, use a separate MongoDB.",
+      "deleteReason": "The server manages this store"
+    },
+    "cloud": {
+      "name": "Atlas state store",
+      "type": "MongoDB Atlas",
+      "access": "The single Atlas destination for this organization. Connection details are managed by Tapstate."
+    },
+    "states": {
+      "loading": "Loading state stores…",
+      "error": "State stores could not be loaded.",
+      "empty": "No state store yet. Pipelines cannot start until one is set."
+    },
+    "settings": "Settings",
+    "sectionsLabel": "Settings sections",
+    "sections": {
+      "stateStore": "State store",
+      "members": "Members",
+      "apiKeys": "API keys"
+    }
   }
 }

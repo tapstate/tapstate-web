@@ -1,11 +1,22 @@
 import type { ComponentType, SVGProps } from 'react'
 
+import { useQuery } from '@tanstack/react-query'
 import { Link, useRouterState } from '@tanstack/react-router'
-import { Database, GitMerge, MessageSquareText, Table2, Terminal } from 'lucide-react'
+import {
+  Building2,
+  Database,
+  GitMerge,
+  LayoutDashboard,
+  MessageSquareText,
+  Settings,
+  Table2,
+  Terminal,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
-import { getDeploymentProfile } from '@/utils/deployment-profile'
+import { loadCloudWorkspaceContext } from '@/service/cloud-workspace-client'
+import { useAuthStore } from '@/stores/auth-store'
 
 import { AppHeader } from './app-header'
 
@@ -16,48 +27,115 @@ interface NavigationItem {
 }
 
 const navigation: NavigationItem[] = [
+  { labelKey: 'nav.overview', to: '/overview', icon: LayoutDashboard },
   { labelKey: 'nav.sources', to: '/sources', icon: Database },
   { labelKey: 'nav.pipelines', to: '/pipelines', icon: GitMerge },
-  ...(getDeploymentProfile() === 'cloud'
-    ? [{ labelKey: 'nav.views', to: '/views', icon: Table2 }]
-    : []),
+  { labelKey: 'nav.views', to: '/views', icon: Table2 },
   { labelKey: 'nav.explorations', to: '/explorations', icon: MessageSquareText },
+]
+
+/** Kept apart from the places above, at the foot of the sidebar. */
+const footerNavigation: NavigationItem[] = [
+  { labelKey: 'nav.settings', to: '/settings', icon: Settings },
 ]
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const { t } = useTranslation()
+  const profile = useAuthStore((state) => state.profile)
+  const apiFetch = useAuthStore((state) => state.apiFetch)
+  const cloudContext = useQuery({
+    queryKey: ['cloud-workspace-context'],
+    queryFn: () => loadCloudWorkspaceContext(apiFetch),
+    enabled: profile === 'cloud',
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  })
 
   return (
     <aside className="app-sidebar bg-transparent">
-      <div className="app-sidebar__brand mt-2">
-        <div className="app-sidebar__mark" aria-hidden="true">
-          <Terminal className="h-3 w-3 text-white" />
+      {profile === 'cloud' ? (
+        <div className="app-sidebar__cloud-identity mt-2" aria-label={t('app.cloudIdentity.label')}>
+          <div className="app-sidebar__cloud-organization">
+            <span className="app-sidebar__cloud-organization-icon" aria-hidden="true">
+              <Building2 className="h-4 w-4" />
+            </span>
+            <span
+              className="app-sidebar__cloud-organization-name"
+              title={cloudContext.data?.organizationName}
+            >
+              {cloudContext.data?.organizationName ??
+                (cloudContext.isLoading
+                  ? t('app.cloudIdentity.organizationLoading')
+                  : t('app.cloudIdentity.organizationUnavailable'))}
+            </span>
+          </div>
+          <div className="app-sidebar__cloud-cluster" aria-live="polite">
+            <span
+              className={cn(
+                'app-sidebar__cloud-cluster-status',
+                cloudContext.data?.clusterState === 'READY' &&
+                  'app-sidebar__cloud-cluster-status--ready',
+                cloudContext.data?.clusterState === 'DEGRADED' &&
+                  'app-sidebar__cloud-cluster-status--degraded',
+              )}
+              aria-hidden="true"
+            />
+            <span className="app-sidebar__cloud-cluster-copy">
+              <span className="app-sidebar__cloud-cluster-name">
+                {cloudContext.data?.clusterName ??
+                  (cloudContext.isLoading
+                    ? t('app.cloudIdentity.clusterLoading')
+                    : t('app.cloudIdentity.clusterUnavailable'))}
+              </span>
+              <span className="app-sidebar__cloud-cluster-region">
+                {cloudContext.data?.region
+                  ? t('app.cloudIdentity.region', { region: cloudContext.data.region })
+                  : t('app.cloudIdentity.regionUnavailable')}
+              </span>
+            </span>
+          </div>
         </div>
-        <span className="app-sidebar__title">{t('app.brand')}</span>
-      </div>
+      ) : (
+        <div className="app-sidebar__brand mt-2">
+          <div className="app-sidebar__mark" aria-hidden="true">
+            <Terminal className="h-3 w-3 text-white" />
+          </div>
+          <span className="app-sidebar__title">{t('app.brand')}</span>
+        </div>
+      )}
 
       <nav className="app-sidebar__nav" aria-label={t('app.primaryNavigation')}>
-        {navigation.map((item) => {
-          const Icon = item.icon
-          return (
-            <Link
-              key={item.to}
-              to={item.to}
-              aria-current={pathname.startsWith(item.to) ? 'page' : undefined}
-              className={cn(
-                'app-sidebar__link',
-                pathname.startsWith(item.to) && 'app-sidebar__link--active',
-              )}
-            >
-              <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-              <span>{t(item.labelKey)}</span>
-            </Link>
-          )
-        })}
+        {navigation.map((item) => (
+          <SidebarLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
+        ))}
+      </nav>
+
+      <nav
+        className="app-sidebar__nav app-sidebar__nav--footer"
+        aria-label={t('app.secondaryNavigation')}
+      >
+        {footerNavigation.map((item) => (
+          <SidebarLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
+        ))}
       </nav>
 
       <AppHeader />
     </aside>
+  )
+}
+
+function SidebarLink({ item, active }: { item: NavigationItem; active: boolean }) {
+  const { t } = useTranslation()
+  const Icon = item.icon
+  return (
+    <Link
+      to={item.to}
+      aria-current={active ? 'page' : undefined}
+      className={cn('app-sidebar__link', active && 'app-sidebar__link--active')}
+    >
+      <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+      <span>{t(item.labelKey)}</span>
+    </Link>
   )
 }

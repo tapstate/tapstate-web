@@ -7,6 +7,7 @@ import {
   Braces,
   X,
   FileCode,
+  Play,
   Zap,
   Check,
   RefreshCw,
@@ -45,6 +46,14 @@ export interface WizardBuilderProps {
   compiledSpec: string
   sourceError?: string
   readOnly?: boolean
+  readOnlyLabel?: string
+  activeGuideTarget?: string
+  renderGuideStep?: (step: number) => React.ReactNode
+  showWorkbenchHeader?: boolean
+  onInspectPlan?: () => Promise<string>
+  onStart?: () => void
+  startBusy?: boolean
+  actionError?: string
 }
 
 export interface JoinCondition {
@@ -117,6 +126,34 @@ export interface WizardViewState {
   destinationWriteMode: string
 }
 
+function ReadOnlyFieldset({
+  disabled,
+  label,
+  children,
+}: {
+  disabled: boolean
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <fieldset
+      disabled={disabled}
+      className="contents"
+      aria-label={disabled ? label : undefined}
+      onClickCapture={
+        disabled
+          ? (event) => {
+              event.preventDefault()
+              event.stopPropagation()
+            }
+          : undefined
+      }
+    >
+      {children}
+    </fieldset>
+  )
+}
+
 export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   catalog: AVAILABLE_DATA_SOURCES,
   initial,
@@ -128,11 +165,36 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   compiledSpec,
   sourceError,
   readOnly = false,
+  readOnlyLabel,
+  activeGuideTarget,
+  renderGuideStep,
+  showWorkbenchHeader = false,
+  onInspectPlan,
+  onStart,
+  startBusy = false,
+  actionError,
 }) => {
   const { t } = useTranslation()
   const [activeContext, setActiveContext] = React.useState('root')
   const [previewMode, setPreviewMode] = React.useState<'json' | 'table'>('json')
-  const [showPlanModal, setShowPlanModal] = React.useState(false)
+  const [planMode, setPlanMode] = React.useState<'dsl' | 'json' | null>(null)
+  const [dsl, setDsl] = React.useState<string | null>(null)
+  const [dslLoading, setDslLoading] = React.useState(false)
+  const [dslError, setDslError] = React.useState('')
+  async function inspectPlan() {
+    if (!onInspectPlan) return
+    setPlanMode('dsl')
+    setDsl(null)
+    setDslError('')
+    setDslLoading(true)
+    try {
+      setDsl(await onInspectPlan())
+    } catch (cause) {
+      setDslError(cause instanceof Error ? cause.message : t('wizard.dslUnavailable'))
+    } finally {
+      setDslLoading(false)
+    }
+  }
   const [targetCollection, setTargetCollection] = React.useState(initial.destinationTable)
   const [targetSourceId, setTargetSourceId] = React.useState(initial.destinationSourceId)
   const [targetWriteMode, setTargetWriteMode] = React.useState(
@@ -579,6 +641,12 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
 
       {/* Relation Card */}
       <div
+        id={!nested && rel.id === relations[0]?.id ? 'step-first-relation' : undefined}
+        data-guide-active={
+          !nested && rel.id === relations[0]?.id && activeGuideTarget === 'step-first-relation'
+            ? true
+            : undefined
+        }
         onClick={(event) => {
           event.stopPropagation()
           setActiveContext(rel.id)
@@ -586,11 +654,13 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
         className={cn(
           'wizard-reference-relation-radius cursor-pointer border transition-all duration-150',
           nested ? 'bg-gray-50/80 p-3.5 shadow-2xs hover:bg-white' : 'bg-white p-4 shadow-xs',
-          activeContext === rel.id
-            ? nested
-              ? 'border-purple-500 bg-white ring-1 ring-purple-500/20'
-              : 'border-blue-500 ring-1 ring-blue-500/20'
-            : 'border-gray-200 hover:border-gray-300',
+          !nested && rel.id === relations[0]?.id && activeGuideTarget === 'step-first-relation'
+            ? 'border-indigo-500 bg-gradient-to-b from-indigo-50/15 to-white shadow-md ring-2 ring-indigo-500/40'
+            : activeContext === rel.id
+              ? nested
+                ? 'border-purple-500 bg-white ring-1 ring-purple-500/20'
+                : 'border-blue-500 ring-1 ring-blue-500/20'
+              : 'border-gray-200 hover:border-gray-300',
         )}
       >
         {/* Card Header (2-row title on the left, actions on the right) */}
@@ -1377,31 +1447,72 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
 
   return (
     <div className="wizard-reference flex h-full w-full flex-col overflow-hidden font-sans text-gray-900 select-none">
-      {/* Top Workbench Header */}
+      {showWorkbenchHeader && (
+        <>
+          <header
+            className="flex h-12 shrink-0 items-center justify-end gap-3 border-b border-gray-200/80 bg-white/80 px-4 saturate-150 backdrop-blur-md"
+            data-testid="wizard-workbench-header"
+          >
+            <button
+              type="button"
+              onClick={() => void inspectPlan()}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
+            >
+              <FileCode className="h-3.5 w-3.5 text-gray-500" aria-hidden="true" />
+              {t('wizard.inspectPlan')}
+            </button>
+            {!readOnly && onStart && (
+              <button
+                type="button"
+                onClick={onStart}
+                disabled={startBusy}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-[12px] font-medium text-gray-700 shadow-2xs transition-colors hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60"
+              >
+                <Play className="h-3.5 w-3.5 text-blue-600" aria-hidden="true" />
+                {startBusy ? t('wizard.starting') : t('wizard.startPipeline')}
+              </button>
+            )}
+          </header>
+          {actionError && (
+            <p
+              className="shrink-0 border-b border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700"
+              role="alert"
+            >
+              {actionError}
+            </p>
+          )}
+        </>
+      )}
       {/* Main Workspace Split */}
       <div className="wizard-reference-workspace flex min-h-0 flex-1 overflow-hidden">
         {/* Left / Center Canvas */}
         <div className="wizard-reference-editor-column">
-          <fieldset
-            disabled={readOnly}
-            className="contents"
-            aria-label={readOnly ? t('pipelines.workspace.readOnly.editorStatus') : undefined}
+          <main
+            id="wizard-canvas-main"
+            className="wizard-reference-canvas flex min-w-0 flex-1 flex-col overflow-y-auto"
             data-testid="wizard-editor-controls"
             data-read-only={readOnly ? 'true' : 'false'}
           >
-            <main className="wizard-reference-canvas flex min-w-0 flex-1 flex-col overflow-y-auto">
-              <div className="w-full min-w-0 pb-24">
-                {/* ================================================================= */}
-                {/* STEP 1: ROOT TABLE (主表锚点 - 卡片原生就地配置，前后形态统一) */}
-                {/* ================================================================= */}
+            <div className="mx-auto w-full max-w-[720px] min-w-0 pb-24">
+              {/* ================================================================= */}
+              {/* STEP 1: ROOT TABLE (主表锚点 - 卡片原生就地配置，前后形态统一) */}
+              {/* ================================================================= */}
+              {activeGuideTarget === 'step-root-table' && renderGuideStep?.(0)}
+              <ReadOnlyFieldset
+                disabled={readOnly}
+                label={readOnlyLabel ?? t('pipelines.workspace.readOnly.editorStatus')}
+              >
                 <section
                   id="step-root-table"
+                  data-guide-active={activeGuideTarget === 'step-root-table' || undefined}
                   onClick={() => setActiveContext('root')}
                   className={cn(
                     'wizard-reference-root-card cursor-pointer border bg-white p-4 shadow-xs transition-all duration-150',
-                    activeContext === 'root'
-                      ? 'border-blue-500 ring-1 ring-blue-500/20'
-                      : 'border-gray-200 hover:border-gray-300',
+                    activeGuideTarget === 'step-root-table'
+                      ? 'border-indigo-500 bg-gradient-to-b from-indigo-50/15 to-white shadow-md ring-2 ring-indigo-500/40'
+                      : activeContext === 'root'
+                        ? 'border-blue-500 ring-1 ring-blue-500/20'
+                        : 'border-gray-200 hover:border-gray-300',
                   )}
                 >
                   {/* Card Header */}
@@ -1704,18 +1815,24 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                     </div>
                   )}
                 </section>
+              </ReadOnlyFieldset>
 
-                {/* ============================================================= */}
-                {/* CONNECTOR: From Root down to Relations Tree (Delicate dashed spine) */}
-                {/* ============================================================= */}
-                <div className="ml-8 flex h-5 justify-start">
-                  <div className="h-full border-l border-dashed border-gray-300" />
-                </div>
+              {/* ============================================================= */}
+              {/* CONNECTOR: From Root down to Relations Tree (Delicate dashed spine) */}
+              {/* ============================================================= */}
+              <div className="ml-8 flex h-5 justify-start">
+                <div className="h-full border-l border-dashed border-gray-300" />
+              </div>
 
-                {/* ============================================================= */}
-                {/* STEP 2: RELATIONS LIST (动态子表树 - 精致虚线导轨，精准分支) */}
-                {/* ============================================================= */}
-                <div className="relative ml-8 space-y-3.5 border-l border-dashed border-gray-300 pl-6">
+              {/* ============================================================= */}
+              {/* STEP 2: RELATIONS LIST (动态子表树 - 精致虚线导轨，精准分支) */}
+              {/* ============================================================= */}
+              <div className="relative ml-8 space-y-3.5 border-l border-dashed border-gray-300 pl-6">
+                {activeGuideTarget === 'step-first-relation' && renderGuideStep?.(1)}
+                <ReadOnlyFieldset
+                  disabled={readOnly}
+                  label={readOnlyLabel ?? t('pipelines.workspace.readOnly.editorStatus')}
+                >
                   {/* Dynamically Render Each Relation Node */}
                   {relations.map((rel) => renderRelation(rel))}
 
@@ -1974,27 +2091,36 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                       </div>
                     )}
                   </div>
-                </div>
+                </ReadOnlyFieldset>
+              </div>
 
-                {/* ============================================================= */}
-                {/* CONNECTOR: From Stage 1 (Root & Relations) down to Stage 2 (Transform) */}
-                {/* ============================================================= */}
-                <div className="ml-8 flex h-6 justify-start">
-                  <div className="h-full border-l border-dashed border-gray-300" />
-                </div>
+              {/* ============================================================= */}
+              {/* CONNECTOR: From Stage 1 (Root & Relations) down to Stage 2 (Transform) */}
+              {/* ============================================================= */}
+              <div className="ml-8 flex h-6 justify-start">
+                <div className="h-full border-l border-dashed border-gray-300" />
+              </div>
 
-                {/* ============================================================= */}
-                {/* PIPELINE TRANSFORMS */}
-                {/* ============================================================= */}
-                <section
-                  id="step-doc-process"
-                  onClick={() => setActiveContext('doc_process')}
-                  className={cn(
-                    'cursor-pointer rounded-xl border bg-white p-4 shadow-xs transition-all duration-150',
-                    activeContext === 'doc_process'
+              {/* ============================================================= */}
+              {/* PIPELINE TRANSFORMS */}
+              {/* ============================================================= */}
+              <section
+                id="step-doc-process"
+                data-guide-active={activeGuideTarget === 'step-doc-process' || undefined}
+                onClick={() => setActiveContext('doc_process')}
+                className={cn(
+                  'cursor-pointer rounded-xl border bg-white p-4 shadow-xs transition-all duration-150',
+                  activeGuideTarget === 'step-doc-process'
+                    ? 'border-indigo-500 bg-gradient-to-b from-indigo-50/15 to-white shadow-md ring-2 ring-indigo-500/40'
+                    : activeContext === 'doc_process'
                       ? 'border-blue-500 ring-1 ring-blue-500/20'
                       : 'border-gray-200 hover:border-gray-300',
-                  )}
+                )}
+              >
+                {activeGuideTarget === 'step-doc-process' && renderGuideStep?.(2)}
+                <ReadOnlyFieldset
+                  disabled={readOnly}
+                  label={readOnlyLabel ?? t('pipelines.workspace.readOnly.editorStatus')}
                 >
                   <div className="flex items-center justify-between border-b border-gray-100 pb-3">
                     <div className="flex items-center gap-2.5">
@@ -2033,15 +2159,20 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                       hideHeader={true}
                     />
                   </div>
-                </section>
+                </ReadOnlyFieldset>
+              </section>
 
-                {/* ============================================================= */}
-                {/* CONNECTOR: Transform stage to the configured destination */}
-                {/* ============================================================= */}
-                <div className="ml-8 flex h-6 justify-start">
-                  <div className="h-full border-l border-dashed border-gray-300" />
-                </div>
+              {/* ============================================================= */}
+              {/* CONNECTOR: Transform stage to the configured destination */}
+              {/* ============================================================= */}
+              <div className="ml-8 flex h-6 justify-start">
+                <div className="h-full border-l border-dashed border-gray-300" />
+              </div>
 
+              <ReadOnlyFieldset
+                disabled={readOnly}
+                label={readOnlyLabel ?? t('pipelines.workspace.readOnly.editorStatus')}
+              >
                 {/* ============================================================= */}
                 {/* Destination */}
                 {/* ============================================================= */}
@@ -2180,14 +2311,21 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   </div>
                 </section>
                 {footer}
-              </div>
-            </main>
-          </fieldset>
+              </ReadOnlyFieldset>
+            </div>
+          </main>
+          {activeGuideTarget === 'step-publish-action' && (
+            <div className="wizard-reference-launch-guide">{renderGuideStep?.(4)}</div>
+          )}
           {actions}
         </div>
 
         {/* Right Side: Real-time Live Result Preview (Original w-[440px]) */}
-        <aside className="wizard-reference-preview flex flex-col rounded-xl bg-white">
+        <aside
+          id="step-preview-panel"
+          data-guide-active={activeGuideTarget === 'step-preview-panel' || undefined}
+          className="wizard-reference-preview flex flex-col rounded-xl bg-white"
+        >
           {/* Preview Header */}
           <div className="flex h-11 shrink-0 items-center justify-between border-b border-gray-200 bg-gray-50/50 px-4">
             <div className="flex items-center gap-2">
@@ -2224,6 +2362,12 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
               </button>
             </div>
           </div>
+
+          {activeGuideTarget === 'step-preview-panel' && (
+            <div className="border-b border-indigo-100 bg-indigo-50/20 p-3">
+              {renderGuideStep?.(3)}
+            </div>
+          )}
 
           {/* Sample Indicator */}
           <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-1.5 text-[11px] text-gray-500">
@@ -2279,7 +2423,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
             <span>Target Model: MongoDB BSON Document</span>
             <button
               type="button"
-              onClick={() => setShowPlanModal(true)}
+              onClick={() => setPlanMode('json')}
               className="cursor-pointer text-blue-600 hover:underline"
             >
               View JSON Spec
@@ -2288,32 +2432,41 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
         </aside>
       </div>
 
-      {/* COMPILED PLAN MODAL (Pure JSON) */}
-      {showPlanModal && (
+      {planMode && (
         <div className="backdrop-blur-2xs fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="animate-in fade-in flex max-h-[80vh] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-3">
               <div className="flex items-center gap-2">
                 <FileCode className="h-4 w-4 text-blue-600" />
                 <h3 className="text-[13px] font-semibold text-gray-900">
-                  Compiled Document Assembly Plan
+                  {planMode === 'dsl' ? t('wizard.dslPreview') : 'Wizard JSON Spec'}
                 </h3>
               </div>
               <button
                 type="button"
-                onClick={() => setShowPlanModal(false)}
+                onClick={() => setPlanMode(null)}
                 className="cursor-pointer text-gray-400 hover:text-gray-600"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto bg-gray-900 p-4 font-mono text-[11px] leading-relaxed text-gray-100">
-              <pre>{compiledPlanJson}</pre>
+              {planMode === 'json' ? (
+                <pre>{compiledPlanJson}</pre>
+              ) : dslLoading ? (
+                <p role="status">{t('wizard.dslLoading')}</p>
+              ) : dslError ? (
+                <p role="alert" className="text-red-300">
+                  {dslError}
+                </p>
+              ) : (
+                <pre>{dsl}</pre>
+              )}
             </div>
             <div className="flex justify-end border-t border-gray-200 bg-gray-50 px-4 py-2">
               <button
                 type="button"
-                onClick={() => setShowPlanModal(false)}
+                onClick={() => setPlanMode(null)}
                 className="cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-1 text-[12px] font-medium text-gray-700 hover:bg-gray-100"
               >
                 Close

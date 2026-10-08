@@ -11,10 +11,11 @@ import {
   PipelineClientError,
   type PipelineDraft,
   type PipelineDraftMutation,
-  type PipelineDraftPreview,
   type PipelineRuntimeState,
 } from '@/service/pipelines/pipeline-client'
+import { isSampleSource } from '@/service/sample-source-client'
 import { getSourceSchema, listConnectors, listSources } from '@/service/source-client'
+import { isDataSource } from '@/service/state-store-source'
 import { useAuthStore } from '@/stores/auth-store'
 
 import type {
@@ -22,6 +23,12 @@ import type {
   SavePipelineDraftBasicInfo,
 } from '../model/pipeline-draft-document'
 
+import {
+  CUSTOMER_360_GUIDE_STEPS,
+  PipelineBuilderGuide,
+  PipelineBuilderGuideStepCard,
+  type Customer360GuideMode,
+} from '../components/pipeline-builder-guide'
 import {
   ReferenceWizardBuilder,
   type DataSourceMeta,
@@ -33,6 +40,12 @@ import {
   wizardPublicationIssue,
   wizardUpsertKeylessInput,
 } from '../components/reference-wizard/wizard-adapter'
+import {
+  createCustomer360Wizard,
+  createCustomerLifetimeValueTransform,
+  findCustomer360Preset,
+  isGuidedCustomer360Pipeline,
+} from '../model/customer-360-guide'
 import { getDeploymentProfile } from '../model/deployment-profile'
 import { targetSources } from '../model/pipeline-target-connectors'
 import { sourceScopedTableNames } from '../model/source-table-scope'
@@ -74,9 +87,10 @@ export function WizardBuilder({
   })
   const connectors = connectorsQuery.data || []
   const sources = sourcesQuery.data || []
+  const inputSources = useMemo(() => sources.filter(isDataSource), [sources])
   const deploymentProfile = getDeploymentProfile()
   const schemas = useQueries({
-    queries: sources.map((s) => ({
+    queries: inputSources.map((s) => ({
       queryKey: ['wizard', 'source-schema', s.id],
       queryFn: () => getSourceSchema(s.id, apiFetch),
       retry: false,
@@ -84,7 +98,7 @@ export function WizardBuilder({
   })
   const catalog = useMemo<DataSourceMeta[]>(
     () =>
-      sources.map((s, i) => {
+      inputSources.map((s, i) => {
         const details = schemas[i]?.data?.tables || []
         const names = sourceScopedTableNames(
           s,
@@ -113,9 +127,26 @@ export function WizardBuilder({
           }),
         }
       }),
-    [connectors, sources, schemas],
+    [connectors, inputSources, schemas],
   )
+  const guidedDraft = isGuidedCustomer360Pipeline(pipelineId, draft.wizard)
+  const sampleSourceIds = useMemo(
+    () => new Set(inputSources.filter(isSampleSource).map((source) => source.id)),
+    [inputSources],
+  )
+  const customer360Preset = useMemo(
+    () =>
+      guidedDraft
+        ? findCustomer360Preset(catalog.filter((source) => sampleSourceIds.has(source.id)))
+        : null,
+    [catalog, guidedDraft, sampleSourceIds],
+  )
+  const guidedPreset = guidedDraft && Boolean(customer360Preset)
   const [wizard, setWizard] = useState(draft.wizard)
+  const [builderRevision, setBuilderRevision] = useState(0)
+  const [guideOpen, setGuideOpen] = useState(() => !readOnly && guidedDraft)
+  const [guideStep, setGuideStep] = useState(0)
+  const [guideMode, setGuideMode] = useState<Customer360GuideMode>('storyboard')
   const [status, setStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -124,7 +155,6 @@ export function WizardBuilder({
   const [startPhase, setStartPhase] = useState<
     'saving' | 'validating' | 'publishing' | 'starting' | 'checking' | null
   >(null)
-  const [preview, setPreview] = useState<PipelineDraftPreview | null>(null)
   const editorReadOnly = readOnly || (busy && action === 'start')
   const currentDraft = useRef(draft)
   const currentEtag = useRef(etag)
@@ -132,8 +162,11 @@ export function WizardBuilder({
   const savedFingerprint = useRef(JSON.stringify(draft.wizard))
   const currentWizard = useRef(wizard)
   currentWizard.current = wizard
+  const emptyWizardDraft = isEmptyWizard(wizard)
+  const presetApplied = hasCustomer360Preset(wizard, customer360Preset)
+  const formulaAdded = hasCustomerLifetimeValue(wizard)
   const outputConfig = draft.wizard?.output as
-    | { kind?: string; config?: { sourceId?: string; writeMode?: string } }
+    | { kind?: string; config?: { sourceId?: string; writeMode?: string; table?: string } }
     | undefined
   const availableDestinationSources = targetSources(sources, connectors, deploymentProfile)
   const destination =
@@ -142,6 +175,72 @@ export function WizardBuilder({
   const destinationConnector = connectors.find(
     (connector) => connector.id === destination?.connector,
   )
+  useEffect(() => {
+    if (!guidedPreset || readOnly || !customer360Preset || !destination) return
+    const expected = createCustomer360Wizard(
+      customer360Preset,
+      destination.id,
+      destinationConnector?.writeModes?.[0] ?? 'upsert',
+      deploymentProfile,
+    )
+    if (JSON.stringify(wizard) === JSON.stringify(expected)) return
+    setWizard(expected)
+    setBuilderRevision((revision) => revision + 1)
+  }, [
+    customer360Preset,
+    deploymentProfile,
+    destination?.id,
+    destinationConnector,
+    guidedPreset,
+    readOnly,
+    wizard,
+  ])
+  useEffect(() => {
+    if (!guideOpen || !guidedPreset || readOnly) return
+    const targetId = CUSTOMER_360_GUIDE_STEPS[guideStep]?.targetId
+    if (!targetId) return
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(targetId)
+      if (!target) return
+      const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'auto'
+        : 'smooth'
+      if (guideStep === 4) {
+        const canvas = document.getElementById('wizard-canvas-main')
+        if (canvas) canvas.scrollTo({ top: canvas.scrollHeight, behavior })
+        return
+      }
+      const callout = document.querySelector<HTMLElement>('[data-guide-callout="canvas"]')
+      const guidedElement = callout ?? target
+      guidedElement.scrollIntoView({ behavior, block: 'start', inline: 'nearest' })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [builderRevision, guideMode, guideOpen, guideStep, guidedPreset, readOnly])
+
+  function applyCustomer360Preset() {
+    if (!customer360Preset || !emptyWizardDraft) return
+    setWizard(
+      createCustomer360Wizard(
+        customer360Preset,
+        destination?.id ?? '',
+        destinationConnector?.writeModes?.[0] ?? 'upsert',
+        deploymentProfile,
+      ),
+    )
+    setBuilderRevision((revision) => revision + 1)
+    setGuideStep(0)
+  }
+
+  function addCustomerLifetimeValue() {
+    if (!customer360Preset || formulaAdded) return
+    const transform = createCustomerLifetimeValueTransform(customer360Preset)
+    if (!transform) return
+    setWizard((current) => ({
+      ...current,
+      transforms: [...(Array.isArray(current?.transforms) ? current.transforms : []), transform],
+    }))
+    setBuilderRevision((revision) => revision + 1)
+  }
   useEffect(() => {
     if (!destination || readOnly) return
     const expectedKind = deploymentProfile === 'cloud' ? 'atlas' : 'source'
@@ -259,10 +358,9 @@ export function WizardBuilder({
   }, [persist, readOnly, t, wizard])
   const onChange = useCallback(
     (state: WizardViewState) => {
-      if (editorReadOnly) return
+      if (editorReadOnly || guidedPreset) return
       setError('')
       setNotice('')
-      setPreview(null)
       setWizard((previous) =>
         writeWizard(
           state,
@@ -272,7 +370,7 @@ export function WizardBuilder({
         ),
       )
     },
-    [destination?.id, deploymentProfile, editorReadOnly],
+    [destination?.id, deploymentProfile, editorReadOnly, guidedPreset],
   )
   async function savePipeline(start: boolean) {
     if (busy || readOnly) return
@@ -293,8 +391,7 @@ export function WizardBuilder({
       if (issue) throw new Error(issue)
       const keylessInput = wizardUpsertKeylessInput(currentWizard.current, catalog)
       if (keylessInput) throw new Error(t('wizard.errors.upsertNeedsKey', keylessInput))
-      const result = await previewPipelineDraft(pipelineId, saved.revision, apiFetch)
-      setPreview(result)
+      await previewPipelineDraft(pipelineId, saved.revision, apiFetch)
       setStartPhase('publishing')
       await publishPipelineDraft(pipelineId, saved.revision, saved.publishedArtifactHash, apiFetch)
       const published = await getPipelineDraft(pipelineId, apiFetch)
@@ -334,6 +431,12 @@ export function WizardBuilder({
       setBusy(false)
     }
   }
+  async function inspectDsl(): Promise<string> {
+    const saved = await persist()
+    const result = await previewPipelineDraft(pipelineId, saved.revision, apiFetch)
+    if (!result.dsl?.trim()) throw new Error(t('wizard.dslUnavailable'))
+    return result.dsl
+  }
   if (sourcesQuery.isPending || connectorsQuery.isPending || schemas.some((s) => s.isPending))
     return (
       <div className="text-muted-foreground p-8 text-sm" role="status">
@@ -368,101 +471,218 @@ export function WizardBuilder({
                           : 'wizard.autosaved',
                   )
   return (
-    <>
-      <ReferenceWizardBuilder
-        catalog={catalog}
-        initial={readWizard(
-          wizard,
-          catalog,
-          destination?.id,
-          destinationConnector?.writeModes?.[0] || 'upsert',
-        )}
-        onChange={onChange}
-        destinationName={
-          destination
-            ? (connectors.find((connector) => connector.id === destination.connector)?.name ||
-                destination.connector) +
-              ' (' +
-              destination.id +
-              ')'
-            : ''
-        }
-        deploymentProfile={deploymentProfile}
-        readOnly={editorReadOnly}
-        actions={
-          <PipelineWorkflowHeader
-            placement="sticky"
-            dockStatus={
-              <div className="wizard-reference-action-dock__status min-w-0 flex-1 text-[11px] text-[var(--pipeline-text-muted)]">
-                <span
-                  className={
-                    error ||
-                    runtimeObservationError ||
-                    runtimeStatus === 'FAILED' ||
-                    status === 'error'
-                      ? 'bg-destructive size-2 shrink-0 rounded-full'
-                      : status === 'saving' ||
-                          action === 'start' ||
-                          runtimeCheckPending ||
-                          runtimeStatus === 'RUNNING' ||
-                          isDirty
-                        ? 'bg-primary size-2 shrink-0 rounded-full'
-                        : 'bg-muted-foreground size-2 shrink-0 rounded-full'
-                  }
-                  aria-hidden="true"
-                />
-                <span className="truncate" role="status" title={saveStatusLabel}>
-                  {saveStatusLabel}
-                </span>
-                {runtimeObservationError && onRetryRuntimeObservation && (
-                  <button
-                    type="button"
-                    className="text-primary shrink-0 font-medium underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none"
-                    onClick={onRetryRuntimeObservation}
+    <div className="h-full min-h-0 min-w-0 p-[var(--app-shell-sidebar-content-inset)]">
+      <section
+        className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-gray-200/90 bg-white shadow-[0_1px_3px_rgba(17,24,39,0.10)]"
+        data-testid="wizard-builder-shell"
+      >
+        <div className="flex h-full min-h-0 flex-col">
+          {guidedPreset && (
+            <PipelineBuilderGuide
+              open={guideOpen}
+              fixedPreset={guidedPreset}
+              step={guideStep}
+              mode={guideMode}
+              preset={customer360Preset}
+              emptyDraft={emptyWizardDraft}
+              presetApplied={presetApplied}
+              formulaAdded={formulaAdded}
+              onOpen={() => setGuideOpen(true)}
+              onClose={() => setGuideOpen(false)}
+              onStepChange={setGuideStep}
+              onModeChange={setGuideMode}
+              onApplyPreset={applyCustomer360Preset}
+              onAddFormula={addCustomerLifetimeValue}
+              onSaveDraft={() => void savePipeline(false)}
+              onLaunch={() => void savePipeline(true)}
+            />
+          )}
+          {guidedPreset && (
+            <p className="border-b border-indigo-100 bg-indigo-50 px-5 py-2 text-xs font-medium text-indigo-800">
+              {t('wizard.guide.fixedNotice')}
+            </p>
+          )}
+          <ReferenceWizardBuilder
+            key={builderRevision}
+            showWorkbenchHeader={!guidedPreset}
+            onInspectPlan={inspectDsl}
+            onStart={() => void savePipeline(true)}
+            startBusy={busy}
+            actionError={error}
+            catalog={catalog}
+            initial={readWizard(
+              wizard,
+              catalog,
+              destination?.id,
+              destinationConnector?.writeModes?.[0] || 'upsert',
+            )}
+            onChange={onChange}
+            destinationName={
+              destination
+                ? (connectors.find((connector) => connector.id === destination.connector)?.name ||
+                    destination.connector) +
+                  ' (' +
+                  destination.id +
+                  ')'
+                : ''
+            }
+            deploymentProfile={deploymentProfile}
+            readOnly={editorReadOnly || guidedPreset}
+            readOnlyLabel={guidedPreset ? t('wizard.guide.fixedNotice') : undefined}
+            activeGuideTarget={
+              guidedPreset && guideOpen ? CUSTOMER_360_GUIDE_STEPS[guideStep]?.targetId : undefined
+            }
+            renderGuideStep={
+              guidedPreset
+                ? (step) => (
+                    <PipelineBuilderGuideStepCard
+                      step={step}
+                      fixedPreset={guidedPreset}
+                      preset={customer360Preset}
+                      targetCollection={outputConfig?.config?.table || 'customer_360_views'}
+                      onClose={() => setGuideOpen(false)}
+                      onPrevious={() => setGuideStep((current) => Math.max(0, current - 1))}
+                      onNext={() => {
+                        if (step === 4) {
+                          setGuideOpen(false)
+                          void savePipeline(true)
+                        } else {
+                          setGuideStep(step + 1)
+                        }
+                      }}
+                    />
+                  )
+                : undefined
+            }
+            actions={
+              <PipelineWorkflowHeader
+                placement="sticky"
+                runButtonId="step-publish-action"
+                runButtonActiveGuide={guidedPreset && guideOpen && guideStep === 4}
+                dockStatus={
+                  <div className="wizard-reference-action-dock__status min-w-0 flex-1 text-[11px] text-[var(--pipeline-text-muted)]">
+                    <span
+                      className={
+                        error ||
+                        runtimeObservationError ||
+                        runtimeStatus === 'FAILED' ||
+                        status === 'error'
+                          ? 'bg-destructive size-2 shrink-0 rounded-full'
+                          : status === 'saving' ||
+                              action === 'start' ||
+                              runtimeCheckPending ||
+                              runtimeStatus === 'RUNNING' ||
+                              isDirty
+                            ? 'bg-primary size-2 shrink-0 rounded-full'
+                            : 'bg-muted-foreground size-2 shrink-0 rounded-full'
+                      }
+                      aria-hidden="true"
+                    />
+                    <span className="truncate" role="status" title={saveStatusLabel}>
+                      {saveStatusLabel}
+                    </span>
+                    {runtimeObservationError && onRetryRuntimeObservation && (
+                      <button
+                        type="button"
+                        className="text-primary shrink-0 font-medium underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none"
+                        onClick={onRetryRuntimeObservation}
+                      >
+                        {t('pipelines.workspace.actions.retry')}
+                      </button>
+                    )}
+                  </div>
+                }
+                stopAction={stopAction}
+                isDirty={isDirty}
+                isSaving={busy && action === 'save'}
+                isRunning={busy && action === 'start'}
+                isBusy={busy}
+                isReadOnly={readOnly}
+                canSave
+                saveLabel={t('wizard.savePipeline')}
+                savePendingLabel={t('pipelines.workspace.actions.saving')}
+                runLabel={t('wizard.startPipeline')}
+                runPendingLabel={t('wizard.starting')}
+                onSave={() => void savePipeline(false)}
+                onRun={() => void savePipeline(true)}
+              />
+            }
+            sourceError={
+              sourcesQuery.error?.message || schemas.find((s) => s.error)?.error?.message
+            }
+            compiledSpec={JSON.stringify(wizard, null, 2)}
+            footer={
+              <div className="mt-5 flex flex-wrap items-center justify-end gap-3 text-[11px]">
+                {error && guidedPreset && (
+                  <p
+                    role="alert"
+                    className="w-full rounded border border-red-200 bg-red-50 p-3 text-red-700"
                   >
-                    {t('pipelines.workspace.actions.retry')}
-                  </button>
+                    {error}
+                  </p>
+                )}
+                {notice && (
+                  <p
+                    className="border-border bg-muted text-muted-foreground rounded-control w-full border p-3"
+                    role="status"
+                  >
+                    {notice}
+                  </p>
                 )}
               </div>
             }
-            stopAction={stopAction}
-            isDirty={isDirty}
-            isSaving={busy && action === 'save'}
-            isRunning={busy && action === 'start'}
-            isBusy={busy}
-            isReadOnly={readOnly}
-            canSave
-            saveLabel={t('wizard.savePipeline')}
-            savePendingLabel={t('pipelines.workspace.actions.saving')}
-            runLabel={t('wizard.startPipeline')}
-            runPendingLabel={t('wizard.starting')}
-            onSave={() => void savePipeline(false)}
-            onRun={() => void savePipeline(true)}
           />
-        }
-        sourceError={sourcesQuery.error?.message || schemas.find((s) => s.error)?.error?.message}
-        compiledSpec={preview?.dsl || JSON.stringify(wizard, null, 2)}
-        footer={
-          <div className="mt-5 flex flex-wrap items-center justify-end gap-3 text-[11px]">
-            {error && (
-              <p
-                role="alert"
-                className="w-full rounded border border-red-200 bg-red-50 p-3 text-red-700"
-              >
-                {error}
-              </p>
-            )}
-            {notice && (
-              <p
-                className="border-border bg-muted text-muted-foreground rounded-control w-full border p-3"
-                role="status"
-              >
-                {notice}
-              </p>
-            )}
-          </div>
-        }
-      />
-    </>
+        </div>
+      </section>
+    </div>
   )
+}
+
+function isEmptyWizard(value: PipelineDraft['wizard']) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return true
+  const root = value.root
+  const related = value.related
+  const transforms = value.transforms
+  const rootTable = isObjectRecord(root) ? root.table : null
+  return (
+    (typeof rootTable !== 'string' || rootTable.length === 0) &&
+    (!Array.isArray(related) || related.length === 0) &&
+    (!Array.isArray(transforms) || transforms.length === 0)
+  )
+}
+
+function hasCustomer360Preset(
+  value: PipelineDraft['wizard'],
+  preset: ReturnType<typeof findCustomer360Preset>,
+) {
+  if (!value || !preset) return false
+  const root = value.root
+  const relations = value.related
+  if (!isObjectRecord(root) || !Array.isArray(relations)) return false
+  const hasTable = (table: string) =>
+    relations.some((relation) => isObjectRecord(relation) && relation.table === table)
+  return (
+    root.sourceId === preset.sourceId &&
+    root.table === preset.root.name &&
+    hasTable(preset.orders.name) &&
+    hasTable(preset.items.name)
+  )
+}
+
+function hasCustomerLifetimeValue(value: PipelineDraft['wizard']) {
+  if (!value || !Array.isArray(value.transforms)) return false
+  return value.transforms.some((transform) => {
+    if (!isObjectRecord(transform)) return false
+    const fields = transform.fields
+    if (!isObjectRecord(fields)) return false
+    return (
+      transform.type === 'map' &&
+      typeof fields.lifetime_value === 'string' &&
+      fields.lifetime_value.startsWith('=')
+    )
+  })
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
