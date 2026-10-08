@@ -15,12 +15,15 @@ import {
   Settings,
   Sun,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import type { Cluster, Organization } from '../service/cloud-api'
 import type { UserProfile } from '../types'
 
-import { useClusterEntry } from '../features/clusters/use-cluster-entry'
+import {
+  cancelPendingClusterEntries,
+  useClusterEntry,
+} from '../features/clusters/use-cluster-entry'
 import { CloudApiError, cloudApi } from '../service/cloud-api'
 import { useCloudAppState } from '../state/cloud-app-state'
 
@@ -59,6 +62,7 @@ export function CloudConsoleShell({
   const [showOrganizationMenu, setShowOrganizationMenu] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [search, setSearch] = useState('')
+  const organizationRequestId = useRef(0)
   const { enterCluster, enteringId, entryError } = useClusterEntry()
 
   const currentOrganization = activeOrganization ?? organization
@@ -70,21 +74,24 @@ export function CloudConsoleShell({
   const initials = displayName.slice(0, 1).toUpperCase()
 
   const selectOrganization = async (nextOrganization: Organization) => {
+    const requestId = ++organizationRequestId.current
     setActiveOrganization(nextOrganization)
     setShowOrganizationMenu(false)
     try {
-      setClusters(await cloudApi.clusters(nextOrganization.id))
+      const nextClusters = await cloudApi.clusters(nextOrganization.id)
+      if (requestId === organizationRequestId.current) setClusters(nextClusters)
     } catch (error) {
       if (error instanceof CloudApiError && error.status === 401) {
         clearIdentity()
         await navigate({ to: '/auth' })
         return
       }
-      setClusters([])
+      if (requestId === organizationRequestId.current) setClusters([])
     }
   }
 
   const signOut = async () => {
+    cancelPendingClusterEntries()
     try {
       await cloudApi.logout()
     } catch (error) {

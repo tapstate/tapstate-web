@@ -21,7 +21,7 @@ export interface ProvisioningUpdate {
 }
 
 interface ProvisioningViewProps {
-  mode: 'provisioning' | 'failed' | 'ready'
+  mode: 'provisioning' | 'failed' | 'ready' | 'cancelled'
   organization: Organization
   cluster: Cluster
   subscription: Subscription
@@ -282,6 +282,31 @@ export function ProvisioningView({
           ) : (
             <ArrowRight className="h-4 w-4" />
           )}
+        </button>
+      </div>
+    )
+  }
+
+  if (mode === 'cancelled') {
+    return (
+      <div className="mx-auto w-full max-w-[480px] space-y-6 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 shadow-xs dark:bg-neutral-800 dark:text-neutral-300">
+          <AlertCircle className="h-6 w-6 stroke-[2]" />
+        </div>
+        <div className="space-y-1.5">
+          <h1 className="text-[24px] font-semibold tracking-[-0.03em] text-[#111827] dark:text-white">
+            {t('onboarding.cancelledTitle')}
+          </h1>
+          <p className="text-[13px] text-neutral-500 dark:text-neutral-400">
+            {t('onboarding.cancelledDescription')}
+          </p>
+        </div>
+        <button
+          className="flex h-10 w-full items-center justify-center rounded-lg border border-black/[0.1] bg-white text-[13px] font-medium text-neutral-700 transition-colors hover:bg-neutral-50 dark:border-white/[0.12] dark:bg-[#1a1b1e] dark:text-neutral-300 dark:hover:bg-[#202124]"
+          onClick={onEdit}
+          type="button"
+        >
+          {t('onboarding.backToSetup')}
         </button>
       </div>
     )

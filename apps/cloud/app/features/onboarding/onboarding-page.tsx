@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router'
 import { AlertCircle, ArrowRight, Check, MapPin, Moon, RefreshCw, Sun } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -7,13 +8,19 @@ import type { OnboardingWorkspace } from './onboarding-service'
 import type { OnboardingInput } from './onboarding-types'
 
 import {
+  CloudApiError,
   cloudApi,
   type Cluster,
   type Organization,
   type Region,
   type Subscription,
 } from '../../service/cloud-api'
-import { isProvisioningFailed, isWorkspaceReady, provisioningStage } from './onboarding-adapter'
+import {
+  isProvisioningCancelled,
+  isProvisioningFailed,
+  isWorkspaceReady,
+  provisioningStage,
+} from './onboarding-adapter'
 import { ProvisioningView, type ProvisioningUpdate } from './provisioning-view'
 export type { OnboardingInput } from './onboarding-types'
 
@@ -27,7 +34,7 @@ interface OnboardingPageProps {
   entryError: string | null
 }
 
-type OnboardingScreen = 'form' | 'starting' | 'provisioning' | 'failed' | 'ready'
+type OnboardingScreen = 'form' | 'starting' | 'provisioning' | 'failed' | 'ready' | 'cancelled'
 
 function observedUpdate(cluster: Cluster, subscription: Subscription): ProvisioningUpdate {
   return {
@@ -57,6 +64,7 @@ export function OnboardingPage({
   entryError,
 }: OnboardingPageProps) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [regions, setRegions] = useState<Region[]>([])
   const [selectedRegionCode, setSelectedRegionCode] = useState('')
   const [organizationName, setOrganizationName] = useState('')
@@ -121,6 +129,10 @@ export function OnboardingPage({
           current.some((item) => item.key === update.key) ? current : [...current, update],
         )
 
+        if (isProvisioningCancelled(cluster, subscription)) {
+          setScreen('cancelled')
+          return
+        }
         if (isProvisioningFailed(cluster)) {
           setScreen('failed')
           return
@@ -129,8 +141,13 @@ export function OnboardingPage({
           setScreen('ready')
           return
         }
-      } catch {
-        if (active) setHasPollingError(true)
+      } catch (error) {
+        if (!active) return
+        if (error instanceof CloudApiError && error.status === 401) {
+          void navigate({ to: '/auth' })
+          return
+        }
+        setHasPollingError(true)
       }
 
       if (active) timer = window.setTimeout(() => void refresh(), 2500)
@@ -141,7 +158,7 @@ export function OnboardingPage({
       active = false
       if (timer !== undefined) window.clearTimeout(timer)
     }
-  }, [screen, workspace])
+  }, [navigate, screen, workspace])
 
   useEffect(() => {
     if (
@@ -173,7 +190,9 @@ export function OnboardingPage({
       })
       setWorkspace(result)
       setUpdates([observedUpdate(result.cluster, result.subscription)])
-      if (isProvisioningFailed(result.cluster)) {
+      if (isProvisioningCancelled(result.cluster, result.subscription)) {
+        setScreen('cancelled')
+      } else if (isProvisioningFailed(result.cluster)) {
         setScreen('failed')
       } else if (isWorkspaceReady(result.cluster, result.subscription)) {
         setScreen('ready')
@@ -202,13 +221,19 @@ export function OnboardingPage({
       )
       setHasPollingError(false)
       setScreen(
-        isProvisioningFailed(cluster)
-          ? 'failed'
-          : isWorkspaceReady(cluster, workspace.subscription)
-            ? 'ready'
-            : 'provisioning',
+        isProvisioningCancelled(cluster, workspace.subscription)
+          ? 'cancelled'
+          : isProvisioningFailed(cluster)
+            ? 'failed'
+            : isWorkspaceReady(cluster, workspace.subscription)
+              ? 'ready'
+              : 'provisioning',
       )
-    } catch {
+    } catch (error) {
+      if (error instanceof CloudApiError && error.status === 401) {
+        void navigate({ to: '/auth' })
+        return
+      }
       setHasRetryError(true)
     } finally {
       setIsRetrying(false)

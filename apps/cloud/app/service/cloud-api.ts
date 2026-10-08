@@ -243,10 +243,25 @@ export const cloudApi = {
       `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
       post,
     ),
-  resolveCluster: (clusterId: string, orgId: string) => {
+  resolveCluster: async (clusterId: string, orgId: string) => {
     const query = new URLSearchParams({ orgId })
-    return request<ResolveResponse>(
+    const result = await request<unknown>(
       `${apiPrefix}/clusters/${encodeURIComponent(clusterId)}/resolve?${query}`,
     )
+    if (
+      !isRecord(result) ||
+      result.success !== true ||
+      typeof result.baseUri !== 'string' ||
+      typeof result.exchangeCode !== 'string' ||
+      typeof result.expiresAt !== 'string'
+    ) {
+      throw new CloudApiError('Cloud API returned an invalid Cluster handoff.', 502)
+    }
+    return {
+      success: true,
+      baseUri: result.baseUri,
+      exchangeCode: result.exchangeCode,
+      expiresAt: result.expiresAt,
+    }
   },
 }

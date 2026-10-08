@@ -15,3 +15,12 @@ export function isWorkspaceReady(cluster: Cluster, subscription: Subscription) {
 export function isProvisioningFailed(cluster: Cluster) {
   return cluster.state === 'PROVISIONING_FAILED'
 }
+
+export function isProvisioningCancelled(cluster: Cluster, subscription: Subscription) {
+  return (
+    subscription.status === 'CANCELLED' ||
+    cluster.state === 'DRAINING' ||
+    cluster.state === 'DRAINED' ||
+    cluster.state === 'TERMINATED'
+  )
+}
