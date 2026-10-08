@@ -1331,6 +1331,7 @@
     "unsavedChanges": "Unsaved changes",
     "actionSummary": "{{relatedCount}} related tables · {{transformCount}} Transform steps",
     "savePipeline": "Save",
+    "inspectPlan": "Inspect Plan",
     "startPipeline": "Save & start",
     "starting": "Starting pipeline…",
     "startPhases": {

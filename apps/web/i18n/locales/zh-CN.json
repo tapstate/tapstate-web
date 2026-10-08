@@ -1331,6 +1331,7 @@
     "unsavedChanges": "有未保存的更改",
     "actionSummary": "{{relatedCount}} 个关联表 · {{transformCount}} 个处理步骤",
     "savePipeline": "保存",
+    "inspectPlan": "查看计划",
     "startPipeline": "保存并启动",
     "starting": "正在启动 Pipeline…",
     "startPhases": {

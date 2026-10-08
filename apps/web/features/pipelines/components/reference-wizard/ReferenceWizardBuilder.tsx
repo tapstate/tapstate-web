@@ -7,6 +7,7 @@ import {
   Braces,
   X,
   FileCode,
+  Play,
   Zap,
   Check,
   RefreshCw,
@@ -48,6 +49,10 @@ export interface WizardBuilderProps {
   readOnlyLabel?: string
   activeGuideTarget?: string
   renderGuideStep?: (step: number) => React.ReactNode
+  showWorkbenchHeader?: boolean
+  onStart?: () => void
+  startBusy?: boolean
+  actionError?: string
 }
 
 export interface JoinCondition {
@@ -162,6 +167,10 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   readOnlyLabel,
   activeGuideTarget,
   renderGuideStep,
+  showWorkbenchHeader = false,
+  onStart,
+  startBusy = false,
+  actionError,
 }) => {
   const { t } = useTranslation()
   const [activeContext, setActiveContext] = React.useState('root')
@@ -1419,7 +1428,42 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
 
   return (
     <div className="wizard-reference flex h-full w-full flex-col overflow-hidden font-sans text-gray-900 select-none">
-      {/* Top Workbench Header */}
+      {showWorkbenchHeader && (
+        <>
+          <header
+            className="flex h-12 shrink-0 items-center justify-end gap-3 border-b border-gray-200/80 bg-white/80 px-4 saturate-150 backdrop-blur-md"
+            data-testid="wizard-workbench-header"
+          >
+            <button
+              type="button"
+              onClick={() => setShowPlanModal(true)}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
+            >
+              <FileCode className="h-3.5 w-3.5 text-gray-500" aria-hidden="true" />
+              {t('wizard.inspectPlan')}
+            </button>
+            {!readOnly && onStart && (
+              <button
+                type="button"
+                onClick={onStart}
+                disabled={startBusy}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-[12px] font-medium text-gray-700 shadow-2xs transition-colors hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60"
+              >
+                <Play className="h-3.5 w-3.5 text-blue-600" aria-hidden="true" />
+                {startBusy ? t('wizard.starting') : t('wizard.startPipeline')}
+              </button>
+            )}
+          </header>
+          {actionError && (
+            <p
+              className="shrink-0 border-b border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700"
+              role="alert"
+            >
+              {actionError}
+            </p>
+          )}
+        </>
+      )}
       {/* Main Workspace Split */}
       <div className="wizard-reference-workspace flex min-h-0 flex-1 overflow-hidden">
         {/* Left / Center Canvas */}

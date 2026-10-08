@@ -502,6 +502,10 @@ export function WizardBuilder({
           )}
           <ReferenceWizardBuilder
             key={builderRevision}
+            showWorkbenchHeader={!guidedPreset}
+            onStart={() => void savePipeline(true)}
+            startBusy={busy}
+            actionError={error}
             catalog={catalog}
             initial={readWizard(
               wizard,
@@ -606,7 +610,7 @@ export function WizardBuilder({
             compiledSpec={preview?.dsl || JSON.stringify(wizard, null, 2)}
             footer={
               <div className="mt-5 flex flex-wrap items-center justify-end gap-3 text-[11px]">
-                {error && (
+                {error && guidedPreset && (
                   <p
                     role="alert"
                     className="w-full rounded border border-red-200 bg-red-50 p-3 text-red-700"
