@@ -26,6 +26,7 @@ import type {
 import {
   CUSTOMER_360_GUIDE_STEPS,
   PipelineBuilderGuide,
+  PipelineBuilderGuideStepCard,
   type Customer360GuideMode,
 } from '../components/pipeline-builder-guide'
 import {
@@ -157,7 +158,7 @@ export function WizardBuilder({
   const presetApplied = hasCustomer360Preset(wizard, customer360Preset)
   const formulaAdded = hasCustomerLifetimeValue(wizard)
   const outputConfig = draft.wizard?.output as
-    | { kind?: string; config?: { sourceId?: string; writeMode?: string } }
+    | { kind?: string; config?: { sourceId?: string; writeMode?: string; table?: string } }
     | undefined
   const availableDestinationSources = targetSources(sources, connectors, deploymentProfile)
   const destination =
@@ -196,7 +197,14 @@ export function WizardBuilder({
       const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
         ? 'auto'
         : 'smooth'
-      target.scrollIntoView({ behavior, block: 'center', inline: 'nearest' })
+      if (guideStep === 4) {
+        const canvas = document.getElementById('wizard-canvas-main')
+        if (canvas) canvas.scrollTo({ top: canvas.scrollHeight, behavior })
+        return
+      }
+      const callout = document.querySelector<HTMLElement>('[data-guide-callout="canvas"]')
+      const guidedElement = callout ?? target
+      guidedElement.scrollIntoView({ behavior, block: 'start', inline: 'nearest' })
     })
     return () => window.cancelAnimationFrame(frame)
   }, [builderRevision, guideMode, guideOpen, guideStep, readOnly])
@@ -451,129 +459,158 @@ export function WizardBuilder({
                           : 'wizard.autosaved',
                   )
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <PipelineBuilderGuide
-        open={guideOpen}
-        fixedPreset={guidedPreset}
-        step={guideStep}
-        mode={guideMode}
-        preset={customer360Preset}
-        emptyDraft={emptyWizardDraft}
-        presetApplied={presetApplied}
-        formulaAdded={formulaAdded}
-        onOpen={() => setGuideOpen(true)}
-        onClose={() => setGuideOpen(false)}
-        onStepChange={setGuideStep}
-        onModeChange={setGuideMode}
-        onApplyPreset={applyCustomer360Preset}
-        onAddFormula={addCustomerLifetimeValue}
-        onSaveDraft={() => void savePipeline(false)}
-        onLaunch={() => void savePipeline(true)}
-      />
-      {guidedPreset && (
-        <p className="border-b border-indigo-100 bg-indigo-50 px-5 py-2 text-xs font-medium text-indigo-800">
-          {t('wizard.guide.fixedNotice')}
-        </p>
-      )}
-      <ReferenceWizardBuilder
-        key={builderRevision}
-        catalog={catalog}
-        initial={readWizard(
-          wizard,
-          catalog,
-          destination?.id,
-          destinationConnector?.writeModes?.[0] || 'upsert',
-        )}
-        onChange={onChange}
-        destinationName={
-          destination
-            ? (connectors.find((connector) => connector.id === destination.connector)?.name ||
-                destination.connector) +
-              ' (' +
-              destination.id +
-              ')'
-            : ''
-        }
-        deploymentProfile={deploymentProfile}
-        readOnly={editorReadOnly || guidedPreset}
-        readOnlyLabel={guidedPreset ? t('wizard.guide.fixedNotice') : undefined}
-        activeGuideTarget={guideOpen ? CUSTOMER_360_GUIDE_STEPS[guideStep]?.targetId : undefined}
-        actions={
-          <PipelineWorkflowHeader
-            placement="sticky"
-            runButtonId="step-publish-action"
-            runButtonActiveGuide={guideOpen && guideStep === 4}
-            dockStatus={
-              <div className="wizard-reference-action-dock__status min-w-0 flex-1 text-[11px] text-[var(--pipeline-text-muted)]">
-                <span
-                  className={
-                    error ||
-                    runtimeObservationError ||
-                    runtimeStatus === 'FAILED' ||
-                    status === 'error'
-                      ? 'bg-destructive size-2 shrink-0 rounded-full'
-                      : status === 'saving' ||
-                          action === 'start' ||
-                          runtimeCheckPending ||
-                          runtimeStatus === 'RUNNING' ||
-                          isDirty
-                        ? 'bg-primary size-2 shrink-0 rounded-full'
-                        : 'bg-muted-foreground size-2 shrink-0 rounded-full'
+    <div className="h-full min-h-0 min-w-0 p-2 sm:p-3">
+      <section
+        className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-gray-200/90 bg-white shadow-[0_1px_3px_rgba(17,24,39,0.10)]"
+        data-testid="wizard-builder-shell"
+      >
+        <div className="flex h-full min-h-0 flex-col">
+          <PipelineBuilderGuide
+            open={guideOpen}
+            fixedPreset={guidedPreset}
+            step={guideStep}
+            mode={guideMode}
+            preset={customer360Preset}
+            emptyDraft={emptyWizardDraft}
+            presetApplied={presetApplied}
+            formulaAdded={formulaAdded}
+            onOpen={() => setGuideOpen(true)}
+            onClose={() => setGuideOpen(false)}
+            onStepChange={setGuideStep}
+            onModeChange={setGuideMode}
+            onApplyPreset={applyCustomer360Preset}
+            onAddFormula={addCustomerLifetimeValue}
+            onSaveDraft={() => void savePipeline(false)}
+            onLaunch={() => void savePipeline(true)}
+          />
+          {guidedPreset && (
+            <p className="border-b border-indigo-100 bg-indigo-50 px-5 py-2 text-xs font-medium text-indigo-800">
+              {t('wizard.guide.fixedNotice')}
+            </p>
+          )}
+          <ReferenceWizardBuilder
+            key={builderRevision}
+            catalog={catalog}
+            initial={readWizard(
+              wizard,
+              catalog,
+              destination?.id,
+              destinationConnector?.writeModes?.[0] || 'upsert',
+            )}
+            onChange={onChange}
+            destinationName={
+              destination
+                ? (connectors.find((connector) => connector.id === destination.connector)?.name ||
+                    destination.connector) +
+                  ' (' +
+                  destination.id +
+                  ')'
+                : ''
+            }
+            deploymentProfile={deploymentProfile}
+            readOnly={editorReadOnly || guidedPreset}
+            readOnlyLabel={guidedPreset ? t('wizard.guide.fixedNotice') : undefined}
+            activeGuideTarget={
+              guideOpen ? CUSTOMER_360_GUIDE_STEPS[guideStep]?.targetId : undefined
+            }
+            renderGuideStep={(step) => (
+              <PipelineBuilderGuideStepCard
+                step={step}
+                fixedPreset={guidedPreset}
+                preset={customer360Preset}
+                targetCollection={outputConfig?.config?.table || 'customer_360_views'}
+                onClose={() => setGuideOpen(false)}
+                onPrevious={() => setGuideStep((current) => Math.max(0, current - 1))}
+                onNext={() => {
+                  if (step === 4) {
+                    setGuideOpen(false)
+                    void savePipeline(true)
+                  } else {
+                    setGuideStep(step + 1)
                   }
-                  aria-hidden="true"
-                />
-                <span className="truncate" role="status" title={saveStatusLabel}>
-                  {saveStatusLabel}
-                </span>
-                {runtimeObservationError && onRetryRuntimeObservation && (
-                  <button
-                    type="button"
-                    className="text-primary shrink-0 font-medium underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none"
-                    onClick={onRetryRuntimeObservation}
+                }}
+              />
+            )}
+            actions={
+              <PipelineWorkflowHeader
+                placement="sticky"
+                runButtonId="step-publish-action"
+                runButtonActiveGuide={guideOpen && guideStep === 4}
+                dockStatus={
+                  <div className="wizard-reference-action-dock__status min-w-0 flex-1 text-[11px] text-[var(--pipeline-text-muted)]">
+                    <span
+                      className={
+                        error ||
+                        runtimeObservationError ||
+                        runtimeStatus === 'FAILED' ||
+                        status === 'error'
+                          ? 'bg-destructive size-2 shrink-0 rounded-full'
+                          : status === 'saving' ||
+                              action === 'start' ||
+                              runtimeCheckPending ||
+                              runtimeStatus === 'RUNNING' ||
+                              isDirty
+                            ? 'bg-primary size-2 shrink-0 rounded-full'
+                            : 'bg-muted-foreground size-2 shrink-0 rounded-full'
+                      }
+                      aria-hidden="true"
+                    />
+                    <span className="truncate" role="status" title={saveStatusLabel}>
+                      {saveStatusLabel}
+                    </span>
+                    {runtimeObservationError && onRetryRuntimeObservation && (
+                      <button
+                        type="button"
+                        className="text-primary shrink-0 font-medium underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none"
+                        onClick={onRetryRuntimeObservation}
+                      >
+                        {t('pipelines.workspace.actions.retry')}
+                      </button>
+                    )}
+                  </div>
+                }
+                stopAction={stopAction}
+                isDirty={isDirty}
+                isSaving={busy && action === 'save'}
+                isRunning={busy && action === 'start'}
+                isBusy={busy}
+                isReadOnly={readOnly}
+                canSave
+                saveLabel={t('wizard.savePipeline')}
+                savePendingLabel={t('pipelines.workspace.actions.saving')}
+                runLabel={t('wizard.startPipeline')}
+                runPendingLabel={t('wizard.starting')}
+                onSave={() => void savePipeline(false)}
+                onRun={() => void savePipeline(true)}
+              />
+            }
+            sourceError={
+              sourcesQuery.error?.message || schemas.find((s) => s.error)?.error?.message
+            }
+            compiledSpec={preview?.dsl || JSON.stringify(wizard, null, 2)}
+            footer={
+              <div className="mt-5 flex flex-wrap items-center justify-end gap-3 text-[11px]">
+                {error && (
+                  <p
+                    role="alert"
+                    className="w-full rounded border border-red-200 bg-red-50 p-3 text-red-700"
                   >
-                    {t('pipelines.workspace.actions.retry')}
-                  </button>
+                    {error}
+                  </p>
+                )}
+                {notice && (
+                  <p
+                    className="border-border bg-muted text-muted-foreground rounded-control w-full border p-3"
+                    role="status"
+                  >
+                    {notice}
+                  </p>
                 )}
               </div>
             }
-            stopAction={stopAction}
-            isDirty={isDirty}
-            isSaving={busy && action === 'save'}
-            isRunning={busy && action === 'start'}
-            isBusy={busy}
-            isReadOnly={readOnly}
-            canSave
-            saveLabel={t('wizard.savePipeline')}
-            savePendingLabel={t('pipelines.workspace.actions.saving')}
-            runLabel={t('wizard.startPipeline')}
-            runPendingLabel={t('wizard.starting')}
-            onSave={() => void savePipeline(false)}
-            onRun={() => void savePipeline(true)}
           />
-        }
-        sourceError={sourcesQuery.error?.message || schemas.find((s) => s.error)?.error?.message}
-        compiledSpec={preview?.dsl || JSON.stringify(wizard, null, 2)}
-        footer={
-          <div className="mt-5 flex flex-wrap items-center justify-end gap-3 text-[11px]">
-            {error && (
-              <p
-                role="alert"
-                className="w-full rounded border border-red-200 bg-red-50 p-3 text-red-700"
-              >
-                {error}
-              </p>
-            )}
-            {notice && (
-              <p
-                className="border-border bg-muted text-muted-foreground rounded-control w-full border p-3"
-                role="status"
-              >
-                {notice}
-              </p>
-            )}
-          </div>
-        }
-      />
+        </div>
+      </section>
     </div>
   )
 }

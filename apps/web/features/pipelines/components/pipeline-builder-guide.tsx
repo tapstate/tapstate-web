@@ -1,5 +1,6 @@
 import {
   Check,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   CircleHelp,
@@ -13,8 +14,7 @@ import {
   Workflow,
   X,
 } from 'lucide-react'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
@@ -31,6 +31,209 @@ export const CUSTOMER_360_GUIDE_STEPS = [
 ] as const
 
 export type Customer360GuideMode = 'storyboard' | 'in-situ'
+
+const calloutThemes = {
+  blue: {
+    wrapper: 'bg-blue-50/90 border-blue-200/90 text-blue-950',
+    badge: 'bg-blue-100/90 text-blue-700 border-blue-200',
+    code: 'bg-blue-100/60 text-blue-800 border-blue-200/60',
+    button: 'bg-blue-600 hover:bg-blue-700 text-white',
+    activeDot: 'bg-blue-600',
+    pastDot: 'bg-blue-300',
+  },
+  indigo: {
+    wrapper: 'bg-indigo-50/90 border-indigo-200/90 text-indigo-950',
+    badge: 'bg-indigo-100/90 text-indigo-700 border-indigo-200',
+    code: 'bg-indigo-100/60 text-indigo-800 border-indigo-200/60',
+    button: 'bg-indigo-600 hover:bg-indigo-700 text-white',
+    activeDot: 'bg-indigo-600',
+    pastDot: 'bg-indigo-300',
+  },
+  purple: {
+    wrapper: 'bg-purple-50/90 border-purple-200/90 text-purple-950',
+    badge: 'bg-purple-100/90 text-purple-700 border-purple-200',
+    code: 'bg-purple-100/60 text-purple-800 border-purple-200/60',
+    button: 'bg-purple-600 hover:bg-purple-700 text-white',
+    activeDot: 'bg-purple-600',
+    pastDot: 'bg-purple-300',
+  },
+  emerald: {
+    wrapper: 'bg-emerald-50/90 border-emerald-200/90 text-emerald-950',
+    badge: 'bg-emerald-100/90 text-emerald-800 border-emerald-200',
+    code: 'bg-emerald-100/60 text-emerald-800 border-emerald-200/60',
+    button: 'bg-emerald-600 hover:bg-emerald-700 text-white',
+    activeDot: 'bg-emerald-600',
+    pastDot: 'bg-emerald-300',
+  },
+  amber: {
+    wrapper: 'bg-amber-50/90 border-amber-200/90 text-amber-950',
+    badge: 'bg-amber-100/90 text-amber-800 border-amber-200',
+    code: 'bg-amber-100/60 text-amber-800 border-amber-200/60',
+    button: 'bg-amber-600 hover:bg-amber-700 text-white',
+    activeDot: 'bg-amber-600',
+    pastDot: 'bg-amber-300',
+  },
+} as const
+
+export function PipelineBuilderGuideStepCard({
+  step,
+  fixedPreset,
+  preset,
+  targetCollection,
+  onClose,
+  onPrevious,
+  onNext,
+}: {
+  step: number
+  fixedPreset: boolean
+  preset: Customer360Preset | null
+  targetCollection: string
+  onClose: () => void
+  onPrevious: () => void
+  onNext: () => void
+}) {
+  const { t } = useTranslation()
+  const current = CUSTOMER_360_GUIDE_STEPS[step] ?? CUSTOMER_360_GUIDE_STEPS[0]
+  const theme = calloutThemes[current.theme]
+  const translationKey =
+    fixedPreset && current.id === 'transform'
+      ? 'wizard.guide.fixedTransform'
+      : `wizard.guide.steps.${current.id}`
+  const sourceName = preset?.sourceId ?? ''
+  const rootTable = preset?.root.name ?? 'customers'
+  const ordersTable = preset?.orders.name ?? 'orders'
+  const itemsTable = preset?.items.name ?? 'items'
+  const detail =
+    step === 0
+      ? preset
+        ? `${sourceName}.${rootTable} → ${targetCollection} (_id)`
+        : ''
+      : step === 1 && preset
+        ? `${ordersTable} → orders[] · ${itemsTable} → items[] · ${t('wizard.guide.joinCount', {
+            first: preset.rootOrderJoin.length,
+            second: preset.orderItemsJoin.length,
+          })}`
+        : step === 2
+          ? t('wizard.guide.fixedTransformNote')
+          : step === 3
+            ? `${t('wizard.destinationContext')}: ${targetCollection}`
+            : t('wizard.guide.steps.launch.calloutDetail')
+  const nextKey = `${translationKey}.calloutNext`
+  const isLast = step === CUSTOMER_360_GUIDE_STEPS.length - 1
+
+  return (
+    <div
+      onClick={(event) => event.stopPropagation()}
+      className={cn(
+        'animate-in fade-in slide-in-from-top-1 mb-3.5 w-full rounded-xl border p-3.5 shadow-xs transition-all duration-200 select-none sm:p-4',
+        theme.wrapper,
+      )}
+      data-guide-callout="canvas"
+      role="region"
+      aria-label={t('wizard.guide.stepOf', { step: step + 1, total: 5 })}
+      aria-live="polite"
+    >
+      <div className="flex items-center justify-between border-b border-black/[0.06] pb-2">
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold',
+              theme.badge,
+            )}
+          >
+            <Sparkles className="size-3.5" aria-hidden="true" />
+            <span>
+              {t('wizard.guide.calloutBadge', {
+                step: step + 1,
+                title: t(`${translationKey}.shortTitle`),
+              })}
+            </span>
+          </span>
+          <div className="ml-1.5 flex shrink-0 items-center gap-1" aria-hidden="true">
+            {CUSTOMER_360_GUIDE_STEPS.map((item, index) => (
+              <span
+                key={item.id}
+                className={cn(
+                  'h-1.5 rounded-full transition-all',
+                  index === step
+                    ? cn('w-4', theme.activeDot)
+                    : index < step
+                      ? cn('w-2', theme.pastDot)
+                      : 'w-1.5 bg-black/15',
+                )}
+              />
+            ))}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="cursor-pointer rounded-md p-1 text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-700"
+          title={t('wizard.guide.close')}
+          aria-label={t('wizard.guide.close')}
+        >
+          <X className="size-3.5" aria-hidden="true" />
+        </button>
+      </div>
+
+      <div className="space-y-1.5 pt-2.5 pb-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h4 className="text-[13.5px] leading-snug font-bold text-gray-900">
+            {t(`${translationKey}.title`)}
+          </h4>
+          {detail && (
+            <code
+              className={cn('rounded border px-1.5 py-0.5 font-mono text-[10.5px]', theme.code)}
+            >
+              {detail}
+            </code>
+          )}
+        </div>
+        <p className="text-[12.5px] leading-relaxed font-normal text-gray-700">
+          {t(`${translationKey}.body`, {
+            rootTable,
+            ordersTable,
+            itemsTable,
+            amountField: preset?.amountField ?? 'amount',
+          })}
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between gap-2 border-t border-black/[0.06] pt-2">
+        <span className="text-[11px] font-medium text-gray-500">
+          {t(fixedPreset ? 'wizard.guide.calloutLockedHint' : 'wizard.guide.calloutHint')}
+        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          {step > 0 && (
+            <button
+              type="button"
+              onClick={onPrevious}
+              className="inline-flex cursor-pointer items-center gap-0.5 rounded-md border border-black/10 bg-white/80 px-2.5 py-1 text-[11.5px] font-medium text-gray-700 transition-colors hover:bg-white hover:text-gray-900"
+            >
+              <ChevronLeft className="size-3.5" aria-hidden="true" />
+              {t('wizard.guide.previous')}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onNext}
+            className={cn(
+              'flex cursor-pointer items-center gap-1 rounded-md px-3.5 py-1 text-[12px] font-semibold shadow-2xs transition-all active:scale-95',
+              theme.button,
+            )}
+          >
+            <span>{t(nextKey)}</span>
+            {isLast ? (
+              <CheckCircle2 className="size-3.5" aria-hidden="true" />
+            ) : (
+              <ChevronRight className="size-3.5" aria-hidden="true" />
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const guideThemes = {
   blue: {
@@ -107,8 +310,6 @@ export function PipelineBuilderGuide({
     fixedPreset && current.id === 'transform'
       ? 'wizard.guide.fixedTransform'
       : `wizard.guide.steps.${current.id}`
-  const [anchorPosition, setAnchorPosition] = useState<{ left: number; top: number } | null>(null)
-  const inSituPanel = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!open) return
     const handleGuideKeyDown = (event: KeyboardEvent) => {
@@ -133,54 +334,9 @@ export function PipelineBuilderGuide({
     return () => window.removeEventListener('keydown', handleGuideKeyDown)
   }, [open, step, onClose, onStepChange])
 
-  useLayoutEffect(() => {
-    if (!open || mode !== 'in-situ') {
-      setAnchorPosition(null)
-      return
-    }
-
-    const updatePosition = () => {
-      const target = document.getElementById(current.targetId)
-      if (!target) {
-        setAnchorPosition(null)
-        return
-      }
-      const rect = target.getBoundingClientRect()
-      const panel = inSituPanel.current
-      const width = Math.min(360, window.innerWidth - 24)
-      const height = panel?.offsetHeight || 250
-      const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12))
-      const below = rect.bottom + 12
-      const top =
-        below + height <= window.innerHeight - 12
-          ? below
-          : Math.max(12, Math.min(rect.top - height - 12, window.innerHeight - height - 12))
-      setAnchorPosition((previous) =>
-        previous?.left === left && previous.top === top ? previous : { left, top },
-      )
-    }
-
-    let frame = 0
-    const scheduleUpdate = () => {
-      window.cancelAnimationFrame(frame)
-      frame = window.requestAnimationFrame(updatePosition)
-    }
-    updatePosition()
-    window.addEventListener('resize', scheduleUpdate)
-    window.addEventListener('scroll', scheduleUpdate, true)
-    return () => {
-      window.cancelAnimationFrame(frame)
-      window.removeEventListener('resize', scheduleUpdate)
-      window.removeEventListener('scroll', scheduleUpdate, true)
-    }
-  }, [current.targetId, mode, open, step])
-
   const stepDetails = (
     <div
-      className={cn(
-        'flex flex-wrap items-start justify-between gap-4 bg-gradient-to-r from-slate-50/40 via-white to-blue-50/20 px-5 py-3',
-        mode === 'in-situ' && 'block rounded-xl p-4',
-      )}
+      className="flex flex-wrap items-start justify-between gap-4 bg-gradient-to-r from-slate-50/40 via-white to-blue-50/20 px-5 py-3"
       role="region"
       aria-live="polite"
       aria-label={t('wizard.guide.stepOf', { step: step + 1, total: 5 })}
@@ -196,34 +352,7 @@ export function PipelineBuilderGuide({
           <span className="rounded border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-500">
             {t(`${translationKey}.shortTitle`)}
           </span>
-          {mode === 'in-situ' && (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={t('wizard.guide.close')}
-              className="ml-auto rounded-md p-1 text-slate-400 hover:bg-black/5 hover:text-slate-700"
-            >
-              <X className="size-3.5" aria-hidden="true" />
-            </button>
-          )}
         </div>
-        {mode === 'in-situ' && (
-          <div className="mb-2 flex gap-1.5" aria-hidden="true">
-            {CUSTOMER_360_GUIDE_STEPS.map((item, index) => (
-              <span
-                key={item.id}
-                className={cn(
-                  'h-1.5 rounded-full',
-                  index === step
-                    ? cn('w-4', theme.dot)
-                    : index < step
-                      ? cn('w-2', theme.past)
-                      : 'w-1.5 bg-slate-300',
-                )}
-              />
-            ))}
-          </div>
-        )}
         <p className="max-w-3xl text-[12.5px] leading-relaxed text-slate-700">
           {t(`${translationKey}.body`, {
             rootTable: preset?.root.name ?? 'customers',
@@ -472,22 +601,6 @@ export function PipelineBuilderGuide({
 
         {mode === 'storyboard' && stepDetails}
       </section>
-      {mode === 'in-situ' && anchorPosition
-        ? createPortal(
-            <div
-              ref={inSituPanel}
-              className={cn(
-                'fixed z-50 max-h-[min(70vh,420px)] w-[min(360px,calc(100vw-24px))] overflow-y-auto rounded-xl border text-slate-900 shadow-lg',
-                theme.card,
-              )}
-              style={{ left: anchorPosition.left, top: anchorPosition.top }}
-              data-guide-callout="in-situ"
-            >
-              {stepDetails}
-            </div>,
-            document.body,
-          )
-        : null}
     </>
   )
 }

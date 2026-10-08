@@ -1400,6 +1400,9 @@
       "close": "Close guide",
       "stepsLabel": "Customer 360 guide steps",
       "stepOf": "Step {{step}} of {{total}}",
+      "calloutBadge": "Step {{step}}/5 · {{title}}",
+      "calloutHint": "💡 Guide · Use Next to continue, or inspect the configured card",
+      "calloutLockedHint": "💡 This sample is preset and locked. Use Next to review each step.",
       "previous": "Previous",
       "next": "Next",
       "launch": "Launch Pipeline",
@@ -1413,7 +1416,8 @@
       "fixedTransform": {
         "shortTitle": "Source fields",
         "title": "Keep the source fields",
-        "body": "The customer, order, and line item fields flow into the nested document without an extra transform."
+        "body": "The customer, order, and line item fields flow into the nested document without an extra transform.",
+        "calloutNext": "Continue to document preview →"
       },
       "applyBeforeFormula": "Apply the detected sample structure first.",
       "addFormula": "Add expression to draft",
@@ -1426,27 +1430,33 @@
         "root": {
           "shortTitle": "Customer root",
           "title": "Choose the customer root",
-          "body": "Each customer row becomes a root document. The guide uses the connected table and its discovered primary key."
+          "body": "Each customer row becomes a root document. The guide uses the connected table and its discovered primary key.",
+          "calloutNext": "Continue to nested orders →"
         },
         "relations": {
           "shortTitle": "Nest orders",
           "title": "Nest orders and line items",
-          "body": "Embed {{ordersTable}} as orders[] and {{itemsTable}} as items[] using discovered keys, including composite joins."
+          "body": "Embed {{ordersTable}} as orders[] and {{itemsTable}} as items[] using discovered keys, including composite joins.",
+          "calloutNext": "Continue to source fields →"
         },
         "transform": {
           "shortTitle": "Lifetime value",
           "title": "Calculate lifetime value",
-          "body": "Sum {{amountField}} across nested order lines. Add the expression to the draft to inspect how this calculation is represented."
+          "body": "Sum {{amountField}} across nested order lines. Add the expression to the draft to inspect how this calculation is represented.",
+          "calloutNext": "Continue to document preview →"
         },
         "preview": {
           "shortTitle": "Document preview",
           "title": "Review the document shape",
-          "body": "Inspect the customer fields and nested order arrays in the JSON or table preview."
+          "body": "Inspect the customer fields and nested order arrays in the JSON or table preview.",
+          "calloutNext": "Continue to save and run →"
         },
         "launch": {
           "shortTitle": "Save and run",
           "title": "Save and start the pipeline",
-          "body": "Save the configured draft, review any compiler messages, then start the pipeline from the action dock."
+          "body": "Save the configured draft, review any compiler messages, then start the pipeline from the action dock.",
+          "calloutDetail": "Save draft · validate · start pipeline",
+          "calloutNext": "Start Pipeline"
         }
       }
     }

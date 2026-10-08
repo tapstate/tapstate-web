@@ -83,6 +83,20 @@
   min-height: 0;
   flex: 1 1 0%;
   flex-direction: column;
+  position: relative;
+}
+.wizard-reference-launch-guide {
+  position: absolute;
+  z-index: 11;
+  right: var(--wizard-canvas-gutter);
+  bottom: calc(var(--wizard-actionbar-height) + 0.5rem);
+  left: var(--wizard-canvas-gutter);
+  pointer-events: none;
+}
+.wizard-reference-launch-guide > * {
+  width: min(100%, 45rem);
+  margin-inline: auto;
+  pointer-events: auto;
 }
 .wizard-reference .pipeline-workflow-header--sticky {
   z-index: 10;
@@ -168,6 +182,9 @@
 .wizard-reference .wizard-reference-canvas {
   padding: var(--wizard-canvas-gutter) 0 var(--wizard-canvas-gutter) var(--wizard-canvas-gutter);
 }
+.wizard-reference .wizard-reference-canvas [data-guide-callout='canvas'] {
+  scroll-margin-block-start: var(--wizard-canvas-gutter);
+}
 .wizard-reference-root-card {
   border-radius: var(--wizard-card-radius);
   color: var(--wizard-foreground);
@@ -215,7 +232,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 1100px) {
   .wizard-reference .wizard-reference-workspace {
     flex-direction: column;
     gap: 16px;

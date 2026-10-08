@@ -47,6 +47,7 @@ export interface WizardBuilderProps {
   readOnly?: boolean
   readOnlyLabel?: string
   activeGuideTarget?: string
+  renderGuideStep?: (step: number) => React.ReactNode
 }
 
 export interface JoinCondition {
@@ -119,6 +120,34 @@ export interface WizardViewState {
   destinationWriteMode: string
 }
 
+function ReadOnlyFieldset({
+  disabled,
+  label,
+  children,
+}: {
+  disabled: boolean
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <fieldset
+      disabled={disabled}
+      className="contents"
+      aria-label={disabled ? label : undefined}
+      onClickCapture={
+        disabled
+          ? (event) => {
+              event.preventDefault()
+              event.stopPropagation()
+            }
+          : undefined
+      }
+    >
+      {children}
+    </fieldset>
+  )
+}
+
 export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   catalog: AVAILABLE_DATA_SOURCES,
   initial,
@@ -132,6 +161,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   readOnly = false,
   readOnlyLabel,
   activeGuideTarget,
+  renderGuideStep,
 }) => {
   const { t } = useTranslation()
   const [activeContext, setActiveContext] = React.useState('root')
@@ -1394,30 +1424,21 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       <div className="wizard-reference-workspace flex min-h-0 flex-1 overflow-hidden">
         {/* Left / Center Canvas */}
         <div className="wizard-reference-editor-column">
-          <fieldset
-            disabled={readOnly}
-            className="contents"
-            aria-label={
-              readOnly
-                ? (readOnlyLabel ?? t('pipelines.workspace.readOnly.editorStatus'))
-                : undefined
-            }
+          <main
+            id="wizard-canvas-main"
+            className="wizard-reference-canvas flex min-w-0 flex-1 flex-col overflow-y-auto"
             data-testid="wizard-editor-controls"
             data-read-only={readOnly ? 'true' : 'false'}
-            onClickCapture={
-              readOnly
-                ? (event) => {
-                    event.preventDefault()
-                    event.stopPropagation()
-                  }
-                : undefined
-            }
           >
-            <main className="wizard-reference-canvas flex min-w-0 flex-1 flex-col overflow-y-auto">
-              <div className="w-full min-w-0 pb-24">
-                {/* ================================================================= */}
-                {/* STEP 1: ROOT TABLE (主表锚点 - 卡片原生就地配置，前后形态统一) */}
-                {/* ================================================================= */}
+            <div className="mx-auto w-full max-w-[720px] min-w-0 pb-24">
+              {/* ================================================================= */}
+              {/* STEP 1: ROOT TABLE (主表锚点 - 卡片原生就地配置，前后形态统一) */}
+              {/* ================================================================= */}
+              {activeGuideTarget === 'step-root-table' && renderGuideStep?.(0)}
+              <ReadOnlyFieldset
+                disabled={readOnly}
+                label={readOnlyLabel ?? t('pipelines.workspace.readOnly.editorStatus')}
+              >
                 <section
                   id="step-root-table"
                   data-guide-active={activeGuideTarget === 'step-root-table' || undefined}
@@ -1731,18 +1752,24 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                     </div>
                   )}
                 </section>
+              </ReadOnlyFieldset>
 
-                {/* ============================================================= */}
-                {/* CONNECTOR: From Root down to Relations Tree (Delicate dashed spine) */}
-                {/* ============================================================= */}
-                <div className="ml-8 flex h-5 justify-start">
-                  <div className="h-full border-l border-dashed border-gray-300" />
-                </div>
+              {/* ============================================================= */}
+              {/* CONNECTOR: From Root down to Relations Tree (Delicate dashed spine) */}
+              {/* ============================================================= */}
+              <div className="ml-8 flex h-5 justify-start">
+                <div className="h-full border-l border-dashed border-gray-300" />
+              </div>
 
-                {/* ============================================================= */}
-                {/* STEP 2: RELATIONS LIST (动态子表树 - 精致虚线导轨，精准分支) */}
-                {/* ============================================================= */}
-                <div className="relative ml-8 space-y-3.5 border-l border-dashed border-gray-300 pl-6">
+              {/* ============================================================= */}
+              {/* STEP 2: RELATIONS LIST (动态子表树 - 精致虚线导轨，精准分支) */}
+              {/* ============================================================= */}
+              <div className="relative ml-8 space-y-3.5 border-l border-dashed border-gray-300 pl-6">
+                {activeGuideTarget === 'step-first-relation' && renderGuideStep?.(1)}
+                <ReadOnlyFieldset
+                  disabled={readOnly}
+                  label={readOnlyLabel ?? t('pipelines.workspace.readOnly.editorStatus')}
+                >
                   {/* Dynamically Render Each Relation Node */}
                   {relations.map((rel) => renderRelation(rel))}
 
@@ -2001,30 +2028,36 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                       </div>
                     )}
                   </div>
-                </div>
+                </ReadOnlyFieldset>
+              </div>
 
-                {/* ============================================================= */}
-                {/* CONNECTOR: From Stage 1 (Root & Relations) down to Stage 2 (Transform) */}
-                {/* ============================================================= */}
-                <div className="ml-8 flex h-6 justify-start">
-                  <div className="h-full border-l border-dashed border-gray-300" />
-                </div>
+              {/* ============================================================= */}
+              {/* CONNECTOR: From Stage 1 (Root & Relations) down to Stage 2 (Transform) */}
+              {/* ============================================================= */}
+              <div className="ml-8 flex h-6 justify-start">
+                <div className="h-full border-l border-dashed border-gray-300" />
+              </div>
 
-                {/* ============================================================= */}
-                {/* PIPELINE TRANSFORMS */}
-                {/* ============================================================= */}
-                <section
-                  id="step-doc-process"
-                  data-guide-active={activeGuideTarget === 'step-doc-process' || undefined}
-                  onClick={() => setActiveContext('doc_process')}
-                  className={cn(
-                    'cursor-pointer rounded-xl border bg-white p-4 shadow-xs transition-all duration-150',
-                    activeGuideTarget === 'step-doc-process'
-                      ? 'border-indigo-500 bg-gradient-to-b from-indigo-50/15 to-white shadow-md ring-2 ring-indigo-500/40'
-                      : activeContext === 'doc_process'
-                        ? 'border-blue-500 ring-1 ring-blue-500/20'
-                        : 'border-gray-200 hover:border-gray-300',
-                  )}
+              {/* ============================================================= */}
+              {/* PIPELINE TRANSFORMS */}
+              {/* ============================================================= */}
+              <section
+                id="step-doc-process"
+                data-guide-active={activeGuideTarget === 'step-doc-process' || undefined}
+                onClick={() => setActiveContext('doc_process')}
+                className={cn(
+                  'cursor-pointer rounded-xl border bg-white p-4 shadow-xs transition-all duration-150',
+                  activeGuideTarget === 'step-doc-process'
+                    ? 'border-indigo-500 bg-gradient-to-b from-indigo-50/15 to-white shadow-md ring-2 ring-indigo-500/40'
+                    : activeContext === 'doc_process'
+                      ? 'border-blue-500 ring-1 ring-blue-500/20'
+                      : 'border-gray-200 hover:border-gray-300',
+                )}
+              >
+                {activeGuideTarget === 'step-doc-process' && renderGuideStep?.(2)}
+                <ReadOnlyFieldset
+                  disabled={readOnly}
+                  label={readOnlyLabel ?? t('pipelines.workspace.readOnly.editorStatus')}
                 >
                   <div className="flex items-center justify-between border-b border-gray-100 pb-3">
                     <div className="flex items-center gap-2.5">
@@ -2063,15 +2096,20 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                       hideHeader={true}
                     />
                   </div>
-                </section>
+                </ReadOnlyFieldset>
+              </section>
 
-                {/* ============================================================= */}
-                {/* CONNECTOR: Transform stage to the configured destination */}
-                {/* ============================================================= */}
-                <div className="ml-8 flex h-6 justify-start">
-                  <div className="h-full border-l border-dashed border-gray-300" />
-                </div>
+              {/* ============================================================= */}
+              {/* CONNECTOR: Transform stage to the configured destination */}
+              {/* ============================================================= */}
+              <div className="ml-8 flex h-6 justify-start">
+                <div className="h-full border-l border-dashed border-gray-300" />
+              </div>
 
+              <ReadOnlyFieldset
+                disabled={readOnly}
+                label={readOnlyLabel ?? t('pipelines.workspace.readOnly.editorStatus')}
+              >
                 {/* ============================================================= */}
                 {/* Destination */}
                 {/* ============================================================= */}
@@ -2210,9 +2248,12 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   </div>
                 </section>
                 {footer}
-              </div>
-            </main>
-          </fieldset>
+              </ReadOnlyFieldset>
+            </div>
+          </main>
+          {activeGuideTarget === 'step-publish-action' && (
+            <div className="wizard-reference-launch-guide">{renderGuideStep?.(4)}</div>
+          )}
           {actions}
         </div>
 
@@ -2258,6 +2299,12 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
               </button>
             </div>
           </div>
+
+          {activeGuideTarget === 'step-preview-panel' && (
+            <div className="border-b border-indigo-100 bg-indigo-50/20 p-3">
+              {renderGuideStep?.(3)}
+            </div>
+          )}
 
           {/* Sample Indicator */}
           <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-1.5 text-[11px] text-gray-500">
