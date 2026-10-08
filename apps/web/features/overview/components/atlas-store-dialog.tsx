@@ -50,7 +50,9 @@ export function AtlasStoreDialog({ open, onOpenChange, onCreated }: AtlasStoreDi
         if (!active) return
         if (detail.spec.text === null) throw new Error('Atlas connector form is unavailable')
         const fields = normalizeConnectorConfigFields(detail.id, detail.config)
-        setSchema(withoutTextHints(connectorSpecConnectionSchema(detail.spec.text, 'en', detail.id)))
+        setSchema(
+          withoutTextHints(connectorSpecConnectionSchema(detail.spec.text, 'en', detail.id)),
+        )
         setConfig({
           ...createInitialConfig(fields),
           ...normalizeConnectorConfigValues(

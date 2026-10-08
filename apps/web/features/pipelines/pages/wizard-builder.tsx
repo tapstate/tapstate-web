@@ -578,7 +578,11 @@ export function WizardBuilder({
                       }
                       aria-hidden="true"
                     />
-                    <span className="truncate" role="status" title={saveStatusLabel}>
+                    <span
+                      className="truncate"
+                      role={error ? 'alert' : 'status'}
+                      title={saveStatusLabel}
+                    >
                       {saveStatusLabel}
                     </span>
                     {runtimeObservationError && onRetryRuntimeObservation && (

@@ -37,12 +37,14 @@ describe('pipeline target connectors', () => {
       { id: 'db2_orders', connector: 'db2' },
       { id: 'pg_warehouse', connector: 'postgres' },
       { id: 'atlas_out', connector: 'mongodb-atlas', metadata: { labels: { store: 'true' } } },
-      { id: 'mongo_out', connector: 'mongodb' },
+      { id: 'mongo_out', connector: 'mongodb', metadata: { labels: { store: 'true' } } },
+      { id: 'mongo_unmarked', connector: 'mongodb' },
     ]
     expect(targetSources(sources, connectors, 'on-prem').map(({ id }) => id)).toEqual([
       'pg_warehouse',
       'atlas_out',
       'mongo_out',
+      'mongo_unmarked',
     ])
     expect(targetSources(sources, connectors, 'cloud').map(({ id }) => id)).toEqual([
       'atlas_out',

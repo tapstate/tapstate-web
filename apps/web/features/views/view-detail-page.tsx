@@ -154,10 +154,12 @@ function ViewDocuments({ view }: { view: ViewSummary }) {
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const preview = useQuery({
     queryKey: ['view-documents', view.location.storeId, view.location.collection, 5],
-    queryFn: () => previewSourceCollection(view.location.storeId, view.location.collection, apiFetch, 5),
+    queryFn: () =>
+      previewSourceCollection(view.location.storeId, view.location.collection, apiFetch, 5),
   })
 
-  if (preview.isPending) return <p className="text-muted-foreground text-[13px]">{t('views.preview.loading')}</p>
+  if (preview.isPending)
+    return <p className="text-muted-foreground text-[13px]">{t('views.preview.loading')}</p>
   if (preview.isError) {
     return (
       <div className="space-y-3" role="alert">
@@ -168,7 +170,8 @@ function ViewDocuments({ view }: { view: ViewSummary }) {
       </div>
     )
   }
-  if (preview.data.rows.length === 0) return <p className="text-muted-foreground text-[13px]">{t('views.preview.empty')}</p>
+  if (preview.data.rows.length === 0)
+    return <p className="text-muted-foreground text-[13px]">{t('views.preview.empty')}</p>
 
   return (
     <section className="space-y-3" aria-label={t('views.preview.title')}>
@@ -178,7 +181,10 @@ function ViewDocuments({ view }: { view: ViewSummary }) {
       </p>
       <div className="grid gap-3 lg:grid-cols-2">
         {preview.data.rows.map((row, index) => (
-          <pre key={`${index}-${String(row._id ?? '')}`} className="border-border bg-muted/20 max-h-72 overflow-auto rounded-lg border p-4 text-xs leading-5">
+          <pre
+            key={`${index}-${String(row._id ?? '')}`}
+            className="border-border bg-muted/20 max-h-72 overflow-auto rounded-lg border p-4 text-xs leading-5"
+          >
             {JSON.stringify(row, null, 2)}
           </pre>
         ))}

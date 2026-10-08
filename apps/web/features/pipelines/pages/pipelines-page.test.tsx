@@ -146,7 +146,7 @@ describe('PipelinesPage', () => {
 
     await vi.waitFor(() => expect(container?.textContent).toContain('orders_to_warehouse'))
 
-    expect(container?.textContent).toContain('All Pipelines')
+    expect(container?.querySelector('h1')?.textContent).toBe('Pipelines')
     expect(container?.textContent).toContain('customer_360')
     expect(container?.textContent).toContain('Running')
     expect(container?.textContent).toContain('Paused')
