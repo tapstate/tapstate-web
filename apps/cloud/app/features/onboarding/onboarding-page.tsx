@@ -1,5 +1,5 @@
 import { AlertCircle, ArrowRight, Check, MapPin, Moon, RefreshCw, Sun } from 'lucide-react'
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { UserProfile } from '../../types'
@@ -70,6 +70,7 @@ export function OnboardingPage({
   const [hasPollingError, setHasPollingError] = useState(false)
   const [isRetrying, setIsRetrying] = useState(false)
   const [hasRetryError, setHasRetryError] = useState(false)
+  const autoEntryClusterId = useRef<string | null>(null)
 
   const selectedRegion = useMemo(
     () => regions.find((region) => region.code === selectedRegionCode) ?? null,
@@ -141,6 +142,20 @@ export function OnboardingPage({
       if (timer !== undefined) window.clearTimeout(timer)
     }
   }, [screen, workspace])
+
+  useEffect(() => {
+    if (
+      screen !== 'ready' ||
+      !workspace ||
+      !isWorkspaceReady(workspace.cluster, workspace.subscription)
+    ) {
+      return
+    }
+    if (autoEntryClusterId.current === workspace.cluster.id) return
+
+    autoEntryClusterId.current = workspace.cluster.id
+    onComplete(workspace.organization, workspace.cluster)
+  }, [onComplete, screen, workspace])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
