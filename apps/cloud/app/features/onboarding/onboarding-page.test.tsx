@@ -217,6 +217,25 @@ describe('Cloud onboarding subscription cancellation', () => {
     expect(host?.textContent).toContain('Cluster is ready')
   })
 
+  it('shows cancellation errors after status refresh moves the view to a ready cluster', async () => {
+    const onCreateWorkspace = vi.fn(async (_input: OnboardingInput) => failedWorkspace)
+    await renderPage(onCreateWorkspace)
+    await submitSetup()
+
+    cluster
+      .mockResolvedValueOnce(failedCluster)
+      .mockResolvedValueOnce({ ...failedCluster, state: 'READY' })
+    subscriptionById
+      .mockResolvedValueOnce(activeSubscription)
+      .mockResolvedValueOnce({ ...activeSubscription, resourceState: 'READY' })
+    cancelSubscription.mockRejectedValueOnce(new Error('The response was unavailable'))
+
+    await clickButton('Cancel subscription')
+
+    expect(host?.textContent).toContain('Cluster is ready')
+    expect(host?.textContent).toContain('Cancellation could not be confirmed')
+  })
+
   it('blocks provisioning retry when cancellation outcome cannot be rechecked', async () => {
     const onCreateWorkspace = vi.fn(async (_input: OnboardingInput) => failedWorkspace)
     await renderPage(onCreateWorkspace)

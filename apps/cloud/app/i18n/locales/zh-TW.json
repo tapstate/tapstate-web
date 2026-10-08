@@ -124,7 +124,7 @@
     "editSettings": "修改組織設定",
     "cancelSubscription": "取消訂閱",
     "cancellingSubscription": "正在取消訂閱…",
-    "cancelSubscriptionError": "無法確認取消結果。請重試取消後再修改設定。",
+    "cancelSubscriptionError": "無法確認訂閱取消結果。請先查看目前部署狀態，再修改設定。",
     "cancelStatusError": "無法重新整理目前部署狀態，尚未送出取消請求；請重試。",
     "footnote": "叢集會在背景建立。主控台將顯示 Cloud 傳回的實際狀態。"
   },

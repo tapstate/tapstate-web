@@ -75,6 +75,14 @@ export function ProvisioningView({
 }: ProvisioningViewProps) {
   const { t } = useTranslation()
   const [showUpdates, setShowUpdates] = useState(false)
+  const cancelErrorAlert = cancelError ? (
+    <p
+      className="rounded-lg bg-red-50 p-3 text-left text-xs text-red-600 dark:bg-red-950/30 dark:text-red-400"
+      role="alert"
+    >
+      {t('onboarding.cancelSubscriptionError')}
+    </p>
+  ) : null
 
   if (mode === 'provisioning') {
     const stages = [
@@ -108,6 +116,8 @@ export function ProvisioningView({
             })}
           </p>
         </div>
+
+        {cancelErrorAlert}
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between font-mono text-[12px] text-neutral-500 dark:text-neutral-400">
@@ -270,6 +280,8 @@ export function ProvisioningView({
           </div>
         </div>
 
+        {cancelErrorAlert}
+
         {entryError && (
           <div
             className="rounded-xl border border-red-200/80 bg-red-50 p-3 text-left text-xs text-red-600 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400"
@@ -355,14 +367,7 @@ export function ProvisioningView({
           {t('onboarding.retryError')}
         </p>
       )}
-      {cancelError && (
-        <p
-          className="rounded-lg bg-red-50 p-3 text-left text-xs text-red-600 dark:bg-red-950/30 dark:text-red-400"
-          role="alert"
-        >
-          {t('onboarding.cancelSubscriptionError')}
-        </p>
-      )}
+      {cancelErrorAlert}
       {cancelStatusError && (
         <p
           className="rounded-lg bg-red-50 p-3 text-left text-xs text-red-600 dark:bg-red-950/30 dark:text-red-400"

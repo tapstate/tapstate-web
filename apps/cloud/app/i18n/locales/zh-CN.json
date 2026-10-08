@@ -124,7 +124,7 @@
     "editSettings": "修改组织设置",
     "cancelSubscription": "取消订阅",
     "cancellingSubscription": "正在取消订阅…",
-    "cancelSubscriptionError": "无法确认取消结果。请重试取消后再修改设置。",
+    "cancelSubscriptionError": "无法确认订阅取消结果。请先查看当前部署状态，再修改设置。",
     "cancelStatusError": "无法刷新当前部署状态，尚未发送取消请求；请重试。",
     "footnote": "集群会在后台创建。控制台将显示 Cloud 返回的实际状态。"
   },

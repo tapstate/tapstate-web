@@ -124,7 +124,7 @@
     "editSettings": "Edit Organization Settings",
     "cancelSubscription": "Cancel subscription",
     "cancellingSubscription": "Cancelling subscription…",
-    "cancelSubscriptionError": "Cancellation could not be confirmed. Retry cancellation before changing settings.",
+    "cancelSubscriptionError": "Cancellation could not be confirmed. Review the deployment status before changing settings.",
     "cancelStatusError": "Could not refresh the current deployment status. The cancellation request was not sent; try again.",
     "footnote": "Cluster provisioning runs in the background. The console will show the status returned by Cloud."
   },
