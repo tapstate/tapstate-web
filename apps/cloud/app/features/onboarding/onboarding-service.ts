@@ -28,15 +28,22 @@ async function findExistingWorkspace(
     cloudApi.clusters(organization.id),
     cloudApi.subscriptions(organization.id),
   ])
-  const match = clusters.find(
-    (item) => item.region === input.region.code && item.name === input.clusterName,
-  )
-  if (!match) return null
-
-  const subscription = subscriptions.find((item) => subscriptionClusterId(item) === match.id)
+  const subscription = subscriptions.find((item) => {
+    if (item.status === 'CANCELLED') return false
+    const clusterId = subscriptionClusterId(item)
+    return clusters.some(
+      (cluster) =>
+        cluster.id === clusterId &&
+        cluster.state !== 'TERMINATED' &&
+        cluster.region === input.region.code &&
+        cluster.name === input.clusterName,
+    )
+  })
   if (!subscription) return null
 
-  const cluster = await cloudApi.cluster(organization.id, match.id)
+  const clusterId = subscriptionClusterId(subscription)
+  if (!clusterId) return null
+  const cluster = await cloudApi.cluster(organization.id, clusterId)
   return { organization, subscription, cluster }
 }
 
