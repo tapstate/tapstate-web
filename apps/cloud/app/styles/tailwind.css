@@ -1,0 +1,458 @@
+@import 'tailwindcss';
+
+@theme {
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 16px;
+}
+
+:root {
+  --app-background: #eff0f1;
+  --surface: #ffffff;
+
+  --foreground: #202124;
+  --muted-foreground: #73767b;
+
+  --border: rgba(0, 0, 0, 0.08);
+  --border-subtle: rgba(0, 0, 0, 0.05);
+
+  --sidebar-width: 240px;
+  --app-padding: 8px;
+  --shell-gap: 8px;
+
+  --radius-control: var(--radius-lg);
+  --radius-card: var(--radius-xl);
+  --radius-main: var(--radius-2xl);
+
+  --main-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 4%), 0 2px 8px rgb(0 0 0 / 5.5%), 0 12px 32px rgb(0 0 0 / 4.5%);
+}
+
+.dark {
+  --app-background: #141517;
+  --surface: #1c1d20;
+  --foreground: #f0f1f3;
+  --muted-foreground: #9ca3af;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --main-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.06), 0 2px 8px rgba(0, 0, 0, 0.35),
+    0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+.app-shell {
+  background:
+    radial-gradient(circle at 10% 5%, rgb(255 255 255 / 80%), transparent 30%),
+    linear-gradient(145deg, #eff0f1 0%, #e9eaec 48%, #e3e5e8 100%);
+}
+
+.dark .app-shell,
+.dark.app-shell {
+  background:
+    radial-gradient(circle at 10% 5%, rgb(255 255 255 / 5%), transparent 30%),
+    linear-gradient(145deg, #131417 0%, #16171a 48%, #101113 100%);
+}
+
+.main-surface {
+  background: #fff;
+
+  border: 1px solid rgb(255 255 255 / 72%);
+  border-radius: var(--radius-main);
+
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 4%),
+    0 2px 8px rgb(0 0 0 / 5.5%),
+    0 12px 32px rgb(0 0 0 / 4.5%);
+}
+
+.dark .main-surface,
+.dark.main-surface {
+  background: #1c1d20;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-main);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.06),
+    0 2px 8px rgba(0, 0, 0, 0.35),
+    0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  background-color: var(--app-background);
+}
+
+/* Custom scrollbar styling for desktop application feel */
+button {
+  outline: none;
+}
+button:focus,
+button:focus-visible {
+  box-shadow: none;
+}
+button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ==========================================================================
+   Liquid Metal & Liquid Glass Flowing Border System (Mobbin / VisionOS Grade)
+   ========================================================================== */
+
+@keyframes border-beam-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Liquid Glass Card Container & Base Metallic Frame */
+.flowing-card-container {
+  position: relative;
+  isolation: isolate;
+  border-radius: 18px;
+}
+
+/* Multi-stop Machined Platinum/Chrome Bezel Baseline Ring */
+.flowing-card-container::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 17.5px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(203, 213, 225, 0.75) 24%,
+    rgba(255, 255, 255, 1) 48%,
+    rgba(148, 163, 184, 0.5) 72%,
+    rgba(241, 245, 249, 0.9) 100%
+  );
+  z-index: 0;
+  pointer-events: none;
+}
+
+.dark .flowing-card-container::before {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.32) 0%,
+    rgba(100, 116, 139, 0.22) 24%,
+    rgba(255, 255, 255, 0.65) 48%,
+    rgba(51, 65, 85, 0.28) 72%,
+    rgba(255, 255, 255, 0.22) 100%
+  );
+}
+
+/* Liquid Glass Translucent Card Body */
+.liquid-glass-card {
+  position: relative;
+  background: linear-gradient(
+    140deg,
+    rgba(255, 255, 255, 0.92) 0%,
+    rgba(248, 250, 253, 0.84) 48%,
+    rgba(240, 244, 250, 0.9) 100%
+  );
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.98),
+    inset 0 -1.5px 1px 0 rgba(148, 163, 184, 0.15),
+    0 4px 12px -2px rgba(15, 23, 42, 0.04),
+    0 16px 36px -6px rgba(15, 23, 42, 0.08);
+}
+
+.dark .liquid-glass-card {
+  background: linear-gradient(
+    140deg,
+    rgba(28, 30, 36, 0.9) 0%,
+    rgba(22, 24, 28, 0.86) 50%,
+    rgba(16, 17, 21, 0.94) 100%
+  );
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1.5px 1px 0 rgba(0, 0, 0, 0.65),
+    0 8px 24px -4px rgba(0, 0, 0, 0.45),
+    0 24px 56px -8px rgba(0, 0, 0, 0.65);
+}
+
+/* Liquid Glass Top Meniscus Specular Refraction Arch */
+.liquid-glass-meniscus {
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.95) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 20;
+}
+
+.dark .liquid-glass-meniscus {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 100%
+  );
+}
+
+/* Focused Caustic Aura Layer (Tight 8px blur, aligned with runner) */
+.flowing-border-aura {
+  position: absolute;
+  inset: -4px;
+  border-radius: 20px;
+  overflow: hidden;
+  pointer-events: none;
+  filter: blur(8px);
+  opacity: 0.65;
+  z-index: 0;
+}
+
+.flowing-border-aura::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  animation: border-beam-spin 11.5s linear infinite;
+}
+
+/* Crisp 1.5px Specular Liquid Runner (Concise ~40° beam, razor metallic contrast) */
+.flowing-border-glow {
+  position: absolute;
+  inset: -1.5px;
+  border-radius: 17.5px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.flowing-border-glow::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  animation: border-beam-spin 11.5s linear infinite;
+}
+
+/* --------------------------------------------------------------------------
+   PRESET 1: Liquid Metal & Glass Fusion (Default - 42° short beam)
+   Combines liquid chrome horizon shadow with glass chromatic dispersion
+   -------------------------------------------------------------------------- */
+.flowing-card-container.material-fusion .flowing-border-glow::before,
+.flowing-card-container:not([class*='material-']) .flowing-border-glow::before {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 318deg,
+    rgba(99, 102, 241, 0.2) 328deg,
+    rgba(30, 41, 59, 0.85) 338deg,
+    rgba(148, 163, 184, 0.88) 346deg,
+    rgba(56, 189, 248, 0.65) 351deg,
+    rgba(241, 245, 249, 0.98) 355deg,
+    #ffffff 357.5deg,
+    rgba(255, 255, 255, 0.85) 359deg,
+    transparent 360deg
+  );
+}
+
+.dark .flowing-card-container.material-fusion .flowing-border-glow::before,
+.dark .flowing-card-container:not([class*='material-']) .flowing-border-glow::before {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 318deg,
+    rgba(129, 140, 248, 0.25) 328deg,
+    rgba(15, 23, 42, 0.92) 338deg,
+    rgba(148, 163, 184, 0.9) 346deg,
+    rgba(56, 189, 248, 0.7) 351deg,
+    rgba(224, 236, 252, 0.98) 355deg,
+    #ffffff 357.5deg,
+    rgba(255, 255, 255, 0.85) 359deg,
+    transparent 360deg
+  );
+}
+
+.flowing-card-container.material-fusion .flowing-border-aura::before,
+.flowing-card-container:not([class*='material-']) .flowing-border-aura::before {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 318deg,
+    rgba(99, 102, 241, 0.2) 330deg,
+    rgba(56, 189, 248, 0.4) 344deg,
+    rgba(186, 230, 253, 0.75) 352deg,
+    rgba(255, 255, 255, 0.95) 357.5deg,
+    transparent 360deg
+  );
+}
+
+.dark .flowing-card-container.material-fusion .flowing-border-aura::before,
+.dark .flowing-card-container:not([class*='material-']) .flowing-border-aura::before {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 318deg,
+    rgba(129, 140, 248, 0.25) 330deg,
+    rgba(56, 189, 248, 0.45) 344deg,
+    rgba(224, 236, 252, 0.8) 352deg,
+    rgba(255, 255, 255, 0.95) 357.5deg,
+    transparent 360deg
+  );
+}
+
+/* --------------------------------------------------------------------------
+   PRESET 2: Liquid Chrome / Mercury (Liquid metal - 38° ultra-tight bead)
+   Stark specular threshold, dark horizon shadow, liquid mercury reflections
+   -------------------------------------------------------------------------- */
+.flowing-card-container.material-chrome .flowing-border-glow::before {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 322deg,
+    rgba(71, 85, 105, 0.35) 330deg,
+    rgba(15, 23, 42, 0.95) 340deg,
+    rgba(148, 163, 184, 0.95) 348deg,
+    rgba(226, 232, 240, 1) 354deg,
+    #ffffff 357.5deg,
+    rgba(255, 255, 255, 0.9) 359deg,
+    transparent 360deg
+  );
+}
+
+.dark .flowing-card-container.material-chrome .flowing-border-glow::before {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 322deg,
+    rgba(100, 116, 139, 0.4) 330deg,
+    rgba(2, 6, 23, 0.98) 340deg,
+    rgba(148, 163, 184, 0.95) 348deg,
+    rgba(241, 245, 249, 1) 354deg,
+    #ffffff 357.5deg,
+    rgba(255, 255, 255, 0.9) 359deg,
+    transparent 360deg
+  );
+}
+
+.flowing-card-container.material-chrome .flowing-border-aura::before {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 325deg,
+    rgba(148, 163, 184, 0.25) 338deg,
+    rgba(203, 213, 225, 0.65) 348deg,
+    rgba(255, 255, 255, 0.95) 357.5deg,
+    transparent 360deg
+  );
+}
+
+.dark .flowing-card-container.material-chrome .flowing-border-aura::before {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 325deg,
+    rgba(148, 163, 184, 0.3) 338deg,
+    rgba(224, 236, 252, 0.7) 348deg,
+    rgba(255, 255, 255, 0.95) 357.5deg,
+    transparent 360deg
+  );
+}
+
+/* --------------------------------------------------------------------------
+   PRESET 3: Liquid Glass (Translucent liquid glass - 40° prismatic refraction)
+   VisionOS glassmorphic caustics, cyan/indigo dispersion, ice clarity
+   -------------------------------------------------------------------------- */
+.flowing-card-container.material-glass .flowing-border-glow::before {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 320deg,
+    rgba(99, 102, 241, 0.28) 332deg,
+    rgba(14, 165, 233, 0.65) 342deg,
+    rgba(186, 230, 253, 0.88) 350deg,
+    rgba(248, 250, 252, 0.98) 355deg,
+    #ffffff 357.5deg,
+    rgba(240, 249, 255, 0.88) 359deg,
+    transparent 360deg
+  );
+}
+
+.dark .flowing-card-container.material-glass .flowing-border-glow::before {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 320deg,
+    rgba(129, 140, 248, 0.35) 332deg,
+    rgba(56, 189, 248, 0.75) 342deg,
+    rgba(186, 230, 253, 0.92) 350deg,
+    rgba(241, 245, 249, 0.98) 355deg,
+    #ffffff 357.5deg,
+    rgba(240, 249, 255, 0.88) 359deg,
+    transparent 360deg
+  );
+}
+
+.flowing-card-container.material-glass .flowing-border-aura::before {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 320deg,
+    rgba(168, 85, 247, 0.25) 332deg,
+    rgba(56, 189, 248, 0.55) 344deg,
+    rgba(224, 242, 254, 0.85) 352deg,
+    rgba(255, 255, 255, 0.95) 357.5deg,
+    transparent 360deg
+  );
+}
+
+.dark .flowing-card-container.material-glass .flowing-border-aura::before {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 320deg,
+    rgba(192, 132, 252, 0.32) 332deg,
+    rgba(56, 189, 248, 0.6) 344deg,
+    rgba(224, 242, 254, 0.9) 352deg,
+    rgba(255, 255, 255, 0.95) 357.5deg,
+    transparent 360deg
+  );
+}

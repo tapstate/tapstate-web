@@ -63,7 +63,7 @@ describe('auth store deployment profiles', () => {
     expect(redirectToCloudConsole).toHaveBeenCalledWith('https://dev.cloud.tapstate.com/')
   })
 
-  it('posts cloud logout without activating the route authentication guard', async () => {
+  it('logs out of the Cluster and Cloud sessions without activating the route guard', async () => {
     const fetcher = vi.fn<typeof fetch>(async () => new Response(null, { status: 204 }))
     const redirectToCloudConsole = vi.fn()
     const store = createAuthStore({
@@ -76,9 +76,16 @@ describe('auth store deployment profiles', () => {
 
     await store.getState().logout()
 
-    expect(fetcher).toHaveBeenCalledWith(
-      '/auth/logout',
+    expect(fetcher).toHaveBeenCalledTimes(2)
+    expect(String(fetcher.mock.calls[0]?.[0])).toBe('/auth/logout')
+    expect(fetcher.mock.calls[0]?.[1]).toEqual(
       expect.objectContaining({ credentials: 'same-origin', method: 'POST' }),
+    )
+    expect(String(fetcher.mock.calls[1]?.[0])).toBe(
+      'https://dev.cloud.tapstate.com/v1/api/auth/logout',
+    )
+    expect(fetcher.mock.calls[1]?.[1]).toEqual(
+      expect.objectContaining({ credentials: 'include', method: 'POST' }),
     )
     expect(store.getState().isAuthenticated).toBe(true)
     expect(redirectToCloudConsole).not.toHaveBeenCalled()

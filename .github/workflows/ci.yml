@@ -33,9 +33,15 @@ jobs:
         run: pnpm lint
       - name: verify translations
         run: pnpm --filter web i18n:check
+      - name: verify Cloud translations
+        run: pnpm --filter cloud i18n:check
       - name: run unit tests
         run: pnpm --filter web test
       - name: build the production bundle
         run: pnpm build
       - name: require the bundle entry point
         run: test -s apps/web/dist/index.html
+      - name: build the Cloud production bundle
+        run: pnpm --filter cloud build
+      - name: require the Cloud bundle entry point
+        run: test -s apps/cloud/dist/index.html
