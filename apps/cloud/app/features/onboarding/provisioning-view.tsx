@@ -11,7 +11,12 @@ import {
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import type { Cluster, Organization, Subscription } from '../../service/cloud-api'
+import type {
+  Cluster,
+  DeploymentProgress,
+  Organization,
+  Subscription,
+} from '../../service/cloud-api'
 
 export interface ProvisioningUpdate {
   key: string
@@ -24,9 +29,9 @@ interface ProvisioningViewProps {
   mode: 'provisioning' | 'failed' | 'ready' | 'cancelled'
   organization: Organization
   cluster: Cluster
+  deploymentProgress: DeploymentProgress | null
   subscription: Subscription
   regionName: string
-  stage: number
   updates: ProvisioningUpdate[]
   hasPollingError: boolean
   isRetrying: boolean
@@ -55,9 +60,9 @@ export function ProvisioningView({
   mode,
   organization,
   cluster,
+  deploymentProgress,
   subscription,
   regionName,
-  stage,
   updates,
   hasPollingError,
   isRetrying,
@@ -86,19 +91,16 @@ export function ProvisioningView({
   ) : null
 
   if (mode === 'provisioning') {
-    const stages = [
-      t('onboarding.stageAccepted'),
-      t('onboarding.stageProvisioning'),
-      t('onboarding.stageClusterReady'),
-      t('onboarding.stageResourcesReady'),
-    ]
-    const currentStage = Math.min(stage, stages.length - 1)
-    const detailKeys = [
-      'onboarding.stageAcceptedDetail',
-      'onboarding.stageProvisioningDetail',
-      'onboarding.stageClusterReadyDetail',
-      'onboarding.stageResourcesReadyDetail',
-    ] as const
+    const stages = deploymentProgress?.operations ?? []
+    const runningStage = stages.findIndex((item) =>
+      ['RUNNING', 'RETRYING', 'FAILED'].includes(item.status),
+    )
+    const currentStage =
+      runningStage >= 0
+        ? runningStage
+        : stages.findIndex((item) => !['SUCCEEDED', 'SKIPPED'].includes(item.status))
+    const activeStage = currentStage < 0 ? stages.length - 1 : currentStage
+    const percent = Math.max(0, Math.min(100, deploymentProgress?.percent ?? 0))
 
     return (
       <div className="mx-auto w-full max-w-[480px] space-y-7">
@@ -124,32 +126,29 @@ export function ProvisioningView({
           <div className="flex items-center justify-between font-mono text-[12px] text-neutral-500 dark:text-neutral-400">
             <span>{t('onboarding.milestones')}</span>
             <span className="font-semibold text-[#111827] dark:text-white">
-              {t('onboarding.stageCount', { current: currentStage + 1, total: stages.length })}
+              {deploymentProgress ? `${percent}%` : t('onboarding.loadingProgress')}
             </span>
           </div>
           <div
             aria-label={t('onboarding.milestones')}
-            aria-valuemax={stages.length}
+            aria-valuemax={100}
             aria-valuemin={0}
-            aria-valuenow={currentStage + 1}
-            aria-valuetext={t('onboarding.stageCount', {
-              current: currentStage + 1,
-              total: stages.length,
-            })}
+            aria-valuenow={percent}
+            aria-valuetext={`${percent}%`}
             className="h-1.5 w-full overflow-hidden rounded-full bg-black/[0.06] dark:bg-white/[0.08]"
             role="progressbar"
           >
             <div
               className="h-full bg-neutral-900 transition-[width] duration-700 ease-out dark:bg-white"
-              style={{ width: `${((currentStage + 1) / stages.length) * 100}%` }}
+              style={{ width: `${percent}%` }}
             />
           </div>
         </div>
 
-        <div className="space-y-3.5 py-1">
-          {stages.map((label, index) => {
-            const isDone = index < currentStage
-            const isCurrent = index === currentStage
+        <div className="max-h-56 space-y-3.5 overflow-y-auto py-1">
+          {stages.map((operation, index) => {
+            const isDone = ['SUCCEEDED', 'SKIPPED'].includes(operation.status)
+            const isCurrent = index === activeStage && !isDone
             return (
               <div
                 className={`flex items-start gap-3.5 text-[13.5px] transition-opacity duration-300 ${
@@ -159,13 +158,15 @@ export function ProvisioningView({
                       ? 'font-medium text-[#111827] dark:text-white'
                       : 'text-neutral-400 opacity-60 dark:text-neutral-600'
                 }`}
-                key={label}
+                key={operation.operation}
               >
                 <div className="mt-0.5 shrink-0">
                   {isDone ? (
                     <div className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-white">
                       <Check className="h-2.5 w-2.5 stroke-[3]" />
                     </div>
+                  ) : operation.status === 'FAILED' ? (
+                    <AlertCircle className="h-4 w-4 text-red-500" />
                   ) : isCurrent ? (
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-900 border-t-transparent dark:border-white" />
                   ) : (
@@ -174,7 +175,7 @@ export function ProvisioningView({
                     </div>
                   )}
                 </div>
-                <div className="min-w-0 flex-1 leading-snug">{label}</div>
+                <div className="min-w-0 flex-1 leading-snug">{operation.displayName}</div>
               </div>
             )
           })}
@@ -186,7 +187,9 @@ export function ProvisioningView({
               {t('onboarding.currentStage')}
             </span>
             <p className="mt-0.5 font-mono text-[11.5px] leading-relaxed text-neutral-800 dark:text-neutral-200">
-              {t(detailKeys[currentStage])}
+              {stages[activeStage]?.message ??
+                stages[activeStage]?.displayName ??
+                t('onboarding.loadingProgress')}
             </p>
           </div>
           <div className="border-t border-black/[0.05] pt-2 dark:border-white/[0.06]">

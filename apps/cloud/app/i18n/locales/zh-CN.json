@@ -86,6 +86,7 @@
     "progressTitle": "正在设置集群",
     "progressSubtitle": "正在为 {{organization}} 部署到 {{region}}",
     "milestones": "供给阶段",
+    "loadingProgress": "正在加载部署进度…",
     "stageCount": "第 {{current}} 阶段，共 {{total}} 阶段",
     "stageAccepted": "请求已接受",
     "stageProvisioning": "正在供给集群资源",

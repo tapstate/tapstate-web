@@ -86,6 +86,7 @@
     "progressTitle": "正在設定叢集",
     "progressSubtitle": "正在為 {{organization}} 部署至 {{region}}",
     "milestones": "供給階段",
+    "loadingProgress": "正在載入部署進度…",
     "stageCount": "第 {{current}} 階段，共 {{total}} 階段",
     "stageAccepted": "請求已接受",
     "stageProvisioning": "正在供給叢集資源",
