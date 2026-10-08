@@ -27,6 +27,9 @@ export function BillingPage() {
     if (!activeOrganization) return
     let current = true
     setIsLoading(true)
+    setSubscriptions([])
+    setConfirmingId(null)
+    setCancelError(false)
     setHasError(false)
     void cloudApi
       .subscriptions(activeOrganization.id)
