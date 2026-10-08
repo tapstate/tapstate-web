@@ -18,7 +18,16 @@
       "avatar": "User avatar",
       "initial": "U"
     },
-    "secondaryNavigation": "Secondary navigation"
+    "secondaryNavigation": "Secondary navigation",
+    "cloudIdentity": {
+      "label": "Cloud workspace and cluster",
+      "organizationLoading": "Loading organization…",
+      "organizationUnavailable": "Organization unavailable",
+      "clusterLoading": "Loading cluster…",
+      "clusterUnavailable": "Cluster unavailable",
+      "region": "AWS {{region}}",
+      "regionUnavailable": "Region unavailable"
+    }
   },
   "nav": {
     "views": "Views",

@@ -18,7 +18,16 @@
       "avatar": "用户头像",
       "initial": "U"
     },
-    "secondaryNavigation": "次要导航"
+    "secondaryNavigation": "次要导航",
+    "cloudIdentity": {
+      "label": "云工作区和集群",
+      "organizationLoading": "正在加载组织…",
+      "organizationUnavailable": "组织信息不可用",
+      "clusterLoading": "正在加载集群…",
+      "clusterUnavailable": "集群信息不可用",
+      "region": "AWS {{region}}",
+      "regionUnavailable": "区域信息不可用"
+    }
   },
   "nav": {
     "views": "Views",

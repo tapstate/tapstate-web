@@ -1,7 +1,9 @@
 import type { ComponentType, SVGProps } from 'react'
 
+import { useQuery } from '@tanstack/react-query'
 import { Link, useRouterState } from '@tanstack/react-router'
 import {
+  Building2,
   Database,
   GitMerge,
   LayoutDashboard,
@@ -13,6 +15,8 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
+import { loadCloudWorkspaceContext } from '@/service/cloud-workspace-client'
+import { useAuthStore } from '@/stores/auth-store'
 
 import { AppHeader } from './app-header'
 
@@ -38,15 +42,68 @@ const footerNavigation: NavigationItem[] = [
 export function AppSidebar() {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const { t } = useTranslation()
+  const profile = useAuthStore((state) => state.profile)
+  const apiFetch = useAuthStore((state) => state.apiFetch)
+  const cloudContext = useQuery({
+    queryKey: ['cloud-workspace-context'],
+    queryFn: () => loadCloudWorkspaceContext(apiFetch),
+    enabled: profile === 'cloud',
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  })
 
   return (
     <aside className="app-sidebar bg-transparent">
-      <div className="app-sidebar__brand mt-2">
-        <div className="app-sidebar__mark" aria-hidden="true">
-          <Terminal className="h-3 w-3 text-white" />
+      {profile === 'cloud' ? (
+        <div className="app-sidebar__cloud-identity mt-2" aria-label={t('app.cloudIdentity.label')}>
+          <div className="app-sidebar__cloud-organization">
+            <span className="app-sidebar__cloud-organization-icon" aria-hidden="true">
+              <Building2 className="h-4 w-4" />
+            </span>
+            <span
+              className="app-sidebar__cloud-organization-name"
+              title={cloudContext.data?.organizationName}
+            >
+              {cloudContext.data?.organizationName ??
+                (cloudContext.isLoading
+                  ? t('app.cloudIdentity.organizationLoading')
+                  : t('app.cloudIdentity.organizationUnavailable'))}
+            </span>
+          </div>
+          <div className="app-sidebar__cloud-cluster" aria-live="polite">
+            <span
+              className={cn(
+                'app-sidebar__cloud-cluster-status',
+                cloudContext.data?.clusterState === 'READY' &&
+                  'app-sidebar__cloud-cluster-status--ready',
+                cloudContext.data?.clusterState === 'DEGRADED' &&
+                  'app-sidebar__cloud-cluster-status--degraded',
+              )}
+              aria-hidden="true"
+            />
+            <span className="app-sidebar__cloud-cluster-copy">
+              <span className="app-sidebar__cloud-cluster-name">
+                {cloudContext.data?.clusterName ??
+                  (cloudContext.isLoading
+                    ? t('app.cloudIdentity.clusterLoading')
+                    : t('app.cloudIdentity.clusterUnavailable'))}
+              </span>
+              <span className="app-sidebar__cloud-cluster-region">
+                {cloudContext.data?.region
+                  ? t('app.cloudIdentity.region', { region: cloudContext.data.region })
+                  : t('app.cloudIdentity.regionUnavailable')}
+              </span>
+            </span>
+          </div>
         </div>
-        <span className="app-sidebar__title">{t('app.brand')}</span>
-      </div>
+      ) : (
+        <div className="app-sidebar__brand mt-2">
+          <div className="app-sidebar__mark" aria-hidden="true">
+            <Terminal className="h-3 w-3 text-white" />
+          </div>
+          <span className="app-sidebar__title">{t('app.brand')}</span>
+        </div>
+      )}
 
       <nav className="app-sidebar__nav" aria-label={t('app.primaryNavigation')}>
         {navigation.map((item) => (
