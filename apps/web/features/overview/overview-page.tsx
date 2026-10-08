@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { ArrowRight, Sparkles } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
@@ -82,6 +82,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
   const [atlasOpen, setAtlasOpen] = useState(false)
   const [sourceFormOpen, setSourceFormOpen] = useState(false)
   const [pipelineCreationOpen, setPipelineCreationOpen] = useState(false)
+  const initialAtlasPromptShown = useRef(false)
 
   // The view list only adds detail; when it fails or is missing, the overview still shows.
   const views = viewsQuery.data ?? null
@@ -93,6 +94,17 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
     [sourcesQuery.data, pipelinesQuery.data, views],
   )
   const failed = sourcesQuery.isError || pipelinesQuery.isError
+  useEffect(() => {
+    if (
+      getDeploymentProfile() !== 'cloud' ||
+      !overview ||
+      overview.stateStore.ready ||
+      initialAtlasPromptShown.current
+    )
+      return
+    initialAtlasPromptShown.current = true
+    setAtlasOpen(true)
+  }, [overview])
   return (
     <section className="overview-page">
       <header className="overview-page__header z-30 flex shrink-0 items-center justify-between border-b border-slate-200/80 bg-white/80 px-8 py-3.5 backdrop-blur-xl">
