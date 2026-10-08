@@ -1332,6 +1332,9 @@
     "actionSummary": "{{relatedCount}} related tables · {{transformCount}} Transform steps",
     "savePipeline": "Save",
     "inspectPlan": "Inspect Plan",
+    "dslPreview": "DSL Preview",
+    "dslLoading": "Compiling DSL…",
+    "dslUnavailable": "The server did not return a DSL preview.",
     "startPipeline": "Save & start",
     "starting": "Starting pipeline…",
     "startPhases": {

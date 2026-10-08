@@ -1332,6 +1332,9 @@
     "actionSummary": "{{relatedCount}} 个关联表 · {{transformCount}} 个处理步骤",
     "savePipeline": "保存",
     "inspectPlan": "查看计划",
+    "dslPreview": "DSL 预览",
+    "dslLoading": "正在编译 DSL…",
+    "dslUnavailable": "服务端未返回 DSL 预览。",
     "startPipeline": "保存并启动",
     "starting": "正在启动 Pipeline…",
     "startPhases": {

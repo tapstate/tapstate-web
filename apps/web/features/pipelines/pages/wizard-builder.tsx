@@ -11,7 +11,6 @@ import {
   PipelineClientError,
   type PipelineDraft,
   type PipelineDraftMutation,
-  type PipelineDraftPreview,
   type PipelineRuntimeState,
 } from '@/service/pipelines/pipeline-client'
 import { isSampleSource } from '@/service/sample-source-client'
@@ -156,7 +155,6 @@ export function WizardBuilder({
   const [startPhase, setStartPhase] = useState<
     'saving' | 'validating' | 'publishing' | 'starting' | 'checking' | null
   >(null)
-  const [preview, setPreview] = useState<PipelineDraftPreview | null>(null)
   const editorReadOnly = readOnly || (busy && action === 'start')
   const currentDraft = useRef(draft)
   const currentEtag = useRef(etag)
@@ -363,7 +361,6 @@ export function WizardBuilder({
       if (editorReadOnly || guidedPreset) return
       setError('')
       setNotice('')
-      setPreview(null)
       setWizard((previous) =>
         writeWizard(
           state,
@@ -394,8 +391,7 @@ export function WizardBuilder({
       if (issue) throw new Error(issue)
       const keylessInput = wizardUpsertKeylessInput(currentWizard.current, catalog)
       if (keylessInput) throw new Error(t('wizard.errors.upsertNeedsKey', keylessInput))
-      const result = await previewPipelineDraft(pipelineId, saved.revision, apiFetch)
-      setPreview(result)
+      await previewPipelineDraft(pipelineId, saved.revision, apiFetch)
       setStartPhase('publishing')
       await publishPipelineDraft(pipelineId, saved.revision, saved.publishedArtifactHash, apiFetch)
       const published = await getPipelineDraft(pipelineId, apiFetch)
@@ -434,6 +430,12 @@ export function WizardBuilder({
       setAction(null)
       setBusy(false)
     }
+  }
+  async function inspectDsl(): Promise<string> {
+    const saved = await persist()
+    const result = await previewPipelineDraft(pipelineId, saved.revision, apiFetch)
+    if (!result.dsl?.trim()) throw new Error(t('wizard.dslUnavailable'))
+    return result.dsl
   }
   if (sourcesQuery.isPending || connectorsQuery.isPending || schemas.some((s) => s.isPending))
     return (
@@ -503,6 +505,7 @@ export function WizardBuilder({
           <ReferenceWizardBuilder
             key={builderRevision}
             showWorkbenchHeader={!guidedPreset}
+            onInspectPlan={inspectDsl}
             onStart={() => void savePipeline(true)}
             startBusy={busy}
             actionError={error}
@@ -607,7 +610,7 @@ export function WizardBuilder({
             sourceError={
               sourcesQuery.error?.message || schemas.find((s) => s.error)?.error?.message
             }
-            compiledSpec={preview?.dsl || JSON.stringify(wizard, null, 2)}
+            compiledSpec={JSON.stringify(wizard, null, 2)}
             footer={
               <div className="mt-5 flex flex-wrap items-center justify-end gap-3 text-[11px]">
                 {error && guidedPreset && (

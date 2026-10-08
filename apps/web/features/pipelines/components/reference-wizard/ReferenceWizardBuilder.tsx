@@ -50,6 +50,7 @@ export interface WizardBuilderProps {
   activeGuideTarget?: string
   renderGuideStep?: (step: number) => React.ReactNode
   showWorkbenchHeader?: boolean
+  onInspectPlan?: () => Promise<string>
   onStart?: () => void
   startBusy?: boolean
   actionError?: string
@@ -168,6 +169,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   activeGuideTarget,
   renderGuideStep,
   showWorkbenchHeader = false,
+  onInspectPlan,
   onStart,
   startBusy = false,
   actionError,
@@ -175,7 +177,24 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   const { t } = useTranslation()
   const [activeContext, setActiveContext] = React.useState('root')
   const [previewMode, setPreviewMode] = React.useState<'json' | 'table'>('json')
-  const [showPlanModal, setShowPlanModal] = React.useState(false)
+  const [planMode, setPlanMode] = React.useState<'dsl' | 'json' | null>(null)
+  const [dsl, setDsl] = React.useState<string | null>(null)
+  const [dslLoading, setDslLoading] = React.useState(false)
+  const [dslError, setDslError] = React.useState('')
+  async function inspectPlan() {
+    if (!onInspectPlan) return
+    setPlanMode('dsl')
+    setDsl(null)
+    setDslError('')
+    setDslLoading(true)
+    try {
+      setDsl(await onInspectPlan())
+    } catch (cause) {
+      setDslError(cause instanceof Error ? cause.message : t('wizard.dslUnavailable'))
+    } finally {
+      setDslLoading(false)
+    }
+  }
   const [targetCollection, setTargetCollection] = React.useState(initial.destinationTable)
   const [targetSourceId, setTargetSourceId] = React.useState(initial.destinationSourceId)
   const [targetWriteMode, setTargetWriteMode] = React.useState(
@@ -1436,7 +1455,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
           >
             <button
               type="button"
-              onClick={() => setShowPlanModal(true)}
+              onClick={() => void inspectPlan()}
               className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
             >
               <FileCode className="h-3.5 w-3.5 text-gray-500" aria-hidden="true" />
@@ -2404,7 +2423,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
             <span>Target Model: MongoDB BSON Document</span>
             <button
               type="button"
-              onClick={() => setShowPlanModal(true)}
+              onClick={() => setPlanMode('json')}
               className="cursor-pointer text-blue-600 hover:underline"
             >
               View JSON Spec
@@ -2413,32 +2432,41 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
         </aside>
       </div>
 
-      {/* COMPILED PLAN MODAL (Pure JSON) */}
-      {showPlanModal && (
+      {planMode && (
         <div className="backdrop-blur-2xs fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="animate-in fade-in flex max-h-[80vh] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-3">
               <div className="flex items-center gap-2">
                 <FileCode className="h-4 w-4 text-blue-600" />
                 <h3 className="text-[13px] font-semibold text-gray-900">
-                  Compiled Document Assembly Plan
+                  {planMode === 'dsl' ? t('wizard.dslPreview') : 'Wizard JSON Spec'}
                 </h3>
               </div>
               <button
                 type="button"
-                onClick={() => setShowPlanModal(false)}
+                onClick={() => setPlanMode(null)}
                 className="cursor-pointer text-gray-400 hover:text-gray-600"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto bg-gray-900 p-4 font-mono text-[11px] leading-relaxed text-gray-100">
-              <pre>{compiledPlanJson}</pre>
+              {planMode === 'json' ? (
+                <pre>{compiledPlanJson}</pre>
+              ) : dslLoading ? (
+                <p role="status">{t('wizard.dslLoading')}</p>
+              ) : dslError ? (
+                <p role="alert" className="text-red-300">
+                  {dslError}
+                </p>
+              ) : (
+                <pre>{dsl}</pre>
+              )}
             </div>
             <div className="flex justify-end border-t border-gray-200 bg-gray-50 px-4 py-2">
               <button
                 type="button"
-                onClick={() => setShowPlanModal(false)}
+                onClick={() => setPlanMode(null)}
                 className="cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-1 text-[12px] font-medium text-gray-700 hover:bg-gray-100"
               >
                 Close
