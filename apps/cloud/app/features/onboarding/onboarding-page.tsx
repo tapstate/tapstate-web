@@ -11,6 +11,7 @@ import {
   CloudApiError,
   cloudApi,
   type Cluster,
+  type DeploymentProgress,
   type Organization,
   type Region,
   type Subscription,
@@ -19,7 +20,6 @@ import {
   isProvisioningCancelled,
   isProvisioningFailed,
   isWorkspaceReady,
-  provisioningStage,
 } from './onboarding-adapter'
 import { ProvisioningView, type ProvisioningUpdate } from './provisioning-view'
 export type { OnboardingInput } from './onboarding-types'
@@ -102,6 +102,7 @@ export function OnboardingPage({
   const [screen, setScreen] = useState<OnboardingScreen>('form')
   const [workspace, setWorkspace] = useState<OnboardingWorkspace | null>(null)
   const [updates, setUpdates] = useState<ProvisioningUpdate[]>([])
+  const [deploymentProgress, setDeploymentProgress] = useState<DeploymentProgress | null>(null)
   const [hasPollingError, setHasPollingError] = useState(false)
   const [isRetrying, setIsRetrying] = useState(false)
   const [hasRetryError, setHasRetryError] = useState(false)
@@ -154,14 +155,18 @@ export function OnboardingPage({
 
     const refresh = async () => {
       try {
-        const [subscription, cluster] = await Promise.all([
+        const [subscription, cluster, progress] = await Promise.all([
           cloudApi.subscriptionById(workspace.organization.id, workspace.subscription.id),
           cloudApi.cluster(workspace.organization.id, workspace.cluster.id),
+          cloudApi
+            .deploymentProgress(workspace.organization.id, workspace.subscription.id)
+            .catch(() => null),
         ])
         if (!active) return
         const currentWorkspace = { ...workspace, subscription, cluster }
         setWorkspace(currentWorkspace)
-        setHasPollingError(false)
+        if (progress) setDeploymentProgress(progress)
+        setHasPollingError(progress === null)
         const update = observedUpdate(cluster, subscription)
         setUpdates((current) =>
           current.some((item) => item.key === update.key) ? current : [...current, update],
@@ -227,6 +232,7 @@ export function OnboardingPage({
         clusterName,
       })
       setWorkspace(result)
+      setDeploymentProgress(null)
       setUpdates([observedUpdate(result.cluster, result.subscription)])
       if (isProvisioningCancelled(result.cluster, result.subscription)) {
         setScreen('cancelled')
@@ -659,6 +665,7 @@ export function OnboardingPage({
         ) : workspace ? (
           <ProvisioningView
             cluster={workspace.cluster}
+            deploymentProgress={deploymentProgress}
             cancelOutcomeUnknown={isCancelOutcomeUnknown}
             entryError={entryError}
             hasPollingError={hasPollingError}
@@ -678,7 +685,6 @@ export function OnboardingPage({
             organization={workspace.organization}
             regionName={selectedRegion?.name ?? workspace.cluster.region}
             retryError={hasRetryError}
-            stage={provisioningStage(workspace.cluster, workspace.subscription)}
             subscription={workspace.subscription}
             updates={updates}
           />

@@ -86,6 +86,7 @@
     "progressTitle": "Setting up your cluster",
     "progressSubtitle": "Deploying in {{region}} for {{organization}}",
     "milestones": "Provisioning milestones",
+    "loadingProgress": "Loading deployment progress…",
     "stageCount": "Stage {{current}} of {{total}}",
     "stageAccepted": "Request accepted",
     "stageProvisioning": "Provisioning cluster resources",
