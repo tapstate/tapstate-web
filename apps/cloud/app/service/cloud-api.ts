@@ -63,7 +63,7 @@ export interface Cluster {
   provisionErrorCode?: string | null
   runtimeId?: string | null
   publicDns?: string | null
-  elasticIp?: string | null
+  ec2PublicIp?: string | null
   lastHeartbeatAt?: string | null
   createdAt?: string
   readyAt?: string | null
@@ -74,6 +74,10 @@ export interface Subscription {
   orgId: string
   status: 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELLED' | string
   provisioningAllowed: boolean
+  resourceState?: 'PROVISIONING' | 'READY' | string | null
+  resourcesReadyAt?: string | null
+  clusterId?: string | null
+  mdbAllocationId?: string | null
   currentPeriodStart?: string
   currentPeriodEnd?: string
   createdAt?: string
@@ -85,6 +89,8 @@ export interface Subscription {
     billingUnit?: string
     includedQuantity?: number
     unitPriceCents?: number
+    clusterId?: string | null
+    mdbAllocationId?: string | null
     metadata?: Record<string, string>
   }>
 }
@@ -215,19 +221,26 @@ export const cloudApi = {
     ),
   createSubscription: (orgId: string, input: CreateSubscriptionInput) =>
     request<Subscription>(
-      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscription`,
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions`,
       jsonBody(input),
+    ),
+  subscriptions: async (orgId: string) =>
+    asList<Subscription>(
+      await request<unknown>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions`),
+    ),
+  subscriptionById: (orgId: string, subscriptionId: string) =>
+    request<Subscription>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions/${encodeURIComponent(subscriptionId)}`,
     ),
   retryCluster: (orgId: string, clusterId: string) =>
     request<Cluster>(
       `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/clusters/${encodeURIComponent(clusterId)}/retry`,
       post,
     ),
-  subscription: (orgId: string) =>
-    request<Subscription>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscription`),
-  cancelSubscription: (orgId: string) =>
+  subscription: async (orgId: string) => (await cloudApi.subscriptions(orgId))[0] ?? null,
+  cancelSubscription: (orgId: string, subscriptionId: string) =>
     request<Subscription>(
-      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscription/cancel`,
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
       post,
     ),
   resolveCluster: (clusterId: string, orgId: string) => {
