@@ -1,5 +1,6 @@
 import { Check, CreditCard } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { cloudApi, type Subscription } from '../../service/cloud-api'
 import { useCloudAppState } from '../../state/cloud-app-state'
@@ -11,24 +12,33 @@ function dateLabel(value?: string) {
 }
 
 export function BillingPage() {
-  const { activeOrganization } = useCloudAppState()
-  const [subscription, setSubscription] = useState<Subscription | null>(null)
+  const { t } = useTranslation()
+  const { activeOrganization, clusters, setClusters } = useCloudAppState()
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
+  const [cancelError, setCancelError] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
+  const subscription =
+    subscriptions.find((item) => item.status !== 'CANCELLED') ?? subscriptions[0] ?? null
 
   useEffect(() => {
     if (!activeOrganization) return
     let current = true
     setIsLoading(true)
+    setSubscriptions([])
+    setConfirmingId(null)
+    setCancelError(false)
     setHasError(false)
     void cloudApi
-      .subscription(activeOrganization.id)
+      .subscriptions(activeOrganization.id)
       .then((value) => {
-        if (current) setSubscription(value)
+        if (current) setSubscriptions(value)
       })
       .catch(() => {
         if (current) {
-          setSubscription(null)
+          setSubscriptions([])
           setHasError(true)
         }
       })
@@ -39,6 +49,43 @@ export function BillingPage() {
       current = false
     }
   }, [activeOrganization])
+
+  const cancelSubscription = async (subscriptionId: string) => {
+    if (!activeOrganization || cancellingId) return
+    const orgId = activeOrganization.id
+    setCancellingId(subscriptionId)
+    setCancelError(false)
+    try {
+      const latest = await cloudApi.subscriptionById(orgId, subscriptionId)
+      const cancelled =
+        latest.status === 'CANCELLED'
+          ? latest
+          : await cloudApi.cancelSubscription(orgId, subscriptionId)
+      if (cancelled.status !== 'CANCELLED') throw new Error('Cancellation not confirmed')
+      setSubscriptions((current) =>
+        current.map((item) => (item.id === subscriptionId ? cancelled : item)),
+      )
+      setConfirmingId(null)
+      setClusters(await cloudApi.clusters(orgId))
+    } catch {
+      try {
+        const latest = await cloudApi.subscriptionById(orgId, subscriptionId)
+        if (latest.status === 'CANCELLED') {
+          setSubscriptions((current) =>
+            current.map((item) => (item.id === subscriptionId ? latest : item)),
+          )
+          setConfirmingId(null)
+          setClusters(await cloudApi.clusters(orgId))
+          return
+        }
+      } catch {
+        // Keep the confirmation visible when the outcome cannot be checked.
+      }
+      setCancelError(true)
+    } finally {
+      setCancellingId(null)
+    }
+  }
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-y-auto">
@@ -55,6 +102,69 @@ export function BillingPage() {
       </header>
 
       <div className="max-w-4xl space-y-6 p-6">
+        {subscriptions
+          .filter((item) => ['TRIAL', 'ACTIVE', 'PAST_DUE'].includes(item.status))
+          .map((item) => (
+            <section
+              className="space-y-3 rounded-xl border border-black/[0.06] p-5 dark:border-white/[0.06]"
+              key={item.id}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-neutral-900 dark:text-white">
+                    {t('onboarding.cancelSubscription')}
+                  </p>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    {clusters.find((cluster) => cluster.id === item.clusterId)?.name ??
+                      item.clusterId ??
+                      item.id}
+                  </p>
+                </div>
+                <button
+                  className="rounded-lg border border-black/[0.1] bg-white px-3 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 dark:border-white/[0.12] dark:bg-[#1a1b1e] dark:text-neutral-300"
+                  onClick={() => {
+                    setConfirmingId(item.id)
+                    setCancelError(false)
+                  }}
+                  type="button"
+                >
+                  {t('onboarding.cancelSubscription')}
+                </button>
+              </div>
+              {confirmingId === item.id && (
+                <div className="space-y-3 rounded-lg border border-red-200/80 bg-red-50/80 p-4 dark:border-red-900/50 dark:bg-red-950/30">
+                  <p className="text-xs leading-relaxed text-red-700 dark:text-red-300">
+                    {t('sections.billing.cancelWarning')}
+                  </p>
+                  {cancelError && (
+                    <p className="text-xs text-red-700 dark:text-red-300" role="alert">
+                      {t('onboarding.cancelSubscriptionError')}
+                    </p>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      className="rounded-lg border border-black/[0.1] bg-white px-3 py-2 text-xs text-neutral-700 dark:border-white/[0.12] dark:bg-[#1a1b1e] dark:text-neutral-300"
+                      disabled={cancellingId !== null}
+                      onClick={() => setConfirmingId(null)}
+                      type="button"
+                    >
+                      {t('onboarding.keepSubscription')}
+                    </button>
+                    <button
+                      className="rounded-lg bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                      disabled={cancellingId !== null}
+                      onClick={() => void cancelSubscription(item.id)}
+                      type="button"
+                    >
+                      {cancellingId === item.id
+                        ? t('onboarding.cancellingSubscription')
+                        : t('onboarding.confirmCancelSubscription')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
+          ))}
         <section className="space-y-4 rounded-xl border border-black/[0.06] p-5 dark:border-white/[0.06]">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">

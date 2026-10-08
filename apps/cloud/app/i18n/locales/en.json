@@ -122,6 +122,9 @@
     "retrying": "Retrying…",
     "retryProvisioning": "Retry Provisioning",
     "editSettings": "Edit Organization Settings",
+    "readyCancelWarning": "Cancelling this subscription will terminate cluster {{cluster}} and remove its resources.",
+    "keepSubscription": "Keep subscription",
+    "confirmCancelSubscription": "Confirm cancellation",
     "cancelSubscription": "Cancel subscription",
     "cancellingSubscription": "Cancelling subscription…",
     "cancelSubscriptionError": "Cancellation could not be confirmed. Review the deployment status before changing settings.",
@@ -142,6 +145,7 @@
       "description": "Manage organization membership and access."
     },
     "billing": {
+      "cancelWarning": "This will cancel the subscription, terminate its cluster, and remove its resources. This cannot be undone.",
       "title": "Usage & billing",
       "description": "Review usage for the current organization."
     },

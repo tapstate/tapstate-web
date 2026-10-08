@@ -122,6 +122,9 @@
     "retrying": "正在重试…",
     "retryProvisioning": "重试供给",
     "editSettings": "修改组织设置",
+    "readyCancelWarning": "取消订阅将终止 Cluster {{cluster}} 并清理其资源。",
+    "keepSubscription": "保留订阅",
+    "confirmCancelSubscription": "确认取消订阅",
     "cancelSubscription": "取消订阅",
     "cancellingSubscription": "正在取消订阅…",
     "cancelSubscriptionError": "无法确认订阅取消结果。请先查看当前部署状态，再修改设置。",
@@ -135,7 +138,11 @@
       "description": "查看集群状态并打开获准访问的 Cluster Console。"
     },
     "organizations": { "title": "组织", "description": "管理组织成员和访问权限。" },
-    "billing": { "title": "用量与账单", "description": "查看当前组织的资源用量。" },
+    "billing": {
+      "cancelWarning": "取消后将终止对应 Cluster 并清理其资源，此操作无法撤销。",
+      "title": "用量与账单",
+      "description": "查看当前组织的资源用量。"
+    },
     "settings": { "title": "设置", "description": "管理组织和账户偏好。" },
     "notConnectedTitle": "Cloud 服务尚未接通",
     "notConnectedDescription": "此页面属于受保护路由。完成登录和 API 接入后，才会显示 Cloud 数据。"

@@ -300,8 +300,9 @@ export function OnboardingPage({
     }
   }
 
-  const handleCancelFailedProvisioning = async () => {
+  const handleCancelSubscription = async () => {
     if (!workspace || isCancellingSubscription || isRetrying) return
+    const startedReady = screen === 'ready'
     setIsCancellingSubscription(true)
     setHasCancelSubscriptionError(false)
     setHasCancelStatusError(false)
@@ -329,7 +330,8 @@ export function OnboardingPage({
       }
       if (
         !isProvisioningFailed(currentWorkspace.cluster) &&
-        !isProvisioningCancelled(currentWorkspace.cluster, currentWorkspace.subscription)
+        !isProvisioningCancelled(currentWorkspace.cluster, currentWorkspace.subscription) &&
+        !(startedReady && isWorkspaceReady(currentWorkspace.cluster, currentWorkspace.subscription))
       ) {
         setIsCancelOutcomeUnknown(false)
         setScreen(
@@ -372,7 +374,11 @@ export function OnboardingPage({
             setScreen('cancelled')
           } else if (
             !isProvisioningFailed(currentWorkspace.cluster) &&
-            !isProvisioningCancelled(currentWorkspace.cluster, currentWorkspace.subscription)
+            !isProvisioningCancelled(currentWorkspace.cluster, currentWorkspace.subscription) &&
+            !(
+              startedReady &&
+              isWorkspaceReady(currentWorkspace.cluster, currentWorkspace.subscription)
+            )
           ) {
             setIsCancelOutcomeUnknown(false)
             setScreen(
@@ -667,7 +673,7 @@ export function OnboardingPage({
               setScreen('form')
             }}
             onOpenCluster={() => onComplete(workspace.organization, workspace.cluster)}
-            onCancel={() => void handleCancelFailedProvisioning()}
+            onCancel={() => void handleCancelSubscription()}
             onRetry={() => void handleRetry()}
             organization={workspace.organization}
             regionName={selectedRegion?.name ?? workspace.cluster.region}
