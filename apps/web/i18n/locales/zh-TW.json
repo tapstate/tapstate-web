@@ -1732,6 +1732,9 @@
     },
     "stateStore": {
       "title": "State store",
+      "atlasTitle": "MongoDB Atlas 狀態儲存",
+      "atlasMissing": "點擊連線目標 Atlas 叢集",
+      "atlasManaged": "已連線為目標端",
       "ready": "就緒",
       "missing": "尚未設定。",
       "location": "位置",

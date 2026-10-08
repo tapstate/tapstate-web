@@ -9,6 +9,7 @@ import type { ConnectorSummary } from '@/service/source-client'
 
 import { ConnectorIcon } from '@/components/connector-icon'
 import { cn } from '@/lib/utils'
+import { getDeploymentProfile } from '@/utils/deployment-profile'
 
 import type { OverviewModel } from '../overview-model'
 
@@ -62,6 +63,8 @@ export function OverviewTopology({
   const leftBead = activeSourceIdx === 0 || activeSourceIdx === 3 ? 6.5 : 7.8
   const rightDash = 16
   const rightBead = 8
+  const cloud = getDeploymentProfile() === 'cloud'
+  const destinationName = t(cloud ? 'overview.stateStore.atlasTitle' : 'overview.stateStore.title')
 
   useEffect(() => {
     const handleSync = () => {
@@ -107,7 +110,7 @@ export function OverviewTopology({
           <span>
             {streamLabel}:{' '}
             <strong className="font-semibold text-slate-800">{activeSource.name}</strong> CDC ➔
-            Tapstate Pipeline ➔ {t('overview.stateStore.title')}
+            Tapstate Pipeline ➔ {destinationName}
           </span>
         </div>
       </div>
@@ -116,7 +119,7 @@ export function OverviewTopology({
         key={'pipeline-stage-' + pipelineSyncKey + '-' + activeSourceIdx}
         className="overview-arena relative mt-2 mb-4 flex min-h-[340px] w-full max-w-[840px] items-center justify-center select-none"
       >
-        <div className="relative z-20 h-[330px] w-[52px] shrink-0">
+        <div className="relative z-30 h-[330px] w-[52px] shrink-0">
           <div className="pointer-events-none absolute -top-7 right-0 left-0 text-center text-[11px] font-semibold tracking-wider text-slate-400 uppercase select-none">
             Sources
           </div>
@@ -456,7 +459,7 @@ export function OverviewTopology({
                     ? 'border-emerald-500/80 shadow-md ring-2 ring-emerald-500/20'
                     : 'border-amber-400 ring-2 ring-amber-400/30',
                 )}
-                aria-label={t('overview.stateStore.title')}
+                aria-label={destinationName}
               >
                 <div className="relative z-10 flex items-center justify-center select-none">
                   <svg
@@ -489,12 +492,16 @@ export function OverviewTopology({
                       overview.stateStore.ready ? 'bg-emerald-400' : 'bg-amber-400',
                     )}
                   />
-                  <span className="font-semibold">{t('overview.stateStore.title')}</span>
+                  <span className="font-semibold">{destinationName}</span>
                 </div>
                 <span className="text-[11px] text-slate-300">
-                  {overview.stateStore.ready
-                    ? t('overview.stateStore.managed')
-                    : t('overview.stateStore.missing')}
+                  {cloud
+                    ? overview.stateStore.ready
+                      ? t('overview.stateStore.atlasManaged')
+                      : t('overview.stateStore.atlasMissing')
+                    : overview.stateStore.ready
+                      ? t('overview.stateStore.managed')
+                      : t('overview.stateStore.missing')}
                 </span>
               </div>
             )}

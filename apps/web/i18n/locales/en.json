@@ -1732,6 +1732,9 @@
     },
     "stateStore": {
       "title": "State store",
+      "atlasTitle": "MongoDB Atlas State Store",
+      "atlasMissing": "Click to connect your target Atlas cluster",
+      "atlasManaged": "Connected as the destination",
       "ready": "Ready",
       "missing": "Not set up yet.",
       "location": "Location",

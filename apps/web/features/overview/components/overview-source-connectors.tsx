@@ -70,7 +70,7 @@ export const SOURCES: SourceConnector[] = [
   },
 ]
 
-const preferred = ['mysql', 'postgres', 'oracle']
+const preferred = ['mysql', 'postgres', 'mongodb']
 
 function family(id: string) {
   if (id.includes('mysql')) return 'mysql'
