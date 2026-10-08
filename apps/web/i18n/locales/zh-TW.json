@@ -1408,6 +1408,13 @@
       "joinCount": "關聯欄位數：{{first}} + {{second}}",
       "applyPreset": "使用偵測到的樣本",
       "presetApplied": "已填入樣本結構",
+      "fixedNotice": "客戶 360 樣本已預設配置。逐步查看後即可啟動 Pipeline；配置不可修改。",
+      "fixedTransformNote": "預設流程保留原始欄位。建立巢狀客戶檢視不需要額外轉換。",
+      "fixedTransform": {
+        "shortTitle": "來源欄位",
+        "title": "保留來源欄位",
+        "body": "客戶、訂單和明細欄位直接進入巢狀文件，不需要額外轉換。"
+      },
       "applyBeforeFormula": "請先填入偵測到的樣本結構。",
       "addFormula": "將運算式加入草稿",
       "formulaAdded": "已加入草稿",

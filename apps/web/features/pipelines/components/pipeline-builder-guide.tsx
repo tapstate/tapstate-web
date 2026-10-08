@@ -67,6 +67,7 @@ const guideThemes = {
 
 export function PipelineBuilderGuide({
   open,
+  fixedPreset = false,
   step,
   mode,
   preset,
@@ -83,6 +84,7 @@ export function PipelineBuilderGuide({
   onLaunch,
 }: {
   open: boolean
+  fixedPreset?: boolean
   step: number
   mode: Customer360GuideMode
   preset: Customer360Preset | null
@@ -101,7 +103,10 @@ export function PipelineBuilderGuide({
   const { t } = useTranslation()
   const current = CUSTOMER_360_GUIDE_STEPS[step] ?? CUSTOMER_360_GUIDE_STEPS[0]
   const theme = guideThemes[current.theme]
-  const translationKey = `wizard.guide.steps.${current.id}`
+  const translationKey =
+    fixedPreset && current.id === 'transform'
+      ? 'wizard.guide.fixedTransform'
+      : `wizard.guide.steps.${current.id}`
   const [anchorPosition, setAnchorPosition] = useState<{ left: number; top: number } | null>(null)
   const inSituPanel = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -259,7 +264,13 @@ export function PipelineBuilderGuide({
           </div>
         )}
 
-        {step === 2 && preset?.amountField && presetApplied && (
+        {step === 2 && fixedPreset && (
+          <p className="text-muted-foreground mt-2 text-xs">
+            {t('wizard.guide.fixedTransformNote')}
+          </p>
+        )}
+
+        {step === 2 && !fixedPreset && preset?.amountField && presetApplied && (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <code className="bg-muted text-foreground rounded px-2 py-1 text-[11px]">
               {`orders.map(o, o.items.map(i, i.${preset.amountField}).sum()).sum()`}
@@ -277,13 +288,13 @@ export function PipelineBuilderGuide({
           </div>
         )}
 
-        {step === 2 && preset?.amountField && !presetApplied && (
+        {step === 2 && !fixedPreset && preset?.amountField && !presetApplied && (
           <p className="text-muted-foreground mt-2 text-xs">
             {t('wizard.guide.applyBeforeFormula')}
           </p>
         )}
 
-        {step === 2 && formulaAdded && (
+        {step === 2 && !fixedPreset && formulaAdded && (
           <p className="text-warning mt-2 text-xs" role="status">
             {t('wizard.guide.formulaUnavailable')}
           </p>
@@ -295,7 +306,7 @@ export function PipelineBuilderGuide({
 
         {step === 4 && (
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            {formulaAdded ? (
+            {formulaAdded && !fixedPreset ? (
               <p className="text-warning text-xs">{t('wizard.guide.saveOnly')}</p>
             ) : null}
             <Button type="button" size="sm" variant="outline" onClick={onSaveDraft}>
@@ -306,7 +317,7 @@ export function PipelineBuilderGuide({
       </div>
 
       <div className="flex shrink-0 items-center gap-2 self-end">
-        {step === 0 && preset && emptyDraft && !presetApplied && (
+        {step === 0 && !fixedPreset && preset && emptyDraft && !presetApplied && (
           <Button type="button" size="sm" onClick={onApplyPreset}>
             {t('wizard.guide.applyPreset')}
           </Button>
@@ -443,7 +454,11 @@ export function PipelineBuilderGuide({
               >
                 <Icon className="size-3" aria-hidden="true" />
                 <span className="font-mono">{String(index + 1).padStart(2, '0')}</span>
-                {t(`wizard.guide.steps.${item.id}.shortTitle`)}
+                {t(
+                  fixedPreset && item.id === 'transform'
+                    ? 'wizard.guide.fixedTransform.shortTitle'
+                    : `wizard.guide.steps.${item.id}.shortTitle`,
+                )}
                 {index === step && (
                   <span
                     className="size-1.5 animate-pulse rounded-full bg-blue-600"

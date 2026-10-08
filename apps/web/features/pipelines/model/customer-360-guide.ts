@@ -21,6 +21,11 @@ const CUSTOMER_ORDER_KEYS = ['o_w_id', 'o_d_id', 'o_c_id']
 const ORDER_KEYS = ['o_w_id', 'o_d_id', 'o_id']
 const LINE_KEYS = ['ol_w_id', 'ol_d_id', 'ol_o_id']
 
+/** IDs created by the fixed sample walkthrough, including drafts created before it was prefilled. */
+export function isGuidedCustomer360Pipeline(pipelineId: string): boolean {
+  return /^customer_360_[0-9a-f]{8}$/i.test(pipelineId)
+}
+
 /** Finds a connected MySQL/Postgres sample schema that can form a customer/order document. */
 export function findCustomer360Preset(catalog: DataSourceMeta[]): Customer360Preset | null {
   const candidates = catalog
@@ -29,10 +34,12 @@ export function findCustomer360Preset(catalog: DataSourceMeta[]): Customer360Pre
 
   for (const source of candidates) {
     const root = source.tables.find((table) => isCustomerTable(table.name))
-    const orders = source.tables.find((table) => basename(table.name).endsWith('bmsql_oorder'))
-      ?? source.tables.find((table) => isOrderTable(table.name))
-    const items = source.tables.find((table) => basename(table.name).endsWith('bmsql_order_line'))
-      ?? source.tables.find((table) => isOrderLineTable(table.name))
+    const orders =
+      source.tables.find((table) => basename(table.name).endsWith('bmsql_oorder')) ??
+      source.tables.find((table) => isOrderTable(table.name))
+    const items =
+      source.tables.find((table) => basename(table.name).endsWith('bmsql_order_line')) ??
+      source.tables.find((table) => isOrderLineTable(table.name))
     if (!root || !orders || !items) continue
     const rootKeys = tableKeys(root)
 

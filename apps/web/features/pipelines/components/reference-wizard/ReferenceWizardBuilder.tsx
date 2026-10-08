@@ -45,6 +45,7 @@ export interface WizardBuilderProps {
   compiledSpec: string
   sourceError?: string
   readOnly?: boolean
+  readOnlyLabel?: string
   activeGuideTarget?: string
 }
 
@@ -129,6 +130,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   compiledSpec,
   sourceError,
   readOnly = false,
+  readOnlyLabel,
   activeGuideTarget,
 }) => {
   const { t } = useTranslation()
@@ -1387,9 +1389,21 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
           <fieldset
             disabled={readOnly}
             className="contents"
-            aria-label={readOnly ? t('pipelines.workspace.readOnly.editorStatus') : undefined}
+            aria-label={
+              readOnly
+                ? (readOnlyLabel ?? t('pipelines.workspace.readOnly.editorStatus'))
+                : undefined
+            }
             data-testid="wizard-editor-controls"
             data-read-only={readOnly ? 'true' : 'false'}
+            onClickCapture={
+              readOnly
+                ? (event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                  }
+                : undefined
+            }
           >
             <main className="wizard-reference-canvas flex min-w-0 flex-1 flex-col overflow-y-auto">
               <div className="w-full min-w-0 pb-24">

@@ -6,12 +6,24 @@ import { ArrowRight, Sparkles } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import type { DataSourceMeta } from '@/features/pipelines/components/reference-wizard/ReferenceWizardBuilder'
+
 import { Button } from '@/components/ui/button'
 import { PipelineCreationDialog } from '@/features/pipelines/components/create/pipeline-creation-dialog'
-import { cn } from '@/lib/utils'
-import { createPipelineDraft, listPipelines } from '@/service/pipelines/pipeline-client'
-import { addSampleSources, loadSampleSources } from '@/service/sample-source-client'
 import {
+  createCustomer360Wizard,
+  findCustomer360Preset,
+} from '@/features/pipelines/model/customer-360-guide'
+import { sourceScopedTableNames } from '@/features/pipelines/model/source-table-scope'
+import { cn } from '@/lib/utils'
+import {
+  createPipelineDraft,
+  listPipelines,
+  type PipelineJsonObject,
+} from '@/service/pipelines/pipeline-client'
+import { addSampleSources, isSampleSource, loadSampleSources } from '@/service/sample-source-client'
+import {
+  getSourceSchema,
   listConnectors,
   listSources,
   type ConnectorSummary,
@@ -91,24 +103,60 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
 
   async function openGuidedBuilder() {
     if (pipelineCreating) return
-    const pipelineId = `customer_360_${crypto.randomUUID().slice(0, 8)}`
     setPipelineCreating(true)
     setPipelineCreationError(null)
     try {
+      const samples = (sourcesQuery.data ?? []).filter(isSampleSource)
+      const storeId = overview?.stateStore.managedSourceId
+      const guided = samples.length > 0
+      let wizard: PipelineJsonObject = {
+        root: { id: 'root', sourceId: '', table: '', key: [], preTransforms: [] },
+        related: [],
+        transforms: [],
+        output: { kind: 'atlas', config: {} },
+      }
+      if (guided) {
+        if (!storeId) throw new Error('Connect MongoDB Atlas before building the sample view.')
+        const catalogs = await Promise.all(
+          samples.map(async (source): Promise<DataSourceMeta> => {
+            const schema = await getSourceSchema(source.id, apiFetch)
+            const names = sourceScopedTableNames(
+              source,
+              schema.tables.map((table) => table.name),
+            )
+            return {
+              id: source.id,
+              name: source.id,
+              badge: source.connector,
+              connector: source.connector,
+              tables: names.map((name) => {
+                const table = schema.tables.find((item) => item.name === name)
+                return {
+                  name,
+                  primaryKey: table?.primaryKey[0] ?? '',
+                  keys: table?.primaryKey ?? [],
+                  discovered: Boolean(table),
+                  rowCount: '—',
+                  columns: table?.fields.map((field) => field.name) ?? [],
+                }
+              }),
+            }
+          }),
+        )
+        const preset = findCustomer360Preset(catalogs)
+        if (!preset) throw new Error('The sample customer, order, or line item schema is missing.')
+        wizard = createCustomer360Wizard(preset, storeId, 'upsert', 'cloud')
+      }
+      const pipelineId = `${guided ? 'customer_360' : 'pipeline'}_${crypto.randomUUID().slice(0, 8)}`
       await createPipelineDraft(
         pipelineId,
         {
           pipelineId,
           mode: 'wizard',
-          name: 'Customer 360',
+          name: guided ? 'Customer 360' : pipelineId,
           description: null,
           graph: null,
-          wizard: {
-            root: { id: 'root', sourceId: '', table: '', key: [], preTransforms: [] },
-            related: [],
-            transforms: [],
-            output: { kind: 'atlas', config: {} },
-          },
+          wizard,
           baseArtifactHash: null,
         },
         apiFetch,

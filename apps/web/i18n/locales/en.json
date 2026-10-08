@@ -1408,6 +1408,13 @@
       "joinCount": "Join fields: {{first}} + {{second}}",
       "applyPreset": "Use detected sample",
       "presetApplied": "Sample structure added",
+      "fixedNotice": "This Customer 360 sample is preconfigured. Review each step, then start the pipeline; its configuration is locked.",
+      "fixedTransformNote": "The preset keeps source fields unchanged. No transform is required for this nested customer view.",
+      "fixedTransform": {
+        "shortTitle": "Source fields",
+        "title": "Keep the source fields",
+        "body": "The customer, order, and line item fields flow into the nested document without an extra transform."
+      },
       "applyBeforeFormula": "Apply the detected sample structure first.",
       "addFormula": "Add expression to draft",
       "formulaAdded": "Added to draft",

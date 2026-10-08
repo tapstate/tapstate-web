@@ -47,7 +47,12 @@ vi.mock('@/service/pipelines/pipeline-client', () => ({
   updatePipelineDraft,
 }))
 
-vi.mock('@/service/source-client', () => ({ getSourceSchema, listConnectors, listSources }))
+vi.mock('@/service/source-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/service/source-client')>()),
+  getSourceSchema,
+  listConnectors,
+  listSources,
+}))
 
 vi.mock('@/stores/auth-store', () => ({
   useAuthStore: <T,>(selector: (state: { apiFetch: typeof fetch }) => T) =>
@@ -56,11 +61,13 @@ vi.mock('@/stores/auth-store', () => ({
 
 vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
   ReferenceWizardBuilder: ({
+    initial,
     onChange,
     footer,
     actions,
     readOnly,
   }: {
+    initial: WizardViewState
     onChange: (state: WizardViewState) => void
     footer: React.ReactNode
     actions?: React.ReactNode
@@ -69,6 +76,7 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
     <section
       className="wizard-reference-editor-column"
       data-read-only={readOnly ? 'true' : 'false'}
+      data-root-table={initial.root?.table ?? ''}
     >
       <button
         data-testid="change-wizard"
@@ -189,6 +197,89 @@ afterEach(() => {
 })
 
 describe('WizardBuilder publish flow', () => {
+  it('automatically fills and locks the guided Customer 360 sample draft', async () => {
+    const guidedDraft: PipelineDraft = {
+      ...initialDraft,
+      pipelineId: 'customer_360_3a1973ba',
+      wizard: {
+        root: { id: 'root', sourceId: '', table: '', key: [], preTransforms: [] },
+        related: [],
+        transforms: [],
+        output: { kind: 'atlas', config: {} },
+      },
+    }
+    listSources.mockResolvedValue([
+      { id: 'atlas-store', connector: 'mongodb-atlas', metadata: { labels: { store: 'true' } } },
+      { id: 'sample_core_banking', connector: 'mysql', metadata: { labels: { sample: 'true' } } },
+    ])
+    listConnectors.mockResolvedValue([
+      { id: 'mongodb-atlas', name: 'MongoDB Atlas', sink: true, writeModes: ['upsert'] },
+      { id: 'mysql', name: 'MySQL', sink: false, writeModes: [] },
+    ])
+    getSourceSchema.mockResolvedValue({
+      tables: [
+        {
+          name: 'bmsql_customer',
+          primaryKey: ['c_w_id', 'c_d_id', 'c_id'],
+          fields: ['c_w_id', 'c_d_id', 'c_id'].map((name) => ({ name })),
+        },
+        {
+          name: 'bmsql_oorder',
+          primaryKey: ['o_w_id', 'o_d_id', 'o_id'],
+          fields: ['o_w_id', 'o_d_id', 'o_id', 'o_c_id'].map((name) => ({ name })),
+        },
+        {
+          name: 'bmsql_order_line',
+          primaryKey: ['ol_w_id', 'ol_d_id', 'ol_o_id'],
+          fields: ['ol_w_id', 'ol_d_id', 'ol_o_id', 'ol_amount'].map((name) => ({ name })),
+        },
+      ],
+    })
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={guidedDraft.pipelineId} draft={guidedDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await vi.waitFor(() =>
+      expect(container?.querySelector('.wizard-reference-editor-column')).not.toBeNull(),
+    )
+
+    expect(
+      container?.querySelector('.wizard-reference-editor-column')?.getAttribute('data-root-table'),
+    ).toBe('bmsql_customer')
+    expect(
+      container?.querySelector('.wizard-reference-editor-column')?.getAttribute('data-read-only'),
+    ).toBe('true')
+    expect(container?.textContent).not.toContain('Use detected sample')
+    expect(container?.textContent).toContain('Nest orders')
+    expect(container?.textContent).toContain('This Customer 360 sample is preconfigured')
+    await vi.waitFor(
+      () =>
+        expect(updatePipelineDraft).toHaveBeenCalledWith(
+          guidedDraft.pipelineId,
+          expect.objectContaining({
+            wizard: expect.objectContaining({
+              root: expect.objectContaining({ table: 'bmsql_customer' }),
+              related: expect.arrayContaining([
+                expect.objectContaining({ table: 'bmsql_oorder' }),
+                expect.objectContaining({ table: 'bmsql_order_line' }),
+              ]),
+            }),
+          }),
+          '"1"',
+          expect.any(Function),
+        ),
+      { timeout: 1500 },
+    )
+  })
+
   it('shows runtime lookup progress and failure in the dock while keeping the Wizard mounted', async () => {
     container = document.createElement('div')
     document.body.append(container)

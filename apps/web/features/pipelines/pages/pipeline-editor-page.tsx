@@ -83,6 +83,7 @@ import {
   type PipelineDraftSaveResult,
 } from '../hooks/use-pipeline-draft-autosave'
 import { PipelineLogsPage } from '../logs/pipeline-logs-page'
+import { isGuidedCustomer360Pipeline } from '../model/customer-360-guide'
 import { getDeploymentProfile } from '../model/deployment-profile'
 import {
   buildPipelineDraftMutation,
@@ -1583,6 +1584,7 @@ export function PipelineWorkspacePage({
     [apiFetch, pipelineId, queryClient, section, t],
   )
   const canEditBasicInfo =
+    !isGuidedCustomer360Pipeline(pipelineId) &&
     pipelineDraft.isSuccess &&
     (pipelineDraft.data !== null || pipelineInfo.isSuccess) &&
     (!statusEnabled || status.isSuccess) &&

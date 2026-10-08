@@ -1408,6 +1408,13 @@
       "joinCount": "关联字段数：{{first}} + {{second}}",
       "applyPreset": "使用检测到的样本",
       "presetApplied": "已填入样本结构",
+      "fixedNotice": "客户 360 样例已预置配置。逐步查看后即可启动 Pipeline；配置不可修改。",
+      "fixedTransformNote": "预置流程保留原始字段。构建嵌套客户视图不需要额外转换。",
+      "fixedTransform": {
+        "shortTitle": "源字段",
+        "title": "保留源字段",
+        "body": "客户、订单和明细字段直接进入嵌套文档，不需要额外转换。"
+      },
       "applyBeforeFormula": "请先填入检测到的样本结构。",
       "addFormula": "将表达式加入草稿",
       "formulaAdded": "已加入草稿",

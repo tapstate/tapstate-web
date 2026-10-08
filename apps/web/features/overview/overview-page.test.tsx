@@ -13,6 +13,7 @@ const {
   addSampleSources,
   apiFetch,
   createPipelineDraft,
+  getSourceSchema,
   listConnectors,
   listPipelines,
   listSources,
@@ -22,6 +23,7 @@ const {
 } = vi.hoisted(() => ({
   addSampleSources: vi.fn(),
   createPipelineDraft: vi.fn(),
+  getSourceSchema: vi.fn(),
   loadSampleSources: vi.fn(),
   listViews: vi.fn(),
   apiFetch: vi.fn(),
@@ -33,6 +35,7 @@ const {
 
 vi.mock('@/service/source-client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/service/source-client')>()),
+  getSourceSchema,
   listConnectors,
   listSources,
 }))
@@ -132,6 +135,7 @@ beforeEach(() => {
   loadSampleSources.mockReset().mockResolvedValue(null)
   addSampleSources.mockReset()
   createPipelineDraft.mockReset().mockResolvedValue({})
+  getSourceSchema.mockReset()
   navigate.mockReset().mockResolvedValue(undefined)
   // jsdom here has no storage; a small in-memory one stands in for the browser's.
   const entries = new Map<string, string>()
@@ -311,9 +315,37 @@ describe('OverviewPage', () => {
     vi.stubGlobal('crypto', { randomUUID: () => '12345678-0000-0000-0000-000000000000' })
     listSources.mockResolvedValue([
       { ...source('atlas-store', 'mongodb-atlas'), metadata: { labels: { store: 'true' } } },
-      source('sample_core_banking', 'mysql'),
+      {
+        ...source('sample_core_banking', 'mysql'),
+        metadata: { labels: { sample: 'true' } },
+      },
     ])
     listPipelines.mockResolvedValue([])
+    getSourceSchema.mockResolvedValue({
+      connectionId: 'sample_core_banking',
+      connectorId: 'mysql',
+      discoveredAt: 1,
+      tables: [
+        {
+          name: 'bmsql_customer',
+          primaryKey: ['c_w_id', 'c_d_id', 'c_id'],
+          fields: ['c_w_id', 'c_d_id', 'c_id'].map((name) => ({ name, type: null })),
+          indexes: [],
+        },
+        {
+          name: 'bmsql_oorder',
+          primaryKey: ['o_w_id', 'o_d_id', 'o_id'],
+          fields: ['o_w_id', 'o_d_id', 'o_id', 'o_c_id'].map((name) => ({ name, type: null })),
+          indexes: [],
+        },
+        {
+          name: 'bmsql_order_line',
+          primaryKey: ['ol_w_id', 'ol_d_id', 'ol_o_id'],
+          fields: ['ol_w_id', 'ol_d_id', 'ol_o_id'].map((name) => ({ name, type: null })),
+          indexes: [],
+        },
+      ],
+    })
 
     await render()
     await settle()
@@ -324,7 +356,20 @@ describe('OverviewPage', () => {
       'customer_360_12345678',
       expect.objectContaining({
         mode: 'wizard',
-        wizard: expect.objectContaining({ output: { kind: 'atlas', config: {} } }),
+        wizard: expect.objectContaining({
+          root: expect.objectContaining({ table: 'bmsql_customer' }),
+          related: expect.arrayContaining([
+            expect.objectContaining({ table: 'bmsql_oorder' }),
+            expect.objectContaining({ table: 'bmsql_order_line' }),
+          ]),
+          output: expect.objectContaining({
+            kind: 'atlas',
+            config: expect.objectContaining({
+              sourceId: 'atlas-store',
+              table: 'customer_360_views',
+            }),
+          }),
+        }),
       }),
       apiFetch,
     )

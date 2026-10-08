@@ -43,6 +43,7 @@ import {
   createCustomer360Wizard,
   createCustomerLifetimeValueTransform,
   findCustomer360Preset,
+  isGuidedCustomer360Pipeline,
 } from '../model/customer-360-guide'
 import { getDeploymentProfile } from '../model/deployment-profile'
 import { targetSources } from '../model/pipeline-target-connectors'
@@ -128,9 +129,12 @@ export function WizardBuilder({
     [connectors, inputSources, schemas],
   )
   const customer360Preset = useMemo(() => findCustomer360Preset(catalog), [catalog])
+  const guidedPreset = isGuidedCustomer360Pipeline(pipelineId)
   const [wizard, setWizard] = useState(draft.wizard)
   const [builderRevision, setBuilderRevision] = useState(0)
-  const [guideOpen, setGuideOpen] = useState(() => !readOnly && isEmptyWizard(draft.wizard))
+  const [guideOpen, setGuideOpen] = useState(
+    () => !readOnly && (guidedPreset || isEmptyWizard(draft.wizard)),
+  )
   const [guideStep, setGuideStep] = useState(0)
   const [guideMode, setGuideMode] = useState<Customer360GuideMode>('storyboard')
   const [status, setStatus] = useState<'saved' | 'saving' | 'error'>('saved')
@@ -162,6 +166,26 @@ export function WizardBuilder({
   const destinationConnector = connectors.find(
     (connector) => connector.id === destination?.connector,
   )
+  useEffect(() => {
+    if (!guidedPreset || readOnly || !customer360Preset || !destination) return
+    const expected = createCustomer360Wizard(
+      customer360Preset,
+      destination.id,
+      destinationConnector?.writeModes?.[0] ?? 'upsert',
+      deploymentProfile,
+    )
+    if (JSON.stringify(wizard) === JSON.stringify(expected)) return
+    setWizard(expected)
+    setBuilderRevision((revision) => revision + 1)
+  }, [
+    customer360Preset,
+    deploymentProfile,
+    destination?.id,
+    destinationConnector,
+    guidedPreset,
+    readOnly,
+    wizard,
+  ])
   useEffect(() => {
     if (!guideOpen || readOnly) return
     const targetId = CUSTOMER_360_GUIDE_STEPS[guideStep]?.targetId
@@ -318,7 +342,7 @@ export function WizardBuilder({
   }, [persist, readOnly, t, wizard])
   const onChange = useCallback(
     (state: WizardViewState) => {
-      if (editorReadOnly) return
+      if (editorReadOnly || guidedPreset) return
       setError('')
       setNotice('')
       setPreview(null)
@@ -331,7 +355,7 @@ export function WizardBuilder({
         ),
       )
     },
-    [destination?.id, deploymentProfile, editorReadOnly],
+    [destination?.id, deploymentProfile, editorReadOnly, guidedPreset],
   )
   async function savePipeline(start: boolean) {
     if (busy || readOnly) return
@@ -430,6 +454,7 @@ export function WizardBuilder({
     <div className="flex h-full min-h-0 flex-col">
       <PipelineBuilderGuide
         open={guideOpen}
+        fixedPreset={guidedPreset}
         step={guideStep}
         mode={guideMode}
         preset={customer360Preset}
@@ -445,6 +470,11 @@ export function WizardBuilder({
         onSaveDraft={() => void savePipeline(false)}
         onLaunch={() => void savePipeline(true)}
       />
+      {guidedPreset && (
+        <p className="border-b border-indigo-100 bg-indigo-50 px-5 py-2 text-xs font-medium text-indigo-800">
+          {t('wizard.guide.fixedNotice')}
+        </p>
+      )}
       <ReferenceWizardBuilder
         key={builderRevision}
         catalog={catalog}
@@ -465,7 +495,8 @@ export function WizardBuilder({
             : ''
         }
         deploymentProfile={deploymentProfile}
-        readOnly={editorReadOnly}
+        readOnly={editorReadOnly || guidedPreset}
+        readOnlyLabel={guidedPreset ? t('wizard.guide.fixedNotice') : undefined}
         activeGuideTarget={guideOpen ? CUSTOMER_360_GUIDE_STEPS[guideStep]?.targetId : undefined}
         actions={
           <PipelineWorkflowHeader
