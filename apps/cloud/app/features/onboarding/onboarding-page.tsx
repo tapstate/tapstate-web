@@ -149,7 +149,13 @@ export function OnboardingPage({
   }, [])
 
   useEffect(() => {
-    if (screen !== 'provisioning' || !workspace) return
+    if ((screen !== 'provisioning' && screen !== 'failed') || !workspace) return
+    if (
+      screen === 'failed' &&
+      deploymentProgress?.overallStatus === 'FAILED' &&
+      deploymentProgress.operations.some((operation) => operation.status === 'FAILED')
+    )
+      return
     let active = true
     let timer: number | undefined
 
@@ -172,17 +178,25 @@ export function OnboardingPage({
           current.some((item) => item.key === update.key) ? current : [...current, update],
         )
 
-        if (isProvisioningCancelled(cluster, subscription)) {
-          setScreen('cancelled')
-          return
-        }
-        if (isProvisioningFailed(cluster)) {
-          setScreen('failed')
-          return
-        }
-        if (isWorkspaceReady(cluster, subscription)) {
-          setScreen('ready')
-          return
+        if (screen === 'failed') {
+          if (
+            progress?.overallStatus === 'FAILED' &&
+            progress.operations.some((operation) => operation.status === 'FAILED')
+          )
+            return
+        } else {
+          if (isProvisioningCancelled(cluster, subscription)) {
+            setScreen('cancelled')
+            return
+          }
+          if (isProvisioningFailed(cluster)) {
+            setScreen('failed')
+            return
+          }
+          if (isWorkspaceReady(cluster, subscription)) {
+            setScreen('ready')
+            return
+          }
         }
       } catch (error) {
         if (!active) return
@@ -201,7 +215,7 @@ export function OnboardingPage({
       active = false
       if (timer !== undefined) window.clearTimeout(timer)
     }
-  }, [navigate, screen, workspace])
+  }, [deploymentProgress, navigate, screen, workspace])
 
   useEffect(() => {
     if (
@@ -281,6 +295,7 @@ export function OnboardingPage({
       const cluster = await cloudApi.retryCluster(workspace.organization.id, workspace.cluster.id)
       const nextWorkspace = { ...currentWorkspace, cluster }
       setWorkspace(nextWorkspace)
+      setDeploymentProgress(null)
       const update = observedUpdate(cluster, subscription)
       setUpdates((current) =>
         current.some((item) => item.key === update.key) ? current : [...current, update],
