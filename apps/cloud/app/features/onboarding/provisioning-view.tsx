@@ -40,6 +40,8 @@ interface ProvisioningViewProps {
   cancelError: boolean
   cancelStatusError: boolean
   cancelOutcomeUnknown: boolean
+  cleanupPending: boolean
+  cleanupStatusError: boolean
   isOpeningCluster: boolean
   entryError: string | null
   onRetry: () => void
@@ -71,6 +73,8 @@ export function ProvisioningView({
   cancelError,
   cancelStatusError,
   cancelOutcomeUnknown,
+  cleanupPending,
+  cleanupStatusError,
   isOpeningCluster,
   entryError,
   onRetry,
@@ -469,15 +473,21 @@ export function ProvisioningView({
             {t('onboarding.cancelledTitle')}
           </h1>
           <p className="text-[13px] text-neutral-500 dark:text-neutral-400">
-            {t('onboarding.cancelledDescription')}
+            {t(cleanupPending ? 'onboarding.cleanupPending' : 'onboarding.cancelledDescription')}
           </p>
         </div>
+        {cleanupStatusError && (
+          <p className="text-xs text-red-600 dark:text-red-400" role="alert">
+            {t('onboarding.cleanupStatusError')}
+          </p>
+        )}
         <button
-          className="flex h-10 w-full items-center justify-center rounded-lg border border-black/[0.1] bg-white text-[13px] font-medium text-neutral-700 transition-colors hover:bg-neutral-50 dark:border-white/[0.12] dark:bg-[#1a1b1e] dark:text-neutral-300 dark:hover:bg-[#202124]"
+          className="flex h-10 w-full items-center justify-center rounded-lg border border-black/[0.1] bg-white text-[13px] font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.12] dark:bg-[#1a1b1e] dark:text-neutral-300 dark:hover:bg-[#202124]"
+          disabled={cleanupPending}
           onClick={onEdit}
           type="button"
         >
-          {t('onboarding.backToSetup')}
+          {t(cleanupPending ? 'onboarding.cleanupWaiting' : 'onboarding.backToSetup')}
         </button>
       </div>
     )
