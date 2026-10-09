@@ -11,26 +11,31 @@ import type { WizardViewState } from '../components/reference-wizard/ReferenceWi
 const {
   getPipelineDraft,
   previewPipelineDraft,
+  streamPipelinePreview,
   publishPipelineDraft,
   runPipeline,
   updatePipelineDraft,
   getSourceSchema,
   listConnectors,
   listSources,
+  apiFetch,
 } = vi.hoisted(() => ({
   getPipelineDraft: vi.fn(),
   previewPipelineDraft: vi.fn(),
+  streamPipelinePreview: vi.fn(),
   publishPipelineDraft: vi.fn(),
   runPipeline: vi.fn(),
   updatePipelineDraft: vi.fn(),
   getSourceSchema: vi.fn(),
   listConnectors: vi.fn(),
   listSources: vi.fn(),
+  apiFetch: vi.fn() as unknown as typeof fetch,
 }))
 
 vi.mock('@/service/pipelines/pipeline-client', () => ({
   getPipelineDraft,
   previewPipelineDraft,
+  streamPipelinePreview,
   publishPipelineDraft,
   runPipeline,
   PipelineClientError: class PipelineClientError extends Error {
@@ -55,8 +60,7 @@ vi.mock('@/service/source-client', async (importOriginal) => ({
 }))
 
 vi.mock('@/stores/auth-store', () => ({
-  useAuthStore: <T,>(selector: (state: { apiFetch: typeof fetch }) => T) =>
-    selector({ apiFetch: vi.fn() as unknown as typeof fetch }),
+  useAuthStore: <T,>(selector: (state: { apiFetch: typeof fetch }) => T) => selector({ apiFetch }),
 }))
 
 vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
@@ -66,17 +70,23 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
     footer,
     actions,
     readOnly,
+    livePreview,
+    livePreviewStatus,
   }: {
     initial: WizardViewState
     onChange: (state: WizardViewState) => void
     footer: React.ReactNode
     actions?: React.ReactNode
     readOnly?: boolean
+    livePreview: { runId: string } | null
+    livePreviewStatus: string
   }) => (
     <section
       className="wizard-reference-editor-column"
       data-read-only={readOnly ? 'true' : 'false'}
       data-root-table={initial.root?.table ?? ''}
+      data-live-preview-status={livePreviewStatus}
+      data-live-preview-run={livePreview?.runId || ''}
     >
       <button
         data-testid="change-wizard"
@@ -472,6 +482,108 @@ describe('WizardBuilder publish flow', () => {
     expect(invalidateQueries).not.toHaveBeenCalledWith({
       queryKey: ['pipelines', initialDraft.pipelineId, 'status'],
     })
+  })
+
+  it('aborts a stale preview when the unsaved candidate changes', async () => {
+    let firstSignal: AbortSignal | undefined
+    streamPipelinePreview
+      .mockImplementationOnce(
+        (request: { signal?: AbortSignal }) =>
+          new Promise((_resolve, reject) => {
+            firstSignal = request.signal
+            request.signal?.addEventListener('abort', () => reject(new Error('aborted')), {
+              once: true,
+            })
+          }),
+      )
+      .mockResolvedValueOnce({
+        runId: 'preview-run-2',
+        candidateHash: 'candidate-2',
+        format: 'logical-json',
+        executionSpec: {},
+        contexts: [],
+        sample: { rootRows: 1, inputRows: 1 },
+        documents: [{ id: 'customer-1' }],
+        trace: [],
+        sampleId: 'sample-2',
+        rowCount: 1,
+        failure: null,
+      })
+
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={initialDraft.pipelineId} draft={initialDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+
+    await vi.waitFor(() => expect(streamPipelinePreview).toHaveBeenCalledTimes(1))
+    expect(firstSignal?.aborted).toBe(false)
+
+    await act(async () => {
+      container?.querySelector<HTMLButtonElement>('[data-testid="change-wizard"]')?.click()
+    })
+    await vi.waitFor(() => expect(streamPipelinePreview).toHaveBeenCalledTimes(2))
+
+    expect(firstSignal?.aborted).toBe(true)
+    expect(previewPipelineDraft).toHaveBeenCalledWith(
+      initialDraft.pipelineId,
+      expect.any(Number),
+      expect.any(Function),
+      expect.any(AbortSignal),
+      expect.objectContaining({ mode: 'wizard', wizard: expect.any(Object) }),
+    )
+    expect(streamPipelinePreview.mock.calls[1]?.[0]).toMatchObject({
+      pipelineId: initialDraft.pipelineId,
+      drafts: [{ content: 'version: tapstate/v1' }],
+      rootLimit: 100,
+      signal: expect.any(AbortSignal),
+    })
+    expect(container?.querySelector('[data-live-preview-status="complete"]')).not.toBeNull()
+    expect(container?.querySelector('[data-live-preview-run="preview-run-2"]')).not.toBeNull()
+  })
+
+  it('keeps a completed preview stable across status-driven rerenders', async () => {
+    streamPipelinePreview.mockResolvedValue({
+      runId: 'preview-run-stable',
+      candidateHash: 'candidate-stable',
+      format: 'logical-json',
+      executionSpec: {},
+      contexts: [],
+      sample: { rootRows: 1, inputRows: 1 },
+      documents: [{ id: 'customer-1' }],
+      trace: [],
+      sampleId: 'sample-stable',
+      rowCount: 1,
+      failure: null,
+    })
+
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={initialDraft.pipelineId} draft={initialDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+
+    await vi.waitFor(() =>
+      expect(container?.querySelector('[data-live-preview-status="complete"]')).not.toBeNull(),
+    )
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 400))
+    })
+
+    expect(streamPipelinePreview).toHaveBeenCalledTimes(1)
+    expect(container?.querySelector('[data-live-preview-run="preview-run-stable"]')).not.toBeNull()
   })
 
   it('autosaves a transform draft, previews, publishes, then starts it', async () => {

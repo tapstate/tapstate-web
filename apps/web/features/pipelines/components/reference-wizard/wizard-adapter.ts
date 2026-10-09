@@ -112,6 +112,44 @@ export function writeTransforms(steps: TransformStep[] = []): PipelineJsonObject
   }))
 }
 
+/** Normalize the composite-key default that the relation editor can store as one field name. */
+export function normalizeCompositeRelationParents(
+  value: PipelineJsonObject | null,
+  catalog: DataSourceMeta[],
+): PipelineJsonObject | null {
+  if (!value) return value
+  const wizard = object(value)
+  const root = object(wizard.root)
+  const related = array(wizard.related).map(object)
+  const tableFor = (sourceId: string, tableName: string) =>
+    catalog
+      .find((candidate) => candidate.id === sourceId)
+      ?.tables.find((table) => table.name === tableName)
+  const keysForParent = (parentId: string) => {
+    const parent = related.find((candidate) => candidate.id === parentId)
+    const parentMeta = parent
+      ? tableFor(text(parent.sourceId), text(parent.table))
+      : tableFor(text(root.sourceId), text(root.table))
+    return parentMeta?.keys || []
+  }
+  return {
+    ...wizard,
+    related: related.map((row) => {
+      const relation = object(row.relation)
+      const parentKeys = keysForParent(text(row.parentId) || 'root')
+      if (parentKeys.length < 2) return row
+      const compositeDefault = parentKeys.join(', ')
+      const on = array(relation.on).map((rawPair) => {
+        const pair = object(rawPair)
+        return text(pair.parentField) === compositeDefault
+          ? { ...pair, parentField: parentKeys[0] }
+          : pair
+      })
+      return { ...row, relation: { ...relation, on } }
+    }),
+  }
+}
+
 function literalValue(value: string): unknown {
   try {
     return JSON.parse(value)
@@ -175,7 +213,7 @@ export function readWizard(
   fallbackDestinationId = '',
   fallbackWriteMode = 'upsert',
 ): WizardViewState {
-  const wizard = object(value),
+  const wizard = object(normalizeCompositeRelationParents(value, catalog)),
     root = object(wizard.root),
     output = object(object(wizard.output).config)
   const sourceId = text(root.sourceId),

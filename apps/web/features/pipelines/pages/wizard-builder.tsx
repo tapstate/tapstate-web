@@ -7,10 +7,13 @@ import {
   previewPipelineDraft,
   publishPipelineDraft,
   runPipeline,
+  streamPipelinePreview,
   updatePipelineDraft,
   PipelineClientError,
   type PipelineDraft,
   type PipelineDraftMutation,
+  type PipelineDraftPreview,
+  type PipelinePreviewRun,
   type PipelineRuntimeState,
 } from '@/service/pipelines/pipeline-client'
 import { isSampleSource } from '@/service/sample-source-client'
@@ -31,11 +34,11 @@ import {
 } from '../components/pipeline-builder-guide'
 import {
   ReferenceWizardBuilder,
-  type DataSourceMeta,
   type WizardViewState,
 } from '../components/reference-wizard/ReferenceWizardBuilder'
 import {
   readWizard,
+  normalizeCompositeRelationParents,
   writeWizard,
   wizardPublicationIssue,
   wizardUpsertKeylessInput,
@@ -89,16 +92,16 @@ export function WizardBuilder({
   const sources = sourcesQuery.data || []
   const inputSources = useMemo(() => sources.filter(isDataSource), [sources])
   const deploymentProfile = getDeploymentProfile()
-  const schemas = useQueries({
+  const { catalog, schemasError, schemasPending } = useQueries({
     queries: inputSources.map((s) => ({
       queryKey: ['wizard', 'source-schema', s.id],
       queryFn: () => getSourceSchema(s.id, apiFetch),
       retry: false,
     })),
-  })
-  const catalog = useMemo<DataSourceMeta[]>(
-    () =>
-      inputSources.map((s, i) => {
+    combine: (schemas) => ({
+      schemasError: schemas.find((schema) => schema.error)?.error?.message,
+      schemasPending: schemas.some((schema) => schema.isPending),
+      catalog: inputSources.map((s, i) => {
         const details = schemas[i]?.data?.tables || []
         const names = sourceScopedTableNames(
           s,
@@ -127,8 +130,8 @@ export function WizardBuilder({
           }),
         }
       }),
-    [connectors, inputSources, schemas],
-  )
+    }),
+  })
   const guidedDraft = isGuidedCustomer360Pipeline(pipelineId, draft.wizard)
   const sampleSourceIds = useMemo(
     () => new Set(inputSources.filter(isSampleSource).map((source) => source.id)),
@@ -155,10 +158,19 @@ export function WizardBuilder({
   const [startPhase, setStartPhase] = useState<
     'saving' | 'validating' | 'publishing' | 'starting' | 'checking' | null
   >(null)
+  const [preview, setPreview] = useState<PipelineDraftPreview | null>(null)
+  const [livePreview, setLivePreview] = useState<PipelinePreviewRun | null>(null)
+  const [livePreviewStatus, setLivePreviewStatus] = useState<
+    'idle' | 'loading' | 'stale' | 'complete' | 'error'
+  >('idle')
+  const [livePreviewError, setLivePreviewError] = useState('')
   const editorReadOnly = readOnly || (busy && action === 'start')
   const currentDraft = useRef(draft)
   const currentEtag = useRef(etag)
   const pending = useRef<Promise<void> | null>(null)
+  const previewAbort = useRef<AbortController | null>(null)
+  const previewGeneration = useRef(0)
+  const reusableSampleId = useRef<string | null>(null)
   const savedFingerprint = useRef(JSON.stringify(draft.wizard))
   const currentWizard = useRef(wizard)
   currentWizard.current = wizard
@@ -359,6 +371,12 @@ export function WizardBuilder({
   const onChange = useCallback(
     (state: WizardViewState) => {
       if (editorReadOnly || guidedPreset) return
+      previewGeneration.current += 1
+      previewAbort.current?.abort()
+      previewAbort.current = null
+      setPreview(null)
+      setLivePreviewError('')
+      setLivePreviewStatus((current) => (current === 'idle' ? 'idle' : 'stale'))
       setError('')
       setNotice('')
       setWizard((previous) =>
@@ -437,7 +455,105 @@ export function WizardBuilder({
     if (!result.dsl?.trim()) throw new Error(t('wizard.dslUnavailable'))
     return result.dsl
   }
-  if (sourcesQuery.isPending || connectorsQuery.isPending || schemas.some((s) => s.isPending))
+
+  useEffect(() => {
+    if (readOnly) return
+    const root = wizard?.root as { sourceId?: unknown; table?: unknown } | undefined
+    const output = wizard?.output as
+      | { config?: { sourceId?: unknown; table?: unknown } }
+      | undefined
+    if (
+      typeof root?.sourceId !== 'string' ||
+      !root.sourceId ||
+      typeof root.table !== 'string' ||
+      !root.table ||
+      typeof output?.config?.sourceId !== 'string' ||
+      !output.config.sourceId
+    ) {
+      setLivePreviewStatus((current) => (current === 'idle' ? 'idle' : 'stale'))
+      return
+    }
+
+    const controller = new AbortController()
+    previewAbort.current = controller
+    const generation = ++previewGeneration.current
+    const timer = window.setTimeout(() => {
+      setLivePreviewStatus((current) => (current === 'idle' ? 'loading' : 'stale'))
+      setLivePreviewError('')
+      void (async () => {
+        try {
+          const previewWizard =
+            normalizeCompositeRelationParents(currentWizard.current, catalog) ||
+            currentWizard.current
+          if (!previewWizard) throw new Error('The preview requires a Pipeline draft.')
+          const previewOutput = previewWizard.output as
+            | { config?: Record<string, unknown> }
+            | undefined
+          const candidate: PipelineDraftMutation = {
+            pipelineId,
+            mode: 'wizard',
+            name: currentDraft.current.name,
+            description: currentDraft.current.description,
+            graph: null,
+            wizard: {
+              ...previewWizard,
+              output: {
+                ...previewOutput,
+                config: {
+                  ...previewOutput?.config,
+                  // The preview executor replaces the sink with a no-write materializer. A
+                  // temporary table name lets a partially configured destination still preview
+                  // its real source rows without changing the saved Pipeline draft.
+                  table: previewOutput?.config?.table || '__tapstate_preview__',
+                },
+              },
+            },
+            baseArtifactHash: currentDraft.current.baseArtifactHash,
+          }
+          const compiled = await previewPipelineDraft(
+            pipelineId,
+            currentDraft.current.revision,
+            apiFetch,
+            controller.signal,
+            candidate,
+          )
+          if (controller.signal.aborted || generation !== previewGeneration.current) return
+          if (!compiled.dsl)
+            throw new Error('The candidate did not compile to a Pipeline DSL document.')
+          const result = await streamPipelinePreview(
+            {
+              pipelineId,
+              drafts: [{ content: compiled.dsl }],
+              rootLimit: 100,
+              sampleId: reusableSampleId.current || undefined,
+              signal: controller.signal,
+            },
+            apiFetch,
+          )
+          if (controller.signal.aborted || generation !== previewGeneration.current) return
+          if (result.failure) {
+            setLivePreviewError(result.failure.code)
+            setLivePreviewStatus('error')
+            return
+          }
+          reusableSampleId.current = result.sampleId
+          setLivePreview(result)
+          setLivePreviewStatus('complete')
+        } catch (cause) {
+          if (controller.signal.aborted || generation !== previewGeneration.current) return
+          setLivePreviewError(cause instanceof Error ? cause.message : 'preview-failed')
+          setLivePreviewStatus('error')
+        }
+      })()
+    }, 250)
+
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+      if (previewAbort.current === controller) previewAbort.current = null
+    }
+  }, [apiFetch, catalog, pipelineId, readOnly, wizard])
+  if (sourcesQuery.isPending || connectorsQuery.isPending || schemasPending)
     return (
       <div className="text-muted-foreground p-8 text-sm" role="status">
         {t('wizard.loading')}
@@ -607,13 +723,18 @@ export function WizardBuilder({
                 onRun={() => void savePipeline(true)}
               />
             }
-            sourceError={
-              sourcesQuery.error?.message || schemas.find((s) => s.error)?.error?.message
+            sourceError={sourcesQuery.error?.message || schemasError}
+            compiledSpec={
+              livePreview
+                ? JSON.stringify(livePreview.executionSpec, null, 2)
+                : preview?.dsl || JSON.stringify(wizard, null, 2)
             }
-            compiledSpec={JSON.stringify(wizard, null, 2)}
+            livePreview={livePreview}
+            livePreviewStatus={livePreviewStatus}
+            livePreviewError={livePreviewError}
             footer={
               <div className="mt-5 flex flex-wrap items-center justify-end gap-3 text-[11px]">
-                {error && guidedPreset && (
+                {error && (
                   <p
                     role="alert"
                     className="w-full rounded border border-red-200 bg-red-50 p-3 text-red-700"
