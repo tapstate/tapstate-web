@@ -55,7 +55,7 @@ export function AppSidebar() {
   })
   const organizationUrl = cloudContext.data?.organizationId
     ? new URL(
-        `/overview?organizationId=${encodeURIComponent(cloudContext.data.organizationId)}`,
+        `/?organizationId=${encodeURIComponent(cloudContext.data.organizationId)}`,
         cloudConsoleUrl,
       ).toString()
     : null
