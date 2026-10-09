@@ -19,9 +19,9 @@
     "signInAction": "Sign in"
   },
   "auth": {
-    "headerNote": "Cloud workspace access",
+    "headerNote": "Cloud cluster access",
     "eyebrow": "TAPSTATE CLOUD",
-    "loginTitle": "Sign in to your workspace",
+    "loginTitle": "Sign in to your cluster",
     "registerTitle": "Create your account",
     "loginDescription": "Use your email and password to access your organizations.",
     "registerDescription": "Create an account to set up your first Cloud organization.",

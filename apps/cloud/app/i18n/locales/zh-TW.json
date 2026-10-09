@@ -19,9 +19,9 @@
     "signInAction": "登入"
   },
   "auth": {
-    "headerNote": "Cloud 工作區存取",
+    "headerNote": "Cloud 叢集存取",
     "eyebrow": "TAPSTATE CLOUD",
-    "loginTitle": "登入工作區",
+    "loginTitle": "登入叢集",
     "registerTitle": "建立帳戶",
     "loginDescription": "使用電子郵件和密碼存取你的組織。",
     "registerDescription": "建立帳戶並設定你的第一個 Cloud 組織。",

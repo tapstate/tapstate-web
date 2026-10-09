@@ -19,9 +19,9 @@
     "signInAction": "登录"
   },
   "auth": {
-    "headerNote": "Cloud 工作区访问",
+    "headerNote": "Cloud 集群访问",
     "eyebrow": "TAPSTATE CLOUD",
-    "loginTitle": "登录工作区",
+    "loginTitle": "登录集群",
     "registerTitle": "创建账户",
     "loginDescription": "使用邮箱和密码访问你的组织。",
     "registerDescription": "创建账户并设置你的第一个 Cloud 组织。",
