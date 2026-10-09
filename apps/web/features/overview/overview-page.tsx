@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { ArrowRight, Sparkles } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { DataSourceMeta } from '@/features/pipelines/components/reference-wizard/ReferenceWizardBuilder'
@@ -99,7 +99,6 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
   const [pipelineCreationOpen, setPipelineCreationOpen] = useState(false)
   const [pipelineCreationError, setPipelineCreationError] = useState<string | null>(null)
   const [pipelineCreating, setPipelineCreating] = useState(false)
-  const initialAtlasPromptShown = useRef(false)
 
   async function openGuidedBuilder() {
     if (pipelineCreating) return
@@ -174,17 +173,6 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
     [sourcesQuery.data, pipelinesQuery.data, views],
   )
   const failed = sourcesQuery.isError || pipelinesQuery.isError
-  useEffect(() => {
-    if (
-      getDeploymentProfile() !== 'cloud' ||
-      !overview ||
-      overview.stateStore.ready ||
-      initialAtlasPromptShown.current
-    )
-      return
-    initialAtlasPromptShown.current = true
-    setAtlasOpen(true)
-  }, [overview])
   return (
     <section className="overview-page">
       <header className="overview-page__header z-30 flex shrink-0 items-center justify-between border-b border-slate-200/80 bg-white/80 px-8 py-3.5 backdrop-blur-xl">
