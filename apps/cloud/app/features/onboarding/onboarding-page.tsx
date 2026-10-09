@@ -104,6 +104,7 @@ export function OnboardingPage({
   const [updates, setUpdates] = useState<ProvisioningUpdate[]>([])
   const [deploymentProgress, setDeploymentProgress] = useState<DeploymentProgress | null>(null)
   const [hasPollingError, setHasPollingError] = useState(false)
+  const [hasCleanupStatusError, setHasCleanupStatusError] = useState(false)
   const [isRetrying, setIsRetrying] = useState(false)
   const [hasRetryError, setHasRetryError] = useState(false)
   const [isCancellingSubscription, setIsCancellingSubscription] = useState(false)
@@ -216,6 +217,34 @@ export function OnboardingPage({
       if (timer !== undefined) window.clearTimeout(timer)
     }
   }, [deploymentProgress, navigate, screen, workspace])
+
+  useEffect(() => {
+    if (screen !== 'cancelled' || !workspace || workspace.cluster.state === 'TERMINATED') return
+    let active = true
+    let timer: number | undefined
+    const refresh = async () => {
+      try {
+        const cluster = await cloudApi.cluster(workspace.organization.id, workspace.cluster.id)
+        if (!active) return
+        setWorkspace((current) => (current ? { ...current, cluster } : current))
+        setHasCleanupStatusError(false)
+        if (cluster.state === 'TERMINATED') return
+      } catch (error) {
+        if (!active) return
+        if (error instanceof CloudApiError && error.status === 401) {
+          redirectToAuth()
+          return
+        }
+        setHasCleanupStatusError(true)
+      }
+      timer = window.setTimeout(() => void refresh(), 3000)
+    }
+    void refresh()
+    return () => {
+      active = false
+      if (timer !== undefined) window.clearTimeout(timer)
+    }
+  }, [screen, workspace?.organization.id, workspace?.cluster.id, workspace?.cluster.state])
 
   useEffect(() => {
     if (
@@ -691,9 +720,12 @@ export function OnboardingPage({
             isRetrying={isRetrying}
             mode={screen}
             onEdit={() => {
+              if (workspace.cluster.state !== 'TERMINATED') return
               setHasSubmitError(false)
               setScreen('form')
             }}
+            cleanupPending={screen === 'cancelled' && workspace.cluster.state !== 'TERMINATED'}
+            cleanupStatusError={hasCleanupStatusError}
             onOpenCluster={() => onComplete(workspace.organization, workspace.cluster)}
             onCancel={() => void handleCancelSubscription()}
             onRetry={() => void handleRetry()}
