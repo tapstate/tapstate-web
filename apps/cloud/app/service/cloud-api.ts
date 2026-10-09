@@ -95,6 +95,19 @@ export interface Subscription {
   }>
 }
 
+export interface DeploymentProgress {
+  overallStatus: 'PENDING' | 'IN_PROGRESS' | 'FAILED' | 'SUCCEEDED'
+  percent: number
+  message?: string | null
+  operations: Array<{
+    operation: string
+    displayName: string
+    sequence: number
+    status: 'PENDING' | 'RUNNING' | 'RETRYING' | 'SUCCEEDED' | 'FAILED' | 'SKIPPED'
+    message?: string | null
+  }>
+}
+
 export interface RegisterInput {
   email: string
   password: string
@@ -228,9 +241,31 @@ export const cloudApi = {
     asList<Subscription>(
       await request<unknown>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions`),
     ),
+  activeClusters: async (orgId: string) => {
+    const [clusters, subscriptions] = await Promise.all([
+      cloudApi.clusters(orgId),
+      cloudApi.subscriptions(orgId),
+    ])
+    const cancelledClusterIds = new Set(
+      subscriptions
+        .filter((subscription) => subscription.status === 'CANCELLED')
+        .flatMap((subscription) => [
+          subscription.clusterId,
+          ...(subscription.items?.map((item) => item.clusterId) ?? []),
+        ])
+        .filter((id): id is string => Boolean(id)),
+    )
+    return clusters.filter(
+      (cluster) => cluster.state !== 'TERMINATED' && !cancelledClusterIds.has(cluster.id),
+    )
+  },
   subscriptionById: (orgId: string, subscriptionId: string) =>
     request<Subscription>(
       `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions/${encodeURIComponent(subscriptionId)}`,
+    ),
+  deploymentProgress: (orgId: string, subscriptionId: string) =>
+    request<DeploymentProgress>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions/${encodeURIComponent(subscriptionId)}/progress?opType=INSTALL`,
     ),
   retryCluster: (orgId: string, clusterId: string) =>
     request<Cluster>(

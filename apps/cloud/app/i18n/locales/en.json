@@ -86,6 +86,7 @@
     "progressTitle": "Setting up your cluster",
     "progressSubtitle": "Deploying in {{region}} for {{organization}}",
     "milestones": "Provisioning milestones",
+    "loadingProgress": "Loading deployment progress…",
     "stageCount": "Stage {{current}} of {{total}}",
     "stageAccepted": "Request accepted",
     "stageProvisioning": "Provisioning cluster resources",
@@ -96,6 +97,7 @@
     "stageClusterReadyDetail": "The cluster is ready. Waiting for all subscription resources to be ready.",
     "stageResourcesReadyDetail": "Cloud reports that all subscription resources are ready.",
     "currentStage": "Current Stage",
+    "failedStage": "Failed operation and reason",
     "nextUpdate": "Next Update",
     "nextUpdateDetail": "This page checks Cloud for the next status update.",
     "pollError": "The latest status could not be loaded. Cloud status checks will continue automatically.",
@@ -111,9 +113,13 @@
     "openingCluster": "Opening Cluster Console…",
     "openCluster": "Open Cluster Console",
     "failedTitle": "Provisioning interrupted",
+    "failedBadge": "Deployment stopped",
     "failedDescription": "Cloud reported that cluster provisioning failed.",
     "cancelledTitle": "Provisioning cancelled",
     "cancelledDescription": "This Cluster is no longer being provisioned. Review the setup to start again.",
+    "cleanupPending": "Subscription cancelled. Waiting for the previous Cluster to finish releasing its resources before you create another one.",
+    "cleanupWaiting": "Releasing Cluster resources...",
+    "cleanupStatusError": "Unable to check cleanup status. This page will keep trying.",
     "backToSetup": "Back to setup",
     "failedCodeLabel": "Provisioning error code",
     "failedCodeUnavailable": "No error code was returned.",
@@ -122,6 +128,13 @@
     "retrying": "Retrying…",
     "retryProvisioning": "Retry Provisioning",
     "editSettings": "Edit Organization Settings",
+    "readyCancelWarning": "Cancelling this subscription will terminate cluster {{cluster}} and remove its resources.",
+    "keepSubscription": "Keep subscription",
+    "confirmCancelSubscription": "Confirm cancellation",
+    "cancelSubscription": "Cancel subscription",
+    "cancellingSubscription": "Cancelling subscription…",
+    "cancelSubscriptionError": "Cancellation could not be confirmed. Review the deployment status before changing settings.",
+    "cancelStatusError": "Could not refresh the current deployment status. The cancellation request was not sent; try again.",
     "footnote": "Cluster provisioning runs in the background. The console will show the status returned by Cloud."
   },
   "sections": {
@@ -138,6 +151,7 @@
       "description": "Manage organization membership and access."
     },
     "billing": {
+      "cancelWarning": "This will cancel the subscription, terminate its cluster, and remove its resources. This cannot be undone.",
       "title": "Usage & billing",
       "description": "Review usage for the current organization."
     },

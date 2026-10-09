@@ -86,6 +86,7 @@
     "progressTitle": "正在設定叢集",
     "progressSubtitle": "正在為 {{organization}} 部署至 {{region}}",
     "milestones": "供給階段",
+    "loadingProgress": "正在載入部署進度…",
     "stageCount": "第 {{current}} 階段，共 {{total}} 階段",
     "stageAccepted": "請求已接受",
     "stageProvisioning": "正在供給叢集資源",
@@ -96,6 +97,7 @@
     "stageClusterReadyDetail": "叢集已就緒，正在等待所有訂閱資源就緒。",
     "stageResourcesReadyDetail": "Cloud 回報所有訂閱資源均已就緒。",
     "currentStage": "目前階段",
+    "failedStage": "失敗步驟與原因",
     "nextUpdate": "下一次更新",
     "nextUpdateDetail": "此頁面會持續向 Cloud 查詢最新狀態。",
     "pollError": "暫時無法取得最新狀態，系統會繼續自動查詢。",
@@ -111,9 +113,13 @@
     "openingCluster": "正在開啟叢集主控台…",
     "openCluster": "開啟叢集主控台",
     "failedTitle": "供給已中斷",
+    "failedBadge": "部署已停止",
     "failedDescription": "Cloud 回報叢集供給失敗。",
     "cancelledTitle": "叢集部署已取消",
     "cancelledDescription": "此叢集已停止部署。請檢查設定後重新開始。",
+    "cleanupPending": "訂閱已取消，正在等待舊 Cluster 釋放資源，完成後即可重新建立。",
+    "cleanupWaiting": "正在釋放 Cluster 資源…",
+    "cleanupStatusError": "暫時無法查詢清理狀態，頁面會繼續重試。",
     "backToSetup": "返回設定",
     "failedCodeLabel": "供給錯誤代碼",
     "failedCodeUnavailable": "未回傳錯誤代碼。",
@@ -122,6 +128,13 @@
     "retrying": "正在重試…",
     "retryProvisioning": "重試供給",
     "editSettings": "修改組織設定",
+    "readyCancelWarning": "取消訂閱將終止 Cluster {{cluster}} 並清理其資源。",
+    "keepSubscription": "保留訂閱",
+    "confirmCancelSubscription": "確認取消訂閱",
+    "cancelSubscription": "取消訂閱",
+    "cancellingSubscription": "正在取消訂閱…",
+    "cancelSubscriptionError": "無法確認訂閱取消結果。請先查看目前部署狀態，再修改設定。",
+    "cancelStatusError": "無法重新整理目前部署狀態，尚未送出取消請求；請重試。",
     "footnote": "叢集會在背景建立。主控台將顯示 Cloud 傳回的實際狀態。"
   },
   "sections": {
@@ -131,7 +144,11 @@
       "description": "查看叢集狀態並開啟獲准存取的 Cluster Console。"
     },
     "organizations": { "title": "組織", "description": "管理組織成員和存取權限。" },
-    "billing": { "title": "用量與帳單", "description": "查看目前組織的資源用量。" },
+    "billing": {
+      "cancelWarning": "取消後將終止對應 Cluster 並清理其資源，此操作無法復原。",
+      "title": "用量與帳單",
+      "description": "查看目前組織的資源用量。"
+    },
     "settings": { "title": "設定", "description": "管理組織和帳戶偏好設定。" },
     "notConnectedTitle": "Cloud 服務尚未接通",
     "notConnectedDescription": "此頁面屬於受保護路由。完成登入和 API 接線後，才會顯示 Cloud 資料。"
