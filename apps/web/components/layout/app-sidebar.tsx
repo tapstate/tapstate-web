@@ -3,6 +3,7 @@ import type { ComponentType, SVGProps } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useRouterState } from '@tanstack/react-router'
 import {
+  ArrowLeft,
   Building2,
   Database,
   GitMerge,
@@ -17,6 +18,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { loadCloudWorkspaceContext } from '@/service/cloud-workspace-client'
 import { useAuthStore } from '@/stores/auth-store'
+import { cloudConsoleUrl } from '@/utils/cloud-console'
 
 import { AppHeader } from './app-header'
 
@@ -51,12 +53,31 @@ export function AppSidebar() {
     staleTime: 5 * 60 * 1000,
     retry: 1,
   })
+  const organizationUrl = cloudContext.data?.organizationId
+    ? new URL(
+        `/overview?organizationId=${encodeURIComponent(cloudContext.data.organizationId)}`,
+        cloudConsoleUrl,
+      ).toString()
+    : null
 
   return (
     <aside className="app-sidebar bg-transparent">
       {profile === 'cloud' ? (
         <div className="app-sidebar__cloud-identity mt-2" aria-label={t('app.cloudIdentity.label')}>
-          <div className="app-sidebar__cloud-organization">
+          <a
+            className={cn(
+              'app-sidebar__cloud-organization',
+              !organizationUrl && 'app-sidebar__cloud-organization--disabled',
+            )}
+            href={organizationUrl ?? undefined}
+            aria-label={t('app.cloudIdentity.returnToOrganization', {
+              organization: cloudContext.data?.organizationName ?? '',
+            })}
+            aria-disabled={!organizationUrl}
+            onClick={(event) => {
+              if (!organizationUrl) event.preventDefault()
+            }}
+          >
             <span className="app-sidebar__cloud-organization-icon" aria-hidden="true">
               <Building2 className="h-4 w-4" />
             </span>
@@ -69,7 +90,8 @@ export function AppSidebar() {
                   ? t('app.cloudIdentity.organizationLoading')
                   : t('app.cloudIdentity.organizationUnavailable'))}
             </span>
-          </div>
+            <ArrowLeft className="app-sidebar__cloud-return-icon" aria-hidden="true" />
+          </a>
           <div className="app-sidebar__cloud-cluster" aria-live="polite">
             <span
               className={cn(

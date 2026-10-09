@@ -67,8 +67,18 @@ export const Route = createFileRoute('/_console')({
     try {
       const [session, organizations] = await Promise.all([cloudApi.me(), cloudApi.organizations()])
       if (organizations.length === 0) throw redirect({ to: '/onboarding' })
-      const clusters = await cloudApi.clusters(organizations[0].id)
-      return { session, organizations, clusters }
+      const requestedOrganizationId = new URLSearchParams(window.location.search).get(
+        'organizationId',
+      )
+      const selectedOrganization = organizations.find((item) => item.id === requestedOrganizationId)
+      const orderedOrganizations = selectedOrganization
+        ? [
+            selectedOrganization,
+            ...organizations.filter((item) => item.id !== selectedOrganization.id),
+          ]
+        : organizations
+      const clusters = await cloudApi.clusters(orderedOrganizations[0].id)
+      return { session, organizations: orderedOrganizations, clusters }
     } catch (error) {
       if (error instanceof CloudApiError && error.status === 401) throw redirect({ to: '/auth' })
       throw error
