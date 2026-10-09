@@ -112,7 +112,6 @@ export function OnboardingPage({
   const [hasCancelStatusError, setHasCancelStatusError] = useState(false)
   const [isCancelOutcomeUnknown, setIsCancelOutcomeUnknown] = useState(false)
   const hasRedirectedToAuth = useRef(false)
-  const autoEntryClusterId = useRef<string | null>(null)
 
   const redirectToAuth = () => {
     if (hasRedirectedToAuth.current) return
@@ -245,20 +244,6 @@ export function OnboardingPage({
       if (timer !== undefined) window.clearTimeout(timer)
     }
   }, [screen, workspace?.organization.id, workspace?.cluster.id, workspace?.cluster.state])
-
-  useEffect(() => {
-    if (
-      screen !== 'ready' ||
-      !workspace ||
-      !isWorkspaceReady(workspace.cluster, workspace.subscription)
-    ) {
-      return
-    }
-    if (autoEntryClusterId.current === workspace.cluster.id) return
-
-    autoEntryClusterId.current = workspace.cluster.id
-    onComplete(workspace.organization, workspace.cluster)
-  }, [onComplete, screen, workspace])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
