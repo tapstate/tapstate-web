@@ -84,7 +84,10 @@ export function AuthPage({
     >
       <header className="z-20 flex w-full max-w-5xl items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <img alt="Tapstate" className="h-7 w-auto dark:hidden" src="/tapstate-lockup-light.svg" />
+          <div className="flex items-center gap-1.5 dark:hidden">
+            <img alt="" className="h-7 w-7" src="/tapstate-app-icon.svg" />
+            <img alt="Tapstate" className="h-7 w-auto" src="/tapstate-wordmark-light.svg" />
+          </div>
           <img
             alt="Tapstate"
             className="hidden h-7 w-auto dark:block"
