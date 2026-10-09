@@ -39,6 +39,7 @@ interface OverviewTopologyProps {
   connectors: ConnectorSummary[]
   onConnectAtlas: () => void
   onAddSources: () => void
+  onConnectSource: (connectorId: string) => void
   onBuildPipeline: () => void
   children: ReactNode
 }
@@ -48,6 +49,7 @@ export function OverviewTopology({
   connectors,
   onConnectAtlas,
   onAddSources,
+  onConnectSource,
   onBuildPipeline,
   children,
 }: OverviewTopologyProps) {
@@ -154,7 +156,10 @@ export function OverviewTopology({
                   onBlur={() => setHoveredTooltipIdx(null)}
                   onClick={() => {
                     if (isMore) onAddSources()
-                    else setSelectedSourceIdx(idx)
+                    else {
+                      setSelectedSourceIdx(idx)
+                      onConnectSource(src.id)
+                    }
                   }}
                   title={isMore ? t('overview.sources.add') : src.name}
                   aria-label={isMore ? t('overview.sources.add') : src.name}

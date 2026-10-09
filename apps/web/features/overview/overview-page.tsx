@@ -96,6 +96,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
   const [atlasOpen, setAtlasOpen] = useState(false)
   const [sourceFormOpen, setSourceFormOpen] = useState(false)
   const [sourceConnectorId, setSourceConnectorId] = useState<string | null>(null)
+  const [returnToAddSources, setReturnToAddSources] = useState(false)
   const [pipelineCreationOpen, setPipelineCreationOpen] = useState(false)
   const [pipelineCreationError, setPipelineCreationError] = useState<string | null>(null)
   const [pipelineCreating, setPipelineCreating] = useState(false)
@@ -172,6 +173,12 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
         : null,
     [sourcesQuery.data, pipelinesQuery.data, views],
   )
+  const cloud = getDeploymentProfile() === 'cloud'
+  const hasInstalledSample = (sourcesQuery.data ?? []).some(isSampleSource)
+  const guidedPipeline = pipelinesQuery.data?.find((pipeline) =>
+    /^customer_360_[0-9a-f]{8}$/i.test(pipeline.id),
+  )
+  const guideAvailable = cloud && hasInstalledSample
   const failed = sourcesQuery.isError || pipelinesQuery.isError
   return (
     <section className="overview-page">
@@ -212,6 +219,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
               ),
             )}
             sampleAdding={addSamples.isPending}
+            guideAvailable={guideAvailable}
             onConnectAtlas={() => {
               if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready)
                 setAtlasOpen(true)
@@ -222,6 +230,17 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
                 setAtlasOpen(true)
               else setAddSourcesOpen(true)
             }}
+            onConnectSource={(connectorId) => {
+              if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready) {
+                setAtlasOpen(true)
+              } else if (sourceForm) {
+                setSourceConnectorId(connectorId)
+                setReturnToAddSources(false)
+                setSourceFormOpen(true)
+              } else {
+                setAddSourcesOpen(true)
+              }
+            }}
             onTrySample={() => {
               if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready)
                 setAtlasOpen(true)
@@ -231,12 +250,12 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
               if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready)
                 setAtlasOpen(true)
               else if (!overview.setup.done.sources) setAddSourcesOpen(true)
-              else if (
-                getDeploymentProfile() === 'cloud' &&
-                (sourcesQuery.data ?? []).some(isSampleSource) &&
-                !overview.setup.done.pipeline
-              )
-                void openGuidedBuilder()
+              else if (guideAvailable && guidedPipeline)
+                void navigate({
+                  to: '/pipelines/$pipelineId/edit',
+                  params: { pipelineId: guidedPipeline.id },
+                })
+              else if (guideAvailable) void openGuidedBuilder()
               else setPipelineCreationOpen(true)
             }}
             onCreatePipeline={() => setPipelineCreationOpen(true)}
@@ -269,6 +288,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
         }
         onConnect={(connectorId) => {
           setSourceConnectorId(connectorId)
+          setReturnToAddSources(true)
           setAddSourcesOpen(false)
           setSourceFormOpen(true)
         }}
@@ -297,7 +317,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
         onOpenChange: (open) => {
           setSourceFormOpen(open)
           // Back to the step dialog, which now lists the new source.
-          if (!open) setAddSourcesOpen(true)
+          if (!open && returnToAddSources) setAddSourcesOpen(true)
         },
         onCreated: (created) => {
           queryClient.setQueryData<SourceView[]>(['sources'], (current) =>
@@ -316,8 +336,10 @@ interface OverviewContentProps {
   connectors: ConnectorSummary[]
   sampleAvailable: boolean
   sampleAdding: boolean
+  guideAvailable: boolean
   onConnectAtlas: () => void
   onAddSources: () => void
+  onConnectSource: (connectorId: string) => void
   onTrySample: () => void
   onBuildPipeline: () => void
   onCreatePipeline: () => void
@@ -328,8 +350,10 @@ function OverviewContent({
   connectors,
   sampleAvailable,
   sampleAdding,
+  guideAvailable,
   onConnectAtlas,
   onAddSources,
+  onConnectSource,
   onTrySample,
   onBuildPipeline,
   onCreatePipeline,
@@ -341,12 +365,14 @@ function OverviewContent({
         connectors={connectors}
         onConnectAtlas={onConnectAtlas}
         onAddSources={onAddSources}
+        onConnectSource={onConnectSource}
         onBuildPipeline={onBuildPipeline}
       >
         <OverviewMilestoneDock
           overview={overview}
           sampleAvailable={sampleAvailable}
           sampleAdding={sampleAdding}
+          guideAvailable={guideAvailable}
           onConnectAtlas={onConnectAtlas}
           onAddSources={onAddSources}
           onTrySample={onTrySample}
@@ -391,6 +417,7 @@ function OverviewMilestoneDock({
   overview,
   sampleAvailable,
   sampleAdding,
+  guideAvailable,
   onConnectAtlas,
   onAddSources,
   onTrySample,
@@ -400,6 +427,7 @@ function OverviewMilestoneDock({
   overview: OverviewModel
   sampleAvailable: boolean
   sampleAdding: boolean
+  guideAvailable: boolean
   onConnectAtlas: () => void
   onAddSources: () => void
   onTrySample: () => void
@@ -559,14 +587,26 @@ function OverviewMilestoneDock({
               <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           ) : (
-            <button
-              type="button"
-              onClick={onCreatePipeline}
-              className="flex h-8.5 cursor-pointer items-center gap-1.5 rounded-xl bg-slate-900 px-4 text-[12.5px] font-semibold whitespace-nowrap text-white shadow-xs transition-all hover:scale-[1.01] hover:bg-black"
-            >
-              <span>{t('overview.milestones.newPipeline', 'New Pipeline')}</span>
-              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
+            <>
+              {guideAvailable && (
+                <button
+                  type="button"
+                  onClick={onBuildPipeline}
+                  className="flex h-8.5 cursor-pointer items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 text-[12.5px] font-semibold whitespace-nowrap text-indigo-700 transition-colors hover:bg-indigo-100"
+                >
+                  <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Customer 360 guide</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onCreatePipeline}
+                className="flex h-8.5 cursor-pointer items-center gap-1.5 rounded-xl bg-slate-900 px-4 text-[12.5px] font-semibold whitespace-nowrap text-white shadow-xs transition-all hover:scale-[1.01] hover:bg-black"
+              >
+                <span>{t('overview.milestones.newPipeline', 'New Pipeline')}</span>
+                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            </>
           )}
         </div>
       </div>
