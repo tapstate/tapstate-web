@@ -174,18 +174,22 @@ describe('Cloud onboarding subscription cancellation', () => {
 
     cancelSubscription
       .mockRejectedValueOnce(new Error('The response was unavailable'))
-      .mockResolvedValueOnce(cancelledSubscription)
+      .mockImplementationOnce(async () => {
+        cluster.mockResolvedValue({ ...failedCluster, state: 'TERMINATED' })
+        return cancelledSubscription
+      })
 
     await clickButton('Cancel subscription')
 
     expect(host?.textContent).toContain('Cancellation could not be confirmed')
-    expect(buttonWithText('Create workspace and cluster')).toBeUndefined()
+    expect(buttonWithText('Create organization and cluster')).toBeUndefined()
     expect(buttonWithText('Retry Provisioning')?.disabled).toBe(true)
     expect(onCreateWorkspace).toHaveBeenCalledTimes(1)
 
     await clickButton('Cancel subscription')
     expect(host?.textContent).toContain('Provisioning cancelled')
 
+    await vi.waitFor(() => expect(buttonWithText('Back to setup')).toBeDefined())
     await clickButton('Back to setup')
     await clickButton('US East')
     await act(async () => {

@@ -168,8 +168,15 @@
       "errors": {
         "network": "無法連接控制面，請檢查後端連線後重試。",
         "protocol": "控制面回傳了無效的連線測試結果，請重試。",
-        "server": "控制面無法測試此連線。",
-        "unknown": "無法測試此連線，請重試。"
+        "server": "伺服器未能完成連線測試。",
+        "connectorFailed": "連接器無法使用目前設定建立連線。",
+        "unknown": "無法測試此連線，請重試。",
+        "timeoutHint": "連線逾時。請檢查主機、連接埠、網路連通性與防火牆規則，然後重試。",
+        "technicalDetails": "技術詳情",
+        "code": "錯誤碼",
+        "connector": "連接器",
+        "detail": "原因",
+        "serverMessage": "伺服器訊息"
       }
     },
     "empty": {
@@ -1250,6 +1257,47 @@
     "destinationTable": "目標資料表",
     "writeStrategy": "寫入策略",
     "awaitingTable": "選擇資料表後繼續",
+    "previewPanel": {
+      "title": "結果預覽",
+      "rootContext": "根資料表：{{table}}",
+      "transformsContext": "文件轉換",
+      "relationContext": "{{shape}}：{{path}}",
+      "documentContext": "文件上下文",
+      "loading": "正在執行有界預覽…",
+      "awaitingPreview": "選擇根資料表和目標端後即可預覽樣本。",
+      "failed": "預覽失敗，仍顯示上一次完成的結果。",
+      "noResult": "目前沒有已完成的預覽結果。",
+      "noDocuments": "樣本沒有產生文件。",
+      "noRootTitle": "尚未選擇根資料表",
+      "noRootBody": "請在步驟 1 選擇根資料表，以預覽組裝後的樣本文檔。",
+      "status": {
+        "idle": "就緒",
+        "loading": "載入中",
+        "stale": "正在更新",
+        "complete": "最新結果",
+        "error": "失敗"
+      },
+      "sampleSummary": "{{roots}} 筆根資料 · {{inputs}} 筆來源資料",
+      "sampleCapped": "根記錄已達取樣上限，來源資料還有更多記錄。",
+      "jsonDoc": "JSON 文件",
+      "tableView": "表格檢視",
+      "copy": "複製規範",
+      "copied": "已複製 ✓",
+      "copyFailed": "複製失敗",
+      "viewSpec": "檢視 JSON 規範",
+      "logicalJsonTarget": "邏輯 JSON · {{destination}}",
+      "mongoExtendedJsonTarget": "Mongo Extended JSON（保留目標型別）· {{destination}}",
+      "expand": "展開節點",
+      "collapse": "收合節點",
+      "documentCount": "文件 {{current}} / {{count}}",
+      "previousDocument": "上一份文件",
+      "nextDocument": "下一份文件",
+      "tableLimit": "顯示前 {{shown}} 份，共 {{count}} 份文件",
+      "embeddedArray": "陣列 · {{count}} 項",
+      "embeddedDocument": "巢狀文件",
+      "transformAnnotation": "變更欄位：{{fields}}",
+      "unknownTransformOrigin": "JS 步驟的欄位來源無法靜態確認：{{steps}}"
+    },
     "relations": {
       "addRelatedTable": "新增關聯資料表",
       "addAs": {

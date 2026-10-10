@@ -18,6 +18,7 @@ import {
   publishPipelineDraft,
   runPipeline,
   savePipelineLayout,
+  streamPipelinePreview,
   stopPipeline,
   updatePipelineDraft,
   updatePipeline,
@@ -308,6 +309,63 @@ describe('Pipeline client', () => {
       revision: draft.revision,
       artifactHash: 'b'.repeat(64),
     })
+  })
+
+  it('accepts both logical JSON and Mongo Extended JSON preview results', async () => {
+    for (const format of ['logical-json', 'mongo-extended-json'] as const) {
+      const runId = 'preview-run'
+      const candidateHash = 'a'.repeat(64)
+      const payloads = [
+        { kind: 'run.accepted', payload: { pipelineId: 'orders' } },
+        { kind: 'compile.completed', payload: { executionSpec: {}, contexts: [] } },
+        {
+          kind: 'sample.completed',
+          payload: {
+            sampleId: 'sample',
+            complete: true,
+            rootSourceKeys: [],
+            rootRows: 1,
+            inputRows: 1,
+            inputBytes: 16,
+            rootTruncated: false,
+            repeatable: true,
+          },
+        },
+        {
+          kind: 'result.completed',
+          payload: {
+            format,
+            complete: true,
+            truncated: false,
+            documents: [{ _id: { $oid: '64f0c0de0011223344556677' } }],
+            rowCount: 1,
+          },
+        },
+        { kind: 'run.completed', payload: { rowCount: 1 } },
+      ]
+      const response = new Response(
+        payloads
+          .map((event, seq) =>
+            JSON.stringify({
+              runId,
+              candidateHash,
+              seq,
+              kind: event.kind,
+              at: '2026-10-02T00:00:00Z',
+              payload: event.payload,
+            }),
+          )
+          .join('\n'),
+        { headers: { 'Content-Type': 'application/x-ndjson' } },
+      )
+
+      await expect(
+        streamPipelinePreview(
+          { pipelineId: 'orders', drafts: [{ content: 'candidate' }] },
+          fetcherFor(response),
+        ),
+      ).resolves.toMatchObject({ format, rowCount: 1 })
+    }
   })
 
   it('accepts transitional and failed states in the Pipeline catalog', async () => {

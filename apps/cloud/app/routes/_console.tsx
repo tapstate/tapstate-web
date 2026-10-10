@@ -8,13 +8,7 @@ import { useCloudAppState } from '../state/cloud-app-state'
 function ConsoleLayout() {
   const navigate = useNavigate()
   const { session, organizations, clusters } = Route.useLoaderData()
-  const {
-    activeOrganization,
-    user,
-    clusters: currentClusters,
-    setClusters,
-    setIdentity,
-  } = useCloudAppState()
+  const { activeOrganization, user, setClusters, setIdentity } = useCloudAppState()
 
   useEffect(() => {
     setIdentity(session, organizations, clusters)
@@ -22,19 +16,11 @@ function ConsoleLayout() {
 
   useEffect(() => {
     const orgId = activeOrganization?.id
-    if (
-      !orgId ||
-      !currentClusters.some(
-        (cluster) =>
-          ['PROVISIONING_PENDING', 'PROVISIONING', 'DEGRADED'].includes(cluster.state) ||
-          (cluster.state === 'READY' && !cluster.publicDns),
-      )
-    )
-      return
+    if (!orgId) return
     let active = true
     const timer = window.setInterval(() => {
       void cloudApi
-        .clusters(orgId)
+        .activeClusters(orgId)
         .then((latest) => {
           if (active) setClusters(latest)
         })
@@ -48,7 +34,7 @@ function ConsoleLayout() {
       active = false
       window.clearInterval(timer)
     }
-  }, [activeOrganization?.id, currentClusters, navigate, setClusters])
+  }, [activeOrganization?.id, navigate, setClusters])
 
   return (
     <CloudConsoleShell
@@ -77,7 +63,7 @@ export const Route = createFileRoute('/_console')({
             ...organizations.filter((item) => item.id !== selectedOrganization.id),
           ]
         : organizations
-      const clusters = await cloudApi.clusters(orderedOrganizations[0].id)
+      const clusters = await cloudApi.activeClusters(orderedOrganizations[0].id)
       return { session, organizations: orderedOrganizations, clusters }
     } catch (error) {
       if (error instanceof CloudApiError && error.status === 401) throw redirect({ to: '/auth' })

@@ -78,7 +78,7 @@ export function CloudConsoleShell({
     setActiveOrganization(nextOrganization)
     setShowOrganizationMenu(false)
     try {
-      const nextClusters = await cloudApi.clusters(nextOrganization.id)
+      const nextClusters = await cloudApi.activeClusters(nextOrganization.id)
       if (requestId === organizationRequestId.current) setClusters(nextClusters)
     } catch (error) {
       if (error instanceof CloudApiError && error.status === 401) {
@@ -114,8 +114,9 @@ export function CloudConsoleShell({
             type="button"
           >
             <span className="flex min-w-0 items-center gap-2">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] bg-neutral-900 text-xs font-bold text-white dark:bg-white dark:text-neutral-900">
-                <span className="font-mono text-[11px] leading-none">T</span>
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] bg-neutral-900 dark:bg-white">
+                <img alt="" className="h-3.5 w-3.5 dark:hidden" src="/tapstate-mark-light.svg" />
+                <img alt="" className="hidden h-3.5 w-3.5 dark:block" src="/tapstate-mark.svg" />
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-xs leading-tight font-semibold tracking-tight text-neutral-900 dark:text-white">

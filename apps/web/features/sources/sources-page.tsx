@@ -134,13 +134,6 @@ function tabIcon(tabName: SourceTab): ComponentType<SVGProps<SVGSVGElement>> {
   }
 }
 
-function connectionTestErrorMessage(error: unknown, t: ReturnType<typeof useTranslation>['t']) {
-  if (!(error instanceof SourceClientError)) return t('sources.test.errors.unknown')
-  if (error.kind === 'network') return t('sources.test.errors.network')
-  if (error.kind === 'protocol') return t('sources.test.errors.protocol')
-  return t('sources.test.errors.server')
-}
-
 function schemaErrorMessage(error: unknown, t: ReturnType<typeof useTranslation>['t']) {
   if (error instanceof SourceClientError && error.status === 404)
     return t('sources.schema.notDiscovered')
@@ -179,7 +172,7 @@ export function SourcesPage({
   const [sampleRemoveError, setSampleRemoveError] = useState('')
   const [testingSourceId, setTestingSourceId] = useState<string | null>(null)
   const [testReport, setTestReport] = useState<ConnectionTestReport | null>(null)
-  const [testError, setTestError] = useState('')
+  const [testError, setTestError] = useState<unknown>(null)
   const [schemaRefreshingSourceId, setSchemaRefreshingSourceId] = useState<string | null>(null)
   const [schemaRefreshError, setSchemaRefreshError] = useState('')
 
@@ -321,7 +314,7 @@ export function SourcesPage({
 
   async function runSourceTest(source: SourceView) {
     setTestReport(null)
-    setTestError('')
+    setTestError(null)
     setTestingSourceId(source.id)
     try {
       setTestReport(
@@ -331,7 +324,7 @@ export function SourcesPage({
         ),
       )
     } catch (error) {
-      setTestError(connectionTestErrorMessage(error, t))
+      setTestError(error)
     } finally {
       setTestingSourceId(null)
     }
@@ -917,7 +910,7 @@ export function SourcesPage({
         onOpenChange={(nextOpen) => {
           if (!nextOpen) {
             setTestReport(null)
-            setTestError('')
+            setTestError(null)
           }
         }}
       />
