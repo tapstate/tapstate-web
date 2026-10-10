@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { ArrowRight, Sparkles } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { DataSourceMeta } from '@/features/pipelines/components/reference-wizard/ReferenceWizardBuilder'
@@ -96,7 +96,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
   const [atlasOpen, setAtlasOpen] = useState(false)
   const [sourceFormOpen, setSourceFormOpen] = useState(false)
   const [sourceConnectorId, setSourceConnectorId] = useState<string | null>(null)
-  const [returnToAddSources, setReturnToAddSources] = useState(false)
+  const returnToAddSources = useRef(false)
   const [pipelineCreationOpen, setPipelineCreationOpen] = useState(false)
   const [pipelineCreationError, setPipelineCreationError] = useState<string | null>(null)
   const [pipelineCreating, setPipelineCreating] = useState(false)
@@ -288,7 +288,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
         }
         onConnect={(connectorId) => {
           setSourceConnectorId(connectorId)
-          setReturnToAddSources(true)
+          returnToAddSources.current = true
           setAddSourcesOpen(false)
           setSourceFormOpen(true)
         }}
@@ -316,10 +316,15 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
         initialConnectorId: sourceConnectorId,
         onOpenChange: (open) => {
           setSourceFormOpen(open)
-          // Back to the step dialog, which now lists the new source.
-          if (!open && returnToAddSources) setAddSourcesOpen(true)
+          // Reopen the source picker when the user cancels source creation.
+          if (!open) {
+            if (returnToAddSources.current) setAddSourcesOpen(true)
+            returnToAddSources.current = false
+          }
         },
         onCreated: (created) => {
+          // A successful connection advances Overview to the next setup step.
+          returnToAddSources.current = false
           queryClient.setQueryData<SourceView[]>(['sources'], (current) =>
             [...(current ?? []).filter((item) => item.id !== created.id), created].sort(
               (left, right) => left.id.localeCompare(right.id),
