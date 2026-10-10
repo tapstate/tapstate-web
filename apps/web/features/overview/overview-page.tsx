@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { ArrowRight, Sparkles } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { DataSourceMeta } from '@/features/pipelines/components/reference-wizard/ReferenceWizardBuilder'
@@ -15,13 +15,14 @@ import {
   findCustomer360Preset,
 } from '@/features/pipelines/model/customer-360-guide'
 import { sourceScopedTableNames } from '@/features/pipelines/model/source-table-scope'
+import { SampleSourcesDialog } from '@/features/sources/sample-sources-dialog'
 import { cn } from '@/lib/utils'
 import {
   createPipelineDraft,
   listPipelines,
   type PipelineJsonObject,
 } from '@/service/pipelines/pipeline-client'
-import { addSampleSources, isSampleSource, loadSampleSources } from '@/service/sample-source-client'
+import { isSampleSource, loadSampleSources } from '@/service/sample-source-client'
 import {
   discoverSourceSchema,
   getSourceSchema,
@@ -91,21 +92,8 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
     queryFn: () => loadSampleSources(apiFetch),
     staleTime: Infinity,
   })
-  const addSamples = useMutation({
-    mutationFn: () => addSampleSources(samplesQuery.data ?? [], sourcesQuery.data ?? [], apiFetch),
-    onSuccess: ({ added }) => {
-      queryClient.setQueryData<SourceView[]>(['sources'], (current) =>
-        [
-          ...(current ?? []).filter((item) => !added.some((source) => source.id === item.id)),
-          ...added,
-        ].sort((left, right) => left.id.localeCompare(right.id)),
-      )
-      setAddSourcesOpen(false)
-      added.forEach(discoverCreatedSource)
-    },
-    onError: () => setAddSourcesOpen(true),
-  })
   const [addSourcesOpen, setAddSourcesOpen] = useState(false)
+  const [sampleDialogOpen, setSampleDialogOpen] = useState(false)
   const [atlasOpen, setAtlasOpen] = useState(false)
   const [sourceFormOpen, setSourceFormOpen] = useState(false)
   const [sourceConnectorId, setSourceConnectorId] = useState<string | null>(null)
@@ -114,12 +102,18 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
   const [pipelineCreationError, setPipelineCreationError] = useState<string | null>(null)
   const [pipelineCreating, setPipelineCreating] = useState(false)
 
-  async function openGuidedBuilder() {
+  async function openGuidedBuilder(preferredSourceId?: string) {
     if (pipelineCreating) return
     setPipelineCreating(true)
     setPipelineCreationError(null)
     try {
-      const samples = (sourcesQuery.data ?? []).filter(isSampleSource)
+      const freshSources = preferredSourceId
+        ? await listSources(apiFetch)
+        : (sourcesQuery.data ?? [])
+      const samples = freshSources.filter(
+        (source) =>
+          isSampleSource(source) && (!preferredSourceId || source.id === preferredSourceId),
+      )
       const storeId = overview?.stateStore.managedSourceId
       if (samples.length === 0) return
       if (!storeId) throw new Error('Connect MongoDB Atlas before building the sample view.')
@@ -150,15 +144,15 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
         }),
       )
       const preset = findCustomer360Preset(catalogs)
-      if (!preset) throw new Error('The sample customer, order, or line item schema is missing.')
+      if (!preset) throw new Error('The sample order, customer, or line item schema is missing.')
       const wizard: PipelineJsonObject = createCustomer360Wizard(preset, storeId, 'upsert', 'cloud')
-      const pipelineId = `customer_360_${crypto.randomUUID().slice(0, 8)}`
+      const pipelineId = `order_360_${crypto.randomUUID().slice(0, 8)}`
       await createPipelineDraft(
         pipelineId,
         {
           pipelineId,
           mode: 'wizard',
-          name: 'Customer 360',
+          name: 'Order 360 demo',
           description: null,
           graph: null,
           wizard,
@@ -189,10 +183,22 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
   const cloud = getDeploymentProfile() === 'cloud'
   const hasInstalledSample = (sourcesQuery.data ?? []).some(isSampleSource)
   const guidedPipeline = pipelinesQuery.data?.find((pipeline) =>
-    /^customer_360_[0-9a-f]{8}$/i.test(pipeline.id),
+    /^(?:customer|order)_360_[0-9a-f]{8}$/i.test(pipeline.id),
   )
   const guideAvailable = cloud && hasInstalledSample
   const failed = sourcesQuery.isError || pipelinesQuery.isError
+  useEffect(() => {
+    if (!overview || pipelineCreating) return
+    const demo = window.sessionStorage.getItem('tapstate.sample.next-demo')
+    if (demo && (sourcesQuery.data ?? []).some((source) => source.id === demo)) {
+      window.sessionStorage.removeItem('tapstate.sample.next-demo')
+      void openGuidedBuilder(demo)
+    }
+    if (window.sessionStorage.getItem('tapstate.sample.next-build')) {
+      window.sessionStorage.removeItem('tapstate.sample.next-build')
+      setPipelineCreationOpen(true)
+    }
+  }, [overview, pipelineCreating, sourcesQuery.data])
   return (
     <section className="overview-page">
       <header className="overview-page__header z-30 flex shrink-0 items-center justify-between border-b border-slate-200/80 bg-white/80 px-8 py-3.5 backdrop-blur-xl">
@@ -231,7 +237,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
                 (sample) => !(sourcesQuery.data ?? []).some((source) => source.id === sample.id),
               ),
             )}
-            sampleAdding={addSamples.isPending}
+            sampleAdding={false}
             guideAvailable={guideAvailable}
             onConnectAtlas={() => {
               if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready)
@@ -257,7 +263,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
             onTrySample={() => {
               if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready)
                 setAtlasOpen(true)
-              else addSamples.mutate()
+              else setSampleDialogOpen(true)
             }}
             onBuildPipeline={() => {
               if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready)
@@ -268,7 +274,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
                   to: '/pipelines/$pipelineId/edit',
                   params: { pipelineId: guidedPipeline.id },
                 })
-              else if (guideAvailable) void openGuidedBuilder()
+              else if (guideAvailable) setSampleDialogOpen(true)
               else setPipelineCreationOpen(true)
             }}
             onCreatePipeline={() => setPipelineCreationOpen(true)}
@@ -289,13 +295,20 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
         sample={
           samplesQuery.data
             ? {
-                names: samplesQuery.data.map((sample) => sample.name),
-                added: samplesQuery.data.every((sample) =>
-                  (sourcesQuery.data ?? []).some((source) => source.id === sample.id),
-                ),
-                adding: addSamples.isPending,
-                error: addSamples.isError ? t('overview.addSources.sample.error') : null,
-                onAdd: () => addSamples.mutate(),
+                names: samplesQuery.data
+                  .filter((sample) => sample.available !== false)
+                  .map((sample) => sample.name),
+                added: samplesQuery.data
+                  .filter((sample) => sample.available !== false)
+                  .every((sample) =>
+                    (sourcesQuery.data ?? []).some((source) => source.id === sample.id),
+                  ),
+                adding: false,
+                error: null,
+                onAdd: () => {
+                  setAddSourcesOpen(false)
+                  setSampleDialogOpen(true)
+                },
               }
             : null
         }
@@ -304,6 +317,24 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
           returnToAddSources.current = true
           setAddSourcesOpen(false)
           setSourceFormOpen(true)
+        }}
+      />
+      <SampleSourcesDialog
+        open={sampleDialogOpen}
+        onOpenChange={setSampleDialogOpen}
+        samples={samplesQuery.data ?? []}
+        installedIds={(sourcesQuery.data ?? []).filter(isSampleSource).map((source) => source.id)}
+        onDemo={(sourceId) => {
+          setSampleDialogOpen(false)
+          void openGuidedBuilder(sourceId)
+        }}
+        onBuild={() => {
+          setSampleDialogOpen(false)
+          setPipelineCreationOpen(true)
+        }}
+        onConnectOwn={() => {
+          setSampleDialogOpen(false)
+          setAddSourcesOpen(true)
         }}
       />
       <AtlasStoreDialog
@@ -614,7 +645,7 @@ function OverviewMilestoneDock({
                   className="flex h-8.5 cursor-pointer items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 text-[12.5px] font-semibold whitespace-nowrap text-indigo-700 transition-colors hover:bg-indigo-100"
                 >
                   <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                  <span>Customer 360 guide</span>
+                  <span>Order 360 demo</span>
                 </button>
               )}
               <button

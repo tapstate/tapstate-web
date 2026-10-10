@@ -1,6 +1,7 @@
 import type { ComponentType, SVGProps } from 'react'
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import {
   Activity,
   AlertCircle,
@@ -46,7 +47,6 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import {
-  addSampleSources,
   isSampleSource,
   loadSampleSources,
   removeSampleSources,
@@ -66,6 +66,7 @@ import { isDataSource } from '@/service/state-store-source'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { ConnectionTestResultDialog } from './connection-test-result'
+import { SampleSourcesDialog } from './sample-sources-dialog'
 import { SourceCreateDialog } from './source-create-dialog'
 import { SourceDeleteDialog } from './source-delete-dialog'
 import { SourceEditDialog } from './source-edit-dialog'
@@ -153,6 +154,7 @@ export function SourcesPage({
 }: SourcesPageProps = {}) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const [searchText, setSearchText] = useState('')
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null)
@@ -163,7 +165,7 @@ export function SourcesPage({
   const [deletingSource, setDeletingSource] = useState<Source | null>(null)
   const [successMessage, setSuccessMessage] = useState('')
   const [removingSamples, setRemovingSamples] = useState(false)
-  const [addingSamples, setAddingSamples] = useState(false)
+  const [sampleDialogOpen, setSampleDialogOpen] = useState(false)
   // Same key as Overview; a deployment without sample settings leaves this null.
   const samplesQuery = useQuery({
     queryKey: ['sample-sources'],
@@ -388,36 +390,7 @@ export function SourcesPage({
     setSuccessMessage(t('sources.edit.success', { id: result.source.id }))
   }
 
-  const samplesMissing = (samplesQuery.data ?? []).some(
-    (sample) => !(sourcesQuery.data ?? []).some((source) => source.id === sample.id),
-  )
-
-  async function addSamples() {
-    setAddingSamples(true)
-    setSampleRemoveError('')
-    try {
-      const result = await addSampleSources(
-        samplesQuery.data ?? [],
-        sourcesQuery.data ?? [],
-        apiFetch,
-      )
-      queryClient.setQueryData<SourceView[]>(['sources'], (current) =>
-        [
-          ...(current ?? []).filter((item) => !result.added.some((added) => added.id === item.id)),
-          ...result.added,
-        ].sort((left, right) => left.id.localeCompare(right.id)),
-      )
-      setSuccessMessage(t('sources.samples.added', { count: result.added.length }))
-      for (const source of result.added) {
-        autoDiscoveryAttempted.current.add(source.id)
-        void refreshSourceSchema(source)
-      }
-    } catch {
-      setSampleRemoveError(t('overview.addSources.sample.error'))
-    } finally {
-      setAddingSamples(false)
-    }
-  }
+  const samplesAvailable = (samplesQuery.data ?? []).some((sample) => sample.available !== false)
 
   async function removeSamples() {
     setRemovingSamples(true)
@@ -487,17 +460,14 @@ export function SourcesPage({
           {t('sources.title')}
         </h1>
         <div className="flex shrink-0 items-center gap-2">
-          {samplesMissing && (
+          {samplesAvailable && (
             <Button
               type="button"
               variant="outline"
               className="px-3 text-[13px] font-medium"
-              disabled={addingSamples}
-              onClick={() => void addSamples()}
+              onClick={() => setSampleDialogOpen(true)}
             >
-              {addingSamples
-                ? t('overview.addSources.sample.adding')
-                : t('overview.addSources.sample.action')}
+              {t('overview.addSources.sample.action')}
             </Button>
           )}
           {(sourcesQuery.data ?? []).some(isSampleSource) && (
@@ -939,6 +909,24 @@ export function SourcesPage({
             setTestReport(null)
             setTestError(null)
           }
+        }}
+      />
+      <SampleSourcesDialog
+        open={sampleDialogOpen}
+        onOpenChange={setSampleDialogOpen}
+        samples={samplesQuery.data ?? []}
+        installedIds={(sourcesQuery.data ?? []).filter(isSampleSource).map((source) => source.id)}
+        onDemo={(sourceId) => {
+          window.sessionStorage.setItem('tapstate.sample.next-demo', sourceId)
+          void navigate({ to: '/overview' })
+        }}
+        onBuild={() => {
+          window.sessionStorage.setItem('tapstate.sample.next-build', 'true')
+          void navigate({ to: '/overview' })
+        }}
+        onConnectOwn={() => {
+          setSampleDialogOpen(false)
+          setCreateOpen(true)
         }}
       />
       <SourceCreateDialog

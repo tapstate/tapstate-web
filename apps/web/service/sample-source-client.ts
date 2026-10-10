@@ -17,6 +17,11 @@ export interface SampleSourceSetting {
   name: string
   description: string
   connector: string
+  available?: boolean
+  guidedDemo?: boolean
+  rootTable?: string | null
+  orderLineTable?: string | null
+  customerTable?: string | null
 }
 
 export function isSampleSource(source: SourceView): boolean {
@@ -35,7 +40,9 @@ export async function loadSampleSources(
 ): Promise<SampleSourceSetting[] | null> {
   let response: Response
   try {
-    response = await fetcher(SAMPLE_SOURCES_PATH, { headers: { Accept: 'application/json' } })
+    response = await fetcher(`${SAMPLE_SOURCES_PATH}/catalog`, {
+      headers: { Accept: 'application/json' },
+    })
   } catch {
     return null
   }
@@ -55,6 +62,68 @@ export interface SampleAddResult {
   added: SourceView[]
   /** Samples already present, left as they are. */
   existing: string[]
+}
+
+export interface SampleInstallItem {
+  id: string
+  stage: 'QUEUED' | 'TESTING' | 'CREATING' | 'DISCOVERING' | 'READY' | 'FAILED'
+  errorCode: string | null
+  errorDetail: string | null
+}
+
+export interface SampleInstallStatus {
+  id: string
+  items: SampleInstallItem[]
+  finished: boolean
+}
+
+export async function startSampleInstall(
+  ids: string[],
+  fetcher: ApiFetcher = fetch,
+): Promise<SampleInstallStatus> {
+  const response = await fetcher(`${SAMPLE_SOURCES_PATH}/installations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  })
+  if (!response.ok)
+    throw new SourceClientError(
+      'server',
+      'sample installation could not start',
+      null,
+      response.status,
+    )
+  return readInstallStatus(await response.json())
+}
+
+export async function getSampleInstallStatus(
+  id: string,
+  fetcher: ApiFetcher = fetch,
+): Promise<SampleInstallStatus> {
+  const response = await fetcher(`${SAMPLE_SOURCES_PATH}/installations/${encodeURIComponent(id)}`)
+  if (!response.ok)
+    throw new SourceClientError(
+      'server',
+      'sample installation status unavailable',
+      null,
+      response.status,
+    )
+  return readInstallStatus(await response.json())
+}
+
+function readInstallStatus(value: unknown): SampleInstallStatus {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== 'string' ||
+    typeof value.finished !== 'boolean' ||
+    !Array.isArray(value.items) ||
+    !value.items.every(
+      (item) => isRecord(item) && typeof item.id === 'string' && typeof item.stage === 'string',
+    )
+  ) {
+    throw new SourceClientError('protocol', 'malformed sample installation status')
+  }
+  return value as unknown as SampleInstallStatus
 }
 
 /** The server installs both sample connections using its private deployment configuration. */

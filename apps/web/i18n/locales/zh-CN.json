@@ -1458,15 +1458,15 @@
       "transform": "转换"
     },
     "guide": {
-      "eyebrow": "客户 360 引导",
-      "title": "构建客户 360 视图",
-      "collapsed": "可使用客户 360 分步引导。",
+      "eyebrow": "订单 360 演示",
+      "title": "构建订单 360 视图",
+      "collapsed": "可使用订单 360 分步演示。",
       "open": "打开引导",
       "mode": "引导模式",
       "storyboard": "步骤总览",
       "inSitu": "就地引导",
       "close": "关闭引导",
-      "stepsLabel": "客户 360 引导步骤",
+      "stepsLabel": "订单 360 演示步骤",
       "stepOf": "第 {{step}} 步，共 {{total}} 步",
       "calloutBadge": "第 {{step}} 步 · {{title}}",
       "calloutHint": "💡流程引导 · 点击下一步继续，或直接查看配置卡片",
@@ -1479,8 +1479,8 @@
       "joinCount": "关联字段数：{{first}} + {{second}}",
       "applyPreset": "使用检测到的样本",
       "presetApplied": "已填入样本结构",
-      "fixedNotice": "客户 360 样例已预置配置。逐步查看后即可启动 Pipeline；配置不可修改。",
-      "fixedTransformNote": "预置流程保留原始字段。构建嵌套客户视图不需要额外转换。",
+      "fixedNotice": "订单 360 演示已预置配置。逐步查看后即可启动 Pipeline；配置不可修改。",
+      "fixedTransformNote": "预置流程保留原始字段。构建嵌套订单视图不需要额外转换。",
       "fixedTransform": {
         "shortTitle": "源字段",
         "title": "保留源字段",
@@ -1496,27 +1496,27 @@
       "saveDraft": "保存草稿",
       "steps": {
         "root": {
-          "shortTitle": "客户根表",
-          "title": "选择客户根表",
-          "body": "每条客户记录都会成为一篇根文档。引导使用已连接的数据表和检测到的主键。",
-          "calloutNext": "继续查看：嵌套订单关系 →"
+          "shortTitle": "订单根表",
+          "title": "选择订单根表",
+          "body": "每条订单记录都会成为一篇根文档。引导使用已连接的数据表和检测到的主键。",
+          "calloutNext": "继续查看：嵌套客户和明细 →"
         },
         "relations": {
-          "shortTitle": "嵌套订单",
-          "title": "嵌套订单和明细",
-          "body": "将 {{ordersTable}} 嵌入为 orders[]，将 {{itemsTable}} 嵌入为 items[]，关联字段取自已发现的 schema，也支持复合键。",
+          "shortTitle": "嵌套客户和明细",
+          "title": "嵌套客户和订单明细",
+          "body": "将 {{customerTable}} 嵌入为 customer，将 {{linesTable}} 嵌入为 lines[]，关联字段取自已发现的 schema，也支持复合键。",
           "calloutNext": "继续查看：保留源字段 →"
         },
         "transform": {
-          "shortTitle": "客户终身价值",
-          "title": "计算客户终身价值",
+          "shortTitle": "订单总额",
+          "title": "计算订单总额",
           "body": "汇总嵌套订单明细中的 {{amountField}}。可将表达式加入草稿，查看这个计算在配置中的表示方式。",
           "calloutNext": "继续查看：文档预览 →"
         },
         "preview": {
           "shortTitle": "文档预览",
           "title": "检查文档结构",
-          "body": "在 JSON 或表格预览中检查客户字段和嵌套订单数组。",
+          "body": "在 JSON 或表格预览中检查订单字段、嵌套客户和订单明细数组。",
           "calloutNext": "继续查看：保存并运行 →"
         },
         "launch": {

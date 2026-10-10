@@ -790,8 +790,8 @@ function hasCustomer360Preset(
   return (
     root.sourceId === preset.sourceId &&
     root.table === preset.root.name &&
-    hasTable(preset.orders.name) &&
-    hasTable(preset.items.name)
+    hasTable(preset.customer.name) &&
+    hasTable(preset.lines.name)
   )
 }
 
@@ -803,8 +803,8 @@ function hasCustomerLifetimeValue(value: PipelineDraft['wizard']) {
     if (!isObjectRecord(fields)) return false
     return (
       transform.type === 'map' &&
-      typeof fields.lifetime_value === 'string' &&
-      fields.lifetime_value.startsWith('=')
+      typeof fields.order_total === 'string' &&
+      fields.order_total.startsWith('=')
     )
   })
 }

@@ -1458,15 +1458,15 @@
       "transform": "轉換"
     },
     "guide": {
-      "eyebrow": "客戶 360 引導",
-      "title": "建立客戶 360 檢視",
-      "collapsed": "可使用客戶 360 分步引導。",
+      "eyebrow": "訂單 360 示範",
+      "title": "建立訂單 360 檢視",
+      "collapsed": "可使用訂單 360 分步示範。",
       "open": "開啟引導",
       "mode": "引導模式",
       "storyboard": "步驟總覽",
       "inSitu": "就地引導",
       "close": "關閉引導",
-      "stepsLabel": "客戶 360 引導步驟",
+      "stepsLabel": "訂單 360 示範步驟",
       "stepOf": "第 {{step}} 步，共 {{total}} 步",
       "calloutBadge": "Step {{step}}/5 · {{title}}",
       "calloutHint": "💡流程引導 · 點選下一步繼續，或直接檢視設定卡片",
@@ -1479,8 +1479,8 @@
       "joinCount": "關聯欄位數：{{first}} + {{second}}",
       "applyPreset": "使用偵測到的樣本",
       "presetApplied": "已填入樣本結構",
-      "fixedNotice": "客戶 360 樣本已預設配置。逐步查看後即可啟動 Pipeline；配置不可修改。",
-      "fixedTransformNote": "預設流程保留原始欄位。建立巢狀客戶檢視不需要額外轉換。",
+      "fixedNotice": "訂單 360 示範已預設配置。逐步查看後即可啟動 Pipeline；配置不可修改。",
+      "fixedTransformNote": "預設流程保留原始欄位。建立巢狀訂單檢視不需要額外轉換。",
       "fixedTransform": {
         "shortTitle": "來源欄位",
         "title": "保留來源欄位",
@@ -1496,27 +1496,27 @@
       "saveDraft": "儲存草稿",
       "steps": {
         "root": {
-          "shortTitle": "客戶根資料表",
-          "title": "選擇客戶根資料表",
-          "body": "每筆客戶資料都會成為一份根文件。引導會使用已連線的資料表和探索到的主鍵。",
-          "calloutNext": "繼續檢視：巢狀訂單關係 →"
+          "shortTitle": "訂單根資料表",
+          "title": "選擇訂單根資料表",
+          "body": "每筆訂單資料都會成為一份根文件。引導會使用已連線的資料表和探索到的主鍵。",
+          "calloutNext": "繼續檢視：巢狀客戶和明細 →"
         },
         "relations": {
-          "shortTitle": "巢狀訂單",
-          "title": "巢狀訂單和明細",
-          "body": "將 {{ordersTable}} 嵌入為 orders[]，將 {{itemsTable}} 嵌入為 items[]，關聯欄位取自已探索的 schema，也支援複合鍵。",
+          "shortTitle": "巢狀客戶和明細",
+          "title": "巢狀客戶和訂單明細",
+          "body": "將 {{customerTable}} 嵌入為 customer，將 {{linesTable}} 嵌入為 lines[]，關聯欄位取自已探索的 schema，也支援複合鍵。",
           "calloutNext": "繼續檢視：保留來源欄位 →"
         },
         "transform": {
-          "shortTitle": "客戶終身價值",
-          "title": "計算客戶終身價值",
+          "shortTitle": "訂單總額",
+          "title": "計算訂單總額",
           "body": "加總巢狀訂單明細中的 {{amountField}}。可將運算式加入草稿，查看此計算在設定中的表示方式。",
           "calloutNext": "繼續檢視：文件預覽 →"
         },
         "preview": {
           "shortTitle": "文件預覽",
           "title": "檢視文件結構",
-          "body": "在 JSON 或表格預覽中檢查客戶欄位和巢狀訂單陣列。",
+          "body": "在 JSON 或表格預覽中檢查訂單欄位、巢狀客戶和訂單明細陣列。",
           "calloutNext": "繼續檢視：儲存並執行 →"
         },
         "launch": {
