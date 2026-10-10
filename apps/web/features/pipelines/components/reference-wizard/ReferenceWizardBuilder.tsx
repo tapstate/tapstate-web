@@ -731,8 +731,25 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
 
       // Flatten has no embedded path; use the returned root output fields for its local slice.
       if (activeRelation?.type === 'flatten') {
+        const flattenOwners = new Map<string, number>()
+        const countFlattenFields = (nodes: RelationNode[]) => {
+          nodes.forEach((node) => {
+            if (node.type === 'flatten') {
+              getColumnsForTable(node.source, node.table).forEach((field) =>
+                flattenOwners.set(field, (flattenOwners.get(field) || 0) + 1),
+              )
+            }
+            countFlattenFields(node.children || [])
+          })
+        }
+        countFlattenFields(relations)
         return getColumnsForTable(activeRelation.source, activeRelation.table)
-          .filter((field) => field in (selectedDocument || {}))
+          .filter(
+            (field) =>
+              field in (selectedDocument || {}) &&
+              !rootFields.has(field) &&
+              flattenOwners.get(field) === 1,
+          )
           .map((field) => `/${pointerSegment(field)}`)
       }
       return activePath ? [`/${activePath.split('/').map(pointerSegment).join('/')}`] : []
@@ -751,6 +768,8 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     previewContexts,
     relationFields,
     relationChain,
+    relations,
+    rootFields,
     selectedDocument,
     computedFields,
   ])

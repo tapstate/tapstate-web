@@ -175,6 +175,11 @@ describe('ReferenceWizardBuilder preview panel', () => {
     expect(
       panel?.querySelector('[data-preview-path="/orders"]')?.getAttribute('data-preview-focused'),
     ).toBe('true')
+    expect(panel?.querySelectorAll('[data-preview-focused="true"]')).toHaveLength(1)
+    expect(panel?.querySelector('[data-preview-focused="true"]')?.textContent).toContain('order-1')
+    expect(panel?.querySelector('[data-preview-focused="true"]')?.textContent).not.toContain(
+      'Northwind',
+    )
     expect(
       panel
         ?.querySelector('[data-preview-path="/customer_id"]')
@@ -206,6 +211,10 @@ describe('ReferenceWizardBuilder preview panel', () => {
     })
     expect(panel?.textContent).toContain('Document Transforms')
     expect(panel?.textContent).toContain('map: sum(orders.amount)')
+    expect(panel?.querySelectorAll('[data-preview-focused="true"]')).toHaveLength(1)
+    expect(
+      panel?.querySelector('[data-preview-focused="true"]')?.getAttribute('data-preview-paths'),
+    ).toBe('/total_spent')
   })
 
   it('splits root focus when an unrelated relation interrupts document field order', () => {
@@ -231,6 +240,30 @@ describe('ReferenceWizardBuilder preview panel', () => {
         ?.querySelector('[data-preview-path="/orders"]')
         ?.hasAttribute('data-preview-focused'),
     ).toBe(false)
+  })
+
+  it('does not assign a shared root and flatten field to the flattened table', () => {
+    const host = renderBuilder({
+      initial: {
+        ...renderInitial,
+        relations: [{ ...relation, type: 'flatten' }],
+      },
+      livePreview: {
+        ...preview,
+        documents: [{ customer_id: 'customer-1', order_id: 'order-1' }],
+      },
+    })
+    act(() => {
+      host
+        ?.querySelector('.wizard-reference-relation-radius')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    expect(
+      previewPanel()
+        ?.querySelector('[data-preview-focused="true"]')
+        ?.getAttribute('data-preview-paths'),
+    ).toBe('/order_id')
+    expect(previewPanel()?.querySelectorAll('[data-preview-focused="true"]')).toHaveLength(1)
   })
 
   it('focuses a nested relation through array indexes without highlighting its parent', () => {
@@ -288,6 +321,11 @@ describe('ReferenceWizardBuilder preview panel', () => {
     expect(
       panel?.querySelector('[data-preview-path="/orders"]')?.hasAttribute('data-preview-focused'),
     ).toBe(false)
+    expect(panel?.querySelectorAll('[data-preview-focused="true"]')).toHaveLength(1)
+    expect(panel?.querySelector('[data-preview-focused="true"]')?.textContent).toContain('item-1')
+    expect(panel?.querySelector('[data-preview-focused="true"]')?.textContent).not.toContain(
+      'order-1',
+    )
     act(() => {
       Array.from(panel?.querySelectorAll('button') ?? [])
         .find((button) => button.textContent === 'Table View')
