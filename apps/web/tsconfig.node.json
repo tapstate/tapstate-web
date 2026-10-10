@@ -8,5 +8,5 @@
     "types": ["node"],
     "outDir": "./node_modules/.tmp/node"
   },
-  "include": ["vite.config.ts"]
+  "include": ["vite.config.ts", "build/web-build-inputs.ts", "utils/cloud-console-url.ts"]
 }
