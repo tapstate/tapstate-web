@@ -13,7 +13,7 @@ function AuthRoute() {
       darkMode={darkMode}
       onAuthenticated={async (user) => {
         setIdentity(user, [])
-        await navigate({ to: '/' })
+        await navigate({ to: '/', search: { organizationId: undefined } })
       }}
       onLogin={(input) => cloudApi.login(input)}
       onRegister={async (input) => {
