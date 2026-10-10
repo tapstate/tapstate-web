@@ -23,6 +23,7 @@ import {
 } from '@/service/pipelines/pipeline-client'
 import { addSampleSources, isSampleSource, loadSampleSources } from '@/service/sample-source-client'
 import {
+  discoverSourceSchema,
   getSourceSchema,
   listConnectors,
   listSources,
@@ -55,6 +56,17 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const apiFetch = useAuthStore((state) => state.apiFetch)
+  function discoverCreatedSource(source: SourceView) {
+    void discoverSourceSchema(
+      { id: source.id, connectorId: source.connector, settings: source.config },
+      apiFetch,
+    ).then(
+      (report) => queryClient.setQueryData(['source-schema', source.id], report),
+      () => {
+        /* Data Sources offers a retry if discovery fails. */
+      },
+    )
+  }
   // Same keys as the Data Sources, Pipelines and Views pages, so they share one cache.
   const sourcesQuery = useQuery({ queryKey: ['sources'], queryFn: () => listSources(apiFetch) })
   const connectorsQuery = useQuery({
@@ -89,6 +101,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
         ].sort((left, right) => left.id.localeCompare(right.id)),
       )
       setAddSourcesOpen(false)
+      added.forEach(discoverCreatedSource)
     },
     onError: () => setAddSourcesOpen(true),
   })
@@ -330,6 +343,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
               (left, right) => left.id.localeCompare(right.id),
             ),
           )
+          discoverCreatedSource(created)
         },
       })}
     </section>
