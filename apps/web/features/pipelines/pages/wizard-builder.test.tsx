@@ -72,6 +72,7 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
     readOnly,
     livePreview,
     livePreviewStatus,
+    onInspectPlan,
   }: {
     initial: WizardViewState
     onChange: (state: WizardViewState) => void
@@ -80,6 +81,7 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
     readOnly?: boolean
     livePreview: { runId: string } | null
     livePreviewStatus: string
+    onInspectPlan: () => Promise<string>
   }) => (
     <section
       className="wizard-reference-editor-column"
@@ -117,6 +119,9 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
         }
       >
         Change wizard
+      </button>
+      <button data-testid="inspect-plan" onClick={() => void onInspectPlan()}>
+        Inspect Plan
       </button>
       {footer}
       {actions}
@@ -207,6 +212,45 @@ afterEach(() => {
 })
 
 describe('WizardBuilder publish flow', () => {
+  it('compiles an unfinished destination only for inspection without saving the temporary name', async () => {
+    const draft: PipelineDraft = {
+      ...initialDraft,
+      wizard: {
+        ...initialDraft.wizard!,
+        output: { kind: 'source', config: { sourceId: 'mysql', table: '', writeMode: 'append' } },
+      },
+    }
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={draft.pipelineId} draft={draft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await act(async () => new Promise((resolve) => window.setTimeout(resolve, 50)))
+    await act(async () => {
+      container?.querySelector<HTMLButtonElement>('[data-testid="inspect-plan"]')?.click()
+    })
+    expect(previewPipelineDraft).toHaveBeenCalledWith(
+      draft.pipelineId,
+      draft.revision,
+      expect.any(Function),
+      undefined,
+      expect.objectContaining({
+        wizard: expect.objectContaining({
+          output: expect.objectContaining({
+            config: expect.objectContaining({ table: '__tapstate_preview__' }),
+          }),
+        }),
+      }),
+    )
+    expect(updatePipelineDraft).not.toHaveBeenCalled()
+  })
+
   it('keeps an ordinary empty Wizard editable and free of sample guidance', async () => {
     const ordinaryDraft: PipelineDraft = {
       ...initialDraft,
