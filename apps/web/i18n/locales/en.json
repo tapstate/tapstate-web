@@ -1091,6 +1091,7 @@
           "errorBody": "Check the control plane and try again."
         },
         "states": {
+          "DRAFT": "Draft",
           "NEW": "New",
           "STARTING": "Starting",
           "RUNNING": "Running",

@@ -1091,6 +1091,7 @@
           "errorBody": "请检查控制平面后重试。"
         },
         "states": {
+          "DRAFT": "草稿",
           "NEW": "新建",
           "STARTING": "正在启动",
           "RUNNING": "运行中",
