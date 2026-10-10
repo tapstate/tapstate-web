@@ -286,6 +286,58 @@ describe('OverviewPage', () => {
     expect(container.textContent).toContain('1 connected source')
   })
 
+  it('opens a source pin directly and returns to Overview after cancel or save', async () => {
+    vi.stubEnv('MODE', 'cloud')
+    listSources.mockResolvedValue([
+      { ...source('atlas-store', 'mongodb-atlas'), metadata: { labels: { store: 'true' } } },
+    ])
+    listPipelines.mockResolvedValue([])
+    const sourceForm: SourceFormSlot = ({ open, initialConnectorId, onOpenChange, onCreated }) =>
+      open ? (
+        <div data-testid="direct-source-form" data-connector={initialConnectorId}>
+          <button type="button" onClick={() => onOpenChange(false)}>
+            Cancel source
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onCreated(source('orders', initialConnectorId ?? 'mysql'))
+              onOpenChange(false)
+            }}
+          >
+            Save direct source
+          </button>
+        </div>
+      ) : null
+
+    await render(sourceForm)
+    await settle()
+    const mysql = () => container.querySelector<HTMLButtonElement>('button[aria-label="MySQL"]')
+    expect(mysql()).not.toBeNull()
+    await act(async () => mysql()?.click())
+    await settle()
+
+    expect(
+      container.querySelector('[data-testid="direct-source-form"]')?.getAttribute('data-connector'),
+    ).toBe('mysql')
+    await act(async () => buttonNamed('Cancel source', container)?.click())
+    await settle()
+    expect(container.querySelector('[data-testid="direct-source-form"]')).toBeNull()
+    expect(document.body.querySelector('[role="dialog"][aria-label="Add databases"]')).toBeNull()
+
+    await act(async () => mysql()?.click())
+    await settle()
+    await act(async () => buttonNamed('Save direct source', container)?.click())
+    await settle()
+
+    expect(container.querySelector('[data-testid="direct-source-form"]')).toBeNull()
+    expect(document.body.querySelector('[role="dialog"][aria-label="Add databases"]')).toBeNull()
+    expect(container.textContent).toContain('1 connected source')
+    expect(container.querySelector('[aria-current="step"]')?.textContent).toContain(
+      'Build Pipeline',
+    )
+  })
+
   it('shows the next-pipeline action when setup is complete', async () => {
     listSources.mockResolvedValue([source('views', 'mongodb'), source('orders')])
     listPipelines.mockResolvedValue([pipeline('a_sync', 'RUNNING')])
