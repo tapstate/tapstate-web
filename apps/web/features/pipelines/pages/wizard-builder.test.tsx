@@ -285,21 +285,21 @@ describe('WizardBuilder publish flow', () => {
       container?.querySelector('.wizard-reference-editor-column')?.getAttribute('data-read-only'),
     ).toBe('false')
     expect(container?.textContent).not.toContain('Nest orders')
-    expect(container?.textContent).not.toContain('This Customer 360 sample is preconfigured')
+    expect(container?.textContent).not.toContain('This Order 360 demo is preconfigured')
     expect(
       container?.querySelector<HTMLButtonElement>('[data-testid="change-wizard"]')?.disabled,
     ).toBe(false)
   })
 
-  it('automatically fills and locks the guided Customer 360 sample draft', async () => {
+  it('automatically fills and locks the guided Order 360 sample draft', async () => {
     const guidedDraft: PipelineDraft = {
       ...initialDraft,
-      pipelineId: 'customer_360_3a1973ba',
+      pipelineId: 'order_360_3a1973ba',
       wizard: {
         root: { id: 'root', sourceId: '', table: '', key: [], preTransforms: [] },
         related: [],
         transforms: [],
-        output: { kind: 'atlas', config: { onboardingGuide: 'customer-360-sample' } },
+        output: { kind: 'atlas', config: { onboardingGuide: 'order-360-sample' } },
       },
     }
     listSources.mockResolvedValue([
@@ -347,22 +347,22 @@ describe('WizardBuilder publish flow', () => {
 
     expect(
       container?.querySelector('.wizard-reference-editor-column')?.getAttribute('data-root-table'),
-    ).toBe('bmsql_customer')
+    ).toBe('bmsql_oorder')
     expect(
       container?.querySelector('.wizard-reference-editor-column')?.getAttribute('data-read-only'),
     ).toBe('true')
     expect(container?.textContent).not.toContain('Use detected sample')
-    expect(container?.textContent).toContain('Nest orders')
-    expect(container?.textContent).toContain('This Customer 360 sample is preconfigured')
+    expect(container?.textContent).toContain('Nest customer and lines')
+    expect(container?.textContent).toContain('This Order 360 demo is preconfigured')
     await vi.waitFor(
       () =>
         expect(updatePipelineDraft).toHaveBeenCalledWith(
           guidedDraft.pipelineId,
           expect.objectContaining({
             wizard: expect.objectContaining({
-              root: expect.objectContaining({ table: 'bmsql_customer' }),
+              root: expect.objectContaining({ table: 'bmsql_oorder' }),
               related: expect.arrayContaining([
-                expect.objectContaining({ table: 'bmsql_oorder' }),
+                expect.objectContaining({ table: 'bmsql_customer' }),
                 expect.objectContaining({ table: 'bmsql_order_line' }),
               ]),
             }),
