@@ -1773,7 +1773,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   )
 
   return (
-    <div className="wizard-reference flex h-full w-full flex-col overflow-hidden font-sans text-gray-900 select-none">
+    <div className="wizard-reference flex h-full w-full flex-col overflow-hidden font-sans text-gray-900">
       {showWorkbenchHeader && (
         <>
           <header

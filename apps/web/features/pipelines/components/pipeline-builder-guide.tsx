@@ -125,7 +125,7 @@ export function PipelineBuilderGuideStepCard({
     <div
       onClick={(event) => event.stopPropagation()}
       className={cn(
-        'animate-in fade-in slide-in-from-top-1 mb-3.5 w-full rounded-xl border p-3.5 shadow-xs transition-all duration-200 select-none sm:p-4',
+        'animate-in fade-in slide-in-from-top-1 mb-3.5 w-full rounded-xl border p-3.5 shadow-xs transition-all duration-200 sm:p-4',
         theme.wrapper,
       )}
       data-guide-callout="canvas"
@@ -504,7 +504,7 @@ export function PipelineBuilderGuide({
     <>
       <section
         aria-labelledby="customer-360-guide-title"
-        className="z-20 shrink-0 border-b border-gray-200/90 bg-white shadow-xs select-none"
+        className="z-20 shrink-0 border-b border-gray-200/90 bg-white shadow-xs"
         data-guide-mode={mode}
       >
         <div className="flex min-h-10 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-gray-100 bg-slate-50/70 px-4 py-1.5">
