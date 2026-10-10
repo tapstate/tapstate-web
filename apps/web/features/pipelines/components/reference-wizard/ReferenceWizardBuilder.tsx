@@ -838,21 +838,71 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     return focusContains(path) || focusPaths.some((focused) => focused.startsWith(`${path}/`))
   }
 
+  const focusClass =
+    activeContext === 'doc_process'
+      ? 'border-emerald-200 bg-emerald-50/70'
+      : relationChain.length > 1
+        ? 'border-purple-200 bg-purple-50/70'
+        : 'border-blue-200 bg-blue-50/70'
+
+  const renderJsonEntries = (
+    entries: Array<[string, unknown]>,
+    parentPath: string,
+    depth: number,
+    array: boolean,
+  ): React.ReactNode => {
+    const groups: Array<{ focused: boolean; items: Array<[string, unknown, number]> }> = []
+    entries.forEach(([field, child], index) => {
+      const childPath = `${parentPath}/${pointerSegment(field)}`
+      const focused = focusContains(childPath)
+      const last = groups.at(-1)
+      if (last?.focused === focused && focused) last.items.push([field, child, index])
+      else groups.push({ focused, items: [[field, child, index]] })
+    })
+    return groups.map((group) => {
+      const firstPath = `${parentPath}/${pointerSegment(group.items[0][0])}`
+      const children = group.items.map(([field, child, index]) => {
+        const childPath = `${parentPath}/${pointerSegment(field)}`
+        return (
+          <React.Fragment key={childPath}>
+            {renderJsonValue(
+              child,
+              childPath,
+              depth + 1,
+              array ? undefined : field,
+              index < entries.length - 1,
+              group.focused,
+            )}
+          </React.Fragment>
+        )
+      })
+      if (!group.focused) return <React.Fragment key={firstPath}>{children}</React.Fragment>
+      return (
+        <div
+          key={firstPath}
+          data-preview-path={firstPath}
+          data-preview-paths={group.items
+            .map(([field]) => `${parentPath}/${pointerSegment(field)}`)
+            .join(',')}
+          data-preview-focused="true"
+          className={cn('rounded-lg border px-1 py-0.5', focusClass)}
+        >
+          {children}
+        </div>
+      )
+    })
+  }
+
   const renderJsonValue = (
     value: unknown,
     path: string,
     depth = 0,
     label?: string,
     comma = false,
+    grouped = false,
   ): React.ReactNode => {
     const highlighted = focusContains(path)
-    const highlightClass = highlighted
-      ? activeContext === 'doc_process'
-        ? 'border-emerald-200 bg-emerald-50/70'
-        : relationChain.length > 1
-          ? 'border-purple-200 bg-purple-50/70'
-          : 'border-blue-200 bg-blue-50/70'
-      : 'border-transparent'
+    const highlightClass = highlighted && !grouped ? focusClass : 'border-transparent'
     const paddingLeft = `${depth * 16}px`
     const key =
       label === undefined ? null : (
@@ -870,7 +920,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       return (
         <div
           data-preview-path={path}
-          data-preview-focused={highlighted || undefined}
+          data-preview-focused={(highlighted && !grouped) || undefined}
           className={cn('rounded-lg border px-1 py-0.5', highlightClass)}
           style={{ paddingLeft }}
         >
@@ -894,7 +944,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     return (
       <div
         data-preview-path={path}
-        data-preview-focused={highlighted || undefined}
+        data-preview-focused={(highlighted && !grouped) || undefined}
         className={cn('rounded-lg border px-1 py-0.5', highlightClass)}
       >
         <div style={{ paddingLeft }}>
@@ -921,18 +971,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
           <span className="text-gray-400">{opening}</span>
           {collapsed && <span className="text-gray-500">{entries.length} entries</span>}
         </div>
-        {!collapsed &&
-          entries.map(([field, child], index) => (
-            <React.Fragment key={`${path}/${pointerSegment(field)}`}>
-              {renderJsonValue(
-                child,
-                `${path}/${pointerSegment(field)}`,
-                depth + 1,
-                Array.isArray(value) ? undefined : field,
-                index < entries.length - 1,
-              )}
-            </React.Fragment>
-          ))}
+        {!collapsed && renderJsonEntries(entries, path, depth, Array.isArray(value))}
         {!collapsed && entries.length > 0 && (
           <div style={{ paddingLeft }} className="text-gray-400">
             {closing}

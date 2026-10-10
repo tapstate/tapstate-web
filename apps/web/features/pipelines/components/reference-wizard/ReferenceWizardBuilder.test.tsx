@@ -162,6 +162,10 @@ describe('ReferenceWizardBuilder preview panel', () => {
     expect(
       panel?.querySelector('[data-preview-path="/orders"]')?.hasAttribute('data-preview-focused'),
     ).toBe(false)
+    expect(panel?.querySelectorAll('[data-preview-focused="true"]')).toHaveLength(1)
+    expect(
+      panel?.querySelector('[data-preview-focused="true"]')?.getAttribute('data-preview-paths'),
+    ).toBe('/customer_id,/company_name')
     act(() => {
       host
         ?.querySelector('.wizard-reference-relation-radius')
@@ -202,6 +206,31 @@ describe('ReferenceWizardBuilder preview panel', () => {
     })
     expect(panel?.textContent).toContain('Document Transforms')
     expect(panel?.textContent).toContain('map: sum(orders.amount)')
+  })
+
+  it('splits root focus when an unrelated relation interrupts document field order', () => {
+    renderBuilder({
+      livePreview: {
+        ...preview,
+        documents: [
+          {
+            customer_id: 'customer-1',
+            orders: [{ order_id: 'order-1' }],
+            company_name: 'Northwind',
+          },
+        ],
+      },
+    })
+    const groups = previewPanel()?.querySelectorAll('[data-preview-focused="true"]')
+    expect(groups).toHaveLength(2)
+    expect(
+      Array.from(groups || []).map((group) => group.getAttribute('data-preview-paths')),
+    ).toEqual(['/customer_id', '/company_name'])
+    expect(
+      previewPanel()
+        ?.querySelector('[data-preview-path="/orders"]')
+        ?.hasAttribute('data-preview-focused'),
+    ).toBe(false)
   })
 
   it('focuses a nested relation through array indexes without highlighting its parent', () => {
