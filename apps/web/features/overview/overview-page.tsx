@@ -235,7 +235,7 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
                 setAtlasOpen(true)
               } else if (sourceForm) {
                 setSourceConnectorId(connectorId)
-                setReturnToAddSources(false)
+                returnToAddSources.current = false
                 setSourceFormOpen(true)
               } else {
                 setAddSourcesOpen(true)
