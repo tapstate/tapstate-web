@@ -266,6 +266,7 @@ export function SourcesPage({
     retry: false,
     queryFn: () => getSourceSchema(selectedSource!.id, apiFetch),
   })
+  const selectedSchemaDiscovering = schemaRefreshingSourceId === selectedSource?.id
   const discoveredTables = (sourceSchemaQuery.data?.tables ?? []).map(toSchemaTable)
   const visibleTables = sourceSchemaQuery.data ? discoveredTables : (selectedSource?.tables ?? [])
   const selectedConfiguredTable = selectedSource?.tables.find(
@@ -794,7 +795,8 @@ export function SourcesPage({
                   </div>
                 )}
 
-                {sourceSchemaQuery.isLoading ? (
+                {sourceSchemaQuery.isLoading ||
+                (selectedSchemaDiscovering && !sourceSchemaQuery.data) ? (
                   <div
                     className="mb-4 flex items-center gap-2 rounded-lg bg-white px-3 py-2.5 text-[13px] text-gray-500 shadow-sm"
                     role="status"
@@ -828,13 +830,16 @@ export function SourcesPage({
                   </div>
                 ) : null}
 
-                {visibleTables.length === 0 ? (
+                {!sourceSchemaQuery.data &&
+                (sourceSchemaQuery.isLoading ||
+                  selectedSchemaDiscovering) ? null : visibleTables.length === 0 &&
+                  sourceSchemaQuery.data ? (
                   <div className="page-state rounded-lg border border-gray-200/70 bg-white">
                     <TableIcon className="h-8 w-8 text-gray-300" aria-hidden="true" />
                     <div className="page-state__title">{t('sources.noTablesTitle')}</div>
                     <p className="page-state__body">{t('sources.details.noTables')}</p>
                   </div>
-                ) : (
+                ) : visibleTables.length > 0 ? (
                   <DataTable
                     headers={[
                       t('sources.table.name'),
@@ -871,7 +876,7 @@ export function SourcesPage({
                       </tr>
                     ))}
                   </DataTable>
-                )}
+                ) : null}
               </div>
             </>
           ) : selectedSource && selectedTable ? (
