@@ -79,6 +79,21 @@ const relation = {
   primaryKey: ['order_id'],
 }
 
+const renderInitial: WizardBuilderProps['initial'] = {
+  root: {
+    source: 'crm',
+    table: 'crm_customers',
+    primaryKey: 'customer_id',
+    rowCount: '1',
+    columns: ['customer_id', 'company_name'],
+  },
+  relations: [relation],
+  transforms: [],
+  destinationTable: 'customers',
+  destinationSourceId: 'mongo',
+  destinationWriteMode: 'upsert',
+}
+
 function renderBuilder(overrides: Partial<WizardBuilderProps> = {}) {
   container = document.createElement('div')
   document.body.append(container)
@@ -110,20 +125,7 @@ function renderBuilder(overrides: Partial<WizardBuilderProps> = {}) {
         ],
       },
     ],
-    initial: {
-      root: {
-        source: 'crm',
-        table: 'crm_customers',
-        primaryKey: 'customer_id',
-        rowCount: '1',
-        columns: ['customer_id', 'company_name'],
-      },
-      relations: [relation],
-      transforms: [],
-      destinationTable: 'customers',
-      destinationSourceId: 'mongo',
-      destinationWriteMode: 'upsert',
-    },
+    initial: renderInitial,
     onChange: vi.fn(),
     destinationName: 'MongoDB',
     deploymentProfile: 'cloud',
@@ -146,19 +148,34 @@ describe('ReferenceWizardBuilder preview panel', () => {
   it('links root, relation, and transform focus to the streamed result', () => {
     const host = renderBuilder()
     const panel = previewPanel()
-    expect(panel?.textContent).toContain('Root Table: crm_customers')
+    expect(panel?.textContent).toContain('Root Anchor')
 
     const rootField = Array.from(panel?.querySelectorAll('span') ?? []).find(
       (element) => element.textContent === '"customer_id"',
     )
     expect(rootField?.className).toContain('font-semibold')
-
+    expect(
+      panel
+        ?.querySelector('[data-preview-path="/customer_id"]')
+        ?.getAttribute('data-preview-focused'),
+    ).toBe('true')
+    expect(
+      panel?.querySelector('[data-preview-path="/orders"]')?.hasAttribute('data-preview-focused'),
+    ).toBe(false)
     act(() => {
       host
         ?.querySelector('.wizard-reference-relation-radius')
         ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
-    expect(panel?.textContent).toContain('Array: orders')
+    expect(panel?.textContent).toContain('(orders)')
+    expect(
+      panel?.querySelector('[data-preview-path="/orders"]')?.getAttribute('data-preview-focused'),
+    ).toBe('true')
+    expect(
+      panel
+        ?.querySelector('[data-preview-path="/customer_id"]')
+        ?.hasAttribute('data-preview-focused'),
+    ).toBe(false)
 
     act(() => {
       host
@@ -167,7 +184,7 @@ describe('ReferenceWizardBuilder preview panel', () => {
         )
         ?.click()
     })
-    expect(panel?.textContent).toContain('Document: orders')
+    expect(panel?.textContent).toContain('(orders)')
 
     act(() => {
       host
@@ -176,7 +193,7 @@ describe('ReferenceWizardBuilder preview panel', () => {
         )
         ?.click()
     })
-    expect(panel?.textContent).toContain('Root Table: crm_customers')
+    expect(panel?.textContent).toContain('Root Anchor')
 
     act(() => {
       host
@@ -185,6 +202,71 @@ describe('ReferenceWizardBuilder preview panel', () => {
     })
     expect(panel?.textContent).toContain('Document Transforms')
     expect(panel?.textContent).toContain('map: sum(orders.amount)')
+  })
+
+  it('focuses a nested relation through array indexes without highlighting its parent', () => {
+    const nestedPreview: PipelinePreviewRun = {
+      ...preview,
+      contexts: [
+        ...preview.contexts,
+        {
+          id: 'items',
+          kind: 'relation',
+          shape: 'array',
+          path: 'orders/items',
+          pointerPatterns: ['/orders/items'],
+        },
+      ],
+      documents: [
+        {
+          ...preview.documents[0],
+          orders: [{ order_id: 'order-1', items: [{ sku: 'item-1' }] }],
+        },
+      ],
+    }
+    const host = renderBuilder({
+      initial: {
+        ...renderInitial,
+        relations: [
+          {
+            ...relation,
+            children: [
+              {
+                ...relation,
+                id: 'items',
+                table: 'crm_items',
+                targetField: 'items',
+                parentTable: 'crm_orders',
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+      livePreview: nestedPreview,
+    })
+    act(() => {
+      host
+        ?.querySelectorAll('.wizard-reference-relation-radius')[1]
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    const panel = previewPanel()
+    expect(
+      panel
+        ?.querySelector('[data-preview-path="/orders/0/items"]')
+        ?.getAttribute('data-preview-focused'),
+    ).toBe('true')
+    expect(
+      panel?.querySelector('[data-preview-path="/orders"]')?.hasAttribute('data-preview-focused'),
+    ).toBe(false)
+    act(() => {
+      Array.from(panel?.querySelectorAll('button') ?? [])
+        .find((button) => button.textContent === 'Table View')
+        ?.click()
+    })
+    expect(
+      panel?.querySelector('td[data-preview-path="/orders"]')?.getAttribute('data-preview-focused'),
+    ).toBe('true')
   })
 
   it('switches to a table without unpacking Extended JSON scalars and copies the compiled spec in place', async () => {
