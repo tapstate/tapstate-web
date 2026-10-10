@@ -447,11 +447,11 @@ function OverviewMilestoneDock({
 
   return (
     <section
-      className="z-20 mx-auto mt-6 w-full max-w-3xl"
+      className="z-20 mx-auto mt-6 w-full max-w-5xl"
       aria-label={t('overview.milestones.title')}
     >
-      <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-slate-200/90 bg-white/95 px-5 py-3 shadow-[0_8px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl transition-all sm:flex-row">
-        <div className="flex max-w-full items-center gap-2 overflow-x-auto text-[12px] font-medium select-none sm:gap-3 sm:text-[13px]">
+      <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-slate-200/90 bg-white/95 px-5 py-3 shadow-[0_8px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl transition-all xl:flex-row">
+        <div className="flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-2 text-[12px] font-medium sm:gap-x-3 sm:text-[13px] xl:justify-start">
           <button
             type="button"
             onClick={onConnectAtlas}
@@ -546,7 +546,7 @@ function OverviewMilestoneDock({
           </button>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2.5">
+        <div className="flex flex-wrap items-center justify-center gap-2.5">
           {storeDone && !sourcesDone && sampleAvailable && (
             <button
               type="button"
