@@ -168,8 +168,15 @@
       "errors": {
         "network": "无法连接控制面，请检查后端连接后重试。",
         "protocol": "控制面返回了无效的连接测试结果，请重试。",
-        "server": "控制面无法测试此连接。",
-        "unknown": "无法测试此连接，请重试。"
+        "server": "服务端未能完成连接测试。",
+        "connectorFailed": "连接器无法使用当前配置建立连接。",
+        "unknown": "无法测试此连接，请重试。",
+        "timeoutHint": "连接超时。请检查主机、端口、网络连通性和防火墙规则，然后重试。",
+        "technicalDetails": "技术详情",
+        "code": "错误码",
+        "connector": "连接器",
+        "detail": "原因",
+        "serverMessage": "服务端信息"
       }
     },
     "empty": {

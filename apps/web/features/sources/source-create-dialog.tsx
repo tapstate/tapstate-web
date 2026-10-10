@@ -59,13 +59,6 @@ function errorMessage(error: unknown, t: ReturnType<typeof useTranslation>['t'])
   return t('sources.create.errors.server')
 }
 
-function testErrorMessage(error: unknown, t: ReturnType<typeof useTranslation>['t']) {
-  if (!(error instanceof SourceClientError)) return t('sources.test.errors.unknown')
-  if (error.kind === 'network') return t('sources.test.errors.network')
-  if (error.kind === 'protocol') return t('sources.test.errors.protocol')
-  return t('sources.test.errors.server')
-}
-
 function RequestError({ message }: { message: string }) {
   return (
     <div
@@ -103,7 +96,7 @@ export function SourceCreateDialog({
   const [requestError, setRequestError] = useState('')
   const [testing, setTesting] = useState(false)
   const [testReport, setTestReport] = useState<ConnectionTestReport | null>(null)
-  const [testError, setTestError] = useState('')
+  const [testError, setTestError] = useState<unknown>(null)
   const connectorButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
   const initializedForOpen = useRef(false)
 
@@ -125,7 +118,7 @@ export function SourceCreateDialog({
     setFieldErrors({})
     setRequestError('')
     setTestReport(null)
-    setTestError('')
+    setTestError(null)
     if (connectors.length === 0) {
       setLoadingConnectors(true)
       listConnectors(apiFetch)
@@ -143,7 +136,7 @@ export function SourceCreateDialog({
     setFieldErrors({})
     setRequestError('')
     setTestReport(null)
-    setTestError('')
+    setTestError(null)
     if (!connectorId || step !== 'configure') return
 
     setLoadingConnector(true)
@@ -225,7 +218,7 @@ export function SourceCreateDialog({
   }
 
   async function runConnectionTest() {
-    setTestError('')
+    setTestError(null)
     setTestReport(null)
     const draft = connectionDraft()
     if (!draft) return
@@ -234,7 +227,7 @@ export function SourceCreateDialog({
     try {
       setTestReport(await testConnection(draft, apiFetch))
     } catch (error) {
-      setTestError(testErrorMessage(error, t))
+      setTestError(error)
     } finally {
       setTesting(false)
     }
@@ -250,7 +243,7 @@ export function SourceCreateDialog({
     setFieldErrors((current) => ({ ...current, connector: '' }))
     setRequestError('')
     setTestReport(null)
-    setTestError('')
+    setTestError(null)
     setStep('configure')
   }
 
@@ -263,7 +256,7 @@ export function SourceCreateDialog({
     setConfig({})
     setRequestError('')
     setTestReport(null)
-    setTestError('')
+    setTestError(null)
     setStep('select')
     requestAnimationFrame(() => connectorButtonRefs.current[previousConnectorId]?.focus())
   }
@@ -428,7 +421,7 @@ export function SourceCreateDialog({
                               setSourceId(event.target.value)
                               setFieldErrors((current) => ({ ...current, id: '' }))
                               setTestReport(null)
-                              setTestError('')
+                              setTestError(null)
                             }}
                           />
                           {fieldErrors.id ? (
@@ -464,7 +457,7 @@ export function SourceCreateDialog({
                                     onClick={() => {
                                       setSourceMode(mode)
                                       setTestReport(null)
-                                      setTestError('')
+                                      setTestError(null)
                                     }}
                                   >
                                     {mode}
@@ -485,7 +478,7 @@ export function SourceCreateDialog({
                           onValuesChange={(values) => {
                             setConfig(values)
                             setTestReport(null)
-                            setTestError('')
+                            setTestError(null)
                           }}
                         />
                       </>
@@ -564,7 +557,7 @@ export function SourceCreateDialog({
           onOpenChange={(nextOpen) => {
             if (!nextOpen) {
               setTestReport(null)
-              setTestError('')
+              setTestError(null)
             }
           }}
         />

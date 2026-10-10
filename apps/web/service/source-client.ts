@@ -373,13 +373,11 @@ async function requestJson(
   if (!response.ok) {
     const code = isRecord(payload) && typeof payload.code === 'string' ? payload.code : null
     const params = isRecord(payload) && isRecord(payload.params) ? payload.params : {}
-    throw new SourceClientError(
-      'server',
-      'the source request was refused',
-      code,
-      response.status,
-      params,
-    )
+    const message =
+      isRecord(payload) && typeof payload.message === 'string'
+        ? payload.message
+        : 'the source request was refused'
+    throw new SourceClientError('server', message, code, response.status, params)
   }
 
   return { payload, response }

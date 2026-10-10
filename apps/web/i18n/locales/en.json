@@ -168,8 +168,15 @@
       "errors": {
         "network": "The control plane is unreachable. Check the connection and try again.",
         "protocol": "The control plane returned an invalid connection test result. Try again.",
-        "server": "The control plane could not test this connection.",
-        "unknown": "The connection could not be tested. Try again."
+        "server": "The server could not complete the connection test.",
+        "connectorFailed": "The connector could not connect with the current settings.",
+        "unknown": "The connection could not be tested. Try again.",
+        "timeoutHint": "The connection timed out. Check the host, port, network access, and firewall rules, then try again.",
+        "technicalDetails": "Technical details",
+        "code": "Error code",
+        "connector": "Connector",
+        "detail": "Cause",
+        "serverMessage": "Server message"
       }
     },
     "empty": {

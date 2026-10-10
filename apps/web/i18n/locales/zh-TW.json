@@ -168,8 +168,15 @@
       "errors": {
         "network": "無法連接控制面，請檢查後端連線後重試。",
         "protocol": "控制面回傳了無效的連線測試結果，請重試。",
-        "server": "控制面無法測試此連線。",
-        "unknown": "無法測試此連線，請重試。"
+        "server": "伺服器未能完成連線測試。",
+        "connectorFailed": "連接器無法使用目前設定建立連線。",
+        "unknown": "無法測試此連線，請重試。",
+        "timeoutHint": "連線逾時。請檢查主機、連接埠、網路連通性與防火牆規則，然後重試。",
+        "technicalDetails": "技術詳情",
+        "code": "錯誤碼",
+        "connector": "連接器",
+        "detail": "原因",
+        "serverMessage": "伺服器訊息"
       }
     },
     "empty": {
