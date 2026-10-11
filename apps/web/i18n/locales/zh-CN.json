@@ -775,6 +775,7 @@
         "field": "字段",
         "operator": "运算符",
         "containsOperator": "包含",
+        "containsTextOnly": "“包含”仅适用于文本字段，请选择其他运算符。",
         "value": "值",
         "removeCondition": "移除条件",
         "addCondition": "添加条件",

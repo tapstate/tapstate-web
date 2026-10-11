@@ -775,6 +775,7 @@
         "field": "Field",
         "operator": "Operator",
         "containsOperator": "Contains",
+        "containsTextOnly": "Contains is only available for text fields. Choose another operator.",
         "value": "Value",
         "removeCondition": "Remove condition",
         "addCondition": "Add condition",

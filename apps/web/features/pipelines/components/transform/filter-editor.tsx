@@ -5,7 +5,13 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
-import { celFilterField } from '../filter-cel'
+import {
+  celFilterField,
+  celFilterFieldKind,
+  celFilterFieldType,
+  celFilterLiteral,
+  type FilterLiteralKind,
+} from '../filter-cel'
 import { TransformEditorShell } from './transform-editor-shell'
 import { TransformSelect } from './transform-select'
 import { mergeBody, type TransformEditorProps } from './types'
@@ -14,16 +20,26 @@ interface ConditionRow {
   field: string
   operator: 'equals' | 'notEquals' | 'contains'
   value: string
+  literalKind: FilterLiteralKind
 }
 
-function expressionFor(rows: ConditionRow[], logic: 'all' | 'any') {
+function expressionFor(
+  rows: ConditionRow[],
+  logic: 'all' | 'any',
+  fieldTypes?: Readonly<Record<string, string>>,
+) {
   return rows
     .map((row) => {
       const field = row.field.trim()
       const value = row.value.trim()
       if (!field || !value) return null
       const reference = celFilterField(field)
-      const escaped = JSON.stringify(value)
+      const escaped = celFilterLiteral(
+        value,
+        celFilterFieldType(field, fieldTypes),
+        row.literalKind,
+        row.operator === 'contains',
+      )
       if (row.operator === 'notEquals') return `${reference} != ${escaped}`
       if (row.operator === 'contains') return `${reference}.contains(${escaped})`
       return `${reference} == ${escaped}`
@@ -34,55 +50,58 @@ function expressionFor(rows: ConditionRow[], logic: 'all' | 'any') {
 
 function parseExpression(value: unknown): ConditionRow[] {
   if (typeof value !== 'string' || value.trim() === '') {
-    return [{ field: '', operator: 'equals', value: '' }]
+    return [{ field: '', operator: 'equals', value: '', literalKind: 'auto' }]
   }
   const rows = value
     .split(/\s+(?:&&|\|\||AND|OR)\s+/i)
     .map((part) => {
       const contains = part.match(/^(.+?)\.contains\((.*)\)$/)
-      if (contains)
-        return {
-          field: contains[1] ?? '',
-          operator: 'contains' as const,
-          value: unquote(contains[2] ?? ''),
-        }
+      if (contains) return conditionRow(contains[1] ?? '', 'contains', contains[2] ?? '')
       const notEquals = part.match(/^(.+?)\s*!=\s*(.*)$/)
-      if (notEquals)
-        return {
-          field: notEquals[1] ?? '',
-          operator: 'notEquals' as const,
-          value: unquote(notEquals[2] ?? ''),
-        }
+      if (notEquals) return conditionRow(notEquals[1] ?? '', 'notEquals', notEquals[2] ?? '')
       const equals = part.match(/^(.+?)\s*==\s*(.*)$/)
-      if (equals)
-        return {
-          field: equals[1] ?? '',
-          operator: 'equals' as const,
-          value: unquote(equals[2] ?? ''),
-        }
+      if (equals) return conditionRow(equals[1] ?? '', 'equals', equals[2] ?? '')
       return null
     })
     .filter((row): row is ConditionRow => row !== null)
-  return rows.length > 0 ? rows : [{ field: '', operator: 'equals', value: '' }]
+  return rows.length > 0
+    ? rows
+    : [{ field: '', operator: 'equals', value: '', literalKind: 'auto' }]
 }
 
-function unquote(value: string) {
+function conditionRow(
+  field: string,
+  operator: ConditionRow['operator'],
+  token: string,
+): ConditionRow {
+  const parsed = parseLiteral(token)
+  return { field, operator, value: parsed.value, literalKind: parsed.kind }
+}
+
+function parseLiteral(value: string): { value: string; kind: FilterLiteralKind } {
   try {
     const parsed: unknown = JSON.parse(value)
-    return typeof parsed === 'string' ? parsed : value
+    if (typeof parsed === 'string') return { value: parsed, kind: 'string' }
+    if (typeof parsed === 'number') return { value: value.trim(), kind: 'number' }
+    if (typeof parsed === 'boolean') return { value: String(parsed), kind: 'boolean' }
+    if (parsed === null) return { value: 'null', kind: 'null' }
   } catch {
-    return value.replace(/^['"]|['"]$/g, '')
+    // Existing CEL may use single-quoted strings, which JSON.parse does not accept.
   }
+  return { value: value.replace(/^['"]|['"]$/g, ''), kind: 'string' }
 }
 
-export function FilterEditor({ config, onChange }: TransformEditorProps) {
+export function FilterEditor({ config, onChange, fieldTypes }: TransformEditorProps) {
   const { t } = useTranslation()
   const initialExpression = typeof config.body.expr === 'string' ? config.body.expr : ''
   const [rows, setRows] = useState(() => parseExpression(initialExpression))
   const [logic, setLogic] = useState<'all' | 'any'>(() =>
     /\s(?:OR|\|\|)\s/i.test(initialExpression) ? 'any' : 'all',
   )
-  const expression = useMemo(() => expressionFor(rows, logic), [logic, rows])
+  const expression = useMemo(
+    () => expressionFor(rows, logic, fieldTypes),
+    [fieldTypes, logic, rows],
+  )
   const configurationKey = JSON.stringify({ expr: config.body.expr })
 
   useEffect(() => {
@@ -93,13 +112,20 @@ export function FilterEditor({ config, onChange }: TransformEditorProps) {
 
   function updateRows(nextRows: ConditionRow[]) {
     setRows(nextRows)
-    onChange?.({ body: mergeBody(config, { expr: expressionFor(nextRows, logic) }) })
+    onChange?.({ body: mergeBody(config, { expr: expressionFor(nextRows, logic, fieldTypes) }) })
   }
 
   function updateLogic(nextLogic: 'all' | 'any') {
     setLogic(nextLogic)
-    onChange?.({ body: mergeBody(config, { expr: expressionFor(rows, nextLogic) }) })
+    onChange?.({ body: mergeBody(config, { expr: expressionFor(rows, nextLogic, fieldTypes) }) })
   }
+
+  useEffect(() => {
+    if (!onChange || !initialExpression || expression === initialExpression) return
+    const hasKnownFieldType = rows.some((row) => celFilterFieldType(row.field, fieldTypes))
+    if (!hasKnownFieldType) return
+    onChange({ body: mergeBody(config, { expr: expression }) })
+  }, [config, expression, fieldTypes, initialExpression, onChange, rows])
 
   return (
     <TransformEditorShell
@@ -122,74 +148,94 @@ export function FilterEditor({ config, onChange }: TransformEditorProps) {
         />
       </div>
       <div className="pipeline-transform__conditions">
-        {rows.map((row, index) => (
-          <div key={`${index}-${row.field}`} className="pipeline-transform__condition">
-            <Input
-              aria-label={t('pipelines.workspace.transform.field')}
-              value={row.field}
-              placeholder={t('pipelines.workspace.transform.field')}
-              onChange={(event) =>
-                updateRows(
-                  rows.map((item, itemIndex) =>
-                    itemIndex === index ? { ...item, field: event.target.value } : item,
-                  ),
-                )
-              }
-            />
-            <TransformSelect
-              label={t('pipelines.workspace.transform.operator')}
-              value={row.operator}
-              options={[
-                { value: 'equals', label: '=' },
-                { value: 'notEquals', label: '≠' },
-                {
-                  value: 'contains',
-                  label: t('pipelines.workspace.transform.containsOperator'),
-                },
-              ]}
-              onChange={(operator) =>
-                updateRows(
-                  rows.map((item, itemIndex) =>
-                    itemIndex === index ? { ...item, operator } : item,
-                  ),
-                )
-              }
-            />
-            <Input
-              aria-label={t('pipelines.workspace.transform.value')}
-              value={row.value}
-              placeholder={t('pipelines.workspace.transform.value')}
-              onChange={(event) =>
-                updateRows(
-                  rows.map((item, itemIndex) =>
-                    itemIndex === index ? { ...item, value: event.target.value } : item,
-                  ),
-                )
-              }
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={t('pipelines.workspace.transform.removeCondition')}
-              onClick={() => {
-                const nextRows = rows.filter((_, itemIndex) => itemIndex !== index)
-                updateRows(
-                  nextRows.length > 0 ? nextRows : [{ field: '', operator: 'equals', value: '' }],
-                )
-              }}
-            >
-              <Trash2 className="size-3.5" />
-            </Button>
-          </div>
-        ))}
+        {rows.map((row, index) => {
+          const fieldType = celFilterFieldType(row.field, fieldTypes)
+          const fieldKind = celFilterFieldKind(fieldType)
+          const containsSupported = fieldKind === 'unknown' || fieldKind === 'string'
+
+          return (
+            <div key={`${index}-${row.field}`}>
+              <div className="pipeline-transform__condition">
+                <Input
+                  aria-label={t('pipelines.workspace.transform.field')}
+                  value={row.field}
+                  placeholder={t('pipelines.workspace.transform.field')}
+                  onChange={(event) =>
+                    updateRows(
+                      rows.map((item, itemIndex) =>
+                        itemIndex === index ? { ...item, field: event.target.value } : item,
+                      ),
+                    )
+                  }
+                />
+                <TransformSelect
+                  label={t('pipelines.workspace.transform.operator')}
+                  value={row.operator}
+                  options={[
+                    { value: 'equals', label: '=' },
+                    { value: 'notEquals', label: '≠' },
+                    {
+                      value: 'contains',
+                      label: t('pipelines.workspace.transform.containsOperator'),
+                      disabled: !containsSupported,
+                    },
+                  ]}
+                  onChange={(operator) =>
+                    updateRows(
+                      rows.map((item, itemIndex) =>
+                        itemIndex === index ? { ...item, operator } : item,
+                      ),
+                    )
+                  }
+                />
+                <Input
+                  aria-label={t('pipelines.workspace.transform.value')}
+                  value={row.value}
+                  placeholder={t('pipelines.workspace.transform.value')}
+                  onChange={(event) =>
+                    updateRows(
+                      rows.map((item, itemIndex) =>
+                        itemIndex === index
+                          ? { ...item, value: event.target.value, literalKind: 'auto' }
+                          : item,
+                      ),
+                    )
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t('pipelines.workspace.transform.removeCondition')}
+                  onClick={() => {
+                    const nextRows = rows.filter((_, itemIndex) => itemIndex !== index)
+                    updateRows(
+                      nextRows.length > 0
+                        ? nextRows
+                        : [{ field: '', operator: 'equals', value: '', literalKind: 'auto' }],
+                    )
+                  }}
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </div>
+              {row.operator === 'contains' && !containsSupported && (
+                <p className="text-destructive mt-1 text-xs" role="alert">
+                  {t('pipelines.workspace.transform.containsTextOnly')}
+                </p>
+              )}
+            </div>
+          )
+        })}
       </div>
       <Button
         type="button"
         variant="outline"
         size="sm"
         className="w-fit gap-1.5"
-        onClick={() => updateRows([...rows, { field: '', operator: 'equals', value: '' }])}
+        onClick={() =>
+          updateRows([...rows, { field: '', operator: 'equals', value: '', literalKind: 'auto' }])
+        }
       >
         <Plus className="size-3.5" />
         {t('pipelines.workspace.transform.addCondition')}

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { ReactFlowProvider } from '@xyflow/react'
 import {
@@ -76,6 +76,7 @@ import type {
 import type {
   PipelineNodeConfiguration,
   PipelineNodeConfigurationChange,
+  PipelineSourceTableSelection,
 } from '../model/pipeline-node-model'
 
 import { PipelineLifecycleMenu } from '../components/pipeline-lifecycle-menu'
@@ -217,6 +218,33 @@ function upstreamSourceTables(
     visited.add(currentId)
     const configuration = draft.configurations.get(currentId)
     if (configuration?.kind === 'source') return sourceTableSelections(configuration)
+    return draft.dag.edges
+      .filter((edge) => edge.target === currentId)
+      .flatMap((edge) => walk(edge.source))
+  }
+  return walk(nodeId)
+}
+
+interface UpstreamSourceTableRef extends PipelineSourceTableSelection {
+  sourceId: string
+}
+
+function upstreamSourceTableRefs(
+  draft: PipelineGraphDraft | null,
+  nodeId: string | undefined,
+): UpstreamSourceTableRef[] {
+  if (!draft || !nodeId) return []
+  const visited = new Set<string>()
+  const walk = (currentId: string): UpstreamSourceTableRef[] => {
+    if (visited.has(currentId)) return []
+    visited.add(currentId)
+    const configuration = draft.configurations.get(currentId)
+    if (configuration?.kind === 'source') {
+      return sourceTableSelections(configuration).map((selection) => ({
+        ...selection,
+        sourceId: configuration.sourceId,
+      }))
+    }
     return draft.dag.edges
       .filter((edge) => edge.target === currentId)
       .flatMap((edge) => walk(edge.source))
@@ -950,6 +978,51 @@ function PipelineOrchestrationPage({
       selection?.configuration?.kind === 'target' ? upstreamSourceTables(draft, selection.id) : [],
     [draft, selection?.configuration?.kind, selection?.id],
   )
+  const selectedFilterSourceRefs = useMemo(() => {
+    const configuration = selection?.configuration
+    return configuration?.kind === 'transform' && configuration.transformType === 'filter'
+      ? upstreamSourceTableRefs(draft, selection?.id)
+      : []
+  }, [draft, selection?.configuration, selection?.id])
+  const selectedFilterSourceIds = useMemo(
+    () => [...new Set(selectedFilterSourceRefs.map((reference) => reference.sourceId))],
+    [selectedFilterSourceRefs],
+  )
+  const filterSourceSchemas = useQueries({
+    queries: selectedFilterSourceIds.map((sourceId) => ({
+      queryKey: ['source-schema', sourceId],
+      queryFn: () => getSourceSchema(sourceId, apiFetch),
+      staleTime: 5 * 60 * 1000,
+    })),
+  })
+  const selectedFilterFieldTypes = useMemo(() => {
+    const fieldTypes: Record<string, string> = {}
+    const ambiguousFields = new Set<string>()
+    const schemasBySourceId = new Map(
+      selectedFilterSourceIds.map((sourceId, index) => [
+        sourceId,
+        filterSourceSchemas[index]?.data,
+      ]),
+    )
+
+    for (const reference of selectedFilterSourceRefs) {
+      if (reference.tableKind === 'regex') continue
+      const table = schemasBySourceId
+        .get(reference.sourceId)
+        ?.tables.find((candidate) => candidate.name === reference.table)
+      for (const field of table?.fields ?? []) {
+        if (!field.type || ambiguousFields.has(field.name)) continue
+        const existingType = fieldTypes[field.name]
+        if (existingType && existingType.toLowerCase() !== field.type.toLowerCase()) {
+          delete fieldTypes[field.name]
+          ambiguousFields.add(field.name)
+          continue
+        }
+        fieldTypes[field.name] = field.type
+      }
+    }
+    return fieldTypes
+  }, [filterSourceSchemas, selectedFilterSourceIds, selectedFilterSourceRefs])
   const loadPipelineTables = useCallback<PipelineTableLoader>(
     async (sourceId) => {
       const report = await getSourceSchema(sourceId, apiFetch)
@@ -1237,6 +1310,7 @@ function PipelineOrchestrationPage({
                 selection?.configuration?.kind === 'target' ? targetSourceOptions : sourceOptions,
               tableOptions: selectedTargetTableOptions,
               upstreamSourceTables: selectedTargetSourceTables,
+              fieldTypes: selectedFilterFieldTypes,
               loadTables: loadPipelineTables,
             }}
           />
