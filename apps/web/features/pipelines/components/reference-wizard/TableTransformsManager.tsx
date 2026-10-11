@@ -578,9 +578,10 @@ const FilterEditor: React.FC<FilterEditorProps> = ({ config, columns, onChange }
         ? ''
         : nextConds
             .map((c) => {
-              if (c.op === 'contains') return `${c.field}.contains(${c.value})`
-              if (c.op === 'starts_with') return `${c.field}.startsWith(${c.value})`
-              return `${c.field} ${c.op} ${c.value}`
+              const literal = JSON.stringify(c.value)
+              if (c.op === 'contains') return `${c.field}.contains(${literal})`
+              if (c.op === 'starts_with') return `${c.field}.startsWith(${literal})`
+              return `${c.field} ${c.op} ${literal}`
             })
             .join(' && ')
 

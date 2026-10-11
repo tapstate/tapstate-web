@@ -672,9 +672,10 @@ async function request(path: string, fetcher: ApiFetcher, init?: RequestInit): P
   if (!response.ok) {
     const code = isRecord(payload) && typeof payload.code === 'string' ? payload.code : null
     const params = isRecord(payload) && isRecord(payload.params) ? payload.params : {}
+    const fallback = `Tapstate refused the Pipeline request. HTTP ${response.status} ${init?.method ?? 'GET'} /api${path}${code ? ` · ${code}` : ''}`
     throw new PipelineClientError(
       'server',
-      responseMessage(payload, 'Tapstate refused the Pipeline request.'),
+      responseMessage(payload, fallback),
       response.status,
       code,
       params,
