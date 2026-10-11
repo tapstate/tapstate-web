@@ -5,6 +5,7 @@ import type { PipelineTransformNodeConfiguration } from '../../model/pipeline-no
 export interface TransformEditorProps {
   config: PipelineTransformNodeConfiguration
   onChange?: (patch: PipelineTransformConfigurationPatch) => void
+  fieldTypes?: Readonly<Record<string, string>>
 }
 
 export interface PipelineTransformConfigurationPatch {

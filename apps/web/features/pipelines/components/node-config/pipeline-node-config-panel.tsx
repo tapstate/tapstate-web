@@ -777,6 +777,7 @@ export function PipelineNodeConfigPanel({
   loadTables,
   sources,
   upstreamSourceTables,
+  fieldTypes,
 }: {
   selection: PipelineCanvasSelection
   onClose: () => void
@@ -788,6 +789,7 @@ export function PipelineNodeConfigPanel({
   loadTables?: PipelineTableLoader
   sources?: readonly SourceView[]
   upstreamSourceTables?: readonly PipelineSourceTableSelection[]
+  fieldTypes?: Readonly<Record<string, string>>
 }) {
   const { t } = useTranslation()
   const configuration = selection.configuration
@@ -864,6 +866,7 @@ export function PipelineNodeConfigPanel({
           {configuration?.kind === 'transform' ? (
             <TransformEditor
               config={configuration}
+              fieldTypes={fieldTypes}
               onChange={(patch) => emit(transformPatchValues(patch))}
             />
           ) : null}

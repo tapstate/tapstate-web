@@ -775,6 +775,7 @@
         "field": "字段",
         "operator": "运算符",
         "containsOperator": "包含",
+        "containsTextOnly": "只有源 schema 确认该字段为文本类型后，才能使用“包含”。",
         "value": "值",
         "removeCondition": "移除条件",
         "addCondition": "添加条件",

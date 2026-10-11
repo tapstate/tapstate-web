@@ -775,6 +775,7 @@
         "field": "欄位",
         "operator": "運算子",
         "containsOperator": "包含",
+        "containsTextOnly": "只有來源 schema 確認該欄位為文字型別後，才能使用「包含」。",
         "value": "值",
         "removeCondition": "移除條件",
         "addCondition": "新增條件",
