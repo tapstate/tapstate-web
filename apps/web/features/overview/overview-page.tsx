@@ -503,7 +503,9 @@ function OverviewMilestoneDock({
             aria-current={!storeDone ? 'step' : undefined}
             className={cn(
               'flex cursor-pointer items-center gap-1.5 whitespace-nowrap transition-colors',
-              storeDone ? 'font-semibold text-emerald-700' : 'font-semibold text-indigo-600',
+              storeDone
+                ? 'font-semibold text-emerald-700'
+                : 'font-semibold text-[var(--brand-primary)]',
             )}
           >
             <span
@@ -537,7 +539,7 @@ function OverviewMilestoneDock({
               sourcesDone
                 ? 'font-semibold text-emerald-700'
                 : storeDone
-                  ? 'font-semibold text-indigo-600'
+                  ? 'font-semibold text-[var(--brand-primary)]'
                   : 'text-slate-400 hover:text-slate-600',
             )}
           >
@@ -570,7 +572,7 @@ function OverviewMilestoneDock({
               pipelineDone
                 ? 'font-semibold text-emerald-700'
                 : storeDone && sourcesDone
-                  ? 'font-semibold text-indigo-600'
+                  ? 'font-semibold text-[var(--brand-primary)]'
                   : 'text-slate-400 hover:text-slate-600',
             )}
           >
@@ -597,9 +599,9 @@ function OverviewMilestoneDock({
               type="button"
               disabled={sampleAdding}
               onClick={onTrySample}
-              className="flex cursor-pointer items-center gap-1 text-[11.5px] font-medium whitespace-nowrap text-indigo-600 transition-colors hover:text-indigo-800 hover:underline disabled:cursor-wait disabled:opacity-60"
+              className="flex cursor-pointer items-center gap-1 text-[11.5px] font-medium whitespace-nowrap text-[var(--brand-primary)] transition-colors hover:text-[var(--brand-hover)] hover:underline disabled:cursor-wait disabled:opacity-60"
             >
-              <Sparkles className="h-3 w-3 text-indigo-500" aria-hidden="true" />
+              <Sparkles className="h-3 w-3 text-[var(--brand-primary)]" aria-hidden="true" />
               <span>{t('overview.milestones.trySample', 'Try sample')}</span>
             </button>
           )}
@@ -607,7 +609,7 @@ function OverviewMilestoneDock({
             <button
               type="button"
               onClick={onConnectAtlas}
-              className="flex h-8.5 cursor-pointer items-center gap-1.5 rounded-xl bg-[#4F46E5] px-4 text-[12.5px] font-semibold whitespace-nowrap text-white shadow-xs transition-all hover:scale-[1.01] hover:bg-[#4338CA]"
+              className="brand-primary-button flex h-8.5 cursor-pointer items-center gap-1.5 rounded-xl px-4 text-[12.5px] font-semibold whitespace-nowrap shadow-xs transition-all hover:scale-[1.01]"
             >
               <span>
                 {cloud
@@ -621,7 +623,7 @@ function OverviewMilestoneDock({
               <button
                 type="button"
                 onClick={onAddSources}
-                className="flex h-8.5 cursor-pointer items-center gap-1.5 rounded-xl bg-[#4F46E5] px-3.5 text-[12.5px] font-semibold whitespace-nowrap text-white shadow-xs transition-all hover:scale-[1.01] hover:bg-[#4338CA]"
+                className="brand-primary-button flex h-8.5 cursor-pointer items-center gap-1.5 rounded-xl px-3.5 text-[12.5px] font-semibold whitespace-nowrap shadow-xs transition-all hover:scale-[1.01]"
               >
                 <span>{t('overview.milestones.sourcesShort', 'Add Databases')}</span>
                 <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -631,7 +633,7 @@ function OverviewMilestoneDock({
             <button
               type="button"
               onClick={onBuildPipeline}
-              className="flex h-8.5 cursor-pointer items-center gap-1.5 rounded-xl bg-[#4F46E5] px-4 text-[12.5px] font-semibold whitespace-nowrap text-white shadow-xs transition-all hover:scale-[1.01] hover:bg-[#4338CA]"
+              className="brand-primary-button flex h-8.5 cursor-pointer items-center gap-1.5 rounded-xl px-4 text-[12.5px] font-semibold whitespace-nowrap shadow-xs transition-all hover:scale-[1.01]"
             >
               <span>{t('overview.milestones.build')}</span>
               <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -642,7 +644,7 @@ function OverviewMilestoneDock({
                 <button
                   type="button"
                   onClick={onBuildPipeline}
-                  className="flex h-8.5 cursor-pointer items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 text-[12.5px] font-semibold whitespace-nowrap text-indigo-700 transition-colors hover:bg-indigo-100"
+                  className="brand-glass-control flex h-8.5 cursor-pointer items-center gap-1.5 rounded-xl px-3.5 text-[12.5px] font-semibold whitespace-nowrap transition-colors"
                 >
                   <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
                   <span>Order 360 demo</span>

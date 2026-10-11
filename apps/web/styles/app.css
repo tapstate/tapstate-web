@@ -171,7 +171,7 @@
   }
 
   .app-sidebar__cloud-organization[href]:focus-visible {
-    outline: 2px solid #4f46e5;
+    outline: 2px solid var(--brand-primary);
     outline-offset: 2px;
   }
 
@@ -206,7 +206,7 @@
     border: 1px solid rgb(100 116 139 / 14%);
     border-radius: 7px;
     background: rgb(255 255 255 / 82%);
-    color: #4f46e5;
+    color: var(--brand-primary);
   }
 
   .app-sidebar__cloud-organization-name {
@@ -376,6 +376,32 @@
 
   .app-sidebar__link--active > span {
     text-shadow: var(--app-sidebar-glass-text-shadow);
+  }
+
+  .brand-glass-control {
+    border: 1px solid var(--brand-border);
+    background: var(--app-sidebar-glass-surface);
+    color: var(--brand-primary);
+    box-shadow: var(--app-sidebar-glass-shadow);
+    backdrop-filter: var(--app-sidebar-glass-backdrop);
+  }
+
+  .brand-glass-control:hover {
+    border-color: var(--brand-border-strong);
+    color: var(--brand-hover);
+  }
+
+  .brand-primary-button {
+    background: var(--brand-primary);
+    color: #fff;
+  }
+
+  .brand-primary-button:hover {
+    background: var(--brand-hover);
+  }
+
+  .brand-primary-button:active {
+    background: var(--brand-pressed);
   }
 
   .app-sidebar__footer {
