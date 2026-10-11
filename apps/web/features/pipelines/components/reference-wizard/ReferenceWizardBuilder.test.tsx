@@ -346,6 +346,9 @@ describe('ReferenceWizardBuilder preview panel', () => {
     const panel = previewPanel()
     expect(panel?.textContent).toContain('9223372036854775807')
     expect(panel?.textContent).not.toContain('$numberLong')
+    expect(panel?.querySelector('[data-preview-path="/total_spent"]')?.className).not.toContain(
+      'border',
+    )
 
     act(() => {
       Array.from(panel?.querySelectorAll('button') ?? [])

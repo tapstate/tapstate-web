@@ -508,6 +508,51 @@ describe('WizardBuilder publish flow', () => {
     expect(runPipeline).not.toHaveBeenCalled()
   })
 
+  it('previews a read-only draft while runtime status is being checked', async () => {
+    streamPipelinePreview.mockResolvedValue({
+      runId: 'status-pending-preview',
+      candidateHash: 'status-pending-candidate',
+      format: 'logical-json',
+      executionSpec: {},
+      contexts: [],
+      sample: { rootRows: 1, inputRows: 1 },
+      documents: [{ id: 'order-1' }],
+      trace: [],
+      sampleId: 'status-pending-sample',
+      rowCount: 1,
+      failure: null,
+    })
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder
+            pipelineId={initialDraft.pipelineId}
+            draft={initialDraft}
+            etag='"1"'
+            readOnly
+            runtimeObservationPending
+          />
+        </QueryClientProvider>,
+      )
+    })
+
+    await vi.waitFor(() => expect(previewPipelineDraft).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() => expect(streamPipelinePreview).toHaveBeenCalledTimes(1))
+    expect(
+      container?.querySelector('[data-live-preview-run="status-pending-preview"]'),
+    ).not.toBeNull()
+    expect(previewPipelineDraft).toHaveBeenCalledTimes(1)
+    expect(streamPipelinePreview).toHaveBeenCalledTimes(1)
+    expect(updatePipelineDraft).not.toHaveBeenCalled()
+    expect(publishPipelineDraft).not.toHaveBeenCalled()
+    expect(runPipeline).not.toHaveBeenCalled()
+  })
+
   it('saves a Wizard draft without previewing, publishing, or starting it', async () => {
     container = document.createElement('div')
     document.body.append(container)
