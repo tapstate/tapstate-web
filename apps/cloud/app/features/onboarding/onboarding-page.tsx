@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
-import { AlertCircle, ArrowRight, Building2, Check, MapPin, Moon, RefreshCw, Sun } from 'lucide-react'
+import { AlertCircle, ArrowRight, Check, MapPin, Moon, RefreshCw, Sun } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -516,8 +516,6 @@ export function OnboardingPage({
   }
 
   const accountName = user.displayName?.trim() || user.email
-  const headerOrganizationName =
-    currentOrganization?.name || workspace?.organization.name || organizationName.trim() || 'Organization'
 
   return (
     <div
@@ -525,11 +523,12 @@ export function OnboardingPage({
     >
       <header className="flex h-16 w-full items-center justify-between border-b border-black/[0.05] bg-transparent px-6 sm:px-12 dark:border-white/[0.06]">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-600 dark:border-indigo-400/20 dark:bg-indigo-400/10 dark:text-indigo-300">
-            <Building2 aria-hidden="true" className="h-4 w-4" />
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-900 dark:bg-white">
+            <img alt="" className="h-5 w-5 dark:hidden" src="/tapstate-mark-light.svg" />
+            <img alt="" className="hidden h-5 w-5 dark:block" src="/tapstate-mark.svg" />
           </div>
-          <span className="max-w-48 truncate text-sm font-semibold tracking-tight text-[#111827] dark:text-white sm:max-w-72">
-            {headerOrganizationName}
+          <span className="text-sm font-semibold tracking-tight text-[#111827] dark:text-white">
+            Tapstate
           </span>
         </div>
 
