@@ -186,6 +186,7 @@ function HighlightedJson({ value }: { value: Record<string, unknown> }) {
 
 function ViewDocuments({ view }: { view: ViewSummary }) {
   const { t } = useTranslation()
+  const [selectedIndex, setSelectedIndex] = useState(0)
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const preview = useQuery({
     queryKey: ['view-documents', view.location.storeId, view.location.collection, 5],
@@ -208,26 +209,50 @@ function ViewDocuments({ view }: { view: ViewSummary }) {
   if (preview.data.rows.length === 0)
     return <p className="text-muted-foreground text-[13px]">{t('views.preview.empty')}</p>
 
+  const activeIndex = Math.min(selectedIndex, preview.data.rows.length - 1)
+  const selectedRow = preview.data.rows[activeIndex]
+
   return (
-    <section className="space-y-3" aria-label={t('views.preview.title')}>
-      <p className="text-muted-foreground text-xs">
-        {t('views.preview.rows', { count: preview.data.rows.length })}
-        {preview.data.moreAvailable ? ` · ${t('views.preview.moreAvailable')}` : ''}
-      </p>
-      <div className="views-documents-grid">
-        {preview.data.rows.map((row, index) => (
-          <article className="views-document" key={`${index}-${String(row._id ?? '')}`}>
-            <header className="views-document__header">
-              <span>Document {String(index + 1).padStart(2, '0')}</span>
-              <span className="views-document__id" title={String(row._id ?? '')}>
-                {String(row._id ?? '')}
-              </span>
-            </header>
-            <pre className="views-document__code">
-              <HighlightedJson value={row} />
-            </pre>
-          </article>
-        ))}
+    <section className="views-documents" aria-label={t('views.preview.title')}>
+      <div className="views-documents__summary">
+        <h2>{t('views.detail.tabs.documents')}</h2>
+        <p>
+          {t('views.preview.rows', { count: preview.data.rows.length })}
+          {preview.data.moreAvailable ? ` · ${t('views.preview.moreAvailable')}` : ''}
+        </p>
+      </div>
+      <div className="views-documents__browser">
+        <nav className="views-documents__list" aria-label={t('views.preview.title')}>
+          {preview.data.rows.map((row, index) => (
+            <button
+              aria-pressed={index === activeIndex}
+              className={cn(
+                'views-documents__item',
+                index === activeIndex && 'views-documents__item--active',
+              )}
+              key={`${index}-${String(row._id ?? '')}`}
+              onClick={() => setSelectedIndex(index)}
+              title={String(row._id ?? '')}
+              type="button"
+            >
+              <span className="views-documents__ordinal">{String(index + 1).padStart(2, '0')}</span>
+              <span className="views-documents__identifier">{String(row._id ?? '')}</span>
+            </button>
+          ))}
+        </nav>
+        <article className="views-document">
+          <header className="views-document__header">
+            <span>
+              {t('views.detail.tabs.documents')} / {String(activeIndex + 1).padStart(2, '0')}
+            </span>
+            <span className="views-document__id" title={String(selectedRow._id ?? '')}>
+              {String(selectedRow._id ?? '')}
+            </span>
+          </header>
+          <pre className="views-document__code">
+            <HighlightedJson value={selectedRow} />
+          </pre>
+        </article>
       </div>
     </section>
   )
@@ -262,28 +287,29 @@ function ViewOverview({ view }: { view: ViewSummary }) {
         })
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="views-stats">
-        <Stat
-          label={t('views.detail.freshness')}
-          value={<ViewStatus status={view.status} />}
-          hint={lastApplied}
-        />
-        <Stat
-          label={t('views.table.documents')}
-          value={
-            view.documents === null ? t('overview.notReported') : view.documents.toLocaleString()
-          }
-        />
-        <Stat
-          label={t('views.detail.size')}
-          value={view.sizeBytes === null ? t('overview.notReported') : formatBytes(view.sizeBytes)}
-        />
-        <Stat
-          label={t('views.detail.largestDocument')}
-          value={t('overview.notReported')}
-          hint={t('views.detail.documentLimit')}
-        />
+    <div className="views-overview-layout">
+      <div className="views-summary">
+        <div className="views-summary__primary">
+          <p className="views-stat__label">{t('views.detail.freshness')}</p>
+          <div className="views-summary__status">
+            <ViewStatus status={view.status} />
+          </div>
+          <p className="views-stat__hint">{lastApplied}</p>
+        </div>
+        <div className="views-summary__metrics">
+          <Stat
+            label={t('views.table.documents')}
+            value={
+              view.documents === null ? t('overview.notReported') : view.documents.toLocaleString()
+            }
+          />
+          <Stat
+            label={t('views.detail.size')}
+            value={
+              view.sizeBytes === null ? t('overview.notReported') : formatBytes(view.sizeBytes)
+            }
+          />
+        </div>
       </div>
 
       <LoadProgress view={view} />
@@ -318,6 +344,7 @@ function ViewOverview({ view }: { view: ViewSummary }) {
           </dd>
         </div>
       </dl>
+      <p className="views-overview__limit">{t('views.detail.documentLimit')}</p>
     </div>
   )
 }
