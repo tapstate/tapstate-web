@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
-import { AlertCircle, ArrowRight, Check, MapPin, Moon, RefreshCw, Sun } from 'lucide-react'
+import { AlertCircle, ArrowRight, Building2, Check, MapPin, Moon, RefreshCw, Sun } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -516,6 +516,8 @@ export function OnboardingPage({
   }
 
   const accountName = user.displayName?.trim() || user.email
+  const headerOrganizationName =
+    currentOrganization?.name || workspace?.organization.name || organizationName.trim() || 'Organization'
 
   return (
     <div
@@ -523,11 +525,11 @@ export function OnboardingPage({
     >
       <header className="flex h-16 w-full items-center justify-between border-b border-black/[0.05] bg-transparent px-6 sm:px-12 dark:border-white/[0.06]">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-6 w-6 items-center justify-center rounded-[6px] bg-neutral-900 text-xs font-bold text-white shadow-2xs dark:bg-white dark:text-neutral-900">
-            <span className="font-mono text-[11px] leading-none">T</span>
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-600 dark:border-indigo-400/20 dark:bg-indigo-400/10 dark:text-indigo-300">
+            <Building2 aria-hidden="true" className="h-4 w-4" />
           </div>
-          <span className="text-sm font-semibold tracking-tight text-[#111827] dark:text-white">
-            Tapstate
+          <span className="max-w-48 truncate text-sm font-semibold tracking-tight text-[#111827] dark:text-white sm:max-w-72">
+            {headerOrganizationName}
           </span>
         </div>
 

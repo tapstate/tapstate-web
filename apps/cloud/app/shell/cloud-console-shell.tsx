@@ -108,15 +108,11 @@ export function CloudConsoleShell({
             type="button"
           >
             <span className="flex min-w-0 items-center gap-2">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] bg-neutral-900 dark:bg-white">
-                <img alt="" className="h-3.5 w-3.5 dark:hidden" src="/tapstate-mark-light.svg" />
-                <img alt="" className="hidden h-3.5 w-3.5 dark:block" src="/tapstate-mark.svg" />
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-600 dark:border-indigo-400/20 dark:bg-indigo-400/10 dark:text-indigo-300">
+                <Building2 aria-hidden="true" className="h-4 w-4" />
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-xs leading-tight font-semibold tracking-tight text-neutral-900 dark:text-white">
-                  Tapstate
-                </span>
-                <span className="block truncate font-mono text-[11px] leading-tight text-neutral-500 dark:text-neutral-400">
                   {currentOrganization?.name ?? 'Organization'}
                 </span>
               </span>
