@@ -129,6 +129,7 @@ export function SourceCreateDialog({
   }, [apiFetch, connectors.length, initialConnectorId, open, t])
 
   useEffect(() => {
+    if (!open) return
     setConnector(null)
     setSchema(null)
     setSourceMode('')
@@ -140,8 +141,10 @@ export function SourceCreateDialog({
     if (!connectorId || step !== 'configure') return
 
     setLoadingConnector(true)
+    let cancelled = false
     getConnector(connectorId, apiFetch)
       .then((detail) => {
+        if (cancelled) return
         if (detail.spec.text === null) {
           setRequestError(t('sources.create.errors.specUnavailable'))
           return
@@ -166,9 +169,16 @@ export function SourceCreateDialog({
         }
         setSourceMode(detail.modes[0] ?? '')
       })
-      .catch((error) => setRequestError(errorMessage(error, t)))
-      .finally(() => setLoadingConnector(false))
-  }, [apiFetch, connectorId, currentLocale, step, t])
+      .catch((error) => {
+        if (!cancelled) setRequestError(errorMessage(error, t))
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingConnector(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [apiFetch, connectorId, currentLocale, open, step, t])
 
   function connectionDraft() {
     const nextErrors: Record<string, string> = {}
