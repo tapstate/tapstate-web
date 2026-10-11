@@ -206,9 +206,6 @@ function PipelineTable({
             <th className="hidden px-4 py-3 font-semibold sm:table-cell">
               {t('pipelines.table.type')}
             </th>
-            <th className="hidden px-4 py-3 font-semibold md:table-cell">
-              {t('pipelines.table.version')}
-            </th>
             <th className="px-4 py-3 font-semibold">{t('pipelines.table.status')}</th>
             <th className="w-20 px-4 py-3" aria-hidden="true" />
           </tr>
@@ -238,20 +235,6 @@ function PipelineTable({
               </td>
               <td className="hidden px-4 py-3 text-[13px] text-gray-500 sm:table-cell">
                 {t('pipelines.type.pipeline')}
-              </td>
-              <td className="hidden px-4 py-3 md:table-cell">
-                {pipeline.revision != null ? (
-                  <code
-                    className="font-mono text-[12px] text-gray-400"
-                    title={pipeline.contentHash ?? undefined}
-                  >
-                    r{pipeline.revision}
-                  </code>
-                ) : (
-                  <span className="font-mono text-[12px] text-gray-500">
-                    {pipeline.contentHash?.slice(0, 12) ?? '—'}
-                  </span>
-                )}
               </td>
               <td className="px-4 py-3">
                 {pipeline.hasArtifact ? (

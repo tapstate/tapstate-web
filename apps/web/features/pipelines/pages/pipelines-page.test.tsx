@@ -198,7 +198,6 @@ describe('PipelinesPage', () => {
     })
     const row = link?.closest('tr')
     expect(row?.textContent).toContain('Draft')
-    expect(row?.textContent).toContain('r3')
     expect(row?.textContent).not.toContain('Edit')
     expect(row?.querySelectorAll('a[href="/pipelines/unfinished_wizard/edit"]')).toHaveLength(2)
     expect(row?.querySelector('.pipeline-list__lifecycle-menu')).not.toBeNull()
