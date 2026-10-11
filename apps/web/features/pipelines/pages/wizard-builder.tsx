@@ -539,7 +539,7 @@ export function WizardBuilder({
           )
           if (controller.signal.aborted || generation !== previewGeneration.current) return
           if (result.failure) {
-            setLivePreviewError(result.failure.code)
+            setLivePreviewError(result.failure.reason || result.failure.code)
             setLivePreviewStatus('error')
             return
           }
