@@ -15,6 +15,7 @@ import {
   type PipelineDraftPreview,
   type PipelinePreviewRun,
   type PipelineRuntimeState,
+  type PipelineCatalogState,
 } from '@/service/pipelines/pipeline-client'
 import { isSampleSource } from '@/service/sample-source-client'
 import { getSourceSchema, listConnectors, listSources } from '@/service/source-client'
@@ -60,6 +61,7 @@ export function WizardBuilder({
   etag,
   readOnly = false,
   runtimeStatus,
+  lifecycleStatus,
   runtimeObservationPending = false,
   runtimeObservationError = false,
   onRetryRuntimeObservation,
@@ -71,6 +73,7 @@ export function WizardBuilder({
   etag: string
   readOnly?: boolean
   runtimeStatus?: PipelineRuntimeState
+  lifecycleStatus?: PipelineCatalogState
   runtimeObservationPending?: boolean
   runtimeObservationError?: boolean
   onRetryRuntimeObservation?: () => void
@@ -578,19 +581,21 @@ export function WizardBuilder({
           ? t('wizard.runtimeStatusError')
           : runtimeCheckPending
             ? t('wizard.checkingRuntime')
-            : runtimeStatus
-              ? t(`pipelines.workspace.runtime.states.${runtimeStatus}`)
-              : readOnly
-                ? t('pipelines.workspace.readOnly.editorStatus')
-                : t(
-                    status === 'saving' || action === 'save'
-                      ? 'wizard.autosaving'
-                      : status === 'error'
-                        ? 'wizard.autosaveError'
-                        : isDirty
-                          ? 'wizard.unsavedChanges'
-                          : 'wizard.autosaved',
-                  )
+            : lifecycleStatus
+              ? t(`pipelines.workspace.runtime.states.${lifecycleStatus}`)
+              : runtimeStatus
+                ? t(`pipelines.workspace.runtime.states.${runtimeStatus}`)
+                : readOnly
+                  ? t('pipelines.workspace.readOnly.editorStatus')
+                  : t(
+                      status === 'saving' || action === 'save'
+                        ? 'wizard.autosaving'
+                        : status === 'error'
+                          ? 'wizard.autosaveError'
+                          : isDirty
+                            ? 'wizard.unsavedChanges'
+                            : 'wizard.autosaved',
+                    )
   return (
     <div className="h-full min-h-0 min-w-0 p-[var(--app-shell-sidebar-content-inset)]">
       <section

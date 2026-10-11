@@ -45,6 +45,7 @@ import {
   getPipelineDraft,
   getPipeline,
   getPipelineLayout,
+  getPipelineStatus,
   listPipelines,
   previewPipelineDraft,
   publishPipelineDraft,
@@ -472,7 +473,11 @@ function PipelineWorkspaceNav({
                   {hasArtifact ? (
                     <PipelineStatusBadge status={status} />
                   ) : (
-                    <span className="inline-flex h-6 items-center rounded-md border border-amber-200 bg-amber-50 px-2 text-[11px] font-semibold text-amber-800" data-testid="pipeline-status" data-state="draft">
+                    <span
+                      className="inline-flex h-6 items-center rounded-md border border-amber-200 bg-amber-50 px-2 text-[11px] font-semibold text-amber-800"
+                      data-testid="pipeline-status"
+                      data-state="draft"
+                    >
                       {t('wizard.draft')}
                     </span>
                   )}
@@ -610,6 +615,7 @@ function PipelineWorkspaceNav({
 function PipelineOrchestrationPage({
   pipelineId,
   runtimeStatus,
+  lifecycleStatus,
   runtimeObservationPending,
   runtimeObservationError,
   onRetryRuntimeObservation,
@@ -617,6 +623,7 @@ function PipelineOrchestrationPage({
 }: {
   pipelineId: string
   runtimeStatus?: PipelineRuntimeState
+  lifecycleStatus?: PipelineCatalogState
   runtimeObservationPending: boolean
   runtimeObservationError: boolean
   onRetryRuntimeObservation: () => void
@@ -1158,6 +1165,7 @@ function PipelineOrchestrationPage({
                 etag={wizardDocument.etag}
                 readOnly={wizardReadOnly}
                 runtimeStatus={runtimeStatus}
+                lifecycleStatus={lifecycleStatus}
                 runtimeObservationPending={runtimeObservationPending}
                 runtimeObservationError={runtimeObservationError}
                 onRetryRuntimeObservation={onRetryRuntimeObservation}
@@ -1492,12 +1500,27 @@ export function PipelineWorkspacePage({
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   })
+  const mergedStatus = useQuery({
+    queryKey: ['pipelines', pipelineId, 'status'],
+    queryFn: () => getPipelineStatus(pipelineId, apiFetch),
+    enabled: pipelineDraft.isSuccess,
+    retry: false,
+    refetchInterval: 5000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  })
   const catalogItem = catalog.data?.find((item) => item.id === pipelineId)
-  const hasArtifact = catalogItem?.hasArtifact ?? Boolean(pipelineInfo.data)
-  const runtimeStatus = catalogItem?.hasArtifact
-    ? catalogItem.status.state === 'STARTING' || catalogItem.status.state === 'RESUMING'
+  const lifecycleStatus = mergedStatus.data?.state ?? catalogItem?.status.state
+  const hasArtifact =
+    mergedStatus.data?.hasArtifact ?? catalogItem?.hasArtifact ?? Boolean(pipelineInfo.data)
+  const runtimeStatus = hasArtifact
+    ? lifecycleStatus === 'STARTING' || lifecycleStatus === 'RESUMING'
       ? 'RUNNING'
-      : (catalogItem.status.observedState ?? catalogItem.status.desiredState ?? 'NEW')
+      : (mergedStatus.data?.observedState ??
+        mergedStatus.data?.desiredState ??
+        catalogItem?.status.observedState ??
+        catalogItem?.status.desiredState ??
+        'NEW')
     : undefined
   const basicInfo = useMemo<PipelineDraftBasicInfo>(() => {
     const draft = pipelineDraft.data?.draft
@@ -1621,9 +1644,13 @@ export function PipelineWorkspacePage({
         <PipelineOrchestrationPage
           pipelineId={pipelineId}
           runtimeStatus={runtimeStatus}
-          runtimeObservationPending={hasArtifact && catalog.isPending}
-          runtimeObservationError={hasArtifact && catalog.isError}
-          onRetryRuntimeObservation={() => void catalog.refetch()}
+          lifecycleStatus={lifecycleStatus}
+          runtimeObservationPending={hasArtifact && catalog.isPending && mergedStatus.isPending}
+          runtimeObservationError={hasArtifact && catalog.isError && mergedStatus.isError}
+          onRetryRuntimeObservation={() => {
+            void catalog.refetch()
+            void mergedStatus.refetch()
+          }}
           onRegisterBasicInfoSaver={registerBasicInfoSaver}
         />
       ) : (
