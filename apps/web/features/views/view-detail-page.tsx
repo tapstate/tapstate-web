@@ -86,7 +86,7 @@ export function ViewDetailPage({ viewId }: { viewId: string }) {
           )}
         </div>
       </header>
-      <div className="views-page__body">
+      <div className="views-page__body views-page__body--detail">
         {viewsQuery.isError ? (
           <div className="views-page__state" role="alert">
             <p>{t('views.states.error')}</p>
@@ -119,7 +119,7 @@ function ViewTabs({ view }: { view: ViewSummary }) {
   const [tab, setTab] = useState<ViewTab>('overview')
 
   return (
-    <>
+    <div className="views-detail-layout">
       <div className="views-tabs" role="tablist" aria-label={t('views.detail.tabsLabel')}>
         {VIEW_TABS.map((id) => (
           <button
@@ -136,7 +136,12 @@ function ViewTabs({ view }: { view: ViewSummary }) {
           </button>
         ))}
       </div>
-      <div role="tabpanel" id={`view-panel-${tab}`} aria-labelledby={`view-tab-${tab}`}>
+      <div
+        className="views-detail-panel"
+        role="tabpanel"
+        id={`view-panel-${tab}`}
+        aria-labelledby={`view-tab-${tab}`}
+      >
         {tab === 'overview' ? (
           <ViewOverview view={view} />
         ) : tab === 'documents' ? (
@@ -145,8 +150,38 @@ function ViewTabs({ view }: { view: ViewSummary }) {
           <p className="text-muted-foreground text-[13px]">{t(`views.detail.pending.${tab}`)}</p>
         )}
       </div>
-    </>
+    </div>
   )
+}
+
+function HighlightedJson({ value }: { value: Record<string, unknown> }) {
+  const source = JSON.stringify(value, null, 2)
+  const tokens =
+    /"(?:\\.|[^"\\])*"(?=\s*:)|"(?:\\.|[^"\\])*"|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|\b(?:true|false|null)\b/g
+  const pieces: ReactNode[] = []
+  let cursor = 0
+  for (const match of source.matchAll(tokens)) {
+    const start = match.index
+    if (start > cursor) pieces.push(source.slice(cursor, start))
+    const token = match[0]
+    const kind = token.startsWith('"')
+      ? /^\s*:/.test(source.slice(start + token.length))
+        ? 'key'
+        : 'string'
+      : token === 'true' || token === 'false'
+        ? 'boolean'
+        : token === 'null'
+          ? 'null'
+          : 'number'
+    pieces.push(
+      <span className={`views-json--${kind}`} key={start}>
+        {token}
+      </span>,
+    )
+    cursor = start + token.length
+  }
+  pieces.push(source.slice(cursor))
+  return <code>{pieces}</code>
 }
 
 function ViewDocuments({ view }: { view: ViewSummary }) {
@@ -179,14 +214,19 @@ function ViewDocuments({ view }: { view: ViewSummary }) {
         {t('views.preview.rows', { count: preview.data.rows.length })}
         {preview.data.moreAvailable ? ` · ${t('views.preview.moreAvailable')}` : ''}
       </p>
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="views-documents-grid">
         {preview.data.rows.map((row, index) => (
-          <pre
-            key={`${index}-${String(row._id ?? '')}`}
-            className="border-border bg-muted/20 max-h-72 overflow-auto rounded-lg border p-4 text-xs leading-5"
-          >
-            {JSON.stringify(row, null, 2)}
-          </pre>
+          <article className="views-document" key={`${index}-${String(row._id ?? '')}`}>
+            <header className="views-document__header">
+              <span>Document {String(index + 1).padStart(2, '0')}</span>
+              <span className="views-document__id" title={String(row._id ?? '')}>
+                {String(row._id ?? '')}
+              </span>
+            </header>
+            <pre className="views-document__code">
+              <HighlightedJson value={row} />
+            </pre>
+          </article>
         ))}
       </div>
     </section>
