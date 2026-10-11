@@ -936,7 +936,12 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     grouped = false,
   ): React.ReactNode => {
     const highlighted = focusContains(path)
-    const highlightClass = highlighted && !grouped ? focusClass : 'border-transparent'
+    const highlightClass = highlighted && !grouped ? focusClass : ''
+    const rowClass = cn(
+      'px-1 py-0.5',
+      highlighted && !grouped && 'rounded-lg border',
+      highlightClass,
+    )
     const paddingLeft = `${depth * 16}px`
     const key =
       label === undefined ? null : (
@@ -955,7 +960,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
         <div
           data-preview-path={path}
           data-preview-focused={(highlighted && !grouped) || undefined}
-          className={cn('rounded-lg border px-1 py-0.5', highlightClass)}
+          className={rowClass}
           style={{ paddingLeft }}
         >
           {key}
@@ -983,7 +988,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       <div
         data-preview-path={path}
         data-preview-focused={(highlighted && !grouped) || undefined}
-        className={cn('rounded-lg border px-1 py-0.5', highlightClass)}
+        className={rowClass}
       >
         <div style={{ paddingLeft }}>
           {key}
