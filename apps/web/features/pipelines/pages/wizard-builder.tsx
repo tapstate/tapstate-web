@@ -573,29 +573,31 @@ export function WizardBuilder({
     (draft.publishedDraftRevision !== null && !runtimeStatus && !runtimeObservationError)
   const saveStatusLabel = error
     ? error
-    : runtimeStatus === 'RUNNING' && startPhase === 'checking'
+    : lifecycleStatus === 'RUNNING' && startPhase === 'checking'
       ? t('pipelines.workspace.runtime.states.RUNNING')
-      : startPhase
-        ? t(`wizard.startPhases.${startPhase}`)
-        : runtimeObservationError
-          ? t('wizard.runtimeStatusError')
-          : runtimeCheckPending
-            ? t('wizard.checkingRuntime')
-            : lifecycleStatus
-              ? t(`pipelines.workspace.runtime.states.${lifecycleStatus}`)
-              : runtimeStatus
-                ? t(`pipelines.workspace.runtime.states.${runtimeStatus}`)
-                : readOnly
-                  ? t('pipelines.workspace.readOnly.editorStatus')
-                  : t(
-                      status === 'saving' || action === 'save'
-                        ? 'wizard.autosaving'
-                        : status === 'error'
-                          ? 'wizard.autosaveError'
-                          : isDirty
-                            ? 'wizard.unsavedChanges'
-                            : 'wizard.autosaved',
-                    )
+      : lifecycleStatus === 'STARTING' && startPhase === 'checking'
+        ? t('pipelines.workspace.runtime.states.STARTING')
+        : startPhase
+          ? t(`wizard.startPhases.${startPhase}`)
+          : runtimeObservationError
+            ? t('wizard.runtimeStatusError')
+            : runtimeCheckPending
+              ? t('wizard.checkingRuntime')
+              : lifecycleStatus
+                ? t(`pipelines.workspace.runtime.states.${lifecycleStatus}`)
+                : runtimeStatus
+                  ? t(`pipelines.workspace.runtime.states.${runtimeStatus}`)
+                  : readOnly
+                    ? t('pipelines.workspace.readOnly.editorStatus')
+                    : t(
+                        status === 'saving' || action === 'save'
+                          ? 'wizard.autosaving'
+                          : status === 'error'
+                            ? 'wizard.autosaveError'
+                            : isDirty
+                              ? 'wizard.unsavedChanges'
+                              : 'wizard.autosaved',
+                      )
   return (
     <div className="h-full min-h-0 min-w-0 p-[var(--app-shell-sidebar-content-inset)]">
       <section

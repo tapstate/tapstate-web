@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
+import { celFilterField } from '../filter-cel'
 import { TransformEditorShell } from './transform-editor-shell'
 import { TransformSelect } from './transform-select'
 import { mergeBody, type TransformEditorProps } from './types'
@@ -21,13 +22,14 @@ function expressionFor(rows: ConditionRow[], logic: 'all' | 'any') {
       const field = row.field.trim()
       const value = row.value.trim()
       if (!field || !value) return null
+      const reference = celFilterField(field)
       const escaped = JSON.stringify(value)
-      if (row.operator === 'notEquals') return `${field} != ${escaped}`
-      if (row.operator === 'contains') return `${field}.contains(${escaped})`
-      return `${field} == ${escaped}`
+      if (row.operator === 'notEquals') return `${reference} != ${escaped}`
+      if (row.operator === 'contains') return `${reference}.contains(${escaped})`
+      return `${reference} == ${escaped}`
     })
     .filter((value): value is string => value !== null)
-    .join(logic === 'all' ? ' AND ' : ' OR ')
+    .join(logic === 'all' ? ' && ' : ' || ')
 }
 
 function parseExpression(value: unknown): ConditionRow[] {
@@ -35,7 +37,7 @@ function parseExpression(value: unknown): ConditionRow[] {
     return [{ field: '', operator: 'equals', value: '' }]
   }
   const rows = value
-    .split(/\s+(?:AND|OR)\s+/i)
+    .split(/\s+(?:&&|\|\||AND|OR)\s+/i)
     .map((part) => {
       const contains = part.match(/^(.+?)\.contains\((.*)\)$/)
       if (contains)
@@ -78,7 +80,7 @@ export function FilterEditor({ config, onChange }: TransformEditorProps) {
   const initialExpression = typeof config.body.expr === 'string' ? config.body.expr : ''
   const [rows, setRows] = useState(() => parseExpression(initialExpression))
   const [logic, setLogic] = useState<'all' | 'any'>(() =>
-    /\sOR\s/i.test(initialExpression) ? 'any' : 'all',
+    /\s(?:OR|\|\|)\s/i.test(initialExpression) ? 'any' : 'all',
   )
   const expression = useMemo(() => expressionFor(rows, logic), [logic, rows])
   const configurationKey = JSON.stringify({ expr: config.body.expr })
@@ -86,7 +88,7 @@ export function FilterEditor({ config, onChange }: TransformEditorProps) {
   useEffect(() => {
     const nextExpression = typeof config.body.expr === 'string' ? config.body.expr : ''
     setRows(parseExpression(nextExpression))
-    setLogic(/\sOR\s/i.test(nextExpression) ? 'any' : 'all')
+    setLogic(/\s(?:OR|\|\|)\s/i.test(nextExpression) ? 'any' : 'all')
   }, [configurationKey])
 
   function updateRows(nextRows: ConditionRow[]) {

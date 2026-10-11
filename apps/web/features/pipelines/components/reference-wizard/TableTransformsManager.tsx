@@ -21,6 +21,8 @@ import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
 
+import { celFilterField } from '../filter-cel'
+
 export type TransformType = 'filter' | 'map' | 'unwind' | 'js' | 'union'
 
 export interface FilterCondition {
@@ -579,9 +581,10 @@ const FilterEditor: React.FC<FilterEditorProps> = ({ config, columns, onChange }
         : nextConds
             .map((c) => {
               const literal = JSON.stringify(c.value)
-              if (c.op === 'contains') return `${c.field}.contains(${literal})`
-              if (c.op === 'starts_with') return `${c.field}.startsWith(${literal})`
-              return `${c.field} ${c.op} ${literal}`
+              const field = celFilterField(c.field)
+              if (c.op === 'contains') return `${field}.contains(${literal})`
+              if (c.op === 'starts_with') return `${field}.startsWith(${literal})`
+              return `${field} ${c.op} ${literal}`
             })
             .join(' && ')
 
