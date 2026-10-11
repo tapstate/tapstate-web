@@ -978,7 +978,8 @@
           "currentTable": "Current table",
           "removeUnionInput": "Remove input stream",
           "addUpstreamInput": "Add upstream stream",
-          "selectAnotherInput": "Select another available stream"
+          "selectAnotherInput": "Select another available stream",
+          "unionWizardUnavailable": "Union needs explicit multi-stream references, which this builder does not collect. Remove this step to save and start."
         }
       },
       "runtime": {

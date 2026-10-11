@@ -8,12 +8,10 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
-  AlertTriangle,
   Info,
   Code,
   ArrowRight,
   ShieldAlert,
-  Database,
   X,
 } from 'lucide-react'
 import React from 'react'
@@ -24,6 +22,14 @@ import { cn } from '@/lib/utils'
 import { celFilterField } from '../filter-cel'
 
 export type TransformType = 'filter' | 'map' | 'unwind' | 'js' | 'union'
+
+const DEFAULT_JS_SCRIPT = 'function process(record, ctx) {\n  return record;\n}'
+const WIZARD_ADDABLE_TRANSFORM_TYPES: Exclude<TransformType, 'union'>[] = [
+  'filter',
+  'map',
+  'unwind',
+  'js',
+]
 
 export interface FilterCondition {
   field: string
@@ -84,7 +90,6 @@ export interface TableTransformsManagerProps {
   tableName: string
   sourceName?: string
   columns: string[]
-  availableUpstreamSources?: string[]
   transforms: TransformStep[]
   onChange: (transforms: TransformStep[]) => void
   hideHeader?: boolean
@@ -150,9 +155,7 @@ const TRANSFORM_TYPE_META: Record<
 }
 
 export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
-  tableName,
   columns = [],
-  availableUpstreamSources = [],
   transforms = [],
   onChange,
   hideHeader = false,
@@ -160,7 +163,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
   const { t } = useTranslation()
   const [isAddingStep, setIsAddingStep] = React.useState(false)
 
-  const handleCreateStep = (type: TransformType) => {
+  const handleCreateStep = (type: Exclude<TransformType, 'union'>) => {
     const newStepId = crypto.randomUUID()
     const initialConfig: TransformStep['config'] =
       type === 'filter'
@@ -169,9 +172,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
           ? { map: { passthroughUnlisted: true, fields: [] } }
           : type === 'unwind'
             ? { unwind: { path: '' } }
-            : type === 'js'
-              ? { js: { script: '' } }
-              : { union: { from: [] } }
+            : { js: { script: DEFAULT_JS_SCRIPT } }
 
     const newStep: TransformStep = {
       id: newStepId,
@@ -276,8 +277,8 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-5">
-            {(Object.keys(TRANSFORM_TYPE_META) as TransformType[]).map((type) => {
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
+            {WIZARD_ADDABLE_TRANSFORM_TYPES.map((type) => {
               const meta = TRANSFORM_TYPE_META[type]
               const IconComp = meta.icon
               return (
@@ -425,6 +426,15 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                 </div>
               </div>
 
+              {step.type === 'union' && (
+                <p
+                  role="alert"
+                  className="border-b border-rose-200 bg-rose-50 px-3.5 py-2 text-[12px] text-rose-800"
+                >
+                  {t('pipelines.workspace.transform.wizard.unionWizardUnavailable')}
+                </p>
+              )}
+
               {/* Step Expanded Editor Body */}
               {step.isExpanded && (
                 <div className="space-y-4 p-4">
@@ -513,7 +523,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                     <JsEditor
                       config={
                         step.config.js || {
-                          script: `function process(record, ctx) {\n  return record;\n}`,
+                          script: DEFAULT_JS_SCRIPT,
                         }
                       }
                       onChange={(newJs) =>
@@ -525,20 +535,11 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                     />
                   )}
 
-                  {/* 5. UNION TYPE EDITOR */}
-                  {step.type === 'union' && (
-                    <UnionEditor
-                      config={step.config.union || { from: [tableName] }}
-                      currentTable={tableName}
-                      availableUpstreamSources={availableUpstreamSources}
-                      onChange={(newUnion) =>
-                        updateStep(idx, (prev) => ({
-                          ...prev,
-                          config: { ...prev.config, union: newUnion },
-                        }))
-                      }
-                    />
-                  )}
+                  {step.type === 'union' && step.config.union?.from?.length ? (
+                    <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 font-mono text-xs text-rose-900">
+                      {step.config.union.from.join(' → ')}
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>
@@ -1217,137 +1218,6 @@ const JsEditor: React.FC<JsEditorProps> = ({ config, onChange }) => {
   )
 }
 
-/* =========================================================================
-   5. Union Editor Component
-   ========================================================================= */
-interface UnionEditorProps {
-  config: UnionTransformConfig
-  currentTable: string
-  availableUpstreamSources: string[]
-  onChange: (config: UnionTransformConfig) => void
-}
-
-const UnionEditor: React.FC<UnionEditorProps> = ({
-  config,
-  currentTable,
-  availableUpstreamSources,
-  onChange,
-}) => {
-  const { t } = useTranslation()
-  const fromSources = config.from || [currentTable]
-
-  const addSource = (source: string) => {
-    if (!fromSources.includes(source)) {
-      onChange({ ...config, from: [...fromSources, source] })
-    }
-  }
-
-  const removeSource = (idx: number) => {
-    const next = [...fromSources]
-    next.splice(idx, 1)
-    onChange({ ...config, from: next })
-  }
-
-  return (
-    <div className="space-y-3 rounded-xl border border-rose-200/70 bg-rose-50/30 p-3.5">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <Sparkles className="h-3.5 w-3.5 text-rose-600" />
-          <span className="text-[12px] font-semibold text-rose-950">
-            {t('pipelines.workspace.transform.wizard.unionStreams')}
-          </span>
-        </div>
-        <span className="rounded-lg border border-rose-200 bg-rose-100/70 px-2 py-0.5 text-[11px] text-rose-700">
-          {t('pipelines.workspace.transform.wizard.fanIn')}
-        </span>
-      </div>
-
-      {/* Union Notice */}
-      <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-[11px] text-rose-900">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
-        <div className="space-y-1">
-          <p className="font-semibold">
-            ⚠️ {t('pipelines.workspace.transform.wizard.unionSemanticsTitle')}
-          </p>
-          <p className="text-rose-800">
-            {t('pipelines.workspace.transform.wizard.unionSemanticsLead')}{' '}
-            <strong>{t('pipelines.workspace.transform.wizard.unionSemanticsLimitation')}</strong>{' '}
-            {t('pipelines.workspace.transform.wizard.unionSemanticsAdvice')} <strong>Map</strong>{' '}
-            {t('pipelines.workspace.transform.wizard.unionSemanticsMapAdvice')}
-          </p>
-        </div>
-      </div>
-
-      {/* Sources List */}
-      <div className="space-y-2 rounded-lg border border-rose-200 bg-white p-3 shadow-2xs">
-        <label className="mb-1 block text-[11px] font-medium text-gray-700">
-          {t('pipelines.workspace.transform.wizard.unionInputList')}
-        </label>
-
-        {fromSources.map((src, sIdx) => (
-          <div
-            key={sIdx}
-            className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 font-mono text-[12px] text-gray-800"
-          >
-            <div className="flex items-center gap-2">
-              <Database className="h-3.5 w-3.5 text-rose-600" />
-              <span>{src}</span>
-              {src === currentTable && (
-                <span className="rounded-lg border border-gray-200 bg-white px-1 text-[10px] text-gray-400">
-                  {t('pipelines.workspace.transform.wizard.currentTable')}
-                </span>
-              )}
-            </div>
-
-            {fromSources.length > 1 && (
-              <button
-                type="button"
-                onClick={() => removeSource(sIdx)}
-                title={t('pipelines.workspace.transform.wizard.removeUnionInput')}
-                aria-label={t('pipelines.workspace.transform.wizard.removeUnionInput')}
-                className="cursor-pointer rounded-lg p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-        ))}
-
-        {/* Add Upstream Source */}
-        {availableUpstreamSources.filter((s) => !fromSources.includes(s)).length > 0 && (
-          <div className="flex items-center gap-2 border-t border-gray-100 pt-2">
-            <span className="text-[11px] text-gray-500">
-              {t('pipelines.workspace.transform.wizard.addUpstreamInput')}:
-            </span>
-            <select
-              onChange={(e) => {
-                if (e.target.value) {
-                  addSource(e.target.value)
-                  e.target.value = ''
-                }
-              }}
-              defaultValue=""
-              aria-label={t('pipelines.workspace.transform.wizard.addUpstreamInput')}
-              className="cursor-pointer rounded-lg border border-gray-300 bg-gray-50 px-2 py-1 font-mono text-[11px] text-gray-800 focus:outline-none"
-            >
-              <option value="" disabled>
-                -- {t('pipelines.workspace.transform.wizard.selectAnotherInput')} --
-              </option>
-              {availableUpstreamSources
-                .filter((s) => !fromSources.includes(s))
-                .map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-            </select>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
 export const formatTransformToDsl = (step: TransformStep, defaultFrom: string) => {
   if (step.type === 'filter') {
     return {
@@ -1391,7 +1261,7 @@ export const formatTransformToDsl = (step: TransformStep, defaultFrom: string) =
       id: step.id,
       type: 'js',
       from: [defaultFrom],
-      script: step.config.js?.script || 'function process(record, ctx) { return record; }',
+      script: step.config.js?.script || DEFAULT_JS_SCRIPT,
     }
   }
   if (step.type === 'union') {
