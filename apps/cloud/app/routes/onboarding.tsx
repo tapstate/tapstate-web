@@ -69,12 +69,13 @@ export const Route = createFileRoute('/onboarding')({
       let initialProgress: Awaited<ReturnType<typeof cloudApi.deploymentProgress>> | null = null
       let resumeError = false
 
-      if (deps.organizationId) {
-        const organizations = await cloudApi.organizations()
-        organization = organizations.find((item) => item.id === deps.organizationId) ?? null
-        if (!organization)
-          throw redirect({ to: '/organizations', search: { organizationId: undefined } })
-
+      const organizations = await cloudApi.organizations()
+      if (deps.organizationId && !organizations.some((item) => item.id === deps.organizationId)) {
+        throw redirect({ to: '/organizations', search: { organizationId: undefined } })
+      }
+      organization =
+        organizations.find((item) => item.id === deps.organizationId) ?? organizations[0] ?? null
+      if (organization) {
         const clusters = await cloudApi.clusters(organization.id)
         suggestedName = suggestedClusterName(organization, clusters)
 

@@ -112,7 +112,8 @@ export async function findProvisioningWorkspace(
 
 async function findOrCreateOrganization(input: OnboardingInput) {
   let organizations = await cloudApi.organizations()
-  let organization = organizations.find((item) => item.slug === input.organizationSlug)
+  if (organizations.length > 0) return organizations[0]
+  let organization: Organization | undefined
 
   if (!organization) {
     try {
