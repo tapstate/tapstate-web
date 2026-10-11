@@ -33,14 +33,7 @@ export function AddSourcesDialog({
   sample,
 }: AddSourcesDialogProps) {
   if (!open) return null
-  const choices = connectors.filter(
-    (connector) =>
-      connector.id !== 'mongodb-atlas' &&
-      connector.modes.length > 0 &&
-      ['mysql', 'postgres', 'mongodb', 'oracle', 'sqlserver'].some((family) =>
-        connector.id.toLowerCase().includes(family),
-      ),
-  )
+  const choices = connectors.filter((connector) => connector.id !== 'mongodb-atlas')
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
       <div
@@ -113,7 +106,7 @@ export function AddSourcesDialog({
             </button>
           )}
           <div className="px-1 pt-1 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
-            Or connect self-hosted / cloud database
+            Or connect a source
           </div>
           {choices.map((connector) => (
             <button
