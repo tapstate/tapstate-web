@@ -775,7 +775,7 @@
         "field": "Field",
         "operator": "Operator",
         "containsOperator": "Contains",
-        "containsTextOnly": "Contains is only available for text fields. Choose another operator.",
+        "containsTextOnly": "Contains is available only after the source schema confirms this is a text field.",
         "value": "Value",
         "removeCondition": "Remove condition",
         "addCondition": "Add condition",

@@ -151,7 +151,7 @@ export function FilterEditor({ config, onChange, fieldTypes }: TransformEditorPr
         {rows.map((row, index) => {
           const fieldType = celFilterFieldType(row.field, fieldTypes)
           const fieldKind = celFilterFieldKind(fieldType)
-          const containsSupported = fieldKind === 'unknown' || fieldKind === 'string'
+          const containsSupported = fieldKind === 'string'
 
           return (
             <div key={`${index}-${row.field}`}>
