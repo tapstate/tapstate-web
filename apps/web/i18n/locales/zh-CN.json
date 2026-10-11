@@ -978,7 +978,8 @@
           "currentTable": "当前表",
           "removeUnionInput": "移除输入流",
           "addUpstreamInput": "添加上游流",
-          "selectAnotherInput": "选择其他可用流"
+          "selectAnotherInput": "选择其他可用流",
+          "unionWizardUnavailable": "Union 需要明确的多路数据流引用，当前构建器尚未收集这些信息。移除此步骤后即可保存并启动。"
         }
       },
       "runtime": {

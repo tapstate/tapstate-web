@@ -1590,7 +1590,6 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
               tableName={rel.table}
               sourceName={rel.source}
               columns={getColumnsForTable(rel.source, rel.table)}
-              availableUpstreamSources={getAvailableJoinTables(rel.id).pipelineTables}
               transforms={rel.transforms || []}
               onChange={(nextTransforms) =>
                 updateRelation(rel.id, (r) => ({ ...r, transforms: nextTransforms }))
@@ -2200,9 +2199,6 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                         tableName={rootConfig.table}
                         sourceName={rootConfig.source}
                         columns={rootConfig.columns}
-                        availableUpstreamSources={AVAILABLE_DATA_SOURCES.flatMap((s) =>
-                          s.tables.map((t) => t.name),
-                        )}
                         transforms={rootConfig.transforms || []}
                         onChange={(nextTransforms) =>
                           setRootConfig((prev) =>
@@ -2548,10 +2544,6 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                           ),
                         ]),
                       )}
-                      availableUpstreamSources={[
-                        rootConfig?.table || 'root',
-                        ...flattenRelations(relations).map((relation) => relation.table),
-                      ]}
                       transforms={pipelineTransforms}
                       onChange={setPipelineTransforms}
                       hideHeader={true}
