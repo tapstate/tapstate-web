@@ -523,8 +523,9 @@ export function OnboardingPage({
     >
       <header className="flex h-16 w-full items-center justify-between border-b border-black/[0.05] bg-transparent px-6 sm:px-12 dark:border-white/[0.06]">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-6 w-6 items-center justify-center rounded-[6px] bg-neutral-900 text-xs font-bold text-white shadow-2xs dark:bg-white dark:text-neutral-900">
-            <span className="font-mono text-[11px] leading-none">T</span>
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-900 dark:bg-white">
+            <img alt="" className="h-5 w-5 dark:hidden" src="/tapstate-mark-light.svg" />
+            <img alt="" className="hidden h-5 w-5 dark:block" src="/tapstate-mark.svg" />
           </div>
           <span className="text-sm font-semibold tracking-tight text-[#111827] dark:text-white">
             Tapstate

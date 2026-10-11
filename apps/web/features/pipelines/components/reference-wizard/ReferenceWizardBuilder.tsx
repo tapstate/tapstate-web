@@ -834,6 +834,21 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       '$uuid',
     ].some((key) => key in value)
 
+  const displayScalar = (value: unknown, quoteStrings = true): string => {
+    if (isObjectRecord(value) && isExtendedJsonScalar(value)) {
+      for (const key of ['$numberLong', '$numberInt', '$numberDouble', '$numberDecimal']) {
+        const numeric = value[key]
+        if (typeof numeric === 'string' && /^-?(?:\d+)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(numeric))
+          return numeric
+      }
+      for (const key of ['$oid', '$uuid', '$date']) {
+        const text = value[key]
+        if (typeof text === 'string') return quoteStrings ? JSON.stringify(text) : text
+      }
+    }
+    return JSON.stringify(value)
+  }
+
   const focusContains = (path: string) => {
     if (/\/\d+$/.test(path)) return false
     const segments = path
@@ -935,7 +950,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     const collapsed = collapsedJson.has(path)
     const complex = Array.isArray(value) || (isObjectRecord(value) && !isExtendedJsonScalar(value))
     if (!complex) {
-      const scalar = JSON.stringify(value)
+      const scalar = displayScalar(value)
       return (
         <div
           data-preview-path={path}
@@ -946,7 +961,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
           {key}
           <span
             className={
-              typeof value === 'string' ? 'text-emerald-700' : 'font-semibold text-blue-700'
+              typeof value === 'string' ||
+              (isObjectRecord(value) &&
+                ('$oid' in value || '$uuid' in value || '$date' in value))
+                ? 'text-emerald-700'
+                : 'font-semibold text-blue-700'
             }
           >
             {scalar}
@@ -2834,6 +2853,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
               title={livePreviewError}
             >
               {t('wizard.previewPanel.failed')}
+              {livePreviewError && <span className="ml-1 font-mono">{livePreviewError}</span>}
             </p>
           )}
 
@@ -2930,7 +2950,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                                 ? t('wizard.previewPanel.embeddedDocument')
                                 : typeof value === 'string'
                                   ? value
-                                  : JSON.stringify(value)
+                                  : displayScalar(value, false)
                           return (
                             <td
                               className={cn(
