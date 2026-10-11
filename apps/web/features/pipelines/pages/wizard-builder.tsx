@@ -531,7 +531,7 @@ export function WizardBuilder({
             {
               pipelineId,
               drafts: [{ content: compiled.dsl }],
-              rootLimit: 100,
+              rootLimit: 1,
               sampleId: reusableSampleId.current || undefined,
               signal: controller.signal,
             },
