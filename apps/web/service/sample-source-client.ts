@@ -86,13 +86,7 @@ export async function startSampleInstall(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ids }),
   })
-  if (!response.ok)
-    throw new SourceClientError(
-      'server',
-      'sample installation could not start',
-      null,
-      response.status,
-    )
+  if (!response.ok) throw await sampleInstallError(response, 'sample installation could not start')
   return readInstallStatus(await response.json())
 }
 
@@ -102,13 +96,20 @@ export async function getSampleInstallStatus(
 ): Promise<SampleInstallStatus> {
   const response = await fetcher(`${SAMPLE_SOURCES_PATH}/installations/${encodeURIComponent(id)}`)
   if (!response.ok)
-    throw new SourceClientError(
-      'server',
-      'sample installation status unavailable',
-      null,
-      response.status,
-    )
+    throw await sampleInstallError(response, 'sample installation status unavailable')
   return readInstallStatus(await response.json())
+}
+
+async function sampleInstallError(
+  response: Response,
+  fallback: string,
+): Promise<SourceClientError> {
+  const payload: unknown = await response.json().catch(() => null)
+  const code = isRecord(payload) && typeof payload.code === 'string' ? payload.code : null
+  const params = isRecord(payload) && isRecord(payload.params) ? payload.params : {}
+  const message =
+    isRecord(payload) && typeof payload.message === 'string' ? payload.message : fallback
+  return new SourceClientError('server', message, code, response.status, params)
 }
 
 function readInstallStatus(value: unknown): SampleInstallStatus {
