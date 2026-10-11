@@ -55,7 +55,7 @@ const preview: PipelinePreviewRun = {
       customer_id: 'customer-1',
       company_name: 'Northwind',
       orders: [{ order_id: 'order-1' }],
-      total_spent: 42,
+      total_spent: { $numberLong: '9223372036854775807' },
     },
   ],
   trace: [],
@@ -336,7 +336,7 @@ describe('ReferenceWizardBuilder preview panel', () => {
     ).toBe('true')
   })
 
-  it('switches to a table without unpacking Extended JSON scalars and copies the compiled spec in place', async () => {
+  it('shows Extended JSON scalars as readable values without losing long integer precision', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -344,6 +344,8 @@ describe('ReferenceWizardBuilder preview panel', () => {
     })
     renderBuilder()
     const panel = previewPanel()
+    expect(panel?.textContent).toContain('9223372036854775807')
+    expect(panel?.textContent).not.toContain('$numberLong')
 
     act(() => {
       Array.from(panel?.querySelectorAll('button') ?? [])
@@ -351,7 +353,9 @@ describe('ReferenceWizardBuilder preview panel', () => {
         ?.click()
     })
     expect(panel?.querySelector('table')?.textContent).toContain('_id')
-    expect(panel?.querySelector('table')?.textContent).toContain('$oid')
+    expect(panel?.querySelector('table')?.textContent).toContain('65f0c1a4d09d3e5a48b10901')
+    expect(panel?.querySelector('table')?.textContent).toContain('9223372036854775807')
+    expect(panel?.querySelector('table')?.textContent).not.toContain('$numberLong')
 
     await act(async () => {
       Array.from(panel?.querySelectorAll('button') ?? [])

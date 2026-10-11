@@ -447,7 +447,20 @@ describe('WizardBuilder publish flow', () => {
     expect(container?.querySelector('[data-workflow-header]')?.textContent).not.toContain('Retry')
   })
 
-  it('hides save and start actions while the runtime is active', async () => {
+  it('previews a read-only running Pipeline without exposing edit or start actions', async () => {
+    streamPipelinePreview.mockResolvedValue({
+      runId: 'running-preview',
+      candidateHash: 'running-candidate',
+      format: 'logical-json',
+      executionSpec: {},
+      contexts: [],
+      sample: { rootRows: 1, inputRows: 1 },
+      documents: [{ id: 'order-1' }],
+      trace: [],
+      sampleId: 'running-sample',
+      rowCount: 1,
+      failure: null,
+    })
     container = document.createElement('div')
     document.body.append(container)
     root = createRoot(container)
@@ -461,6 +474,7 @@ describe('WizardBuilder publish flow', () => {
             draft={initialDraft}
             etag='"1"'
             readOnly
+            runtimeStatus="RUNNING"
           />
         </QueryClientProvider>,
       )
@@ -471,7 +485,7 @@ describe('WizardBuilder publish flow', () => {
     expect(
       container?.querySelector<HTMLButtonElement>('[data-testid="change-wizard"]')?.disabled,
     ).toBe(true)
-    expect(container?.textContent).toContain('Pipeline configuration is read-only')
+    expect(container?.textContent).toContain('Running')
     const actionButtons = container?.querySelectorAll<HTMLButtonElement>(
       '[data-workflow-header] button',
     )
@@ -485,7 +499,11 @@ describe('WizardBuilder publish flow', () => {
     expect(container?.textContent).not.toContain('Save')
     expect(container?.textContent).not.toContain('Save & start')
     expect(updatePipelineDraft).not.toHaveBeenCalled()
-    expect(previewPipelineDraft).not.toHaveBeenCalled()
+    await vi.waitFor(() =>
+      expect(container?.querySelector('[data-live-preview-run="running-preview"]')).not.toBeNull(),
+    )
+    expect(previewPipelineDraft).toHaveBeenCalledTimes(1)
+    expect(streamPipelinePreview).toHaveBeenCalledTimes(1)
     expect(publishPipelineDraft).not.toHaveBeenCalled()
     expect(runPipeline).not.toHaveBeenCalled()
   })

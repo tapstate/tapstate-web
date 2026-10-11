@@ -492,7 +492,6 @@ export function WizardBuilder({
   }
 
   useEffect(() => {
-    if (readOnly) return
     const root = wizard?.root as { sourceId?: unknown; table?: unknown } | undefined
     const output = wizard?.output as
       | { config?: { sourceId?: unknown; table?: unknown } }
@@ -560,7 +559,7 @@ export function WizardBuilder({
       controller.abort()
       if (previewAbort.current === controller) previewAbort.current = null
     }
-  }, [apiFetch, catalog, pipelineId, readOnly, wizard])
+  }, [apiFetch, catalog, pipelineId, wizard])
   if (sourcesQuery.isPending || connectorsQuery.isPending || schemasPending)
     return (
       <div className="text-muted-foreground p-8 text-sm" role="status">
