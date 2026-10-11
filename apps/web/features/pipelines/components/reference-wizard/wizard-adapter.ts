@@ -158,7 +158,7 @@ function literalValue(value: string): unknown {
   }
 }
 
-/** Guard current server compiler gaps rather than publishing incorrect literal values. */
+/** Reject incomplete Wizard inputs and transform kinds the server cannot compile. */
 export function wizardPublicationIssue(value: PipelineJsonObject | null): string | null {
   const wizard = object(value)
   const root = object(wizard.root)
@@ -173,13 +173,10 @@ export function wizardPublicationIssue(value: PipelineJsonObject | null): string
     ...array(wizard.transforms),
   ].map(object)
   for (const t of transforms) {
-    if (t.type !== 'filter' && t.type !== 'map')
+    if (t.type !== 'filter' && t.type !== 'map' && t.type !== 'js' && t.type !== 'unwind')
       return `The current server cannot publish Wizard ${text(t.type)} transforms yet. Your configuration is saved as a draft.`
-    if (
-      t.type === 'map' &&
-      Object.values(object(t.fields)).some((v) => typeof v === 'string' && v.startsWith('='))
-    )
-      return 'The current server cannot compile computed field expressions yet. Your configuration is saved as a draft; publishing is blocked to avoid writing expression strings as data.'
+    if (t.type === 'js' && !text(object(t.fields).script).trim())
+      return 'Enter a JavaScript script before publishing.'
     if (t.type === 'filter' && !text(object(t.fields).expr).trim())
       return 'Complete the filter expression before publishing.'
   }
