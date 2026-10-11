@@ -445,6 +445,19 @@ export async function testConnection(
   return payload
 }
 
+export async function getConnectionTestResult(
+  id: string,
+  fetcher: ApiFetcher = fetch,
+): Promise<ConnectionTestReport> {
+  const { payload } = await requestJson(
+    `/connections/${encodeURIComponent(id)}/test-result`,
+    fetcher,
+  )
+  if (!isConnectionTestReport(payload) || payload.connectionId !== id)
+    throw new SourceClientError('protocol', 'the connection test result is malformed')
+  return payload
+}
+
 export async function discoverSourceSchema(
   request: SourceSchemaRequest,
   fetcher: ApiFetcher = fetch,
@@ -467,7 +480,7 @@ export async function getSourceSchema(
   id: string,
   fetcher: ApiFetcher = fetch,
 ): Promise<SourceSchemaReport> {
-  const { payload } = await requestJson(`/connections/${encodeURIComponent(id)}/schema`, fetcher)
+  const { payload } = await requestJson(`/sources/${encodeURIComponent(id)}/schema`, fetcher)
   if (!isSourceSchemaReport(payload) || payload.connectionId !== id)
     throw new SourceClientError('protocol', 'the source schema response is malformed')
   return payload

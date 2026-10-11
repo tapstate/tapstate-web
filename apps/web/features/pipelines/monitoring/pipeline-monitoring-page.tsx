@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { PipelineClientError, type PipelineRuntimeState } from '@/service/pipelines/pipeline-client'
+import { PipelineClientError, type PipelineCatalogState } from '@/service/pipelines/pipeline-client'
 
 import { PipelineRefreshControls } from '../components/pipeline-refresh-controls'
 import { PipelineMetricChart } from './pipeline-metric-chart'
@@ -13,7 +13,7 @@ function isObservationUnavailable(error: unknown) {
   return error instanceof PipelineClientError && error.status === 404
 }
 
-function stateTone(state: PipelineRuntimeState) {
+function stateTone(state: PipelineCatalogState) {
   return state.toLowerCase()
 }
 

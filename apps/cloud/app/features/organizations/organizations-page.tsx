@@ -32,7 +32,12 @@ export function OrganizationsPage() {
 
         <button
           className="flex h-8 items-center gap-1.5 rounded-lg bg-neutral-900 px-3 text-xs font-medium text-white shadow-2xs transition-colors hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100"
-          onClick={() => void navigate({ to: '/onboarding' })}
+          onClick={() =>
+            void navigate({
+              to: '/onboarding',
+              search: { organizationId: undefined, subscriptionId: undefined },
+            })
+          }
           type="button"
         >
           <Plus className="h-3.5 w-3.5" />

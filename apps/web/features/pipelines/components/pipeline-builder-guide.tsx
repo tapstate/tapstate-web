@@ -100,18 +100,18 @@ export function PipelineBuilderGuideStepCard({
       ? 'wizard.guide.fixedTransform'
       : `wizard.guide.steps.${current.id}`
   const sourceName = preset?.sourceId ?? ''
-  const rootTable = preset?.root.name ?? 'customers'
-  const ordersTable = preset?.orders.name ?? 'orders'
-  const itemsTable = preset?.items.name ?? 'items'
+  const rootTable = preset?.root.name ?? 'orders'
+  const customerTable = preset?.customer.name ?? 'customer'
+  const linesTable = preset?.lines.name ?? 'lines'
   const detail =
     step === 0
       ? preset
         ? `${sourceName}.${rootTable} → ${targetCollection} (_id)`
         : ''
       : step === 1 && preset
-        ? `${ordersTable} → orders[] · ${itemsTable} → items[] · ${t('wizard.guide.joinCount', {
-            first: preset.rootOrderJoin.length,
-            second: preset.orderItemsJoin.length,
+        ? `${customerTable} → customer · ${linesTable} → lines[] · ${t('wizard.guide.joinCount', {
+            first: preset.orderCustomerJoin.length,
+            second: preset.orderLineJoin.length,
           })}`
         : step === 2
           ? t('wizard.guide.fixedTransformNote')
@@ -125,7 +125,7 @@ export function PipelineBuilderGuideStepCard({
     <div
       onClick={(event) => event.stopPropagation()}
       className={cn(
-        'animate-in fade-in slide-in-from-top-1 mb-3.5 w-full rounded-xl border p-3.5 shadow-xs transition-all duration-200 select-none sm:p-4',
+        'animate-in fade-in slide-in-from-top-1 mb-3.5 w-full rounded-xl border p-3.5 shadow-xs transition-all duration-200 sm:p-4',
         theme.wrapper,
       )}
       data-guide-callout="canvas"
@@ -192,8 +192,8 @@ export function PipelineBuilderGuideStepCard({
         <p className="text-[12.5px] leading-relaxed font-normal text-gray-700">
           {t(`${translationKey}.body`, {
             rootTable,
-            ordersTable,
-            itemsTable,
+            customerTable,
+            linesTable,
             amountField: preset?.amountField ?? 'amount',
           })}
         </p>
@@ -355,9 +355,9 @@ export function PipelineBuilderGuide({
         </div>
         <p className="max-w-3xl text-[12.5px] leading-relaxed text-slate-700">
           {t(`${translationKey}.body`, {
-            rootTable: preset?.root.name ?? 'customers',
-            ordersTable: preset?.orders.name ?? 'orders',
-            itemsTable: preset?.items.name ?? 'items',
+            rootTable: preset?.root.name ?? 'orders',
+            customerTable: preset?.customer.name ?? 'customer',
+            linesTable: preset?.lines.name ?? 'lines',
             amountField: preset?.amountField ?? 'amount',
           })}
         </p>
@@ -382,12 +382,14 @@ export function PipelineBuilderGuide({
 
         {step === 1 && preset && (
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-            <code className="bg-muted rounded px-1.5 py-0.5">{preset.orders.name} → orders[]</code>
-            <code className="bg-muted rounded px-1.5 py-0.5">{preset.items.name} → items[]</code>
+            <code className="bg-muted rounded px-1.5 py-0.5">
+              {preset.customer.name} → customer
+            </code>
+            <code className="bg-muted rounded px-1.5 py-0.5">{preset.lines.name} → lines[]</code>
             <span className="text-muted-foreground">
               {t('wizard.guide.joinCount', {
-                first: preset.rootOrderJoin.length,
-                second: preset.orderItemsJoin.length,
+                first: preset.orderCustomerJoin.length,
+                second: preset.orderLineJoin.length,
               })}
             </span>
           </div>
@@ -504,7 +506,7 @@ export function PipelineBuilderGuide({
     <>
       <section
         aria-labelledby="customer-360-guide-title"
-        className="z-20 shrink-0 border-b border-gray-200/90 bg-white shadow-xs select-none"
+        className="z-20 shrink-0 border-b border-gray-200/90 bg-white shadow-xs"
         data-guide-mode={mode}
       >
         <div className="flex min-h-10 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-gray-100 bg-slate-50/70 px-4 py-1.5">

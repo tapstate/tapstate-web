@@ -646,15 +646,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     if (activeContext === 'destination') return t('wizard.destinationContext')
     const relation = relationChain[relationChain.length - 1]
     if (relation) {
-      const shape = t(
-        relation.type === 'sub_array'
-          ? 'wizard.relations.shapes.array'
-          : relation.type === 'sub_doc'
-            ? 'wizard.relations.shapes.object'
-            : 'wizard.relations.shapes.flat',
-      )
       return t('wizard.previewPanel.relationContext', {
-        shape,
         path: relationChain
           .map((item) => item.targetField)
           .filter(Boolean)
@@ -686,13 +678,33 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
 
   const pointerSegment = (segment: string) => segment.replace(/~/g, '~0').replace(/\//g, '~1')
   const previewContexts = livePreview?.contexts || []
+  const computedFields = new Set(
+    previewContexts
+      .filter((context) => context.kind === 'transform' && Array.isArray(context.effects))
+      .flatMap((context) => (context.effects as unknown[]).filter(isObjectRecord))
+      .filter((effect) => effect.kind !== 'removed' && typeof effect.pointer === 'string')
+      .map(
+        (effect) =>
+          (effect.pointer as string)
+            .split('/')
+            .filter(Boolean)
+            .at(-1)
+            ?.replace(/~1/g, '/')
+            .replace(/~0/g, '~') || '',
+      ),
+  )
   const pointerPatterns = (context: Record<string, unknown> | undefined) =>
     Array.isArray(context?.pointerPatterns)
       ? context.pointerPatterns.filter((pointer): pointer is string => typeof pointer === 'string')
       : []
   const focusPaths = React.useMemo(() => {
     if (activeContext === 'root') {
-      return pointerPatterns(previewContexts.find((context) => context.id === 'root'))
+      const reported = pointerPatterns(previewContexts.find((context) => context.id === 'root'))
+      if (reported.length > 0) return reported
+      // Root provenance is implicit in the server context. Keep relations and computed fields separate.
+      return Object.keys(selectedDocument || {})
+        .filter((field) => !relationFields.has(field) && !computedFields.has(field))
+        .map((field) => `/${pointerSegment(field)}`)
     }
     if (activeContext !== 'doc_process') {
       const activeRelation = relationChain.at(-1)
@@ -718,12 +730,29 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       if (serverPaths.length > 0) return [...new Set(serverPaths)]
 
       // Flatten has no embedded path; use the returned root output fields for its local slice.
-      if (relationChain.some((relation) => relation.type === 'flatten')) {
-        return relationFields.size > 0
-          ? [...relationFields].map((field) => `/${pointerSegment(field)}`)
-          : []
+      if (activeRelation?.type === 'flatten') {
+        const flattenOwners = new Map<string, number>()
+        const countFlattenFields = (nodes: RelationNode[]) => {
+          nodes.forEach((node) => {
+            if (node.type === 'flatten') {
+              getColumnsForTable(node.source, node.table).forEach((field) =>
+                flattenOwners.set(field, (flattenOwners.get(field) || 0) + 1),
+              )
+            }
+            countFlattenFields(node.children || [])
+          })
+        }
+        countFlattenFields(relations)
+        return getColumnsForTable(activeRelation.source, activeRelation.table)
+          .filter(
+            (field) =>
+              field in (selectedDocument || {}) &&
+              !rootFields.has(field) &&
+              flattenOwners.get(field) === 1,
+          )
+          .map((field) => `/${pointerSegment(field)}`)
       }
-      return []
+      return activePath ? [`/${activePath.split('/').map(pointerSegment).join('/')}`] : []
     }
     return [
       ...new Set(
@@ -739,6 +768,10 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     previewContexts,
     relationFields,
     relationChain,
+    relations,
+    rootFields,
+    selectedDocument,
+    computedFields,
   ])
 
   const transformTrace = React.useMemo(() => {
@@ -779,21 +812,6 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     return { type: types.join(', '), annotations, fields, unknownOrigins }
   }, [activeContext, previewContexts])
 
-  const computedFields = new Set(
-    previewContexts
-      .filter((context) => context.kind === 'transform' && Array.isArray(context.effects))
-      .flatMap((context) => (context.effects as unknown[]).filter(isObjectRecord))
-      .filter((effect) => effect.kind !== 'removed' && typeof effect.pointer === 'string')
-      .map(
-        (effect) =>
-          (effect.pointer as string)
-            .split('/')
-            .filter(Boolean)
-            .at(-1)
-            ?.replace(/~1/g, '/')
-            .replace(/~0/g, '~') || '',
-      ),
-  )
   const previewTableColumns = Array.from(
     new Set(documents.flatMap((document) => Object.keys(document))),
   ).slice(0, 32)
@@ -816,69 +834,144 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       '$uuid',
     ].some((key) => key in value)
 
-  const focusContains = (path: string) =>
-    Boolean(path) &&
-    focusPaths.some(
-      (focused) =>
-        path === focused || path.startsWith(`${focused}/`) || focused.startsWith(`${path}/`),
-    )
-
-  const renderJsonValue = (value: unknown, path: string, depth = 0): React.ReactNode => {
-    const highlighted = focusContains(path)
-    const highlightClass = highlighted ? 'rounded bg-accent/60 ring-1 ring-primary/30' : ''
-    const indentation = '  '.repeat(depth)
-    const collapsed = collapsedJson.has(path)
-    if (Array.isArray(value)) {
+  const focusContains = (path: string) => {
+    if (/\/\d+$/.test(path)) return false
+    const segments = path
+      .split('/')
+      .filter(Boolean)
+      .filter((segment) => !/^\d+$/.test(segment))
+    return focusPaths.some((focused) => {
+      const expected = focused
+        .split('/')
+        .filter(Boolean)
+        .filter((segment) => segment !== '*')
       return (
-        <span className={highlightClass}>
-          {value.length > 0 && (
-            <button
-              type="button"
-              className="text-muted-foreground hover:bg-accent mr-1 rounded px-0.5"
-              aria-label={t(
-                collapsed ? 'wizard.previewPanel.expand' : 'wizard.previewPanel.collapse',
-              )}
-              onClick={() =>
-                setCollapsedJson((current) => {
-                  const next = new Set(current)
-                  if (next.has(path)) next.delete(path)
-                  else next.add(path)
-                  return next
-                })
-              }
-            >
-              {collapsed ? '▸' : '▾'}
-            </button>
-          )}
-          {collapsed ? (
-            `[${value.length}]`
-          ) : (
-            <>
-              {'['}
-              {value.length > 0 && '\n'}
-              {value.map((item, index) => (
-                <React.Fragment key={`${path}/${index}`}>
-                  {'  '.repeat(depth + 1)}
-                  {renderJsonValue(item, `${path}/${index}`, depth + 1)}
-                  {index < value.length - 1 ? ',' : ''}
-                  {'\n'}
-                </React.Fragment>
-              ))}
-              {value.length > 0 && indentation}
-              {']'}
-            </>
-          )}
-        </span>
+        segments.length === expected.length &&
+        segments.every((segment, index) => segment === expected[index])
+      )
+    })
+  }
+
+  const tableFieldFocused = (field: string) => {
+    const path = `/${pointerSegment(field)}`
+    return focusContains(path) || focusPaths.some((focused) => focused.startsWith(`${path}/`))
+  }
+
+  const focusClass =
+    activeContext === 'doc_process'
+      ? 'border-emerald-200 bg-emerald-50/70'
+      : relationChain.length > 1
+        ? 'border-purple-200 bg-purple-50/70'
+        : 'border-blue-200 bg-blue-50/70'
+
+  const renderJsonEntries = (
+    entries: Array<[string, unknown]>,
+    parentPath: string,
+    depth: number,
+    array: boolean,
+  ): React.ReactNode => {
+    const groups: Array<{ focused: boolean; items: Array<[string, unknown, number]> }> = []
+    entries.forEach(([field, child], index) => {
+      const childPath = `${parentPath}/${pointerSegment(field)}`
+      const focused = focusContains(childPath)
+      const last = groups.at(-1)
+      if (last?.focused === focused && focused) last.items.push([field, child, index])
+      else groups.push({ focused, items: [[field, child, index]] })
+    })
+    return groups.map((group) => {
+      const firstPath = `${parentPath}/${pointerSegment(group.items[0][0])}`
+      const children = group.items.map(([field, child, index]) => {
+        const childPath = `${parentPath}/${pointerSegment(field)}`
+        return (
+          <React.Fragment key={childPath}>
+            {renderJsonValue(
+              child,
+              childPath,
+              depth + 1,
+              array ? undefined : field,
+              index < entries.length - 1,
+              group.focused,
+            )}
+          </React.Fragment>
+        )
+      })
+      if (!group.focused) return <React.Fragment key={firstPath}>{children}</React.Fragment>
+      return (
+        <div
+          key={firstPath}
+          data-preview-path={firstPath}
+          data-preview-paths={group.items
+            .map(([field]) => `${parentPath}/${pointerSegment(field)}`)
+            .join(',')}
+          data-preview-focused="true"
+          className={cn('rounded-lg border px-1 py-0.5', focusClass)}
+        >
+          {children}
+        </div>
+      )
+    })
+  }
+
+  const renderJsonValue = (
+    value: unknown,
+    path: string,
+    depth = 0,
+    label?: string,
+    comma = false,
+    grouped = false,
+  ): React.ReactNode => {
+    const highlighted = focusContains(path)
+    const highlightClass = highlighted && !grouped ? focusClass : 'border-transparent'
+    const paddingLeft = `${depth * 16}px`
+    const key =
+      label === undefined ? null : (
+        <>
+          <span className={highlighted ? 'font-semibold text-blue-600' : 'text-blue-600'}>
+            {JSON.stringify(label)}
+          </span>
+          <span className="text-gray-400">: </span>
+        </>
+      )
+    const collapsed = collapsedJson.has(path)
+    const complex = Array.isArray(value) || (isObjectRecord(value) && !isExtendedJsonScalar(value))
+    if (!complex) {
+      const scalar = JSON.stringify(value)
+      return (
+        <div
+          data-preview-path={path}
+          data-preview-focused={(highlighted && !grouped) || undefined}
+          className={cn('rounded-lg border px-1 py-0.5', highlightClass)}
+          style={{ paddingLeft }}
+        >
+          {key}
+          <span
+            className={
+              typeof value === 'string' ? 'text-emerald-700' : 'font-semibold text-blue-700'
+            }
+          >
+            {scalar}
+          </span>
+          {comma && <span className="text-gray-400">,</span>}
+        </div>
       )
     }
-    if (isObjectRecord(value)) {
-      const entries = Object.entries(value)
-      return (
-        <span className={highlightClass}>
+    const entries: Array<[string, unknown]> = Array.isArray(value)
+      ? value.map((item, index) => [String(index), item])
+      : Object.entries(value)
+    const opening = Array.isArray(value) ? '[' : '{'
+    const closing = Array.isArray(value) ? ']' : '}'
+    return (
+      <div
+        data-preview-path={path}
+        data-preview-focused={(highlighted && !grouped) || undefined}
+        className={cn('rounded-lg border px-1 py-0.5', highlightClass)}
+      >
+        <div style={{ paddingLeft }}>
+          {key}
           {entries.length > 0 && (
             <button
               type="button"
-              className="text-muted-foreground hover:bg-accent mr-1 rounded px-0.5"
+              className="mr-1 rounded px-0.5 text-gray-400 hover:bg-gray-100"
               aria-label={t(
                 collapsed ? 'wizard.previewPanel.expand' : 'wizard.previewPanel.collapse',
               )}
@@ -894,45 +987,23 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
               {collapsed ? '▸' : '▾'}
             </button>
           )}
-          {collapsed ? (
-            `{${entries.length}}`
-          ) : (
-            <>
-              {'{'}
-              {entries.length > 0 && '\n'}
-              {entries.map(([key, child], index) => {
-                const childPath = `${path}/${pointerSegment(key)}`
-                const keyFocused = focusPaths.some(
-                  (focused) => focused === childPath || focused.startsWith(`${childPath}/`),
-                )
-                return (
-                  <React.Fragment key={childPath}>
-                    {'  '.repeat(depth + 1)}
-                    <span className={keyFocused ? 'text-primary font-semibold' : 'text-foreground'}>
-                      {JSON.stringify(key)}
-                    </span>
-                    {': '}
-                    {renderJsonValue(child, childPath, depth + 1)}
-                    {index < entries.length - 1 ? ',' : ''}
-                    {'\n'}
-                  </React.Fragment>
-                )
-              })}
-              {entries.length > 0 && indentation}
-              {'}'}
-            </>
-          )}
-        </span>
-      )
-    }
-    return (
-      <span
-        className={
-          highlightClass || (typeof value === 'string' ? 'text-primary' : 'text-muted-foreground')
-        }
-      >
-        {JSON.stringify(value)}
-      </span>
+          <span className="text-gray-400">{opening}</span>
+          {collapsed && <span className="text-gray-500">{entries.length} entries</span>}
+        </div>
+        {!collapsed && renderJsonEntries(entries, path, depth, Array.isArray(value))}
+        {!collapsed && entries.length > 0 && (
+          <div style={{ paddingLeft }} className="text-gray-400">
+            {closing}
+            {comma && ','}
+          </div>
+        )}
+        {(collapsed || entries.length === 0) && (
+          <span className="text-gray-400">
+            {closing}
+            {comma && ','}
+          </span>
+        )}
+      </div>
     )
   }
 
@@ -1773,7 +1844,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   )
 
   return (
-    <div className="wizard-reference flex h-full w-full flex-col overflow-hidden font-sans text-gray-900 select-none">
+    <div className="wizard-reference flex h-full w-full flex-col overflow-hidden font-sans text-gray-900">
       {showWorkbenchHeader && (
         <>
           <header
@@ -2650,37 +2721,37 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
         <aside
           id="step-preview-panel"
           data-guide-active={activeGuideTarget === 'step-preview-panel' || undefined}
-          className="wizard-reference-preview border-border bg-card flex flex-col overflow-hidden rounded-xl border"
+          className="wizard-reference-preview flex flex-col overflow-hidden bg-white"
         >
-          <div className="border-border flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-2 border-b px-3 py-2">
-            <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-h-11 shrink-0 items-center justify-between gap-1 border-b border-gray-200/80 bg-white/75 px-3 py-2 backdrop-blur-md">
+            <div className="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
               <span
                 className={cn(
                   'size-2 shrink-0 rounded-full',
                   livePreviewStatus === 'error'
                     ? 'bg-destructive'
                     : livePreviewStatus === 'loading'
-                      ? 'bg-primary animate-pulse'
+                      ? 'animate-pulse bg-emerald-500'
                       : livePreviewStatus === 'complete'
-                        ? 'bg-primary'
+                        ? 'bg-emerald-500'
                         : 'bg-muted-foreground',
                 )}
                 aria-hidden="true"
               />
-              <span className="text-foreground text-xs font-semibold">
+              <span className="text-xs font-semibold text-gray-900">
                 {t('wizard.previewPanel.title')}
               </span>
-              <span className="text-muted-foreground truncate font-mono text-[11px]">
+              <span className="max-w-28 truncate font-mono text-[10px] text-gray-400">
                 ({activeContextLabel})
               </span>
             </div>
 
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
                 onClick={() => void copyExecutionSpec()}
                 disabled={!livePreview}
-                className="border-border text-muted-foreground hover:bg-accent hover:text-foreground inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-1 rounded border border-gray-200/80 bg-white/80 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 shadow-xs hover:border-gray-300 hover:bg-white hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-live="polite"
               >
                 {copyStatus === 'copied' ? (
@@ -2696,16 +2767,16 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                       : 'wizard.previewPanel.copy',
                 )}
               </button>
-              <div className="bg-muted flex items-center rounded-md p-0.5 text-[11px] font-medium">
+              <div className="flex items-center rounded border border-gray-200/60 bg-gray-100/80 p-0.5 text-[10px] font-medium">
                 <button
                   type="button"
                   onClick={() => setPreviewMode('json')}
                   aria-pressed={previewMode === 'json'}
                   className={cn(
-                    'rounded px-2 py-1 transition-colors',
+                    'rounded px-1.5 py-0.5 transition-colors',
                     previewMode === 'json'
-                      ? 'bg-card text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground',
+                      ? 'bg-white font-semibold text-gray-900 shadow-xs'
+                      : 'text-gray-600 hover:text-gray-900',
                   )}
                 >
                   {t('wizard.previewPanel.jsonDoc')}
@@ -2715,10 +2786,10 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   onClick={() => setPreviewMode('table')}
                   aria-pressed={previewMode === 'table'}
                   className={cn(
-                    'rounded px-2 py-1 transition-colors',
+                    'rounded px-1.5 py-0.5 transition-colors',
                     previewMode === 'table'
-                      ? 'bg-card text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground',
+                      ? 'bg-white font-semibold text-gray-900 shadow-xs'
+                      : 'text-gray-600 hover:text-gray-900',
                   )}
                 >
                   {t('wizard.previewPanel.tableView')}
@@ -2733,39 +2804,33 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
             </div>
           )}
 
-          <div className="border-border bg-muted/40 text-muted-foreground flex min-h-9 items-center justify-between gap-2 border-b px-3 py-1.5 text-[11px]">
+          <div className="flex min-h-9 items-center justify-between gap-2 border-b border-gray-100 bg-gray-50 px-4 py-1.5 text-[11px] text-gray-500">
             <span className="min-w-0 truncate">
-              {livePreview?.sample ? (
-                <>
-                  {t('wizard.previewPanel.sampleSummary', {
-                    roots: Number(livePreview.sample.rootRows || 0),
-                    inputs: Number(livePreview.sample.inputRows || 0),
-                  })}
-                  {livePreview.sample.rootTruncated === true && (
-                    <span className="text-muted-foreground ml-2">
-                      {t('wizard.previewPanel.sampleCapped')}
-                    </span>
-                  )}
-                </>
-              ) : livePreviewStatus === 'loading' ? (
-                t('wizard.previewPanel.loading')
-              ) : (
-                t('wizard.previewPanel.awaitingPreview')
-              )}
+              {selectedDocument
+                ? t('wizard.previewPanel.sampleRecord', { number: selectedIndex + 1 })
+                : livePreviewStatus === 'loading'
+                  ? t('wizard.previewPanel.loading')
+                  : t('wizard.previewPanel.awaitingPreview')}
             </span>
             <span
               className={cn(
-                'shrink-0 rounded-full px-2 py-0.5 font-medium',
+                'flex shrink-0 items-center gap-1 font-medium',
                 livePreviewStatus === 'stale'
-                  ? 'bg-accent text-foreground'
+                  ? 'text-gray-600'
                   : livePreviewStatus === 'error'
-                    ? 'bg-destructive/10 text-destructive'
+                    ? 'text-red-600'
                     : livePreviewStatus === 'complete'
-                      ? 'bg-primary/10 text-primary'
-                      : 'bg-muted text-muted-foreground',
+                      ? 'text-emerald-700'
+                      : 'text-gray-500',
               )}
               role="status"
             >
+              <span
+                className={cn(
+                  'size-1.5 rounded-full',
+                  livePreviewStatus === 'complete' ? 'bg-emerald-500' : 'bg-gray-400',
+                )}
+              />
               {t(`wizard.previewPanel.status.${livePreviewStatus}`)}
             </span>
           </div>
@@ -2780,7 +2845,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
             </p>
           )}
 
-          <div className="text-foreground min-h-48 flex-1 overflow-auto p-3 font-mono text-xs">
+          <div className="min-h-48 flex-1 overflow-auto bg-white p-4 font-mono text-xs text-gray-800">
             {!rootConfig ? (
               <div className="text-muted-foreground flex h-full min-h-48 flex-col items-center justify-center gap-2 p-6 text-center">
                 <Database className="size-8 opacity-60" />
@@ -2803,14 +2868,8 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
               </p>
             ) : previewMode === 'json' ? (
               <>
-                <div className="text-muted-foreground mb-2 flex items-center justify-between font-sans text-[11px]">
-                  <span>
-                    {t('wizard.previewPanel.documentCount', {
-                      current: selectedIndex + 1,
-                      count: documents.length,
-                    })}
-                  </span>
-                  <span className="flex items-center gap-1">
+                {documents.length > 1 && (
+                  <div className="mb-2 flex items-center justify-end gap-1 font-sans text-[11px] text-gray-500">
                     <button
                       type="button"
                       className="border-border hover:bg-accent rounded border px-1.5 py-0.5 disabled:opacity-40"
@@ -2833,11 +2892,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                     >
                       ›
                     </button>
-                  </span>
-                </div>
-                <pre className="leading-relaxed break-words whitespace-pre-wrap">
+                  </div>
+                )}
+                <div className="space-y-0.5 leading-relaxed break-words">
                   {renderJsonValue(selectedDocument, '', 0)}
-                </pre>
+                </div>
               </>
             ) : (
               <div>
@@ -2850,7 +2909,13 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   <thead>
                     <tr className="border-border text-muted-foreground border-b">
                       {previewTableColumns.map((field) => (
-                        <th className="px-2 py-2 font-medium" key={field}>
+                        <th
+                          className={cn(
+                            'px-2 py-2 font-medium',
+                            tableFieldFocused(field) && 'bg-blue-50 font-semibold text-blue-700',
+                          )}
+                          key={field}
+                        >
                           {field}
                         </th>
                       ))}
@@ -2876,9 +2941,15 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                                   : JSON.stringify(value)
                           return (
                             <td
-                              className="text-foreground max-w-56 truncate px-2 py-2"
+                              className={cn(
+                                'max-w-56 truncate px-2 py-2 text-gray-900',
+                                tableFieldFocused(field) &&
+                                  'bg-blue-50/70 ring-1 ring-blue-200 ring-inset',
+                              )}
                               key={field}
                               title={display}
+                              data-preview-path={`/${pointerSegment(field)}`}
+                              data-preview-focused={tableFieldFocused(field) || undefined}
                             >
                               <span
                                 className={cn(

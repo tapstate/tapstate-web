@@ -362,7 +362,7 @@ describe('OverviewPage', () => {
     ).toBe('wizard')
   })
 
-  it('opens the cloud builder directly with a new wizard draft', async () => {
+  it('offers the Order 360 demo before creating a guided cloud draft', async () => {
     vi.stubEnv('MODE', 'cloud')
     vi.stubGlobal('crypto', { randomUUID: () => '12345678-0000-0000-0000-000000000000' })
     listSources.mockResolvedValue([
@@ -373,6 +373,16 @@ describe('OverviewPage', () => {
       },
     ])
     listPipelines.mockResolvedValue([])
+    loadSampleSources.mockResolvedValue([
+      {
+        id: 'sample_core_banking',
+        name: 'MySQL order sample',
+        description: 'Orders',
+        connector: 'mysql',
+        available: true,
+        guidedDemo: true,
+      },
+    ])
     getSourceSchema.mockResolvedValue({
       connectionId: 'sample_core_banking',
       connectorId: 'mysql',
@@ -403,23 +413,25 @@ describe('OverviewPage', () => {
     await settle()
     await act(async () => buttonNamed('Build Pipeline', container)?.click())
     await settle()
+    await act(async () => buttonNamed('Try Order 360 demo')?.click())
+    await settle()
 
     expect(createPipelineDraft).toHaveBeenCalledWith(
-      'customer_360_12345678',
+      'order_360_12345678',
       expect.objectContaining({
         mode: 'wizard',
         wizard: expect.objectContaining({
-          root: expect.objectContaining({ table: 'bmsql_customer' }),
+          root: expect.objectContaining({ table: 'bmsql_oorder' }),
           related: expect.arrayContaining([
-            expect.objectContaining({ table: 'bmsql_oorder' }),
+            expect.objectContaining({ table: 'bmsql_customer' }),
             expect.objectContaining({ table: 'bmsql_order_line' }),
           ]),
           output: expect.objectContaining({
             kind: 'atlas',
             config: expect.objectContaining({
               sourceId: 'atlas-store',
-              table: 'customer_360_views',
-              onboardingGuide: 'customer-360-sample',
+              table: 'order_360_views',
+              onboardingGuide: 'order-360-sample',
             }),
           }),
         }),
@@ -428,7 +440,7 @@ describe('OverviewPage', () => {
     )
     expect(navigate).toHaveBeenCalledWith({
       to: '/pipelines/$pipelineId/edit',
-      params: { pipelineId: 'customer_360_12345678' },
+      params: { pipelineId: 'order_360_12345678' },
     })
     expect(container.querySelector('[data-testid="pipeline-creation-dialog"]')).toBeNull()
   })

@@ -49,14 +49,20 @@ function ConsoleLayout() {
 }
 
 export const Route = createFileRoute('/_console')({
-  loader: async () => {
+  validateSearch: (search: Record<string, unknown>) => ({
+    organizationId: typeof search.organizationId === 'string' ? search.organizationId : undefined,
+  }),
+  loaderDeps: ({ search }) => ({ organizationId: search.organizationId }),
+  loader: async ({ deps }) => {
     try {
       const [session, organizations] = await Promise.all([cloudApi.me(), cloudApi.organizations()])
-      if (organizations.length === 0) throw redirect({ to: '/onboarding' })
-      const requestedOrganizationId = new URLSearchParams(window.location.search).get(
-        'organizationId',
-      )
-      const selectedOrganization = organizations.find((item) => item.id === requestedOrganizationId)
+      if (organizations.length === 0) {
+        throw redirect({
+          to: '/onboarding',
+          search: { organizationId: undefined, subscriptionId: undefined },
+        })
+      }
+      const selectedOrganization = organizations.find((item) => item.id === deps.organizationId)
       const orderedOrganizations = selectedOrganization
         ? [
             selectedOrganization,

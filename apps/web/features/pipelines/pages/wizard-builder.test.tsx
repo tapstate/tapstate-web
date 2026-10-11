@@ -72,6 +72,7 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
     readOnly,
     livePreview,
     livePreviewStatus,
+    onInspectPlan,
   }: {
     initial: WizardViewState
     onChange: (state: WizardViewState) => void
@@ -80,6 +81,7 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
     readOnly?: boolean
     livePreview: { runId: string } | null
     livePreviewStatus: string
+    onInspectPlan: () => Promise<string>
   }) => (
     <section
       className="wizard-reference-editor-column"
@@ -117,6 +119,9 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
         }
       >
         Change wizard
+      </button>
+      <button data-testid="inspect-plan" onClick={() => void onInspectPlan()}>
+        Inspect Plan
       </button>
       {footer}
       {actions}
@@ -207,6 +212,45 @@ afterEach(() => {
 })
 
 describe('WizardBuilder publish flow', () => {
+  it('compiles an unfinished destination only for inspection without saving the temporary name', async () => {
+    const draft: PipelineDraft = {
+      ...initialDraft,
+      wizard: {
+        ...initialDraft.wizard!,
+        output: { kind: 'source', config: { sourceId: 'mysql', table: '', writeMode: 'append' } },
+      },
+    }
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={draft.pipelineId} draft={draft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await act(async () => new Promise((resolve) => window.setTimeout(resolve, 50)))
+    await act(async () => {
+      container?.querySelector<HTMLButtonElement>('[data-testid="inspect-plan"]')?.click()
+    })
+    expect(previewPipelineDraft).toHaveBeenCalledWith(
+      draft.pipelineId,
+      draft.revision,
+      expect.any(Function),
+      undefined,
+      expect.objectContaining({
+        wizard: expect.objectContaining({
+          output: expect.objectContaining({
+            config: expect.objectContaining({ table: '__tapstate_preview__' }),
+          }),
+        }),
+      }),
+    )
+    expect(updatePipelineDraft).not.toHaveBeenCalled()
+  })
+
   it('keeps an ordinary empty Wizard editable and free of sample guidance', async () => {
     const ordinaryDraft: PipelineDraft = {
       ...initialDraft,
@@ -241,21 +285,21 @@ describe('WizardBuilder publish flow', () => {
       container?.querySelector('.wizard-reference-editor-column')?.getAttribute('data-read-only'),
     ).toBe('false')
     expect(container?.textContent).not.toContain('Nest orders')
-    expect(container?.textContent).not.toContain('This Customer 360 sample is preconfigured')
+    expect(container?.textContent).not.toContain('This Order 360 demo is preconfigured')
     expect(
       container?.querySelector<HTMLButtonElement>('[data-testid="change-wizard"]')?.disabled,
     ).toBe(false)
   })
 
-  it('automatically fills and locks the guided Customer 360 sample draft', async () => {
+  it('automatically fills and locks the guided Order 360 sample draft', async () => {
     const guidedDraft: PipelineDraft = {
       ...initialDraft,
-      pipelineId: 'customer_360_3a1973ba',
+      pipelineId: 'order_360_3a1973ba',
       wizard: {
         root: { id: 'root', sourceId: '', table: '', key: [], preTransforms: [] },
         related: [],
         transforms: [],
-        output: { kind: 'atlas', config: { onboardingGuide: 'customer-360-sample' } },
+        output: { kind: 'atlas', config: { onboardingGuide: 'order-360-sample' } },
       },
     }
     listSources.mockResolvedValue([
@@ -303,22 +347,22 @@ describe('WizardBuilder publish flow', () => {
 
     expect(
       container?.querySelector('.wizard-reference-editor-column')?.getAttribute('data-root-table'),
-    ).toBe('bmsql_customer')
+    ).toBe('bmsql_oorder')
     expect(
       container?.querySelector('.wizard-reference-editor-column')?.getAttribute('data-read-only'),
     ).toBe('true')
     expect(container?.textContent).not.toContain('Use detected sample')
-    expect(container?.textContent).toContain('Nest orders')
-    expect(container?.textContent).toContain('This Customer 360 sample is preconfigured')
+    expect(container?.textContent).toContain('Nest customer and lines')
+    expect(container?.textContent).toContain('This Order 360 demo is preconfigured')
     await vi.waitFor(
       () =>
         expect(updatePipelineDraft).toHaveBeenCalledWith(
           guidedDraft.pipelineId,
           expect.objectContaining({
             wizard: expect.objectContaining({
-              root: expect.objectContaining({ table: 'bmsql_customer' }),
+              root: expect.objectContaining({ table: 'bmsql_oorder' }),
               related: expect.arrayContaining([
-                expect.objectContaining({ table: 'bmsql_oorder' }),
+                expect.objectContaining({ table: 'bmsql_customer' }),
                 expect.objectContaining({ table: 'bmsql_order_line' }),
               ]),
             }),

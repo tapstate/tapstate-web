@@ -46,6 +46,7 @@ import {
   getPipeline,
   getPipelineLayout,
   getPipelineStatus,
+  listPipelines,
   previewPipelineDraft,
   publishPipelineDraft,
   runPipeline,
@@ -55,6 +56,7 @@ import {
   type PipelineDraft,
   type PipelineDraftMutation,
   type PipelineRuntimeState,
+  type PipelineCatalogState,
 } from '@/service/pipelines/pipeline-client'
 import { getSourceSchema, listConnectors, listSources } from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
@@ -101,7 +103,6 @@ import {
 } from '../model/pipeline-graph-edit'
 import { pipelineNodeConnectors } from '../model/pipeline-node-connectors'
 import { sourceTableSelections } from '../model/pipeline-node-model'
-import { pipelineStatusRefetchInterval } from '../model/pipeline-status-polling'
 import { targetSources } from '../model/pipeline-target-connectors'
 import { PipelineMonitoringPage } from '../monitoring/pipeline-monitoring-page'
 import { PipelineWorkflowWithInnerContext } from '../workflow-app'
@@ -329,6 +330,7 @@ function PipelineWorkspaceNav({
   collapsed,
   onCollapsedChange,
   status,
+  hasArtifact,
   canEditBasicInfo,
   onSaveBasicInfo,
 }: {
@@ -337,7 +339,8 @@ function PipelineWorkspaceNav({
   activeSection: PipelineWorkspaceSection
   collapsed: boolean
   onCollapsedChange: (collapsed: boolean) => void
-  status?: PipelineRuntimeState
+  status?: PipelineCatalogState
+  hasArtifact: boolean
   canEditBasicInfo: boolean
   onSaveBasicInfo: SavePipelineDraftBasicInfo
 }) {
@@ -467,7 +470,17 @@ function PipelineWorkspaceNav({
                   >
                     {basicInfo.name}
                   </span>
-                  <PipelineStatusBadge status={status} />
+                  {hasArtifact ? (
+                    <PipelineStatusBadge status={status} />
+                  ) : (
+                    <span
+                      className="inline-flex h-6 items-center rounded-md border border-amber-200 bg-amber-50 px-2 text-[11px] font-semibold text-amber-800"
+                      data-testid="pipeline-status"
+                      data-state="draft"
+                    >
+                      {t('wizard.draft')}
+                    </span>
+                  )}
                 </div>
                 <Button
                   type="button"
@@ -602,6 +615,7 @@ function PipelineWorkspaceNav({
 function PipelineOrchestrationPage({
   pipelineId,
   runtimeStatus,
+  lifecycleStatus,
   runtimeObservationPending,
   runtimeObservationError,
   onRetryRuntimeObservation,
@@ -609,6 +623,7 @@ function PipelineOrchestrationPage({
 }: {
   pipelineId: string
   runtimeStatus?: PipelineRuntimeState
+  lifecycleStatus?: PipelineCatalogState
   runtimeObservationPending: boolean
   runtimeObservationError: boolean
   onRetryRuntimeObservation: () => void
@@ -830,11 +845,7 @@ function PipelineOrchestrationPage({
       : null
   const isWizard = wizardDocument !== null
   const wizardReadOnly =
-    isReadOnly ||
-    (isWizard &&
-      (runtimeObservationPending ||
-        runtimeObservationError ||
-        (wizardDocument?.draft.publishedDraftRevision !== null && !runtimeStatus)))
+    isReadOnly || (isWizard && (runtimeObservationPending || runtimeObservationError))
   const stopAction = isReadOnly ? (
     <PipelineLifecycleMenu
       pipelineId={pipelineId}
@@ -1154,6 +1165,7 @@ function PipelineOrchestrationPage({
                 etag={wizardDocument.etag}
                 readOnly={wizardReadOnly}
                 runtimeStatus={runtimeStatus}
+                lifecycleStatus={lifecycleStatus}
                 runtimeObservationPending={runtimeObservationPending}
                 runtimeObservationError={runtimeObservationError}
                 onRetryRuntimeObservation={onRetryRuntimeObservation}
@@ -1480,17 +1492,36 @@ export function PipelineWorkspacePage({
     basicInfoSaverRef.current = save
     setBasicInfoSaverReady(Boolean(save))
   }, [])
-  const statusEnabled =
-    pipelineDraft.isSuccess &&
-    (pipelineDraft.data === null || pipelineDraft.data?.draft.publishedDraftRevision !== null)
-  const status = useQuery({
+  const catalog = useQuery({
+    queryKey: ['pipelines'],
+    queryFn: () => listPipelines(apiFetch),
+    refetchInterval: 5000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  })
+  const mergedStatus = useQuery({
     queryKey: ['pipelines', pipelineId, 'status'],
     queryFn: () => getPipelineStatus(pipelineId, apiFetch),
-    enabled: statusEnabled,
+    enabled: pipelineDraft.isSuccess,
     retry: false,
-    refetchInterval: (query) => pipelineStatusRefetchInterval(query.state.error),
-    refetchIntervalInBackground: false,
+    refetchInterval: 5000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   })
+  const catalogItem = catalog.data?.find((item) => item.id === pipelineId)
+  const lifecycleStatus = mergedStatus.data?.state ?? catalogItem?.status.state
+  const hasArtifact =
+    mergedStatus.data?.hasArtifact ?? catalogItem?.hasArtifact ?? Boolean(pipelineInfo.data)
+  const runtimeStatus = hasArtifact
+    ? lifecycleStatus === 'STARTING' || lifecycleStatus === 'RESUMING'
+      ? 'RUNNING'
+      : (mergedStatus.data?.observedState ??
+        mergedStatus.data?.desiredState ??
+        catalogItem?.status.observedState ??
+        catalogItem?.status.desiredState ??
+        'NEW')
+    : undefined
   const basicInfo = useMemo<PipelineDraftBasicInfo>(() => {
     const draft = pipelineDraft.data?.draft
     if (draft) {
@@ -1590,8 +1621,7 @@ export function PipelineWorkspacePage({
     ) &&
     pipelineDraft.isSuccess &&
     (pipelineDraft.data !== null || pipelineInfo.isSuccess) &&
-    (!statusEnabled || status.isSuccess) &&
-    !isPipelineReadOnly(status.data?.state) &&
+    !isPipelineReadOnly(runtimeStatus) &&
     (section !== 'orchestrate' || basicInfoSaverReady)
 
   return (
@@ -1605,17 +1635,22 @@ export function PipelineWorkspacePage({
         activeSection={section}
         collapsed={navigationCollapsed}
         onCollapsedChange={setNavigationCollapsed}
-        status={status.data?.state}
+        status={catalogItem?.status.state}
+        hasArtifact={hasArtifact}
         canEditBasicInfo={canEditBasicInfo}
         onSaveBasicInfo={saveBasicInfo}
       />
       {section === 'orchestrate' ? (
         <PipelineOrchestrationPage
           pipelineId={pipelineId}
-          runtimeStatus={status.data?.state}
-          runtimeObservationPending={statusEnabled && status.isPending}
-          runtimeObservationError={statusEnabled && status.isError}
-          onRetryRuntimeObservation={() => void status.refetch()}
+          runtimeStatus={runtimeStatus}
+          lifecycleStatus={lifecycleStatus}
+          runtimeObservationPending={hasArtifact && catalog.isPending && mergedStatus.isPending}
+          runtimeObservationError={hasArtifact && catalog.isError && mergedStatus.isError}
+          onRetryRuntimeObservation={() => {
+            void catalog.refetch()
+            void mergedStatus.refetch()
+          }}
           onRegisterBasicInfoSaver={registerBasicInfoSaver}
         />
       ) : (

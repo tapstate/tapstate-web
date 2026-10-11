@@ -9,10 +9,10 @@ import type { DeploymentProfile } from './deployment-profile'
 export interface Customer360Preset {
   sourceId: string
   root: TableMeta
-  orders: TableMeta
-  items: TableMeta
-  rootOrderJoin: Array<{ parentField: string; childField: string }>
-  orderItemsJoin: Array<{ parentField: string; childField: string }>
+  customer: TableMeta
+  lines: TableMeta
+  orderCustomerJoin: Array<{ parentField: string; childField: string }>
+  orderLineJoin: Array<{ parentField: string; childField: string }>
   amountField: string | null
 }
 
@@ -28,52 +28,70 @@ export function isGuidedCustomer360Pipeline(
 ): boolean {
   if (!wizard) return false
   const output = wizard.output as { config?: { onboardingGuide?: string } } | undefined
-  if (output?.config?.onboardingGuide === 'customer-360-sample') return true
+  if (
+    output?.config?.onboardingGuide === 'order-360-sample' ||
+    output?.config?.onboardingGuide === 'customer-360-sample'
+  )
+    return true
   // Recognize drafts created before the marker existed only when their fixed sample structure matches.
   const root = wizard.root as { id?: string } | undefined
   const related = Array.isArray(wizard.related) ? wizard.related : []
   return (
-    /^customer_360_[0-9a-f]{8}$/i.test(pipelineId) &&
+    /^(?:customer|order)_360_[0-9a-f]{8}$/i.test(pipelineId) &&
     root?.id === 'root' &&
     related.some((entry) =>
-      Boolean(entry && typeof entry === 'object' && entry.id === 'customer-360-orders'),
+      Boolean(
+        entry &&
+        typeof entry === 'object' &&
+        (entry.id === 'customer-360-orders' || entry.id === 'order-360-customer'),
+      ),
     ) &&
     related.some((entry) =>
-      Boolean(entry && typeof entry === 'object' && entry.id === 'customer-360-items'),
+      Boolean(
+        entry &&
+        typeof entry === 'object' &&
+        (entry.id === 'customer-360-items' || entry.id === 'order-360-lines'),
+      ),
     )
   )
 }
 
-/** Finds a connected MySQL/Postgres sample schema that can form a customer/order document. */
+/** Finds one sample schema that can form an order-root document. */
 export function findCustomer360Preset(catalog: DataSourceMeta[]): Customer360Preset | null {
   const candidates = catalog
     .filter((source) => /mysql|postgres|postgresql/i.test(source.connector || ''))
     .sort((left, right) => connectorPriority(left.connector) - connectorPriority(right.connector))
 
   for (const source of candidates) {
-    const root = source.tables.find((table) => isCustomerTable(table.name))
-    const orders =
+    const customer = source.tables.find((table) => isCustomerTable(table.name))
+    const root =
       source.tables.find((table) => basename(table.name).endsWith('bmsql_oorder')) ??
       source.tables.find((table) => isOrderTable(table.name))
-    const items =
+    const lines =
       source.tables.find((table) => basename(table.name).endsWith('bmsql_order_line')) ??
       source.tables.find((table) => isOrderLineTable(table.name))
-    if (!root || !orders || !items) continue
+    if (!root || !customer || !lines) continue
     const rootKeys = tableKeys(root)
 
-    const rootOrderJoin = findJoin(root, orders, CUSTOMER_KEYS, CUSTOMER_ORDER_KEYS, 'customer')
-    const orderItemsJoin = findJoin(orders, items, ORDER_KEYS, LINE_KEYS, 'order')
-    if (!rootOrderJoin || !orderItemsJoin || rootKeys.length === 0) continue
+    const orderCustomerJoin = findJoin(
+      root,
+      customer,
+      CUSTOMER_ORDER_KEYS,
+      CUSTOMER_KEYS,
+      'customer',
+    )
+    const orderLineJoin = findJoin(root, lines, ORDER_KEYS, LINE_KEYS, 'order')
+    if (!orderCustomerJoin || !orderLineJoin || rootKeys.length === 0) continue
 
     return {
       sourceId: source.id,
       root,
-      orders,
-      items,
-      rootOrderJoin,
-      orderItemsJoin,
+      customer,
+      lines,
+      orderCustomerJoin,
+      orderLineJoin,
       amountField:
-        items.columns.find((column) =>
+        lines.columns.find((column) =>
           /^(ol_)?amount$|^total_amount$|^line_total$|^subtotal$/i.test(column),
         ) ?? null,
     }
@@ -88,7 +106,6 @@ export function createCustomer360Wizard(
   writeMode: string,
   deploymentProfile: DeploymentProfile,
 ): PipelineJsonObject {
-  const orderId = 'customer-360-orders'
   return {
     root: {
       id: 'root',
@@ -99,16 +116,15 @@ export function createCustomer360Wizard(
     },
     related: [
       {
-        id: orderId,
+        id: 'order-360-customer',
         parentId: 'root',
         sourceId: preset.sourceId,
-        table: preset.orders.name,
+        table: preset.customer.name,
         relation: {
-          shape: 'array',
-          path: 'orders',
-          key: tableKeys(preset.orders),
-          arrayKey: tableKeys(preset.orders),
-          on: preset.rootOrderJoin.map(({ parentField, childField }) => ({
+          shape: 'object',
+          path: 'customer',
+          key: tableKeys(preset.customer),
+          on: preset.orderCustomerJoin.map(({ parentField, childField }) => ({
             parentField,
             childField,
           })),
@@ -116,16 +132,16 @@ export function createCustomer360Wizard(
         preTransforms: [],
       },
       {
-        id: 'customer-360-items',
-        parentId: orderId,
+        id: 'order-360-lines',
+        parentId: 'root',
         sourceId: preset.sourceId,
-        table: preset.items.name,
+        table: preset.lines.name,
         relation: {
           shape: 'array',
-          path: 'items',
-          key: tableKeys(preset.items),
-          arrayKey: tableKeys(preset.items),
-          on: preset.orderItemsJoin.map(({ parentField, childField }) => ({
+          path: 'lines',
+          key: tableKeys(preset.lines),
+          arrayKey: tableKeys(preset.lines),
+          on: preset.orderLineJoin.map(({ parentField, childField }) => ({
             parentField,
             childField,
           })),
@@ -138,10 +154,10 @@ export function createCustomer360Wizard(
       kind: deploymentProfile === 'cloud' ? 'atlas' : 'source',
       config: {
         sourceId: destinationSourceId,
-        table: 'customer_360_views',
+        table: 'order_360_views',
         inputTable: preset.root.name,
         writeMode: writeMode || 'upsert',
-        onboardingGuide: 'customer-360-sample',
+        onboardingGuide: 'order-360-sample',
       },
     },
   }
@@ -152,10 +168,10 @@ export function createCustomerLifetimeValueTransform(
 ): PipelineJsonObject | null {
   if (!preset.amountField) return null
   return {
-    id: 'customer-360-lifetime-value',
+    id: 'order-360-total',
     type: 'map',
     fields: {
-      lifetime_value: `=orders.map(o, o.items.map(i, i.${preset.amountField}).sum()).sum()`,
+      order_total: `=lines.map(i, i.${preset.amountField}).sum()`,
     },
   }
 }

@@ -15,6 +15,7 @@ import {
   type PipelineDraftPreview,
   type PipelinePreviewRun,
   type PipelineRuntimeState,
+  type PipelineCatalogState,
 } from '@/service/pipelines/pipeline-client'
 import { isSampleSource } from '@/service/sample-source-client'
 import { getSourceSchema, listConnectors, listSources } from '@/service/source-client'
@@ -60,6 +61,7 @@ export function WizardBuilder({
   etag,
   readOnly = false,
   runtimeStatus,
+  lifecycleStatus,
   runtimeObservationPending = false,
   runtimeObservationError = false,
   onRetryRuntimeObservation,
@@ -71,6 +73,7 @@ export function WizardBuilder({
   etag: string
   readOnly?: boolean
   runtimeStatus?: PipelineRuntimeState
+  lifecycleStatus?: PipelineCatalogState
   runtimeObservationPending?: boolean
   runtimeObservationError?: boolean
   onRetryRuntimeObservation?: () => void
@@ -450,10 +453,42 @@ export function WizardBuilder({
     }
   }
   async function inspectDsl(): Promise<string> {
-    const saved = await persist()
-    const result = await previewPipelineDraft(pipelineId, saved.revision, apiFetch)
+    const candidate = previewCandidate()
+    const result = await previewPipelineDraft(
+      pipelineId,
+      currentDraft.current.revision,
+      apiFetch,
+      undefined,
+      candidate,
+    )
     if (!result.dsl?.trim()) throw new Error(t('wizard.dslUnavailable'))
     return result.dsl
+  }
+
+  function previewCandidate(): PipelineDraftMutation {
+    const previewWizard =
+      normalizeCompositeRelationParents(currentWizard.current, catalog) || currentWizard.current
+    if (!previewWizard) throw new Error('The preview requires a Pipeline draft.')
+    const previewOutput = previewWizard.output as { config?: Record<string, unknown> } | undefined
+    return {
+      pipelineId,
+      mode: 'wizard',
+      name: currentDraft.current.name,
+      description: currentDraft.current.description,
+      graph: null,
+      wizard: {
+        ...previewWizard,
+        output: {
+          ...previewOutput,
+          config: {
+            ...previewOutput?.config,
+            // Preview substitutes a no-write sink; a temporary target lets unfinished drafts compile.
+            table: previewOutput?.config?.table || '__tapstate_preview__',
+          },
+        },
+      },
+      baseArtifactHash: currentDraft.current.baseArtifactHash,
+    }
   }
 
   useEffect(() => {
@@ -482,34 +517,7 @@ export function WizardBuilder({
       setLivePreviewError('')
       void (async () => {
         try {
-          const previewWizard =
-            normalizeCompositeRelationParents(currentWizard.current, catalog) ||
-            currentWizard.current
-          if (!previewWizard) throw new Error('The preview requires a Pipeline draft.')
-          const previewOutput = previewWizard.output as
-            | { config?: Record<string, unknown> }
-            | undefined
-          const candidate: PipelineDraftMutation = {
-            pipelineId,
-            mode: 'wizard',
-            name: currentDraft.current.name,
-            description: currentDraft.current.description,
-            graph: null,
-            wizard: {
-              ...previewWizard,
-              output: {
-                ...previewOutput,
-                config: {
-                  ...previewOutput?.config,
-                  // The preview executor replaces the sink with a no-write materializer. A
-                  // temporary table name lets a partially configured destination still preview
-                  // its real source rows without changing the saved Pipeline draft.
-                  table: previewOutput?.config?.table || '__tapstate_preview__',
-                },
-              },
-            },
-            baseArtifactHash: currentDraft.current.baseArtifactHash,
-          }
+          const candidate = previewCandidate()
           const compiled = await previewPipelineDraft(
             pipelineId,
             currentDraft.current.revision,
@@ -565,27 +573,31 @@ export function WizardBuilder({
     (draft.publishedDraftRevision !== null && !runtimeStatus && !runtimeObservationError)
   const saveStatusLabel = error
     ? error
-    : runtimeStatus === 'RUNNING' && startPhase === 'checking'
+    : lifecycleStatus === 'RUNNING' && startPhase === 'checking'
       ? t('pipelines.workspace.runtime.states.RUNNING')
-      : startPhase
-        ? t(`wizard.startPhases.${startPhase}`)
-        : runtimeObservationError
-          ? t('wizard.runtimeStatusError')
-          : runtimeCheckPending
-            ? t('wizard.checkingRuntime')
-            : runtimeStatus
-              ? t(`pipelines.workspace.runtime.states.${runtimeStatus}`)
-              : readOnly
-                ? t('pipelines.workspace.readOnly.editorStatus')
-                : t(
-                    status === 'saving' || action === 'save'
-                      ? 'wizard.autosaving'
-                      : status === 'error'
-                        ? 'wizard.autosaveError'
-                        : isDirty
-                          ? 'wizard.unsavedChanges'
-                          : 'wizard.autosaved',
-                  )
+      : lifecycleStatus === 'STARTING' && startPhase === 'checking'
+        ? t('pipelines.workspace.runtime.states.STARTING')
+        : startPhase
+          ? t(`wizard.startPhases.${startPhase}`)
+          : runtimeObservationError
+            ? t('wizard.runtimeStatusError')
+            : runtimeCheckPending
+              ? t('wizard.checkingRuntime')
+              : lifecycleStatus
+                ? t(`pipelines.workspace.runtime.states.${lifecycleStatus}`)
+                : runtimeStatus
+                  ? t(`pipelines.workspace.runtime.states.${runtimeStatus}`)
+                  : readOnly
+                    ? t('pipelines.workspace.readOnly.editorStatus')
+                    : t(
+                        status === 'saving' || action === 'save'
+                          ? 'wizard.autosaving'
+                          : status === 'error'
+                            ? 'wizard.autosaveError'
+                            : isDirty
+                              ? 'wizard.unsavedChanges'
+                              : 'wizard.autosaved',
+                      )
   return (
     <div className="h-full min-h-0 min-w-0 p-[var(--app-shell-sidebar-content-inset)]">
       <section
@@ -789,8 +801,8 @@ function hasCustomer360Preset(
   return (
     root.sourceId === preset.sourceId &&
     root.table === preset.root.name &&
-    hasTable(preset.orders.name) &&
-    hasTable(preset.items.name)
+    hasTable(preset.customer.name) &&
+    hasTable(preset.lines.name)
   )
 }
 
@@ -802,8 +814,8 @@ function hasCustomerLifetimeValue(value: PipelineDraft['wizard']) {
     if (!isObjectRecord(fields)) return false
     return (
       transform.type === 'map' &&
-      typeof fields.lifetime_value === 'string' &&
-      fields.lifetime_value.startsWith('=')
+      typeof fields.order_total === 'string' &&
+      fields.order_total.startsWith('=')
     )
   })
 }

@@ -28,8 +28,17 @@ interface OnboardingPageProps {
   darkMode: boolean
   setDarkMode: (enabled: boolean) => void
   user: UserProfile
+  currentOrganization?: Organization | null
+  initialWorkspace?: OnboardingWorkspace | null
+  initialProgress?: DeploymentProgress | null
+  suggestedClusterName?: string
+  resumeError?: boolean
   onComplete: (organization: Organization, cluster: Cluster) => void
-  onCreateWorkspace: (input: OnboardingInput) => Promise<OnboardingWorkspace>
+  onCreateWorkspace: (
+    input: OnboardingInput,
+    existingOrganization?: Organization | null,
+    onOrganizationResolved?: (organization: Organization) => void,
+  ) => Promise<OnboardingWorkspace>
   isOpeningCluster: boolean
   entryError: string | null
 }
@@ -72,6 +81,13 @@ function isSubscriptionCancelled(subscription: Subscription) {
   return subscription.status === 'CANCELLED'
 }
 
+function workspaceScreen(workspace: OnboardingWorkspace): OnboardingScreen {
+  if (isProvisioningCancelled(workspace.cluster, workspace.subscription)) return 'cancelled'
+  if (isProvisioningFailed(workspace.cluster)) return 'failed'
+  if (isWorkspaceReady(workspace.cluster, workspace.subscription)) return 'ready'
+  return 'provisioning'
+}
+
 function toSlug(name: string) {
   return name
     .trim()
@@ -85,6 +101,11 @@ export function OnboardingPage({
   darkMode,
   setDarkMode,
   user,
+  currentOrganization = null,
+  initialWorkspace = null,
+  initialProgress = null,
+  suggestedClusterName = '',
+  resumeError = false,
   onComplete,
   onCreateWorkspace,
   isOpeningCluster,
@@ -95,14 +116,23 @@ export function OnboardingPage({
   const [regions, setRegions] = useState<Region[]>([])
   const [selectedRegionCode, setSelectedRegionCode] = useState('')
   const [organizationName, setOrganizationName] = useState('')
+  const [clusterNameInput, setClusterNameInput] = useState(suggestedClusterName)
   const [isLoadingRegions, setIsLoadingRegions] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hasLoadError, setHasLoadError] = useState(false)
   const [hasSubmitError, setHasSubmitError] = useState(false)
-  const [screen, setScreen] = useState<OnboardingScreen>('form')
-  const [workspace, setWorkspace] = useState<OnboardingWorkspace | null>(null)
-  const [updates, setUpdates] = useState<ProvisioningUpdate[]>([])
-  const [deploymentProgress, setDeploymentProgress] = useState<DeploymentProgress | null>(null)
+  const [screen, setScreen] = useState<OnboardingScreen>(() =>
+    initialWorkspace ? workspaceScreen(initialWorkspace) : 'form',
+  )
+  const [workspace, setWorkspace] = useState<OnboardingWorkspace | null>(initialWorkspace)
+  const [updates, setUpdates] = useState<ProvisioningUpdate[]>(() =>
+    initialWorkspace
+      ? [observedUpdate(initialWorkspace.cluster, initialWorkspace.subscription)]
+      : [],
+  )
+  const [deploymentProgress, setDeploymentProgress] = useState<DeploymentProgress | null>(
+    initialProgress,
+  )
   const [hasPollingError, setHasPollingError] = useState(false)
   const [hasCleanupStatusError, setHasCleanupStatusError] = useState(false)
   const [isRetrying, setIsRetrying] = useState(false)
@@ -123,8 +153,26 @@ export function OnboardingPage({
     () => regions.find((region) => region.code === selectedRegionCode) ?? null,
     [regions, selectedRegionCode],
   )
-  const organizationSlug = toSlug(organizationName)
-  const clusterName = organizationSlug ? `${organizationSlug}-stream`.slice(0, 100) : ''
+  const organizationSlug = currentOrganization?.slug ?? toSlug(organizationName)
+  const organizationDisplayName = currentOrganization?.name ?? organizationName.trim()
+  const clusterName = currentOrganization
+    ? toSlug(clusterNameInput).slice(0, 100)
+    : organizationSlug
+      ? `${organizationSlug}-stream`.slice(0, 100)
+      : ''
+
+  useEffect(() => {
+    if (!currentOrganization || !suggestedClusterName) return
+    setClusterNameInput(suggestedClusterName)
+  }, [currentOrganization?.id, suggestedClusterName])
+
+  useEffect(() => {
+    if (!initialWorkspace) return
+    setWorkspace(initialWorkspace)
+    setDeploymentProgress(initialProgress)
+    setUpdates([observedUpdate(initialWorkspace.cluster, initialWorkspace.subscription)])
+    setScreen(workspaceScreen(initialWorkspace))
+  }, [initialProgress, initialWorkspace])
 
   const loadRegions = async () => {
     setIsLoadingRegions(true)
@@ -135,7 +183,10 @@ export function OnboardingPage({
       setSelectedRegionCode((current) =>
         availableRegions.some((region) => region.code === current)
           ? current
-          : (availableRegions[0]?.code ?? ''),
+          : (availableRegions.find((region) => region.code === initialWorkspace?.cluster.region)
+              ?.code ??
+            availableRegions[0]?.code ??
+            ''),
       )
     } catch {
       setHasLoadError(true)
@@ -248,29 +299,39 @@ export function OnboardingPage({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setHasSubmitError(false)
-    if (!selectedRegion || !organizationSlug) return
+    if (!selectedRegion || !organizationSlug || !clusterName) return
 
     setIsSubmitting(true)
     setScreen('starting')
     try {
-      const result = await onCreateWorkspace({
-        organizationName: organizationName.trim(),
-        organizationSlug,
-        region: selectedRegion,
-        clusterName,
-      })
+      const result = await onCreateWorkspace(
+        {
+          organizationName: organizationDisplayName,
+          organizationSlug,
+          region: selectedRegion,
+          clusterName,
+        },
+        currentOrganization,
+        (organization) => {
+          void navigate({
+            to: '/onboarding',
+            search: { organizationId: organization.id, subscriptionId: undefined },
+            replace: true,
+          })
+        },
+      )
       setWorkspace(result)
       setDeploymentProgress(null)
       setUpdates([observedUpdate(result.cluster, result.subscription)])
-      if (isProvisioningCancelled(result.cluster, result.subscription)) {
-        setScreen('cancelled')
-      } else if (isProvisioningFailed(result.cluster)) {
-        setScreen('failed')
-      } else if (isWorkspaceReady(result.cluster, result.subscription)) {
-        setScreen('ready')
-      } else {
-        setScreen('provisioning')
-      }
+      setScreen(workspaceScreen(result))
+      void navigate({
+        to: '/onboarding',
+        search: {
+          organizationId: result.organization.id,
+          subscriptionId: result.subscription.id,
+        },
+        replace: true,
+      })
     } catch {
       setHasSubmitError(true)
       setScreen('form')
@@ -337,7 +398,6 @@ export function OnboardingPage({
 
   const handleCancelSubscription = async () => {
     if (!workspace || isCancellingSubscription || isRetrying) return
-    const startedReady = screen === 'ready'
     setIsCancellingSubscription(true)
     setHasCancelSubscriptionError(false)
     setHasCancelStatusError(false)
@@ -365,8 +425,7 @@ export function OnboardingPage({
       }
       if (
         !isProvisioningFailed(currentWorkspace.cluster) &&
-        !isProvisioningCancelled(currentWorkspace.cluster, currentWorkspace.subscription) &&
-        !(startedReady && isWorkspaceReady(currentWorkspace.cluster, currentWorkspace.subscription))
+        !isProvisioningCancelled(currentWorkspace.cluster, currentWorkspace.subscription)
       ) {
         setIsCancelOutcomeUnknown(false)
         setScreen(
@@ -409,11 +468,7 @@ export function OnboardingPage({
             setScreen('cancelled')
           } else if (
             !isProvisioningFailed(currentWorkspace.cluster) &&
-            !isProvisioningCancelled(currentWorkspace.cluster, currentWorkspace.subscription) &&
-            !(
-              startedReady &&
-              isWorkspaceReady(currentWorkspace.cluster, currentWorkspace.subscription)
-            )
+            !isProvisioningCancelled(currentWorkspace.cluster, currentWorkspace.subscription)
           ) {
             setIsCancelOutcomeUnknown(false)
             setScreen(
@@ -440,6 +495,24 @@ export function OnboardingPage({
     } finally {
       setIsCancellingSubscription(false)
     }
+  }
+
+  const resetOnboarding = () => {
+    if (!workspace || workspace.cluster.state !== 'TERMINATED') return
+    setHasSubmitError(false)
+    setWorkspace(null)
+    setDeploymentProgress(null)
+    setUpdates([])
+    setHasCancelSubscriptionError(false)
+    setHasCancelStatusError(false)
+    setIsCancelOutcomeUnknown(false)
+    setScreen('form')
+    setClusterNameInput(suggestedClusterName)
+    void navigate({
+      to: '/onboarding',
+      search: { organizationId: workspace.organization.id, subscriptionId: undefined },
+      replace: true,
+    })
   }
 
   const accountName = user.displayName?.trim() || user.email
@@ -482,7 +555,11 @@ export function OnboardingPage({
                 {t('onboarding.title')}
               </h1>
               <p className="text-[14px] text-neutral-500 dark:text-neutral-400">
-                {t('onboarding.description')}
+                {t(
+                  currentOrganization
+                    ? 'onboarding.existingOrganizationDescription'
+                    : 'onboarding.description',
+                )}
               </p>
             </div>
 
@@ -496,28 +573,71 @@ export function OnboardingPage({
               </div>
             )}
 
-            <form className="space-y-6" onSubmit={handleSubmit}>
-              <div className="space-y-2">
-                <label
-                  className="block text-[13px] font-medium text-[#374151] dark:text-neutral-200"
-                  htmlFor="onboarding-organization"
-                >
-                  {t('onboarding.organizationLabel')}
-                </label>
-                <input
-                  autoComplete="organization"
-                  className="h-10 w-full rounded-lg border border-black/[0.12] bg-white px-3.5 text-[14px] text-[#111827] shadow-2xs transition-all placeholder:text-neutral-400 focus:border-[#111827] focus:ring-1 focus:ring-[#111827] focus:outline-none dark:border-white/[0.14] dark:bg-[#1a1b1e] dark:text-white dark:focus:border-white dark:focus:ring-white"
-                  id="onboarding-organization"
-                  maxLength={100}
-                  onChange={(event) => setOrganizationName(event.target.value)}
-                  placeholder={t('onboarding.organizationPlaceholder')}
-                  required
-                  value={organizationName}
-                />
-                {organizationName && !organizationSlug && (
-                  <p className="text-[11px] text-red-500">{t('onboarding.slugHint')}</p>
-                )}
+            {resumeError && (
+              <div
+                className="rounded-xl border border-amber-200/80 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300"
+                role="status"
+              >
+                {t('onboarding.resumeError')}
               </div>
+            )}
+
+            <form className="space-y-6" onSubmit={handleSubmit}>
+              {currentOrganization ? (
+                <>
+                  <div className="space-y-2">
+                    <span className="block text-[13px] font-medium text-[#374151] dark:text-neutral-200">
+                      {t('onboarding.organizationLabel')}
+                    </span>
+                    <div className="flex h-10 items-center rounded-lg border border-black/[0.08] bg-neutral-50 px-3.5 text-[14px] font-medium text-[#111827] dark:border-white/[0.1] dark:bg-[#1a1b1e] dark:text-white">
+                      {currentOrganization.name}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label
+                      className="block text-[13px] font-medium text-[#374151] dark:text-neutral-200"
+                      htmlFor="onboarding-cluster-name"
+                    >
+                      {t('onboarding.newClusterLabel')}
+                    </label>
+                    <input
+                      autoComplete="off"
+                      className="h-10 w-full rounded-lg border border-black/[0.12] bg-white px-3.5 text-[14px] text-[#111827] shadow-2xs transition-all placeholder:text-neutral-400 focus:border-[#111827] focus:ring-1 focus:ring-[#111827] focus:outline-none dark:border-white/[0.14] dark:bg-[#1a1b1e] dark:text-white dark:focus:border-white dark:focus:ring-white"
+                      id="onboarding-cluster-name"
+                      maxLength={100}
+                      onChange={(event) => setClusterNameInput(event.target.value)}
+                      placeholder={t('onboarding.clusterNamePlaceholder')}
+                      required
+                      value={clusterNameInput}
+                    />
+                    {clusterNameInput && !clusterName && (
+                      <p className="text-[11px] text-red-500">{t('onboarding.clusterNameHint')}</p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-2">
+                  <label
+                    className="block text-[13px] font-medium text-[#374151] dark:text-neutral-200"
+                    htmlFor="onboarding-organization"
+                  >
+                    {t('onboarding.organizationLabel')}
+                  </label>
+                  <input
+                    autoComplete="organization"
+                    className="h-10 w-full rounded-lg border border-black/[0.12] bg-white px-3.5 text-[14px] text-[#111827] shadow-2xs transition-all placeholder:text-neutral-400 focus:border-[#111827] focus:ring-1 focus:ring-[#111827] focus:outline-none dark:border-white/[0.14] dark:bg-[#1a1b1e] dark:text-white dark:focus:border-white dark:focus:ring-white"
+                    id="onboarding-organization"
+                    maxLength={100}
+                    onChange={(event) => setOrganizationName(event.target.value)}
+                    placeholder={t('onboarding.organizationPlaceholder')}
+                    required
+                    value={organizationName}
+                  />
+                  {organizationName && !organizationSlug && (
+                    <p className="text-[11px] text-red-500">{t('onboarding.slugHint')}</p>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -618,7 +738,11 @@ export function OnboardingPage({
               <div className="space-y-2 pt-1">
                 <div className="flex items-center justify-between">
                   <label className="block text-[13px] font-medium text-[#374151] dark:text-neutral-200">
-                    {t('onboarding.clusterLabel')}
+                    {t(
+                      currentOrganization
+                        ? 'onboarding.newClusterLabel'
+                        : 'onboarding.clusterLabel',
+                    )}
                   </label>
                   <span className="font-mono text-[11px] text-neutral-500 dark:text-neutral-400">
                     {selectedRegion?.defaultSpecKey ?? t('onboarding.regionDefault')}
@@ -647,6 +771,7 @@ export function OnboardingPage({
                   hasLoadError ||
                   !selectedRegion ||
                   !organizationSlug ||
+                  !clusterName ||
                   isSubmitting
                 }
                 type="submit"
@@ -658,7 +783,13 @@ export function OnboardingPage({
                   </>
                 ) : (
                   <>
-                    <span>{t('onboarding.createAction')}</span>
+                    <span>
+                      {t(
+                        currentOrganization
+                          ? 'onboarding.createClusterAction'
+                          : 'onboarding.createAction',
+                      )}
+                    </span>
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}
@@ -683,7 +814,7 @@ export function OnboardingPage({
               <p className="text-[13px] text-neutral-500 dark:text-neutral-400">
                 {t('onboarding.startingDescription', {
                   region: selectedRegion?.name,
-                  organization: organizationName.trim(),
+                  organization: organizationDisplayName,
                 })}
               </p>
             </div>
@@ -704,11 +835,7 @@ export function OnboardingPage({
             isOpeningCluster={isOpeningCluster}
             isRetrying={isRetrying}
             mode={screen}
-            onEdit={() => {
-              if (workspace.cluster.state !== 'TERMINATED') return
-              setHasSubmitError(false)
-              setScreen('form')
-            }}
+            onEdit={resetOnboarding}
             cleanupPending={screen === 'cancelled' && workspace.cluster.state !== 'TERMINATED'}
             cleanupStatusError={hasCleanupStatusError}
             onOpenCluster={() => onComplete(workspace.organization, workspace.cluster)}

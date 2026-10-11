@@ -1,6 +1,7 @@
 import type { ComponentType, SVGProps } from 'react'
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import {
   Activity,
   AlertCircle,
@@ -21,7 +22,7 @@ import {
   Table as TableIcon,
   Trash2,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type {
@@ -46,13 +47,13 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import {
-  addSampleSources,
   isSampleSource,
   loadSampleSources,
   removeSampleSources,
 } from '@/service/sample-source-client'
 import {
   discoverSourceSchema,
+  getConnectionTestResult,
   getSource,
   getSourceSchema,
   listConnectors,
@@ -65,6 +66,7 @@ import { isDataSource } from '@/service/state-store-source'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { ConnectionTestResultDialog } from './connection-test-result'
+import { SampleSourcesDialog } from './sample-sources-dialog'
 import { SourceCreateDialog } from './source-create-dialog'
 import { SourceDeleteDialog } from './source-delete-dialog'
 import { SourceEditDialog } from './source-edit-dialog'
@@ -152,6 +154,7 @@ export function SourcesPage({
 }: SourcesPageProps = {}) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const [searchText, setSearchText] = useState('')
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null)
@@ -162,7 +165,7 @@ export function SourcesPage({
   const [deletingSource, setDeletingSource] = useState<Source | null>(null)
   const [successMessage, setSuccessMessage] = useState('')
   const [removingSamples, setRemovingSamples] = useState(false)
-  const [addingSamples, setAddingSamples] = useState(false)
+  const [sampleDialogOpen, setSampleDialogOpen] = useState(false)
   // Same key as Overview; a deployment without sample settings leaves this null.
   const samplesQuery = useQuery({
     queryKey: ['sample-sources'],
@@ -175,6 +178,7 @@ export function SourcesPage({
   const [testError, setTestError] = useState<unknown>(null)
   const [schemaRefreshingSourceId, setSchemaRefreshingSourceId] = useState<string | null>(null)
   const [schemaRefreshError, setSchemaRefreshError] = useState('')
+  const autoDiscoveryAttempted = useRef(new Set<string>())
 
   function toTable(table: SourceTableView, index: number): SourceTable {
     const name = table.name ?? table.pattern ?? table.filter ?? t('sources.details.unnamedTable')
@@ -264,6 +268,7 @@ export function SourcesPage({
     retry: false,
     queryFn: () => getSourceSchema(selectedSource!.id, apiFetch),
   })
+  const selectedSchemaDiscovering = schemaRefreshingSourceId === selectedSource?.id
   const discoveredTables = (sourceSchemaQuery.data?.tables ?? []).map(toSchemaTable)
   const visibleTables = sourceSchemaQuery.data ? discoveredTables : (selectedSource?.tables ?? [])
   const selectedConfiguredTable = selectedSource?.tables.find(
@@ -317,12 +322,12 @@ export function SourcesPage({
     setTestError(null)
     setTestingSourceId(source.id)
     try {
-      setTestReport(
-        await testConnection(
-          { id: source.id, connectorId: source.connector, settings: source.config },
-          apiFetch,
-        ),
+      const report = await testConnection(
+        { id: source.id, connectorId: source.connector, settings: source.config },
+        apiFetch,
       )
+      setTestReport(report)
+      queryClient.setQueryData(['source-test-result', source.id], report)
     } catch (error) {
       setTestError(error)
     } finally {
@@ -360,6 +365,8 @@ export function SourcesPage({
       setSelectedTableId(null)
     }
     setSuccessMessage(t('sources.create.success', { id: created.id }))
+    autoDiscoveryAttempted.current.add(created.id)
+    void refreshSourceSchema(created)
   }
 
   function onEdited(result: SourceEnvelope) {
@@ -369,6 +376,10 @@ export function SourcesPage({
       ),
     )
     queryClient.setQueryData<SourceEnvelope>(['source', result.source.id], result)
+    queryClient.removeQueries({ queryKey: ['source-schema', result.source.id] })
+    queryClient.removeQueries({ queryKey: ['source-test-result', result.source.id] })
+    autoDiscoveryAttempted.current.add(result.source.id)
+    void refreshSourceSchema(result.source)
     if (onNavigate) {
       onNavigate({ sourceId: result.source.id })
     } else {
@@ -379,32 +390,7 @@ export function SourcesPage({
     setSuccessMessage(t('sources.edit.success', { id: result.source.id }))
   }
 
-  const samplesMissing = (samplesQuery.data ?? []).some(
-    (sample) => !(sourcesQuery.data ?? []).some((source) => source.id === sample.id),
-  )
-
-  async function addSamples() {
-    setAddingSamples(true)
-    setSampleRemoveError('')
-    try {
-      const result = await addSampleSources(
-        samplesQuery.data ?? [],
-        sourcesQuery.data ?? [],
-        apiFetch,
-      )
-      queryClient.setQueryData<SourceView[]>(['sources'], (current) =>
-        [
-          ...(current ?? []).filter((item) => !result.added.some((added) => added.id === item.id)),
-          ...result.added,
-        ].sort((left, right) => left.id.localeCompare(right.id)),
-      )
-      setSuccessMessage(t('sources.samples.added', { count: result.added.length }))
-    } catch {
-      setSampleRemoveError(t('overview.addSources.sample.error'))
-    } finally {
-      setAddingSamples(false)
-    }
-  }
+  const samplesAvailable = (samplesQuery.data ?? []).some((sample) => sample.available !== false)
 
   async function removeSamples() {
     setRemovingSamples(true)
@@ -438,6 +424,7 @@ export function SourcesPage({
     )
     queryClient.removeQueries({ queryKey: ['source', source.id] })
     queryClient.removeQueries({ queryKey: ['source-schema', source.id] })
+    queryClient.removeQueries({ queryKey: ['source-test-result', source.id] })
     setDeletingSource(null)
     if (selectedSource?.id === source.id) selectSource(null)
     setSuccessMessage(t('sources.delete.success', { id: source.id }))
@@ -448,6 +435,14 @@ export function SourcesPage({
     const timeoutId = window.setTimeout(() => setSuccessMessage(''), 4000)
     return () => window.clearTimeout(timeoutId)
   }, [successMessage])
+
+  useEffect(() => {
+    if (!selectedSource || !(sourceSchemaQuery.error instanceof SourceClientError)) return
+    if (sourceSchemaQuery.error.status !== 404) return
+    if (autoDiscoveryAttempted.current.has(selectedSource.id)) return
+    autoDiscoveryAttempted.current.add(selectedSource.id)
+    void refreshSourceSchema(selectedSource.raw)
+  }, [selectedSource, sourceSchemaQuery.error])
 
   const loadError =
     sourcesQuery.error instanceof SourceClientError && sourcesQuery.error.kind === 'network'
@@ -465,17 +460,14 @@ export function SourcesPage({
           {t('sources.title')}
         </h1>
         <div className="flex shrink-0 items-center gap-2">
-          {samplesMissing && (
+          {samplesAvailable && (
             <Button
               type="button"
               variant="outline"
               className="px-3 text-[13px] font-medium"
-              disabled={addingSamples}
-              onClick={() => void addSamples()}
+              onClick={() => setSampleDialogOpen(true)}
             >
-              {addingSamples
-                ? t('overview.addSources.sample.adding')
-                : t('overview.addSources.sample.action')}
+              {t('overview.addSources.sample.action')}
             </Button>
           )}
           {(sourcesQuery.data ?? []).some(isSampleSource) && (
@@ -773,7 +765,8 @@ export function SourcesPage({
                   </div>
                 )}
 
-                {sourceSchemaQuery.isLoading ? (
+                {sourceSchemaQuery.isLoading ||
+                (selectedSchemaDiscovering && !sourceSchemaQuery.data) ? (
                   <div
                     className="mb-4 flex items-center gap-2 rounded-lg bg-white px-3 py-2.5 text-[13px] text-gray-500 shadow-sm"
                     role="status"
@@ -807,13 +800,16 @@ export function SourcesPage({
                   </div>
                 ) : null}
 
-                {visibleTables.length === 0 ? (
+                {!sourceSchemaQuery.data &&
+                (sourceSchemaQuery.isLoading ||
+                  selectedSchemaDiscovering) ? null : visibleTables.length === 0 &&
+                  sourceSchemaQuery.data ? (
                   <div className="page-state rounded-lg border border-gray-200/70 bg-white">
                     <TableIcon className="h-8 w-8 text-gray-300" aria-hidden="true" />
                     <div className="page-state__title">{t('sources.noTablesTitle')}</div>
                     <p className="page-state__body">{t('sources.details.noTables')}</p>
                   </div>
-                ) : (
+                ) : visibleTables.length > 0 ? (
                   <DataTable
                     headers={[
                       t('sources.table.name'),
@@ -850,7 +846,7 @@ export function SourcesPage({
                       </tr>
                     ))}
                   </DataTable>
-                )}
+                ) : null}
               </div>
             </>
           ) : selectedSource && selectedTable ? (
@@ -899,6 +895,7 @@ export function SourcesPage({
               onSelect={selectSource}
               onTest={(source) => void runSourceTest(source.raw)}
               testingSourceId={testingSourceId}
+              autoDiscoveryAttempted={autoDiscoveryAttempted.current}
             />
           )}
         </main>
@@ -912,6 +909,24 @@ export function SourcesPage({
             setTestReport(null)
             setTestError(null)
           }
+        }}
+      />
+      <SampleSourcesDialog
+        open={sampleDialogOpen}
+        onOpenChange={setSampleDialogOpen}
+        samples={samplesQuery.data ?? []}
+        installedIds={(sourcesQuery.data ?? []).filter(isSampleSource).map((source) => source.id)}
+        onDemo={(sourceId) => {
+          window.sessionStorage.setItem('tapstate.sample.next-demo', sourceId)
+          void navigate({ to: '/overview' })
+        }}
+        onBuild={() => {
+          window.sessionStorage.setItem('tapstate.sample.next-build', 'true')
+          void navigate({ to: '/overview' })
+        }}
+        onConnectOwn={() => {
+          setSampleDialogOpen(false)
+          setCreateOpen(true)
         }}
       />
       <SourceCreateDialog
@@ -1115,6 +1130,7 @@ function AllSourcesView({
   onSelect,
   onTest,
   testingSourceId,
+  autoDiscoveryAttempted,
 }: {
   sources: Source[]
   filteredSources: Source[]
@@ -1122,6 +1138,7 @@ function AllSourcesView({
   onSelect: (source: Source) => void
   onTest: (source: Source) => void
   testingSourceId: string | null
+  autoDiscoveryAttempted: Set<string>
 }) {
   const { t } = useTranslation()
   return (
@@ -1159,64 +1176,194 @@ function AllSourcesView({
               </tr>
             ) : (
               filteredSources.map((source) => (
-                <tr key={source.id} className="group transition-colors hover:bg-gray-50/70">
-                  <td className="px-4 py-3">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="h-auto justify-start px-0 text-left"
-                      onClick={() => onSelect(source)}
-                    >
-                      <span className="flex h-6 w-6 items-center justify-center rounded-lg border border-gray-200/70 bg-gray-50">
-                        <ConnectorIcon
-                          connectorId={source.type}
-                          name={source.connectorName}
-                          iconPath={source.connectorIcon}
-                          size={16}
-                          className="size-4 rounded-md border-0 bg-transparent"
-                        />
-                      </span>
-                      <span className="font-medium text-gray-900">{source.name}</span>
-                      {isSampleSource(source.raw) && (
-                        <Badge variant="secondary">{t('sources.samples.tag')}</Badge>
-                      )}
-                    </Button>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{source.type}</td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 px-1.5 py-0.5 text-[11px] font-medium text-gray-600 ring-1 ring-gray-600/15 ring-inset">
-                      <span className="h-1 w-1 rounded-full bg-gray-400" aria-hidden="true" />
-                      {t('sources.details.secretConfigured')}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">{source.host}</td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {t('sources.tablesCount', { count: source.tables.length })}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-700"
-                      type="button"
-                      aria-label={`${t('sources.actions.test')} ${source.name}`}
-                      title={t('sources.actions.test')}
-                      disabled={testingSourceId !== null}
-                      onClick={() => onTest(source)}
-                    >
-                      {testingSourceId === source.id ? (
-                        <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
-                      ) : (
-                        <Activity className="size-3.5" aria-hidden="true" />
-                      )}
-                    </Button>
-                  </td>
-                </tr>
+                <SourceListRow
+                  key={source.id}
+                  source={source}
+                  onSelect={onSelect}
+                  onTest={onTest}
+                  testingSourceId={testingSourceId}
+                  autoDiscoveryAttempted={autoDiscoveryAttempted}
+                />
               ))
             )}
           </DataTable>
         )}
       </div>
     </div>
+  )
+}
+
+function SourceListRow({
+  source,
+  onSelect,
+  onTest,
+  testingSourceId,
+  autoDiscoveryAttempted,
+}: {
+  source: Source
+  onSelect: (source: Source) => void
+  onTest: (source: Source) => void
+  testingSourceId: string | null
+  autoDiscoveryAttempted: Set<string>
+}) {
+  const { t } = useTranslation()
+  const apiFetch = useAuthStore((state) => state.apiFetch)
+  const queryClient = useQueryClient()
+  const [discovering, setDiscovering] = useState(false)
+  const [discoveryFailed, setDiscoveryFailed] = useState(false)
+  const schemaQuery = useQuery({
+    queryKey: ['source-schema', source.id],
+    queryFn: () => getSourceSchema(source.id, apiFetch),
+    retry: false,
+  })
+  const testQuery = useQuery({
+    queryKey: ['source-test-result', source.id],
+    queryFn: () => getConnectionTestResult(source.id, apiFetch),
+    retry: false,
+  })
+
+  useEffect(() => {
+    if (!(schemaQuery.error instanceof SourceClientError) || schemaQuery.error.status !== 404)
+      return
+    if (autoDiscoveryAttempted.has(source.id)) return
+    autoDiscoveryAttempted.add(source.id)
+    setDiscovering(true)
+    void discoverSourceSchema(
+      { id: source.id, connectorId: source.type, settings: source.raw.config },
+      apiFetch,
+    )
+      .then(
+        (report) => queryClient.setQueryData(['source-schema', source.id], report),
+        () => setDiscoveryFailed(true),
+      )
+      .finally(() => setDiscovering(false))
+  }, [
+    apiFetch,
+    autoDiscoveryAttempted,
+    queryClient,
+    schemaQuery.error,
+    source.id,
+    source.raw.config,
+    source.type,
+  ])
+
+  const testing = testingSourceId === source.id || testQuery.isPending
+  const testStatus = testing
+    ? t('sources.test.testing')
+    : testQuery.data?.outcome === 'PASSED'
+      ? t('sources.test.status.passed')
+      : testQuery.data?.outcome === 'FAILED'
+        ? t('sources.test.status.failed')
+        : testQuery.error instanceof SourceClientError && testQuery.error.status === 404
+          ? t('sources.test.notTested')
+          : t('sources.test.statusUnavailable')
+  const tableStatus = schemaQuery.data
+    ? t('sources.tablesCount', { count: schemaQuery.data.tables.length })
+    : discovering || schemaQuery.isPending
+      ? t('sources.schema.loading')
+      : discoveryFailed
+        ? t('sources.schema.discoveryFailed')
+        : schemaQuery.error instanceof SourceClientError && schemaQuery.error.status === 404
+          ? t('sources.schema.notDiscovered')
+          : t('sources.schema.loadError')
+
+  async function retryDiscovery() {
+    setDiscoveryFailed(false)
+    setDiscovering(true)
+    try {
+      const report = await discoverSourceSchema(
+        { id: source.id, connectorId: source.type, settings: source.raw.config },
+        apiFetch,
+      )
+      queryClient.setQueryData(['source-schema', source.id], report)
+    } catch {
+      setDiscoveryFailed(true)
+    } finally {
+      setDiscovering(false)
+    }
+  }
+
+  return (
+    <tr className="group transition-colors hover:bg-gray-50/70">
+      <td className="px-4 py-3">
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-auto justify-start px-0 text-left"
+          onClick={() => onSelect(source)}
+        >
+          <span className="flex h-6 w-6 items-center justify-center rounded-lg border border-gray-200/70 bg-gray-50">
+            <ConnectorIcon
+              connectorId={source.type}
+              name={source.connectorName}
+              iconPath={source.connectorIcon}
+              size={16}
+              className="size-4 rounded-md border-0 bg-transparent"
+            />
+          </span>
+          <span className="font-medium text-gray-900">{source.name}</span>
+          {isSampleSource(source.raw) && (
+            <Badge variant="secondary">{t('sources.samples.tag')}</Badge>
+          )}
+        </Button>
+      </td>
+      <td className="px-4 py-3 text-gray-600">{source.type}</td>
+      <td className="px-4 py-3">
+        <span
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-lg px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset',
+            testQuery.data?.outcome === 'PASSED'
+              ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/15'
+              : testQuery.data?.outcome === 'FAILED'
+                ? 'bg-red-50 text-red-700 ring-red-600/15'
+                : 'bg-gray-50 text-gray-600 ring-gray-600/15',
+          )}
+        >
+          <span
+            className={cn(
+              'h-1 w-1 rounded-full',
+              testQuery.data?.outcome === 'PASSED'
+                ? 'bg-emerald-500'
+                : testQuery.data?.outcome === 'FAILED'
+                  ? 'bg-red-500'
+                  : 'bg-gray-400',
+            )}
+            aria-hidden="true"
+          />
+          {testStatus}
+        </span>
+      </td>
+      <td className="px-4 py-3 text-gray-500">{source.host}</td>
+      <td className="px-4 py-3 text-gray-600">
+        {tableStatus}
+        {discoveryFailed && (
+          <button
+            type="button"
+            className="ml-2 text-blue-600 hover:underline"
+            onClick={() => void retryDiscovery()}
+          >
+            {t('state.error.retry')}
+          </button>
+        )}
+      </td>
+      <td className="px-4 py-3 text-right">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-700"
+          type="button"
+          aria-label={`${t('sources.actions.test')} ${source.name}`}
+          title={t('sources.actions.test')}
+          disabled={testingSourceId !== null}
+          onClick={() => onTest(source)}
+        >
+          {testingSourceId === source.id ? (
+            <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
+          ) : (
+            <Activity className="size-3.5" aria-hidden="true" />
+          )}
+        </Button>
+      </td>
+    </tr>
   )
 }

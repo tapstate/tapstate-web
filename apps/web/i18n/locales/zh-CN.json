@@ -157,6 +157,8 @@
       "description": "结果基于当前数据源配置。",
       "action": "测试连接",
       "testing": "正在测试连接",
+      "notTested": "未测试",
+      "statusUnavailable": "状态暂不可用",
       "passed": "连接测试通过",
       "failed": "连接测试失败",
       "reenterSecrets": "测试此草稿前，请重新输入已配置的密钥。",
@@ -370,6 +372,7 @@
       "indexes": "索引",
       "loadError": "无法加载 Schema，请重试。",
       "loading": "正在加载 Schema",
+      "discoveryFailed": "Schema 发现失败",
       "networkError": "无法连接控制面，请重试刷新 Schema。",
       "noFields": "此表没有返回字段。",
       "none": "无",
@@ -1091,6 +1094,7 @@
           "errorBody": "请检查控制平面后重试。"
         },
         "states": {
+          "DRAFT": "草稿",
           "NEW": "新建",
           "STARTING": "正在启动",
           "RUNNING": "运行中",
@@ -1259,9 +1263,9 @@
     "awaitingTable": "选择表后继续",
     "previewPanel": {
       "title": "结果预览",
-      "rootContext": "根表：{{table}}",
+      "rootContext": "根实体",
       "transformsContext": "文档转换",
-      "relationContext": "{{shape}}：{{path}}",
+      "relationContext": "{{path}}",
       "documentContext": "文档上下文",
       "loading": "正在运行有界预览…",
       "awaitingPreview": "选择根表和目标端后即可预览样本。",
@@ -1274,10 +1278,11 @@
         "idle": "就绪",
         "loading": "加载中",
         "stale": "正在更新",
-        "complete": "最新结果",
+        "complete": "实时渲染",
         "error": "失败"
       },
       "sampleSummary": "{{roots}} 条根记录 · {{inputs}} 条源记录",
+      "sampleRecord": "样本：第 {{number}} 条记录",
       "sampleCapped": "根记录已达到采样上限，源数据还有更多记录。",
       "jsonDoc": "JSON 文档",
       "tableView": "表格视图",
@@ -1453,15 +1458,15 @@
       "transform": "转换"
     },
     "guide": {
-      "eyebrow": "客户 360 引导",
-      "title": "构建客户 360 视图",
-      "collapsed": "可使用客户 360 分步引导。",
+      "eyebrow": "订单 360 演示",
+      "title": "构建订单 360 视图",
+      "collapsed": "可使用订单 360 分步演示。",
       "open": "打开引导",
       "mode": "引导模式",
       "storyboard": "步骤总览",
       "inSitu": "就地引导",
       "close": "关闭引导",
-      "stepsLabel": "客户 360 引导步骤",
+      "stepsLabel": "订单 360 演示步骤",
       "stepOf": "第 {{step}} 步，共 {{total}} 步",
       "calloutBadge": "第 {{step}} 步 · {{title}}",
       "calloutHint": "💡流程引导 · 点击下一步继续，或直接查看配置卡片",
@@ -1474,8 +1479,8 @@
       "joinCount": "关联字段数：{{first}} + {{second}}",
       "applyPreset": "使用检测到的样本",
       "presetApplied": "已填入样本结构",
-      "fixedNotice": "客户 360 样例已预置配置。逐步查看后即可启动 Pipeline；配置不可修改。",
-      "fixedTransformNote": "预置流程保留原始字段。构建嵌套客户视图不需要额外转换。",
+      "fixedNotice": "订单 360 演示已预置配置。逐步查看后即可启动 Pipeline；配置不可修改。",
+      "fixedTransformNote": "预置流程保留原始字段。构建嵌套订单视图不需要额外转换。",
       "fixedTransform": {
         "shortTitle": "源字段",
         "title": "保留源字段",
@@ -1491,27 +1496,27 @@
       "saveDraft": "保存草稿",
       "steps": {
         "root": {
-          "shortTitle": "客户根表",
-          "title": "选择客户根表",
-          "body": "每条客户记录都会成为一篇根文档。引导使用已连接的数据表和检测到的主键。",
-          "calloutNext": "继续查看：嵌套订单关系 →"
+          "shortTitle": "订单根表",
+          "title": "选择订单根表",
+          "body": "每条订单记录都会成为一篇根文档。引导使用已连接的数据表和检测到的主键。",
+          "calloutNext": "继续查看：嵌套客户和明细 →"
         },
         "relations": {
-          "shortTitle": "嵌套订单",
-          "title": "嵌套订单和明细",
-          "body": "将 {{ordersTable}} 嵌入为 orders[]，将 {{itemsTable}} 嵌入为 items[]，关联字段取自已发现的 schema，也支持复合键。",
+          "shortTitle": "嵌套客户和明细",
+          "title": "嵌套客户和订单明细",
+          "body": "将 {{customerTable}} 嵌入为 customer，将 {{linesTable}} 嵌入为 lines[]，关联字段取自已发现的 schema，也支持复合键。",
           "calloutNext": "继续查看：保留源字段 →"
         },
         "transform": {
-          "shortTitle": "客户终身价值",
-          "title": "计算客户终身价值",
+          "shortTitle": "订单总额",
+          "title": "计算订单总额",
           "body": "汇总嵌套订单明细中的 {{amountField}}。可将表达式加入草稿，查看这个计算在配置中的表示方式。",
           "calloutNext": "继续查看：文档预览 →"
         },
         "preview": {
           "shortTitle": "文档预览",
           "title": "检查文档结构",
-          "body": "在 JSON 或表格预览中检查客户字段和嵌套订单数组。",
+          "body": "在 JSON 或表格预览中检查订单字段、嵌套客户和订单明细数组。",
           "calloutNext": "继续查看：保存并运行 →"
         },
         "launch": {

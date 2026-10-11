@@ -77,7 +77,6 @@ export function AddSourcesDialog({
           {sample && (
             <button
               type="button"
-              disabled={sample.added || sample.adding}
               onClick={sample.onAdd}
               className="group w-full cursor-pointer rounded-2xl border-2 border-indigo-500/30 bg-gradient-to-r from-indigo-50/80 via-purple-50/50 to-white p-3.5 text-left transition-all hover:border-indigo-500 hover:shadow-md disabled:cursor-default"
             >
@@ -96,12 +95,13 @@ export function AddSourcesDialog({
                       </span>
                     </span>
                     <span className="mt-0.5 block text-[11.5px] leading-snug text-slate-500">
-                      {sample.names.join(' & ')}. Ready for the guided pipeline builder.
+                      Choose from {sample.names.join(' & ')}. Preview the order document before
+                      installing.
                     </span>
                   </span>
                 </span>
                 <span className="flex shrink-0 items-center gap-1 rounded-xl bg-[#4F46E5] px-3.5 py-1.5 text-[11px] font-bold whitespace-nowrap text-white shadow-xs transition-colors group-hover:bg-[#4338CA]">
-                  {sample.added ? 'Added' : sample.adding ? 'Adding…' : 'Initialize'}{' '}
+                  {sample.added ? 'View samples' : 'Choose samples'}{' '}
                   <ArrowRight className="h-3.5 w-3.5" />
                 </span>
               </span>

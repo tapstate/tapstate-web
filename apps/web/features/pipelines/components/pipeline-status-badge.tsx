@@ -5,6 +5,7 @@ import type { PipelineCatalogState } from '@/service/pipelines/pipeline-client'
 import { cn } from '@/lib/utils'
 
 const pipelineStatusClasses: Record<PipelineCatalogState, string> = {
+  DRAFT: 'pipeline-list__status--draft text-slate-600 bg-slate-100 border-slate-200',
   NEW: 'pipeline-list__status--new text-sky-700 bg-sky-50/80 border-sky-200/50',
   STARTING: 'pipeline-list__status--starting text-blue-700 bg-blue-50/80 border-blue-200/50',
   RUNNING: 'pipeline-list__status--running text-blue-700 bg-blue-50/80 border-blue-200/50',
@@ -29,19 +30,7 @@ export function PipelineStatusBadge({
   const { t } = useTranslation()
 
   if (!status) {
-    return (
-      <span
-        className={cn(
-          'pipeline-list__status pipeline-list__status--unavailable h-6 shrink-0 self-start rounded-md border-gray-200 bg-gray-50 px-2 text-[11px] leading-4 font-semibold text-gray-500',
-          className,
-        )}
-        data-state="unavailable"
-        data-testid="pipeline-status"
-      >
-        <span className="pipeline-list__status-dot" aria-hidden="true" />
-        {t('pipelines.status.unavailable')}
-      </span>
-    )
+    return null
   }
 
   return (
