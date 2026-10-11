@@ -16,6 +16,7 @@ import {
   startSampleInstall,
   type SampleSourceSetting,
 } from '@/service/sample-source-client'
+import { SourceClientError } from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
 
 const STORAGE_KEY = 'tapstate.sample-installation'
@@ -72,9 +73,11 @@ export function SampleSourcesDialog({
     queryKey: ['sample-installation', jobId],
     enabled: Boolean(jobId),
     queryFn: () => getSampleInstallStatus(jobId!, apiFetch),
-    refetchInterval: (query) => (query.state.data?.finished ? false : 1200),
+    refetchInterval: (query) => (query.state.error || query.state.data?.finished ? false : 1200),
     retry: false,
   })
+  const statusError = statusQuery.error instanceof SourceClientError ? statusQuery.error : null
+  const missingJob = statusError?.status === 400 || statusError?.status === 404
   const job = statusQuery.data
   const ready = job?.items.filter((item) => item.stage === 'READY') ?? []
   const failures = job?.items.filter((item) => item.stage === 'FAILED') ?? []
@@ -105,8 +108,12 @@ export function SampleSourcesDialog({
       window.localStorage.setItem(STORAGE_KEY, result.id)
       queryClient.setQueryData(['sample-installation', result.id], result)
       setJobId(result.id)
-    } catch {
-      setStartError('Installation could not start. Check the cluster connection and try again.')
+    } catch (error) {
+      setStartError(
+        error instanceof SourceClientError && error.code
+          ? `${error.message} (${error.code})`
+          : 'Installation could not start. Check the cluster connection and try again.',
+      )
     } finally {
       setStarting(false)
     }
@@ -438,19 +445,42 @@ export function SampleSourcesDialog({
             </p>
           )}
           {statusQuery.isError && (
-            <p role="alert" className="mt-3 text-[12px] text-red-700">
-              This setup status is no longer available.{' '}
-              <button
-                type="button"
-                className="underline"
-                onClick={() => {
-                  window.localStorage.removeItem(STORAGE_KEY)
-                  setJobId(null)
-                }}
-              >
-                Choose samples again
-              </button>
-            </p>
+            <div
+              role="alert"
+              className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-[12px] text-red-800"
+            >
+              <p>
+                {missingJob
+                  ? 'This setup status is no longer available.'
+                  : statusError?.status === 500
+                    ? 'The cluster encountered an internal error while preparing samples. The setup may have stopped.'
+                    : 'Could not check sample setup status. The cluster may still be working.'}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-3 font-medium">
+                {missingJob ? (
+                  <button type="button" className="underline" onClick={chooseMore}>
+                    Choose samples again
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="underline"
+                    onClick={() => void statusQuery.refetch()}
+                  >
+                    Retry status
+                  </button>
+                )}
+              </div>
+              <details className="mt-2 text-red-700">
+                <summary className="cursor-pointer">Technical details</summary>
+                <div className="mt-1 font-mono break-all">
+                  <div>Job: {jobId}</div>
+                  {statusError?.status != null && <div>HTTP {statusError.status}</div>}
+                  {statusError?.code && <div>Code: {statusError.code}</div>}
+                  {statusError?.message && <div>{statusError.message}</div>}
+                </div>
+              </details>
+            </div>
           )}
         </div>
         {!job && (
