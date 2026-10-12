@@ -4,13 +4,17 @@ import type { DeploymentProfile } from './deployment-profile'
 
 export type SourceIdentity = Pick<SourceView, 'id' | 'connector'>
 
-/** Profile policy narrows cloud to Atlas; OP exposes only sources whose catalog declares sink support. */
+/** Release Cloud targets Atlas; local Cloud also permits catalog-confirmed MongoDB sinks. */
 export function isTargetConnector(
   connector: string | null | undefined,
   deploymentProfile: DeploymentProfile,
   connectors: readonly ConnectorSummary[],
+  localDevelopment: boolean = import.meta.env.VITE_LOCAL_DEVELOPMENT === 'true',
 ) {
-  if (deploymentProfile === 'cloud') return connector === 'mongodb-atlas'
+  if (deploymentProfile === 'cloud') {
+    if (connector === 'mongodb-atlas') return true
+    if (connector !== 'mongodb' || localDevelopment !== true) return false
+  }
   return connectors.find((item) => item.id === connector)?.sink === true
 }
 
@@ -18,8 +22,9 @@ export function targetSources<T extends SourceIdentity>(
   sources: readonly T[],
   connectors: readonly ConnectorSummary[],
   deploymentProfile: DeploymentProfile,
+  localDevelopment?: boolean,
 ) {
   return sources.filter((source) =>
-    isTargetConnector(source.connector, deploymentProfile, connectors),
+    isTargetConnector(source.connector, deploymentProfile, connectors, localDevelopment),
   )
 }

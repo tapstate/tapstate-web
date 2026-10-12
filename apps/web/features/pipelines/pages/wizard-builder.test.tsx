@@ -6,9 +6,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { PipelineClientError, type PipelineDraft } from '@/service/pipelines/pipeline-client'
 
-import type { WizardViewState } from '../components/reference-wizard/ReferenceWizardBuilder'
+import type {
+  DataSourceMeta,
+  WizardViewState,
+} from '../components/reference-wizard/ReferenceWizardBuilder'
 
 const {
+  getDeploymentProfile,
   getPipelineDraft,
   previewPipelineDraft,
   publishPipelineDraft,
@@ -18,6 +22,7 @@ const {
   listConnectors,
   listSources,
 } = vi.hoisted(() => ({
+  getDeploymentProfile: vi.fn(),
   getPipelineDraft: vi.fn(),
   previewPipelineDraft: vi.fn(),
   publishPipelineDraft: vi.fn(),
@@ -49,6 +54,18 @@ vi.mock('@/service/pipelines/pipeline-client', () => ({
 
 vi.mock('@/service/source-client', () => ({ getSourceSchema, listConnectors, listSources }))
 
+vi.mock('../model/deployment-profile', () => ({ getDeploymentProfile }))
+
+vi.mock('../model/pipeline-target-connectors', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../model/pipeline-target-connectors')>()
+  return {
+    ...actual,
+    // Exercise the compiled local-build default while retaining the actual target policy.
+    targetSources: (...args: Parameters<typeof actual.targetSources>) =>
+      actual.targetSources(args[0], args[1], args[2], args[3] ?? true),
+  }
+})
+
 vi.mock('@/stores/auth-store', () => ({
   useAuthStore: <T,>(selector: (state: { apiFetch: typeof fetch }) => T) =>
     selector({ apiFetch: vi.fn() as unknown as typeof fetch }),
@@ -60,7 +77,13 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
     footer,
     actions,
     readOnly,
+    initial,
+    catalog,
+    destinationName,
   }: {
+    initial?: WizardViewState
+    catalog?: DataSourceMeta[]
+    destinationName?: string
     onChange: (state: WizardViewState) => void
     footer: React.ReactNode
     actions?: React.ReactNode
@@ -69,6 +92,11 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
     <section
       className="wizard-reference-editor-column"
       data-read-only={readOnly ? 'true' : 'false'}
+      data-destination-name={destinationName}
+      data-destination-source={initial?.destinationSourceId}
+      data-mongo-sink={
+        catalog?.find((source) => source.id === 'mongo_out')?.sink === true ? 'true' : 'false'
+      }
     >
       <button
         data-testid="change-wizard"
@@ -140,6 +168,7 @@ const initialDraft: PipelineDraft = {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  getDeploymentProfile.mockReturnValue('on-prem')
   listSources.mockResolvedValue([{ id: 'mysql', connector: 'mysql' }])
   listConnectors.mockResolvedValue([
     {
@@ -189,6 +218,54 @@ afterEach(() => {
 })
 
 describe('WizardBuilder publish flow', () => {
+  it('keeps Cloud wizard output aligned with its Atlas picker in a local build', async () => {
+    getDeploymentProfile.mockReturnValue('cloud')
+    listSources.mockResolvedValue([
+      { id: 'mongo_out', connector: 'mongodb' },
+      { id: 'atlas_out', connector: 'mongodb-atlas' },
+      { id: 'mysql', connector: 'mysql' },
+    ])
+    listConnectors.mockResolvedValue([
+      { id: 'mongodb', name: 'MongoDB', sink: true, writeModes: ['upsert'] },
+      { id: 'mongodb-atlas', name: 'MongoDB Atlas', sink: true, writeModes: ['upsert'] },
+      { id: 'mysql', name: 'MySQL', sink: false },
+    ])
+    const cloudDraft = {
+      ...initialDraft,
+      wizard: {
+        ...initialDraft.wizard!,
+        output: {
+          kind: 'atlas',
+          config: { sourceId: 'missing', table: 'orders', writeMode: 'upsert' },
+        },
+      },
+    }
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={cloudDraft.pipelineId} draft={cloudDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(queryClient.getQueryState(['wizard', 'sources'])?.status).toBe('success')
+        expect(queryClient.getQueryState(['wizard', 'connectors'])?.status).toBe('success')
+      })
+    })
+    expect(container?.querySelector('[data-mongo-sink="true"]')).not.toBeNull()
+    expect(
+      container?.querySelector('[data-destination-name]')?.getAttribute('data-destination-name'),
+    ).toBe('MongoDB Atlas (atlas_out)')
+    await vi.waitFor(() =>
+      expect(container?.querySelector('[data-destination-source="atlas_out"]')).not.toBeNull(),
+    )
+  })
+
   it('shows runtime lookup progress and failure in the dock while keeping the Wizard mounted', async () => {
     container = document.createElement('div')
     document.body.append(container)

@@ -12,6 +12,27 @@ const connectors = [
 ] as unknown as ConnectorSummary[]
 
 describe('pipeline target connectors', () => {
+  it('allows a catalog-confirmed MongoDB target only in a local Cloud distribution', () => {
+    expect(isTargetConnector('mongodb', 'cloud', connectors, true)).toBe(true)
+    expect(isTargetConnector('mongodb', 'cloud', connectors, false)).toBe(false)
+    expect(isTargetConnector('postgres', 'cloud', connectors, true)).toBe(false)
+    expect(isTargetConnector('mysql', 'cloud', connectors, true)).toBe(false)
+    expect(isTargetConnector('mongodb', 'cloud', [], true)).toBe(false)
+    expect(
+      isTargetConnector(
+        'mongodb',
+        'cloud',
+        [{ id: 'mongodb', sink: false }] as unknown as ConnectorSummary[],
+        true,
+      ),
+    ).toBe(false)
+    expect(
+      targetSources([{ id: 'local_out', connector: 'mongodb' }], connectors, 'cloud', true).map(
+        ({ id }) => id,
+      ),
+    ).toEqual(['local_out'])
+  })
+
   it('limits cloud to Atlas and uses declared sink capability in OP', () => {
     expect(isTargetConnector('mongodb-atlas', 'cloud', connectors)).toBe(true)
     expect(isTargetConnector('mongodb', 'cloud', connectors)).toBe(false)

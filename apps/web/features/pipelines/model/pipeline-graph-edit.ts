@@ -640,6 +640,7 @@ export function validatePipelineGraph(
   availableSources?: readonly (string | SourceIdentity)[],
   connectorCatalog: readonly ConnectorSummary[] = [],
   deploymentProfile: DeploymentProfile = 'on-prem',
+  localDevelopment?: boolean,
 ): PipelineGraphDiagnostic[] {
   const diagnostics: PipelineGraphDiagnostic[] = []
   const availableSourceIds = availableSources?.map((source) =>
@@ -768,6 +769,7 @@ export function validatePipelineGraph(
         connectorBySourceId.get(config.sourceId),
         deploymentProfile,
         connectorCatalog,
+        localDevelopment,
       )
     ) {
       diagnostics.push({

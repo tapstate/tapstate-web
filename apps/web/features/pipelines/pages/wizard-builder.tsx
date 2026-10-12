@@ -135,7 +135,8 @@ export function WizardBuilder({
   const outputConfig = draft.wizard?.output as
     | { kind?: string; config?: { sourceId?: string; writeMode?: string } }
     | undefined
-  const availableDestinationSources = targetSources(sources, connectors, deploymentProfile)
+  // Wizard output retains Atlas semantics in every Cloud distribution.
+  const availableDestinationSources = targetSources(sources, connectors, deploymentProfile, false)
   const destination =
     availableDestinationSources.find((source) => source.id === outputConfig?.config?.sourceId) ||
     availableDestinationSources[0]
