@@ -1028,6 +1028,8 @@
         "errorBody": "Check the control plane and try again.",
         "monitoring": {
           "loading": "Loading monitoring",
+          "draftTitle": "This Pipeline is a draft",
+          "draftBody": "Save and start the Pipeline to view its runtime status and metrics.",
           "snapshot": "Current metrics",
           "metricsTitle": "Metric snapshot",
           "metricsBody": "Values reported by the Pipeline observation endpoint.",

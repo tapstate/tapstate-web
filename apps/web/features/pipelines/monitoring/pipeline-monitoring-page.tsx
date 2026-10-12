@@ -17,11 +17,17 @@ function stateTone(state: PipelineCatalogState) {
   return state.toLowerCase()
 }
 
-export function PipelineMonitoringPage({ pipelineId }: { pipelineId: string }) {
+export function PipelineMonitoringPage({
+  pipelineId,
+  hasArtifact = true,
+}: {
+  pipelineId: string
+  hasArtifact?: boolean
+}) {
   const { i18n, t } = useTranslation()
   const queryClient = useQueryClient()
   const [autoRefresh, setAutoRefresh] = useState(true)
-  const { status, metrics } = usePipelineMonitoringQueries(pipelineId, autoRefresh)
+  const { status, metrics } = usePipelineMonitoringQueries(pipelineId, autoRefresh, hasArtifact)
   const isLoading = status.isLoading || metrics.isLoading
   const error = status.error ?? metrics.error
   const hasError = status.isError || metrics.isError
@@ -45,6 +51,19 @@ export function PipelineMonitoringPage({ pipelineId }: { pipelineId: string }) {
     pauseAria: t('pipelines.workspace.runtime.monitoring.pauseAria'),
     resume: t('pipelines.workspace.runtime.monitoring.resume'),
     resumeAria: t('pipelines.workspace.runtime.monitoring.resumeAria'),
+  }
+
+  if (!hasArtifact) {
+    return (
+      <section className="pipeline-monitoring__state mt-6" aria-live="polite">
+        <h2 className="pipeline-monitoring__state-title">
+          {t('pipelines.workspace.runtime.monitoring.draftTitle')}
+        </h2>
+        <p className="pipeline-monitoring__state-description">
+          {t('pipelines.workspace.runtime.monitoring.draftBody')}
+        </p>
+      </section>
+    )
   }
 
   if (isLoading) {

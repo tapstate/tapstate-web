@@ -116,6 +116,20 @@ function isPipelineReadOnly(status?: PipelineRuntimeState) {
   return status === 'RUNNING' || status === 'PAUSED' || status === 'FAILED'
 }
 
+function runtimeStateFromCatalog(state?: PipelineCatalogState): PipelineRuntimeState | undefined {
+  switch (state) {
+    case 'NEW':
+    case 'RUNNING':
+    case 'PAUSED':
+    case 'STOPPED':
+    case 'COMPLETED':
+    case 'FAILED':
+      return state
+    default:
+      return undefined
+  }
+}
+
 function connectorForConfiguration(
   configuration: PipelineNodeConfiguration | null,
   connectorsBySourceId: ReadonlyMap<string, PipelineNodeConnector>,
@@ -1574,19 +1588,25 @@ export function PipelineWorkspacePage({
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   })
+  const catalogItem = catalog.data?.find((item) => item.id === pipelineId)
+  const hasArtifact =
+    Boolean(
+      pipelineDraft.data?.draft?.publishedArtifactHash ||
+      pipelineDraft.data?.draft?.baseArtifactHash,
+    ) ||
+    catalogItem?.hasArtifact === true ||
+    Boolean(pipelineInfo.data)
   const mergedStatus = useQuery({
     queryKey: ['pipelines', pipelineId, 'status'],
     queryFn: () => getPipelineStatus(pipelineId, apiFetch),
-    enabled: pipelineDraft.isSuccess,
+    enabled: pipelineDraft.isSuccess && hasArtifact,
     retry: false,
     refetchInterval: 5000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   })
-  const catalogItem = catalog.data?.find((item) => item.id === pipelineId)
-  const lifecycleStatus = mergedStatus.data?.state ?? catalogItem?.status.state
-  const hasArtifact =
-    mergedStatus.data?.hasArtifact ?? catalogItem?.hasArtifact ?? Boolean(pipelineInfo.data)
+  const lifecycleStatus =
+    mergedStatus.data?.displayState ?? mergedStatus.data?.state ?? catalogItem?.status.state
   const runtimeStatus = hasArtifact
     ? lifecycleStatus === 'STARTING' || lifecycleStatus === 'RESUMING'
       ? 'RUNNING'
@@ -1594,6 +1614,7 @@ export function PipelineWorkspacePage({
         mergedStatus.data?.desiredState ??
         catalogItem?.status.observedState ??
         catalogItem?.status.desiredState ??
+        runtimeStateFromCatalog(lifecycleStatus) ??
         'NEW')
     : undefined
   const basicInfo = useMemo<PipelineDraftBasicInfo>(() => {
@@ -1709,7 +1730,7 @@ export function PipelineWorkspacePage({
         activeSection={section}
         collapsed={navigationCollapsed}
         onCollapsedChange={setNavigationCollapsed}
-        status={catalogItem?.status.state}
+        status={lifecycleStatus}
         hasArtifact={hasArtifact}
         canEditBasicInfo={canEditBasicInfo}
         onSaveBasicInfo={saveBasicInfo}
@@ -1719,8 +1740,8 @@ export function PipelineWorkspacePage({
           pipelineId={pipelineId}
           runtimeStatus={runtimeStatus}
           lifecycleStatus={lifecycleStatus}
-          runtimeObservationPending={hasArtifact && catalog.isPending && mergedStatus.isPending}
-          runtimeObservationError={hasArtifact && catalog.isError && mergedStatus.isError}
+          runtimeObservationPending={hasArtifact && mergedStatus.isPending}
+          runtimeObservationError={hasArtifact && mergedStatus.isError}
           onRetryRuntimeObservation={() => {
             void catalog.refetch()
             void mergedStatus.refetch()
@@ -1733,7 +1754,9 @@ export function PipelineWorkspacePage({
           section={section}
           showHeading={section !== 'logs'}
         >
-          {section === 'monitoring' && <PipelineMonitoringPage pipelineId={pipelineId} />}
+          {section === 'monitoring' && (
+            <PipelineMonitoringPage pipelineId={pipelineId} hasArtifact={hasArtifact} />
+          )}
           {section === 'logs' && <PipelineLogsPage pipelineId={pipelineId} />}
           {section === 'api' && <ApiAccessPage pipelineId={pipelineId} />}
         </WorkspacePageFrame>

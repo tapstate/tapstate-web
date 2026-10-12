@@ -210,6 +210,7 @@ export interface PipelineStatusFailure {
 export interface PipelineStatus {
   pipelineId: string
   state: PipelineCatalogState
+  displayState?: PipelineCatalogState
   failure?: PipelineStatusFailure | null
   observedAt?: string | null
   observedAgeMillis?: number | null
@@ -493,9 +494,20 @@ function isPipelineStatus(value: unknown): value is PipelineStatus {
   return (
     isRecord(value) &&
     typeof value.pipelineId === 'string' &&
-    ['DRAFT', 'NEW', 'STARTING', 'RUNNING', 'PAUSING', 'PAUSED', 'RESUMING', 'STOPPING', 'STOPPED', 'COMPLETED', 'FAILED', 'UNAVAILABLE'].includes(
-      value.state as string,
-    ) &&
+    [
+      'DRAFT',
+      'NEW',
+      'STARTING',
+      'RUNNING',
+      'PAUSING',
+      'PAUSED',
+      'RESUMING',
+      'STOPPING',
+      'STOPPED',
+      'COMPLETED',
+      'FAILED',
+      'UNAVAILABLE',
+    ].includes(value.state as string) &&
     (value.failure === undefined ||
       value.failure === null ||
       isPipelineStatusFailure(value.failure))
@@ -506,9 +518,15 @@ function isPipelineCatalogStatus(value: unknown): value is PipelineCatalogStatus
   const runtimeStates = ['NEW', 'RUNNING', 'PAUSED', 'STOPPED', 'COMPLETED', 'FAILED']
   return (
     isRecord(value) &&
-    [...runtimeStates, 'DRAFT', 'STARTING', 'PAUSING', 'RESUMING', 'STOPPING', 'UNAVAILABLE'].includes(
-      value.state as string,
-    ) &&
+    [
+      ...runtimeStates,
+      'DRAFT',
+      'STARTING',
+      'PAUSING',
+      'RESUMING',
+      'STOPPING',
+      'UNAVAILABLE',
+    ].includes(value.state as string) &&
     (value.desiredState === undefined ||
       value.desiredState === null ||
       runtimeStates.includes(value.desiredState as string)) &&

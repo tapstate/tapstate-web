@@ -1028,6 +1028,8 @@
         "errorBody": "請檢查控制平面後重試。",
         "monitoring": {
           "loading": "正在載入監控資料",
+          "draftTitle": "此 Pipeline 仍是草稿",
+          "draftBody": "儲存並啟動 Pipeline 後，即可查看執行狀態和指標。",
           "snapshot": "目前指標",
           "metricsTitle": "指標快照",
           "metricsBody": "Pipeline 觀測介面目前回報的數值。",
