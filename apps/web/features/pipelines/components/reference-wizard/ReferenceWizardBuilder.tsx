@@ -7,18 +7,21 @@ import {
   Braces,
   X,
   FileCode,
+  Play,
   Zap,
   Check,
   RefreshCw,
   Layers,
   Workflow,
+  Copy,
 } from 'lucide-react'
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { ConnectorIcon } from '@/components/connector-icon'
+import type { PipelinePreviewRun } from '@/service/pipelines/pipeline-client'
 
 import './wizard-reference.css'
+import { ConnectorIcon } from '@/components/connector-icon'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -43,8 +46,19 @@ export interface WizardBuilderProps {
   footer: React.ReactNode
   actions?: React.ReactNode
   compiledSpec: string
+  livePreview: PipelinePreviewRun | null
+  livePreviewStatus: 'idle' | 'loading' | 'stale' | 'complete' | 'error'
+  livePreviewError: string
   sourceError?: string
   readOnly?: boolean
+  readOnlyLabel?: string
+  activeGuideTarget?: string
+  renderGuideStep?: (step: number) => React.ReactNode
+  showWorkbenchHeader?: boolean
+  onInspectPlan?: () => Promise<string>
+  onStart?: () => void
+  startBusy?: boolean
+  actionError?: string
 }
 
 export interface JoinCondition {
@@ -117,6 +131,38 @@ export interface WizardViewState {
   destinationWriteMode: string
 }
 
+function ReadOnlyFieldset({
+  disabled,
+  label,
+  children,
+}: {
+  disabled: boolean
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <fieldset
+      disabled={disabled}
+      className="contents"
+      aria-label={disabled ? label : undefined}
+      onClickCapture={
+        disabled
+          ? (event) => {
+              event.preventDefault()
+              event.stopPropagation()
+            }
+          : undefined
+      }
+    >
+      {children}
+    </fieldset>
+  )
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
 export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   catalog: AVAILABLE_DATA_SOURCES,
   initial,
@@ -126,13 +172,43 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   footer,
   actions,
   compiledSpec,
+  livePreview,
+  livePreviewStatus,
+  livePreviewError,
   sourceError,
   readOnly = false,
+  readOnlyLabel,
+  activeGuideTarget,
+  renderGuideStep,
+  showWorkbenchHeader = false,
+  onInspectPlan,
+  onStart,
+  startBusy = false,
+  actionError,
 }) => {
   const { t } = useTranslation()
   const [activeContext, setActiveContext] = React.useState('root')
   const [previewMode, setPreviewMode] = React.useState<'json' | 'table'>('json')
-  const [showPlanModal, setShowPlanModal] = React.useState(false)
+  const [planMode, setPlanMode] = React.useState<'dsl' | 'json' | null>(null)
+  const [dsl, setDsl] = React.useState<string | null>(null)
+  const [dslLoading, setDslLoading] = React.useState(false)
+  const [dslError, setDslError] = React.useState('')
+  async function inspectPlan() {
+    if (!onInspectPlan) return
+    setPlanMode('dsl')
+    setDsl(null)
+    setDslError('')
+    setDslLoading(true)
+    try {
+      setDsl(await onInspectPlan())
+    } catch (cause) {
+      setDslError(cause instanceof Error ? cause.message : t('wizard.dslUnavailable'))
+    } finally {
+      setDslLoading(false)
+    }
+  }
+  const [copyStatus, setCopyStatus] = React.useState<'idle' | 'copied' | 'failed'>('idle')
+  const copyResetTimer = React.useRef<number | null>(null)
   const [targetCollection, setTargetCollection] = React.useState(initial.destinationTable)
   const [targetSourceId, setTargetSourceId] = React.useState(initial.destinationSourceId)
   const [targetWriteMode, setTargetWriteMode] = React.useState(
@@ -146,6 +222,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   const [scratchSelectedTable, setScratchSelectedTable] = React.useState(initial.root?.table || '')
   const [relations, setRelations] = React.useState<RelationNode[]>(initial.relations)
   const [pipelineTransforms, setPipelineTransforms] = React.useState(initial.transforms)
+  const [selectedDocumentIndex, setSelectedDocumentIndex] = React.useState(0)
   const targetDataSource = AVAILABLE_DATA_SOURCES.find((source) => source.id === targetSourceId)
   const availableWriteModes = targetDataSource?.writeModes?.length
     ? targetDataSource.writeModes
@@ -298,6 +375,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     })
   }
 
+  const updateRelationType = (id: string, type: RelationNode['type']) => {
+    setActiveContext(id)
+    updateRelation(id, (relation) => ({ ...relation, type }))
+  }
+
   const handleAddCondition = (rel: RelationNode) => {
     const conds = [...getConditions(rel)]
     const childCols = getColumnsForTable(rel.source, rel.table)
@@ -439,8 +521,17 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     setNewRelTable(tableName)
     const tbl = getTablesForSource(newRelSource).find((t) => t.name === tableName)
     if (tbl) {
+      const parentColumns = rootConfig?.columns || []
+      const preferredParentKey = tbl.defaultParentKey
+      const defaultParentKey =
+        (preferredParentKey && parentColumns.includes(preferredParentKey)
+          ? preferredParentKey
+          : '') ||
+        rootConfig?.keys?.find((key) => parentColumns.includes(key)) ||
+        parentColumns[0] ||
+        ''
       setNewRelKey(tbl.primaryKey || tbl.columns[0] || '')
-      setNewRelParentKey(tbl.defaultParentKey || rootConfig?.primaryKey || 'id')
+      setNewRelParentKey(defaultParentKey)
       setNewRelTargetField(tbl.name.split('.').pop() || 'items')
     }
   }
@@ -470,6 +561,10 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   }
 
   const removeRelation = (id: string) => {
+    const removed = flattenRelations(relations).find((relation) => relation.id === id)
+    if (removed && flattenRelations([removed]).some((relation) => relation.id === activeContext)) {
+      setActiveContext('root')
+    }
     const remove = (nodes: RelationNode[]): RelationNode[] =>
       nodes.filter((r) => r.id !== id).map((r) => ({ ...r, children: remove(r.children || []) }))
     setRelations(remove)
@@ -530,41 +625,430 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     setActiveAddChildForRelId(null)
   }
 
-  // Preview Label & Data
-  const activeContextLabel = React.useMemo(() => {
-    if (activeContext === 'root') return 'Root Anchor'
-    if (activeContext === 'doc_process') return 'Post Operations'
-    if (activeContext === 'destination') return t('wizard.destinationContext')
-    for (const rel of relations) {
-      if (rel.id === activeContext) return rel.targetField
-      if (rel.children) {
-        const child = rel.children.find((c) => c.id === activeContext)
-        if (child) return `${rel.targetField}.${child.targetField}`
+  const relationChain = React.useMemo(() => {
+    const find = (nodes: RelationNode[], parents: RelationNode[]): RelationNode[] | null => {
+      for (const relation of nodes) {
+        const chain = [...parents, relation]
+        if (relation.id === activeContext) return chain
+        const child = find(relation.children || [], chain)
+        if (child) return child
       }
+      return null
     }
-    return 'Document Context'
+    return find(relations, []) || []
   }, [activeContext, relations])
 
+  const activeContextLabel = React.useMemo(() => {
+    if (activeContext === 'root') {
+      return t('wizard.previewPanel.rootContext', { table: rootConfig?.table || '' })
+    }
+    if (activeContext === 'doc_process') return t('wizard.previewPanel.transformsContext')
+    if (activeContext === 'destination') return t('wizard.destinationContext')
+    const relation = relationChain[relationChain.length - 1]
+    if (relation) {
+      return t('wizard.previewPanel.relationContext', {
+        path: relationChain
+          .map((item) => item.targetField)
+          .filter(Boolean)
+          .join('.'),
+      })
+    }
+    return t('wizard.previewPanel.documentContext')
+  }, [activeContext, relationChain, rootConfig?.table, t])
+
   const compiledPlanJson = compiledSpec
-  const shapeFor = (columns: string[], children: RelationNode[]): Record<string, unknown> => {
-    const shape: Record<string, unknown> = Object.fromEntries(columns.map((c) => [c, null]))
-    for (const r of children) {
-      const child = shapeFor(getColumnsForTable(r.source, r.table), r.children || [])
-      if (r.type === 'flatten') Object.assign(shape, child)
-      else if (r.targetField) shape[r.targetField] = r.type === 'sub_array' ? [child] : child
-    }
-    return shape
-  }
-  const previewDoc = rootConfig
-    ? shapeFor(getColumnsForTable(rootConfig.source, rootConfig.table), relations)
-    : {}
-  for (const step of pipelineTransforms) {
-    if (step.type !== 'map') continue
-    for (const field of step.config.map?.fields || []) {
-      if (field.ruleType === 'delete') delete previewDoc[field.outputField]
-      else if (field.outputField) previewDoc[field.outputField] = null
+  const documents = livePreview?.documents || []
+  const selectedIndex = Math.min(selectedDocumentIndex, Math.max(0, documents.length - 1))
+  const selectedDocument = documents[selectedIndex] || null
+  const rootFields = new Set(rootConfig?.columns || [])
+  const relationFields = new Set<string>()
+  const collectRelationFields = (nodes: RelationNode[]) => {
+    for (const relation of nodes) {
+      if (relation.type === 'flatten') {
+        getColumnsForTable(relation.source, relation.table).forEach((field) =>
+          relationFields.add(field),
+        )
+      } else if (relation.targetField) {
+        relationFields.add(relation.targetField)
+      }
+      collectRelationFields(relation.children || [])
     }
   }
+  collectRelationFields(relations)
+
+  const pointerSegment = (segment: string) => segment.replace(/~/g, '~0').replace(/\//g, '~1')
+  const previewContexts = livePreview?.contexts || []
+  const computedFields = new Set(
+    previewContexts
+      .filter((context) => context.kind === 'transform' && Array.isArray(context.effects))
+      .flatMap((context) => (context.effects as unknown[]).filter(isObjectRecord))
+      .filter((effect) => effect.kind !== 'removed' && typeof effect.pointer === 'string')
+      .map(
+        (effect) =>
+          (effect.pointer as string)
+            .split('/')
+            .filter(Boolean)
+            .at(-1)
+            ?.replace(/~1/g, '/')
+            .replace(/~0/g, '~') || '',
+      ),
+  )
+  const pointerPatterns = (context: Record<string, unknown> | undefined) =>
+    Array.isArray(context?.pointerPatterns)
+      ? context.pointerPatterns.filter((pointer): pointer is string => typeof pointer === 'string')
+      : []
+  const focusPaths = React.useMemo(() => {
+    if (activeContext === 'root') {
+      const reported = pointerPatterns(previewContexts.find((context) => context.id === 'root'))
+      if (reported.length > 0) return reported
+      // Root provenance is implicit in the server context. Keep relations and computed fields separate.
+      return Object.keys(selectedDocument || {})
+        .filter((field) => !relationFields.has(field) && !computedFields.has(field))
+        .map((field) => `/${pointerSegment(field)}`)
+    }
+    if (activeContext !== 'doc_process') {
+      const activeRelation = relationChain.at(-1)
+      const activePath = relationChain
+        .filter((relation) => relation.type !== 'flatten')
+        .map((relation) => relation.targetField)
+        .filter(Boolean)
+        .join('/')
+      const parentPath = relationChain
+        .slice(0, -1)
+        .filter((relation) => relation.type !== 'flatten')
+        .map((relation) => relation.targetField)
+        .filter(Boolean)
+        .join('/')
+      const matching = previewContexts.filter(
+        (context) =>
+          context.kind === 'relation' &&
+          (activeRelation?.type === 'flatten'
+            ? context.shape === 'flat' && context.parentPath === parentPath
+            : context.path === activePath),
+      )
+      const serverPaths = matching.flatMap((context) => pointerPatterns(context))
+      if (serverPaths.length > 0) return [...new Set(serverPaths)]
+
+      // Flatten has no embedded path; use the returned root output fields for its local slice.
+      if (activeRelation?.type === 'flatten') {
+        const flattenOwners = new Map<string, number>()
+        const countFlattenFields = (nodes: RelationNode[]) => {
+          nodes.forEach((node) => {
+            if (node.type === 'flatten') {
+              getColumnsForTable(node.source, node.table).forEach((field) =>
+                flattenOwners.set(field, (flattenOwners.get(field) || 0) + 1),
+              )
+            }
+            countFlattenFields(node.children || [])
+          })
+        }
+        countFlattenFields(relations)
+        return getColumnsForTable(activeRelation.source, activeRelation.table)
+          .filter(
+            (field) =>
+              field in (selectedDocument || {}) &&
+              !rootFields.has(field) &&
+              flattenOwners.get(field) === 1,
+          )
+          .map((field) => `/${pointerSegment(field)}`)
+      }
+      return activePath ? [`/${activePath.split('/').map(pointerSegment).join('/')}`] : []
+    }
+    return [
+      ...new Set(
+        previewContexts
+          .filter((context) => context.kind === 'transform')
+          .flatMap((context) => pointerPatterns(context)),
+      ),
+    ]
+  }, [
+    activeContext,
+    pointerSegment,
+    pointerPatterns,
+    previewContexts,
+    relationFields,
+    relationChain,
+    relations,
+    rootFields,
+    selectedDocument,
+    computedFields,
+  ])
+
+  const transformTrace = React.useMemo(() => {
+    if (activeContext !== 'doc_process') return null
+    const effects = previewContexts.flatMap((context) =>
+      context.kind === 'transform' && Array.isArray(context.effects)
+        ? context.effects.filter(isObjectRecord)
+        : [],
+    )
+    const annotations = effects
+      .map((effect) => effect.annotation)
+      .filter((annotation): annotation is string => typeof annotation === 'string')
+    const unknownOrigins = previewContexts
+      .filter((context) => context.kind === 'transform' && context.origin === 'unknown')
+      .map((context) => context.stepId)
+      .filter((stepId): stepId is string => typeof stepId === 'string')
+    const fields = [
+      ...new Set(
+        effects
+          .map((effect) => effect.pointer)
+          .filter((pointer): pointer is string => typeof pointer === 'string')
+          .map(
+            (pointer) =>
+              pointer.split('/').filter(Boolean).at(-1)?.replace(/~1/g, '/').replace(/~0/g, '~') ||
+              '',
+          ),
+      ),
+    ]
+    const types = [
+      ...new Set(
+        previewContexts
+          .filter((context) => context.kind === 'transform')
+          .map((context) => context.type)
+          .filter((type): type is string => typeof type === 'string'),
+      ),
+    ]
+    if (effects.length === 0 && unknownOrigins.length === 0) return null
+    return { type: types.join(', '), annotations, fields, unknownOrigins }
+  }, [activeContext, previewContexts])
+
+  const previewTableColumns = Array.from(
+    new Set(documents.flatMap((document) => Object.keys(document))),
+  ).slice(0, 32)
+  const isExtendedJsonScalar = (value: unknown) =>
+    isObjectRecord(value) &&
+    Object.keys(value).length === 1 &&
+    [
+      '$binary',
+      '$date',
+      '$maxKey',
+      '$minKey',
+      '$numberDecimal',
+      '$numberDouble',
+      '$numberInt',
+      '$numberLong',
+      '$oid',
+      '$regularExpression',
+      '$timestamp',
+      '$undefined',
+      '$uuid',
+    ].some((key) => key in value)
+
+  const displayScalar = (value: unknown, quoteStrings = true): string => {
+    if (isObjectRecord(value) && isExtendedJsonScalar(value)) {
+      for (const key of ['$numberLong', '$numberInt', '$numberDouble', '$numberDecimal']) {
+        const numeric = value[key]
+        if (typeof numeric === 'string' && /^-?(?:\d+)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(numeric))
+          return numeric
+      }
+      for (const key of ['$oid', '$uuid', '$date']) {
+        const text = value[key]
+        if (typeof text === 'string') return quoteStrings ? JSON.stringify(text) : text
+      }
+    }
+    return JSON.stringify(value)
+  }
+
+  const focusContains = (path: string) => {
+    if (/\/\d+$/.test(path)) return false
+    const segments = path
+      .split('/')
+      .filter(Boolean)
+      .filter((segment) => !/^\d+$/.test(segment))
+    return focusPaths.some((focused) => {
+      const expected = focused
+        .split('/')
+        .filter(Boolean)
+        .filter((segment) => segment !== '*')
+      return (
+        segments.length === expected.length &&
+        segments.every((segment, index) => segment === expected[index])
+      )
+    })
+  }
+
+  const tableFieldFocused = (field: string) => {
+    const path = `/${pointerSegment(field)}`
+    return focusContains(path) || focusPaths.some((focused) => focused.startsWith(`${path}/`))
+  }
+
+  const focusClass =
+    activeContext === 'doc_process'
+      ? 'border-emerald-200 bg-emerald-50/70'
+      : relationChain.length > 1
+        ? 'border-purple-200 bg-purple-50/70'
+        : 'border-blue-200 bg-blue-50/70'
+
+  const renderJsonEntries = (
+    entries: Array<[string, unknown]>,
+    parentPath: string,
+    depth: number,
+    array: boolean,
+  ): React.ReactNode => {
+    const groups: Array<{ focused: boolean; items: Array<[string, unknown, number]> }> = []
+    entries.forEach(([field, child], index) => {
+      const childPath = `${parentPath}/${pointerSegment(field)}`
+      const focused = focusContains(childPath)
+      const last = groups.at(-1)
+      if (last?.focused === focused && focused) last.items.push([field, child, index])
+      else groups.push({ focused, items: [[field, child, index]] })
+    })
+    return groups.map((group) => {
+      const firstPath = `${parentPath}/${pointerSegment(group.items[0][0])}`
+      const children = group.items.map(([field, child, index]) => {
+        const childPath = `${parentPath}/${pointerSegment(field)}`
+        return (
+          <React.Fragment key={childPath}>
+            {renderJsonValue(
+              child,
+              childPath,
+              depth + 1,
+              array ? undefined : field,
+              index < entries.length - 1,
+              group.focused,
+            )}
+          </React.Fragment>
+        )
+      })
+      if (!group.focused) return <React.Fragment key={firstPath}>{children}</React.Fragment>
+      return (
+        <div
+          key={firstPath}
+          data-preview-path={firstPath}
+          data-preview-paths={group.items
+            .map(([field]) => `${parentPath}/${pointerSegment(field)}`)
+            .join(',')}
+          data-preview-focused="true"
+          className={cn('rounded-lg border px-1 py-0.5', focusClass)}
+        >
+          {children}
+        </div>
+      )
+    })
+  }
+
+  const renderJsonValue = (
+    value: unknown,
+    path: string,
+    depth = 0,
+    label?: string,
+    comma = false,
+    grouped = false,
+  ): React.ReactNode => {
+    const highlighted = focusContains(path)
+    const highlightClass = highlighted && !grouped ? focusClass : ''
+    const rowClass = cn(
+      'px-1 py-0.5',
+      highlighted && !grouped && 'rounded-lg border',
+      highlightClass,
+    )
+    const paddingLeft = `${depth * 16}px`
+    const key =
+      label === undefined ? null : (
+        <>
+          <span className={highlighted ? 'font-semibold text-blue-600' : 'text-blue-600'}>
+            {JSON.stringify(label)}
+          </span>
+          <span className="text-gray-400">: </span>
+        </>
+      )
+    const collapsed = collapsedJson.has(path)
+    const complex = Array.isArray(value) || (isObjectRecord(value) && !isExtendedJsonScalar(value))
+    if (!complex) {
+      const scalar = displayScalar(value)
+      return (
+        <div
+          data-preview-path={path}
+          data-preview-focused={(highlighted && !grouped) || undefined}
+          className={rowClass}
+          style={{ paddingLeft }}
+        >
+          {key}
+          <span
+            className={
+              typeof value === 'string' ||
+              (isObjectRecord(value) &&
+                ('$oid' in value || '$uuid' in value || '$date' in value))
+                ? 'text-emerald-700'
+                : 'font-semibold text-blue-700'
+            }
+          >
+            {scalar}
+          </span>
+          {comma && <span className="text-gray-400">,</span>}
+        </div>
+      )
+    }
+    const entries: Array<[string, unknown]> = Array.isArray(value)
+      ? value.map((item, index) => [String(index), item])
+      : Object.entries(value)
+    const opening = Array.isArray(value) ? '[' : '{'
+    const closing = Array.isArray(value) ? ']' : '}'
+    return (
+      <div
+        data-preview-path={path}
+        data-preview-focused={(highlighted && !grouped) || undefined}
+        className={rowClass}
+      >
+        <div style={{ paddingLeft }}>
+          {key}
+          {entries.length > 0 && (
+            <button
+              type="button"
+              className="mr-1 rounded px-0.5 text-gray-400 hover:bg-gray-100"
+              aria-label={t(
+                collapsed ? 'wizard.previewPanel.expand' : 'wizard.previewPanel.collapse',
+              )}
+              onClick={() =>
+                setCollapsedJson((current) => {
+                  const next = new Set(current)
+                  if (next.has(path)) next.delete(path)
+                  else next.add(path)
+                  return next
+                })
+              }
+            >
+              {collapsed ? '▸' : '▾'}
+            </button>
+          )}
+          <span className="text-gray-400">{opening}</span>
+          {collapsed && <span className="text-gray-500">{entries.length} entries</span>}
+        </div>
+        {!collapsed && renderJsonEntries(entries, path, depth, Array.isArray(value))}
+        {!collapsed && entries.length > 0 && (
+          <div style={{ paddingLeft }} className="text-gray-400">
+            {closing}
+            {comma && ','}
+          </div>
+        )}
+        {(collapsed || entries.length === 0) && (
+          <span className="text-gray-400">
+            {closing}
+            {comma && ','}
+          </span>
+        )}
+      </div>
+    )
+  }
+
+  const [collapsedJson, setCollapsedJson] = React.useState<Set<string>>(() => new Set())
+  const copyExecutionSpec = async () => {
+    if (!livePreview) return
+    try {
+      await navigator.clipboard.writeText(compiledPlanJson)
+      setCopyStatus('copied')
+    } catch {
+      setCopyStatus('failed')
+    }
+    if (copyResetTimer.current !== null) window.clearTimeout(copyResetTimer.current)
+    copyResetTimer.current = window.setTimeout(() => setCopyStatus('idle'), 1600)
+  }
+  React.useEffect(
+    () => () => {
+      if (copyResetTimer.current !== null) window.clearTimeout(copyResetTimer.current)
+    },
+    [],
+  )
 
   const renderRelation = (rel: RelationNode, nested = false): React.ReactNode => (
     <div key={rel.id} className="relative">
@@ -579,6 +1063,12 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
 
       {/* Relation Card */}
       <div
+        id={!nested && rel.id === relations[0]?.id ? 'step-first-relation' : undefined}
+        data-guide-active={
+          !nested && rel.id === relations[0]?.id && activeGuideTarget === 'step-first-relation'
+            ? true
+            : undefined
+        }
         onClick={(event) => {
           event.stopPropagation()
           setActiveContext(rel.id)
@@ -586,11 +1076,13 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
         className={cn(
           'wizard-reference-relation-radius cursor-pointer border transition-all duration-150',
           nested ? 'bg-gray-50/80 p-3.5 shadow-2xs hover:bg-white' : 'bg-white p-4 shadow-xs',
-          activeContext === rel.id
-            ? nested
-              ? 'border-purple-500 bg-white ring-1 ring-purple-500/20'
-              : 'border-blue-500 ring-1 ring-blue-500/20'
-            : 'border-gray-200 hover:border-gray-300',
+          !nested && rel.id === relations[0]?.id && activeGuideTarget === 'step-first-relation'
+            ? 'border-indigo-500 bg-gradient-to-b from-indigo-50/15 to-white shadow-md ring-2 ring-indigo-500/40'
+            : activeContext === rel.id
+              ? nested
+                ? 'border-purple-500 bg-white ring-1 ring-purple-500/20'
+                : 'border-blue-500 ring-1 ring-blue-500/20'
+              : 'border-gray-200 hover:border-gray-300',
         )}
       >
         {/* Card Header (2-row title on the left, actions on the right) */}
@@ -605,7 +1097,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
-                    updateRelation(rel.id, (r) => ({ ...r, type: 'sub_doc' }))
+                    updateRelationType(rel.id, 'sub_doc')
                   }}
                   className={cn(
                     'flex cursor-pointer items-center gap-1 rounded-lg px-2 py-0.5 transition-all',
@@ -622,7 +1114,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
-                    updateRelation(rel.id, (r) => ({ ...r, type: 'sub_array' }))
+                    updateRelationType(rel.id, 'sub_array')
                   }}
                   className={cn(
                     'flex cursor-pointer items-center gap-1 rounded-lg px-2 py-0.5 transition-all',
@@ -639,7 +1131,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
-                    updateRelation(rel.id, (r) => ({ ...r, type: 'flatten' }))
+                    updateRelationType(rel.id, 'flatten')
                   }}
                   className={cn(
                     'flex cursor-pointer items-center gap-1 rounded-lg px-2 py-0.5 transition-all',
@@ -943,7 +1435,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                 <div className="grid grid-cols-3 gap-1">
                   <button
                     type="button"
-                    onClick={() => updateRelation(rel.id, (r) => ({ ...r, type: 'sub_doc' }))}
+                    onClick={() => updateRelationType(rel.id, 'sub_doc')}
                     className={cn(
                       'cursor-pointer rounded-lg border px-1 py-1 text-center text-[10px] transition-colors',
                       rel.type === 'sub_doc'
@@ -955,7 +1447,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => updateRelation(rel.id, (r) => ({ ...r, type: 'sub_array' }))}
+                    onClick={() => updateRelationType(rel.id, 'sub_array')}
                     className={cn(
                       'cursor-pointer rounded-lg border px-1 py-1 text-center text-[10px] transition-colors',
                       rel.type === 'sub_array'
@@ -967,7 +1459,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => updateRelation(rel.id, (r) => ({ ...r, type: 'flatten' }))}
+                    onClick={() => updateRelationType(rel.id, 'flatten')}
                     className={cn(
                       'cursor-pointer rounded-lg border px-1 py-1 text-center text-[10px] transition-colors',
                       rel.type === 'flatten'
@@ -1122,7 +1614,6 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
               tableName={rel.table}
               sourceName={rel.source}
               columns={getColumnsForTable(rel.source, rel.table)}
-              availableUpstreamSources={getAvailableJoinTables(rel.id).pipelineTables}
               transforms={rel.transforms || []}
               onChange={(nextTransforms) =>
                 updateRelation(rel.id, (r) => ({ ...r, transforms: nextTransforms }))
@@ -1376,32 +1867,73 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   )
 
   return (
-    <div className="wizard-reference flex h-full w-full flex-col overflow-hidden font-sans text-gray-900 select-none">
-      {/* Top Workbench Header */}
+    <div className="wizard-reference flex h-full w-full flex-col overflow-hidden font-sans text-gray-900">
+      {showWorkbenchHeader && (
+        <>
+          <header
+            className="flex h-12 shrink-0 items-center justify-end gap-3 border-b border-gray-200/80 bg-white/80 px-4 saturate-150 backdrop-blur-md"
+            data-testid="wizard-workbench-header"
+          >
+            <button
+              type="button"
+              onClick={() => void inspectPlan()}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
+            >
+              <FileCode className="h-3.5 w-3.5 text-gray-500" aria-hidden="true" />
+              {t('wizard.inspectPlan')}
+            </button>
+            {!readOnly && onStart && (
+              <button
+                type="button"
+                onClick={onStart}
+                disabled={startBusy}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-[12px] font-medium text-gray-700 shadow-2xs transition-colors hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60"
+              >
+                <Play className="h-3.5 w-3.5 text-blue-600" aria-hidden="true" />
+                {startBusy ? t('wizard.starting') : t('wizard.startPipeline')}
+              </button>
+            )}
+          </header>
+          {actionError && (
+            <p
+              className="shrink-0 border-b border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700"
+              role="alert"
+            >
+              {actionError}
+            </p>
+          )}
+        </>
+      )}
       {/* Main Workspace Split */}
       <div className="wizard-reference-workspace flex min-h-0 flex-1 overflow-hidden">
         {/* Left / Center Canvas */}
         <div className="wizard-reference-editor-column">
-          <fieldset
-            disabled={readOnly}
-            className="contents"
-            aria-label={readOnly ? t('pipelines.workspace.readOnly.editorStatus') : undefined}
+          <main
+            id="wizard-canvas-main"
+            className="wizard-reference-canvas flex min-w-0 flex-1 flex-col overflow-y-auto"
             data-testid="wizard-editor-controls"
             data-read-only={readOnly ? 'true' : 'false'}
           >
-            <main className="wizard-reference-canvas flex min-w-0 flex-1 flex-col overflow-y-auto">
-              <div className="w-full min-w-0 pb-24">
-                {/* ================================================================= */}
-                {/* STEP 1: ROOT TABLE (主表锚点 - 卡片原生就地配置，前后形态统一) */}
-                {/* ================================================================= */}
+            <div className="mx-auto w-full max-w-[720px] min-w-0 pb-24">
+              {/* ================================================================= */}
+              {/* STEP 1: ROOT TABLE (主表锚点 - 卡片原生就地配置，前后形态统一) */}
+              {/* ================================================================= */}
+              {activeGuideTarget === 'step-root-table' && renderGuideStep?.(0)}
+              <ReadOnlyFieldset
+                disabled={readOnly}
+                label={readOnlyLabel ?? t('pipelines.workspace.readOnly.editorStatus')}
+              >
                 <section
                   id="step-root-table"
+                  data-guide-active={activeGuideTarget === 'step-root-table' || undefined}
                   onClick={() => setActiveContext('root')}
                   className={cn(
                     'wizard-reference-root-card cursor-pointer border bg-white p-4 shadow-xs transition-all duration-150',
-                    activeContext === 'root'
-                      ? 'border-blue-500 ring-1 ring-blue-500/20'
-                      : 'border-gray-200 hover:border-gray-300',
+                    activeGuideTarget === 'step-root-table'
+                      ? 'border-indigo-500 bg-gradient-to-b from-indigo-50/15 to-white shadow-md ring-2 ring-indigo-500/40'
+                      : activeContext === 'root'
+                        ? 'border-blue-500 ring-1 ring-blue-500/20'
+                        : 'border-gray-200 hover:border-gray-300',
                   )}
                 >
                   {/* Card Header */}
@@ -1691,9 +2223,6 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                         tableName={rootConfig.table}
                         sourceName={rootConfig.source}
                         columns={rootConfig.columns}
-                        availableUpstreamSources={AVAILABLE_DATA_SOURCES.flatMap((s) =>
-                          s.tables.map((t) => t.name),
-                        )}
                         transforms={rootConfig.transforms || []}
                         onChange={(nextTransforms) =>
                           setRootConfig((prev) =>
@@ -1704,18 +2233,24 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                     </div>
                   )}
                 </section>
+              </ReadOnlyFieldset>
 
-                {/* ============================================================= */}
-                {/* CONNECTOR: From Root down to Relations Tree (Delicate dashed spine) */}
-                {/* ============================================================= */}
-                <div className="ml-8 flex h-5 justify-start">
-                  <div className="h-full border-l border-dashed border-gray-300" />
-                </div>
+              {/* ============================================================= */}
+              {/* CONNECTOR: From Root down to Relations Tree (Delicate dashed spine) */}
+              {/* ============================================================= */}
+              <div className="ml-8 flex h-5 justify-start">
+                <div className="h-full border-l border-dashed border-gray-300" />
+              </div>
 
-                {/* ============================================================= */}
-                {/* STEP 2: RELATIONS LIST (动态子表树 - 精致虚线导轨，精准分支) */}
-                {/* ============================================================= */}
-                <div className="relative ml-8 space-y-3.5 border-l border-dashed border-gray-300 pl-6">
+              {/* ============================================================= */}
+              {/* STEP 2: RELATIONS LIST (动态子表树 - 精致虚线导轨，精准分支) */}
+              {/* ============================================================= */}
+              <div className="relative ml-8 space-y-3.5 border-l border-dashed border-gray-300 pl-6">
+                {activeGuideTarget === 'step-first-relation' && renderGuideStep?.(1)}
+                <ReadOnlyFieldset
+                  disabled={readOnly}
+                  label={readOnlyLabel ?? t('pipelines.workspace.readOnly.editorStatus')}
+                >
                   {/* Dynamically Render Each Relation Node */}
                   {relations.map((rel) => renderRelation(rel))}
 
@@ -1974,27 +2509,36 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                       </div>
                     )}
                   </div>
-                </div>
+                </ReadOnlyFieldset>
+              </div>
 
-                {/* ============================================================= */}
-                {/* CONNECTOR: From Stage 1 (Root & Relations) down to Stage 2 (Transform) */}
-                {/* ============================================================= */}
-                <div className="ml-8 flex h-6 justify-start">
-                  <div className="h-full border-l border-dashed border-gray-300" />
-                </div>
+              {/* ============================================================= */}
+              {/* CONNECTOR: From Stage 1 (Root & Relations) down to Stage 2 (Transform) */}
+              {/* ============================================================= */}
+              <div className="ml-8 flex h-6 justify-start">
+                <div className="h-full border-l border-dashed border-gray-300" />
+              </div>
 
-                {/* ============================================================= */}
-                {/* PIPELINE TRANSFORMS */}
-                {/* ============================================================= */}
-                <section
-                  id="step-doc-process"
-                  onClick={() => setActiveContext('doc_process')}
-                  className={cn(
-                    'cursor-pointer rounded-xl border bg-white p-4 shadow-xs transition-all duration-150',
-                    activeContext === 'doc_process'
+              {/* ============================================================= */}
+              {/* PIPELINE TRANSFORMS */}
+              {/* ============================================================= */}
+              <section
+                id="step-doc-process"
+                data-guide-active={activeGuideTarget === 'step-doc-process' || undefined}
+                onClick={() => setActiveContext('doc_process')}
+                className={cn(
+                  'cursor-pointer rounded-xl border bg-white p-4 shadow-xs transition-all duration-150',
+                  activeGuideTarget === 'step-doc-process'
+                    ? 'border-indigo-500 bg-gradient-to-b from-indigo-50/15 to-white shadow-md ring-2 ring-indigo-500/40'
+                    : activeContext === 'doc_process'
                       ? 'border-blue-500 ring-1 ring-blue-500/20'
                       : 'border-gray-200 hover:border-gray-300',
-                  )}
+                )}
+              >
+                {activeGuideTarget === 'step-doc-process' && renderGuideStep?.(2)}
+                <ReadOnlyFieldset
+                  disabled={readOnly}
+                  label={readOnlyLabel ?? t('pipelines.workspace.readOnly.editorStatus')}
                 >
                   <div className="flex items-center justify-between border-b border-gray-100 pb-3">
                     <div className="flex items-center gap-2.5">
@@ -2024,24 +2568,25 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                           ),
                         ]),
                       )}
-                      availableUpstreamSources={[
-                        rootConfig?.table || 'root',
-                        ...flattenRelations(relations).map((relation) => relation.table),
-                      ]}
                       transforms={pipelineTransforms}
                       onChange={setPipelineTransforms}
                       hideHeader={true}
                     />
                   </div>
-                </section>
+                </ReadOnlyFieldset>
+              </section>
 
-                {/* ============================================================= */}
-                {/* CONNECTOR: Transform stage to the configured destination */}
-                {/* ============================================================= */}
-                <div className="ml-8 flex h-6 justify-start">
-                  <div className="h-full border-l border-dashed border-gray-300" />
-                </div>
+              {/* ============================================================= */}
+              {/* CONNECTOR: Transform stage to the configured destination */}
+              {/* ============================================================= */}
+              <div className="ml-8 flex h-6 justify-start">
+                <div className="h-full border-l border-dashed border-gray-300" />
+              </div>
 
+              <ReadOnlyFieldset
+                disabled={readOnly}
+                label={readOnlyLabel ?? t('pipelines.workspace.readOnly.editorStatus')}
+              >
                 {/* ============================================================= */}
                 {/* Destination */}
                 {/* ============================================================= */}
@@ -2180,140 +2725,356 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   </div>
                 </section>
                 {footer}
-              </div>
-            </main>
-          </fieldset>
+              </ReadOnlyFieldset>
+            </div>
+          </main>
+          {activeGuideTarget === 'step-publish-action' && (
+            <div className="wizard-reference-launch-guide">{renderGuideStep?.(4)}</div>
+          )}
           {actions}
         </div>
 
-        {/* Right Side: Real-time Live Result Preview (Original w-[440px]) */}
-        <aside className="wizard-reference-preview flex flex-col rounded-xl bg-white">
-          {/* Preview Header */}
-          <div className="flex h-11 shrink-0 items-center justify-between border-b border-gray-200 bg-gray-50/50 px-4">
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
-              <span className="text-[12px] font-semibold text-gray-900">Result Preview</span>
-              <span className="font-mono text-[11px] text-gray-400">({activeContextLabel})</span>
+        <aside
+          id="step-preview-panel"
+          data-guide-active={activeGuideTarget === 'step-preview-panel' || undefined}
+          className="wizard-reference-preview flex flex-col overflow-hidden bg-white"
+        >
+          <div className="flex min-h-11 shrink-0 items-center justify-between gap-1 border-b border-gray-200/80 bg-white/75 px-3 py-2 backdrop-blur-md">
+            <div className="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
+              <span
+                className={cn(
+                  'size-2 shrink-0 rounded-full',
+                  livePreviewStatus === 'error'
+                    ? 'bg-destructive'
+                    : livePreviewStatus === 'loading'
+                      ? 'animate-pulse bg-emerald-500'
+                      : livePreviewStatus === 'complete'
+                        ? 'bg-emerald-500'
+                        : 'bg-muted-foreground',
+                )}
+                aria-hidden="true"
+              />
+              <span className="text-xs font-semibold text-gray-900">
+                {t('wizard.previewPanel.title')}
+              </span>
+              <span className="max-w-28 truncate font-mono text-[10px] text-gray-400">
+                ({activeContextLabel})
+              </span>
             </div>
 
-            {/* Format Switcher */}
-            <div className="flex items-center rounded-lg bg-gray-200/80 p-0.5 text-[11px] font-medium">
+            <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                onClick={() => setPreviewMode('json')}
-                className={cn(
-                  'cursor-pointer rounded-lg px-2 py-0.5 transition-all',
-                  previewMode === 'json'
-                    ? 'bg-white font-semibold text-gray-900 shadow-2xs'
-                    : 'text-gray-600 hover:text-gray-900',
-                )}
+                onClick={() => void copyExecutionSpec()}
+                disabled={!livePreview}
+                className="inline-flex items-center gap-1 rounded border border-gray-200/80 bg-white/80 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 shadow-xs hover:border-gray-300 hover:bg-white hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-live="polite"
               >
-                JSON Doc
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreviewMode('table')}
-                className={cn(
-                  'cursor-pointer rounded-lg px-2 py-0.5 transition-all',
-                  previewMode === 'table'
-                    ? 'bg-white font-semibold text-gray-900 shadow-2xs'
-                    : 'text-gray-600 hover:text-gray-900',
+                {copyStatus === 'copied' ? (
+                  <Check className="size-3.5" />
+                ) : (
+                  <Copy className="size-3.5" />
                 )}
-              >
-                Table View
+                {t(
+                  copyStatus === 'copied'
+                    ? 'wizard.previewPanel.copied'
+                    : copyStatus === 'failed'
+                      ? 'wizard.previewPanel.copyFailed'
+                      : 'wizard.previewPanel.copy',
+                )}
               </button>
+              <div className="flex items-center rounded border border-gray-200/60 bg-gray-100/80 p-0.5 text-[10px] font-medium">
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode('json')}
+                  aria-pressed={previewMode === 'json'}
+                  className={cn(
+                    'rounded px-1.5 py-0.5 transition-colors',
+                    previewMode === 'json'
+                      ? 'bg-white font-semibold text-gray-900 shadow-xs'
+                      : 'text-gray-600 hover:text-gray-900',
+                  )}
+                >
+                  {t('wizard.previewPanel.jsonDoc')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode('table')}
+                  aria-pressed={previewMode === 'table'}
+                  className={cn(
+                    'rounded px-1.5 py-0.5 transition-colors',
+                    previewMode === 'table'
+                      ? 'bg-white font-semibold text-gray-900 shadow-xs'
+                      : 'text-gray-600 hover:text-gray-900',
+                  )}
+                >
+                  {t('wizard.previewPanel.tableView')}
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Sample Indicator */}
-          <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-1.5 text-[11px] text-gray-500">
-            <span>Document structure · not sample data</span>
-            <span className="flex items-center gap-1 font-medium text-emerald-700">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Schema
+          {activeGuideTarget === 'step-preview-panel' && (
+            <div className="border-b border-indigo-100 bg-indigo-50/20 p-3">
+              {renderGuideStep?.(3)}
+            </div>
+          )}
+
+          <div className="flex min-h-9 items-center justify-between gap-2 border-b border-gray-100 bg-gray-50 px-4 py-1.5 text-[11px] text-gray-500">
+            <span className="min-w-0 truncate">
+              {selectedDocument
+                ? t('wizard.previewPanel.sampleRecord', { number: selectedIndex + 1 })
+                : livePreviewStatus === 'loading'
+                  ? t('wizard.previewPanel.loading')
+                  : t('wizard.previewPanel.awaitingPreview')}
+            </span>
+            <span
+              className={cn(
+                'flex shrink-0 items-center gap-1 font-medium',
+                livePreviewStatus === 'stale'
+                  ? 'text-gray-600'
+                  : livePreviewStatus === 'error'
+                    ? 'text-red-600'
+                    : livePreviewStatus === 'complete'
+                      ? 'text-emerald-700'
+                      : 'text-gray-500',
+              )}
+              role="status"
+            >
+              <span
+                className={cn(
+                  'size-1.5 rounded-full',
+                  livePreviewStatus === 'complete' ? 'bg-emerald-500' : 'bg-gray-400',
+                )}
+              />
+              {t(`wizard.previewPanel.status.${livePreviewStatus}`)}
             </span>
           </div>
 
-          {/* Preview Document Rendering */}
-          <div className="flex-1 overflow-y-auto bg-white p-4 font-mono text-[12px]">
+          {livePreviewStatus === 'error' && (
+            <p
+              className="border-border text-destructive border-b px-3 py-2 text-xs"
+              role="alert"
+              title={livePreviewError}
+            >
+              {t('wizard.previewPanel.failed')}
+              {livePreviewError && <span className="ml-1 font-mono">{livePreviewError}</span>}
+            </p>
+          )}
+
+          <div className="min-h-48 flex-1 overflow-auto bg-white p-4 font-mono text-xs text-gray-800">
             {!rootConfig ? (
-              <div className="flex h-full flex-col items-center justify-center p-6 text-center text-gray-400">
-                <Database className="mb-2 h-8 w-8 text-gray-300" />
-                <div className="text-[13px] font-medium text-gray-600">No Root Table Selected</div>
-                <div className="mt-1 max-w-xs text-[11px] text-gray-400">
-                  Select your root table in Step 1 to generate and inspect the assembled MongoDB
-                  document.
-                </div>
+              <div className="text-muted-foreground flex h-full min-h-48 flex-col items-center justify-center gap-2 p-6 text-center">
+                <Database className="size-8 opacity-60" />
+                <span className="font-sans font-medium">
+                  {t('wizard.previewPanel.noRootTitle')}
+                </span>
+                <span className="max-w-xs font-sans text-[11px]">
+                  {t('wizard.previewPanel.noRootBody')}
+                </span>
               </div>
+            ) : !livePreview && livePreviewStatus === 'error' ? (
+              <p className="text-muted-foreground font-sans text-sm">
+                {t('wizard.previewPanel.noResult')}
+              </p>
+            ) : !livePreview || !selectedDocument ? (
+              <p className="text-muted-foreground font-sans text-sm">
+                {livePreviewStatus === 'loading'
+                  ? t('wizard.previewPanel.loading')
+                  : t('wizard.previewPanel.noDocuments')}
+              </p>
             ) : previewMode === 'json' ? (
-              <pre className="text-[12px] leading-relaxed break-words whitespace-pre-wrap text-blue-600">
-                {JSON.stringify(previewDoc, null, 2)}
-              </pre>
+              <>
+                {documents.length > 1 && (
+                  <div className="mb-2 flex items-center justify-end gap-1 font-sans text-[11px] text-gray-500">
+                    <button
+                      type="button"
+                      className="border-border hover:bg-accent rounded border px-1.5 py-0.5 disabled:opacity-40"
+                      aria-label={t('wizard.previewPanel.previousDocument')}
+                      disabled={selectedIndex <= 0}
+                      onClick={() => setSelectedDocumentIndex((index) => Math.max(0, index - 1))}
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      className="border-border hover:bg-accent rounded border px-1.5 py-0.5 disabled:opacity-40"
+                      aria-label={t('wizard.previewPanel.nextDocument')}
+                      disabled={selectedIndex >= documents.length - 1}
+                      onClick={() =>
+                        setSelectedDocumentIndex((index) =>
+                          Math.min(documents.length - 1, index + 1),
+                        )
+                      }
+                    >
+                      ›
+                    </button>
+                  </div>
+                )}
+                <div className="space-y-0.5 leading-relaxed break-words">
+                  {renderJsonValue(selectedDocument, '', 0)}
+                </div>
+              </>
             ) : (
-              <table className="w-full text-left text-[11px]">
-                <thead>
-                  <tr className="border-b border-gray-200 text-gray-500">
-                    <th className="py-2">Field</th>
-                    <th>Structure</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(previewDoc).map(([key, value]) => (
-                    <tr key={key} className="border-b border-gray-100">
-                      <td className="py-2 text-blue-600">{key}</td>
-                      <td>
-                        {Array.isArray(value)
-                          ? 'Array'
-                          : value === null
-                            ? 'Source field'
-                            : 'Document'}
-                      </td>
+              <div>
+                {documents.length > 200 && (
+                  <p className="text-muted-foreground mb-2 font-sans text-[11px]">
+                    {t('wizard.previewPanel.tableLimit', { shown: 200, count: documents.length })}
+                  </p>
+                )}
+                <table className="w-full border-collapse text-left font-sans text-[11px]">
+                  <thead>
+                    <tr className="border-border text-muted-foreground border-b">
+                      {previewTableColumns.map((field) => (
+                        <th
+                          className={cn(
+                            'px-2 py-2 font-medium',
+                            tableFieldFocused(field) && 'bg-blue-50 font-semibold text-blue-700',
+                          )}
+                          key={field}
+                        >
+                          {field}
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {documents.slice(0, 200).map((document, rowIndex) => (
+                      <tr
+                        className="border-border border-b"
+                        key={`${String(document._id ?? 'row')}-${rowIndex}`}
+                      >
+                        {previewTableColumns.map((field) => {
+                          const value = document[field]
+                          const relation = relationFields.has(field)
+                          const computed = computedFields.has(field)
+                          const display =
+                            relation && Array.isArray(value)
+                              ? t('wizard.previewPanel.embeddedArray', { count: value.length })
+                              : relation && isObjectRecord(value) && !isExtendedJsonScalar(value)
+                                ? t('wizard.previewPanel.embeddedDocument')
+                                : typeof value === 'string'
+                                  ? value
+                                  : displayScalar(value, false)
+                          return (
+                            <td
+                              className={cn(
+                                'max-w-56 truncate px-2 py-2 text-gray-900',
+                                tableFieldFocused(field) &&
+                                  'bg-blue-50/70 ring-1 ring-blue-200 ring-inset',
+                              )}
+                              key={field}
+                              title={display}
+                              data-preview-path={`/${pointerSegment(field)}`}
+                              data-preview-focused={tableFieldFocused(field) || undefined}
+                            >
+                              <span
+                                className={cn(
+                                  rootFields.has(field) && 'text-primary',
+                                  relation && 'text-foreground',
+                                  computed && 'bg-accent rounded px-1',
+                                )}
+                              >
+                                {display ?? 'null'}
+                              </span>
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 
-          <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50 p-3 text-[11px] text-gray-500">
-            <span>Target Model: MongoDB BSON Document</span>
+          {transformTrace &&
+            (transformTrace.fields.length > 0 ||
+              transformTrace.annotations.length > 0 ||
+              transformTrace.unknownOrigins.length > 0) && (
+              <div
+                className="border-border bg-accent/30 text-foreground border-t px-3 py-2 text-[11px]"
+                role="note"
+              >
+                <span className="bg-primary/10 text-primary mr-2 rounded px-1.5 py-0.5 font-sans font-medium">
+                  {transformTrace.type || t('wizard.previewPanel.transformsContext')}
+                </span>
+                {transformTrace.annotations.length > 0 ? (
+                  <span>{transformTrace.annotations.join('; ')}</span>
+                ) : (
+                  transformTrace.fields.length > 0 && (
+                    <span>
+                      {t('wizard.previewPanel.transformAnnotation', {
+                        fields: transformTrace.fields.join(', '),
+                      })}
+                    </span>
+                  )
+                )}
+                {transformTrace.unknownOrigins.length > 0 && (
+                  <span className="text-muted-foreground ml-2">
+                    {t('wizard.previewPanel.unknownTransformOrigin', {
+                      steps: transformTrace.unknownOrigins.join(', '),
+                    })}
+                  </span>
+                )}
+              </div>
+            )}
+
+          <div className="border-border bg-muted/30 text-muted-foreground flex items-center justify-between gap-3 border-t px-3 py-2 text-[11px]">
+            <span className="truncate">
+              {t(
+                livePreview?.format === 'mongo-extended-json'
+                  ? 'wizard.previewPanel.mongoExtendedJsonTarget'
+                  : 'wizard.previewPanel.logicalJsonTarget',
+                { destination: destinationName },
+              )}
+            </span>
             <button
               type="button"
-              onClick={() => setShowPlanModal(true)}
+              onClick={() => setPlanMode('json')}
               className="cursor-pointer text-blue-600 hover:underline"
             >
-              View JSON Spec
+              {t('wizard.previewPanel.viewSpec')}
             </button>
           </div>
         </aside>
       </div>
 
-      {/* COMPILED PLAN MODAL (Pure JSON) */}
-      {showPlanModal && (
+      {planMode && (
         <div className="backdrop-blur-2xs fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="animate-in fade-in flex max-h-[80vh] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-3">
               <div className="flex items-center gap-2">
                 <FileCode className="h-4 w-4 text-blue-600" />
                 <h3 className="text-[13px] font-semibold text-gray-900">
-                  Compiled Document Assembly Plan
+                  {planMode === 'dsl' ? t('wizard.dslPreview') : 'Wizard JSON Spec'}
                 </h3>
               </div>
               <button
                 type="button"
-                onClick={() => setShowPlanModal(false)}
+                onClick={() => setPlanMode(null)}
                 className="cursor-pointer text-gray-400 hover:text-gray-600"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto bg-gray-900 p-4 font-mono text-[11px] leading-relaxed text-gray-100">
-              <pre>{compiledPlanJson}</pre>
+              {planMode === 'json' ? (
+                <pre>{compiledPlanJson}</pre>
+              ) : dslLoading ? (
+                <p role="status">{t('wizard.dslLoading')}</p>
+              ) : dslError ? (
+                <p role="alert" className="text-red-300">
+                  {dslError}
+                </p>
+              ) : (
+                <pre>{dsl}</pre>
+              )}
             </div>
             <div className="flex justify-end border-t border-gray-200 bg-gray-50 px-4 py-2">
               <button
                 type="button"
-                onClick={() => setShowPlanModal(false)}
+                onClick={() => setPlanMode(null)}
                 className="cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-1 text-[12px] font-medium text-gray-700 hover:bg-gray-100"
               >
                 Close

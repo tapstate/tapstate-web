@@ -10,13 +10,18 @@ import { useAuthStore } from '@/stores/auth-store'
 
 const PIPELINE_MONITORING_REFRESH_INTERVAL = 5_000
 
-export function usePipelineMonitoringQueries(pipelineId: string, autoRefresh: boolean) {
+export function usePipelineMonitoringQueries(
+  pipelineId: string,
+  autoRefresh: boolean,
+  enabled = true,
+) {
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const refetchInterval = autoRefresh ? PIPELINE_MONITORING_REFRESH_INTERVAL : false
 
   const status = useQuery<PipelineStatus>({
     queryKey: ['pipelines', pipelineId, 'status'],
     queryFn: () => getPipelineStatus(pipelineId, apiFetch),
+    enabled,
     retry: false,
     refetchInterval,
     refetchOnReconnect: autoRefresh,
@@ -25,6 +30,7 @@ export function usePipelineMonitoringQueries(pipelineId: string, autoRefresh: bo
   const metrics = useQuery<PipelineMetrics>({
     queryKey: ['pipelines', pipelineId, 'metrics'],
     queryFn: () => getPipelineMetrics(pipelineId, apiFetch),
+    enabled,
     retry: false,
     refetchInterval,
     refetchOnReconnect: autoRefresh,

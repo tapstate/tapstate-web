@@ -1,8 +1,11 @@
 import type { ConnectorSummary, SourceView } from '@/service/source-client'
 
+import { hasStoreMarker } from '@/service/state-store-source'
+
 import type { DeploymentProfile } from './deployment-profile'
 
-export type SourceIdentity = Pick<SourceView, 'id' | 'connector'>
+export type SourceIdentity = Pick<SourceView, 'id' | 'connector'> &
+  Partial<Pick<SourceView, 'metadata'>>
 
 /** Profile policy narrows cloud to Atlas; OP exposes only sources whose catalog declares sink support. */
 export function isTargetConnector(
@@ -19,7 +22,9 @@ export function targetSources<T extends SourceIdentity>(
   connectors: readonly ConnectorSummary[],
   deploymentProfile: DeploymentProfile,
 ) {
-  return sources.filter((source) =>
-    isTargetConnector(source.connector, deploymentProfile, connectors),
+  return sources.filter(
+    (source) =>
+      isTargetConnector(source.connector, deploymentProfile, connectors) &&
+      (deploymentProfile !== 'cloud' || hasStoreMarker({ metadata: source.metadata ?? null })),
   )
 }

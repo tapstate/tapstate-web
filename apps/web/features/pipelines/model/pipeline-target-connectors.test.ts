@@ -24,7 +24,7 @@ describe('pipeline target connectors', () => {
     const sources = [
       { id: 'mysql_orders', connector: 'mysql' },
       { id: 'pg_warehouse', connector: 'postgres' },
-      { id: 'atlas_out', connector: 'mongodb-atlas' },
+      { id: 'atlas_out', connector: 'mongodb-atlas', metadata: { labels: { store: 'true' } } },
       { id: 'mongo_out', connector: 'mongodb' },
     ]
     expect(targetSources(sources, connectors, 'on-prem').map(({ id }) => id)).toEqual([

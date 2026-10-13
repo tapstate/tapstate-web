@@ -42,8 +42,15 @@ export function OverviewPage() {
       organization={activeOrganization}
       subscriptionLabel={subscription ? statusLabel(subscription.status) : undefined}
       clusters={clusters}
-      onNavigate={() => void navigate({ to: '/clusters' })}
-      onOpenProvisionModal={() => void navigate({ to: '/onboarding' })}
+      onNavigate={() =>
+        void navigate({ to: '/clusters', search: { organizationId: activeOrganization?.id } })
+      }
+      onOpenProvisionModal={() =>
+        void navigate({
+          to: '/onboarding',
+          search: { organizationId: activeOrganization?.id, subscriptionId: undefined },
+        })
+      }
       onEnterCluster={(cluster) => {
         if (activeOrganization) void enterCluster(cluster, activeOrganization.id)
       }}

@@ -17,10 +17,23 @@
     "user": {
       "avatar": "使用者頭像",
       "initial": "U"
+    },
+    "secondaryNavigation": "次要導覽",
+    "cloudIdentity": {
+      "label": "雲端工作區與叢集",
+      "returnToOrganization": "返回 Tapstate Cloud 的{{organization}}組織",
+      "organizationLoading": "正在載入組織…",
+      "organizationUnavailable": "無法取得組織資訊",
+      "clusterLoading": "正在載入叢集…",
+      "clusterUnavailable": "無法取得叢集資訊",
+      "region": "AWS {{region}}",
+      "regionUnavailable": "無法取得區域資訊"
     }
   },
   "nav": {
+    "views": "Views",
     "overview": "概覽",
+    "settings": "設定",
     "resources": "資源",
     "develop": "開發",
     "operations": "運行",
@@ -29,7 +42,6 @@
     "admin": "管理",
     "sources": "資料來源",
     "pipelines": "流水線",
-    "views": "Views",
     "explorations": "探索"
   },
   "context": {
@@ -145,6 +157,8 @@
       "description": "結果以目前資料來源設定為準。",
       "action": "測試連線",
       "testing": "正在測試連線",
+      "notTested": "尚未測試",
+      "statusUnavailable": "狀態暫不可用",
       "passed": "連線測試通過",
       "failed": "連線測試失敗",
       "reenterSecrets": "測試此草稿前，請重新輸入已設定的密鑰。",
@@ -156,8 +170,15 @@
       "errors": {
         "network": "無法連接控制面，請檢查後端連線後重試。",
         "protocol": "控制面回傳了無效的連線測試結果，請重試。",
-        "server": "控制面無法測試此連線。",
-        "unknown": "無法測試此連線，請重試。"
+        "server": "伺服器未能完成連線測試。",
+        "connectorFailed": "連接器無法使用目前設定建立連線。",
+        "unknown": "無法測試此連線，請重試。",
+        "timeoutHint": "連線逾時。請檢查主機、連接埠、網路連通性與防火牆規則，然後重試。",
+        "technicalDetails": "技術詳情",
+        "code": "錯誤碼",
+        "connector": "連接器",
+        "detail": "原因",
+        "serverMessage": "伺服器訊息"
       }
     },
     "empty": {
@@ -351,6 +372,7 @@
       "indexes": "索引",
       "loadError": "無法載入 Schema，請重試。",
       "loading": "正在載入 Schema",
+      "discoveryFailed": "Schema 探索失敗",
       "networkError": "無法連接控制面，請重試重新整理 Schema。",
       "noFields": "此資料表沒有回傳欄位。",
       "none": "無",
@@ -390,6 +412,18 @@
       "lineage": "血緣",
       "log": "日誌",
       "settings": "設定"
+    },
+    "samples": {
+      "tag": "範例",
+      "remove": "移除範例資料來源",
+      "removing": "正在移除…",
+      "removed_one": "已移除 {{count}} 個範例資料來源。",
+      "removed_other": "已移除 {{count}} 個範例資料來源。",
+      "inUse": "範例資料來源 {{id}} 仍被以下 pipeline 讀取：{{pipelines}}。請先刪除這些 pipeline；尚未移除的範例已保留。",
+      "error": "範例資料來源移除失敗。請重試。",
+      "dismiss": "關閉",
+      "added_one": "已新增 {{count}} 個範例資料來源。",
+      "added_other": "已新增 {{count}} 個範例資料來源。"
     }
   },
   "pipelines": {
@@ -741,6 +775,7 @@
         "field": "欄位",
         "operator": "運算子",
         "containsOperator": "包含",
+        "containsTextOnly": "只有來源 schema 確認該欄位為文字型別後，才能使用「包含」。",
         "value": "值",
         "removeCondition": "移除條件",
         "addCondition": "新增條件",
@@ -806,13 +841,34 @@
         "customDescription": "以 JSON 編輯投影後的處理配置。",
         "invalidObjectJson": "請輸入有效的 JSON 物件。",
         "invalidInteger": "請輸入整數，也可以留白。",
-        "filter": { "title": "篩選記錄", "description": "使用結構化條件保留符合要求的記錄。" },
-        "map": { "title": "對映欄位", "description": "透過欄位引用或常數重新組織每筆記錄。" },
-        "join": { "title": "連接資料流", "description": "使用明確的連接條件合併兩個輸入。" },
-        "union": { "title": "合併輸入", "description": "將結構相容的分支合併為一條資料流。" },
-        "nest": { "title": "巢狀記錄", "description": "將相關欄位聚合到巢狀文件中。" },
-        "js": { "title": "執行指令碼", "description": "使用程式碼執行自訂的逐筆記錄轉換。" },
-        "unwind": { "title": "展開陣列", "description": "將陣列元素展開為個別記錄。" },
+        "filter": {
+          "title": "篩選記錄",
+          "description": "使用結構化條件保留符合要求的記錄。"
+        },
+        "map": {
+          "title": "對映欄位",
+          "description": "透過欄位引用或常數重新組織每筆記錄。"
+        },
+        "join": {
+          "title": "連接資料流",
+          "description": "使用明確的連接條件合併兩個輸入。"
+        },
+        "union": {
+          "title": "合併輸入",
+          "description": "將結構相容的分支合併為一條資料流。"
+        },
+        "nest": {
+          "title": "巢狀記錄",
+          "description": "將相關欄位聚合到巢狀文件中。"
+        },
+        "js": {
+          "title": "執行指令碼",
+          "description": "使用程式碼執行自訂的逐筆記錄轉換。"
+        },
+        "unwind": {
+          "title": "展開陣列",
+          "description": "將陣列元素展開為個別記錄。"
+        },
         "wizard": {
           "transformsHeading": "Transform",
           "stepsCount": "{{count}} 個步驟",
@@ -923,7 +979,8 @@
           "currentTable": "目前資料表",
           "removeUnionInput": "移除輸入資料流",
           "addUpstreamInput": "新增上游資料流",
-          "selectAnotherInput": "選擇其他可用資料流"
+          "selectAnotherInput": "選擇其他可用資料流",
+          "unionWizardUnavailable": "Union 需要明確的多路資料流參照，目前建構器尚未收集這些資訊。移除此步驟後即可儲存並啟動。"
         }
       },
       "runtime": {
@@ -971,6 +1028,8 @@
         "errorBody": "請檢查控制平面後重試。",
         "monitoring": {
           "loading": "正在載入監控資料",
+          "draftTitle": "此 Pipeline 仍是草稿",
+          "draftBody": "儲存並啟動 Pipeline 後，即可查看執行狀態和指標。",
           "snapshot": "目前指標",
           "metricsTitle": "指標快照",
           "metricsBody": "Pipeline 觀測介面目前回報的數值。",
@@ -996,7 +1055,12 @@
           "historyError": "無法載入輸出歷史。請檢查控制平面後重試。",
           "noRetainedSamples": "此時間範圍內沒有保留的取樣資料。這無法說明 Pipeline 過去是否曾執行。",
           "rangeLabel": "歷史時間範圍",
-          "ranges": { "1h": "1 小時", "6h": "6 小時", "24h": "24 小時", "7d": "7 天" },
+          "ranges": {
+            "1h": "1 小時",
+            "6h": "6 小時",
+            "24h": "24 小時",
+            "7d": "7 天"
+          },
           "recordsRate": "每秒記錄數",
           "bytesRate": "每秒位元組數",
           "rateUnavailable": "此範圍內沒有可用的 {{metric}} 取樣。",
@@ -1015,7 +1079,11 @@
           "cannotSay": "目前無法判斷",
           "nextAction": "建議的下一步",
           "observationAge": "{{seconds}} 秒前觀測",
-          "freshness": { "FRESH": "觀測新鮮", "STALE": "觀測已過期", "UNKNOWN": "觀測時間未知" },
+          "freshness": {
+            "FRESH": "觀測新鮮",
+            "STALE": "觀測已過期",
+            "UNKNOWN": "觀測時間未知"
+          },
           "explainKind": {
             "OBSERVATION_STALE": "觀測已過期",
             "CODED_FAILURE": "已回報故障",
@@ -1030,6 +1098,7 @@
           "errorBody": "請檢查控制平面後重試。"
         },
         "states": {
+          "DRAFT": "草稿",
           "NEW": "新增",
           "STARTING": "正在啟動",
           "RUNNING": "執行中",
@@ -1196,14 +1265,64 @@
     "destinationTable": "目標資料表",
     "writeStrategy": "寫入策略",
     "awaitingTable": "選擇資料表後繼續",
+    "previewPanel": {
+      "title": "結果預覽",
+      "rootContext": "根實體",
+      "transformsContext": "文件轉換",
+      "relationContext": "{{path}}",
+      "documentContext": "文件上下文",
+      "loading": "正在執行有界預覽…",
+      "awaitingPreview": "選擇根資料表和目標端後即可預覽樣本。",
+      "failed": "預覽失敗，仍顯示上一次完成的結果。",
+      "noResult": "目前沒有已完成的預覽結果。",
+      "noDocuments": "樣本沒有產生文件。",
+      "noRootTitle": "尚未選擇根資料表",
+      "noRootBody": "請在步驟 1 選擇根資料表，以預覽組裝後的樣本文檔。",
+      "status": {
+        "idle": "就緒",
+        "loading": "載入中",
+        "stale": "正在更新",
+        "complete": "即時渲染",
+        "error": "失敗"
+      },
+      "sampleSummary": "{{roots}} 筆根資料 · {{inputs}} 筆來源資料",
+      "sampleRecord": "樣本：第 {{number}} 筆記錄",
+      "sampleCapped": "根記錄已達取樣上限，來源資料還有更多記錄。",
+      "jsonDoc": "JSON 文件",
+      "tableView": "表格檢視",
+      "copy": "複製規範",
+      "copied": "已複製 ✓",
+      "copyFailed": "複製失敗",
+      "viewSpec": "檢視 JSON 規範",
+      "logicalJsonTarget": "邏輯 JSON · {{destination}}",
+      "mongoExtendedJsonTarget": "Mongo Extended JSON（保留目標型別）· {{destination}}",
+      "expand": "展開節點",
+      "collapse": "收合節點",
+      "documentCount": "文件 {{current}} / {{count}}",
+      "previousDocument": "上一份文件",
+      "nextDocument": "下一份文件",
+      "tableLimit": "顯示前 {{shown}} 份，共 {{count}} 份文件",
+      "embeddedArray": "陣列 · {{count}} 項",
+      "embeddedDocument": "巢狀文件",
+      "transformAnnotation": "變更欄位：{{fields}}",
+      "unknownTransformOrigin": "JS 步驟的欄位來源無法靜態確認：{{steps}}"
+    },
     "relations": {
       "addRelatedTable": "新增關聯資料表",
-      "addAs": { "flat": "平鋪至父文件", "object": "作為子文件", "array": "作為子陣列" },
+      "addAs": {
+        "flat": "平鋪至父文件",
+        "object": "作為子文件",
+        "array": "作為子陣列"
+      },
       "newTable": "新關聯資料表",
       "editTable": "(編輯)",
       "relationship": "關聯資料表",
       "shape": "關係輸出形態",
-      "shapes": { "flat": "平鋪", "object": "文件", "array": "陣列" },
+      "shapes": {
+        "flat": "平鋪",
+        "object": "文件",
+        "array": "陣列"
+      },
       "preprocess": "預處理",
       "closeTablePicker": "收合資料表選擇",
       "as": "作為",
@@ -1280,6 +1399,10 @@
     "unsavedChanges": "有未儲存的變更",
     "actionSummary": "{{relatedCount}} 個關聯資料表 · {{transformCount}} 個處理步驟",
     "savePipeline": "儲存",
+    "inspectPlan": "查看計劃",
+    "dslPreview": "DSL 預覽",
+    "dslLoading": "正在編譯 DSL…",
+    "dslUnavailable": "服務端未返回 DSL 預覽。",
     "startPipeline": "儲存並啟動",
     "starting": "正在啟動 Pipeline…",
     "startPhases": {
@@ -1337,10 +1460,81 @@
       "revert": "還原欄位",
       "title": "欄位重新命名",
       "transform": "轉換"
+    },
+    "guide": {
+      "eyebrow": "訂單 360 示範",
+      "title": "建立訂單 360 檢視",
+      "collapsed": "可使用訂單 360 分步示範。",
+      "open": "開啟引導",
+      "mode": "引導模式",
+      "storyboard": "步驟總覽",
+      "inSitu": "就地引導",
+      "close": "關閉引導",
+      "stepsLabel": "訂單 360 示範步驟",
+      "stepOf": "第 {{step}} 步，共 {{total}} 步",
+      "calloutBadge": "Step {{step}}/5 · {{title}}",
+      "calloutHint": "💡流程引導 · 點選下一步繼續，或直接檢視設定卡片",
+      "calloutLockedHint": "💡此樣本流程已預設並鎖定，點選下一步繼續檢視",
+      "previous": "上一步",
+      "next": "下一步",
+      "launch": "啟動 Pipeline",
+      "noSample": "連接包含客戶、訂單和訂單明細資料表的 MySQL 或 PostgreSQL 資料來源後，可自動填入這些步驟。",
+      "primaryKey": "主鍵：{{keys}}",
+      "joinCount": "關聯欄位數：{{first}} + {{second}}",
+      "applyPreset": "使用偵測到的樣本",
+      "presetApplied": "已填入樣本結構",
+      "fixedNotice": "訂單 360 示範已預設配置。逐步查看後即可啟動 Pipeline；配置不可修改。",
+      "fixedTransformNote": "預設流程保留原始欄位。建立巢狀訂單檢視不需要額外轉換。",
+      "fixedTransform": {
+        "shortTitle": "來源欄位",
+        "title": "保留來源欄位",
+        "body": "客戶、訂單和明細欄位直接進入巢狀文件，不需要額外轉換。",
+        "calloutNext": "繼續檢視：文件預覽 →"
+      },
+      "applyBeforeFormula": "請先填入偵測到的樣本結構。",
+      "addFormula": "將運算式加入草稿",
+      "formulaAdded": "已加入草稿",
+      "formulaUnavailable": "目前伺服器尚無法編譯計算型 map 運算式。此運算式會保留在草稿中並阻止發布；移除運算式後才能執行巢狀檢視。",
+      "previewNote": "此預覽依據已探索的 schema 顯示文件結構，不會讀取樣本資料列。",
+      "saveOnly": "目前伺服器暫不支援發布計算欄位。請儲存草稿，並在執行前移除此運算式。",
+      "saveDraft": "儲存草稿",
+      "steps": {
+        "root": {
+          "shortTitle": "訂單根資料表",
+          "title": "選擇訂單根資料表",
+          "body": "每筆訂單資料都會成為一份根文件。引導會使用已連線的資料表和探索到的主鍵。",
+          "calloutNext": "繼續檢視：巢狀客戶和明細 →"
+        },
+        "relations": {
+          "shortTitle": "巢狀客戶和明細",
+          "title": "巢狀客戶和訂單明細",
+          "body": "將 {{customerTable}} 嵌入為 customer，將 {{linesTable}} 嵌入為 lines[]，關聯欄位取自已探索的 schema，也支援複合鍵。",
+          "calloutNext": "繼續檢視：保留來源欄位 →"
+        },
+        "transform": {
+          "shortTitle": "訂單總額",
+          "title": "計算訂單總額",
+          "body": "加總巢狀訂單明細中的 {{amountField}}。可將運算式加入草稿，查看此計算在設定中的表示方式。",
+          "calloutNext": "繼續檢視：文件預覽 →"
+        },
+        "preview": {
+          "shortTitle": "文件預覽",
+          "title": "檢視文件結構",
+          "body": "在 JSON 或表格預覽中檢查訂單欄位、巢狀客戶和訂單明細陣列。",
+          "calloutNext": "繼續檢視：儲存並執行 →"
+        },
+        "launch": {
+          "shortTitle": "儲存並執行",
+          "title": "儲存並啟動 Pipeline",
+          "body": "儲存設定草稿、檢查編譯訊息，再從底部操作列啟動 Pipeline。",
+          "calloutDetail": "儲存草稿 · 驗證 · 啟動 Pipeline",
+          "calloutNext": "立即啟動 Pipeline"
+        }
+      }
     }
   },
   "views": {
-    "title": "Views",
+    "title": "檢視",
     "subtitle": "瀏覽 Tapstate 在雲端版狀態儲存中持續維護的集合。",
     "refresh": "重新整理",
     "materialized": "已物化",
@@ -1357,8 +1551,9 @@
       "action": "開啟 Pipelines"
     },
     "states": {
-      "loading": "正在載入 Views...",
-      "error": "無法載入 Views。"
+      "loading": "正在載入檢視…",
+      "error": "檢視載入失敗。",
+      "notReported": "此伺服器暫不提供檢視清單。每條 pipeline 的頁面仍會顯示它寫到哪裡。"
     },
     "stats": {
       "documents": "預估文件數",
@@ -1395,7 +1590,107 @@
       "loading": "正在載入 Pipeline 血緣...",
       "unavailable": "此伺服器尚未提供該 View 的 Pipeline 血緣。",
       "noSources": "沒有上游資料表資訊。"
-    }
+    },
+    "newView": "新增檢視",
+    "intro": "你的即時營運狀態：Tapstate 持續保持最新的每一個檢視。",
+    "kind": {
+      "view": "檢視",
+      "replica": "副本"
+    },
+    "status": {
+      "fresh": "最新 · 落後 {{behind}}",
+      "stale": "過期 · {{age}}",
+      "staleUnknown": "過期",
+      "loading": "載入中 {{percent}}%",
+      "loadingUnknown": "載入中",
+      "notLoaded": "未載入"
+    },
+    "duration": {
+      "s": "{{value}} 秒",
+      "min": "{{value}} 分鐘",
+      "h": "{{value}} 小時",
+      "d": "{{value}} 天"
+    },
+    "ago": "{{age}}前",
+    "summary": {
+      "total_one": "{{count}} 個檢視",
+      "total_other": "{{count}} 個檢視",
+      "fresh_one": "{{count}} 個最新",
+      "fresh_other": "{{count}} 個最新",
+      "stale_one": "{{count}} 個過期",
+      "stale_other": "{{count}} 個過期",
+      "slowest": "最慢落後 {{behind}}",
+      "loading_one": "{{count}} 個載入中",
+      "loading_other": "{{count}} 個載入中",
+      "notLoaded_one": "{{count}} 個未載入",
+      "notLoaded_other": "{{count}} 個未載入"
+    },
+    "table": {
+      "name": "名稱",
+      "type": "類型",
+      "storedIn": "存放於",
+      "status": "狀態",
+      "documents": "文件數",
+      "lastChange": "最近套用的變更",
+      "maintainedBy": "維護者"
+    },
+    "storedIn": {
+      "managed": "Tapstate state store",
+      "store": "{{store}} / {{database}}"
+    },
+    "explainer": {
+      "empty": "還沒有檢視",
+      "what": "檢視是 Tapstate 依據來源表持續保持最新的 collection。",
+      "flowLabel": "檢視如何產生",
+      "sources": "資料來源",
+      "pipeline": "Pipeline",
+      "view": "檢視",
+      "storedIn": "檢視將存放於",
+      "storeMissing": "檢視存放在 state store 中。建立檢視前先選一個。",
+      "setUp": "去設定",
+      "build": "建立檢視",
+      "replicas": "鏡像表會產生副本，也會列在這裡。"
+    },
+    "detail": {
+      "maintainedBy": "維護者",
+      "notFound": "此伺服器上沒有名為 {{id}} 的檢視。",
+      "tabsLabel": "檢視分區",
+      "tabs": {
+        "overview": "概覽",
+        "documents": "文件",
+        "shape": "形狀",
+        "lineage": "血緣",
+        "indexes": "索引"
+      },
+      "pending": {
+        "documents": "此伺服器暫不支援瀏覽文件。",
+        "shape": "此伺服器暫不提供文件形狀。",
+        "lineage": "此伺服器暫不提供欄位血緣。",
+        "indexes": "此伺服器暫不提供索引詳情。"
+      },
+      "size": "大小",
+      "largestDocument": "最大文件",
+      "collection": "collection {{name}}",
+      "storedIn": "存放於",
+      "siblings": "此 pipeline 還寫入：",
+      "freshness": "新鮮度",
+      "lastApplied": "最近一次變更在 {{age}}前",
+      "neverApplied": "尚未套用任何變更",
+      "documentLimit": "單一文件上限 16 MB",
+      "initialLoad": "初次載入",
+      "upToDate": "已是最新",
+      "streaming": "初次載入已完成；變更擷取持續保持最新。",
+      "pipelineState": {
+        "NEW": "從未啟動",
+        "RUNNING": "執行中",
+        "PAUSED": "已暫停",
+        "STOPPED": "已停止",
+        "COMPLETED": "已完成",
+        "FAILED": "已失敗"
+      }
+    },
+    "footnote": "狀態綜合了 pipeline 的狀態與檢視落後於來源的程度。檢視是建立出的文件；副本是一張表的鏡像。",
+    "browseCollections": "瀏覽集合"
   },
   "notFound": {
     "back": "返回工作區",
@@ -1404,12 +1699,222 @@
     "title": "頁面不存在"
   },
   "view": {
-    "overview": { "title": "概覽", "placeholder": "工作區健康概覽。" },
-    "resources": { "title": "資源", "placeholder": "按 kind 篩選全部資產。" },
-    "develop": { "title": "開發", "placeholder": "DAG 畫布與 SQL 編輯器。" },
-    "operations": { "title": "運行", "placeholder": "任務運行、集群和 Share CDC。" },
-    "governance": { "title": "治理", "placeholder": "血緣、校驗和監控。" },
-    "services": { "title": "資料服務", "placeholder": "已發布 API 和 Token。" },
-    "admin": { "title": "管理", "placeholder": "使用者、角色、租戶和設定。" }
+    "overview": {
+      "title": "概覽",
+      "placeholder": "工作區健康概覽。"
+    },
+    "resources": {
+      "title": "資源",
+      "placeholder": "按 kind 篩選全部資產。"
+    },
+    "develop": {
+      "title": "開發",
+      "placeholder": "DAG 畫布與 SQL 編輯器。"
+    },
+    "operations": {
+      "title": "運行",
+      "placeholder": "任務運行、集群和 Share CDC。"
+    },
+    "governance": {
+      "title": "治理",
+      "placeholder": "血緣、校驗和監控。"
+    },
+    "services": {
+      "title": "資料服務",
+      "placeholder": "已發布 API 和 Token。"
+    },
+    "admin": {
+      "title": "管理",
+      "placeholder": "使用者、角色、租戶和設定。"
+    }
+  },
+  "overview": {
+    "title": "概覽",
+    "pipelineHub": "Tapstate Pipeline",
+    "pipelineHubSubtitle": "持續 CDC 同步",
+    "notReported": "此伺服器尚未提供",
+    "streamStatus": {
+      "label": "Pipeline 即時狀態",
+      "active_one": "{{count}} 條 Pipeline 正在同步",
+      "active_other": "{{count}} 條 Pipeline 正在同步",
+      "none": "目前沒有執行中的 Pipeline",
+      "preview": "資料流預覽",
+      "sources_one": "{{count}} 個已連線資料來源",
+      "sources_other": "{{count}} 個已連線資料來源",
+      "destination": "狀態儲存：{{name}}",
+      "open": "查看 Pipelines"
+    },
+    "milestones": {
+      "title": "設定進度",
+      "stateStore": "設定狀態儲存",
+      "stateStoreShort": "狀態儲存",
+      "sources": "連線資料來源",
+      "sourcesShort": "新增資料庫",
+      "pipeline": "建立 Pipeline",
+      "pipelineShort": "建立 Pipeline",
+      "configure": "開啟設定",
+      "connectStateStore": "連線狀態儲存",
+      "connectAtlas": "連線 Atlas",
+      "trySample": "試用範例",
+      "addSources": "新增資料來源",
+      "build": "建立 Pipeline",
+      "newPipeline": "建立 Pipeline",
+      "open": "開啟"
+    },
+    "problems_one": "{{count}} 個問題",
+    "problems_other": "{{count}} 個問題",
+    "states": {
+      "loading": "正在載入概覽…",
+      "error": "概覽載入失敗。"
+    },
+    "setup": {
+      "progress": "設定 {{completed}}/{{total}}",
+      "hideHints": "隱藏設定提示",
+      "showHints": "顯示設定提示",
+      "stepOf": "第 {{step}} 步，共 {{total}} 步",
+      "stepNumber": "設定第 {{step}} 步",
+      "stepDone": "設定第 {{step}} 步已完成",
+      "later": "略過，稍後再做",
+      "stateStore": {
+        "title": "選擇檢視存放的位置",
+        "description": "此伺服器還沒有 state store，需要管理員設定。"
+      },
+      "sources": {
+        "title": "新增用來建立的資料庫",
+        "action": "新增資料來源"
+      },
+      "pipeline": {
+        "title": "開始第一條 pipeline",
+        "action": "建立第一條 pipeline"
+      },
+      "complete": {
+        "title": "設定完成。",
+        "body": "State store、資料來源與第一條 pipeline 都已就緒。此提示不會再顯示。",
+        "close": "關閉"
+      }
+    },
+    "sources": {
+      "title": "資料來源",
+      "metric_one": "{{count}} 個資料來源",
+      "metric_other": "{{count}} 個資料來源",
+      "none": "還沒有資料來源。",
+      "more_one": "還有 {{count}} 個",
+      "more_other": "還有 {{count}} 個",
+      "open": "資料來源 →",
+      "add": "新增資料來源",
+      "connected": "已連線",
+      "connect": "連線 {{name}}",
+      "tooltip": "選擇 {{connector}} 資料來源 {{id}}"
+    },
+    "pipelines": {
+      "title": "Pipelines",
+      "metric_one": "{{count}} 條 pipeline",
+      "metric_other": "{{count}} 條 pipeline",
+      "running": "執行中",
+      "idle": "閒置",
+      "error": "錯誤",
+      "open": "Pipelines →",
+      "none": "還沒有 pipeline。",
+      "build": "建立第一條 pipeline",
+      "idleValue_one": "{{count}} · 已停止或從未啟動",
+      "idleValue_other": "{{count}} · 已停止或從未啟動"
+    },
+    "stateStore": {
+      "title": "State store",
+      "atlasTitle": "MongoDB Atlas 狀態儲存",
+      "atlasMissing": "點擊連線目標 Atlas 叢集",
+      "atlasManaged": "已連線為目標端",
+      "ready": "就緒",
+      "missing": "尚未設定。",
+      "location": "位置",
+      "managed": "Tapstate state store",
+      "views": "檢視",
+      "open": "設定 → State store",
+      "metric_one": "{{count}} 個檢視",
+      "metric_other": "{{count}} 個檢視",
+      "fresh": "最新",
+      "stale": "過期",
+      "missingDetail": "檢視存放在 state store 中。建立檢視前先選一個。",
+      "openViews": "檢視 →"
+    },
+    "attention": {
+      "title": "需要關注",
+      "clear": "一切正常。沒有失敗的 pipeline 或過期的檢視。",
+      "pipelineFailed": "失敗的 pipeline",
+      "viewStale": "過期的檢視",
+      "lastApplied_one": "最近一次變更在 {{count}} 分鐘前",
+      "lastApplied_other": "最近一次變更在 {{count}} 分鐘前",
+      "neverApplied": "尚未套用任何變更",
+      "pipelineIs": {
+        "running": "其 pipeline {{pipeline}} 正在執行",
+        "idle": "其 pipeline {{pipeline}} 已停止",
+        "error": "其 pipeline {{pipeline}} 已失敗",
+        "unknown": "由 {{pipeline}} 維護"
+      },
+      "openPipeline": "在 Pipelines 中開啟",
+      "openView": "在檢視中開啟"
+    },
+    "subtitle": "資料從資料來源經 pipeline 流入 state store。",
+    "addSources": {
+      "title": "新增資料來源",
+      "description": "新增你要用來建立的資料庫。",
+      "connect": {
+        "title": "連接你自己的資料庫",
+        "description": "Oracle、SQL Server、MySQL、PostgreSQL 或 MongoDB。新增時會執行連線測試。",
+        "action": "連接資料庫"
+      },
+      "added_one": "你的資料來源（{{count}}）",
+      "added_other": "你的資料來源（{{count}}）",
+      "done": "完成",
+      "tag": "範例",
+      "sample": {
+        "title": "使用範例銀行資料來源",
+        "description": "{{names}}，已為變更擷取準備好。它們帶有「範例」標籤，可在資料來源頁移除。",
+        "and": "與",
+        "action": "新增範例資料來源",
+        "adding": "正在新增…",
+        "added": "已新增",
+        "error": "範例資料來源新增失敗。請重試，或連接你自己的資料庫。"
+      }
+    }
+  },
+  "stateStorePage": {
+    "title": "State store",
+    "intro": "Tapstate 保存檢視的地方。pipeline 建立的每個檢視都寫入預設 store。",
+    "listLabel": "State store 清單",
+    "add": "新增 store",
+    "addLimit": "此版本只支援一個 store",
+    "default": "預設",
+    "delete": "刪除",
+    "fields": {
+      "type": "類型",
+      "location": "資料庫",
+      "checks": "檢查",
+      "usage": "用量",
+      "access": "存取"
+    },
+    "managed": {
+      "name": "Tapstate state store",
+      "type": "MongoDB · 伺服器中繼資料庫",
+      "access": "與此伺服器已使用的 MongoDB 共用。正式環境請使用獨立的 MongoDB。",
+      "deleteReason": "此 store 由伺服器管理"
+    },
+    "cloud": {
+      "name": "Atlas state store",
+      "type": "MongoDB Atlas",
+      "access": "此組織唯一的 Atlas 目標，由 Tapstate 管理連線資訊。"
+    },
+    "states": {
+      "loading": "正在載入 state store…",
+      "error": "state store 載入失敗。",
+      "empty": "還沒有 state store。設定之前 pipeline 無法啟動。"
+    },
+    "settings": "設定",
+    "sectionsLabel": "設定分區",
+    "sections": {
+      "stateStore": "State store",
+      "members": "成員",
+      "apiKeys": "API 金鑰"
+    }
   }
 }

@@ -17,10 +17,23 @@
     "user": {
       "avatar": "用户头像",
       "initial": "U"
+    },
+    "secondaryNavigation": "次要导航",
+    "cloudIdentity": {
+      "label": "云工作区和集群",
+      "returnToOrganization": "返回 Tapstate Cloud 的{{organization}}组织",
+      "organizationLoading": "正在加载组织…",
+      "organizationUnavailable": "组织信息不可用",
+      "clusterLoading": "正在加载集群…",
+      "clusterUnavailable": "集群信息不可用",
+      "region": "AWS {{region}}",
+      "regionUnavailable": "区域信息不可用"
     }
   },
   "nav": {
+    "views": "Views",
     "overview": "概览",
+    "settings": "设置",
     "resources": "资源",
     "develop": "开发",
     "operations": "运行",
@@ -29,7 +42,6 @@
     "admin": "管理",
     "sources": "数据源",
     "pipelines": "流水线",
-    "views": "Views",
     "explorations": "探索"
   },
   "context": {
@@ -145,6 +157,8 @@
       "description": "结果基于当前数据源配置。",
       "action": "测试连接",
       "testing": "正在测试连接",
+      "notTested": "未测试",
+      "statusUnavailable": "状态暂不可用",
       "passed": "连接测试通过",
       "failed": "连接测试失败",
       "reenterSecrets": "测试此草稿前，请重新输入已配置的密钥。",
@@ -156,8 +170,15 @@
       "errors": {
         "network": "无法连接控制面，请检查后端连接后重试。",
         "protocol": "控制面返回了无效的连接测试结果，请重试。",
-        "server": "控制面无法测试此连接。",
-        "unknown": "无法测试此连接，请重试。"
+        "server": "服务端未能完成连接测试。",
+        "connectorFailed": "连接器无法使用当前配置建立连接。",
+        "unknown": "无法测试此连接，请重试。",
+        "timeoutHint": "连接超时。请检查主机、端口、网络连通性和防火墙规则，然后重试。",
+        "technicalDetails": "技术详情",
+        "code": "错误码",
+        "connector": "连接器",
+        "detail": "原因",
+        "serverMessage": "服务端信息"
       }
     },
     "empty": {
@@ -351,6 +372,7 @@
       "indexes": "索引",
       "loadError": "无法加载 Schema，请重试。",
       "loading": "正在加载 Schema",
+      "discoveryFailed": "Schema 发现失败",
       "networkError": "无法连接控制面，请重试刷新 Schema。",
       "noFields": "此表没有返回字段。",
       "none": "无",
@@ -390,6 +412,18 @@
       "lineage": "血缘",
       "log": "日志",
       "settings": "设置"
+    },
+    "samples": {
+      "tag": "样例",
+      "remove": "移除样例数据源",
+      "removing": "正在移除…",
+      "removed_one": "已移除 {{count}} 个样例数据源。",
+      "removed_other": "已移除 {{count}} 个样例数据源。",
+      "inUse": "样例数据源 {{id}} 仍被以下 pipeline 读取：{{pipelines}}。请先删除这些 pipeline；尚未移除的样例已保留。",
+      "error": "样例数据源移除失败。请重试。",
+      "dismiss": "关闭",
+      "added_one": "已添加 {{count}} 个样例数据源。",
+      "added_other": "已添加 {{count}} 个样例数据源。"
     }
   },
   "pipelines": {
@@ -741,6 +775,7 @@
         "field": "字段",
         "operator": "运算符",
         "containsOperator": "包含",
+        "containsTextOnly": "只有源 schema 确认该字段为文本类型后，才能使用“包含”。",
         "value": "值",
         "removeCondition": "移除条件",
         "addCondition": "添加条件",
@@ -806,13 +841,34 @@
         "customDescription": "以 JSON 编辑投影后的处理配置。",
         "invalidObjectJson": "请输入有效的 JSON 对象。",
         "invalidInteger": "请输入整数，也可以留空。",
-        "filter": { "title": "过滤记录", "description": "使用结构化条件保留符合要求的记录。" },
-        "map": { "title": "映射字段", "description": "通过字段引用或常量重新组织每条记录。" },
-        "join": { "title": "连接数据流", "description": "使用明确的连接条件合并两个输入。" },
-        "union": { "title": "合并输入", "description": "将结构兼容的分支合并为一条数据流。" },
-        "nest": { "title": "嵌套记录", "description": "将相关字段聚合到嵌套文档中。" },
-        "js": { "title": "运行脚本", "description": "使用代码执行自定义的逐记录转换。" },
-        "unwind": { "title": "展开数组", "description": "将数组元素展开为独立记录。" },
+        "filter": {
+          "title": "过滤记录",
+          "description": "使用结构化条件保留符合要求的记录。"
+        },
+        "map": {
+          "title": "映射字段",
+          "description": "通过字段引用或常量重新组织每条记录。"
+        },
+        "join": {
+          "title": "连接数据流",
+          "description": "使用明确的连接条件合并两个输入。"
+        },
+        "union": {
+          "title": "合并输入",
+          "description": "将结构兼容的分支合并为一条数据流。"
+        },
+        "nest": {
+          "title": "嵌套记录",
+          "description": "将相关字段聚合到嵌套文档中。"
+        },
+        "js": {
+          "title": "运行脚本",
+          "description": "使用代码执行自定义的逐记录转换。"
+        },
+        "unwind": {
+          "title": "展开数组",
+          "description": "将数组元素展开为独立记录。"
+        },
         "wizard": {
           "transformsHeading": "Transform",
           "stepsCount": "{{count}} 个步骤",
@@ -923,7 +979,8 @@
           "currentTable": "当前表",
           "removeUnionInput": "移除输入流",
           "addUpstreamInput": "添加上游流",
-          "selectAnotherInput": "选择其他可用流"
+          "selectAnotherInput": "选择其他可用流",
+          "unionWizardUnavailable": "Union 需要明确的多路数据流引用，当前构建器尚未收集这些信息。移除此步骤后即可保存并启动。"
         }
       },
       "runtime": {
@@ -971,6 +1028,8 @@
         "errorBody": "请检查控制平面后重试。",
         "monitoring": {
           "loading": "正在加载监控数据",
+          "draftTitle": "此 Pipeline 仍是草稿",
+          "draftBody": "保存并启动 Pipeline 后，即可查看运行状态和指标。",
           "snapshot": "当前指标",
           "metricsTitle": "指标快照",
           "metricsBody": "Pipeline 观测接口当前上报的数值。",
@@ -996,7 +1055,12 @@
           "historyError": "无法加载输出历史。请检查控制平面后重试。",
           "noRetainedSamples": "此时间范围内没有保留的采样数据。这不能说明 Pipeline 过去是否运行过。",
           "rangeLabel": "历史时间范围",
-          "ranges": { "1h": "1 小时", "6h": "6 小时", "24h": "24 小时", "7d": "7 天" },
+          "ranges": {
+            "1h": "1 小时",
+            "6h": "6 小时",
+            "24h": "24 小时",
+            "7d": "7 天"
+          },
           "recordsRate": "每秒记录数",
           "bytesRate": "每秒字节数",
           "rateUnavailable": "此范围内没有可用的 {{metric}} 采样。",
@@ -1015,7 +1079,11 @@
           "cannotSay": "当前无法判断",
           "nextAction": "建议的下一步",
           "observationAge": "{{seconds}} 秒前采集",
-          "freshness": { "FRESH": "观测较新", "STALE": "观测已过期", "UNKNOWN": "观测时间未知" },
+          "freshness": {
+            "FRESH": "观测较新",
+            "STALE": "观测已过期",
+            "UNKNOWN": "观测时间未知"
+          },
           "explainKind": {
             "OBSERVATION_STALE": "观测已过期",
             "CODED_FAILURE": "检测到已报告故障",
@@ -1030,6 +1098,7 @@
           "errorBody": "请检查控制平面后重试。"
         },
         "states": {
+          "DRAFT": "草稿",
           "NEW": "新建",
           "STARTING": "正在启动",
           "RUNNING": "运行中",
@@ -1196,14 +1265,64 @@
     "destinationTable": "目标表",
     "writeStrategy": "写入策略",
     "awaitingTable": "选择表后继续",
+    "previewPanel": {
+      "title": "结果预览",
+      "rootContext": "根实体",
+      "transformsContext": "文档转换",
+      "relationContext": "{{path}}",
+      "documentContext": "文档上下文",
+      "loading": "正在运行有界预览…",
+      "awaitingPreview": "选择根表和目标端后即可预览样本。",
+      "failed": "预览失败，仍显示上一次完成的结果。",
+      "noResult": "暂无已完成的预览结果。",
+      "noDocuments": "样本没有生成文档。",
+      "noRootTitle": "尚未选择根表",
+      "noRootBody": "请在步骤 1 选择根表，以预览组装后的样本文档。",
+      "status": {
+        "idle": "就绪",
+        "loading": "加载中",
+        "stale": "正在更新",
+        "complete": "实时渲染",
+        "error": "失败"
+      },
+      "sampleSummary": "{{roots}} 条根记录 · {{inputs}} 条源记录",
+      "sampleRecord": "样本：第 {{number}} 条记录",
+      "sampleCapped": "根记录已达到采样上限，源数据还有更多记录。",
+      "jsonDoc": "JSON 文档",
+      "tableView": "表格视图",
+      "copy": "复制规范",
+      "copied": "已复制 ✓",
+      "copyFailed": "复制失败",
+      "viewSpec": "查看 JSON 规范",
+      "logicalJsonTarget": "逻辑 JSON · {{destination}}",
+      "mongoExtendedJsonTarget": "Mongo Extended JSON（保留目标类型）· {{destination}}",
+      "expand": "展开节点",
+      "collapse": "折叠节点",
+      "documentCount": "文档 {{current}} / {{count}}",
+      "previousDocument": "上一份文档",
+      "nextDocument": "下一份文档",
+      "tableLimit": "显示前 {{shown}} 份，共 {{count}} 份文档",
+      "embeddedArray": "数组 · {{count}} 项",
+      "embeddedDocument": "嵌套文档",
+      "transformAnnotation": "变更字段：{{fields}}",
+      "unknownTransformOrigin": "JS 步骤的字段来源无法静态确认：{{steps}}"
+    },
     "relations": {
       "addRelatedTable": "添加关联表",
-      "addAs": { "flat": "平铺到父文档", "object": "作为子文档", "array": "作为子数组" },
+      "addAs": {
+        "flat": "平铺到父文档",
+        "object": "作为子文档",
+        "array": "作为子数组"
+      },
       "newTable": "新关联表",
       "editTable": "(编辑)",
       "relationship": "关联表",
       "shape": "关系输出形态",
-      "shapes": { "flat": "平铺", "object": "文档", "array": "数组" },
+      "shapes": {
+        "flat": "平铺",
+        "object": "文档",
+        "array": "数组"
+      },
       "preprocess": "预处理",
       "closeTablePicker": "收起表选择",
       "as": "作为",
@@ -1280,6 +1399,10 @@
     "unsavedChanges": "有未保存的更改",
     "actionSummary": "{{relatedCount}} 个关联表 · {{transformCount}} 个处理步骤",
     "savePipeline": "保存",
+    "inspectPlan": "查看计划",
+    "dslPreview": "DSL 预览",
+    "dslLoading": "正在编译 DSL…",
+    "dslUnavailable": "服务端未返回 DSL 预览。",
     "startPipeline": "保存并启动",
     "starting": "正在启动 Pipeline…",
     "startPhases": {
@@ -1337,10 +1460,81 @@
       "revert": "还原字段",
       "title": "字段重命名",
       "transform": "转换"
+    },
+    "guide": {
+      "eyebrow": "订单 360 演示",
+      "title": "构建订单 360 视图",
+      "collapsed": "可使用订单 360 分步演示。",
+      "open": "打开引导",
+      "mode": "引导模式",
+      "storyboard": "步骤总览",
+      "inSitu": "就地引导",
+      "close": "关闭引导",
+      "stepsLabel": "订单 360 演示步骤",
+      "stepOf": "第 {{step}} 步，共 {{total}} 步",
+      "calloutBadge": "第 {{step}} 步 · {{title}}",
+      "calloutHint": "💡流程引导 · 点击下一步继续，或直接查看配置卡片",
+      "calloutLockedHint": "💡样例流程已预置并锁定，点击下一步继续查看",
+      "previous": "上一步",
+      "next": "下一步",
+      "launch": "启动 Pipeline",
+      "noSample": "连接包含客户、订单和订单明细表的 MySQL 或 PostgreSQL 数据源后，可自动填入这些步骤。",
+      "primaryKey": "主键：{{keys}}",
+      "joinCount": "关联字段数：{{first}} + {{second}}",
+      "applyPreset": "使用检测到的样本",
+      "presetApplied": "已填入样本结构",
+      "fixedNotice": "订单 360 演示已预置配置。逐步查看后即可启动 Pipeline；配置不可修改。",
+      "fixedTransformNote": "预置流程保留原始字段。构建嵌套订单视图不需要额外转换。",
+      "fixedTransform": {
+        "shortTitle": "源字段",
+        "title": "保留源字段",
+        "body": "客户、订单和明细字段直接进入嵌套文档，不需要额外转换。",
+        "calloutNext": "继续查看：文档预览 →"
+      },
+      "applyBeforeFormula": "请先填入检测到的样本结构。",
+      "addFormula": "将表达式加入草稿",
+      "formulaAdded": "已加入草稿",
+      "formulaUnavailable": "当前服务端尚不能编译计算型 map 表达式。该表达式会保留在草稿中并阻止发布；移除表达式后才能运行嵌套视图。",
+      "previewNote": "此预览根据已发现的 schema 展示文档结构，不会读取样本行数据。",
+      "saveOnly": "当前服务端暂不支持发布计算字段。请保存草稿，并在运行前移除此表达式。",
+      "saveDraft": "保存草稿",
+      "steps": {
+        "root": {
+          "shortTitle": "订单根表",
+          "title": "选择订单根表",
+          "body": "每条订单记录都会成为一篇根文档。引导使用已连接的数据表和检测到的主键。",
+          "calloutNext": "继续查看：嵌套客户和明细 →"
+        },
+        "relations": {
+          "shortTitle": "嵌套客户和明细",
+          "title": "嵌套客户和订单明细",
+          "body": "将 {{customerTable}} 嵌入为 customer，将 {{linesTable}} 嵌入为 lines[]，关联字段取自已发现的 schema，也支持复合键。",
+          "calloutNext": "继续查看：保留源字段 →"
+        },
+        "transform": {
+          "shortTitle": "订单总额",
+          "title": "计算订单总额",
+          "body": "汇总嵌套订单明细中的 {{amountField}}。可将表达式加入草稿，查看这个计算在配置中的表示方式。",
+          "calloutNext": "继续查看：文档预览 →"
+        },
+        "preview": {
+          "shortTitle": "文档预览",
+          "title": "检查文档结构",
+          "body": "在 JSON 或表格预览中检查订单字段、嵌套客户和订单明细数组。",
+          "calloutNext": "继续查看：保存并运行 →"
+        },
+        "launch": {
+          "shortTitle": "保存并运行",
+          "title": "保存并启动 Pipeline",
+          "body": "保存配置草稿，检查编译消息，然后从底部操作栏启动 Pipeline。",
+          "calloutDetail": "保存草稿 · 校验 · 启动 Pipeline",
+          "calloutNext": "立即启动 Pipeline"
+        }
+      }
     }
   },
   "views": {
-    "title": "Views",
+    "title": "视图",
     "subtitle": "查看 Tapstate 在云版状态存储中持续维护的集合。",
     "refresh": "刷新",
     "materialized": "已物化",
@@ -1357,8 +1551,9 @@
       "action": "打开 Pipelines"
     },
     "states": {
-      "loading": "正在加载 Views...",
-      "error": "无法加载 Views。"
+      "loading": "正在加载视图…",
+      "error": "视图加载失败。",
+      "notReported": "此服务器暂不提供视图列表。每条 pipeline 的页面仍会显示它写到哪里。"
     },
     "stats": {
       "documents": "预计文档数",
@@ -1395,7 +1590,107 @@
       "loading": "正在加载 Pipeline 血缘...",
       "unavailable": "此服务器暂未提供该 View 的 Pipeline 血缘。",
       "noSources": "没有上游数据表信息。"
-    }
+    },
+    "newView": "新建视图",
+    "intro": "你的实时运营状态：Tapstate 持续保持最新的每一个视图。",
+    "kind": {
+      "view": "视图",
+      "replica": "副本"
+    },
+    "status": {
+      "fresh": "最新 · 落后 {{behind}}",
+      "stale": "过期 · {{age}}",
+      "staleUnknown": "过期",
+      "loading": "加载中 {{percent}}%",
+      "loadingUnknown": "加载中",
+      "notLoaded": "未加载"
+    },
+    "duration": {
+      "s": "{{value}} 秒",
+      "min": "{{value}} 分钟",
+      "h": "{{value}} 小时",
+      "d": "{{value}} 天"
+    },
+    "ago": "{{age}}前",
+    "summary": {
+      "total_one": "{{count}} 个视图",
+      "total_other": "{{count}} 个视图",
+      "fresh_one": "{{count}} 个最新",
+      "fresh_other": "{{count}} 个最新",
+      "stale_one": "{{count}} 个过期",
+      "stale_other": "{{count}} 个过期",
+      "slowest": "最慢落后 {{behind}}",
+      "loading_one": "{{count}} 个加载中",
+      "loading_other": "{{count}} 个加载中",
+      "notLoaded_one": "{{count}} 个未加载",
+      "notLoaded_other": "{{count}} 个未加载"
+    },
+    "table": {
+      "name": "名称",
+      "type": "类型",
+      "storedIn": "存放于",
+      "status": "状态",
+      "documents": "文档数",
+      "lastChange": "最近应用的变更",
+      "maintainedBy": "维护者"
+    },
+    "storedIn": {
+      "managed": "Tapstate state store",
+      "store": "{{store}} / {{database}}"
+    },
+    "explainer": {
+      "empty": "还没有视图",
+      "what": "视图是 Tapstate 根据源表持续保持最新的 collection。",
+      "flowLabel": "视图如何产生",
+      "sources": "数据源",
+      "pipeline": "Pipeline",
+      "view": "视图",
+      "storedIn": "视图将存放于",
+      "storeMissing": "视图存放在 state store 中。构建视图前先选一个。",
+      "setUp": "去设置",
+      "build": "构建视图",
+      "replicas": "镜像表会产生副本，也会列在这里。"
+    },
+    "detail": {
+      "maintainedBy": "维护者",
+      "notFound": "此服务器上没有名为 {{id}} 的视图。",
+      "tabsLabel": "视图分区",
+      "tabs": {
+        "overview": "概览",
+        "documents": "文档",
+        "shape": "形状",
+        "lineage": "血缘",
+        "indexes": "索引"
+      },
+      "pending": {
+        "documents": "此服务器暂不支持浏览文档。",
+        "shape": "此服务器暂不提供文档形状。",
+        "lineage": "此服务器暂不提供字段血缘。",
+        "indexes": "此服务器暂不提供索引详情。"
+      },
+      "size": "大小",
+      "largestDocument": "最大文档",
+      "collection": "collection {{name}}",
+      "storedIn": "存放于",
+      "siblings": "此 pipeline 还写入：",
+      "freshness": "新鲜度",
+      "lastApplied": "最近一次变更在 {{age}}前",
+      "neverApplied": "尚未应用任何变更",
+      "documentLimit": "单个文档上限 16 MB",
+      "initialLoad": "初次加载",
+      "upToDate": "已是最新",
+      "streaming": "初次加载已完成；变更捕获持续保持最新。",
+      "pipelineState": {
+        "NEW": "从未启动",
+        "RUNNING": "运行中",
+        "PAUSED": "已暂停",
+        "STOPPED": "已停止",
+        "COMPLETED": "已完成",
+        "FAILED": "已失败"
+      }
+    },
+    "footnote": "状态综合了 pipeline 的状态与视图落后于源的程度。视图是构建出的文档；副本是一张表的镜像。",
+    "browseCollections": "浏览集合"
   },
   "notFound": {
     "back": "返回工作区",
@@ -1404,12 +1699,222 @@
     "title": "页面不存在"
   },
   "view": {
-    "overview": { "title": "概览", "placeholder": "工作区健康概览。" },
-    "resources": { "title": "资源", "placeholder": "按 kind 过滤全部资产。" },
-    "develop": { "title": "开发", "placeholder": "DAG 画布与 SQL 编辑器。" },
-    "operations": { "title": "运行", "placeholder": "任务运行、集群和 Share CDC。" },
-    "governance": { "title": "治理", "placeholder": "血缘、校验和监控。" },
-    "services": { "title": "数据服务", "placeholder": "已发布 API 和 Token。" },
-    "admin": { "title": "管理", "placeholder": "用户、角色、租户和设置。" }
+    "overview": {
+      "title": "概览",
+      "placeholder": "工作区健康概览。"
+    },
+    "resources": {
+      "title": "资源",
+      "placeholder": "按 kind 过滤全部资产。"
+    },
+    "develop": {
+      "title": "开发",
+      "placeholder": "DAG 画布与 SQL 编辑器。"
+    },
+    "operations": {
+      "title": "运行",
+      "placeholder": "任务运行、集群和 Share CDC。"
+    },
+    "governance": {
+      "title": "治理",
+      "placeholder": "血缘、校验和监控。"
+    },
+    "services": {
+      "title": "数据服务",
+      "placeholder": "已发布 API 和 Token。"
+    },
+    "admin": {
+      "title": "管理",
+      "placeholder": "用户、角色、租户和设置。"
+    }
+  },
+  "overview": {
+    "title": "概览",
+    "pipelineHub": "Tapstate Pipeline",
+    "pipelineHubSubtitle": "持续 CDC 同步",
+    "notReported": "此服务器暂未提供",
+    "streamStatus": {
+      "label": "Pipeline 实时状态",
+      "active_one": "{{count}} 条 Pipeline 正在同步",
+      "active_other": "{{count}} 条 Pipeline 正在同步",
+      "none": "当前没有正在同步的 Pipeline",
+      "preview": "数据流预览",
+      "sources_one": "{{count}} 个已连接数据源",
+      "sources_other": "{{count}} 个已连接数据源",
+      "destination": "状态存储：{{name}}",
+      "open": "查看 Pipelines"
+    },
+    "milestones": {
+      "title": "设置进度",
+      "stateStore": "配置状态存储",
+      "stateStoreShort": "状态存储",
+      "sources": "连接数据源",
+      "sourcesShort": "添加数据库",
+      "pipeline": "构建 Pipeline",
+      "pipelineShort": "构建 Pipeline",
+      "configure": "打开设置",
+      "connectStateStore": "连接状态存储",
+      "connectAtlas": "连接 Atlas",
+      "trySample": "试用样本",
+      "addSources": "添加数据源",
+      "build": "构建 Pipeline",
+      "newPipeline": "新建 Pipeline",
+      "open": "打开"
+    },
+    "problems_one": "{{count}} 个问题",
+    "problems_other": "{{count}} 个问题",
+    "states": {
+      "loading": "正在加载概览…",
+      "error": "概览加载失败。"
+    },
+    "setup": {
+      "progress": "设置 {{completed}}/{{total}}",
+      "hideHints": "隐藏设置提示",
+      "showHints": "显示设置提示",
+      "stepOf": "第 {{step}} 步，共 {{total}} 步",
+      "stepNumber": "设置第 {{step}} 步",
+      "stepDone": "设置第 {{step}} 步已完成",
+      "later": "跳过，稍后再做",
+      "stateStore": {
+        "title": "选择视图存放的位置",
+        "description": "此服务器还没有 state store，需要管理员配置。"
+      },
+      "sources": {
+        "title": "添加用来构建的数据库",
+        "action": "添加数据源"
+      },
+      "pipeline": {
+        "title": "开始第一条 pipeline",
+        "action": "构建第一条 pipeline"
+      },
+      "complete": {
+        "title": "设置完成。",
+        "body": "State store、数据源与第一条 pipeline 都已就绪。此提示不会再显示。",
+        "close": "关闭"
+      }
+    },
+    "sources": {
+      "title": "数据源",
+      "metric_one": "{{count}} 个数据源",
+      "metric_other": "{{count}} 个数据源",
+      "none": "还没有数据源。",
+      "more_one": "还有 {{count}} 个",
+      "more_other": "还有 {{count}} 个",
+      "open": "数据源 →",
+      "add": "添加数据源",
+      "connected": "已连接",
+      "connect": "连接 {{name}}",
+      "tooltip": "选择 {{connector}} 数据源 {{id}}"
+    },
+    "pipelines": {
+      "title": "Pipelines",
+      "metric_one": "{{count}} 条 pipeline",
+      "metric_other": "{{count}} 条 pipeline",
+      "running": "运行中",
+      "idle": "空闲",
+      "error": "出错",
+      "open": "Pipelines →",
+      "none": "还没有 pipeline。",
+      "build": "构建第一条 pipeline",
+      "idleValue_one": "{{count}} · 已停止或从未启动",
+      "idleValue_other": "{{count}} · 已停止或从未启动"
+    },
+    "stateStore": {
+      "title": "State store",
+      "atlasTitle": "MongoDB Atlas 状态存储",
+      "atlasMissing": "点击连接目标 Atlas 集群",
+      "atlasManaged": "已连接为目标端",
+      "ready": "就绪",
+      "missing": "尚未设置。",
+      "location": "位置",
+      "managed": "Tapstate state store",
+      "views": "视图",
+      "open": "设置 → State store",
+      "metric_one": "{{count}} 个视图",
+      "metric_other": "{{count}} 个视图",
+      "fresh": "最新",
+      "stale": "过期",
+      "missingDetail": "视图存放在 state store 中。构建视图前先选一个。",
+      "openViews": "视图 →"
+    },
+    "attention": {
+      "title": "需要关注",
+      "clear": "一切正常。没有失败的 pipeline 或过期的视图。",
+      "pipelineFailed": "失败的 pipeline",
+      "viewStale": "过期的视图",
+      "lastApplied_one": "最近一次变更在 {{count}} 分钟前",
+      "lastApplied_other": "最近一次变更在 {{count}} 分钟前",
+      "neverApplied": "尚未应用任何变更",
+      "pipelineIs": {
+        "running": "其 pipeline {{pipeline}} 正在运行",
+        "idle": "其 pipeline {{pipeline}} 已停止",
+        "error": "其 pipeline {{pipeline}} 已失败",
+        "unknown": "由 {{pipeline}} 维护"
+      },
+      "openPipeline": "在 Pipelines 中打开",
+      "openView": "在视图中打开"
+    },
+    "subtitle": "数据从数据源经 pipeline 流入 state store。",
+    "addSources": {
+      "title": "添加数据源",
+      "description": "添加你要用来构建的数据库。",
+      "connect": {
+        "title": "连接你自己的数据库",
+        "description": "Oracle、SQL Server、MySQL、PostgreSQL 或 MongoDB。添加时会运行连接测试。",
+        "action": "连接数据库"
+      },
+      "added_one": "你的数据源（{{count}}）",
+      "added_other": "你的数据源（{{count}}）",
+      "done": "完成",
+      "tag": "样例",
+      "sample": {
+        "title": "使用样例银行数据源",
+        "description": "{{names}}，已为变更捕获准备好。它们带有「样例」标签，可在数据源页移除。",
+        "and": "与",
+        "action": "添加样例数据源",
+        "adding": "正在添加…",
+        "added": "已添加",
+        "error": "样例数据源添加失败。请重试，或连接你自己的数据库。"
+      }
+    }
+  },
+  "stateStorePage": {
+    "title": "State store",
+    "intro": "Tapstate 保存视图的地方。pipeline 构建的每个视图都写入默认 store。",
+    "listLabel": "State store 列表",
+    "add": "添加 store",
+    "addLimit": "本版本只支持一个 store",
+    "default": "默认",
+    "delete": "删除",
+    "fields": {
+      "type": "类型",
+      "location": "数据库",
+      "checks": "检查",
+      "usage": "用量",
+      "access": "访问"
+    },
+    "managed": {
+      "name": "Tapstate state store",
+      "type": "MongoDB · 服务器元数据库",
+      "access": "与此服务器已使用的 MongoDB 共用。生产环境请使用单独的 MongoDB。",
+      "deleteReason": "此 store 由服务器管理"
+    },
+    "cloud": {
+      "name": "Atlas state store",
+      "type": "MongoDB Atlas",
+      "access": "此组织唯一的 Atlas 目标，由 Tapstate 管理连接信息。"
+    },
+    "states": {
+      "loading": "正在加载 state store…",
+      "error": "state store 加载失败。",
+      "empty": "还没有 state store。设置之前 pipeline 无法启动。"
+    },
+    "settings": "设置",
+    "sectionsLabel": "设置分区",
+    "sections": {
+      "stateStore": "State store",
+      "members": "成员",
+      "apiKeys": "API 密钥"
+    }
   }
 }

@@ -55,13 +55,6 @@ function errorMessage(error: unknown, t: ReturnType<typeof useTranslation>['t'])
   return t('sources.edit.errors.server')
 }
 
-function testErrorMessage(error: unknown, t: ReturnType<typeof useTranslation>['t']) {
-  if (!(error instanceof SourceClientError)) return t('sources.test.errors.unknown')
-  if (error.kind === 'network') return t('sources.test.errors.network')
-  if (error.kind === 'protocol') return t('sources.test.errors.protocol')
-  return t('sources.test.errors.server')
-}
-
 function metadataText(source: SourceView) {
   return source.metadata ? JSON.stringify(source.metadata, null, 2) : '{}'
 }
@@ -178,7 +171,7 @@ export function SourceEditDialog({
   const [submitting, setSubmitting] = useState(false)
   const [testing, setTesting] = useState(false)
   const [testReport, setTestReport] = useState<ConnectionTestReport | null>(null)
-  const [testError, setTestError] = useState('')
+  const [testError, setTestError] = useState<unknown>(null)
 
   function sourceConfig(sourceToEdit: SourceView, detail = connector) {
     if (!detail?.spec.text) return { ...sourceToEdit.config }
@@ -205,7 +198,7 @@ export function SourceEditDialog({
     setFieldErrors({})
     setRequestError('')
     setTestReport(null)
-    setTestError('')
+    setTestError(null)
     setConflict(false)
     setSecretDrafts(
       Object.fromEntries(
@@ -342,7 +335,7 @@ export function SourceEditDialog({
   async function runConnectionTest() {
     if (!connector || !schema) return
 
-    setTestError('')
+    setTestError(null)
     setTestReport(null)
 
     const nextErrors: Record<string, string> = {}
@@ -367,7 +360,7 @@ export function SourceEditDialog({
         ),
       )
     } catch (error) {
-      setTestError(testErrorMessage(error, t))
+      setTestError(error)
     } finally {
       setTesting(false)
     }
@@ -478,7 +471,7 @@ export function SourceEditDialog({
                                 onClick={() => {
                                   setMode(item)
                                   setTestReport(null)
-                                  setTestError('')
+                                  setTestError(null)
                                 }}
                               >
                                 {item}
@@ -501,12 +494,12 @@ export function SourceEditDialog({
                       onValuesChange={(values) => {
                         setConfig(values)
                         setTestReport(null)
-                        setTestError('')
+                        setTestError(null)
                       }}
                       onSecretChange={(name, draft) => {
                         setSecretDrafts((current) => ({ ...current, [name]: draft }))
                         setTestReport(null)
-                        setTestError('')
+                        setTestError(null)
                       }}
                     />
                   </>
@@ -665,7 +658,7 @@ export function SourceEditDialog({
           onOpenChange={(nextOpen) => {
             if (!nextOpen) {
               setTestReport(null)
-              setTestError('')
+              setTestError(null)
             }
           }}
         />

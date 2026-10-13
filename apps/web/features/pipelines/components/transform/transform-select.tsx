@@ -13,7 +13,7 @@ export function TransformSelect<T extends string>({
   onChange,
 }: {
   value: T
-  options: Array<{ value: T; label: string }>
+  options: Array<{ value: T; label: string; disabled?: boolean }>
   label: string
   onChange: (value: T) => void
 }) {
@@ -25,7 +25,7 @@ export function TransformSelect<T extends string>({
         </SelectTrigger>
         <SelectContent>
           {options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
+            <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
               {option.label}
             </SelectItem>
           ))}

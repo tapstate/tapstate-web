@@ -112,6 +112,44 @@ export function writeTransforms(steps: TransformStep[] = []): PipelineJsonObject
   }))
 }
 
+/** Normalize the composite-key default that the relation editor can store as one field name. */
+export function normalizeCompositeRelationParents(
+  value: PipelineJsonObject | null,
+  catalog: DataSourceMeta[],
+): PipelineJsonObject | null {
+  if (!value) return value
+  const wizard = object(value)
+  const root = object(wizard.root)
+  const related = array(wizard.related).map(object)
+  const tableFor = (sourceId: string, tableName: string) =>
+    catalog
+      .find((candidate) => candidate.id === sourceId)
+      ?.tables.find((table) => table.name === tableName)
+  const keysForParent = (parentId: string) => {
+    const parent = related.find((candidate) => candidate.id === parentId)
+    const parentMeta = parent
+      ? tableFor(text(parent.sourceId), text(parent.table))
+      : tableFor(text(root.sourceId), text(root.table))
+    return parentMeta?.keys || []
+  }
+  return {
+    ...wizard,
+    related: related.map((row) => {
+      const relation = object(row.relation)
+      const parentKeys = keysForParent(text(row.parentId) || 'root')
+      if (parentKeys.length < 2) return row
+      const compositeDefault = parentKeys.join(', ')
+      const on = array(relation.on).map((rawPair) => {
+        const pair = object(rawPair)
+        return text(pair.parentField) === compositeDefault
+          ? { ...pair, parentField: parentKeys[0] }
+          : pair
+      })
+      return { ...row, relation: { ...relation, on } }
+    }),
+  }
+}
+
 function literalValue(value: string): unknown {
   try {
     return JSON.parse(value)
@@ -120,7 +158,7 @@ function literalValue(value: string): unknown {
   }
 }
 
-/** Guard current server compiler gaps rather than publishing incorrect literal values. */
+/** Reject incomplete Wizard inputs and transform kinds the server cannot compile. */
 export function wizardPublicationIssue(value: PipelineJsonObject | null): string | null {
   const wizard = object(value)
   const root = object(wizard.root)
@@ -135,13 +173,10 @@ export function wizardPublicationIssue(value: PipelineJsonObject | null): string
     ...array(wizard.transforms),
   ].map(object)
   for (const t of transforms) {
-    if (t.type !== 'filter' && t.type !== 'map')
+    if (t.type !== 'filter' && t.type !== 'map' && t.type !== 'js' && t.type !== 'unwind')
       return `The current server cannot publish Wizard ${text(t.type)} transforms yet. Your configuration is saved as a draft.`
-    if (
-      t.type === 'map' &&
-      Object.values(object(t.fields)).some((v) => typeof v === 'string' && v.startsWith('='))
-    )
-      return 'The current server cannot compile computed field expressions yet. Your configuration is saved as a draft; publishing is blocked to avoid writing expression strings as data.'
+    if (t.type === 'js' && !text(object(t.fields).script).trim())
+      return 'Enter a JavaScript script before publishing.'
     if (t.type === 'filter' && !text(object(t.fields).expr).trim())
       return 'Complete the filter expression before publishing.'
   }
@@ -175,7 +210,7 @@ export function readWizard(
   fallbackDestinationId = '',
   fallbackWriteMode = 'upsert',
 ): WizardViewState {
-  const wizard = object(value),
+  const wizard = object(normalizeCompositeRelationParents(value, catalog)),
     root = object(wizard.root),
     output = object(object(wizard.output).config)
   const sourceId = text(root.sourceId),

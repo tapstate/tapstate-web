@@ -50,6 +50,19 @@ const {
   }
 })
 
+const { addSampleSources, loadSampleSources, removeSampleSources } = vi.hoisted(() => ({
+  addSampleSources: vi.fn(),
+  loadSampleSources: vi.fn(),
+  removeSampleSources: vi.fn(),
+}))
+
+vi.mock('@/service/sample-source-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/service/sample-source-client')>()),
+  addSampleSources,
+  loadSampleSources,
+  removeSampleSources,
+}))
+
 vi.mock('@/service/source-client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/service/source-client')>()),
   discoverSourceSchema,
@@ -182,6 +195,7 @@ async function waitForPage(assertion: () => void | Promise<void>) {
 }
 
 beforeEach(() => {
+  loadSampleSources.mockResolvedValue(null)
   listConnectors.mockResolvedValue([mysqlConnector])
   listSources.mockResolvedValue([source])
   getSource.mockResolvedValue({ source, etag: `"${source.contentHash}"` })
@@ -619,5 +633,105 @@ describe('SourcesPage', () => {
       expect(container?.querySelector('[role="status"]')?.textContent).toBe('Source orders updated')
       expect(queryClient.getQueryData(['source', 'orders'])).toEqual(saved)
     })
+  })
+
+  it('tags sample sources and removes them as a set, naming a pipeline that still reads one', async () => {
+    const sample = (id: string): SourceView => ({
+      ...source,
+      id,
+      metadata: { labels: { sample: 'true' }, description: id },
+    })
+    listSources.mockResolvedValue([
+      source,
+      sample('sample_cards_crm'),
+      sample('sample_core_banking'),
+    ])
+    removeSampleSources.mockResolvedValue({
+      removed: ['sample_core_banking'],
+      refused: { sourceId: 'sample_cards_crm', referrers: ['c360_pipeline'] },
+    })
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <SourcesPage />
+        </QueryClientProvider>,
+      )
+    })
+    await waitForPage(() => expect(buttonWithText('Remove sample sources')).toBeDefined())
+
+    const rows = [...(container.querySelectorAll('tbody tr') ?? [])].map(
+      (row) => row.textContent ?? '',
+    )
+    expect(rows.filter((row) => row.includes('Sample'))).toHaveLength(2)
+    expect(rows.find((row) => row.includes('orders'))).not.toContain('Sample')
+
+    await act(async () => buttonWithText('Remove sample sources')?.click())
+    await waitForPage(() =>
+      expect(container?.querySelector('[role="alert"]')?.textContent).toContain(
+        'Sample source sample_cards_crm is still read by: c360_pipeline',
+      ),
+    )
+    expect(removeSampleSources).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ id: 'orders' })]),
+      expect.anything(),
+    )
+    expect(container.textContent).not.toContain('sample_core_banking')
+  })
+
+  it('offers no sample removal when there are no sample sources', async () => {
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <SourcesPage />
+        </QueryClientProvider>,
+      )
+    })
+    await waitForPage(() => expect(container?.textContent).toContain('orders'))
+
+    expect(buttonWithText('Remove sample sources')).toBeUndefined()
+  })
+
+  it('offers the missing sample sources on Data Sources once other sources exist', async () => {
+    const samples = [
+      {
+        id: 'sample_core_banking',
+        name: 'Core banking',
+        description: '',
+        connector: 'mysql',
+        mode: 'cdc',
+        config: {},
+      },
+    ]
+    loadSampleSources.mockResolvedValue(samples)
+    addSampleSources.mockResolvedValue({
+      added: [{ ...source, id: 'sample_core_banking', metadata: { labels: { sample: 'true' } } }],
+      existing: [],
+    })
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <SourcesPage />
+        </QueryClientProvider>,
+      )
+    })
+    await waitForPage(() => expect(buttonWithText('Add sample sources')).toBeDefined())
+
+    await act(async () => buttonWithText('Add sample sources')?.click())
+    await waitForPage(() => expect(buttonWithText('Remove sample sources')).toBeDefined())
+
+    expect(addSampleSources).toHaveBeenCalledWith(samples, [source], expect.anything())
+    expect(buttonWithText('Add sample sources')).toBeUndefined()
   })
 })
