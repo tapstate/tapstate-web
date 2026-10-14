@@ -8,14 +8,16 @@ import {
   ShieldCheck,
   Sun,
 } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-
-import './auth-pages.css'
 
 import type { UserProfile } from '../../types'
 
-import { CloudApiError, type LoginInput, type RegisterInput } from '../../service/cloud-api'
+import {
+  CloudApiError,
+  type EmailRegistrationInput,
+  type LoginInput,
+} from '../../service/cloud-api'
 import { AuthProviderButtons } from './auth-provider-buttons'
 
 type AuthMode = 'login' | 'register'
@@ -23,37 +25,106 @@ type AuthMode = 'login' | 'register'
 interface AuthPageProps {
   darkMode: boolean
   setDarkMode: (enabled: boolean) => void
+  invitationToken: string | null
+  oauthOutcome?: string
   onLogin: (input: LoginInput) => Promise<UserProfile>
-  onRegister: (input: RegisterInput) => Promise<UserProfile>
+  onRequestCode: (email: string, invitationToken: string) => Promise<void>
+  onRegisterWithEmail: (input: EmailRegistrationInput) => Promise<UserProfile>
+  onAcceptInvitation: (invitationToken: string) => Promise<UserProfile>
+  onCurrentSession: () => Promise<UserProfile>
   onAuthenticated: (user: UserProfile) => Promise<void>
+  onOAuth: (
+    provider: 'google' | 'github',
+    mode: AuthMode,
+    invitationToken: string | null,
+  ) => Promise<void>
+}
+
+const inputClassName =
+  'h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]'
+
+const codeToMessage: Record<string, string> = {
+  'auth.email-already-registered': 'auth.errors.emailExists',
+  'auth.invitation-required': 'auth.errors.invitationRequired',
+  'auth.invitation-invalid': 'auth.errors.invitationInvalid',
+  'auth.invitation-expired': 'auth.errors.invitationExpired',
+  'auth.invitation-revoked': 'auth.errors.invitationRevoked',
+  'auth.invitation-consumed': 'auth.errors.invitationConsumed',
+  'auth.invitation-email-mismatch': 'auth.errors.invitationEmailMismatch',
+  'auth.email-code-invalid': 'auth.errors.codeInvalid',
+  'auth.email-code-expired': 'auth.errors.codeExpired',
+  'auth.email-code-attempts-exceeded': 'auth.errors.codeAttemptsExceeded',
+  'auth.email-code-rate-limited': 'auth.errors.codeRateLimited',
+  'auth.email-code-cooldown': 'auth.errors.codeCooldown',
+  'auth.email-delivery-unavailable': 'auth.errors.emailUnavailable',
+  'auth.sso-provider-unavailable': 'auth.errors.providerUnavailable',
+  'auth.sso-email-unverified': 'auth.errors.providerEmailUnverified',
+  'auth.sso-account-link-required': 'auth.errors.accountLinkRequired',
+  'auth.identity-link-conflict': 'auth.errors.identityConflict',
+  'auth.reauthentication-required': 'auth.errors.reauthenticationRequired',
 }
 
 function errorMessageKey(error: unknown) {
   if (!(error instanceof CloudApiError)) return 'auth.errors.generic'
   if (error.status === 0) return 'auth.errors.network'
   if (error.status === 401) return 'auth.errors.invalidCredentials'
+  if (error.code && codeToMessage[error.code]) return codeToMessage[error.code]
   if (error.status === 409) return 'auth.errors.emailExists'
   return 'auth.errors.generic'
 }
 
-const inputClassName =
-  'w-full h-10 px-3.5 rounded-lg border border-black/[0.1] dark:border-white/[0.12] bg-white dark:bg-[#202124] text-[13px] text-[#111827] dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-[#111827] dark:focus:border-white focus:ring-1 focus:ring-[#111827] dark:focus:ring-white transition-all font-mono'
+function oauthErrorMessage(outcome: string) {
+  if (outcome === 'cancelled') return 'auth.errors.oauthCancelled'
+  if (outcome === 'provider-unavailable') return 'auth.errors.providerUnavailable'
+  if (outcome === 'provider-error' || outcome === 'provider-email-unavailable') {
+    return 'auth.errors.providerError'
+  }
+  if (outcome.startsWith('auth.')) return codeToMessage[outcome] ?? 'auth.errors.generic'
+  return null
+}
 
 export function AuthPage({
   darkMode,
   setDarkMode,
+  invitationToken,
+  oauthOutcome,
   onLogin,
-  onRegister,
+  onRequestCode,
+  onRegisterWithEmail,
+  onAcceptInvitation,
+  onCurrentSession,
   onAuthenticated,
+  onOAuth,
 }: AuthPageProps) {
   const { t } = useTranslation()
-  const [mode, setMode] = useState<AuthMode>('login')
+  const [mode, setMode] = useState<AuthMode>(invitationToken ? 'register' : 'login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
+  const [verificationCode, setVerificationCode] = useState('')
+  const [verificationSent, setVerificationSent] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSendingCode, setIsSendingCode] = useState(false)
+  const [isStartingOAuth, setIsStartingOAuth] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [oauthCompleting, setOauthCompleting] = useState(false)
+  const oauthHandled = useRef(false)
+
+  useEffect(() => {
+    if (!oauthOutcome || oauthHandled.current) return
+    if (oauthOutcome === 'success') {
+      oauthHandled.current = true
+      setOauthCompleting(true)
+      void onCurrentSession()
+        .then(onAuthenticated)
+        .catch((cause: unknown) => setError(errorMessageKey(cause)))
+        .finally(() => setOauthCompleting(false))
+      return
+    }
+    const message = oauthErrorMessage(oauthOutcome)
+    if (message) setError(message)
+  }, [oauthOutcome, onAuthenticated, onCurrentSession])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -61,10 +132,27 @@ export function AuthPage({
     setIsSubmitting(true)
 
     try {
-      const user =
-        mode === 'login'
-          ? await onLogin({ email: email.trim(), password })
-          : await onRegister({ email: email.trim(), password, displayName: displayName.trim() })
+      let user: UserProfile
+      if (mode === 'login') {
+        user = await onLogin({ email: email.trim(), password })
+        if (invitationToken) user = await onAcceptInvitation(invitationToken)
+      } else {
+        if (!invitationToken) {
+          setError('auth.errors.invitationRequired')
+          return
+        }
+        if (!verificationSent) {
+          setError('auth.errors.requestCodeFirst')
+          return
+        }
+        user = await onRegisterWithEmail({
+          email: email.trim(),
+          invitationToken,
+          code: verificationCode.trim(),
+          password,
+          displayName: displayName.trim(),
+        })
+      }
       await onAuthenticated(user)
     } catch (cause) {
       setError(errorMessageKey(cause))
@@ -73,16 +161,252 @@ export function AuthPage({
     }
   }
 
+  const handleRequestCode = async () => {
+    if (!invitationToken) {
+      setError('auth.errors.invitationRequired')
+      return
+    }
+    setError(null)
+    setIsSendingCode(true)
+    try {
+      await onRequestCode(email.trim(), invitationToken)
+      setVerificationSent(true)
+    } catch (cause) {
+      setError(errorMessageKey(cause))
+    } finally {
+      setIsSendingCode(false)
+    }
+  }
+
+  const handleOAuth = async (provider: 'google' | 'github') => {
+    setError(null)
+    setIsStartingOAuth(true)
+    try {
+      await onOAuth(provider, mode, invitationToken)
+    } catch (cause) {
+      setError(errorMessageKey(cause))
+      setIsStartingOAuth(false)
+    }
+  }
+
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode)
     setError(null)
   }
 
+  const updateEmail = (value: string) => {
+    if (email.trim().toLowerCase() !== value.trim().toLowerCase()) {
+      setVerificationSent(false)
+      setVerificationCode('')
+    }
+    setEmail(value)
+  }
+
+  if (oauthCompleting) {
+    return (
+      <AuthShell darkMode={darkMode} setDarkMode={setDarkMode}>
+        <div className="flex min-h-64 flex-col items-center justify-center gap-3 text-center">
+          <RefreshCw aria-hidden="true" className="h-5 w-5 animate-spin" />
+          <p className="text-sm text-[var(--muted-foreground)]">{t('auth.working')}</p>
+        </div>
+      </AuthShell>
+    )
+  }
+
   return (
-    <div
-      className={`app-shell relative flex min-h-screen w-full flex-col items-center justify-between px-4 py-6 font-sans transition-colors duration-200 ${darkMode ? 'dark text-[#f0f1f3]' : 'text-[#111827]'}`}
-    >
-      <header className="z-20 flex w-full max-w-5xl items-center justify-between">
+    <AuthShell darkMode={darkMode} setDarkMode={setDarkMode}>
+      {error && (
+        <div
+          className="mb-5 flex items-start gap-2 rounded-md border border-[var(--border)] bg-[var(--app-background)] p-3 text-sm text-[var(--foreground)]"
+          role="alert"
+        >
+          <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{t(error)}</span>
+        </div>
+      )}
+
+      <div className="space-y-1 text-center">
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">
+          {t(mode === 'login' ? 'auth.loginTitle' : 'auth.registerTitle')}
+        </h1>
+        <p className="text-sm text-[var(--muted-foreground)]">
+          {t(mode === 'login' ? 'auth.loginDescription' : 'auth.registerDescription')}
+        </p>
+      </div>
+
+      {invitationToken && (
+        <p className="mt-4 rounded-md border border-[var(--border)] bg-[var(--app-background)] px-3 py-2 text-xs text-[var(--muted-foreground)]">
+          {t('auth.invitationNotice')}
+        </p>
+      )}
+
+      <div className="mt-6 space-y-4">
+        <AuthProviderButtons
+          disabled={isSubmitting || isSendingCode || isStartingOAuth}
+          mode={mode}
+          onStart={(provider) => void handleOAuth(provider)}
+        />
+        {isStartingOAuth && (
+          <p aria-live="polite" className="text-center text-xs text-[var(--muted-foreground)]">
+            {t('auth.working')}
+          </p>
+        )}
+
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          {mode === 'register' && (
+            <Field label={t('auth.nameLabel')} htmlFor="auth-name">
+              <input
+                autoComplete="name"
+                className={inputClassName}
+                id="auth-name"
+                maxLength={100}
+                onChange={(event) => setDisplayName(event.target.value)}
+                placeholder={t('auth.namePlaceholder')}
+                value={displayName}
+              />
+            </Field>
+          )}
+
+          <Field label={t('auth.emailLabel')} htmlFor="auth-email">
+            <input
+              autoComplete="email"
+              className={inputClassName}
+              id="auth-email"
+              onChange={(event) => updateEmail(event.target.value)}
+              placeholder={t('auth.emailPlaceholder')}
+              required
+              type="email"
+              value={email}
+            />
+          </Field>
+
+          {mode === 'register' && (
+            <div className="space-y-2">
+              <button
+                className="h-10 w-full rounded-md border border-[var(--border)] px-3 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--app-background)] disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={!email.trim() || isSendingCode || isSubmitting}
+                onClick={handleRequestCode}
+                type="button"
+              >
+                {isSendingCode
+                  ? t('auth.sendingCode')
+                  : verificationSent
+                    ? t('auth.resendCode')
+                    : t('auth.sendCode')}
+              </button>
+              {verificationSent && (
+                <Field label={t('auth.codeLabel')} htmlFor="auth-code">
+                  <input
+                    autoComplete="one-time-code"
+                    className={inputClassName}
+                    id="auth-code"
+                    inputMode="numeric"
+                    maxLength={6}
+                    onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, ''))}
+                    pattern="[0-9]{6}"
+                    required
+                    value={verificationCode}
+                  />
+                  <p className="text-xs text-[var(--muted-foreground)]">
+                    {t('auth.codeSentTo', { email: email.trim() })}
+                  </p>
+                </Field>
+              )}
+            </div>
+          )}
+
+          {(mode === 'login' || verificationSent) && (
+            <Field label={t('auth.passwordLabel')} htmlFor="auth-password">
+              <div className="relative">
+                <input
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                  className={`${inputClassName} pr-10`}
+                  id="auth-password"
+                  minLength={mode === 'register' ? 8 : undefined}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder={t(
+                    mode === 'login' ? 'auth.passwordPlaceholder' : 'auth.newPasswordPlaceholder',
+                  )}
+                  required
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                />
+                <button
+                  aria-label={t(showPassword ? 'auth.hidePassword' : 'auth.showPassword')}
+                  className="absolute inset-y-0 right-3 text-[var(--muted-foreground)]"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  type="button"
+                >
+                  {showPassword ? (
+                    <EyeOff aria-hidden="true" className="h-4 w-4" />
+                  ) : (
+                    <Eye aria-hidden="true" className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </Field>
+          )}
+
+          {(mode === 'login' || verificationSent) && (
+            <button
+              className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--foreground)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSubmitting || isSendingCode}
+              type="submit"
+            >
+              {isSubmitting ? (
+                <>
+                  <RefreshCw aria-hidden="true" className="h-4 w-4 animate-spin" />
+                  <span>{t('auth.working')}</span>
+                </>
+              ) : (
+                <>
+                  <span>{t(mode === 'login' ? 'auth.loginAction' : 'auth.registerAction')}</span>
+                  <ArrowRight aria-hidden="true" className="h-4 w-4" />
+                </>
+              )}
+            </button>
+          )}
+        </form>
+
+        {invitationToken ? (
+          <p className="text-center text-sm text-[var(--muted-foreground)]">
+            {t(mode === 'login' ? 'auth.haveAccount' : 'auth.haveInviteAccount')}{' '}
+            <button
+              className="font-medium text-[var(--foreground)] underline-offset-4 hover:underline"
+              onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
+              type="button"
+            >
+              {t(mode === 'login' ? 'auth.goRegister' : 'auth.goLogin')}
+            </button>
+          </p>
+        ) : (
+          <p className="text-center text-xs text-[var(--muted-foreground)]">
+            {t('auth.invitationRequiredForRegistration')}
+          </p>
+        )}
+
+        <div className="flex items-center justify-center gap-2 border-t border-[var(--border)] pt-4 text-xs text-[var(--muted-foreground)]">
+          <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0" />
+          <span>{t('auth.securityNote')}</span>
+        </div>
+      </div>
+    </AuthShell>
+  )
+}
+
+function AuthShell({
+  children,
+  darkMode,
+  setDarkMode,
+}: {
+  children: ReactNode
+  darkMode: boolean
+  setDarkMode: (enabled: boolean) => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <div className="app-shell flex min-h-screen flex-col items-center justify-between px-4 py-6 text-[var(--foreground)]">
+      <header className="flex w-full max-w-5xl items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="flex items-center gap-1.5 dark:hidden">
             <img alt="" className="h-7 w-7" src="/tapstate-app-icon.svg" />
@@ -94,170 +418,54 @@ export function AuthPage({
             src="/tapstate-lockup-dark.svg"
           />
         </div>
-
-        <div className="flex items-center gap-2">
-          <span className="hidden text-xs text-neutral-500 sm:inline dark:text-neutral-400">
+        <div className="flex items-center gap-3">
+          <span className="hidden text-xs text-[var(--muted-foreground)] sm:inline">
             {t('auth.headerNote')}
           </span>
           <button
             aria-label={t('app.toggleTheme')}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-black/[0.04] hover:text-neutral-900 dark:hover:bg-white/[0.05] dark:hover:text-white"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
             onClick={() => setDarkMode(!darkMode)}
             title={t('app.toggleTheme')}
             type="button"
           >
-            {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {darkMode ? (
+              <Sun aria-hidden="true" className="h-4 w-4" />
+            ) : (
+              <Moon aria-hidden="true" className="h-4 w-4" />
+            )}
           </button>
         </div>
       </header>
 
-      <main className="z-10 my-auto flex w-full items-center justify-center py-8">
-        <div className="auth-card flowing-card-container material-fusion w-full max-w-[400px]">
-          <div aria-hidden="true" className="flowing-border-glow" />
-
-          <section className="liquid-glass-card relative z-10 w-full overflow-hidden p-7 transition-all duration-200 sm:p-8">
-            <div aria-hidden="true" className="liquid-glass-meniscus" />
-
-            {error && (
-              <div
-                className="mb-4 flex items-start gap-2 rounded-xl border border-red-200/80 bg-red-50 p-2.5 text-xs text-red-600 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400"
-                role="alert"
-              >
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                <div className="leading-snug">{t(error)}</div>
-              </div>
-            )}
-
-            <div className="space-y-6">
-              <div className="space-y-1 text-center">
-                <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-[#111827] dark:text-white">
-                  {t(mode === 'login' ? 'auth.loginTitle' : 'auth.registerTitle')}
-                </h1>
-                <p className="text-[13px] text-neutral-500 dark:text-neutral-400">
-                  {t(mode === 'login' ? 'auth.loginDescription' : 'auth.registerDescription')}
-                </p>
-              </div>
-
-              <AuthProviderButtons mode={mode} />
-
-              <form className="space-y-3.5" onSubmit={handleSubmit}>
-                {mode === 'register' && (
-                  <div className="space-y-1.5">
-                    <label
-                      className="block text-[12px] font-medium text-[#374151] dark:text-neutral-300"
-                      htmlFor="auth-name"
-                    >
-                      {t('auth.nameLabel')}
-                    </label>
-                    <input
-                      autoComplete="name"
-                      className={inputClassName}
-                      id="auth-name"
-                      maxLength={100}
-                      onChange={(event) => setDisplayName(event.target.value)}
-                      placeholder={t('auth.namePlaceholder')}
-                      required
-                      value={displayName}
-                    />
-                  </div>
-                )}
-
-                <div className="space-y-1.5">
-                  <label
-                    className="block text-[12px] font-medium text-[#374151] dark:text-neutral-300"
-                    htmlFor="auth-email"
-                  >
-                    {t('auth.emailLabel')}
-                  </label>
-                  <input
-                    autoComplete="email"
-                    className={inputClassName}
-                    id="auth-email"
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder={t('auth.emailPlaceholder')}
-                    required
-                    type="email"
-                    value={email}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label
-                    className="block text-[12px] font-medium text-[#374151] dark:text-neutral-300"
-                    htmlFor="auth-password"
-                  >
-                    {t('auth.passwordLabel')}
-                  </label>
-                  <div className="relative">
-                    <input
-                      autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                      className={`${inputClassName} pr-10`}
-                      id="auth-password"
-                      minLength={mode === 'register' ? 8 : undefined}
-                      onChange={(event) => setPassword(event.target.value)}
-                      placeholder={t(
-                        mode === 'login'
-                          ? 'auth.passwordPlaceholder'
-                          : 'auth.newPasswordPlaceholder',
-                      )}
-                      required
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                    />
-                    <button
-                      aria-label={t(showPassword ? 'auth.hidePassword' : 'auth.showPassword')}
-                      className="absolute top-3 right-3 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
-                      onClick={() => setShowPassword((visible) => !visible)}
-                      type="button"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  {mode === 'register' && (
-                    <p className="text-[11px] text-neutral-400">{t('auth.passwordHint')}</p>
-                  )}
-                </div>
-
-                <button
-                  className="mt-1 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#111827] text-[13px] font-medium text-white shadow-xs transition-all hover:bg-[#1f2937] active:scale-[0.99] disabled:opacity-50 dark:bg-white dark:text-[#111827] dark:hover:bg-neutral-100"
-                  disabled={isSubmitting}
-                  type="submit"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                      <span>{t('auth.working')}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>
-                        {t(mode === 'login' ? 'auth.loginAction' : 'auth.registerAction')}
-                      </span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </>
-                  )}
-                </button>
-              </form>
-
-              <div className="pt-2 text-center text-[13px] text-neutral-500 dark:text-neutral-400">
-                {t(mode === 'login' ? 'auth.noAccount' : 'auth.haveAccount')}{' '}
-                <button
-                  className="ml-0.5 font-medium text-[#111827] transition-colors hover:underline dark:text-white"
-                  onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
-                  type="button"
-                >
-                  {t(mode === 'login' ? 'auth.goRegister' : 'auth.goLogin')}
-                </button>
-              </div>
-
-              <div className="flex items-center justify-center gap-2 border-t border-black/[0.06] pt-4 text-[11px] text-neutral-400 dark:border-white/[0.08]">
-                <ShieldCheck className="h-4 w-4" />
-                <span>{t('auth.securityNote')}</span>
-              </div>
-            </div>
-          </section>
-        </div>
+      <main className="my-auto flex w-full max-w-md items-center justify-center py-10">
+        <section className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--main-shadow)] sm:p-8">
+          {children}
+        </section>
       </main>
+
+      <footer className="w-full max-w-5xl text-center text-xs text-[var(--muted-foreground)]">
+        {t('auth.footer')}
+      </footer>
+    </div>
+  )
+}
+
+function Field({
+  children,
+  htmlFor,
+  label,
+}: {
+  children: ReactNode
+  htmlFor: string
+  label: string
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="block text-sm font-medium text-[var(--foreground)]" htmlFor={htmlFor}>
+        {label}
+      </label>
+      {children}
     </div>
   )
 }

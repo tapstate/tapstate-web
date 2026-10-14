@@ -1,9 +1,55 @@
 import { Building2, ShieldCheck, UserRound } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
+import { cloudApi, type LinkedIdentity } from '../../service/cloud-api'
 import { useCloudAppState } from '../../state/cloud-app-state'
 
 export function SettingsPage() {
   const { activeOrganization, user } = useCloudAppState()
+  const { t } = useTranslation()
+  const [identities, setIdentities] = useState<LinkedIdentity[]>([])
+  const [password, setPassword] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [isLinking, setIsLinking] = useState<'google' | 'github' | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    cloudApi
+      .identities()
+      .then((items) => {
+        if (!cancelled) setIdentities(items)
+      })
+      .catch(() => {
+        if (!cancelled) setError('settings.identityLoadError')
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const linkIdentity = async (provider: 'google' | 'github') => {
+    setError(null)
+    setIsLinking(provider)
+    try {
+      await cloudApi.reauthenticateIdentity(password)
+    } catch {
+      setError('settings.reauthenticationError')
+      setIsLinking(null)
+      return
+    }
+    try {
+      const authorizationUrl = await cloudApi.oauthStart(provider, 'link')
+      window.location.assign(authorizationUrl)
+    } catch {
+      setError('settings.identityLinkStartError')
+      setIsLinking(null)
+    }
+  }
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-y-auto">
@@ -70,6 +116,82 @@ export function SettingsPage() {
               <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>Changes to these settings are not available yet.</span>
             </div>
+          </div>
+        </section>
+
+        <section className="space-y-3" aria-labelledby="linked-identities-title">
+          <h2
+            className="flex items-center gap-2 text-xs font-semibold tracking-wider text-neutral-400 uppercase"
+            id="linked-identities-title"
+          >
+            <ShieldCheck className="h-3.5 w-3.5" />
+            {t('settings.linkedIdentitiesTitle')}
+          </h2>
+          <div className="space-y-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+            <p className="text-xs text-[var(--muted-foreground)]">
+              {t('settings.linkedIdentitiesDescription')}
+            </p>
+            <div className="space-y-2">
+              {(['google', 'github'] as const).map((provider) => {
+                const linked = identities.find((identity) => identity.provider === provider)
+                return (
+                  <div
+                    className="flex flex-col gap-2 rounded-md border border-[var(--border-subtle)] p-3 sm:flex-row sm:items-center sm:justify-between"
+                    key={provider}
+                  >
+                    <div>
+                      <div className="text-sm font-medium text-[var(--foreground)]">
+                        {t(`settings.provider.${provider}`)}
+                      </div>
+                      <div className="mt-0.5 text-xs text-[var(--muted-foreground)]">
+                        {isLoading
+                          ? t('settings.loadingIdentities')
+                          : linked
+                            ? t('settings.identityLinked', {
+                                email: linked.email ?? user?.email ?? '',
+                              })
+                            : t('settings.identityNotLinked')}
+                      </div>
+                    </div>
+                    <button
+                      className="h-9 rounded-md border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground)] hover:bg-[var(--app-background)] disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={isLoading || Boolean(linked) || isLinking !== null}
+                      onClick={() => void linkIdentity(provider)}
+                      type="button"
+                    >
+                      {isLinking === provider
+                        ? t('settings.linkingIdentity')
+                        : t('settings.linkIdentity')}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="space-y-1.5">
+              <label
+                className="block text-xs font-medium text-[var(--foreground)]"
+                htmlFor="identity-reauth-password"
+              >
+                {t('settings.reauthenticationPasswordLabel')}
+              </label>
+              <input
+                autoComplete="current-password"
+                className="h-9 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)]"
+                id="identity-reauth-password"
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder={t('settings.reauthenticationPasswordPlaceholder')}
+                type="password"
+                value={password}
+              />
+              <p className="text-xs text-[var(--muted-foreground)]">
+                {t('settings.reauthenticationHint')}
+              </p>
+            </div>
+            {error && (
+              <p className="text-sm text-[var(--foreground)]" role="alert">
+                {t(error)}
+              </p>
+            )}
           </div>
         </section>
       </div>

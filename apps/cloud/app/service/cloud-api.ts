@@ -29,6 +29,34 @@ export interface Organization {
   status?: 'ACTIVE' | 'SUSPENDED' | string
 }
 
+export interface OrganizationInvitation {
+  id: string
+  orgId: string
+  invitedEmail?: string | null
+  createdAt: string
+  expiresAt: string
+  status: 'active' | 'revoked' | 'consumed' | 'expired'
+}
+
+export interface CreatedOrganizationInvitation {
+  invitation: OrganizationInvitation
+  token: string
+}
+
+export interface LinkedIdentity {
+  provider: 'google' | 'github'
+  email?: string | null
+  linkedAt: string
+}
+
+export interface EmailRegistrationInput {
+  email: string
+  invitationToken: string
+  code: string
+  password: string
+  displayName?: string
+}
+
 export interface Region {
   code: string
   name: string
@@ -212,9 +240,43 @@ const post: Pick<RequestInit, 'method'> = { method: 'POST' }
 const apiPrefix = '/v1/api'
 
 export const cloudApi = {
-  register: (input: RegisterInput) =>
-    request<RegisteredUser>(`${apiPrefix}/auth/register`, jsonBody(input)),
   login: (input: LoginInput) => request<LoginResult>(`${apiPrefix}/auth/login`, jsonBody(input)),
+  requestEmailCode: (email: string, invitationToken: string) =>
+    request<void>(`${apiPrefix}/auth/email/code`, jsonBody({ email, invitationToken })),
+  registerWithEmailCode: (input: EmailRegistrationInput) =>
+    request<LoginResult>(`${apiPrefix}/auth/email/register`, jsonBody(input)),
+  acceptInvitation: (invitationToken: string) =>
+    request<LoginResult>(`${apiPrefix}/auth/invitations/accept`, jsonBody({ invitationToken })),
+  oauthStart: async (
+    provider: 'google' | 'github',
+    flow: 'login' | 'signup' | 'link',
+    invitationToken?: string,
+  ) => {
+    const result = await request<{ authorizationUrl: string }>(
+      `${apiPrefix}/auth/oauth/${provider}/start`,
+      jsonBody({ flow, invitationToken: invitationToken ?? null }),
+    )
+    const authorizationBase = cloudApiOrigin || window.location.origin
+    return new URL(result.authorizationUrl, authorizationBase).toString()
+  },
+  identities: async () =>
+    asList<LinkedIdentity>(await request<unknown>(`${apiPrefix}/auth/identities`)),
+  reauthenticateIdentity: (password: string) =>
+    request<void>(`${apiPrefix}/auth/identities/reauthenticate`, jsonBody({ password })),
+  invitations: async (orgId: string) =>
+    asList<OrganizationInvitation>(
+      await request<unknown>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/invitations`),
+    ),
+  createInvitation: (orgId: string, email?: string) =>
+    request<CreatedOrganizationInvitation>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/invitations`,
+      jsonBody({ email: email?.trim() || null }),
+    ),
+  revokeInvitation: (orgId: string, invitationId: string) =>
+    request<OrganizationInvitation>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/invitations/${encodeURIComponent(invitationId)}`,
+      { method: 'DELETE' },
+    ),
   logout: () => request<unknown>(`${apiPrefix}/auth/logout`, post),
   me: () => request<LoginResult>(`${apiPrefix}/auth/me`),
   organizations: async () => asList<Organization>(await request<unknown>(`${apiPrefix}/orgs`)),
