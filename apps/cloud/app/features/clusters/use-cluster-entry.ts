@@ -6,6 +6,7 @@ import type { Cluster } from '../../service/cloud-api'
 import { CloudApiError, cloudApi } from '../../service/cloud-api'
 
 const activeEntryCancellations = new Set<() => void>()
+const cloudConsoleHosts = new Set(['cloud.tapstate.com', 'dev.cloud.tapstate.com'])
 
 export function cancelPendingClusterEntries() {
   for (const cancel of activeEntryCancellations) cancel()
@@ -47,7 +48,10 @@ export function useClusterEntry() {
       const origin = new URL(baseUri)
       const localTarget = ['localhost', '127.0.0.1'].includes(origin.hostname)
       const localApp = ['localhost', '127.0.0.1'].includes(window.location.hostname)
-      const expectedClusterHost = `${cluster.id}.dev.cloud.tapstate.com`
+      const consoleHost = window.location.hostname
+      const expectedClusterHost = cloudConsoleHosts.has(consoleHost)
+        ? `${cluster.id}.${consoleHost}`
+        : null
       if (
         !success ||
         !exchangeCode ||
