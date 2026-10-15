@@ -145,6 +145,21 @@
     "tabComingSoonBody": "此标签页在迁移预览中以空态表示。",
     "observationUnavailableTitle": "{{tab}} 运行观测不可用",
     "observationUnavailableBody": "当前 Source 仅提供静态 artifact 数据；观测 API 可用后，这里才会显示运行时信息。",
+    "egressAddress": {
+      "title": "Cluster 出口 IP",
+      "loading": "正在查询此 Cluster 连接数据源时使用的 IP……",
+      "unavailable": "暂时无法加载此 Cluster 的出口 IP。",
+      "changing": "稳定 IP 正在配置中。请等待完成后再更新防火墙规则。",
+      "stableHelp": "将此 IP 加入数据库防火墙白名单，允许此 Cluster 连接。如果刚刚完成了 IP 更新，请重新进入 Cluster 刷新此面板。",
+      "dynamicHelp": "这是当前出口 IP。替换 Cluster 实例后可能变化；如需依赖白名单，请让组织管理员先在 Cloud Console 配置稳定 IP。",
+      "currentHelp": "可将当前出口 IP 加入数据库防火墙白名单。稳定状态请查看 Clusters 页面。",
+      "failedHelp": "稳定 IP 配置失败。当前地址仍可能变化，请组织管理员在 Cloud Console 重试。",
+      "missing": "此 Cluster 尚未报告出口 IP。你仍可继续配置数据源。",
+      "copy": "复制 IP",
+      "copied": "已复制",
+      "copyFailed": "无法访问剪贴板。请选中 IP 后手动复制。",
+      "continueSetup": "你仍可继续配置并创建数据源。"
+    },
     "actions": {
       "create": "创建数据源",
       "refresh": "刷新数据源",

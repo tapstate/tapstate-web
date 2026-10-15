@@ -1,13 +1,18 @@
 import type { ISchema } from '@formily/json-schema'
 
+import { useQuery } from '@tanstack/react-query'
 import {
   AlertCircle,
   ArrowLeft,
   Check,
   ChevronRight,
+  Copy,
   Database,
   LoaderCircle,
+  Network,
   Search,
+  ShieldCheck,
+  TriangleAlert,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -23,6 +28,7 @@ import { ConnectorIcon } from '@/components/connector-icon'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { loadCloudWorkspaceContext } from '@/service/cloud-workspace-client'
 import {
   createSource,
   getConnector,
@@ -80,6 +86,7 @@ export function SourceCreateDialog({
   const { i18n, t } = useTranslation()
   const currentLocale = i18n.resolvedLanguage ?? i18n.language
   const apiFetch = useAuthStore((state) => state.apiFetch)
+  const isCloudDeployment = getDeploymentProfile() === 'cloud'
   const [connectors, setConnectors] = useState<ConnectorSummary[]>([])
   const [connector, setConnector] = useState<ConnectorDetail | null>(null)
   const [schema, setSchema] = useState<ISchema | null>(null)
@@ -87,6 +94,13 @@ export function SourceCreateDialog({
   const [connectorId, setConnectorId] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [step, setStep] = useState<CreateSourceStep>('select')
+  const cloudContext = useQuery({
+    queryKey: ['cloud-workspace-context'],
+    queryFn: () => loadCloudWorkspaceContext(apiFetch),
+    enabled: isCloudDeployment && open && step === 'configure',
+    staleTime: 0,
+    retry: 1,
+  })
   const [sourceMode, setSourceMode] = useState('')
   const [config, setConfig] = useState<SourceConfigState>({})
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -97,6 +111,8 @@ export function SourceCreateDialog({
   const [testing, setTesting] = useState(false)
   const [testReport, setTestReport] = useState<ConnectionTestReport | null>(null)
   const [testError, setTestError] = useState<unknown>(null)
+  const [egressAddressCopied, setEgressAddressCopied] = useState(false)
+  const [egressAddressCopyFailed, setEgressAddressCopyFailed] = useState(false)
   const connectorButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
   const initializedForOpen = useRef(false)
 
@@ -285,6 +301,22 @@ export function SourceCreateDialog({
     : sourceConnectors
   const selectedConnector = connectors.find((item) => item.id === connectorId)
   const configuredConnectorName = connector?.name ?? selectedConnector?.name
+  const egressAddress = cloudContext.data?.ec2PublicIp?.trim() || null
+  const egressStatus = cloudContext.data?.egressAddressStatus ?? (egressAddress ? 'DYNAMIC' : null)
+  const egressAddressChanging = egressStatus === 'STABILIZING' || egressStatus === 'ATTACHING'
+  const egressAddressStable = egressStatus === 'STABLE'
+
+  async function copyEgressAddress() {
+    if (!egressAddress) return
+    setEgressAddressCopied(false)
+    setEgressAddressCopyFailed(false)
+    try {
+      await navigator.clipboard.writeText(egressAddress)
+      setEgressAddressCopied(true)
+    } catch {
+      setEgressAddressCopyFailed(true)
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -412,6 +444,91 @@ export function SourceCreateDialog({
                 <div className="flex-1 overflow-y-auto">
                   <section className="mx-auto grid w-full max-w-3xl gap-6 p-6 lg:p-8">
                     {requestError && <RequestError message={requestError} />}
+
+                    {isCloudDeployment && (
+                      <section
+                        aria-label={t('sources.egressAddress.title')}
+                        className={`grid gap-3 rounded-xl border p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center ${
+                          egressAddressStable
+                            ? 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/70 dark:bg-emerald-950/20'
+                            : 'border-amber-200 bg-amber-50/70 dark:border-amber-900/70 dark:bg-amber-950/20'
+                        }`}
+                      >
+                        <div className="flex min-w-0 items-start gap-3">
+                          <span
+                            className={`mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg ${
+                              egressAddressStable
+                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300'
+                                : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                            }`}
+                          >
+                            {egressAddressStable ? (
+                              <ShieldCheck className="size-4" aria-hidden="true" />
+                            ) : egressAddressChanging || cloudContext.isLoading ? (
+                              <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+                            ) : (
+                              <Network className="size-4" aria-hidden="true" />
+                            )}
+                          </span>
+                          <div className="grid min-w-0 gap-1">
+                            <h3 className="text-foreground text-[13px] font-semibold">
+                              {t('sources.egressAddress.title')}
+                            </h3>
+                            <p className="text-muted-foreground text-[12px] leading-relaxed">
+                              {cloudContext.isLoading
+                                ? t('sources.egressAddress.loading')
+                                : cloudContext.isError
+                                  ? t('sources.egressAddress.unavailable')
+                                  : egressAddressChanging
+                                    ? t('sources.egressAddress.changing')
+                                    : egressAddressStable && egressAddress
+                                      ? t('sources.egressAddress.stableHelp')
+                                      : egressStatus === 'FAILED' && egressAddress
+                                        ? t('sources.egressAddress.failedHelp')
+                                        : egressStatus === 'DYNAMIC'
+                                          ? t('sources.egressAddress.dynamicHelp')
+                                          : egressAddress
+                                            ? t('sources.egressAddress.currentHelp')
+                                            : t('sources.egressAddress.missing')}
+                            </p>
+                            {egressAddress ? (
+                              <code className="text-foreground bg-background/80 mt-1 w-fit max-w-full rounded-md px-2 py-1 font-mono text-[13px] break-all">
+                                {egressAddress}
+                              </code>
+                            ) : null}
+                            {egressAddressCopyFailed && (
+                              <span className="text-destructive text-[11px]" role="alert">
+                                {t('sources.egressAddress.copyFailed')}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {egressAddress && !egressAddressChanging ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-9 w-full gap-2 sm:w-auto"
+                            onClick={() => void copyEgressAddress()}
+                          >
+                            {egressAddressCopied ? (
+                              <Check className="size-3.5 text-emerald-600" aria-hidden="true" />
+                            ) : (
+                              <Copy className="size-3.5" aria-hidden="true" />
+                            )}
+                            {egressAddressCopied
+                              ? t('sources.egressAddress.copied')
+                              : t('sources.egressAddress.copy')}
+                          </Button>
+                        ) : null}
+                        {cloudContext.isError && (
+                          <div className="text-muted-foreground flex items-center gap-1.5 text-[11px] sm:col-span-2">
+                            <TriangleAlert className="size-3.5 shrink-0" aria-hidden="true" />
+                            {t('sources.egressAddress.continueSetup')}
+                          </div>
+                        )}
+                      </section>
+                    )}
 
                     {loadingConnector ? (
                       <div className="text-muted-foreground flex min-h-24 items-center justify-center gap-2 text-[13px]">

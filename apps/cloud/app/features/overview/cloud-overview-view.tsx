@@ -27,6 +27,33 @@ function dateLabel(value?: string) {
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString()
 }
 
+function egressAddressState(cluster: Cluster) {
+  if (!cluster.ec2PublicIp) {
+    return {
+      label: 'Address not available',
+      className: 'text-neutral-400',
+    }
+  }
+
+  switch (cluster.egressAddressStatus) {
+    case 'STABLE':
+      return { label: 'Stable', className: 'text-emerald-700 dark:text-emerald-400' }
+    case 'STABILIZING':
+    case 'ATTACHING':
+      return {
+        label: 'Address update in progress',
+        className: 'text-amber-700 dark:text-amber-400',
+      }
+    case 'FAILED':
+      return { label: 'Update failed · IP may change', className: 'text-red-600 dark:text-red-400' }
+    default:
+      return {
+        label: 'Dynamic · may change if replaced',
+        className: 'text-amber-700 dark:text-amber-400',
+      }
+  }
+}
+
 export function CloudOverviewView({
   organization,
   subscriptionLabel,
@@ -136,45 +163,55 @@ export function CloudOverviewView({
                 No clusters yet. Use “Provision Cluster” to create one.
               </div>
             ) : (
-              clusters.map((cluster) => (
-                <button
-                  key={cluster.id}
-                  onClick={() => onEnterCluster(cluster)}
-                  className="group flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-black/[0.02] disabled:cursor-default disabled:hover:bg-transparent dark:hover:bg-white/[0.02] dark:disabled:hover:bg-transparent"
-                  disabled={cluster.state !== 'READY' || enteringClusterId !== null}
-                  type="button"
-                >
-                  <span className="flex items-center gap-3">
-                    <span
-                      className={`h-2 w-2 shrink-0 rounded-full ${cluster.state === 'READY' ? 'bg-emerald-500' : cluster.state === 'PROVISIONING_FAILED' || cluster.state === 'DEGRADED' ? 'bg-red-500' : 'bg-neutral-400'}`}
-                    />
-                    <span>
-                      <span className="flex items-center gap-2 font-mono text-xs font-semibold text-neutral-900 group-hover:text-neutral-700 dark:text-white dark:group-hover:text-neutral-200">
-                        <span>{cluster.name}</span>
-                        <span className="py-0.2 rounded bg-black/[0.04] px-1.5 font-sans text-[10px] font-normal text-neutral-500 capitalize dark:bg-white/[0.06]">
-                          {statusLabel(cluster.state)}
+              clusters.map((cluster) => {
+                const addressState = egressAddressState(cluster)
+                return (
+                  <button
+                    key={cluster.id}
+                    onClick={() => onEnterCluster(cluster)}
+                    className="group flex w-full items-center justify-between gap-4 px-4 py-3.5 text-left transition-colors hover:bg-black/[0.02] disabled:cursor-default disabled:hover:bg-transparent dark:hover:bg-white/[0.02] dark:disabled:hover:bg-white/[0.02]"
+                    disabled={cluster.state !== 'READY' || enteringClusterId !== null}
+                    type="button"
+                  >
+                    <span className="flex items-center gap-3">
+                      <span
+                        className={`h-2 w-2 shrink-0 rounded-full ${cluster.state === 'READY' ? 'bg-emerald-500' : cluster.state === 'PROVISIONING_FAILED' || cluster.state === 'DEGRADED' ? 'bg-red-500' : 'bg-neutral-400'}`}
+                      />
+                      <span className="min-w-0">
+                        <span className="flex items-center gap-2 font-mono text-xs font-semibold text-neutral-900 group-hover:text-neutral-700 dark:text-white dark:group-hover:text-neutral-200">
+                          <span>{cluster.name}</span>
+                          <span className="py-0.2 rounded bg-black/[0.04] px-1.5 font-sans text-[10px] font-normal text-neutral-500 capitalize dark:bg-white/[0.06]">
+                            {statusLabel(cluster.state)}
+                          </span>
+                        </span>
+                        <span className="text-[11px] text-neutral-500">
+                          AWS {cluster.region}
+                          {cluster.specKey ? ` · ${cluster.specKey}` : ''}
+                        </span>
+                        <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
+                          <span className="text-neutral-400">Outbound IP</span>
+                          <code className="font-mono text-neutral-700 dark:text-neutral-300">
+                            {cluster.ec2PublicIp ?? 'Not available'}
+                          </code>
+                          <span className={addressState.className}>{addressState.label}</span>
                         </span>
                       </span>
-                      <span className="text-[11px] text-neutral-500">
-                        AWS {cluster.region}
-                        {cluster.specKey ? ` · ${cluster.specKey}` : ''}
-                      </span>
                     </span>
-                  </span>
 
-                  <span className="flex items-center gap-4 text-xs">
-                    <span className="text-right font-mono text-neutral-500">
-                      <span className="block">— MAR</span>
-                      <span className="block text-[10px] text-neutral-400">
-                        {dateLabel(cluster.createdAt)}
+                    <span className="flex items-center gap-4 text-xs">
+                      <span className="text-right font-mono text-neutral-500">
+                        <span className="block">— MAR</span>
+                        <span className="block text-[10px] text-neutral-400">
+                          {dateLabel(cluster.createdAt)}
+                        </span>
                       </span>
+                      {cluster.state === 'READY' && (
+                        <ArrowUpRight className="h-4 w-4 text-neutral-400 transition-colors group-hover:text-neutral-800 dark:group-hover:text-white" />
+                      )}
                     </span>
-                    {cluster.state === 'READY' && (
-                      <ArrowUpRight className="h-4 w-4 text-neutral-400 transition-colors group-hover:text-neutral-800 dark:group-hover:text-white" />
-                    )}
-                  </span>
-                </button>
-              ))
+                  </button>
+                )
+              })
             )}
           </div>
         </div>
