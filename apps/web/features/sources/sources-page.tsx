@@ -335,7 +335,10 @@ export function SourcesPage({
     }
   }
 
-  async function refreshSourceSchema(source: SourceView) {
+  async function refreshSourceSchema(
+    source: SourceView,
+    { announceSuccess = true }: { announceSuccess?: boolean } = {},
+  ) {
     setSchemaRefreshError('')
     setSchemaRefreshingSourceId(source.id)
     try {
@@ -344,7 +347,9 @@ export function SourcesPage({
         apiFetch,
       )
       queryClient.setQueryData<SourceSchemaReport>(['source-schema', source.id], report)
-      setSuccessMessage(t('sources.schema.refreshSuccess', { id: source.id }))
+      if (announceSuccess) {
+        setSuccessMessage(t('sources.schema.refreshSuccess', { id: source.id }))
+      }
     } catch (error) {
       setSchemaRefreshError(schemaErrorMessage(error, t))
     } finally {
@@ -366,7 +371,7 @@ export function SourcesPage({
     }
     setSuccessMessage(t('sources.create.success', { id: created.id }))
     autoDiscoveryAttempted.current.add(created.id)
-    void refreshSourceSchema(created)
+    void refreshSourceSchema(created, { announceSuccess: false })
   }
 
   function onEdited(result: SourceEnvelope) {
@@ -379,7 +384,7 @@ export function SourcesPage({
     queryClient.removeQueries({ queryKey: ['source-schema', result.source.id] })
     queryClient.removeQueries({ queryKey: ['source-test-result', result.source.id] })
     autoDiscoveryAttempted.current.add(result.source.id)
-    void refreshSourceSchema(result.source)
+    void refreshSourceSchema(result.source, { announceSuccess: false })
     if (onNavigate) {
       onNavigate({ sourceId: result.source.id })
     } else {
@@ -441,7 +446,7 @@ export function SourcesPage({
     if (sourceSchemaQuery.error.status !== 404) return
     if (autoDiscoveryAttempted.current.has(selectedSource.id)) return
     autoDiscoveryAttempted.current.add(selectedSource.id)
-    void refreshSourceSchema(selectedSource.raw)
+    void refreshSourceSchema(selectedSource.raw, { announceSuccess: false })
   }, [selectedSource, sourceSchemaQuery.error])
 
   const loadError =

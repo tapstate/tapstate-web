@@ -986,7 +986,9 @@ describe('PipelineEditorPage', () => {
 
     await vi.waitFor(() => expect(container?.textContent).toContain('No log lines'))
     expect(getPipelineLogs).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function))
-    expect(getPipelineStatus).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function))
+    await vi.waitFor(() =>
+      expect(getPipelineStatus).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function)),
+    )
     expect(getPipelineMetrics).not.toHaveBeenCalled()
   })
 

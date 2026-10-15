@@ -7,13 +7,15 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { PipelineCatalogItem } from '@/service/pipelines/pipeline-client'
+import type { SampleInstallStatus } from '@/service/sample-source-client'
 import type { SourceView } from '@/service/source-client'
 
 const {
-  addSampleSources,
+  startSampleInstall,
   apiFetch,
   createPipelineDraft,
   getSourceSchema,
+  getSampleInstallStatus,
   listConnectors,
   listPipelines,
   listSources,
@@ -21,9 +23,10 @@ const {
   loadSampleSources,
   navigate,
 } = vi.hoisted(() => ({
-  addSampleSources: vi.fn(),
+  startSampleInstall: vi.fn(),
   createPipelineDraft: vi.fn(),
   getSourceSchema: vi.fn(),
+  getSampleInstallStatus: vi.fn(),
   loadSampleSources: vi.fn(),
   listViews: vi.fn(),
   apiFetch: vi.fn(),
@@ -46,7 +49,8 @@ vi.mock('@/service/pipelines/pipeline-client', async (importOriginal) => ({
 }))
 vi.mock('@/service/sample-source-client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/service/sample-source-client')>()),
-  addSampleSources,
+  startSampleInstall,
+  getSampleInstallStatus,
   loadSampleSources,
 }))
 vi.mock('@/service/view-client', async (importOriginal) => ({
@@ -133,7 +137,8 @@ beforeEach(() => {
   listConnectors.mockReset().mockResolvedValue([])
   listViews.mockReset().mockResolvedValue({ available: false })
   loadSampleSources.mockReset().mockResolvedValue(null)
-  addSampleSources.mockReset()
+  startSampleInstall.mockReset()
+  getSampleInstallStatus.mockReset()
   createPipelineDraft.mockReset().mockResolvedValue({})
   getSourceSchema.mockReset()
   navigate.mockReset().mockResolvedValue(undefined)
@@ -275,10 +280,10 @@ describe('OverviewPage', () => {
     await act(async () => buttonNamed('Add data sources', container)?.click())
     await settle()
 
-    expect(document.body.textContent).toContain('Or connect self-hosted / cloud database')
+    expect(document.body.textContent).toContain('Or connect a source')
     await act(async () => buttonNamed('Connect a source')?.click())
     await settle()
-    expect(document.body.textContent).not.toContain('Or connect self-hosted / cloud database')
+    expect(document.body.textContent).not.toContain('Or connect a source')
 
     await act(async () => buttonNamed('Save source')?.click())
     await settle()
@@ -478,18 +483,60 @@ describe('OverviewPage', () => {
       ...source(id, connector),
       metadata: { labels: { sample: 'true' }, description: id },
     })
-    addSampleSources.mockResolvedValue({
-      added: [added('sample_core_banking', 'mysql'), added('sample_cards_crm', 'postgres')],
-      existing: [],
-    })
+    const queued: SampleInstallStatus = {
+      id: 'overview-samples',
+      finished: false,
+      items: ['sample_core_banking', 'sample_cards_crm'].map((id) => ({
+        id,
+        stage: 'QUEUED',
+        errorCode: null,
+        errorDetail: null,
+      })),
+    }
+    let completeInstall!: (status: SampleInstallStatus) => void
+    startSampleInstall.mockResolvedValue(queued)
+    getSampleInstallStatus.mockReturnValue(
+      new Promise<SampleInstallStatus>((resolve) => {
+        completeInstall = resolve
+      }),
+    )
 
     await render()
     await settle()
     await act(async () => buttonNamed('Try sample', container)?.click())
     await settle()
+    expect(document.body.textContent).toContain('Choose data to explore')
+    expect(startSampleInstall).not.toHaveBeenCalled()
+    for (const input of document.querySelectorAll<HTMLInputElement>(
+      '[role="dialog"] input[type="checkbox"]',
+    )) {
+      if (!input.checked) await act(async () => input.click())
+    }
+    await act(async () => buttonNamed('Initialize 2 samples', container)?.click())
+    await settle()
+    expect(startSampleInstall).toHaveBeenCalledWith(
+      ['sample_core_banking', 'sample_cards_crm'],
+      apiFetch,
+    )
+    expect(getSampleInstallStatus).toHaveBeenCalledWith(queued.id, apiFetch)
+    expect(container.textContent).not.toContain('2 connected sources')
 
-    expect(addSampleSources).toHaveBeenCalledTimes(1)
-    expect(container.textContent).toContain('2 connected sources')
+    listSources.mockResolvedValue([
+      source('views', 'mongodb'),
+      added('sample_core_banking', 'mysql'),
+      added('sample_cards_crm', 'postgres'),
+    ])
+    await act(async () =>
+      completeInstall({
+        ...queued,
+        finished: true,
+        items: queued.items.map((item) => ({ ...item, stage: 'READY' })),
+      }),
+    )
+    await settle()
+    await act(async () => {
+      await vi.waitFor(() => expect(container.textContent).toContain('2 connected sources'))
+    })
     expect(buttonNamed('Try sample', container)).toBeUndefined()
   })
 
@@ -502,7 +549,7 @@ describe('OverviewPage', () => {
     await act(async () => buttonNamed('Add data sources', container)?.click())
     await settle()
 
-    expect(document.body.textContent).toContain('Or connect self-hosted / cloud database')
+    expect(document.body.textContent).toContain('Or connect a source')
     expect(document.body.textContent).not.toContain('Sample bank sources')
   })
 })
