@@ -135,6 +135,8 @@ export function SourceCreateDialog({
     setRequestError('')
     setTestReport(null)
     setTestError(null)
+    setEgressAddressCopied(false)
+    setEgressAddressCopyFailed(false)
     if (connectors.length === 0) {
       setLoadingConnectors(true)
       listConnectors(apiFetch)
@@ -301,7 +303,7 @@ export function SourceCreateDialog({
     : sourceConnectors
   const selectedConnector = connectors.find((item) => item.id === connectorId)
   const configuredConnectorName = connector?.name ?? selectedConnector?.name
-  const egressAddress = cloudContext.data?.ec2PublicIp?.trim() || null
+  const egressAddress = cloudContext.isError ? null : cloudContext.data?.ec2PublicIp?.trim() || null
   const egressStatus = cloudContext.data?.egressAddressStatus ?? (egressAddress ? 'DYNAMIC' : null)
   const egressAddressChanging = egressStatus === 'STABILIZING' || egressStatus === 'ATTACHING'
   const egressAddressStable = egressStatus === 'STABLE'
