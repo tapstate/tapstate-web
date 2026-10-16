@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest'
 
 import type { ConnectorConfigField } from '@/service/source-client'
 
-import { buildSourceConfig, createInitialConfig, isFieldVisible } from './source-form'
+import {
+  buildSourceConfig,
+  createInitialConfig,
+  isFieldVisible,
+  type FormConnectorConfigField,
+} from './source-form'
 
 const fields: ConnectorConfigField[] = [
   {
@@ -107,5 +112,84 @@ describe('source form helpers', () => {
       config: { host: 'db.local', password: 'replacement' },
       errors: {},
     })
+  })
+
+  it('builds nested injected settings and preserves explicit file clears', () => {
+    const injectedFields: FormConnectorConfigField[] = [
+      {
+        name: '__TAPDATA.useSSH',
+        type: 'boolean',
+        label: 'Use SSH tunnel',
+        required: false,
+        defaultValue: 'false',
+        secret: false,
+        options: [],
+        visibleWhen: null,
+      },
+      {
+        name: '__TAPDATA.sshPort',
+        type: 'number',
+        label: 'SSH port',
+        required: false,
+        defaultValue: null,
+        secret: false,
+        options: [],
+        visibleWhen: null,
+      },
+      {
+        name: '__TAPDATA.sshPassword',
+        type: 'string',
+        label: 'SSH password',
+        required: false,
+        defaultValue: null,
+        secret: true,
+        options: [],
+        visibleWhen: null,
+      },
+      {
+        name: 'sslCa',
+        type: 'string',
+        label: 'CA certificate',
+        required: false,
+        defaultValue: null,
+        secret: false,
+        options: [],
+        visibleWhen: null,
+        clearable: true,
+      },
+    ]
+
+    expect(createInitialConfig(injectedFields)).toEqual({
+      __TAPDATA: { useSSH: false, sshPort: undefined, sshPassword: undefined },
+      sslCa: undefined,
+    })
+    expect(
+      buildSourceConfig(injectedFields, {
+        __TAPDATA: { useSSH: true, sshPort: '2222', sshPassword: 'secret' },
+        sslCa: null,
+      }),
+    ).toEqual({
+      config: {
+        __TAPDATA: { useSSH: true, sshPort: 2222, sshPassword: 'secret' },
+        sslCa: null,
+      },
+      errors: {},
+    })
+  })
+
+  it('omits a secret field when a newly selected file is removed', () => {
+    const secretFile: FormConnectorConfigField = {
+      name: 'sslKey',
+      type: 'string',
+      label: 'Client key',
+      required: false,
+      defaultValue: null,
+      secret: true,
+      options: [],
+      visibleWhen: null,
+      clearable: true,
+    }
+
+    expect(buildSourceConfig([secretFile], { sslKey: null })).toEqual({ config: {}, errors: {} })
   })
 })
