@@ -543,9 +543,12 @@ describe('WizardBuilder publish flow', () => {
 
     await vi.waitFor(() => expect(previewPipelineDraft).toHaveBeenCalledTimes(1))
     await vi.waitFor(() => expect(streamPipelinePreview).toHaveBeenCalledTimes(1))
-    expect(
-      container?.querySelector('[data-live-preview-run="status-pending-preview"]'),
-    ).not.toBeNull()
+    await vi.waitFor(() => {
+      expect(
+        container?.querySelector('[data-live-preview-run="status-pending-preview"]'),
+      ).not.toBeNull()
+      expect(container?.querySelector('[data-live-preview-status="complete"]')).not.toBeNull()
+    })
     expect(previewPipelineDraft).toHaveBeenCalledTimes(1)
     expect(streamPipelinePreview).toHaveBeenCalledTimes(1)
     expect(updatePipelineDraft).not.toHaveBeenCalled()
@@ -648,7 +651,7 @@ describe('WizardBuilder publish flow', () => {
     expect(streamPipelinePreview.mock.calls[1]?.[0]).toMatchObject({
       pipelineId: initialDraft.pipelineId,
       drafts: [{ content: 'version: tapstate/v1' }],
-      rootLimit: 100,
+      rootLimit: 1,
       signal: expect.any(AbortSignal),
     })
     expect(container?.querySelector('[data-live-preview-status="complete"]')).not.toBeNull()

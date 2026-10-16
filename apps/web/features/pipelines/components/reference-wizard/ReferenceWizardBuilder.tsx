@@ -967,8 +967,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
           <span
             className={
               typeof value === 'string' ||
-              (isObjectRecord(value) &&
-                ('$oid' in value || '$uuid' in value || '$date' in value))
+              (isObjectRecord(value) && ('$oid' in value || '$uuid' in value || '$date' in value))
                 ? 'text-emerald-700'
                 : 'font-semibold text-blue-700'
             }

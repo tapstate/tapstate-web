@@ -43,7 +43,7 @@ describe('loadSampleSources', () => {
     const fetcher = vi.fn(async () => json({ sources: [coreBanking] }))
 
     await expect(loadSampleSources(fetcher)).resolves.toEqual([coreBanking])
-    expect(fetcher).toHaveBeenCalledWith('/api/sample-sources', expect.anything())
+    expect(fetcher).toHaveBeenCalledWith('/api/sample-sources/catalog', expect.anything())
   })
 
   it('offers nothing when the server has no samples or returns malformed metadata', async () => {

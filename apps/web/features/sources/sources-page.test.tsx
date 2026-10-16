@@ -1,5 +1,13 @@
 import '@/i18n/index'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+} from '@tanstack/react-router'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -10,6 +18,7 @@ import {
   type SourceEnvelope,
   type SourceView,
 } from '@/service/source-client'
+import { useSourceFeedbackStore } from '@/stores/source-feedback-store'
 
 const {
   discoverSourceSchema,
@@ -50,15 +59,18 @@ const {
   }
 })
 
-const { addSampleSources, loadSampleSources, removeSampleSources } = vi.hoisted(() => ({
-  addSampleSources: vi.fn(),
-  loadSampleSources: vi.fn(),
-  removeSampleSources: vi.fn(),
-}))
+const { startSampleInstall, getSampleInstallStatus, loadSampleSources, removeSampleSources } =
+  vi.hoisted(() => ({
+    startSampleInstall: vi.fn(),
+    getSampleInstallStatus: vi.fn(),
+    loadSampleSources: vi.fn(),
+    removeSampleSources: vi.fn(),
+  }))
 
 vi.mock('@/service/sample-source-client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/service/sample-source-client')>()),
-  addSampleSources,
+  startSampleInstall,
+  getSampleInstallStatus,
   loadSampleSources,
   removeSampleSources,
 }))
@@ -111,6 +123,10 @@ vi.mock('./source-delete-dialog', () => ({
   },
 }))
 
+import type { SampleInstallStatus } from '@/service/sample-source-client'
+
+import { SourceDetailPage } from './pages/source-detail-page'
+import { SourcesCatalogPage } from './pages/sources-catalog-page'
 import { SourcesPage } from './sources-page'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
@@ -195,6 +211,10 @@ async function waitForPage(assertion: () => void | Promise<void>) {
 }
 
 beforeEach(() => {
+  window.localStorage.clear()
+  useSourceFeedbackStore.setState({ successMessage: '' })
+  startSampleInstall.mockReset()
+  getSampleInstallStatus.mockReset()
   loadSampleSources.mockResolvedValue(null)
   listConnectors.mockResolvedValue([mysqlConnector])
   listSources.mockResolvedValue([source])
@@ -434,7 +454,7 @@ describe('SourcesPage', () => {
     await act(async () => resolveTest?.(testReport))
   })
 
-  it('refreshes schema and shows the discovered fields in table detail', async () => {
+  it('automatically discovers missing schema and retains manual refresh', async () => {
     getSourceSchema.mockRejectedValueOnce(
       new SourceClientError('server', 'not discovered', null, 404),
     )
@@ -454,12 +474,13 @@ describe('SourcesPage', () => {
     })
     await waitForPage(() => expect(buttonWithText('orders')).toBeDefined())
     await act(async () => buttonWithText('orders')?.click())
-    await waitForPage(() =>
-      expect(container?.textContent).toContain('Schema has not been discovered yet.'),
-    )
-
-    await act(async () => buttonWithText('Refresh schema')?.click())
     await waitForPage(() => expect(container?.textContent).toContain('Discovered'))
+    expect(discoverSourceSchema).toHaveBeenCalledTimes(1)
+    await act(async () => buttonWithText('Refresh schema')?.click())
+    await waitForPage(() => expect(discoverSourceSchema).toHaveBeenCalledTimes(2))
+    expect(container?.querySelector('[role="status"]')?.textContent).toBe(
+      'Schema refreshed for orders',
+    )
     expect(discoverSourceSchema).toHaveBeenCalledWith(
       { id: 'orders', connectorId: 'mysql', settings: source.config },
       expect.any(Function),
@@ -503,6 +524,12 @@ describe('SourcesPage', () => {
   })
 
   it('shows creation success as a transient message without adding a page block', async () => {
+    let finishDiscovery!: (report: typeof schemaReport) => void
+    discoverSourceSchema.mockReturnValueOnce(
+      new Promise<typeof schemaReport>((resolve) => {
+        finishDiscovery = resolve
+      }),
+    )
     container = document.createElement('div')
     document.body.append(container)
     root = createRoot(container)
@@ -530,6 +557,64 @@ describe('SourcesPage', () => {
     expect(successToast?.textContent).toBe('Source feyn created')
     expect(successToast?.className).toContain('fixed')
     expect(successToast?.className).not.toContain('border-b')
+    const discovered = { ...schemaReport, connectionId: 'feyn' }
+    expect(discoverSourceSchema).toHaveBeenCalledTimes(1)
+    await act(async () => finishDiscovery(discovered))
+    expect(queryClient.getQueryData(['source-schema', 'feyn'])).toEqual(discovered)
+    expect(container.querySelector('[role="status"]')?.textContent).toBe('Source feyn created')
+  })
+
+  it('keeps creation success when the catalog navigates to the source detail route', async () => {
+    discoverSourceSchema.mockResolvedValueOnce({ ...schemaReport, connectionId: 'feyn' })
+    getSource.mockResolvedValue({ source: { ...source, id: 'feyn' }, etag: '"feyn"' })
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    const rootRoute = createRootRoute({ component: Outlet })
+    const authenticatedRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      id: '_authenticated',
+      component: Outlet,
+    })
+    const catalogRoute = createRoute({
+      getParentRoute: () => authenticatedRoute,
+      path: 'sources/',
+      component: SourcesCatalogPage,
+      validateSearch: () => ({ create: false }),
+    })
+    const detailRoute = createRoute({
+      getParentRoute: () => authenticatedRoute,
+      path: 'sources/$sourceId/',
+      component: SourceDetailPage,
+    })
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([
+        authenticatedRoute.addChildren([catalogRoute, detailRoute]),
+      ]),
+      history: createMemoryHistory({ initialEntries: ['/sources'] }),
+    })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>,
+      )
+    })
+    await waitForPage(() => expect(buttonWithText('orders')).toBeDefined())
+
+    await act(async () => triggerCreated({ ...source, id: 'feyn' }))
+
+    await waitForPage(() => {
+      expect(router.state.location.pathname).toBe('/sources/feyn')
+      const successToast = [...(container?.querySelectorAll('[role="status"]') ?? [])].find(
+        (element) => element.className.includes('fixed'),
+      )
+      expect(successToast?.textContent).toBe('Source feyn created')
+    })
   })
 
   it('loads the latest Source and its ETag before opening Edit', async () => {
@@ -596,6 +681,12 @@ describe('SourcesPage', () => {
   })
 
   it('writes a saved Source back to the selected detail and list caches', async () => {
+    let finishDiscovery!: (report: typeof schemaReport) => void
+    discoverSourceSchema.mockReturnValueOnce(
+      new Promise<typeof schemaReport>((resolve) => {
+        finishDiscovery = resolve
+      }),
+    )
     container = document.createElement('div')
     document.body.append(container)
     root = createRoot(container)
@@ -633,6 +724,11 @@ describe('SourcesPage', () => {
       expect(container?.querySelector('[role="status"]')?.textContent).toBe('Source orders updated')
       expect(queryClient.getQueryData(['source', 'orders'])).toEqual(saved)
     })
+    const discovered = { ...schemaReport, discoveredAt: schemaReport.discoveredAt + 1000 }
+    expect(discoverSourceSchema).toHaveBeenCalledTimes(1)
+    await act(async () => finishDiscovery(discovered))
+    expect(queryClient.getQueryData(['source-schema', 'orders'])).toEqual(discovered)
+    expect(container?.querySelector('[role="status"]')?.textContent).toBe('Source orders updated')
   })
 
   it('tags sample sources and removes them as a set, naming a pipeline that still reads one', async () => {
@@ -711,10 +807,18 @@ describe('SourcesPage', () => {
       },
     ]
     loadSampleSources.mockResolvedValue(samples)
-    addSampleSources.mockResolvedValue({
-      added: [{ ...source, id: 'sample_core_banking', metadata: { labels: { sample: 'true' } } }],
-      existing: [],
-    })
+    const queued: SampleInstallStatus = {
+      id: 'sources-samples',
+      finished: false,
+      items: [{ id: 'sample_core_banking', stage: 'QUEUED', errorCode: null, errorDetail: null }],
+    }
+    let completeInstall!: (status: SampleInstallStatus) => void
+    startSampleInstall.mockResolvedValue(queued)
+    getSampleInstallStatus.mockReturnValue(
+      new Promise<SampleInstallStatus>((resolve) => {
+        completeInstall = resolve
+      }),
+    )
     container = document.createElement('div')
     document.body.append(container)
     root = createRoot(container)
@@ -729,9 +833,33 @@ describe('SourcesPage', () => {
     await waitForPage(() => expect(buttonWithText('Add sample sources')).toBeDefined())
 
     await act(async () => buttonWithText('Add sample sources')?.click())
+    expect(startSampleInstall).not.toHaveBeenCalled()
+    const checkbox = document.querySelector<HTMLInputElement>(
+      '[role="dialog"] input[type="checkbox"]',
+    )!
+    if (!checkbox.checked) await act(async () => checkbox.click())
+    await act(async () => buttonWithText('Initialize 1 sample')?.click())
+    await waitForPage(() =>
+      expect(getSampleInstallStatus).toHaveBeenCalledWith(queued.id, expect.any(Function)),
+    )
+    expect(startSampleInstall).toHaveBeenCalledWith(['sample_core_banking'], expect.any(Function))
+    expect(buttonWithText('Remove sample sources')).toBeUndefined()
+    listSources.mockResolvedValue([
+      source,
+      { ...source, id: 'sample_core_banking', metadata: { labels: { sample: 'true' } } },
+    ])
+    await act(async () =>
+      completeInstall({
+        ...queued,
+        finished: true,
+        items: [{ ...queued.items[0], stage: 'READY' }],
+      }),
+    )
     await waitForPage(() => expect(buttonWithText('Remove sample sources')).toBeDefined())
-
-    expect(addSampleSources).toHaveBeenCalledWith(samples, [source], expect.anything())
-    expect(buttonWithText('Add sample sources')).toBeUndefined()
+    expect(startSampleInstall).toHaveBeenCalledTimes(1)
+    await act(async () => buttonWithLabel('Close sample sources')?.click())
+    await act(async () => buttonWithText('Add sample sources')?.click())
+    expect(container?.textContent).toContain('Ready to use')
+    expect(startSampleInstall).toHaveBeenCalledTimes(1)
   })
 })
