@@ -10,6 +10,7 @@ import {
   type SourceEnvelope,
   type SourceView,
 } from '@/service/source-client'
+import { useSourceFeedbackStore } from '@/stores/source-feedback-store'
 
 const {
   discoverSourceSchema,
@@ -116,7 +117,7 @@ vi.mock('./source-delete-dialog', () => ({
 
 import type { SampleInstallStatus } from '@/service/sample-source-client'
 
-import { SourcesPage } from './sources-page'
+import { SourcesPage, type SourcesPageRoute } from './sources-page'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
@@ -201,6 +202,7 @@ async function waitForPage(assertion: () => void | Promise<void>) {
 
 beforeEach(() => {
   window.localStorage.clear()
+  useSourceFeedbackStore.setState({ successMessage: '' })
   startSampleInstall.mockReset()
   getSampleInstallStatus.mockReset()
   loadSampleSources.mockResolvedValue(null)
@@ -550,6 +552,41 @@ describe('SourcesPage', () => {
     await act(async () => finishDiscovery(discovered))
     expect(queryClient.getQueryData(['source-schema', 'feyn'])).toEqual(discovered)
     expect(container.querySelector('[role="status"]')?.textContent).toBe('Source feyn created')
+  })
+
+  it('keeps creation success when the catalog navigates to the source detail route', async () => {
+    discoverSourceSchema.mockResolvedValueOnce({ ...schemaReport, connectionId: 'feyn' })
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    const navigateFromCatalog = (next: SourcesPageRoute) => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <SourcesPage key="detail" route={next} />
+        </QueryClientProvider>,
+      )
+    }
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <SourcesPage key="catalog" onNavigate={navigateFromCatalog} />
+        </QueryClientProvider>,
+      )
+    })
+    await waitForPage(() => expect(buttonWithText('orders')).toBeDefined())
+
+    await act(async () => triggerCreated({ ...source, id: 'feyn' }))
+
+    await waitForPage(() => {
+      const successToast = [...(container?.querySelectorAll('[role="status"]') ?? [])].find(
+        (element) => element.className.includes('fixed'),
+      )
+      expect(successToast?.textContent).toBe('Source feyn created')
+    })
   })
 
   it('loads the latest Source and its ETag before opening Edit', async () => {
