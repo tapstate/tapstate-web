@@ -22,6 +22,7 @@ import {
   connectorFieldsToFormilySchema,
   formilyInitialValues,
 } from './connector-formily-schema'
+import { TextFileReader } from './text-file-reader'
 
 type FormValues = Record<string, unknown>
 export type SecretDraft = { action: 'keep' | 'replace' | 'clear'; value: string }
@@ -35,6 +36,15 @@ type ControlProps = {
   draft?: SecretDraft
   fieldName?: string
   onSecretChange?: (name: string, draft: SecretDraft) => void
+}
+
+function ConfigSection({ title, children }: ComponentProps<'fieldset'> & { title?: string }) {
+  return (
+    <fieldset className="border-border grid gap-4 rounded-lg border p-4">
+      {title && <legend className="text-foreground px-1 text-[13px] font-semibold">{title}</legend>}
+      {children}
+    </fieldset>
+  )
 }
 
 function ArrayInputBase({ value, onChange, disabled, readOnly }: ControlProps) {
@@ -174,21 +184,31 @@ export interface ConnectorFormilyProps {
   onSecretChange?: (name: string, draft: SecretDraft) => void
 }
 
-function isJsonValue(value: unknown): value is JsonValue {
-  if (value === null) return true
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')
-    return true
-  if (Array.isArray(value)) return value.every(isJsonValue)
-  if (typeof value !== 'object') return false
-  return Object.values(value).every(isJsonValue)
-}
-
 function sourceConfigState(values: FormValues): SourceConfigState {
-  return Object.fromEntries(
-    Object.entries(values).flatMap(([name, value]) =>
-      value === undefined || isJsonValue(value) ? [[name, value]] : [],
-    ),
-  )
+  function clean(value: unknown): JsonValue | undefined {
+    if (value === undefined) return undefined
+    if (
+      value === null ||
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean'
+    )
+      return value
+    if (Array.isArray(value))
+      return value.flatMap((item) => {
+        const cleaned = clean(item)
+        return cleaned === undefined ? [] : [cleaned]
+      })
+    if (typeof value !== 'object') return undefined
+    return Object.fromEntries(
+      Object.entries(value).flatMap(([name, child]) => {
+        const cleaned = clean(child)
+        return cleaned === undefined ? [] : [[name, cleaned]]
+      }),
+    )
+  }
+
+  return clean(values) as SourceConfigState
 }
 
 function createSchema(
@@ -203,55 +223,80 @@ function createSchema(
   const base = (sourceSchema ?? connectorFieldsToFormilySchema(fields)) as ISchema & {
     properties: Record<string, ISchema>
   }
-  const properties = Object.fromEntries(
-    Object.entries(base.properties ?? {}).map(([name, property]) => {
-      const field = fields.find((candidate) => candidate.name === name)
-      const configuredSecret = Boolean(field?.secret && configuredSecrets.includes(name))
-      const decoratorPropsFromSchema = property['x-decorator-props'] as
-        | Record<string, unknown>
-        | undefined
-      const componentPropsFromSchema = property['x-component-props'] as
-        | Record<string, unknown>
-        | undefined
-      const fieldTitle = typeof property.title === 'string' ? property.title : field?.label
-      const decoratorProps = {
-        ...decoratorPropsFromSchema,
-        label: decoratorPropsFromSchema?.label ?? fieldTitle,
-        colon: false,
-        layout: 'vertical',
-        feedbackLayout: 'loose',
-        ...(field && errors[field.name]
-          ? { feedbackStatus: 'error', feedbackText: errors[field.name] }
-          : {}),
-      }
-      const componentProps = {
-        ...componentPropsFromSchema,
-        ...(typeof fieldTitle === 'string' && componentPropsFromSchema?.['aria-label'] === undefined
-          ? { 'aria-label': fieldTitle }
-          : {}),
-        disabled,
-        ...(configuredSecret
-          ? {
-              requiredSecret: field?.required ?? false,
-              draft: secretDrafts[name],
-              fieldName: name,
-              onSecretChange,
-            }
-          : {}),
-      }
-      return [
-        name,
-        {
-          ...property,
-          ...(field?.secret
-            ? { 'x-component': configuredSecret ? 'ConfiguredSecretInput' : 'Password' }
+
+  function decorateProperties(
+    properties: Record<string, ISchema>,
+    path: string[] = [],
+  ): Record<string, ISchema> {
+    return Object.fromEntries(
+      Object.entries(properties).map(([name, property]) => {
+        const propertyRecord = property as ISchema & { properties?: Record<string, ISchema> }
+        const fieldPath = property.type === 'void' ? path : [...path, name]
+        const fieldName = fieldPath.join('.')
+        const field = fields.find((candidate) => candidate.name === fieldName)
+        const configuredFieldSecret = Boolean(
+          field?.secret && configuredSecrets.includes(fieldName),
+        )
+        const decoratorPropsFromSchema = property['x-decorator-props'] as
+          | Record<string, unknown>
+          | undefined
+        const componentPropsFromSchema = property['x-component-props'] as
+          | Record<string, unknown>
+          | undefined
+        const fieldTitle = typeof property.title === 'string' ? property.title : field?.label
+        const decoratorProps = {
+          ...decoratorPropsFromSchema,
+          label: decoratorPropsFromSchema?.label ?? fieldTitle,
+          colon: false,
+          layout: 'vertical',
+          feedbackLayout: 'loose',
+          ...(field && errors[fieldName]
+            ? { feedbackStatus: 'error', feedbackText: errors[fieldName] }
             : {}),
-          'x-decorator-props': decoratorProps,
-          'x-component-props': componentProps,
-        },
-      ]
-    }),
-  )
+        }
+        const fileNameField =
+          typeof (property as ISchema & { fileNameField?: unknown }).fileNameField === 'string'
+            ? (property as ISchema & { fileNameField: string }).fileNameField
+            : undefined
+        const componentProps = {
+          ...componentPropsFromSchema,
+          ...(fileNameField ? { fileNameField } : {}),
+          ...(typeof fieldTitle === 'string' &&
+          componentPropsFromSchema?.['aria-label'] === undefined
+            ? { 'aria-label': fieldTitle }
+            : {}),
+          disabled,
+          ...(configuredFieldSecret
+            ? {
+                requiredSecret: field?.required ?? false,
+                configuredSecret: true,
+                draft: secretDrafts[fieldName],
+                fieldName,
+                onSecretChange,
+              }
+            : {}),
+        }
+        const component = property['x-component']
+        const childProperties = propertyRecord.properties
+        return [
+          name,
+          {
+            ...property,
+            ...(field?.secret && component !== 'TextFileReader'
+              ? { 'x-component': configuredFieldSecret ? 'ConfiguredSecretInput' : 'Password' }
+              : {}),
+            'x-decorator-props': decoratorProps,
+            'x-component-props': componentProps,
+            ...(childProperties
+              ? { properties: decorateProperties(childProperties, fieldPath) }
+              : {}),
+          },
+        ]
+      }),
+    )
+  }
+
+  const properties = decorateProperties(base.properties ?? {})
   return { ...base, properties }
 }
 
@@ -329,6 +374,8 @@ export function ConnectorFormily({
       ...antdFormilyComponents,
       ArrayInput,
       ConfiguredSecretInput,
+      ConfigSection,
+      TextFileReader,
     }),
     [],
   )

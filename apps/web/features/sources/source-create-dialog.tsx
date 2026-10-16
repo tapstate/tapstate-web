@@ -37,6 +37,7 @@ import { ConnectionTestResultDialog } from './connection-test-result'
 import { ConnectorFormily } from './connector-formily'
 import {
   connectorSpecConnectionSchema,
+  connectorSpecConfigFields,
   connectorSpecInitialValues,
   normalizeConnectorConfigFields,
   normalizeConnectorConfigValues,
@@ -150,7 +151,10 @@ export function SourceCreateDialog({
           return
         }
         try {
-          const normalizedFields = normalizeConnectorConfigFields(detail.id, detail.config)
+          const normalizedFields = normalizeConnectorConfigFields(
+            detail.id,
+            connectorSpecConfigFields(detail.spec.text, detail.config, currentLocale),
+          )
           const nextSchema = connectorSpecConnectionSchema(
             detail.spec.text,
             currentLocale,
