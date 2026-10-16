@@ -288,7 +288,7 @@ export function PipelineLifecycleMenu({
           className="min-w-0 sm:max-w-[420px]"
         >
           <DialogHeader>
-            <DialogTitle className="break-words [overflow-wrap:anywhere]">
+            <DialogTitle className="[overflow-wrap:anywhere] break-words">
               {t('pipelines.lifecycle.confirmStopTitle', { id: pipelineId })}
             </DialogTitle>
             <DialogDescription>{t('pipelines.lifecycle.confirmStopBody')}</DialogDescription>

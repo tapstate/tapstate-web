@@ -80,7 +80,9 @@ describe('TransformEditor', () => {
     const values = [...host.querySelectorAll<HTMLInputElement>('input[aria-label="Value"]')]
     setInput(values[1]!, 'Grace')
 
-    expect(changes.at(-1)).toEqual({ body: { expr: 'active == "true" OR name.contains("Grace")' } })
+    expect(changes.at(-1)).toEqual({
+      body: { expr: 'after.active == true || after.name.contains("Grace")' },
+    })
   })
 
   it('keeps one editable filter row after removing the last condition', () => {

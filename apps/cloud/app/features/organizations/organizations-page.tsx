@@ -27,7 +27,6 @@ export function OrganizationsPage() {
             Manage the organizations associated with your account.
           </p>
         </div>
-
       </header>
 
       <div className="flex shrink-0 items-center justify-between border-b border-black/[0.05] bg-neutral-50/50 px-6 py-2.5 dark:border-white/[0.05] dark:bg-black/10">

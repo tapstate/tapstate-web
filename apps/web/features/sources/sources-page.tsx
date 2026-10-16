@@ -64,6 +64,7 @@ import {
 } from '@/service/source-client'
 import { isDataSource } from '@/service/state-store-source'
 import { useAuthStore } from '@/stores/auth-store'
+import { useSourceFeedbackStore } from '@/stores/source-feedback-store'
 
 import { ConnectionTestResultDialog } from './connection-test-result'
 import { SampleSourcesDialog } from './sample-sources-dialog'
@@ -163,7 +164,8 @@ export function SourcesPage({
   const [createOpen, setCreateOpen] = useState(createOnArrival)
   const [editingSourceId, setEditingSourceId] = useState<string | null>(null)
   const [deletingSource, setDeletingSource] = useState<Source | null>(null)
-  const [successMessage, setSuccessMessage] = useState('')
+  const successMessage = useSourceFeedbackStore((state) => state.successMessage)
+  const setSuccessMessage = useSourceFeedbackStore((state) => state.setSuccessMessage)
   const [removingSamples, setRemovingSamples] = useState(false)
   const [sampleDialogOpen, setSampleDialogOpen] = useState(false)
   // Same key as Overview; a deployment without sample settings leaves this null.
@@ -335,7 +337,10 @@ export function SourcesPage({
     }
   }
 
-  async function refreshSourceSchema(source: SourceView) {
+  async function refreshSourceSchema(
+    source: SourceView,
+    { announceSuccess = true }: { announceSuccess?: boolean } = {},
+  ) {
     setSchemaRefreshError('')
     setSchemaRefreshingSourceId(source.id)
     try {
@@ -344,7 +349,9 @@ export function SourcesPage({
         apiFetch,
       )
       queryClient.setQueryData<SourceSchemaReport>(['source-schema', source.id], report)
-      setSuccessMessage(t('sources.schema.refreshSuccess', { id: source.id }))
+      if (announceSuccess) {
+        setSuccessMessage(t('sources.schema.refreshSuccess', { id: source.id }))
+      }
     } catch (error) {
       setSchemaRefreshError(schemaErrorMessage(error, t))
     } finally {
@@ -358,15 +365,15 @@ export function SourcesPage({
         left.id.localeCompare(right.id),
       ),
     )
+    setSuccessMessage(t('sources.create.success', { id: created.id }))
     if (onNavigate) {
       onNavigate({ sourceId: created.id })
     } else {
       setSelectedSourceId(created.id)
       setSelectedTableId(null)
     }
-    setSuccessMessage(t('sources.create.success', { id: created.id }))
     autoDiscoveryAttempted.current.add(created.id)
-    void refreshSourceSchema(created)
+    void refreshSourceSchema(created, { announceSuccess: false })
   }
 
   function onEdited(result: SourceEnvelope) {
@@ -378,8 +385,9 @@ export function SourcesPage({
     queryClient.setQueryData<SourceEnvelope>(['source', result.source.id], result)
     queryClient.removeQueries({ queryKey: ['source-schema', result.source.id] })
     queryClient.removeQueries({ queryKey: ['source-test-result', result.source.id] })
+    setSuccessMessage(t('sources.edit.success', { id: result.source.id }))
     autoDiscoveryAttempted.current.add(result.source.id)
-    void refreshSourceSchema(result.source)
+    void refreshSourceSchema(result.source, { announceSuccess: false })
     if (onNavigate) {
       onNavigate({ sourceId: result.source.id })
     } else {
@@ -387,7 +395,6 @@ export function SourcesPage({
       setSelectedTableId(null)
     }
     setEditingSourceId(null)
-    setSuccessMessage(t('sources.edit.success', { id: result.source.id }))
   }
 
   const samplesAvailable = (samplesQuery.data ?? []).some((sample) => sample.available !== false)
@@ -441,7 +448,7 @@ export function SourcesPage({
     if (sourceSchemaQuery.error.status !== 404) return
     if (autoDiscoveryAttempted.current.has(selectedSource.id)) return
     autoDiscoveryAttempted.current.add(selectedSource.id)
-    void refreshSourceSchema(selectedSource.raw)
+    void refreshSourceSchema(selectedSource.raw, { announceSuccess: false })
   }, [selectedSource, sourceSchemaQuery.error])
 
   const loadError =
