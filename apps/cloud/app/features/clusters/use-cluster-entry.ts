@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Cluster } from '../../service/cloud-api'
 
 import { CloudApiError, cloudApi } from '../../service/cloud-api'
+import { isAllowedCloudClusterHostname } from './cluster-entry-host'
 
 const activeEntryCancellations = new Set<() => void>()
-const cloudConsoleHosts = new Set(['cloud.tapstate.com', 'dev.cloud.tapstate.com'])
 
 export function cancelPendingClusterEntries() {
   for (const cancel of activeEntryCancellations) cancel()
@@ -49,12 +49,7 @@ export function useClusterEntry() {
       const localTarget = ['localhost', '127.0.0.1'].includes(origin.hostname)
       const localApp = ['localhost', '127.0.0.1'].includes(window.location.hostname)
       const consoleHost = window.location.hostname
-      const clusterLabel = origin.hostname.endsWith(`.${consoleHost}`)
-        ? origin.hostname.slice(0, -(consoleHost.length + 1))
-        : ''
-      const isAllowedCloudClusterHost =
-        cloudConsoleHosts.has(consoleHost) &&
-        /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(clusterLabel)
+      const isAllowedCloudClusterHost = isAllowedCloudClusterHostname(origin.hostname, consoleHost)
       if (
         !success ||
         !exchangeCode ||
