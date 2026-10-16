@@ -1,5 +1,13 @@
 import '@/i18n/index'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+} from '@tanstack/react-router'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -117,7 +125,9 @@ vi.mock('./source-delete-dialog', () => ({
 
 import type { SampleInstallStatus } from '@/service/sample-source-client'
 
-import { SourcesPage, type SourcesPageRoute } from './sources-page'
+import { SourceDetailPage } from './pages/source-detail-page'
+import { SourcesCatalogPage } from './pages/sources-catalog-page'
+import { SourcesPage } from './sources-page'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
@@ -556,24 +566,41 @@ describe('SourcesPage', () => {
 
   it('keeps creation success when the catalog navigates to the source detail route', async () => {
     discoverSourceSchema.mockResolvedValueOnce({ ...schemaReport, connectionId: 'feyn' })
+    getSource.mockResolvedValue({ source: { ...source, id: 'feyn' }, etag: '"feyn"' })
     container = document.createElement('div')
     document.body.append(container)
     root = createRoot(container)
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     })
-    const navigateFromCatalog = (next: SourcesPageRoute) => {
-      root?.render(
-        <QueryClientProvider client={queryClient}>
-          <SourcesPage key="detail" route={next} />
-        </QueryClientProvider>,
-      )
-    }
+    const rootRoute = createRootRoute({ component: Outlet })
+    const authenticatedRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      id: '_authenticated',
+      component: Outlet,
+    })
+    const catalogRoute = createRoute({
+      getParentRoute: () => authenticatedRoute,
+      path: 'sources/',
+      component: SourcesCatalogPage,
+      validateSearch: () => ({ create: false }),
+    })
+    const detailRoute = createRoute({
+      getParentRoute: () => authenticatedRoute,
+      path: 'sources/$sourceId/',
+      component: SourceDetailPage,
+    })
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([
+        authenticatedRoute.addChildren([catalogRoute, detailRoute]),
+      ]),
+      history: createMemoryHistory({ initialEntries: ['/sources'] }),
+    })
 
     await act(async () => {
       root?.render(
         <QueryClientProvider client={queryClient}>
-          <SourcesPage key="catalog" onNavigate={navigateFromCatalog} />
+          <RouterProvider router={router} />
         </QueryClientProvider>,
       )
     })
@@ -582,6 +609,7 @@ describe('SourcesPage', () => {
     await act(async () => triggerCreated({ ...source, id: 'feyn' }))
 
     await waitForPage(() => {
+      expect(router.state.location.pathname).toBe('/sources/feyn')
       const successToast = [...(container?.querySelectorAll('[role="status"]') ?? [])].find(
         (element) => element.className.includes('fixed'),
       )
