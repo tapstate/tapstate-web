@@ -49,15 +49,18 @@ export function useClusterEntry() {
       const localTarget = ['localhost', '127.0.0.1'].includes(origin.hostname)
       const localApp = ['localhost', '127.0.0.1'].includes(window.location.hostname)
       const consoleHost = window.location.hostname
-      const expectedClusterHost = cloudConsoleHosts.has(consoleHost)
-        ? `${cluster.id}.${consoleHost}`
-        : null
+      const clusterLabel = origin.hostname.endsWith(`.${consoleHost}`)
+        ? origin.hostname.slice(0, -(consoleHost.length + 1))
+        : ''
+      const isAllowedCloudClusterHost =
+        cloudConsoleHosts.has(consoleHost) &&
+        /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(clusterLabel)
       if (
         !success ||
         !exchangeCode ||
         origin.username ||
         origin.password ||
-        (origin.hostname !== expectedClusterHost && !(localApp && localTarget)) ||
+        (!isAllowedCloudClusterHost && !(localApp && localTarget)) ||
         (!localTarget && origin.port !== '') ||
         (origin.protocol !== 'https:' && !(localApp && localTarget && origin.protocol === 'http:'))
       ) {
