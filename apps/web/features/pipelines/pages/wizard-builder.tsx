@@ -7,14 +7,19 @@ import {
   previewPipelineDraft,
   publishPipelineDraft,
   runPipeline,
+  streamPipelinePreview,
   updatePipelineDraft,
   PipelineClientError,
   type PipelineDraft,
   type PipelineDraftMutation,
   type PipelineDraftPreview,
+  type PipelinePreviewRun,
   type PipelineRuntimeState,
+  type PipelineCatalogState,
 } from '@/service/pipelines/pipeline-client'
+import { isSampleSource } from '@/service/sample-source-client'
 import { getSourceSchema, listConnectors, listSources } from '@/service/source-client'
+import { isDataSource } from '@/service/state-store-source'
 import { useAuthStore } from '@/stores/auth-store'
 
 import type {
@@ -23,16 +28,28 @@ import type {
 } from '../model/pipeline-draft-document'
 
 import {
+  CUSTOMER_360_GUIDE_STEPS,
+  PipelineBuilderGuide,
+  PipelineBuilderGuideStepCard,
+  type Customer360GuideMode,
+} from '../components/pipeline-builder-guide'
+import {
   ReferenceWizardBuilder,
-  type DataSourceMeta,
   type WizardViewState,
 } from '../components/reference-wizard/ReferenceWizardBuilder'
 import {
   readWizard,
+  normalizeCompositeRelationParents,
   writeWizard,
   wizardPublicationIssue,
   wizardUpsertKeylessInput,
 } from '../components/reference-wizard/wizard-adapter'
+import {
+  createCustomer360Wizard,
+  createCustomerLifetimeValueTransform,
+  findCustomer360Preset,
+  isGuidedCustomer360Pipeline,
+} from '../model/customer-360-guide'
 import { getDeploymentProfile } from '../model/deployment-profile'
 import { targetSources } from '../model/pipeline-target-connectors'
 import { sourceScopedTableNames } from '../model/source-table-scope'
@@ -44,6 +61,7 @@ export function WizardBuilder({
   etag,
   readOnly = false,
   runtimeStatus,
+  lifecycleStatus,
   runtimeObservationPending = false,
   runtimeObservationError = false,
   onRetryRuntimeObservation,
@@ -55,6 +73,7 @@ export function WizardBuilder({
   etag: string
   readOnly?: boolean
   runtimeStatus?: PipelineRuntimeState
+  lifecycleStatus?: PipelineCatalogState
   runtimeObservationPending?: boolean
   runtimeObservationError?: boolean
   onRetryRuntimeObservation?: () => void
@@ -74,17 +93,18 @@ export function WizardBuilder({
   })
   const connectors = connectorsQuery.data || []
   const sources = sourcesQuery.data || []
+  const inputSources = useMemo(() => sources.filter(isDataSource), [sources])
   const deploymentProfile = getDeploymentProfile()
-  const schemas = useQueries({
-    queries: sources.map((s) => ({
+  const { catalog, schemasError, schemasPending } = useQueries({
+    queries: inputSources.map((s) => ({
       queryKey: ['wizard', 'source-schema', s.id],
       queryFn: () => getSourceSchema(s.id, apiFetch),
       retry: false,
     })),
-  })
-  const catalog = useMemo<DataSourceMeta[]>(
-    () =>
-      sources.map((s, i) => {
+    combine: (schemas) => ({
+      schemasError: schemas.find((schema) => schema.error)?.error?.message,
+      schemasPending: schemas.some((schema) => schema.isPending),
+      catalog: inputSources.map((s, i) => {
         const details = schemas[i]?.data?.tables || []
         const names = sourceScopedTableNames(
           s,
@@ -113,9 +133,26 @@ export function WizardBuilder({
           }),
         }
       }),
-    [connectors, sources, schemas],
+    }),
+  })
+  const guidedDraft = isGuidedCustomer360Pipeline(pipelineId, draft.wizard)
+  const sampleSourceIds = useMemo(
+    () => new Set(inputSources.filter(isSampleSource).map((source) => source.id)),
+    [inputSources],
   )
+  const customer360Preset = useMemo(
+    () =>
+      guidedDraft
+        ? findCustomer360Preset(catalog.filter((source) => sampleSourceIds.has(source.id)))
+        : null,
+    [catalog, guidedDraft, sampleSourceIds],
+  )
+  const guidedPreset = guidedDraft && Boolean(customer360Preset)
   const [wizard, setWizard] = useState(draft.wizard)
+  const [builderRevision, setBuilderRevision] = useState(0)
+  const [guideOpen, setGuideOpen] = useState(() => !readOnly && guidedDraft)
+  const [guideStep, setGuideStep] = useState(0)
+  const [guideMode, setGuideMode] = useState<Customer360GuideMode>('storyboard')
   const [status, setStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -125,15 +162,26 @@ export function WizardBuilder({
     'saving' | 'validating' | 'publishing' | 'starting' | 'checking' | null
   >(null)
   const [preview, setPreview] = useState<PipelineDraftPreview | null>(null)
+  const [livePreview, setLivePreview] = useState<PipelinePreviewRun | null>(null)
+  const [livePreviewStatus, setLivePreviewStatus] = useState<
+    'idle' | 'loading' | 'stale' | 'complete' | 'error'
+  >('idle')
+  const [livePreviewError, setLivePreviewError] = useState('')
   const editorReadOnly = readOnly || (busy && action === 'start')
   const currentDraft = useRef(draft)
   const currentEtag = useRef(etag)
   const pending = useRef<Promise<void> | null>(null)
+  const previewAbort = useRef<AbortController | null>(null)
+  const previewGeneration = useRef(0)
+  const reusableSampleId = useRef<string | null>(null)
   const savedFingerprint = useRef(JSON.stringify(draft.wizard))
   const currentWizard = useRef(wizard)
   currentWizard.current = wizard
+  const emptyWizardDraft = isEmptyWizard(wizard)
+  const presetApplied = hasCustomer360Preset(wizard, customer360Preset)
+  const formulaAdded = hasCustomerLifetimeValue(wizard)
   const outputConfig = draft.wizard?.output as
-    | { kind?: string; config?: { sourceId?: string; writeMode?: string } }
+    | { kind?: string; config?: { sourceId?: string; writeMode?: string; table?: string } }
     | undefined
   // Wizard output retains Atlas semantics in every Cloud distribution.
   const availableDestinationSources = targetSources(sources, connectors, deploymentProfile, false)
@@ -143,6 +191,72 @@ export function WizardBuilder({
   const destinationConnector = connectors.find(
     (connector) => connector.id === destination?.connector,
   )
+  useEffect(() => {
+    if (!guidedPreset || readOnly || !customer360Preset || !destination) return
+    const expected = createCustomer360Wizard(
+      customer360Preset,
+      destination.id,
+      destinationConnector?.writeModes?.[0] ?? 'upsert',
+      deploymentProfile,
+    )
+    if (JSON.stringify(wizard) === JSON.stringify(expected)) return
+    setWizard(expected)
+    setBuilderRevision((revision) => revision + 1)
+  }, [
+    customer360Preset,
+    deploymentProfile,
+    destination?.id,
+    destinationConnector,
+    guidedPreset,
+    readOnly,
+    wizard,
+  ])
+  useEffect(() => {
+    if (!guideOpen || !guidedPreset || readOnly) return
+    const targetId = CUSTOMER_360_GUIDE_STEPS[guideStep]?.targetId
+    if (!targetId) return
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(targetId)
+      if (!target) return
+      const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'auto'
+        : 'smooth'
+      if (guideStep === 4) {
+        const canvas = document.getElementById('wizard-canvas-main')
+        if (canvas) canvas.scrollTo({ top: canvas.scrollHeight, behavior })
+        return
+      }
+      const callout = document.querySelector<HTMLElement>('[data-guide-callout="canvas"]')
+      const guidedElement = callout ?? target
+      guidedElement.scrollIntoView({ behavior, block: 'start', inline: 'nearest' })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [builderRevision, guideMode, guideOpen, guideStep, guidedPreset, readOnly])
+
+  function applyCustomer360Preset() {
+    if (!customer360Preset || !emptyWizardDraft) return
+    setWizard(
+      createCustomer360Wizard(
+        customer360Preset,
+        destination?.id ?? '',
+        destinationConnector?.writeModes?.[0] ?? 'upsert',
+        deploymentProfile,
+      ),
+    )
+    setBuilderRevision((revision) => revision + 1)
+    setGuideStep(0)
+  }
+
+  function addCustomerLifetimeValue() {
+    if (!customer360Preset || formulaAdded) return
+    const transform = createCustomerLifetimeValueTransform(customer360Preset)
+    if (!transform) return
+    setWizard((current) => ({
+      ...current,
+      transforms: [...(Array.isArray(current?.transforms) ? current.transforms : []), transform],
+    }))
+    setBuilderRevision((revision) => revision + 1)
+  }
   useEffect(() => {
     if (!destination || readOnly) return
     const expectedKind = deploymentProfile === 'cloud' ? 'atlas' : 'source'
@@ -260,10 +374,15 @@ export function WizardBuilder({
   }, [persist, readOnly, t, wizard])
   const onChange = useCallback(
     (state: WizardViewState) => {
-      if (editorReadOnly) return
+      if (editorReadOnly || guidedPreset) return
+      previewGeneration.current += 1
+      previewAbort.current?.abort()
+      previewAbort.current = null
+      setPreview(null)
+      setLivePreviewError('')
+      setLivePreviewStatus((current) => (current === 'idle' ? 'idle' : 'stale'))
       setError('')
       setNotice('')
-      setPreview(null)
       setWizard((previous) =>
         writeWizard(
           state,
@@ -273,7 +392,7 @@ export function WizardBuilder({
         ),
       )
     },
-    [destination?.id, deploymentProfile, editorReadOnly],
+    [destination?.id, deploymentProfile, editorReadOnly, guidedPreset],
   )
   async function savePipeline(start: boolean) {
     if (busy || readOnly) return
@@ -294,8 +413,7 @@ export function WizardBuilder({
       if (issue) throw new Error(issue)
       const keylessInput = wizardUpsertKeylessInput(currentWizard.current, catalog)
       if (keylessInput) throw new Error(t('wizard.errors.upsertNeedsKey', keylessInput))
-      const result = await previewPipelineDraft(pipelineId, saved.revision, apiFetch)
-      setPreview(result)
+      await previewPipelineDraft(pipelineId, saved.revision, apiFetch)
       setStartPhase('publishing')
       await publishPipelineDraft(pipelineId, saved.revision, saved.publishedArtifactHash, apiFetch)
       const published = await getPipelineDraft(pipelineId, apiFetch)
@@ -335,7 +453,115 @@ export function WizardBuilder({
       setBusy(false)
     }
   }
-  if (sourcesQuery.isPending || connectorsQuery.isPending || schemas.some((s) => s.isPending))
+  async function inspectDsl(): Promise<string> {
+    const candidate = previewCandidate()
+    const result = await previewPipelineDraft(
+      pipelineId,
+      currentDraft.current.revision,
+      apiFetch,
+      undefined,
+      candidate,
+    )
+    if (!result.dsl?.trim()) throw new Error(t('wizard.dslUnavailable'))
+    return result.dsl
+  }
+
+  function previewCandidate(): PipelineDraftMutation {
+    const previewWizard =
+      normalizeCompositeRelationParents(currentWizard.current, catalog) || currentWizard.current
+    if (!previewWizard) throw new Error('The preview requires a Pipeline draft.')
+    const previewOutput = previewWizard.output as { config?: Record<string, unknown> } | undefined
+    return {
+      pipelineId,
+      mode: 'wizard',
+      name: currentDraft.current.name,
+      description: currentDraft.current.description,
+      graph: null,
+      wizard: {
+        ...previewWizard,
+        output: {
+          ...previewOutput,
+          config: {
+            ...previewOutput?.config,
+            // Preview substitutes a no-write sink; a temporary target lets unfinished drafts compile.
+            table: previewOutput?.config?.table || '__tapstate_preview__',
+          },
+        },
+      },
+      baseArtifactHash: currentDraft.current.baseArtifactHash,
+    }
+  }
+
+  useEffect(() => {
+    const root = wizard?.root as { sourceId?: unknown; table?: unknown } | undefined
+    const output = wizard?.output as
+      | { config?: { sourceId?: unknown; table?: unknown } }
+      | undefined
+    if (
+      typeof root?.sourceId !== 'string' ||
+      !root.sourceId ||
+      typeof root.table !== 'string' ||
+      !root.table ||
+      typeof output?.config?.sourceId !== 'string' ||
+      !output.config.sourceId
+    ) {
+      setLivePreviewStatus((current) => (current === 'idle' ? 'idle' : 'stale'))
+      return
+    }
+
+    const controller = new AbortController()
+    previewAbort.current = controller
+    const generation = ++previewGeneration.current
+    const timer = window.setTimeout(() => {
+      setLivePreviewStatus((current) => (current === 'idle' ? 'loading' : 'stale'))
+      setLivePreviewError('')
+      void (async () => {
+        try {
+          const candidate = previewCandidate()
+          const compiled = await previewPipelineDraft(
+            pipelineId,
+            currentDraft.current.revision,
+            apiFetch,
+            controller.signal,
+            candidate,
+          )
+          if (controller.signal.aborted || generation !== previewGeneration.current) return
+          if (!compiled.dsl)
+            throw new Error('The candidate did not compile to a Pipeline DSL document.')
+          const result = await streamPipelinePreview(
+            {
+              pipelineId,
+              drafts: [{ content: compiled.dsl }],
+              rootLimit: 1,
+              sampleId: reusableSampleId.current || undefined,
+              signal: controller.signal,
+            },
+            apiFetch,
+          )
+          if (controller.signal.aborted || generation !== previewGeneration.current) return
+          if (result.failure) {
+            setLivePreviewError(result.failure.reason || result.failure.code)
+            setLivePreviewStatus('error')
+            return
+          }
+          reusableSampleId.current = result.sampleId
+          setLivePreview(result)
+          setLivePreviewStatus('complete')
+        } catch (cause) {
+          if (controller.signal.aborted || generation !== previewGeneration.current) return
+          setLivePreviewError(cause instanceof Error ? cause.message : 'preview-failed')
+          setLivePreviewStatus('error')
+        }
+      })()
+    }, 250)
+
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+      if (previewAbort.current === controller) previewAbort.current = null
+    }
+  }, [apiFetch, catalog, pipelineId, wizard])
+  if (sourcesQuery.isPending || connectorsQuery.isPending || schemasPending)
     return (
       <div className="text-muted-foreground p-8 text-sm" role="status">
         {t('wizard.loading')}
@@ -347,123 +573,249 @@ export function WizardBuilder({
     (draft.publishedDraftRevision !== null && !runtimeStatus && !runtimeObservationError)
   const saveStatusLabel = error
     ? error
-    : runtimeStatus === 'RUNNING' && startPhase === 'checking'
+    : lifecycleStatus === 'RUNNING' && startPhase === 'checking'
       ? t('pipelines.workspace.runtime.states.RUNNING')
-      : startPhase
-        ? t(`wizard.startPhases.${startPhase}`)
-        : runtimeObservationError
-          ? t('wizard.runtimeStatusError')
-          : runtimeCheckPending
-            ? t('wizard.checkingRuntime')
-            : runtimeStatus
-              ? t(`pipelines.workspace.runtime.states.${runtimeStatus}`)
-              : readOnly
-                ? t('pipelines.workspace.readOnly.editorStatus')
-                : t(
-                    status === 'saving' || action === 'save'
-                      ? 'wizard.autosaving'
-                      : status === 'error'
-                        ? 'wizard.autosaveError'
-                        : isDirty
-                          ? 'wizard.unsavedChanges'
-                          : 'wizard.autosaved',
-                  )
+      : lifecycleStatus === 'STARTING' && startPhase === 'checking'
+        ? t('pipelines.workspace.runtime.states.STARTING')
+        : startPhase
+          ? t(`wizard.startPhases.${startPhase}`)
+          : runtimeObservationError
+            ? t('wizard.runtimeStatusError')
+            : runtimeCheckPending
+              ? t('wizard.checkingRuntime')
+              : lifecycleStatus
+                ? t(`pipelines.workspace.runtime.states.${lifecycleStatus}`)
+                : runtimeStatus
+                  ? t(`pipelines.workspace.runtime.states.${runtimeStatus}`)
+                  : readOnly
+                    ? t('pipelines.workspace.readOnly.editorStatus')
+                    : t(
+                        status === 'saving' || action === 'save'
+                          ? 'wizard.autosaving'
+                          : status === 'error'
+                            ? 'wizard.autosaveError'
+                            : isDirty
+                              ? 'wizard.unsavedChanges'
+                              : 'wizard.autosaved',
+                      )
   return (
-    <>
-      <ReferenceWizardBuilder
-        catalog={catalog}
-        initial={readWizard(
-          wizard,
-          catalog,
-          destination?.id,
-          destinationConnector?.writeModes?.[0] || 'upsert',
-        )}
-        onChange={onChange}
-        destinationName={
-          destination
-            ? (connectors.find((connector) => connector.id === destination.connector)?.name ||
-                destination.connector) +
-              ' (' +
-              destination.id +
-              ')'
-            : ''
-        }
-        deploymentProfile={deploymentProfile}
-        readOnly={editorReadOnly}
-        actions={
-          <PipelineWorkflowHeader
-            placement="sticky"
-            dockStatus={
-              <div className="wizard-reference-action-dock__status min-w-0 flex-1 text-[11px] text-[var(--pipeline-text-muted)]">
-                <span
-                  className={
-                    error ||
-                    runtimeObservationError ||
-                    runtimeStatus === 'FAILED' ||
-                    status === 'error'
-                      ? 'bg-destructive size-2 shrink-0 rounded-full'
-                      : status === 'saving' ||
-                          action === 'start' ||
-                          runtimeCheckPending ||
-                          runtimeStatus === 'RUNNING' ||
-                          isDirty
-                        ? 'bg-primary size-2 shrink-0 rounded-full'
-                        : 'bg-muted-foreground size-2 shrink-0 rounded-full'
-                  }
-                  aria-hidden="true"
-                />
-                <span className="truncate" role="status" title={saveStatusLabel}>
-                  {saveStatusLabel}
-                </span>
-                {runtimeObservationError && onRetryRuntimeObservation && (
-                  <button
-                    type="button"
-                    className="text-primary shrink-0 font-medium underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none"
-                    onClick={onRetryRuntimeObservation}
+    <div className="h-full min-h-0 min-w-0 p-[var(--app-shell-sidebar-content-inset)]">
+      <section
+        className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-gray-200/90 bg-white shadow-[0_1px_3px_rgba(17,24,39,0.10)]"
+        data-testid="wizard-builder-shell"
+      >
+        <div className="flex h-full min-h-0 flex-col">
+          {guidedPreset && (
+            <PipelineBuilderGuide
+              open={guideOpen}
+              fixedPreset={guidedPreset}
+              step={guideStep}
+              mode={guideMode}
+              preset={customer360Preset}
+              emptyDraft={emptyWizardDraft}
+              presetApplied={presetApplied}
+              formulaAdded={formulaAdded}
+              onOpen={() => setGuideOpen(true)}
+              onClose={() => setGuideOpen(false)}
+              onStepChange={setGuideStep}
+              onModeChange={setGuideMode}
+              onApplyPreset={applyCustomer360Preset}
+              onAddFormula={addCustomerLifetimeValue}
+              onSaveDraft={() => void savePipeline(false)}
+              onLaunch={() => void savePipeline(true)}
+            />
+          )}
+          {guidedPreset && (
+            <p className="border-b border-indigo-100 bg-indigo-50 px-5 py-2 text-xs font-medium text-indigo-800">
+              {t('wizard.guide.fixedNotice')}
+            </p>
+          )}
+          <ReferenceWizardBuilder
+            key={builderRevision}
+            showWorkbenchHeader={!guidedPreset}
+            onInspectPlan={inspectDsl}
+            onStart={() => void savePipeline(true)}
+            startBusy={busy}
+            actionError={error}
+            catalog={catalog}
+            initial={readWizard(
+              wizard,
+              catalog,
+              destination?.id,
+              destinationConnector?.writeModes?.[0] || 'upsert',
+            )}
+            onChange={onChange}
+            destinationName={
+              destination
+                ? (connectors.find((connector) => connector.id === destination.connector)?.name ||
+                    destination.connector) +
+                  ' (' +
+                  destination.id +
+                  ')'
+                : ''
+            }
+            deploymentProfile={deploymentProfile}
+            readOnly={editorReadOnly || guidedPreset}
+            readOnlyLabel={guidedPreset ? t('wizard.guide.fixedNotice') : undefined}
+            activeGuideTarget={
+              guidedPreset && guideOpen ? CUSTOMER_360_GUIDE_STEPS[guideStep]?.targetId : undefined
+            }
+            renderGuideStep={
+              guidedPreset
+                ? (step) => (
+                    <PipelineBuilderGuideStepCard
+                      step={step}
+                      fixedPreset={guidedPreset}
+                      preset={customer360Preset}
+                      targetCollection={outputConfig?.config?.table || 'customer_360_views'}
+                      onClose={() => setGuideOpen(false)}
+                      onPrevious={() => setGuideStep((current) => Math.max(0, current - 1))}
+                      onNext={() => {
+                        if (step === 4) {
+                          setGuideOpen(false)
+                          void savePipeline(true)
+                        } else {
+                          setGuideStep(step + 1)
+                        }
+                      }}
+                    />
+                  )
+                : undefined
+            }
+            actions={
+              <PipelineWorkflowHeader
+                placement="sticky"
+                runButtonId="step-publish-action"
+                runButtonActiveGuide={guidedPreset && guideOpen && guideStep === 4}
+                dockStatus={
+                  <div className="wizard-reference-action-dock__status min-w-0 flex-1 text-[11px] text-[var(--pipeline-text-muted)]">
+                    <span
+                      className={
+                        error ||
+                        runtimeObservationError ||
+                        runtimeStatus === 'FAILED' ||
+                        status === 'error'
+                          ? 'bg-destructive size-2 shrink-0 rounded-full'
+                          : status === 'saving' ||
+                              action === 'start' ||
+                              runtimeCheckPending ||
+                              runtimeStatus === 'RUNNING' ||
+                              isDirty
+                            ? 'bg-primary size-2 shrink-0 rounded-full'
+                            : 'bg-muted-foreground size-2 shrink-0 rounded-full'
+                      }
+                      aria-hidden="true"
+                    />
+                    <span className="truncate" role="status" title={saveStatusLabel}>
+                      {saveStatusLabel}
+                    </span>
+                    {runtimeObservationError && onRetryRuntimeObservation && (
+                      <button
+                        type="button"
+                        className="text-primary shrink-0 font-medium underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none"
+                        onClick={onRetryRuntimeObservation}
+                      >
+                        {t('pipelines.workspace.actions.retry')}
+                      </button>
+                    )}
+                  </div>
+                }
+                stopAction={stopAction}
+                isDirty={isDirty}
+                isSaving={busy && action === 'save'}
+                isRunning={busy && action === 'start'}
+                isBusy={busy}
+                isReadOnly={readOnly}
+                canSave
+                saveLabel={t('wizard.savePipeline')}
+                savePendingLabel={t('pipelines.workspace.actions.saving')}
+                runLabel={t('wizard.startPipeline')}
+                runPendingLabel={t('wizard.starting')}
+                onSave={() => void savePipeline(false)}
+                onRun={() => void savePipeline(true)}
+              />
+            }
+            sourceError={sourcesQuery.error?.message || schemasError}
+            compiledSpec={
+              livePreview
+                ? JSON.stringify(livePreview.executionSpec, null, 2)
+                : preview?.dsl || JSON.stringify(wizard, null, 2)
+            }
+            livePreview={livePreview}
+            livePreviewStatus={livePreviewStatus}
+            livePreviewError={livePreviewError}
+            footer={
+              <div className="mt-5 flex flex-wrap items-center justify-end gap-3 text-[11px]">
+                {error && (
+                  <p
+                    role="alert"
+                    className="w-full rounded border border-red-200 bg-red-50 p-3 text-red-700"
                   >
-                    {t('pipelines.workspace.actions.retry')}
-                  </button>
+                    {error}
+                  </p>
+                )}
+                {notice && (
+                  <p
+                    className="border-border bg-muted text-muted-foreground rounded-control w-full border p-3"
+                    role="status"
+                  >
+                    {notice}
+                  </p>
                 )}
               </div>
             }
-            stopAction={stopAction}
-            isDirty={isDirty}
-            isSaving={busy && action === 'save'}
-            isRunning={busy && action === 'start'}
-            isBusy={busy}
-            isReadOnly={readOnly}
-            canSave
-            saveLabel={t('wizard.savePipeline')}
-            savePendingLabel={t('pipelines.workspace.actions.saving')}
-            runLabel={t('wizard.startPipeline')}
-            runPendingLabel={t('wizard.starting')}
-            onSave={() => void savePipeline(false)}
-            onRun={() => void savePipeline(true)}
           />
-        }
-        sourceError={sourcesQuery.error?.message || schemas.find((s) => s.error)?.error?.message}
-        compiledSpec={preview?.dsl || JSON.stringify(wizard, null, 2)}
-        footer={
-          <div className="mt-5 flex flex-wrap items-center justify-end gap-3 text-[11px]">
-            {error && (
-              <p
-                role="alert"
-                className="w-full rounded border border-red-200 bg-red-50 p-3 text-red-700"
-              >
-                {error}
-              </p>
-            )}
-            {notice && (
-              <p
-                className="border-border bg-muted text-muted-foreground rounded-control w-full border p-3"
-                role="status"
-              >
-                {notice}
-              </p>
-            )}
-          </div>
-        }
-      />
-    </>
+        </div>
+      </section>
+    </div>
   )
+}
+
+function isEmptyWizard(value: PipelineDraft['wizard']) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return true
+  const root = value.root
+  const related = value.related
+  const transforms = value.transforms
+  const rootTable = isObjectRecord(root) ? root.table : null
+  return (
+    (typeof rootTable !== 'string' || rootTable.length === 0) &&
+    (!Array.isArray(related) || related.length === 0) &&
+    (!Array.isArray(transforms) || transforms.length === 0)
+  )
+}
+
+function hasCustomer360Preset(
+  value: PipelineDraft['wizard'],
+  preset: ReturnType<typeof findCustomer360Preset>,
+) {
+  if (!value || !preset) return false
+  const root = value.root
+  const relations = value.related
+  if (!isObjectRecord(root) || !Array.isArray(relations)) return false
+  const hasTable = (table: string) =>
+    relations.some((relation) => isObjectRecord(relation) && relation.table === table)
+  return (
+    root.sourceId === preset.sourceId &&
+    root.table === preset.root.name &&
+    hasTable(preset.customer.name) &&
+    hasTable(preset.lines.name)
+  )
+}
+
+function hasCustomerLifetimeValue(value: PipelineDraft['wizard']) {
+  if (!value || !Array.isArray(value.transforms)) return false
+  return value.transforms.some((transform) => {
+    if (!isObjectRecord(transform)) return false
+    const fields = transform.fields
+    if (!isObjectRecord(fields)) return false
+    return (
+      transform.type === 'map' &&
+      typeof fields.order_total === 'string' &&
+      fields.order_total.startsWith('=')
+    )
+  })
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }

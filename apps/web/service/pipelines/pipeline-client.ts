@@ -160,6 +160,38 @@ export interface PipelineDraftPreview {
   artifact: PipelineJsonObject
 }
 
+export interface PipelinePreviewRequest {
+  pipelineId: string
+  drafts: { source?: string; content: string; expectedContentHash?: string }[]
+  outputId?: string
+  rootLimit?: number
+  sampleId?: string
+  signal?: AbortSignal
+}
+
+export interface PipelinePreviewEvent {
+  runId: string
+  candidateHash: string
+  seq: number
+  kind: string
+  at: string
+  payload: Record<string, unknown>
+}
+
+export interface PipelinePreviewRun {
+  runId: string
+  candidateHash: string
+  format: 'logical-json' | 'mongo-extended-json' | null
+  executionSpec: Record<string, unknown>
+  contexts: Record<string, unknown>[]
+  sample: Record<string, unknown> | null
+  documents: Record<string, unknown>[]
+  trace: Record<string, unknown>[]
+  sampleId: string | null
+  rowCount: number
+  failure: { code: string; reason: string } | null
+}
+
 export interface PipelineDraftPublishResult {
   pipelineId: string
   revision: number
@@ -177,12 +209,19 @@ export interface PipelineStatusFailure {
 
 export interface PipelineStatus {
   pipelineId: string
-  state: PipelineRuntimeState
+  state: PipelineCatalogState
+  displayState?: PipelineCatalogState
   failure?: PipelineStatusFailure | null
+  observedAt?: string | null
+  observedAgeMillis?: number | null
+  desiredState?: PipelineRuntimeState | null
+  observedState?: PipelineRuntimeState | null
+  hasArtifact?: boolean
 }
 
 export type PipelineCatalogState =
   | PipelineRuntimeState
+  | 'DRAFT'
   | 'STARTING'
   | 'PAUSING'
   | 'RESUMING'
@@ -455,9 +494,20 @@ function isPipelineStatus(value: unknown): value is PipelineStatus {
   return (
     isRecord(value) &&
     typeof value.pipelineId === 'string' &&
-    ['NEW', 'RUNNING', 'PAUSED', 'STOPPED', 'COMPLETED', 'FAILED'].includes(
-      value.state as string,
-    ) &&
+    [
+      'DRAFT',
+      'NEW',
+      'STARTING',
+      'RUNNING',
+      'PAUSING',
+      'PAUSED',
+      'RESUMING',
+      'STOPPING',
+      'STOPPED',
+      'COMPLETED',
+      'FAILED',
+      'UNAVAILABLE',
+    ].includes(value.state as string) &&
     (value.failure === undefined ||
       value.failure === null ||
       isPipelineStatusFailure(value.failure))
@@ -468,9 +518,15 @@ function isPipelineCatalogStatus(value: unknown): value is PipelineCatalogStatus
   const runtimeStates = ['NEW', 'RUNNING', 'PAUSED', 'STOPPED', 'COMPLETED', 'FAILED']
   return (
     isRecord(value) &&
-    [...runtimeStates, 'STARTING', 'PAUSING', 'RESUMING', 'STOPPING', 'UNAVAILABLE'].includes(
-      value.state as string,
-    ) &&
+    [
+      ...runtimeStates,
+      'DRAFT',
+      'STARTING',
+      'PAUSING',
+      'RESUMING',
+      'STOPPING',
+      'UNAVAILABLE',
+    ].includes(value.state as string) &&
     (value.desiredState === undefined ||
       value.desiredState === null ||
       runtimeStates.includes(value.desiredState as string)) &&
@@ -623,6 +679,7 @@ async function request(path: string, fetcher: ApiFetcher, init?: RequestInit): P
   try {
     response = await fetcher(`/api${path}`, init)
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') throw error
     throw new PipelineClientError(
       'network',
       error instanceof Error ? error.message : 'The request did not reach Tapstate.',
@@ -633,9 +690,10 @@ async function request(path: string, fetcher: ApiFetcher, init?: RequestInit): P
   if (!response.ok) {
     const code = isRecord(payload) && typeof payload.code === 'string' ? payload.code : null
     const params = isRecord(payload) && isRecord(payload.params) ? payload.params : {}
+    const fallback = `Tapstate refused the Pipeline request. HTTP ${response.status} ${init?.method ?? 'GET'} /api${path}${code ? ` · ${code}` : ''}`
     throw new PipelineClientError(
       'server',
-      responseMessage(payload, 'Tapstate refused the Pipeline request.'),
+      responseMessage(payload, fallback),
       response.status,
       code,
       params,
@@ -914,11 +972,14 @@ export async function previewPipelineDraft(
   id: string,
   revision: number,
   fetcher: ApiFetcher = fetch,
+  signal?: AbortSignal,
+  candidate?: PipelineDraftMutation,
 ): Promise<PipelineDraftPreview> {
   const payload = await request(`/pipelines/${encodeURIComponent(id)}/draft:preview`, fetcher, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ revision }),
+    body: JSON.stringify({ revision, ...(candidate ? { candidate } : {}) }),
+    signal,
   })
   if (
     !isRecord(payload) ||
@@ -932,6 +993,389 @@ export async function previewPipelineDraft(
     )
   }
   return payload as unknown as PipelineDraftPreview
+}
+
+/** Opens the bounded runtime preview and validates its ordered NDJSON event stream. */
+export async function streamPipelinePreview(
+  request: PipelinePreviewRequest,
+  fetcher: ApiFetcher = fetch,
+  onEvent?: (event: PipelinePreviewEvent) => void,
+): Promise<PipelinePreviewRun> {
+  let response: Response
+  try {
+    response = await fetcher('/api/artifacts:preview', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/x-ndjson' },
+      body: JSON.stringify({
+        pipelineId: request.pipelineId,
+        drafts: request.drafts,
+        ...(request.outputId ? { outputId: request.outputId } : {}),
+        ...(request.rootLimit ? { rootLimit: request.rootLimit } : {}),
+        ...(request.sampleId ? { sampleId: request.sampleId } : {}),
+      }),
+      signal: request.signal,
+      cache: 'no-store',
+    })
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') throw error
+    throw new PipelineClientError(
+      'network',
+      error instanceof Error ? error.message : 'The preview request did not reach Tapstate.',
+    )
+  }
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null)
+    const code = isRecord(payload) && typeof payload.code === 'string' ? payload.code : null
+    const params = isRecord(payload) && isRecord(payload.params) ? payload.params : {}
+    throw new PipelineClientError(
+      'server',
+      responseMessage(payload, 'Tapstate refused the Pipeline preview.'),
+      response.status,
+      code,
+      params,
+    )
+  }
+  if (!response.headers.get('content-type')?.toLowerCase().startsWith('application/x-ndjson')) {
+    throw new PipelineClientError('protocol', 'Tapstate returned a non-NDJSON Pipeline preview.')
+  }
+  if (!response.body) {
+    throw new PipelineClientError('protocol', 'Tapstate returned an empty Pipeline preview stream.')
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let receivedBytes = 0
+  let expectedSequence = 0
+  let runId: string | null = null
+  let candidateHash: string | null = null
+  let executionSpec: Record<string, unknown> | null = null
+  let contexts: Record<string, unknown>[] = []
+  let sample: Record<string, unknown> | null = null
+  let documents: Record<string, unknown>[] = []
+  let format: PipelinePreviewRun['format'] = null
+  let trace: Record<string, unknown>[] = []
+  let sampleId: string | null = null
+  let rowCount = 0
+  let failure: PipelinePreviewRun['failure'] = null
+  let terminal = false
+  let accepted = false
+  let compileCompleted = false
+  let sampleCompleted = false
+  let resultCompleted = false
+
+  const consumeLine = (line: string) => {
+    if (!line.trim()) return
+    if (line.length > 10 * 1024 * 1024) {
+      throw new PipelineClientError('protocol', 'A Pipeline preview event exceeded its size limit.')
+    }
+    let raw: unknown
+    try {
+      raw = JSON.parse(line)
+    } catch {
+      throw new PipelineClientError(
+        'protocol',
+        'Tapstate returned malformed Pipeline preview JSON.',
+      )
+    }
+    if (
+      !isRecord(raw) ||
+      typeof raw.runId !== 'string' ||
+      typeof raw.candidateHash !== 'string' ||
+      !Number.isInteger(raw.seq) ||
+      typeof raw.kind !== 'string' ||
+      typeof raw.at !== 'string' ||
+      !isRecord(raw.payload)
+    ) {
+      throw new PipelineClientError(
+        'protocol',
+        'Tapstate returned an invalid Pipeline preview event.',
+      )
+    }
+    if (terminal) {
+      throw new PipelineClientError(
+        'protocol',
+        'Tapstate sent an event after the Pipeline preview ended.',
+      )
+    }
+    if (raw.seq !== expectedSequence++) {
+      throw new PipelineClientError(
+        'protocol',
+        'Tapstate returned an out-of-order Pipeline preview event.',
+      )
+    }
+    if (runId === null) {
+      runId = raw.runId
+      candidateHash = raw.candidateHash
+    } else if (raw.runId !== runId || raw.candidateHash !== candidateHash) {
+      throw new PipelineClientError(
+        'protocol',
+        'Tapstate changed the Pipeline preview identity mid-stream.',
+      )
+    }
+    const event = raw as unknown as PipelinePreviewEvent
+    onEvent?.(event)
+    const payload = event.payload
+    switch (event.kind) {
+      case 'run.accepted':
+        if (event.seq !== 0 || accepted || typeof payload.pipelineId !== 'string') {
+          throw new PipelineClientError(
+            'protocol',
+            'Tapstate returned an invalid preview acceptance event.',
+          )
+        }
+        accepted = true
+        break
+      case 'compile.completed':
+        if (
+          !accepted ||
+          compileCompleted ||
+          !isRecord(payload.executionSpec) ||
+          !Array.isArray(payload.contexts) ||
+          !payload.contexts.every(
+            (context) =>
+              isRecord(context) &&
+              typeof context.id === 'string' &&
+              typeof context.kind === 'string' &&
+              Array.isArray(context.pointerPatterns) &&
+              context.pointerPatterns.every((pointer) => typeof pointer === 'string'),
+          )
+        ) {
+          throw new PipelineClientError(
+            'protocol',
+            'The preview compiler returned an invalid execution spec.',
+          )
+        }
+        compileCompleted = true
+        executionSpec = payload.executionSpec
+        contexts = payload.contexts
+        break
+      case 'sample.completed':
+        if (
+          !compileCompleted ||
+          sampleCompleted ||
+          payload.complete !== true ||
+          !isStringArray(payload.rootSourceKeys) ||
+          typeof payload.rootRows !== 'number' ||
+          typeof payload.inputRows !== 'number' ||
+          typeof payload.inputBytes !== 'number' ||
+          typeof payload.rootTruncated !== 'boolean' ||
+          typeof payload.repeatable !== 'boolean'
+        ) {
+          throw new PipelineClientError(
+            'protocol',
+            'Tapstate returned invalid preview sample facts.',
+          )
+        }
+        sampleCompleted = true
+        sample = payload
+        sampleId = typeof payload.sampleId === 'string' ? payload.sampleId : null
+        break
+      case 'step.completed':
+        if (
+          !sampleCompleted ||
+          resultCompleted ||
+          typeof payload.nodeId !== 'string' ||
+          typeof payload.inputRows !== 'number' ||
+          typeof payload.outputRows !== 'number' ||
+          !Array.isArray(payload.samples) ||
+          !payload.samples.every(isRecord) ||
+          !isStringArray(payload.pointerPatterns) ||
+          typeof payload.pointerPatternsComplete !== 'boolean' ||
+          payload.countComplete !== true ||
+          typeof payload.truncated !== 'boolean'
+        ) {
+          throw new PipelineClientError(
+            'protocol',
+            'Tapstate returned invalid preview trace facts.',
+          )
+        }
+        trace.push(payload, ...payload.samples)
+        {
+          const nodeId = payload.nodeId
+          const pointers = payload.pointerPatterns
+          const rootSourceKeys =
+            isRecord(sample) && isStringArray(sample.rootSourceKeys) ? sample.rootSourceKeys : []
+          if (rootSourceKeys.includes(nodeId)) {
+            const rootContext = contexts.find((context) => context.id === 'root')
+            if (rootContext) {
+              const existing = isStringArray(rootContext.pointerPatterns)
+                ? rootContext.pointerPatterns
+                : []
+              rootContext.pointerPatterns = [...new Set([...existing, ...pointers])]
+              rootContext.pointerPatternsComplete =
+                rootContext.pointerPatternsComplete !== false && payload.pointerPatternsComplete
+            }
+          }
+          const inputPointers = isRecord(payload.inputPointerPatternsByAlias)
+            ? payload.inputPointerPatternsByAlias
+            : {}
+          const relationContexts = contexts.filter(
+            (context) =>
+              context.kind === 'relation' && context.stepId === nodeId && context.shape === 'flat',
+          )
+          for (const relationContext of relationContexts) {
+            const alias = relationContext.sourceAlias
+            const sourcePatterns =
+              typeof alias === 'string' && isStringArray(inputPointers[alias])
+                ? inputPointers[alias]
+                : []
+            const parent =
+              typeof relationContext.parentPointerPattern === 'string'
+                ? relationContext.parentPointerPattern
+                : ''
+            const parentShape = contexts.find(
+              (context) =>
+                context.kind === 'relation' && context.path === relationContext.parentPath,
+            )?.shape
+            const prefix = `${parent}${parentShape === 'array' ? '/*' : ''}`
+            const existing = isStringArray(relationContext.pointerPatterns)
+              ? relationContext.pointerPatterns
+              : []
+            relationContext.pointerPatterns = [
+              ...new Set([...existing, ...sourcePatterns.map((pointer) => `${prefix}${pointer}`)]),
+            ]
+            relationContext.pointerPatternsComplete = payload.pointerPatternsComplete
+          }
+          const transformContext = contexts.find((context) => context.id === `transform:${nodeId}`)
+          if (transformContext?.type === 'js') {
+            transformContext.pointerPatterns = pointers
+            transformContext.pointerPatternsComplete = payload.pointerPatternsComplete
+            transformContext.effects = pointers.map((pointer) => ({
+              pointer,
+              kind: 'unknown',
+              origin: 'unknown',
+              lastChangedBy: nodeId,
+            }))
+          }
+        }
+        break
+      case 'result.completed': {
+        const resultFormat = payload.format
+        if (
+          !sampleCompleted ||
+          resultCompleted ||
+          (resultFormat !== 'logical-json' && resultFormat !== 'mongo-extended-json') ||
+          payload.complete !== true ||
+          payload.truncated !== false ||
+          !Array.isArray(payload.documents) ||
+          !payload.documents.every(isRecord) ||
+          !Number.isInteger(payload.rowCount) ||
+          payload.rowCount !== payload.documents.length
+        ) {
+          throw new PipelineClientError('protocol', 'Tapstate returned invalid preview documents.')
+        }
+        resultCompleted = true
+        format = resultFormat
+        documents = payload.documents
+        rowCount = payload.rowCount
+        break
+      }
+      case 'run.completed':
+        if (
+          !resultCompleted ||
+          !Number.isInteger(payload.rowCount) ||
+          payload.rowCount !== rowCount
+        ) {
+          throw new PipelineClientError(
+            'protocol',
+            'Tapstate completed a preview without a complete result.',
+          )
+        }
+        terminal = true
+        break
+      case 'run.failed':
+        if (resultCompleted) {
+          throw new PipelineClientError(
+            'protocol',
+            'Tapstate failed a preview after returning a result.',
+          )
+        }
+        terminal = true
+        failure = {
+          code: typeof payload.code === 'string' ? payload.code : 'unknown',
+          reason:
+            typeof payload.reason === 'string'
+              ? payload.reason
+              : 'The preview could not be completed.',
+        }
+        break
+      default:
+        throw new PipelineClientError(
+          'protocol',
+          'Tapstate returned an unknown Pipeline preview event.',
+        )
+    }
+  }
+
+  try {
+    while (true) {
+      const chunk = await reader.read()
+      if (chunk.done) {
+        buffer += decoder.decode()
+        if (buffer.trim()) consumeLine(buffer)
+        break
+      }
+      receivedBytes += chunk.value.byteLength
+      if (receivedBytes > 40 * 1024 * 1024) {
+        throw new PipelineClientError(
+          'protocol',
+          'The Pipeline preview stream exceeded its size limit.',
+        )
+      }
+      buffer += decoder.decode(chunk.value, { stream: true })
+      let newline = buffer.indexOf('\n')
+      while (newline >= 0) {
+        consumeLine(buffer.slice(0, newline).replace(/\r$/, ''))
+        buffer = buffer.slice(newline + 1)
+        newline = buffer.indexOf('\n')
+      }
+      if (buffer.length > 10 * 1024 * 1024) {
+        throw new PipelineClientError(
+          'protocol',
+          'A Pipeline preview event exceeded its size limit.',
+        )
+      }
+    }
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') throw error
+    if (error instanceof PipelineClientError) throw error
+    throw new PipelineClientError(
+      'network',
+      error instanceof Error ? error.message : 'The Pipeline preview stream ended unexpectedly.',
+    )
+  } finally {
+    reader.releaseLock()
+  }
+
+  if (
+    !terminal ||
+    !runId ||
+    !candidateHash ||
+    !executionSpec ||
+    !accepted ||
+    !compileCompleted ||
+    (!failure && (!sampleCompleted || !resultCompleted))
+  ) {
+    throw new PipelineClientError(
+      'protocol',
+      'The Pipeline preview ended without a valid terminal result.',
+    )
+  }
+  return {
+    runId,
+    candidateHash,
+    format,
+    executionSpec,
+    contexts,
+    sample,
+    documents,
+    trace,
+    sampleId,
+    rowCount,
+    failure,
+  }
 }
 
 export async function publishPipelineDraft(

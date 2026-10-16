@@ -15,6 +15,8 @@ export interface PipelineWorkflowHeaderProps {
   savePendingLabel?: string
   runLabel?: string
   runPendingLabel?: string
+  runButtonId?: string
+  runButtonActiveGuide?: boolean
   dockStatus?: ReactNode
   stopAction?: ReactNode
   onSave: () => void
@@ -34,6 +36,8 @@ export function PipelineWorkflowHeader({
   savePendingLabel,
   runLabel,
   runPendingLabel,
+  runButtonId,
+  runButtonActiveGuide,
   dockStatus,
   stopAction,
   onSave,
@@ -49,6 +53,8 @@ export function PipelineWorkflowHeader({
       {!isReadOnly && (
         <div className="border-pipeline-actionbar-border bg-pipeline-actionbar-bg flex h-8 items-center rounded-lg border-[0.5px] px-0.5 shadow-xs backdrop-blur-[10px]">
           <button
+            id={runButtonId}
+            data-guide-active={runButtonActiveGuide || undefined}
             type="button"
             className="hover:bg-pipeline-actionbar-bg-accent inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-[var(--pipeline-text-muted)] transition-colors focus-visible:ring-2 focus-visible:ring-[var(--pipeline-selection-ring)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!(canSave ?? isDirty) || isSaving || isBusy}

@@ -12,10 +12,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { SourceClientError } from '@/service/source-client'
 
 interface ConnectionTestResultProps {
   report: ConnectionTestReport | null
-  error: string
+  error: unknown
 }
 
 function checkDetail(check: ConnectionTestCheck) {
@@ -25,15 +26,65 @@ function checkDetail(check: ConnectionTestCheck) {
 export function ConnectionTestResult({ report, error }: ConnectionTestResultProps) {
   const { t } = useTranslation()
 
-  if (error) {
+  if (error != null) {
+    const clientError = error instanceof SourceClientError ? error : null
+    const detail = clientError?.params.detail
+    const technicalDetail = typeof detail === 'string' && detail.trim() ? detail : null
+    const timedOut = technicalDetail != null && /timed out|timeout/i.test(technicalDetail)
+    const summary = clientError
+      ? clientError.code === 'connector.test-failed'
+        ? t('sources.test.errors.connectorFailed')
+        : t(`sources.test.errors.${clientError.kind}`)
+      : t('sources.test.errors.unknown')
     return (
-      <div
-        className="border-destructive/30 bg-destructive/10 text-destructive flex items-start gap-2 rounded-lg border px-3 py-2.5 text-[13px] leading-relaxed"
+      <section
+        className="border-destructive/30 bg-destructive/5 overflow-hidden rounded-lg border text-[13px] leading-relaxed"
         role="alert"
       >
-        <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-        <span>{error}</span>
-      </div>
+        <div className="flex items-start gap-2 px-3 py-3">
+          <AlertCircle className="text-destructive mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <div className="min-w-0 space-y-1">
+            <p className="text-foreground font-medium">{t('sources.test.failed')}</p>
+            <p className="text-foreground">{summary}</p>
+            {timedOut && (
+              <p className="text-muted-foreground">{t('sources.test.errors.timeoutHint')}</p>
+            )}
+          </div>
+        </div>
+        {clientError && (clientError.code || technicalDetail || clientError.message) && (
+          <details className="border-destructive/15 bg-background/70 border-t px-3 py-2.5">
+            <summary className="text-muted-foreground focus-visible:ring-ring cursor-pointer rounded-sm font-medium focus-visible:ring-2 focus-visible:outline-none">
+              {t('sources.test.errors.technicalDetails')}
+            </summary>
+            <dl className="text-muted-foreground mt-2 grid gap-1.5 break-words">
+              {clientError.code && (
+                <div>
+                  <dt className="inline font-medium">{t('sources.test.errors.code')}: </dt>
+                  <dd className="inline font-mono">{clientError.code}</dd>
+                </div>
+              )}
+              {typeof clientError.params.connector === 'string' && (
+                <div>
+                  <dt className="inline font-medium">{t('sources.test.errors.connector')}: </dt>
+                  <dd className="inline">{clientError.params.connector}</dd>
+                </div>
+              )}
+              {technicalDetail && (
+                <div>
+                  <dt className="inline font-medium">{t('sources.test.errors.detail')}: </dt>
+                  <dd className="inline font-mono text-[12px]">{technicalDetail}</dd>
+                </div>
+              )}
+              {clientError.message && (
+                <div>
+                  <dt className="inline font-medium">{t('sources.test.errors.serverMessage')}: </dt>
+                  <dd className="inline">{clientError.message}</dd>
+                </div>
+              )}
+            </dl>
+          </details>
+        )}
+      </section>
     )
   }
 
@@ -91,7 +142,7 @@ export function ConnectionTestResultDialog({
   onOpenChange,
 }: ConnectionTestResultProps & { onOpenChange: (open: boolean) => void }) {
   const { t } = useTranslation()
-  const open = report !== null || Boolean(error)
+  const open = report !== null || error != null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

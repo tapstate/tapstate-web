@@ -36,6 +36,7 @@ export interface PipelineWorkflowPanelProps {
   loadTables?: PipelineTableLoader
   sources?: readonly SourceView[]
   upstreamSourceTables?: readonly PipelineSourceTableSelection[]
+  fieldTypes?: Readonly<Record<string, string>>
 }
 
 /** Owns the resizable inspector shell; form rendering remains in the node-config feature. */
@@ -51,6 +52,7 @@ export function PipelineWorkflowPanel({
   loadTables,
   sources,
   upstreamSourceTables,
+  fieldTypes,
 }: PipelineWorkflowPanelProps) {
   const { t } = useTranslation()
   const [width, setWidth] = useState(NODE_PANEL_DEFAULT_WIDTH)
@@ -135,6 +137,7 @@ export function PipelineWorkflowPanel({
           loadTables={loadTables}
           sources={sources}
           upstreamSourceTables={upstreamSourceTables}
+          fieldTypes={fieldTypes}
         />
       </div>
     </aside>

@@ -31,6 +31,7 @@ import {
   testConnection,
 } from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
+import { getDeploymentProfile } from '@/utils/deployment-profile'
 
 import { ConnectionTestResultDialog } from './connection-test-result'
 import { ConnectorFormily } from './connector-formily'
@@ -46,6 +47,7 @@ interface SourceCreateDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreated: (source: SourceView) => void
+  initialConnectorId?: string | null
 }
 
 type CreateSourceStep = 'select' | 'configure'
@@ -55,13 +57,6 @@ function errorMessage(error: unknown, t: ReturnType<typeof useTranslation>['t'])
   if (error.kind === 'network') return t('sources.create.errors.network')
   if (error.code === 'source.already-exists') return t('sources.create.errors.exists')
   return t('sources.create.errors.server')
-}
-
-function testErrorMessage(error: unknown, t: ReturnType<typeof useTranslation>['t']) {
-  if (!(error instanceof SourceClientError)) return t('sources.test.errors.unknown')
-  if (error.kind === 'network') return t('sources.test.errors.network')
-  if (error.kind === 'protocol') return t('sources.test.errors.protocol')
-  return t('sources.test.errors.server')
 }
 
 function RequestError({ message }: { message: string }) {
@@ -76,7 +71,12 @@ function RequestError({ message }: { message: string }) {
   )
 }
 
-export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCreateDialogProps) {
+export function SourceCreateDialog({
+  open,
+  onOpenChange,
+  onCreated,
+  initialConnectorId,
+}: SourceCreateDialogProps) {
   const { i18n, t } = useTranslation()
   const currentLocale = i18n.resolvedLanguage ?? i18n.language
   const apiFetch = useAuthStore((state) => state.apiFetch)
@@ -96,15 +96,21 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
   const [requestError, setRequestError] = useState('')
   const [testing, setTesting] = useState(false)
   const [testReport, setTestReport] = useState<ConnectionTestReport | null>(null)
-  const [testError, setTestError] = useState('')
+  const [testError, setTestError] = useState<unknown>(null)
   const connectorButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
+  const initializedForOpen = useRef(false)
 
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      initializedForOpen.current = false
+      return
+    }
+    if (initializedForOpen.current) return
+    initializedForOpen.current = true
     setSourceId('')
-    setConnectorId('')
+    setConnectorId(initialConnectorId ?? '')
     setSearchTerm('')
-    setStep('select')
+    setStep(initialConnectorId ? 'configure' : 'select')
     setSourceMode('')
     setConnector(null)
     setSchema(null)
@@ -112,7 +118,7 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
     setFieldErrors({})
     setRequestError('')
     setTestReport(null)
-    setTestError('')
+    setTestError(null)
     if (connectors.length === 0) {
       setLoadingConnectors(true)
       listConnectors(apiFetch)
@@ -120,9 +126,10 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
         .catch((error) => setRequestError(errorMessage(error, t)))
         .finally(() => setLoadingConnectors(false))
     }
-  }, [apiFetch, connectors.length, open, t])
+  }, [apiFetch, connectors.length, initialConnectorId, open, t])
 
   useEffect(() => {
+    if (!open) return
     setConnector(null)
     setSchema(null)
     setSourceMode('')
@@ -130,12 +137,14 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
     setFieldErrors({})
     setRequestError('')
     setTestReport(null)
-    setTestError('')
+    setTestError(null)
     if (!connectorId || step !== 'configure') return
 
     setLoadingConnector(true)
+    let cancelled = false
     getConnector(connectorId, apiFetch)
       .then((detail) => {
+        if (cancelled) return
         if (detail.spec.text === null) {
           setRequestError(t('sources.create.errors.specUnavailable'))
           return
@@ -160,9 +169,16 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
         }
         setSourceMode(detail.modes[0] ?? '')
       })
-      .catch((error) => setRequestError(errorMessage(error, t)))
-      .finally(() => setLoadingConnector(false))
-  }, [apiFetch, connectorId, currentLocale, step, t])
+      .catch((error) => {
+        if (!cancelled) setRequestError(errorMessage(error, t))
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingConnector(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [apiFetch, connectorId, currentLocale, open, step, t])
 
   function connectionDraft() {
     const nextErrors: Record<string, string> = {}
@@ -212,7 +228,7 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
   }
 
   async function runConnectionTest() {
-    setTestError('')
+    setTestError(null)
     setTestReport(null)
     const draft = connectionDraft()
     if (!draft) return
@@ -221,7 +237,7 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
     try {
       setTestReport(await testConnection(draft, apiFetch))
     } catch (error) {
-      setTestError(testErrorMessage(error, t))
+      setTestError(error)
     } finally {
       setTesting(false)
     }
@@ -237,7 +253,7 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
     setFieldErrors((current) => ({ ...current, connector: '' }))
     setRequestError('')
     setTestReport(null)
-    setTestError('')
+    setTestError(null)
     setStep('configure')
   }
 
@@ -250,19 +266,23 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
     setConfig({})
     setRequestError('')
     setTestReport(null)
-    setTestError('')
+    setTestError(null)
     setStep('select')
     requestAnimationFrame(() => connectorButtonRefs.current[previousConnectorId]?.focus())
   }
 
   const normalizedSearch = searchTerm.trim().toLocaleLowerCase()
+  const sourceConnectors =
+    getDeploymentProfile() === 'cloud'
+      ? connectors.filter((item) => item.id !== 'mongodb-atlas')
+      : connectors
   const visibleConnectors = normalizedSearch
-    ? connectors.filter((item) =>
+    ? sourceConnectors.filter((item) =>
         [item.name, item.id, item.group, ...item.modes].some((value) =>
           value.toLocaleLowerCase().includes(normalizedSearch),
         ),
       )
-    : connectors
+    : sourceConnectors
   const selectedConnector = connectors.find((item) => item.id === connectorId)
   const configuredConnectorName = connector?.name ?? selectedConnector?.name
 
@@ -411,7 +431,7 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
                               setSourceId(event.target.value)
                               setFieldErrors((current) => ({ ...current, id: '' }))
                               setTestReport(null)
-                              setTestError('')
+                              setTestError(null)
                             }}
                           />
                           {fieldErrors.id ? (
@@ -447,7 +467,7 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
                                     onClick={() => {
                                       setSourceMode(mode)
                                       setTestReport(null)
-                                      setTestError('')
+                                      setTestError(null)
                                     }}
                                   >
                                     {mode}
@@ -468,7 +488,7 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
                           onValuesChange={(values) => {
                             setConfig(values)
                             setTestReport(null)
-                            setTestError('')
+                            setTestError(null)
                           }}
                         />
                       </>
@@ -547,7 +567,7 @@ export function SourceCreateDialog({ open, onOpenChange, onCreated }: SourceCrea
           onOpenChange={(nextOpen) => {
             if (!nextOpen) {
               setTestReport(null)
-              setTestError('')
+              setTestError(null)
             }
           }}
         />

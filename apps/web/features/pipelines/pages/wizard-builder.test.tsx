@@ -15,27 +15,32 @@ const {
   getDeploymentProfile,
   getPipelineDraft,
   previewPipelineDraft,
+  streamPipelinePreview,
   publishPipelineDraft,
   runPipeline,
   updatePipelineDraft,
   getSourceSchema,
   listConnectors,
   listSources,
+  apiFetch,
 } = vi.hoisted(() => ({
   getDeploymentProfile: vi.fn(),
   getPipelineDraft: vi.fn(),
   previewPipelineDraft: vi.fn(),
+  streamPipelinePreview: vi.fn(),
   publishPipelineDraft: vi.fn(),
   runPipeline: vi.fn(),
   updatePipelineDraft: vi.fn(),
   getSourceSchema: vi.fn(),
   listConnectors: vi.fn(),
   listSources: vi.fn(),
+  apiFetch: vi.fn() as unknown as typeof fetch,
 }))
 
 vi.mock('@/service/pipelines/pipeline-client', () => ({
   getPipelineDraft,
   previewPipelineDraft,
+  streamPipelinePreview,
   publishPipelineDraft,
   runPipeline,
   PipelineClientError: class PipelineClientError extends Error {
@@ -52,7 +57,12 @@ vi.mock('@/service/pipelines/pipeline-client', () => ({
   updatePipelineDraft,
 }))
 
-vi.mock('@/service/source-client', () => ({ getSourceSchema, listConnectors, listSources }))
+vi.mock('@/service/source-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/service/source-client')>()),
+  getSourceSchema,
+  listConnectors,
+  listSources,
+}))
 
 vi.mock('../model/deployment-profile', () => ({ getDeploymentProfile }))
 
@@ -67,36 +77,44 @@ vi.mock('../model/pipeline-target-connectors', async (importOriginal) => {
 })
 
 vi.mock('@/stores/auth-store', () => ({
-  useAuthStore: <T,>(selector: (state: { apiFetch: typeof fetch }) => T) =>
-    selector({ apiFetch: vi.fn() as unknown as typeof fetch }),
+  useAuthStore: <T,>(selector: (state: { apiFetch: typeof fetch }) => T) => selector({ apiFetch }),
 }))
 
 vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
   ReferenceWizardBuilder: ({
+    initial,
     onChange,
     footer,
     actions,
     readOnly,
-    initial,
     catalog,
     destinationName,
+    livePreview,
+    livePreviewStatus,
+    onInspectPlan,
   }: {
-    initial?: WizardViewState
+    initial: WizardViewState
     catalog?: DataSourceMeta[]
     destinationName?: string
     onChange: (state: WizardViewState) => void
     footer: React.ReactNode
     actions?: React.ReactNode
     readOnly?: boolean
+    livePreview: { runId: string } | null
+    livePreviewStatus: string
+    onInspectPlan: () => Promise<string>
   }) => (
     <section
       className="wizard-reference-editor-column"
       data-read-only={readOnly ? 'true' : 'false'}
       data-destination-name={destinationName}
-      data-destination-source={initial?.destinationSourceId}
+      data-destination-source={initial.destinationSourceId}
       data-mongo-sink={
         catalog?.find((source) => source.id === 'mongo_out')?.sink === true ? 'true' : 'false'
       }
+      data-root-table={initial.root?.table ?? ''}
+      data-live-preview-status={livePreviewStatus}
+      data-live-preview-run={livePreview?.runId || ''}
     >
       <button
         data-testid="change-wizard"
@@ -127,6 +145,9 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
         }
       >
         Change wizard
+      </button>
+      <button data-testid="inspect-plan" onClick={() => void onInspectPlan()}>
+        Inspect Plan
       </button>
       {footer}
       {actions}
@@ -167,8 +188,8 @@ const initialDraft: PipelineDraft = {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks()
   getDeploymentProfile.mockReturnValue('on-prem')
+  vi.clearAllMocks()
   listSources.mockResolvedValue([{ id: 'mysql', connector: 'mysql' }])
   listConnectors.mockResolvedValue([
     {
@@ -222,7 +243,7 @@ describe('WizardBuilder publish flow', () => {
     getDeploymentProfile.mockReturnValue('cloud')
     listSources.mockResolvedValue([
       { id: 'mongo_out', connector: 'mongodb' },
-      { id: 'atlas_out', connector: 'mongodb-atlas' },
+      { id: 'atlas_out', connector: 'mongodb-atlas', metadata: { labels: { store: 'true' } } },
       { id: 'mysql', connector: 'mysql' },
     ])
     listConnectors.mockResolvedValue([
@@ -263,6 +284,168 @@ describe('WizardBuilder publish flow', () => {
     ).toBe('MongoDB Atlas (atlas_out)')
     await vi.waitFor(() =>
       expect(container?.querySelector('[data-destination-source="atlas_out"]')).not.toBeNull(),
+    )
+  })
+
+  it('compiles an unfinished destination only for inspection without saving the temporary name', async () => {
+    const draft: PipelineDraft = {
+      ...initialDraft,
+      wizard: {
+        ...initialDraft.wizard!,
+        output: { kind: 'source', config: { sourceId: 'mysql', table: '', writeMode: 'append' } },
+      },
+    }
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={draft.pipelineId} draft={draft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await act(async () => new Promise((resolve) => window.setTimeout(resolve, 50)))
+    await act(async () => {
+      container?.querySelector<HTMLButtonElement>('[data-testid="inspect-plan"]')?.click()
+    })
+    expect(previewPipelineDraft).toHaveBeenCalledWith(
+      draft.pipelineId,
+      draft.revision,
+      expect.any(Function),
+      undefined,
+      expect.objectContaining({
+        wizard: expect.objectContaining({
+          output: expect.objectContaining({
+            config: expect.objectContaining({ table: '__tapstate_preview__' }),
+          }),
+        }),
+      }),
+    )
+    expect(updatePipelineDraft).not.toHaveBeenCalled()
+  })
+
+  it('keeps an ordinary empty Wizard editable and free of sample guidance', async () => {
+    const ordinaryDraft: PipelineDraft = {
+      ...initialDraft,
+      pipelineId: 'customer_360_3a1973ba',
+      wizard: {
+        root: { id: 'root', sourceId: '', table: '', key: [], preTransforms: [] },
+        related: [],
+        transforms: [],
+        output: { kind: 'atlas', config: {} },
+      },
+    }
+    listSources.mockResolvedValue([
+      { id: 'atlas-store', connector: 'mongodb-atlas', metadata: { labels: { store: 'true' } } },
+      { id: 'sample_core_banking', connector: 'mysql', metadata: { labels: { sample: 'true' } } },
+    ])
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={ordinaryDraft.pipelineId} draft={ordinaryDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await vi.waitFor(() =>
+      expect(container?.querySelector('.wizard-reference-editor-column')).not.toBeNull(),
+    )
+    expect(
+      container?.querySelector('.wizard-reference-editor-column')?.getAttribute('data-read-only'),
+    ).toBe('false')
+    expect(container?.textContent).not.toContain('Nest orders')
+    expect(container?.textContent).not.toContain('This Order 360 demo is preconfigured')
+    expect(
+      container?.querySelector<HTMLButtonElement>('[data-testid="change-wizard"]')?.disabled,
+    ).toBe(false)
+  })
+
+  it('automatically fills and locks the guided Order 360 sample draft', async () => {
+    const guidedDraft: PipelineDraft = {
+      ...initialDraft,
+      pipelineId: 'order_360_3a1973ba',
+      wizard: {
+        root: { id: 'root', sourceId: '', table: '', key: [], preTransforms: [] },
+        related: [],
+        transforms: [],
+        output: { kind: 'atlas', config: { onboardingGuide: 'order-360-sample' } },
+      },
+    }
+    listSources.mockResolvedValue([
+      { id: 'atlas-store', connector: 'mongodb-atlas', metadata: { labels: { store: 'true' } } },
+      { id: 'sample_core_banking', connector: 'mysql', metadata: { labels: { sample: 'true' } } },
+    ])
+    listConnectors.mockResolvedValue([
+      { id: 'mongodb-atlas', name: 'MongoDB Atlas', sink: true, writeModes: ['upsert'] },
+      { id: 'mysql', name: 'MySQL', sink: false, writeModes: [] },
+    ])
+    getSourceSchema.mockResolvedValue({
+      tables: [
+        {
+          name: 'bmsql_customer',
+          primaryKey: ['c_w_id', 'c_d_id', 'c_id'],
+          fields: ['c_w_id', 'c_d_id', 'c_id'].map((name) => ({ name })),
+        },
+        {
+          name: 'bmsql_oorder',
+          primaryKey: ['o_w_id', 'o_d_id', 'o_id'],
+          fields: ['o_w_id', 'o_d_id', 'o_id', 'o_c_id'].map((name) => ({ name })),
+        },
+        {
+          name: 'bmsql_order_line',
+          primaryKey: ['ol_w_id', 'ol_d_id', 'ol_o_id'],
+          fields: ['ol_w_id', 'ol_d_id', 'ol_o_id', 'ol_amount'].map((name) => ({ name })),
+        },
+      ],
+    })
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={guidedDraft.pipelineId} draft={guidedDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await vi.waitFor(() =>
+      expect(container?.querySelector('.wizard-reference-editor-column')).not.toBeNull(),
+    )
+
+    expect(
+      container?.querySelector('.wizard-reference-editor-column')?.getAttribute('data-root-table'),
+    ).toBe('bmsql_oorder')
+    expect(
+      container?.querySelector('.wizard-reference-editor-column')?.getAttribute('data-read-only'),
+    ).toBe('true')
+    expect(container?.textContent).not.toContain('Use detected sample')
+    expect(container?.textContent).toContain('Nest customer and lines')
+    expect(container?.textContent).toContain('This Order 360 demo is preconfigured')
+    await vi.waitFor(
+      () =>
+        expect(updatePipelineDraft).toHaveBeenCalledWith(
+          guidedDraft.pipelineId,
+          expect.objectContaining({
+            wizard: expect.objectContaining({
+              root: expect.objectContaining({ table: 'bmsql_oorder' }),
+              related: expect.arrayContaining([
+                expect.objectContaining({ table: 'bmsql_customer' }),
+                expect.objectContaining({ table: 'bmsql_order_line' }),
+              ]),
+            }),
+          }),
+          '"1"',
+          expect.any(Function),
+        ),
+      { timeout: 1500 },
     )
   })
 
@@ -339,7 +522,20 @@ describe('WizardBuilder publish flow', () => {
     expect(container?.querySelector('[data-workflow-header]')?.textContent).not.toContain('Retry')
   })
 
-  it('hides save and start actions while the runtime is active', async () => {
+  it('previews a read-only running Pipeline without exposing edit or start actions', async () => {
+    streamPipelinePreview.mockResolvedValue({
+      runId: 'running-preview',
+      candidateHash: 'running-candidate',
+      format: 'logical-json',
+      executionSpec: {},
+      contexts: [],
+      sample: { rootRows: 1, inputRows: 1 },
+      documents: [{ id: 'order-1' }],
+      trace: [],
+      sampleId: 'running-sample',
+      rowCount: 1,
+      failure: null,
+    })
     container = document.createElement('div')
     document.body.append(container)
     root = createRoot(container)
@@ -353,6 +549,7 @@ describe('WizardBuilder publish flow', () => {
             draft={initialDraft}
             etag='"1"'
             readOnly
+            runtimeStatus="RUNNING"
           />
         </QueryClientProvider>,
       )
@@ -363,7 +560,7 @@ describe('WizardBuilder publish flow', () => {
     expect(
       container?.querySelector<HTMLButtonElement>('[data-testid="change-wizard"]')?.disabled,
     ).toBe(true)
-    expect(container?.textContent).toContain('Pipeline configuration is read-only')
+    expect(container?.textContent).toContain('Running')
     const actionButtons = container?.querySelectorAll<HTMLButtonElement>(
       '[data-workflow-header] button',
     )
@@ -377,7 +574,59 @@ describe('WizardBuilder publish flow', () => {
     expect(container?.textContent).not.toContain('Save')
     expect(container?.textContent).not.toContain('Save & start')
     expect(updatePipelineDraft).not.toHaveBeenCalled()
-    expect(previewPipelineDraft).not.toHaveBeenCalled()
+    await vi.waitFor(() =>
+      expect(container?.querySelector('[data-live-preview-run="running-preview"]')).not.toBeNull(),
+    )
+    expect(previewPipelineDraft).toHaveBeenCalledTimes(1)
+    expect(streamPipelinePreview).toHaveBeenCalledTimes(1)
+    expect(publishPipelineDraft).not.toHaveBeenCalled()
+    expect(runPipeline).not.toHaveBeenCalled()
+  })
+
+  it('previews a read-only draft while runtime status is being checked', async () => {
+    streamPipelinePreview.mockResolvedValue({
+      runId: 'status-pending-preview',
+      candidateHash: 'status-pending-candidate',
+      format: 'logical-json',
+      executionSpec: {},
+      contexts: [],
+      sample: { rootRows: 1, inputRows: 1 },
+      documents: [{ id: 'order-1' }],
+      trace: [],
+      sampleId: 'status-pending-sample',
+      rowCount: 1,
+      failure: null,
+    })
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder
+            pipelineId={initialDraft.pipelineId}
+            draft={initialDraft}
+            etag='"1"'
+            readOnly
+            runtimeObservationPending
+          />
+        </QueryClientProvider>,
+      )
+    })
+
+    await vi.waitFor(() => expect(previewPipelineDraft).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() => expect(streamPipelinePreview).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() => {
+      expect(
+        container?.querySelector('[data-live-preview-run="status-pending-preview"]'),
+      ).not.toBeNull()
+      expect(container?.querySelector('[data-live-preview-status="complete"]')).not.toBeNull()
+    })
+    expect(previewPipelineDraft).toHaveBeenCalledTimes(1)
+    expect(streamPipelinePreview).toHaveBeenCalledTimes(1)
+    expect(updatePipelineDraft).not.toHaveBeenCalled()
     expect(publishPipelineDraft).not.toHaveBeenCalled()
     expect(runPipeline).not.toHaveBeenCalled()
   })
@@ -418,6 +667,110 @@ describe('WizardBuilder publish flow', () => {
     expect(invalidateQueries).not.toHaveBeenCalledWith({
       queryKey: ['pipelines', initialDraft.pipelineId, 'status'],
     })
+  })
+
+  it('aborts a stale preview when the unsaved candidate changes', async () => {
+    let firstSignal: AbortSignal | undefined
+    streamPipelinePreview
+      .mockImplementationOnce(
+        (request: { signal?: AbortSignal }) =>
+          new Promise((_resolve, reject) => {
+            firstSignal = request.signal
+            request.signal?.addEventListener('abort', () => reject(new Error('aborted')), {
+              once: true,
+            })
+          }),
+      )
+      .mockResolvedValueOnce({
+        runId: 'preview-run-2',
+        candidateHash: 'candidate-2',
+        format: 'logical-json',
+        executionSpec: {},
+        contexts: [],
+        sample: { rootRows: 1, inputRows: 1 },
+        documents: [{ id: 'customer-1' }],
+        trace: [],
+        sampleId: 'sample-2',
+        rowCount: 1,
+        failure: null,
+      })
+
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={initialDraft.pipelineId} draft={initialDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+
+    await vi.waitFor(() => expect(streamPipelinePreview).toHaveBeenCalledTimes(1))
+    expect(firstSignal?.aborted).toBe(false)
+
+    await act(async () => {
+      container?.querySelector<HTMLButtonElement>('[data-testid="change-wizard"]')?.click()
+    })
+    await act(async () => {
+      await vi.waitFor(() => expect(streamPipelinePreview).toHaveBeenCalledTimes(2))
+    })
+
+    expect(firstSignal?.aborted).toBe(true)
+    expect(previewPipelineDraft).toHaveBeenCalledWith(
+      initialDraft.pipelineId,
+      expect.any(Number),
+      expect.any(Function),
+      expect.any(AbortSignal),
+      expect.objectContaining({ mode: 'wizard', wizard: expect.any(Object) }),
+    )
+    expect(streamPipelinePreview.mock.calls[1]?.[0]).toMatchObject({
+      pipelineId: initialDraft.pipelineId,
+      drafts: [{ content: 'version: tapstate/v1' }],
+      rootLimit: 1,
+      signal: expect.any(AbortSignal),
+    })
+    expect(container?.querySelector('[data-live-preview-status="complete"]')).not.toBeNull()
+    expect(container?.querySelector('[data-live-preview-run="preview-run-2"]')).not.toBeNull()
+  })
+
+  it('keeps a completed preview stable across status-driven rerenders', async () => {
+    streamPipelinePreview.mockResolvedValue({
+      runId: 'preview-run-stable',
+      candidateHash: 'candidate-stable',
+      format: 'logical-json',
+      executionSpec: {},
+      contexts: [],
+      sample: { rootRows: 1, inputRows: 1 },
+      documents: [{ id: 'customer-1' }],
+      trace: [],
+      sampleId: 'sample-stable',
+      rowCount: 1,
+      failure: null,
+    })
+
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={initialDraft.pipelineId} draft={initialDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+
+    await vi.waitFor(() =>
+      expect(container?.querySelector('[data-live-preview-status="complete"]')).not.toBeNull(),
+    )
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 400))
+    })
+
+    expect(streamPipelinePreview).toHaveBeenCalledTimes(1)
+    expect(container?.querySelector('[data-live-preview-run="preview-run-stable"]')).not.toBeNull()
   })
 
   it('autosaves a transform draft, previews, publishes, then starts it', async () => {

@@ -41,11 +41,29 @@ describe('pipeline target connectors', () => {
     expect(isTargetConnector(null, 'on-prem', connectors)).toBe(false)
   })
 
+  it('keeps Atlas store markers required while confining the MongoDB exception to local builds', () => {
+    const sources = [
+      { id: 'unmarked_atlas', connector: 'mongodb-atlas' },
+      { id: 'store_atlas', connector: 'mongodb-atlas', metadata: { labels: { store: true } } },
+      { id: 'local_mongo', connector: 'mongodb' },
+      { id: 'marked_mongo', connector: 'mongodb', metadata: { labels: { store: true } } },
+      { id: 'marked_postgres', connector: 'postgres', metadata: { labels: { store: true } } },
+    ]
+    expect(targetSources(sources, connectors, 'cloud', true).map(({ id }) => id)).toEqual([
+      'store_atlas',
+      'local_mongo',
+      'marked_mongo',
+    ])
+    expect(targetSources(sources, connectors, 'cloud', false).map(({ id }) => id)).toEqual([
+      'store_atlas',
+    ])
+  })
+
   it('filters sources by deployment policy while preserving order', () => {
     const sources = [
       { id: 'mysql_orders', connector: 'mysql' },
       { id: 'pg_warehouse', connector: 'postgres' },
-      { id: 'atlas_out', connector: 'mongodb-atlas' },
+      { id: 'atlas_out', connector: 'mongodb-atlas', metadata: { labels: { store: 'true' } } },
       { id: 'mongo_out', connector: 'mongodb' },
     ]
     expect(targetSources(sources, connectors, 'on-prem').map(({ id }) => id)).toEqual([

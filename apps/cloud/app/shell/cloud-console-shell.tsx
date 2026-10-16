@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
   Building2,
   Check,
@@ -15,7 +15,7 @@ import {
   Settings,
   Sun,
 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 
 import type { Cluster, Organization } from '../service/cloud-api'
 import type { UserProfile } from '../types'
@@ -50,19 +50,21 @@ export function CloudConsoleShell({
   user,
 }: CloudConsoleShellProps) {
   const navigate = useNavigate()
+  const currentPath = useRouterState({
+    select: (state) =>
+      state.location.pathname as '/' | '/organizations' | '/clusters' | '/billing' | '/settings',
+  })
   const {
     activeOrganization,
     clusters: stateClusters,
     darkMode,
     setDarkMode,
     setActiveOrganization,
-    setClusters,
     clearIdentity,
   } = useCloudAppState()
   const [showOrganizationMenu, setShowOrganizationMenu] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [search, setSearch] = useState('')
-  const organizationRequestId = useRef(0)
   const { enterCluster, enteringId, entryError } = useClusterEntry()
 
   const currentOrganization = activeOrganization ?? organization
@@ -73,21 +75,13 @@ export function CloudConsoleShell({
   const displayName = user.displayName?.trim() || user.email.split('@')[0]
   const initials = displayName.slice(0, 1).toUpperCase()
 
-  const selectOrganization = async (nextOrganization: Organization) => {
-    const requestId = ++organizationRequestId.current
+  const selectOrganization = (nextOrganization: Organization) => {
     setActiveOrganization(nextOrganization)
     setShowOrganizationMenu(false)
-    try {
-      const nextClusters = await cloudApi.activeClusters(nextOrganization.id)
-      if (requestId === organizationRequestId.current) setClusters(nextClusters)
-    } catch (error) {
-      if (error instanceof CloudApiError && error.status === 401) {
-        clearIdentity()
-        await navigate({ to: '/auth' })
-        return
-      }
-      if (requestId === organizationRequestId.current) setClusters([])
-    }
+    void navigate({
+      to: currentPath,
+      search: { organizationId: nextOrganization.id },
+    })
   }
 
   const signOut = async () => {
@@ -114,14 +108,11 @@ export function CloudConsoleShell({
             type="button"
           >
             <span className="flex min-w-0 items-center gap-2">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] bg-neutral-900 text-xs font-bold text-white dark:bg-white dark:text-neutral-900">
-                <span className="font-mono text-[11px] leading-none">T</span>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-600 dark:border-indigo-400/20 dark:bg-indigo-400/10 dark:text-indigo-300">
+                <Building2 aria-hidden="true" className="h-4 w-4" />
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-xs leading-tight font-semibold tracking-tight text-neutral-900 dark:text-white">
-                  Tapstate
-                </span>
-                <span className="block truncate font-mono text-[11px] leading-tight text-neutral-500 dark:text-neutral-400">
                   {currentOrganization?.name ?? 'Organization'}
                 </span>
               </span>
@@ -183,6 +174,7 @@ export function CloudConsoleShell({
               }}
               className="flex h-8.5 w-full items-center gap-2.5 rounded-lg px-3 text-left text-xs font-normal text-neutral-600 transition-all duration-150 hover:bg-black/[0.04] hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-white/[0.05] dark:hover:text-white"
               key={path}
+              search={{ organizationId: currentOrganization?.id }}
               to={path}
             >
               <Icon className="h-4 w-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
@@ -194,6 +186,7 @@ export function CloudConsoleShell({
             <span>Clusters</span>
             <Link
               className="text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
+              search={{ organizationId: currentOrganization?.id }}
               to="/clusters"
             >
               <ChevronRight aria-label="View all clusters" className="h-3 w-3" />
@@ -208,7 +201,10 @@ export function CloudConsoleShell({
                 if (cluster.state === 'READY' && currentOrganization) {
                   void enterCluster(cluster, currentOrganization.id)
                 } else {
-                  void navigate({ to: '/clusters' })
+                  void navigate({
+                    to: '/clusters',
+                    search: { organizationId: currentOrganization?.id },
+                  })
                 }
               }}
               type="button"
@@ -236,6 +232,7 @@ export function CloudConsoleShell({
                 'flex h-8.5 w-full items-center gap-2.5 rounded-lg bg-white px-3 text-left text-xs font-medium text-neutral-900 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_1px_rgba(0,0,0,0.03)] dark:bg-[#25272a] dark:text-white',
             }}
             className="flex h-8.5 w-full items-center gap-2.5 rounded-lg px-3 text-left text-xs font-normal text-neutral-600 transition-all duration-150 hover:bg-black/[0.04] hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-white/[0.05] dark:hover:text-white"
+            search={{ organizationId: currentOrganization?.id }}
             to="/settings"
           >
             <Settings className="h-4 w-4 shrink-0 text-neutral-400 dark:text-neutral-500" />

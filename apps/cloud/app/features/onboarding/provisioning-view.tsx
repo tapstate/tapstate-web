@@ -84,7 +84,6 @@ export function ProvisioningView({
 }: ProvisioningViewProps) {
   const { t } = useTranslation()
   const [showUpdates, setShowUpdates] = useState(false)
-  const [confirmReadyCancellation, setConfirmReadyCancellation] = useState(false)
   const cancelErrorAlert = cancelError ? (
     <p
       className="rounded-lg bg-red-50 p-3 text-left text-xs text-red-600 dark:bg-red-950/30 dark:text-red-400"
@@ -409,7 +408,7 @@ export function ProvisioningView({
         )}
         <button
           className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111827] text-[13.5px] font-semibold text-white shadow-xs transition-colors hover:bg-[#1f2937] active:scale-[0.99] disabled:cursor-wait disabled:opacity-50 dark:bg-white dark:text-[#111827] dark:hover:bg-neutral-100"
-          disabled={isOpeningCluster || isCancelling || cancelOutcomeUnknown}
+          disabled={isOpeningCluster}
           onClick={onOpenCluster}
           type="button"
         >
@@ -422,42 +421,6 @@ export function ProvisioningView({
             <ArrowRight className="h-4 w-4" />
           )}
         </button>
-        {confirmReadyCancellation ? (
-          <div className="space-y-3 rounded-xl border border-red-200/80 bg-red-50/80 p-4 text-left dark:border-red-900/50 dark:bg-red-950/30">
-            <p className="text-[12.5px] leading-relaxed text-red-700 dark:text-red-300">
-              {t('onboarding.readyCancelWarning', { cluster: cluster.name })}
-            </p>
-            <div className="flex gap-2">
-              <button
-                className="flex h-10 flex-1 items-center justify-center rounded-lg border border-black/[0.1] bg-white text-[13px] font-medium text-neutral-700 dark:border-white/[0.12] dark:bg-[#1a1b1e] dark:text-neutral-300"
-                disabled={isCancelling}
-                onClick={() => setConfirmReadyCancellation(false)}
-                type="button"
-              >
-                {t('onboarding.keepSubscription')}
-              </button>
-              <button
-                className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-red-600 text-[13px] font-medium text-white hover:bg-red-700 disabled:cursor-wait disabled:opacity-50"
-                disabled={isCancelling}
-                onClick={onCancel}
-                type="button"
-              >
-                {isCancelling && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
-                {isCancelling
-                  ? t('onboarding.cancellingSubscription')
-                  : t('onboarding.confirmCancelSubscription')}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            className="flex h-10 w-full items-center justify-center rounded-lg border border-black/[0.1] bg-white text-[13px] font-medium text-neutral-700 transition-colors hover:bg-neutral-50 dark:border-white/[0.12] dark:bg-[#1a1b1e] dark:text-neutral-300 dark:hover:bg-[#202124]"
-            onClick={() => setConfirmReadyCancellation(true)}
-            type="button"
-          >
-            {t('onboarding.cancelSubscription')}
-          </button>
-        )}
       </div>
     )
   }

@@ -182,7 +182,7 @@ describe('Cloud onboarding subscription cancellation', () => {
     await clickButton('Cancel subscription')
 
     expect(host?.textContent).toContain('Cancellation could not be confirmed')
-    expect(buttonWithText('Create workspace and cluster')).toBeUndefined()
+    expect(buttonWithText('Create organization and cluster')).toBeUndefined()
     expect(buttonWithText('Retry Provisioning')?.disabled).toBe(true)
     expect(onCreateWorkspace).toHaveBeenCalledTimes(1)
 

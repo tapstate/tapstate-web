@@ -49,12 +49,28 @@ function ConsoleLayout() {
 }
 
 export const Route = createFileRoute('/_console')({
-  loader: async () => {
+  validateSearch: (search: Record<string, unknown>) => ({
+    organizationId: typeof search.organizationId === 'string' ? search.organizationId : undefined,
+  }),
+  loaderDeps: ({ search }) => ({ organizationId: search.organizationId }),
+  loader: async ({ deps }) => {
     try {
       const [session, organizations] = await Promise.all([cloudApi.me(), cloudApi.organizations()])
-      if (organizations.length === 0) throw redirect({ to: '/onboarding' })
-      const clusters = await cloudApi.activeClusters(organizations[0].id)
-      return { session, organizations, clusters }
+      if (organizations.length === 0) {
+        throw redirect({
+          to: '/onboarding',
+          search: { organizationId: undefined, subscriptionId: undefined },
+        })
+      }
+      const selectedOrganization = organizations.find((item) => item.id === deps.organizationId)
+      const orderedOrganizations = selectedOrganization
+        ? [
+            selectedOrganization,
+            ...organizations.filter((item) => item.id !== selectedOrganization.id),
+          ]
+        : organizations
+      const clusters = await cloudApi.activeClusters(orderedOrganizations[0].id)
+      return { session, organizations: orderedOrganizations, clusters }
     } catch (error) {
       if (error instanceof CloudApiError && error.status === 401) throw redirect({ to: '/auth' })
       throw error

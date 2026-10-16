@@ -1,11 +1,9 @@
-import { useNavigate } from '@tanstack/react-router'
-import { Plus, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { useCloudAppState } from '../../state/cloud-app-state'
 
 export function OrganizationsPage() {
-  const navigate = useNavigate()
   const { activeOrganization, organizations } = useCloudAppState()
   const [searchQuery, setSearchQuery] = useState('')
   const filteredOrganizations = useMemo(
@@ -29,15 +27,6 @@ export function OrganizationsPage() {
             Manage the organizations associated with your account.
           </p>
         </div>
-
-        <button
-          className="flex h-8 items-center gap-1.5 rounded-lg bg-neutral-900 px-3 text-xs font-medium text-white shadow-2xs transition-colors hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100"
-          onClick={() => void navigate({ to: '/onboarding' })}
-          type="button"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          <span>Create Organization</span>
-        </button>
       </header>
 
       <div className="flex shrink-0 items-center justify-between border-b border-black/[0.05] bg-neutral-50/50 px-6 py-2.5 dark:border-white/[0.05] dark:bg-black/10">

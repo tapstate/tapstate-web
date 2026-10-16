@@ -285,15 +285,15 @@ export function PipelineLifecycleMenu({
         <DialogContent
           closeDisabled={pending}
           closeLabel={t('pipelines.lifecycle.cancel')}
-          className="sm:max-w-[420px]"
+          className="min-w-0 sm:max-w-[420px]"
         >
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="[overflow-wrap:anywhere] break-words">
               {t('pipelines.lifecycle.confirmStopTitle', { id: pipelineId })}
             </DialogTitle>
             <DialogDescription>{t('pipelines.lifecycle.confirmStopBody')}</DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-col [&>button]:w-full [&>button]:min-w-0 [&>button]:whitespace-normal">
             <Button
               type="button"
               variant="outline"

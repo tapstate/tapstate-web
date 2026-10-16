@@ -9,11 +9,11 @@ import type { TransformEditorProps } from './types'
 import { getPipelineTransformDefinition } from './registry'
 import { TransformEditorShell } from './transform-editor-shell'
 
-export function TransformEditor({ config, onChange }: TransformEditorProps) {
+export function TransformEditor({ config, onChange, fieldTypes }: TransformEditorProps) {
   const definition = getPipelineTransformDefinition(config.transformType)
   if (definition) {
     const Editor = definition.editor
-    return <Editor config={config} onChange={onChange} />
+    return <Editor config={config} onChange={onChange} fieldTypes={fieldTypes} />
   }
   return <UnknownTransformEditor config={config} onChange={onChange} title={config.transformType} />
 }
