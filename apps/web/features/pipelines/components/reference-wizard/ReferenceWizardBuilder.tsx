@@ -14,6 +14,7 @@ import {
   Layers,
   Workflow,
   Copy,
+  Sparkles,
 } from 'lucide-react'
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
@@ -34,7 +35,14 @@ import { cn } from '@/lib/utils'
 
 import type { DeploymentProfile } from '../../model/deployment-profile'
 
+import { PipelineAiCopilot, type BuilderAssistantContext } from './PipelineAiCopilot'
 import { TableTransformsManager, type TransformStep } from './TableTransformsManager'
+import {
+  readWizard,
+  relationKeysForTableChange,
+  relationTableKeys,
+  writeWizard,
+} from './wizard-adapter'
 import { reparentRelation } from './wizard-tree'
 
 export interface WizardBuilderProps {
@@ -59,6 +67,7 @@ export interface WizardBuilderProps {
   onStart?: () => void
   startBusy?: boolean
   actionError?: string
+  assistant?: BuilderAssistantContext
 }
 
 export interface JoinCondition {
@@ -82,6 +91,7 @@ export interface RelationNode {
   transforms?: TransformStep[]
   children?: RelationNode[]
   primaryKey?: string[]
+  arrayKey?: string[]
   isConditionOpen?: boolean
   isPreProcessOpen?: boolean
   isTableEditing?: boolean
@@ -185,8 +195,27 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   onStart,
   startBusy = false,
   actionError,
+  assistant,
 }) => {
   const { t } = useTranslation()
+  const [assistantOpen, setAssistantOpen] = React.useState(true)
+  const [rightPanelTab, setRightPanelTab] = React.useState<'copilot' | 'preview'>(
+    assistant && !readOnly ? 'copilot' : 'preview',
+  )
+  React.useEffect(() => {
+    if (!assistant) return
+    const toggle = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'j') {
+        event.preventDefault()
+        setAssistantOpen((open) => !open)
+      }
+    }
+    window.addEventListener('keydown', toggle)
+    return () => window.removeEventListener('keydown', toggle)
+  }, [assistant])
+  const [assistantPrompt, setAssistantPrompt] = React.useState<{ id: number; text: string } | null>(
+    null,
+  )
   const [activeContext, setActiveContext] = React.useState('root')
   const [previewMode, setPreviewMode] = React.useState<'json' | 'table'>('json')
   const [planMode, setPlanMode] = React.useState<'dsl' | 'json' | null>(null)
@@ -220,6 +249,8 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     initial.root?.source || '',
   )
   const [scratchSelectedTable, setScratchSelectedTable] = React.useState(initial.root?.table || '')
+  const unconfirmedRootEdit =
+    isRootEditing && Boolean(rootConfig || scratchSelectedSource || scratchSelectedTable)
   const [relations, setRelations] = React.useState<RelationNode[]>(initial.relations)
   const [pipelineTransforms, setPipelineTransforms] = React.useState(initial.transforms)
   const [selectedDocumentIndex, setSelectedDocumentIndex] = React.useState(0)
@@ -251,6 +282,12 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     ],
   )
   const lastView = React.useRef(JSON.stringify(viewState))
+  const currentView = React.useRef(viewState)
+  currentView.current = viewState
+  const assistantUndo = React.useRef<{
+    previous: WizardViewState
+    appliedFingerprint: string
+  } | null>(null)
   React.useEffect(() => {
     const fingerprint = JSON.stringify(viewState)
     if (lastView.current !== fingerprint) {
@@ -258,6 +295,84 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       onChangeRef.current(viewState)
     }
   }, [viewState])
+
+  function askAssistant(focus: string, intent: string) {
+    setActiveContext(focus)
+    setAssistantOpen(true)
+    setRightPanelTab('copilot')
+    const target =
+      focus === 'root'
+        ? rootConfig?.table
+        : focus === 'doc_process'
+          ? t('wizard.assistant.documentFocus')
+          : flattenRelations(relations).find((relation) => relation.id === focus)?.table
+    setAssistantPrompt({
+      id: Date.now(),
+      text: `${t(`wizard.assistant.prompts.${intent}`)}${target ? `\n${t('wizard.assistant.focus')} ${target}` : ''}`,
+    })
+  }
+  function applyAssistant(
+    candidate: import('@/service/pipelines/pipeline-client').PipelineJsonObject,
+  ) {
+    if (readOnly || unconfirmedRootEdit || assistant?.blocked) return
+    const previous = currentView.current
+    const next = readWizard(
+      writeWizard(candidate as unknown as WizardViewState, null, '', deploymentProfile),
+      AVAILABLE_DATA_SOURCES,
+    )
+    assistantUndo.current = { previous, appliedFingerprint: JSON.stringify(next) }
+    setRootConfig(next.root)
+    setRelations(next.relations)
+    setPipelineTransforms(next.transforms)
+    setTargetCollection(next.destinationTable)
+    setTargetSourceId(next.destinationSourceId)
+    setTargetWriteMode(next.destinationWriteMode)
+    setIsRootEditing(!next.root)
+    lastView.current = JSON.stringify(next)
+    // Apply the canonical candidate as one editor transaction.
+    assistant?.onApply(candidate)
+  }
+  function undoAssistantApply() {
+    const transaction = assistantUndo.current
+    if (
+      readOnly ||
+      unconfirmedRootEdit ||
+      assistant?.undoBlocked ||
+      !transaction ||
+      JSON.stringify(currentView.current) !== transaction.appliedFingerprint
+    )
+      return false
+    assistantUndo.current = null
+    const previous = transaction.previous
+    setRootConfig(previous.root)
+    setIsRootEditing(!previous.root)
+    setScratchSelectedSource(previous.root?.source || '')
+    setScratchSelectedTable(previous.root?.table || '')
+    setRelations(previous.relations)
+    setPipelineTransforms(previous.transforms)
+    setTargetCollection(previous.destinationTable)
+    setTargetSourceId(previous.destinationSourceId)
+    setTargetWriteMode(previous.destinationWriteMode)
+    lastView.current = JSON.stringify(previous)
+    assistant?.onApply(
+      previous as unknown as import('@/service/pipelines/pipeline-client').PipelineJsonObject,
+    )
+    return true
+  }
+  const assistantHelper = (focus: string, intent: string) =>
+    assistant && !readOnly ? (
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation()
+          askAssistant(focus, intent)
+        }}
+        className="inline-flex items-center gap-1.5 rounded-md border border-blue-200/80 bg-blue-50/80 px-2.5 py-1 text-[11px] font-medium text-blue-700 transition-colors hover:bg-blue-100"
+      >
+        <Sparkles className="h-3 w-3" />
+        {t(`wizard.assistant.helpers.${intent}`)}
+      </button>
+    ) : null
 
   // Inline Add Relation workflow state
   const [isAddingRelation, setIsAddingRelation] = React.useState(false)
@@ -350,7 +465,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
         const meta = getTablesForSource(after.source).find((t) => t.name === after.table)
         after = {
           ...after,
-          primaryKey: meta?.keys || [],
+          ...relationKeysForTableChange(after.type, meta),
           conditions: getConditions(before).map((c) => ({
             ...c,
             childKey: meta?.columns.includes(c.childKey) ? c.childKey : '',
@@ -377,7 +492,16 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
 
   const updateRelationType = (id: string, type: RelationNode['type']) => {
     setActiveContext(id)
-    updateRelation(id, (relation) => ({ ...relation, type }))
+    updateRelation(id, (relation) => {
+      const meta = getTablesForSource(relation.source).find(
+        (table) => table.name === relation.table,
+      )
+      return {
+        ...relation,
+        type,
+        arrayKey: relationKeysForTableChange(type, meta).arrayKey,
+      }
+    })
   }
 
   const handleAddCondition = (rel: RelationNode) => {
@@ -545,7 +669,13 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       source: newRelSource,
       table: newRelTable,
       key: newRelKey,
-      primaryKey: getTablesForSource(newRelSource).find((t) => t.name === newRelTable)?.keys || [],
+      primaryKey: relationTableKeys(
+        getTablesForSource(newRelSource).find((t) => t.name === newRelTable),
+      ),
+      arrayKey:
+        newRelType === 'sub_array'
+          ? relationTableKeys(getTablesForSource(newRelSource).find((t) => t.name === newRelTable))
+          : [],
       parentTable: rootConfig?.table || 'root',
       parentKey: newRelParentKey,
       conditions: [{ childKey: newRelKey, parentKey: newRelParentKey, operator: '=' }],
@@ -602,8 +732,15 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       source: newChildSource,
       table: newChildTable,
       key: newChildKey,
-      primaryKey:
-        getTablesForSource(newChildSource).find((t) => t.name === newChildTable)?.keys || [],
+      primaryKey: relationTableKeys(
+        getTablesForSource(newChildSource).find((t) => t.name === newChildTable),
+      ),
+      arrayKey:
+        newChildType === 'sub_array'
+          ? relationTableKeys(
+              getTablesForSource(newChildSource).find((t) => t.name === newChildTable),
+            )
+          : [],
       parentTable: targetParentTable,
       parentKey: newChildParentKey,
       conditions: [
@@ -1084,6 +1221,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
               : 'border-gray-200 hover:border-gray-300',
         )}
       >
+        <div className="mb-2">{assistantHelper(rel.id, 'clean')}</div>
         {/* Card Header (2-row title on the left, actions on the right) */}
         <div className="flex items-start justify-between gap-3">
           {/* Left side: 2 rows */}
@@ -2186,6 +2324,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                     </div>
                   )}
 
+                  <div className="mt-2">{assistantHelper('root', 'clean')}</div>
                   {/* Columns preview (when configured and not editing) */}
                   {rootConfig && !isRootEditing && (
                     <div className="mt-2.5 flex items-center justify-between border-t border-gray-100 pt-2 text-[11px] text-gray-400">
@@ -2250,6 +2389,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   disabled={readOnly}
                   label={readOnlyLabel ?? t('pipelines.workspace.readOnly.editorStatus')}
                 >
+                  <div>{assistantHelper('relations', 'relations')}</div>
                   {/* Dynamically Render Each Relation Node */}
                   {relations.map((rel) => renderRelation(rel))}
 
@@ -2556,6 +2696,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                     </div>
                   </div>
                   <div className="mt-3.5" onClick={(event) => event.stopPropagation()}>
+                    <div className="mb-3">{assistantHelper('doc_process', 'metrics')}</div>
                     <TableTransformsManager
                       tableName={rootConfig?.table || 'root'}
                       sourceName={rootConfig?.source || 'Pipeline'}
@@ -2734,307 +2875,422 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
         </div>
 
         <aside
-          id="step-preview-panel"
-          data-guide-active={activeGuideTarget === 'step-preview-panel' || undefined}
-          className="wizard-reference-preview flex flex-col overflow-hidden bg-white"
+          id={assistant ? 'step-preview-panel' : undefined}
+          data-guide-active={(assistant && activeGuideTarget === 'step-preview-panel') || undefined}
+          className={cn(
+            assistant ? 'wizard-reference-sidebar' : 'contents',
+            assistant && (assistantOpen ? 'flex' : 'hidden'),
+          )}
         >
-          <div className="flex min-h-11 shrink-0 items-center justify-between gap-1 border-b border-gray-200/80 bg-white/75 px-3 py-2 backdrop-blur-md">
-            <div className="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
-              <span
-                className={cn(
-                  'size-2 shrink-0 rounded-full',
-                  livePreviewStatus === 'error'
-                    ? 'bg-destructive'
-                    : livePreviewStatus === 'loading'
-                      ? 'animate-pulse bg-emerald-500'
-                      : livePreviewStatus === 'complete'
-                        ? 'bg-emerald-500'
-                        : 'bg-muted-foreground',
-                )}
-                aria-hidden="true"
-              />
-              <span className="text-xs font-semibold text-gray-900">
-                {t('wizard.previewPanel.title')}
-              </span>
-              <span className="max-w-28 truncate font-mono text-[10px] text-gray-400">
-                ({activeContextLabel})
-              </span>
-            </div>
-
-            <div className="flex shrink-0 items-center gap-1">
+          {assistant && (
+            <div className="flex h-10 shrink-0 items-center justify-between border-b border-gray-200/80 bg-gray-50/70 px-3">
+              <div
+                role="tablist"
+                onKeyDown={(event) => {
+                  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+                  event.preventDefault()
+                  const next =
+                    event.key === 'Home'
+                      ? 'copilot'
+                      : event.key === 'End'
+                        ? 'preview'
+                        : rightPanelTab === 'copilot'
+                          ? 'preview'
+                          : 'copilot'
+                  setRightPanelTab(next)
+                  event.currentTarget
+                    .querySelectorAll<HTMLButtonElement>('[role="tab"]')
+                    [next === 'copilot' ? 0 : 1]?.focus()
+                }}
+                aria-label={t('wizard.assistant.title')}
+                className="flex items-center gap-1 rounded-lg bg-gray-200/60 p-0.5 text-[11px] font-medium"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  tabIndex={rightPanelTab === 'copilot' ? 0 : -1}
+                  aria-selected={rightPanelTab === 'copilot'}
+                  aria-controls="builder-copilot-panel"
+                  onClick={() => setRightPanelTab('copilot')}
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-md px-2.5 py-1 whitespace-nowrap transition-colors',
+                    rightPanelTab === 'copilot'
+                      ? 'bg-white font-semibold text-blue-700 shadow-2xs'
+                      : 'text-gray-600 hover:text-gray-900',
+                  )}
+                >
+                  <Sparkles className="h-3 w-3 text-blue-600" />
+                  {t('wizard.assistant.open')} (Copilot)
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  tabIndex={rightPanelTab === 'preview' ? 0 : -1}
+                  aria-selected={rightPanelTab === 'preview'}
+                  aria-controls="builder-preview-panel"
+                  onClick={() => setRightPanelTab('preview')}
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-md px-2.5 py-1 whitespace-nowrap transition-colors',
+                    rightPanelTab === 'preview'
+                      ? 'bg-white font-semibold text-gray-900 shadow-2xs'
+                      : 'text-gray-600 hover:text-gray-900',
+                  )}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  {t('wizard.previewPanel.title')}
+                </button>
+              </div>
               <button
                 type="button"
-                onClick={() => void copyExecutionSpec()}
-                disabled={!livePreview}
-                className="inline-flex items-center gap-1 rounded border border-gray-200/80 bg-white/80 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 shadow-xs hover:border-gray-300 hover:bg-white hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
-                aria-live="polite"
+                onClick={() => setAssistantOpen(false)}
+                aria-label={t('wizard.assistant.close')}
+                className="rounded p-1 text-gray-400 transition-colors hover:bg-gray-200/60 hover:text-gray-600"
               >
-                {copyStatus === 'copied' ? (
-                  <Check className="size-3.5" />
-                ) : (
-                  <Copy className="size-3.5" />
-                )}
-                {t(
-                  copyStatus === 'copied'
-                    ? 'wizard.previewPanel.copied'
-                    : copyStatus === 'failed'
-                      ? 'wizard.previewPanel.copyFailed'
-                      : 'wizard.previewPanel.copy',
-                )}
+                <X className="h-3.5 w-3.5" />
               </button>
-              <div className="flex items-center rounded border border-gray-200/60 bg-gray-100/80 p-0.5 text-[10px] font-medium">
-                <button
-                  type="button"
-                  onClick={() => setPreviewMode('json')}
-                  aria-pressed={previewMode === 'json'}
-                  className={cn(
-                    'rounded px-1.5 py-0.5 transition-colors',
-                    previewMode === 'json'
-                      ? 'bg-white font-semibold text-gray-900 shadow-xs'
-                      : 'text-gray-600 hover:text-gray-900',
-                  )}
-                >
-                  {t('wizard.previewPanel.jsonDoc')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewMode('table')}
-                  aria-pressed={previewMode === 'table'}
-                  className={cn(
-                    'rounded px-1.5 py-0.5 transition-colors',
-                    previewMode === 'table'
-                      ? 'bg-white font-semibold text-gray-900 shadow-xs'
-                      : 'text-gray-600 hover:text-gray-900',
-                  )}
-                >
-                  {t('wizard.previewPanel.tableView')}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {activeGuideTarget === 'step-preview-panel' && (
-            <div className="border-b border-indigo-100 bg-indigo-50/20 p-3">
-              {renderGuideStep?.(3)}
             </div>
           )}
-
-          <div className="flex min-h-9 items-center justify-between gap-2 border-b border-gray-100 bg-gray-50 px-4 py-1.5 text-[11px] text-gray-500">
-            <span className="min-w-0 truncate">
-              {selectedDocument
-                ? t('wizard.previewPanel.sampleRecord', { number: selectedIndex + 1 })
-                : livePreviewStatus === 'loading'
-                  ? t('wizard.previewPanel.loading')
-                  : t('wizard.previewPanel.awaitingPreview')}
-            </span>
-            <span
+          {assistant && (
+            <div
+              id="builder-copilot-panel"
+              role="tabpanel"
+              aria-label={t('wizard.assistant.open')}
               className={cn(
-                'flex shrink-0 items-center gap-1 font-medium',
-                livePreviewStatus === 'stale'
-                  ? 'text-gray-600'
-                  : livePreviewStatus === 'error'
-                    ? 'text-red-600'
-                    : livePreviewStatus === 'complete'
-                      ? 'text-emerald-700'
-                      : 'text-gray-500',
+                'wizard-reference-assistant',
+                rightPanelTab === 'copilot' ? 'flex' : 'hidden',
               )}
-              role="status"
             >
+              <PipelineAiCopilot
+                context={{
+                  ...assistant,
+                  blocked: assistant.blocked || unconfirmedRootEdit,
+                  undoBlocked: readOnly || unconfirmedRootEdit || assistant.undoBlocked,
+                  onApply: applyAssistant,
+                  onUndoApply: undoAssistantApply,
+                }}
+                focus={activeContext}
+                focusLabel={
+                  activeContext === 'root'
+                    ? `Step 1 · ${rootConfig?.table || t('wizard.assistant.unconfigured')}`
+                    : activeContext === 'doc_process'
+                      ? t('wizard.assistant.documentFocus')
+                      : `Step 2 · ${activeContext}`
+                }
+                promptRequest={assistantPrompt}
+                onClose={() => setAssistantOpen(false)}
+              />
+            </div>
+          )}
+          <div
+            id={assistant ? 'builder-preview-panel' : 'step-preview-panel'}
+            data-guide-active={
+              (!assistant && activeGuideTarget === 'step-preview-panel') || undefined
+            }
+            role={assistant ? 'tabpanel' : undefined}
+            aria-label={assistant ? t('wizard.previewPanel.title') : undefined}
+            className={cn(
+              assistant && rightPanelTab === 'copilot' ? 'hidden' : 'flex',
+              'wizard-reference-preview flex-col overflow-hidden bg-white',
+            )}
+          >
+            <div className="flex min-h-11 shrink-0 items-center justify-between gap-1 border-b border-gray-200/80 bg-white/75 px-3 py-2 backdrop-blur-md">
+              <div className="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
+                <span
+                  className={cn(
+                    'size-2 shrink-0 rounded-full',
+                    livePreviewStatus === 'error'
+                      ? 'bg-destructive'
+                      : livePreviewStatus === 'loading'
+                        ? 'animate-pulse bg-emerald-500'
+                        : livePreviewStatus === 'complete'
+                          ? 'bg-emerald-500'
+                          : 'bg-muted-foreground',
+                  )}
+                  aria-hidden="true"
+                />
+                <span className="text-xs font-semibold text-gray-900">
+                  {t('wizard.previewPanel.title')}
+                </span>
+                <span className="max-w-28 truncate font-mono text-[10px] text-gray-400">
+                  ({activeContextLabel})
+                </span>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => void copyExecutionSpec()}
+                  disabled={!livePreview}
+                  className="inline-flex items-center gap-1 rounded border border-gray-200/80 bg-white/80 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 shadow-xs hover:border-gray-300 hover:bg-white hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-live="polite"
+                >
+                  {copyStatus === 'copied' ? (
+                    <Check className="size-3.5" />
+                  ) : (
+                    <Copy className="size-3.5" />
+                  )}
+                  {t(
+                    copyStatus === 'copied'
+                      ? 'wizard.previewPanel.copied'
+                      : copyStatus === 'failed'
+                        ? 'wizard.previewPanel.copyFailed'
+                        : 'wizard.previewPanel.copy',
+                  )}
+                </button>
+                <div className="flex items-center rounded border border-gray-200/60 bg-gray-100/80 p-0.5 text-[10px] font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode('json')}
+                    aria-pressed={previewMode === 'json'}
+                    className={cn(
+                      'rounded px-1.5 py-0.5 transition-colors',
+                      previewMode === 'json'
+                        ? 'bg-white font-semibold text-gray-900 shadow-xs'
+                        : 'text-gray-600 hover:text-gray-900',
+                    )}
+                  >
+                    {t('wizard.previewPanel.jsonDoc')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode('table')}
+                    aria-pressed={previewMode === 'table'}
+                    className={cn(
+                      'rounded px-1.5 py-0.5 transition-colors',
+                      previewMode === 'table'
+                        ? 'bg-white font-semibold text-gray-900 shadow-xs'
+                        : 'text-gray-600 hover:text-gray-900',
+                    )}
+                  >
+                    {t('wizard.previewPanel.tableView')}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {activeGuideTarget === 'step-preview-panel' && (
+              <div className="border-b border-indigo-100 bg-indigo-50/20 p-3">
+                {renderGuideStep?.(3)}
+              </div>
+            )}
+
+            <div className="flex min-h-9 items-center justify-between gap-2 border-b border-gray-100 bg-gray-50 px-4 py-1.5 text-[11px] text-gray-500">
+              <span className="min-w-0 truncate">
+                {selectedDocument
+                  ? t('wizard.previewPanel.sampleRecord', { number: selectedIndex + 1 })
+                  : livePreviewStatus === 'loading'
+                    ? t('wizard.previewPanel.loading')
+                    : t('wizard.previewPanel.awaitingPreview')}
+              </span>
               <span
                 className={cn(
-                  'size-1.5 rounded-full',
-                  livePreviewStatus === 'complete' ? 'bg-emerald-500' : 'bg-gray-400',
+                  'flex shrink-0 items-center gap-1 font-medium',
+                  livePreviewStatus === 'stale'
+                    ? 'text-gray-600'
+                    : livePreviewStatus === 'error'
+                      ? 'text-red-600'
+                      : livePreviewStatus === 'complete'
+                        ? 'text-emerald-700'
+                        : 'text-gray-500',
                 )}
-              />
-              {t(`wizard.previewPanel.status.${livePreviewStatus}`)}
-            </span>
-          </div>
-
-          {livePreviewStatus === 'error' && (
-            <p
-              className="border-border text-destructive border-b px-3 py-2 text-xs"
-              role="alert"
-              title={livePreviewError}
-            >
-              {t('wizard.previewPanel.failed')}
-              {livePreviewError && <span className="ml-1 font-mono">{livePreviewError}</span>}
-            </p>
-          )}
-
-          <div className="min-h-48 flex-1 overflow-auto bg-white p-4 font-mono text-xs text-gray-800">
-            {!rootConfig ? (
-              <div className="text-muted-foreground flex h-full min-h-48 flex-col items-center justify-center gap-2 p-6 text-center">
-                <Database className="size-8 opacity-60" />
-                <span className="font-sans font-medium">
-                  {t('wizard.previewPanel.noRootTitle')}
-                </span>
-                <span className="max-w-xs font-sans text-[11px]">
-                  {t('wizard.previewPanel.noRootBody')}
-                </span>
-              </div>
-            ) : !livePreview && livePreviewStatus === 'error' ? (
-              <p className="text-muted-foreground font-sans text-sm">
-                {t('wizard.previewPanel.noResult')}
-              </p>
-            ) : !livePreview || !selectedDocument ? (
-              <p className="text-muted-foreground font-sans text-sm">
-                {livePreviewStatus === 'loading'
-                  ? t('wizard.previewPanel.loading')
-                  : t('wizard.previewPanel.noDocuments')}
-              </p>
-            ) : previewMode === 'json' ? (
-              <>
-                {documents.length > 1 && (
-                  <div className="mb-2 flex items-center justify-end gap-1 font-sans text-[11px] text-gray-500">
-                    <button
-                      type="button"
-                      className="border-border hover:bg-accent rounded border px-1.5 py-0.5 disabled:opacity-40"
-                      aria-label={t('wizard.previewPanel.previousDocument')}
-                      disabled={selectedIndex <= 0}
-                      onClick={() => setSelectedDocumentIndex((index) => Math.max(0, index - 1))}
-                    >
-                      ‹
-                    </button>
-                    <button
-                      type="button"
-                      className="border-border hover:bg-accent rounded border px-1.5 py-0.5 disabled:opacity-40"
-                      aria-label={t('wizard.previewPanel.nextDocument')}
-                      disabled={selectedIndex >= documents.length - 1}
-                      onClick={() =>
-                        setSelectedDocumentIndex((index) =>
-                          Math.min(documents.length - 1, index + 1),
-                        )
-                      }
-                    >
-                      ›
-                    </button>
-                  </div>
-                )}
-                <div className="space-y-0.5 leading-relaxed break-words">
-                  {renderJsonValue(selectedDocument, '', 0)}
-                </div>
-              </>
-            ) : (
-              <div>
-                {documents.length > 200 && (
-                  <p className="text-muted-foreground mb-2 font-sans text-[11px]">
-                    {t('wizard.previewPanel.tableLimit', { shown: 200, count: documents.length })}
-                  </p>
-                )}
-                <table className="w-full border-collapse text-left font-sans text-[11px]">
-                  <thead>
-                    <tr className="border-border text-muted-foreground border-b">
-                      {previewTableColumns.map((field) => (
-                        <th
-                          className={cn(
-                            'px-2 py-2 font-medium',
-                            tableFieldFocused(field) && 'bg-blue-50 font-semibold text-blue-700',
-                          )}
-                          key={field}
-                        >
-                          {field}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {documents.slice(0, 200).map((document, rowIndex) => (
-                      <tr
-                        className="border-border border-b"
-                        key={`${String(document._id ?? 'row')}-${rowIndex}`}
-                      >
-                        {previewTableColumns.map((field) => {
-                          const value = document[field]
-                          const relation = relationFields.has(field)
-                          const computed = computedFields.has(field)
-                          const display =
-                            relation && Array.isArray(value)
-                              ? t('wizard.previewPanel.embeddedArray', { count: value.length })
-                              : relation && isObjectRecord(value) && !isExtendedJsonScalar(value)
-                                ? t('wizard.previewPanel.embeddedDocument')
-                                : typeof value === 'string'
-                                  ? value
-                                  : displayScalar(value, false)
-                          return (
-                            <td
-                              className={cn(
-                                'max-w-56 truncate px-2 py-2 text-gray-900',
-                                tableFieldFocused(field) &&
-                                  'bg-blue-50/70 ring-1 ring-blue-200 ring-inset',
-                              )}
-                              key={field}
-                              title={display}
-                              data-preview-path={`/${pointerSegment(field)}`}
-                              data-preview-focused={tableFieldFocused(field) || undefined}
-                            >
-                              <span
-                                className={cn(
-                                  rootFields.has(field) && 'text-primary',
-                                  relation && 'text-foreground',
-                                  computed && 'bg-accent rounded px-1',
-                                )}
-                              >
-                                {display ?? 'null'}
-                              </span>
-                            </td>
-                          )
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {transformTrace &&
-            (transformTrace.fields.length > 0 ||
-              transformTrace.annotations.length > 0 ||
-              transformTrace.unknownOrigins.length > 0) && (
-              <div
-                className="border-border bg-accent/30 text-foreground border-t px-3 py-2 text-[11px]"
-                role="note"
+                role="status"
               >
-                <span className="bg-primary/10 text-primary mr-2 rounded px-1.5 py-0.5 font-sans font-medium">
-                  {transformTrace.type || t('wizard.previewPanel.transformsContext')}
-                </span>
-                {transformTrace.annotations.length > 0 ? (
-                  <span>{transformTrace.annotations.join('; ')}</span>
-                ) : (
-                  transformTrace.fields.length > 0 && (
-                    <span>
-                      {t('wizard.previewPanel.transformAnnotation', {
-                        fields: transformTrace.fields.join(', '),
+                <span
+                  className={cn(
+                    'size-1.5 rounded-full',
+                    livePreviewStatus === 'complete' ? 'bg-emerald-500' : 'bg-gray-400',
+                  )}
+                />
+                {t(`wizard.previewPanel.status.${livePreviewStatus}`)}
+              </span>
+            </div>
+
+            {livePreviewStatus === 'error' && (
+              <p
+                className="border-border text-destructive border-b px-3 py-2 text-xs"
+                role="alert"
+                title={livePreviewError}
+              >
+                {t('wizard.previewPanel.failed')}
+                {livePreviewError && <span className="ml-1 font-mono">{livePreviewError}</span>}
+              </p>
+            )}
+
+            <div className="min-h-48 flex-1 overflow-auto bg-white p-4 font-mono text-xs text-gray-800">
+              {!rootConfig ? (
+                <div className="text-muted-foreground flex h-full min-h-48 flex-col items-center justify-center gap-2 p-6 text-center">
+                  <Database className="size-8 opacity-60" />
+                  <span className="font-sans font-medium">
+                    {t('wizard.previewPanel.noRootTitle')}
+                  </span>
+                  <span className="max-w-xs font-sans text-[11px]">
+                    {t('wizard.previewPanel.noRootBody')}
+                  </span>
+                </div>
+              ) : !livePreview && livePreviewStatus === 'error' ? (
+                <p className="text-muted-foreground font-sans text-sm">
+                  {t('wizard.previewPanel.noResult')}
+                </p>
+              ) : !livePreview || !selectedDocument ? (
+                <p className="text-muted-foreground font-sans text-sm">
+                  {livePreviewStatus === 'loading'
+                    ? t('wizard.previewPanel.loading')
+                    : t('wizard.previewPanel.noDocuments')}
+                </p>
+              ) : previewMode === 'json' ? (
+                <>
+                  {documents.length > 1 && (
+                    <div className="mb-2 flex items-center justify-end gap-1 font-sans text-[11px] text-gray-500">
+                      <button
+                        type="button"
+                        className="border-border hover:bg-accent rounded border px-1.5 py-0.5 disabled:opacity-40"
+                        aria-label={t('wizard.previewPanel.previousDocument')}
+                        disabled={selectedIndex <= 0}
+                        onClick={() => setSelectedDocumentIndex((index) => Math.max(0, index - 1))}
+                      >
+                        ‹
+                      </button>
+                      <button
+                        type="button"
+                        className="border-border hover:bg-accent rounded border px-1.5 py-0.5 disabled:opacity-40"
+                        aria-label={t('wizard.previewPanel.nextDocument')}
+                        disabled={selectedIndex >= documents.length - 1}
+                        onClick={() =>
+                          setSelectedDocumentIndex((index) =>
+                            Math.min(documents.length - 1, index + 1),
+                          )
+                        }
+                      >
+                        ›
+                      </button>
+                    </div>
+                  )}
+                  <div className="space-y-0.5 leading-relaxed break-words">
+                    {renderJsonValue(selectedDocument, '', 0)}
+                  </div>
+                </>
+              ) : (
+                <div>
+                  {documents.length > 200 && (
+                    <p className="text-muted-foreground mb-2 font-sans text-[11px]">
+                      {t('wizard.previewPanel.tableLimit', { shown: 200, count: documents.length })}
+                    </p>
+                  )}
+                  <table className="w-full border-collapse text-left font-sans text-[11px]">
+                    <thead>
+                      <tr className="border-border text-muted-foreground border-b">
+                        {previewTableColumns.map((field) => (
+                          <th
+                            className={cn(
+                              'px-2 py-2 font-medium',
+                              tableFieldFocused(field) && 'bg-blue-50 font-semibold text-blue-700',
+                            )}
+                            key={field}
+                          >
+                            {field}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {documents.slice(0, 200).map((document, rowIndex) => (
+                        <tr
+                          className="border-border border-b"
+                          key={`${String(document._id ?? 'row')}-${rowIndex}`}
+                        >
+                          {previewTableColumns.map((field) => {
+                            const value = document[field]
+                            const relation = relationFields.has(field)
+                            const computed = computedFields.has(field)
+                            const display =
+                              relation && Array.isArray(value)
+                                ? t('wizard.previewPanel.embeddedArray', { count: value.length })
+                                : relation && isObjectRecord(value) && !isExtendedJsonScalar(value)
+                                  ? t('wizard.previewPanel.embeddedDocument')
+                                  : typeof value === 'string'
+                                    ? value
+                                    : displayScalar(value, false)
+                            return (
+                              <td
+                                className={cn(
+                                  'max-w-56 truncate px-2 py-2 text-gray-900',
+                                  tableFieldFocused(field) &&
+                                    'bg-blue-50/70 ring-1 ring-blue-200 ring-inset',
+                                )}
+                                key={field}
+                                title={display}
+                                data-preview-path={`/${pointerSegment(field)}`}
+                                data-preview-focused={tableFieldFocused(field) || undefined}
+                              >
+                                <span
+                                  className={cn(
+                                    rootFields.has(field) && 'text-primary',
+                                    relation && 'text-foreground',
+                                    computed && 'bg-accent rounded px-1',
+                                  )}
+                                >
+                                  {display ?? 'null'}
+                                </span>
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {transformTrace &&
+              (transformTrace.fields.length > 0 ||
+                transformTrace.annotations.length > 0 ||
+                transformTrace.unknownOrigins.length > 0) && (
+                <div
+                  className="border-border bg-accent/30 text-foreground border-t px-3 py-2 text-[11px]"
+                  role="note"
+                >
+                  <span className="bg-primary/10 text-primary mr-2 rounded px-1.5 py-0.5 font-sans font-medium">
+                    {transformTrace.type || t('wizard.previewPanel.transformsContext')}
+                  </span>
+                  {transformTrace.annotations.length > 0 ? (
+                    <span>{transformTrace.annotations.join('; ')}</span>
+                  ) : (
+                    transformTrace.fields.length > 0 && (
+                      <span>
+                        {t('wizard.previewPanel.transformAnnotation', {
+                          fields: transformTrace.fields.join(', '),
+                        })}
+                      </span>
+                    )
+                  )}
+                  {transformTrace.unknownOrigins.length > 0 && (
+                    <span className="text-muted-foreground ml-2">
+                      {t('wizard.previewPanel.unknownTransformOrigin', {
+                        steps: transformTrace.unknownOrigins.join(', '),
                       })}
                     </span>
-                  )
-                )}
-                {transformTrace.unknownOrigins.length > 0 && (
-                  <span className="text-muted-foreground ml-2">
-                    {t('wizard.previewPanel.unknownTransformOrigin', {
-                      steps: transformTrace.unknownOrigins.join(', '),
-                    })}
-                  </span>
-                )}
-              </div>
-            )}
-
-          <div className="border-border bg-muted/30 text-muted-foreground flex items-center justify-between gap-3 border-t px-3 py-2 text-[11px]">
-            <span className="truncate">
-              {t(
-                livePreview?.format === 'mongo-extended-json'
-                  ? 'wizard.previewPanel.mongoExtendedJsonTarget'
-                  : 'wizard.previewPanel.logicalJsonTarget',
-                { destination: destinationName },
+                  )}
+                </div>
               )}
-            </span>
-            <button
-              type="button"
-              onClick={() => setPlanMode('json')}
-              className="cursor-pointer text-blue-600 hover:underline"
-            >
-              {t('wizard.previewPanel.viewSpec')}
-            </button>
+
+            <div className="border-border bg-muted/30 text-muted-foreground flex items-center justify-between gap-3 border-t px-3 py-2 text-[11px]">
+              <span className="truncate">
+                {t(
+                  livePreview?.format === 'mongo-extended-json'
+                    ? 'wizard.previewPanel.mongoExtendedJsonTarget'
+                    : 'wizard.previewPanel.logicalJsonTarget',
+                  { destination: destinationName },
+                )}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPlanMode('json')}
+                className="cursor-pointer text-blue-600 hover:underline"
+              >
+                {t('wizard.previewPanel.viewSpec')}
+              </button>
+            </div>
           </div>
         </aside>
       </div>
