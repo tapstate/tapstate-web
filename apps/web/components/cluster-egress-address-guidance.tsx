@@ -82,9 +82,6 @@ export function ClusterEgressAddressGuidance({
                 type="button"
                 variant="outline"
                 size="icon-lg"
-                aria-label={
-                  copied ? t('sources.egressAddress.copied') : t('sources.egressAddress.copy')
-                }
                 title={copied ? t('sources.egressAddress.copied') : t('sources.egressAddress.copy')}
                 onClick={onCopy}
               >
@@ -93,6 +90,9 @@ export function ClusterEgressAddressGuidance({
                 ) : (
                   <Copy className="size-4" aria-hidden="true" />
                 )}
+                <span className="sr-only">
+                  {copied ? t('sources.egressAddress.copied') : t('sources.egressAddress.copy')}
+                </span>
               </Button>
             )}
           </div>
