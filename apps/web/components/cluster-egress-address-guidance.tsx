@@ -50,7 +50,7 @@ export function ClusterEgressAddressGuidance({
           <Info className="size-4" aria-hidden="true" />
         </span>
         <div className="grid min-w-0 gap-1">
-          <p className="text-foreground text-[14px] leading-5 sm:text-[15px]">{addressMessage}</p>
+          <p className="text-foreground text-sm leading-5">{addressMessage}</p>
           {isError && (
             <p className="text-muted-foreground text-[12px] leading-relaxed">
               {t('sources.egressAddress.continueSetup')}
