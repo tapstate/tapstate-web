@@ -5,15 +5,10 @@ import {
   AlertCircle,
   ArrowLeft,
   Check,
-  ChevronDown,
   ChevronRight,
-  Copy,
   Database,
   LoaderCircle,
-  Network,
   Search,
-  ShieldCheck,
-  TriangleAlert,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -25,6 +20,7 @@ import type {
   SourceView,
 } from '@/service/source-client'
 
+import { ClusterEgressAddressGuidance } from '@/components/cluster-egress-address-guidance'
 import { ConnectorIcon } from '@/components/connector-icon'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -306,8 +302,6 @@ export function SourceCreateDialog({
   const configuredConnectorName = connector?.name ?? selectedConnector?.name
   const egressAddress = cloudContext.isError ? null : cloudContext.data?.ec2PublicIp?.trim() || null
   const egressStatus = cloudContext.data?.egressAddressStatus ?? (egressAddress ? 'DYNAMIC' : null)
-  const egressAddressChanging = egressStatus === 'STABILIZING' || egressStatus === 'ATTACHING'
-  const egressAddressStable = egressStatus === 'STABLE'
 
   async function copyEgressAddress() {
     if (!egressAddress) return
@@ -449,102 +443,15 @@ export function SourceCreateDialog({
                     {requestError && <RequestError message={requestError} />}
 
                     {isCloudDeployment && (
-                      <section
-                        aria-label={t('sources.egressAddress.title')}
-                        className={`grid gap-3 rounded-xl border p-4 ${
-                          egressAddressStable
-                            ? 'border-success/30 bg-success/5'
-                            : 'border-warning/35 bg-warning/5'
-                        }`}
-                      >
-                        <div className="flex min-w-0 items-start gap-3">
-                          <span
-                            className={`mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg ${
-                              egressAddressStable
-                                ? 'bg-success/10 text-success'
-                                : 'bg-warning/10 text-warning'
-                            }`}
-                          >
-                            {egressAddressStable ? (
-                              <ShieldCheck className="size-4" aria-hidden="true" />
-                            ) : egressAddressChanging || cloudContext.isLoading ? (
-                              <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
-                            ) : (
-                              <Network className="size-4" aria-hidden="true" />
-                            )}
-                          </span>
-                          <div className="grid min-w-0 gap-1">
-                            <h3 className="text-foreground text-[13px] font-semibold">
-                              {t('sources.egressAddress.title')}
-                            </h3>
-                            <p className="text-muted-foreground text-[12px] leading-relaxed">
-                              {cloudContext.isLoading
-                                ? t('sources.egressAddress.loading')
-                                : cloudContext.isError
-                                  ? t('sources.egressAddress.unavailable')
-                                  : egressAddressChanging
-                                    ? t('sources.egressAddress.changing')
-                                    : egressAddressStable && egressAddress
-                                      ? t('sources.egressAddress.stableHelp')
-                                      : egressStatus === 'FAILED' && egressAddress
-                                        ? t('sources.egressAddress.failedHelp')
-                                        : egressStatus === 'DYNAMIC'
-                                          ? t('sources.egressAddress.dynamicHelp')
-                                          : egressAddress
-                                            ? t('sources.egressAddress.currentHelp')
-                                            : t('sources.egressAddress.missing')}
-                            </p>
-                          </div>
-                        </div>
-                        {egressAddress ? (
-                          <details
-                            open
-                            className="border-border dark:bg-muted/50 group min-w-0 rounded-lg border bg-[var(--info-fill)]"
-                          >
-                            <summary className="text-foreground focus-visible:outline-ring flex cursor-pointer list-none items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] font-medium focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
-                              <ChevronDown
-                                className="text-muted-foreground size-4 shrink-0 transition-transform group-open:rotate-180"
-                                aria-hidden="true"
-                              />
-                              <span>{t('sources.egressAddress.addressLabel')}</span>
-                            </summary>
-                            <div className="flex min-w-0 flex-col gap-2 px-3 pb-3 sm:flex-row sm:items-center">
-                              <code className="text-foreground bg-background/80 border-border min-w-0 flex-1 rounded-md border px-3 py-2 font-mono text-[13px] break-all">
-                                {egressAddress}
-                              </code>
-                              {!egressAddressChanging && (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-9 w-full gap-2 sm:w-auto"
-                                  onClick={() => void copyEgressAddress()}
-                                >
-                                  {egressAddressCopied ? (
-                                    <Check className="text-success size-3.5" aria-hidden="true" />
-                                  ) : (
-                                    <Copy className="size-3.5" aria-hidden="true" />
-                                  )}
-                                  {egressAddressCopied
-                                    ? t('sources.egressAddress.copied')
-                                    : t('sources.egressAddress.copy')}
-                                </Button>
-                              )}
-                            </div>
-                          </details>
-                        ) : null}
-                        {egressAddressCopyFailed && (
-                          <span className="text-destructive text-[11px]" role="alert">
-                            {t('sources.egressAddress.copyFailed')}
-                          </span>
-                        )}
-                        {cloudContext.isError && (
-                          <div className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
-                            <TriangleAlert className="size-3.5 shrink-0" aria-hidden="true" />
-                            {t('sources.egressAddress.continueSetup')}
-                          </div>
-                        )}
-                      </section>
+                      <ClusterEgressAddressGuidance
+                        isLoading={cloudContext.isLoading}
+                        isError={cloudContext.isError}
+                        address={egressAddress}
+                        status={egressStatus}
+                        copied={egressAddressCopied}
+                        copyFailed={egressAddressCopyFailed}
+                        onCopy={() => void copyEgressAddress()}
+                      />
                     )}
 
                     {loadingConnector ? (
