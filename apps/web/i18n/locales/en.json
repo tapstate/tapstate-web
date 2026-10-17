@@ -147,6 +147,7 @@
     "observationUnavailableBody": "This Source has static artifact data only. Runtime observations will appear when the observation API is available.",
     "egressAddress": {
       "title": "Cluster outbound IP",
+      "addressLabel": "Cluster IP address",
       "loading": "Checking the IP this Cluster uses to reach your source...",
       "unavailable": "Could not load this Cluster's outbound IP right now.",
       "changing": "Stable IP setup is in progress. Wait for it to finish before updating firewall rules.",

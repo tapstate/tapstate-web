@@ -232,6 +232,10 @@ describe('Cluster outbound IP guidance', () => {
     await vi.waitFor(() => expect(copyButton()).toBeDefined())
     expect(document.body.textContent).toContain('203.0.113.42')
     expect(document.body.textContent).toContain('Allowlist this IP')
+    expect(document.body.querySelector<HTMLDetailsElement>('details')?.open).toBe(true)
+    expect(document.body.querySelector('details summary')?.textContent).toContain(
+      'Cluster IP address',
+    )
     await act(async () => copyButton()?.click())
     expect(writeText).toHaveBeenCalledWith('203.0.113.42')
     expect(document.body.textContent).toContain('Copied')

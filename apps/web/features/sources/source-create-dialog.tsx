@@ -5,6 +5,7 @@ import {
   AlertCircle,
   ArrowLeft,
   Check,
+  ChevronDown,
   ChevronRight,
   Copy,
   Database,
@@ -450,18 +451,18 @@ export function SourceCreateDialog({
                     {isCloudDeployment && (
                       <section
                         aria-label={t('sources.egressAddress.title')}
-                        className={`grid gap-3 rounded-xl border p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center ${
+                        className={`grid gap-3 rounded-xl border p-4 ${
                           egressAddressStable
-                            ? 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/70 dark:bg-emerald-950/20'
-                            : 'border-amber-200 bg-amber-50/70 dark:border-amber-900/70 dark:bg-amber-950/20'
+                            ? 'border-success/30 bg-success/5'
+                            : 'border-warning/35 bg-warning/5'
                         }`}
                       >
                         <div className="flex min-w-0 items-start gap-3">
                           <span
                             className={`mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg ${
                               egressAddressStable
-                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300'
-                                : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                                ? 'bg-success/10 text-success'
+                                : 'bg-warning/10 text-warning'
                             }`}
                           >
                             {egressAddressStable ? (
@@ -493,38 +494,52 @@ export function SourceCreateDialog({
                                             ? t('sources.egressAddress.currentHelp')
                                             : t('sources.egressAddress.missing')}
                             </p>
-                            {egressAddress ? (
-                              <code className="text-foreground bg-background/80 mt-1 w-fit max-w-full rounded-md px-2 py-1 font-mono text-[13px] break-all">
-                                {egressAddress}
-                              </code>
-                            ) : null}
-                            {egressAddressCopyFailed && (
-                              <span className="text-destructive text-[11px]" role="alert">
-                                {t('sources.egressAddress.copyFailed')}
-                              </span>
-                            )}
                           </div>
                         </div>
-                        {egressAddress && !egressAddressChanging ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-9 w-full gap-2 sm:w-auto"
-                            onClick={() => void copyEgressAddress()}
+                        {egressAddress ? (
+                          <details
+                            open
+                            className="border-border dark:bg-muted/50 group min-w-0 rounded-lg border bg-[var(--info-fill)]"
                           >
-                            {egressAddressCopied ? (
-                              <Check className="size-3.5 text-emerald-600" aria-hidden="true" />
-                            ) : (
-                              <Copy className="size-3.5" aria-hidden="true" />
-                            )}
-                            {egressAddressCopied
-                              ? t('sources.egressAddress.copied')
-                              : t('sources.egressAddress.copy')}
-                          </Button>
+                            <summary className="text-foreground focus-visible:outline-ring flex cursor-pointer list-none items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] font-medium focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
+                              <ChevronDown
+                                className="text-muted-foreground size-4 shrink-0 transition-transform group-open:rotate-180"
+                                aria-hidden="true"
+                              />
+                              <span>{t('sources.egressAddress.addressLabel')}</span>
+                            </summary>
+                            <div className="flex min-w-0 flex-col gap-2 px-3 pb-3 sm:flex-row sm:items-center">
+                              <code className="text-foreground bg-background/80 border-border min-w-0 flex-1 rounded-md border px-3 py-2 font-mono text-[13px] break-all">
+                                {egressAddress}
+                              </code>
+                              {!egressAddressChanging && (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-9 w-full gap-2 sm:w-auto"
+                                  onClick={() => void copyEgressAddress()}
+                                >
+                                  {egressAddressCopied ? (
+                                    <Check className="text-success size-3.5" aria-hidden="true" />
+                                  ) : (
+                                    <Copy className="size-3.5" aria-hidden="true" />
+                                  )}
+                                  {egressAddressCopied
+                                    ? t('sources.egressAddress.copied')
+                                    : t('sources.egressAddress.copy')}
+                                </Button>
+                              )}
+                            </div>
+                          </details>
                         ) : null}
+                        {egressAddressCopyFailed && (
+                          <span className="text-destructive text-[11px]" role="alert">
+                            {t('sources.egressAddress.copyFailed')}
+                          </span>
+                        )}
                         {cloudContext.isError && (
-                          <div className="text-muted-foreground flex items-center gap-1.5 text-[11px] sm:col-span-2">
+                          <div className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
                             <TriangleAlert className="size-3.5 shrink-0" aria-hidden="true" />
                             {t('sources.egressAddress.continueSetup')}
                           </div>

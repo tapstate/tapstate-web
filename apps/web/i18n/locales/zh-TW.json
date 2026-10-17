@@ -147,6 +147,7 @@
     "observationUnavailableBody": "目前 Source 僅提供靜態 artifact 資料；觀測 API 可用後，這裡才會顯示執行時資訊。",
     "egressAddress": {
       "title": "Cluster 出口 IP",
+      "addressLabel": "Cluster IP 位址",
       "loading": "正在查詢此 Cluster 連線資料來源時使用的 IP……",
       "unavailable": "目前無法載入此 Cluster 的出口 IP。",
       "changing": "穩定 IP 正在設定中。請等待完成後再更新防火牆規則。",
