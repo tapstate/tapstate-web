@@ -1531,6 +1531,102 @@
           "calloutNext": "Start Pipeline"
         }
       }
+    },
+    "assistant": {
+      "title": "Pipeline AI Copilot",
+      "subtitle": "Build and refine your pipeline",
+      "open": "AI assistant",
+      "configure": "Configure AI provider",
+      "reset": "Clear conversation",
+      "close": "Close AI assistant",
+      "focus": "Current focus:",
+      "diff": "View diff",
+      "back": "Back to chat",
+      "loading": "Loading",
+      "welcome": "Describe the tables, relationships, or transformations you need. I can propose a pipeline configuration for you to review before applying.",
+      "you": "You",
+      "name": "AI Copilot",
+      "generating": "Validating metadata and generating a proposal…",
+      "connecting": "Connecting to your AI provider…",
+      "review": "Review proposed pipeline changes",
+      "diffTitle": "Proposed changes",
+      "noProposal": "No complete proposal yet. Ask the assistant to propose a change.",
+      "editProposal": "Edit proposed configuration (JSON)",
+      "reviewHint": "Review or edit this proposed configuration. Apply validates it against the saved draft and updates the editor.",
+      "apply": "Validate and apply",
+      "applied": "Applied to editor",
+      "undoApply": "Undo apply",
+      "undoStale": "The draft changed after this AI update, so it can no longer be undone safely.",
+      "reject": "Reject",
+      "requestFailed": "The assistant request failed. Check the provider configuration and try again. Partial output has not changed the pipeline.",
+      "applyFailed": "Could not validate this proposal. Check the configuration JSON or retry.",
+      "invalid": "The proposed configuration did not pass server validation. Edit it and retry.",
+      "normalized": "The server normalized this configuration. Review the updated proposal, then apply again.",
+      "stale": "This proposal is based on an older draft. Generate a new proposal for the current saved draft.",
+      "suggestions": "Suggested intents",
+      "waitForSave": "Wait for draft changes to finish saving before generating or applying a proposal.",
+      "prompt": "Pipeline assistant prompt",
+      "placeholder": "Describe tables, relationships, or transformation rules…",
+      "newline": "Shift + Enter for a new line",
+      "send": "Send",
+      "stop": "Stop",
+      "unconfigured": "Not configured",
+      "documentFocus": "Step 3 · Document transforms",
+      "helpers": {
+        "clean": "AI cleaning / filtering",
+        "relations": "AI infer relationships",
+        "metrics": "AI generate CEL metrics"
+      },
+      "intents": {
+        "assemble": "Assemble a pipeline from available tables",
+        "relations": "Infer parent and child relationships",
+        "clean": "Generate filtering and cleaning rules",
+        "metrics": "Generate document metrics with CEL",
+        "diagnose": "Diagnose the pipeline configuration"
+      },
+      "prompts": {
+        "assemble": "Help assemble this pipeline using the available sources and tables. Propose a root table, nested relationships, and transformations for review.",
+        "relations": "Analyze available table metadata and propose parent and child relationships with supported join keys. Ask for clarification when metadata is insufficient.",
+        "clean": "For the focused table, propose suitable filtering and field cleaning rules. Use only supported transforms and available columns.",
+        "metrics": "For the document transform stage, propose supported CEL expressions for derived business metrics using available fields.",
+        "diagnose": "Review this pipeline for configuration issues, unsupported relations, and transformation mistakes. Explain findings and propose corrections for review."
+      },
+      "provider": {
+        "title": "AI provider",
+        "description": "Use an OpenAI compatible API to generate pipeline suggestions. Configure the endpoint and model provided by your AI service.",
+        "endpoint": "API base URL",
+        "model": "Model ID",
+        "key": "API key",
+        "rotate": "Enter a new key to replace the saved key",
+        "secretHint": "The key is stored securely by the server. It is never saved in browser storage or returned to this panel.",
+        "save": "Save provider",
+        "check": "Check connection",
+        "delete": "Remove provider",
+        "saveSuccess": "Provider saved.",
+        "checkSuccess": "Connection verified.",
+        "deleteSuccess": "Provider removed.",
+        "failed": "The provider operation failed. Check the endpoint, model and credentials, then retry.",
+        "loadFailed": "Could not load provider settings. Close and reopen this panel to retry."
+      },
+      "editedReview": "The edited proposal was validated. Review the updated diff, then apply again.",
+      "progress": {
+        "connecting": "Connecting to your AI provider…",
+        "streaming": "Validating metadata and generating a proposal…",
+        "validating": "Validating the proposed pipeline…",
+        "ready": "Review proposed pipeline changes",
+        "error": "The assistant request failed. Check the provider configuration and try again. Partial output has not changed the pipeline."
+      },
+      "canceled": "Generation stopped. Partial output has not changed the pipeline.",
+      "errors": {
+        "notConfigured": "Configure an AI provider in this panel before generating a proposal.",
+        "providerAuth": "The AI provider rejected the credentials. Enter a valid API key in the provider configuration and retry.",
+        "providerUnavailable": "The AI provider is unavailable. Check the endpoint and model or retry later.",
+        "schema": "The model response did not match the supported Builder schema. Refine the request and generate a new proposal.",
+        "domain": "The proposal failed pipeline validation. Review the configuration and generate a corrected proposal.",
+        "stale": "This proposal is based on an older draft. Generate a new proposal for the current saved draft.",
+        "overloaded": "The assistant is busy. Wait a moment and retry.",
+        "requestFailed": "The assistant request failed. Check the provider configuration and try again. Partial output has not changed the pipeline."
+      }
     }
   },
   "views": {

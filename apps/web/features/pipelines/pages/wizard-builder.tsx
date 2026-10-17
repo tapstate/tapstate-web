@@ -631,6 +631,35 @@ export function WizardBuilder({
           )}
           <ReferenceWizardBuilder
             key={builderRevision}
+            assistant={
+              guidedPreset
+                ? undefined
+                : {
+                    pipelineId,
+                    revision: currentDraft.current.revision,
+                    blocked:
+                      editorReadOnly ||
+                      busy ||
+                      status !== 'saved' ||
+                      Boolean(pending.current) ||
+                      JSON.stringify(wizard) !== savedFingerprint.current,
+                    undoBlocked: editorReadOnly || busy,
+                    onApply: (candidate) => {
+                      previewGeneration.current += 1
+                      previewAbort.current?.abort()
+                      setLivePreviewStatus((current) => (current === 'idle' ? 'idle' : 'stale'))
+                      setPreview(null)
+                      setWizard(
+                        writeWizard(
+                          candidate as unknown as WizardViewState,
+                          currentWizard.current,
+                          destination?.id || '',
+                          deploymentProfile,
+                        ),
+                      )
+                    },
+                  }
+            }
             showWorkbenchHeader={!guidedPreset}
             onInspectPlan={inspectDsl}
             onStart={() => void savePipeline(true)}

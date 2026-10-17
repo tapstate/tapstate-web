@@ -157,3 +157,41 @@ describe('Wizard post-assembly transforms', () => {
     })
   })
 })
+
+describe('Wizard relation identity mapping', () => {
+  it.each([
+    { key: ['order_id'], arrayKey: ['line_number'] },
+    { key: [], arrayKey: ['external_id'] },
+    { key: ['order_id'], arrayKey: [] },
+  ])('round-trips separate relation keys: %j', ({ key, arrayKey }) => {
+    const document = {
+      root: { sourceId: 'mysql', table: 'customers', key: ['id'] },
+      related: [
+        {
+          id: 'orders',
+          parentId: 'root',
+          sourceId: 'mysql',
+          table: 'orders',
+          relation: {
+            shape: 'array',
+            path: 'orders',
+            key,
+            arrayKey,
+            on: [{ childField: 'customer_id', parentField: 'id' }],
+          },
+        },
+      ],
+      transforms: [],
+      output: { config: { sourceId: 'atlas', table: 'customers', writeMode: 'upsert' } },
+    }
+    const view = readWizard(document, [])
+    expect(view.relations[0].primaryKey).toEqual(key)
+    expect(view.relations[0].arrayKey).toEqual(arrayKey)
+    expect(
+      (writeWizard(view, document, 'atlas').related as { relation: unknown }[])[0].relation,
+    ).toMatchObject({ key, arrayKey })
+    expect(
+      (writeWizard(view, null, 'atlas').related as { relation: unknown }[])[0].relation,
+    ).toMatchObject({ key, arrayKey })
+  })
+})
