@@ -1,4 +1,5 @@
-import { act } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { act, type ComponentProps } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -6,11 +7,25 @@ import type { ConnectorDetail, ConnectorSummary, SourceView } from '@/service/so
 
 import { i18n } from '@/i18n/index'
 
-const { getConnector, listConnectors, testConnection } = vi.hoisted(() => ({
+const {
+  getConnector,
+  listConnectors,
+  testConnection,
+  getDeploymentProfile,
+  loadCloudWorkspaceContext,
+} = vi.hoisted(() => ({
   getConnector: vi.fn(),
   listConnectors: vi.fn(),
   testConnection: vi.fn(),
+  getDeploymentProfile: vi.fn(() => 'on-prem'),
+  loadCloudWorkspaceContext: vi.fn(),
 }))
+
+vi.mock('@/utils/deployment-profile', () => ({
+  getDeploymentProfile,
+  deploymentProfile: 'on-prem',
+}))
+vi.mock('@/service/cloud-workspace-client', () => ({ loadCloudWorkspaceContext }))
 
 vi.mock('@/service/source-client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/service/source-client')>()),
@@ -19,7 +34,17 @@ vi.mock('@/service/source-client', async (importOriginal) => ({
   testConnection,
 }))
 
-import { SourceCreateDialog } from './source-create-dialog'
+import { SourceCreateDialog as DialogUnderTest } from './source-create-dialog'
+
+let queryClient: QueryClient
+
+function SourceCreateDialog(props: ComponentProps<typeof DialogUnderTest>) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <DialogUnderTest {...props} />
+    </QueryClientProvider>
+  )
+}
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
@@ -140,6 +165,17 @@ function hasClasses(element: Element | null | undefined, ...classes: string[]) {
 }
 
 beforeEach(async () => {
+  queryClient = new QueryClient({ defaultOptions: { queries: { retryDelay: 0 } } })
+  getDeploymentProfile.mockReturnValue('on-prem')
+  loadCloudWorkspaceContext.mockResolvedValue({
+    organizationId: 'org-one',
+    organizationName: 'Workspace',
+    clusterName: 'Analytics',
+    region: 'us-east-1',
+    clusterState: 'READY',
+    ec2PublicIp: '203.0.113.42',
+    egressAddressStatus: 'STABLE',
+  })
   await i18n.changeLanguage('en')
   listConnectors.mockResolvedValue([mysql, mongodb])
   getConnector.mockResolvedValue(detail)
@@ -154,11 +190,153 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await act(async () => root?.unmount())
+  queryClient.clear()
   await i18n.changeLanguage('en')
   host?.remove()
   root = undefined
   host = undefined
   vi.clearAllMocks()
+})
+
+describe('Cluster outbound IP guidance', () => {
+  async function renderDialog(open = true) {
+    if (!host) {
+      host = document.createElement('div')
+      document.body.append(host)
+      root = createRoot(host)
+    }
+    await act(async () => {
+      root?.render(
+        <SourceCreateDialog
+          open={open}
+          initialConnectorId="mysql"
+          onOpenChange={() => undefined}
+          onCreated={() => undefined}
+        />,
+      )
+    })
+    if (open) await vi.waitFor(() => expect(fieldInput('Spec host')).not.toBeNull())
+  }
+
+  function copyButton() {
+    return [...document.body.querySelectorAll('button')].find(
+      (button) => button.textContent?.trim() === 'Copy IP',
+    )
+  }
+
+  it('shows and copies the stable Cluster IP, then resets feedback when reopened', async () => {
+    getDeploymentProfile.mockReturnValue('cloud')
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    await renderDialog()
+    await vi.waitFor(() => expect(copyButton()).toBeDefined())
+    expect(document.body.textContent).toContain('203.0.113.42')
+    expect(document.body.textContent).toContain('Allowlist this IP')
+    expect(document.body.querySelector<HTMLDetailsElement>('details')?.open).toBe(true)
+    expect(document.body.querySelector('details summary')?.textContent).toContain(
+      'Cluster IP address',
+    )
+    await act(async () => copyButton()?.click())
+    expect(writeText).toHaveBeenCalledWith('203.0.113.42')
+    expect(document.body.textContent).toContain('Copied')
+    await renderDialog(false)
+    await renderDialog()
+    await vi.waitFor(() => expect(copyButton()).toBeDefined())
+  })
+
+  it('reports clipboard failure and leaves the configuration usable', async () => {
+    getDeploymentProfile.mockReturnValue('cloud')
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+    })
+    await renderDialog()
+    await vi.waitFor(() => expect(copyButton()).toBeDefined())
+    await act(async () => copyButton()?.click())
+    expect(document.body.textContent).toContain('Clipboard access failed')
+    expect(fieldInput('Spec host')).not.toBeNull()
+  })
+
+  it('allows configuration without an address and never invents one', async () => {
+    getDeploymentProfile.mockReturnValue('cloud')
+    loadCloudWorkspaceContext.mockResolvedValue({
+      organizationId: 'org',
+      organizationName: 'Org',
+      clusterName: 'Cluster',
+      region: 'us-east-1',
+      clusterState: 'READY',
+    })
+    await renderDialog()
+    await vi.waitFor(() =>
+      expect(document.body.textContent).toContain('has not reported an outbound IP'),
+    )
+    expect(copyButton()).toBeUndefined()
+    expect(fieldInput('Spec host')).not.toBeNull()
+  })
+
+  it('shows loading without blocking connector fields', async () => {
+    getDeploymentProfile.mockReturnValue('cloud')
+    loadCloudWorkspaceContext.mockReturnValue(new Promise(() => undefined))
+    await renderDialog()
+    expect(document.body.textContent).toContain('Checking the IP')
+    expect(fieldInput('Spec host')).not.toBeNull()
+  })
+
+  it('shows a retryable context error without blocking connector fields', async () => {
+    getDeploymentProfile.mockReturnValue('cloud')
+    loadCloudWorkspaceContext.mockRejectedValue(new Error('unavailable'))
+    await renderDialog()
+    await vi.waitFor(() => expect(document.body.textContent).toContain('Could not load'))
+    expect(fieldInput('Spec host')).not.toBeNull()
+  })
+
+  it('does not show Cloud firewall guidance in on-prem mode', async () => {
+    await renderDialog()
+    expect(document.body.textContent).not.toContain('Cluster outbound IP')
+    expect(loadCloudWorkspaceContext).not.toHaveBeenCalled()
+  })
+
+  it('hides a cached address when its refresh fails', async () => {
+    getDeploymentProfile.mockReturnValue('cloud')
+    queryClient.setQueryData(['cloud-workspace-context'], {
+      ec2PublicIp: '203.0.113.42',
+      egressAddressStatus: 'STABLE',
+    })
+    loadCloudWorkspaceContext.mockRejectedValue(new Error('unavailable'))
+    await renderDialog()
+    await vi.waitFor(() => expect(document.body.textContent).toContain('Could not load'))
+    expect(document.body.textContent).not.toContain('203.0.113.42')
+    expect(copyButton()).toBeUndefined()
+  })
+
+  it.each(['STABILIZING', 'ATTACHING'])('prevents copying an address during %s', async (status) => {
+    getDeploymentProfile.mockReturnValue('cloud')
+    loadCloudWorkspaceContext.mockResolvedValue({
+      ec2PublicIp: '203.0.113.42',
+      egressAddressStatus: status,
+    })
+    await renderDialog()
+    await vi.waitFor(() =>
+      expect(document.body.textContent).toContain('Stable IP setup is in progress'),
+    )
+    expect(copyButton()).toBeUndefined()
+  })
+
+  it.each([
+    ['DYNAMIC', 'may change if the Cluster instance is replaced'],
+    ['FAILED', 'Stable IP setup failed'],
+  ])('labels %s addresses accurately', async (status, message) => {
+    getDeploymentProfile.mockReturnValue('cloud')
+    loadCloudWorkspaceContext.mockResolvedValue({
+      ec2PublicIp: '203.0.113.42',
+      egressAddressStatus: status,
+    })
+    await renderDialog()
+    await vi.waitFor(() => expect(document.body.textContent).toContain(message))
+    expect(document.body.textContent).not.toContain(
+      'Allowlist this IP in your database firewall to let',
+    )
+  })
 })
 
 describe('SourceCreateDialog', () => {

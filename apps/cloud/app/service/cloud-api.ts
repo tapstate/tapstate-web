@@ -53,6 +53,13 @@ export type ClusterState =
   | 'DRAINED'
   | 'TERMINATED'
 
+export type ClusterEgressAddressStatus =
+  | 'DYNAMIC'
+  | 'STABILIZING'
+  | 'ATTACHING'
+  | 'STABLE'
+  | 'FAILED'
+
 export interface Cluster {
   id: string
   orgId: string
@@ -64,6 +71,7 @@ export interface Cluster {
   runtimeId?: string | null
   publicDns?: string | null
   ec2PublicIp?: string | null
+  egressAddressStatus?: ClusterEgressAddressStatus | null
   lastHeartbeatAt?: string | null
   createdAt?: string
   readyAt?: string | null
@@ -270,6 +278,11 @@ export const cloudApi = {
   retryCluster: (orgId: string, clusterId: string) =>
     request<Cluster>(
       `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/clusters/${encodeURIComponent(clusterId)}/retry`,
+      post,
+    ),
+  stabilizeClusterEgressAddress: (orgId: string, clusterId: string) =>
+    request<Cluster>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/clusters/${encodeURIComponent(clusterId)}/egress-address:stabilize`,
       post,
     ),
   subscription: async (orgId: string) => (await cloudApi.subscriptions(orgId))[0] ?? null,
