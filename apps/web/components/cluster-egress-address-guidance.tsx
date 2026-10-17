@@ -45,7 +45,7 @@ export function ClusterEgressAddressGuidance({
       aria-label={t('sources.egressAddress.title')}
       className="grid min-w-0 gap-4 rounded-[14px] bg-[var(--info-fill)] px-5 py-4 sm:px-6"
     >
-      <div className="flex min-w-0 items-start gap-4 sm:gap-6">
+      <div className="flex min-w-0 items-start gap-3">
         <span className="text-primary-foreground mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-[var(--brand-primary)]">
           <Info className="size-4" aria-hidden="true" />
         </span>
