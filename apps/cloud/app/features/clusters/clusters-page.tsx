@@ -1,6 +1,6 @@
 import { useNavigate } from '@tanstack/react-router'
 import { Check, Copy, LoaderCircle, Plus, Search } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { cloudApi, type Cluster } from '../../service/cloud-api'
 import { useCloudAppState } from '../../state/cloud-app-state'
@@ -30,6 +30,8 @@ function statusColor(status: string) {
 export function ClustersPage() {
   const navigate = useNavigate()
   const { activeOrganization, clusters, setClusters } = useCloudAppState()
+  const activeOrganizationIdRef = useRef(activeOrganization?.id)
+  activeOrganizationIdRef.current = activeOrganization?.id
   const { enterCluster, enteringId, entryError } = useClusterEntry()
   const [searchQuery, setSearchQuery] = useState('')
   const [confirmingEgressId, setConfirmingEgressId] = useState<string | null>(null)
@@ -56,7 +58,7 @@ export function ClustersPage() {
     let cancelled = false
     const refresh = () => {
       void cloudApi
-        .clusters(activeOrganization.id)
+        .activeClusters(activeOrganization.id)
         .then((nextClusters) => {
           if (!cancelled) setClusters(nextClusters)
         })
@@ -69,23 +71,31 @@ export function ClustersPage() {
     }
   }, [activeOrganization, hasEgressOperation, setClusters])
 
+  useEffect(() => {
+    setConfirmingEgressId(null)
+    setStabilizingEgressId(null)
+    setEgressError(null)
+  }, [activeOrganization?.id])
+
   async function stabilizeEgressAddress(cluster: Cluster) {
     if (!activeOrganization || stabilizingEgressId) return
+    const organizationId = activeOrganization.id
     setStabilizingEgressId(cluster.id)
     setEgressError(null)
     setConfirmingEgressId(null)
     try {
-      const updated = await cloudApi.stabilizeClusterEgressAddress(
-        activeOrganization.id,
-        cluster.id,
+      const updated = await cloudApi.stabilizeClusterEgressAddress(organizationId, cluster.id)
+      if (activeOrganizationIdRef.current !== organizationId) return
+      setClusters((currentClusters) =>
+        currentClusters.map((item) => (item.id === updated.id ? updated : item)),
       )
-      setClusters(clusters.map((item) => (item.id === updated.id ? updated : item)))
     } catch (error) {
+      if (activeOrganizationIdRef.current !== organizationId) return
       setEgressError(
         error instanceof Error ? error.message : 'Could not start the address update. Try again.',
       )
     } finally {
-      setStabilizingEgressId(null)
+      if (activeOrganizationIdRef.current === organizationId) setStabilizingEgressId(null)
     }
   }
 

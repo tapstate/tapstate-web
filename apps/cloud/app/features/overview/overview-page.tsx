@@ -49,7 +49,7 @@ export function OverviewPage() {
     let current = true
     const refreshClusters = () => {
       void cloudApi
-        .clusters(organizationId)
+        .activeClusters(organizationId)
         .then((nextClusters) => {
           if (current) setClusters(nextClusters)
         })
