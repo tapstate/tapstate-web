@@ -61,7 +61,7 @@ export function ClusterEgressAddressGuidance({
 
       {address && (
         <details open className="group bg-background -mx-2 min-w-0 rounded-xl sm:-mx-3">
-          <summary className="focus-visible:outline-ring flex min-h-7 cursor-pointer list-none items-center gap-2.5 rounded-xl px-4 py-1 text-sm leading-5 font-medium text-[var(--brand-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
+          <summary className="focus-visible:outline-ring flex min-h-8 cursor-pointer list-none items-center gap-2.5 rounded-xl px-4 pt-2 pb-1 text-sm leading-5 font-medium text-[var(--brand-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
             <ChevronDown
               className="size-4 shrink-0 text-[var(--brand-primary)] transition-transform group-open:rotate-180"
               aria-hidden="true"
