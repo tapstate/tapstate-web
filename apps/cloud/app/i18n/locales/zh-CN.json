@@ -16,6 +16,47 @@
     "searchClusters": "搜索集群",
     "searchOrganizations": "搜索组织"
   },
+  "organizationList": {
+    "current": "当前组织：",
+    "currentBadge": "当前",
+    "count_one": "{{count}} 个组织",
+    "count_other": "{{count}} 个组织",
+    "clearSearch": "清除组织搜索",
+    "name": "组织",
+    "slug": "标识",
+    "status": "状态",
+    "owner": "所有者",
+    "active": "活跃",
+    "suspended": "已暂停",
+    "noOrganizations": "此账户暂无可用组织。",
+    "noMatches": "没有匹配搜索条件的组织。"
+  },
+  "clusterList": {
+    "description": "管理不同 AWS 区域中的 Tapstate 集群。",
+    "provision": "创建集群",
+    "provisionDescription": "创建第一个 Cloud 集群。",
+    "total": "总计：",
+    "count_one": "{{count}} 个集群",
+    "count_other": "{{count}} 个集群",
+    "clearSearch": "清除集群搜索",
+    "name": "集群名称",
+    "status": "状态",
+    "region": "区域",
+    "plan": "套餐",
+    "created": "创建时间",
+    "noClusters": "还没有集群。",
+    "noMatches": "没有匹配搜索条件的集群。",
+    "states": {
+      "PROVISIONING_PENDING": "等待创建",
+      "PROVISIONING": "创建中",
+      "READY": "就绪",
+      "PROVISIONING_FAILED": "创建失败",
+      "DEGRADED": "性能下降",
+      "DRAINING": "排空中",
+      "DRAINED": "已排空",
+      "TERMINATED": "已终止"
+    }
+  },
   "access": {
     "eyebrow": "安全云集群",
     "title": "请先登录",
