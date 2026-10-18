@@ -329,7 +329,8 @@
     },
     "empty": {
       "title": "还没有数据源",
-      "body": "添加一个由连接器驱动的数据源，让 Tapstate 可以使用实时数据。"
+      "body": "添加一个由连接器驱动的数据源，让 Tapstate 可以使用实时数据。",
+      "sampleDescription": "先通过样例数据源探索，再连接自己的数据。"
     },
     "columns": {
       "comment": "备注",

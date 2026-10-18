@@ -1,4 +1,5 @@
 import { Radio as RadioPrimitive } from '@base-ui/react/radio'
+import { SkeletonRectangle } from '@langgenius/dify-ui/skeleton'
 import { CircleIcon } from 'lucide-react'
 import * as React from 'react'
 
@@ -27,34 +28,6 @@ export function Badge({ className, variant, tone, ...props }: BadgeProps) {
       data-tone={normalizeTone(variant, tone)}
       {...props}
     />
-  )
-}
-
-export interface AlertProps extends React.ComponentProps<'div'> {
-  tone?: Tone
-  variant?: 'default' | 'destructive' | Tone
-}
-
-export function Alert({ className, tone, variant, role, ...props }: AlertProps) {
-  const resolvedTone = normalizeTone(variant, tone)
-  return (
-    <div
-      className={cn('ui-alert', className)}
-      data-slot="alert"
-      data-tone={resolvedTone}
-      role={role ?? (resolvedTone === 'danger' ? 'alert' : 'status')}
-      {...props}
-    />
-  )
-}
-
-export function AlertTitle({ className, ...props }: React.ComponentProps<'h3'>) {
-  return <h3 className={cn('ui-alert-title', className)} data-slot="alert-title" {...props} />
-}
-
-export function AlertDescription({ className, ...props }: React.ComponentProps<'p'>) {
-  return (
-    <p className={cn('ui-alert-description', className)} data-slot="alert-description" {...props} />
   )
 }
 
@@ -151,12 +124,7 @@ export function EmptyState({
 
 export function Skeleton({ className, ...props }: React.ComponentProps<'div'>) {
   return (
-    <div
-      aria-hidden="true"
-      className={cn('ui-skeleton', className)}
-      data-slot="skeleton"
-      {...props}
-    />
+    <SkeletonRectangle aria-hidden="true" className={className} data-slot="skeleton" {...props} />
   )
 }
 

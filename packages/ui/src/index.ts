@@ -1,9 +1,6 @@
 export { Button, IconButton } from './button'
 export type { ButtonProps, ButtonSize, ButtonTone, ButtonVariant } from './button'
 export {
-  Alert,
-  AlertDescription,
-  AlertTitle,
   ActionRow,
   Badge,
   EmptyState,
@@ -20,7 +17,7 @@ export {
   TableHeader,
   TableRow,
 } from './content'
-export type { AlertProps, BadgeProps } from './content'
+export type { BadgeProps } from './content'
 export { cn } from './cn'
 export {
   Dialog,

@@ -1,5 +1,6 @@
 import { createForm } from '@formily/core'
 import { Field as FormilyField, FormProvider } from '@formily/react'
+import SourceAlert from '@langgenius/dify-ui/alert'
 import {
   AlertDialog as SourceAlertDialog,
   AlertDialogCancelButton as SourceAlertDialogCancelButton,
@@ -29,9 +30,6 @@ import { SearchInput as SourceSearchInput } from '@langgenius/dify-ui/search-inp
 import { createLazyFileRoute } from '@tanstack/react-router'
 import {
   ActionRow,
-  Alert,
-  AlertDescription,
-  AlertTitle,
   Badge,
   Button,
   Checkbox,
@@ -138,6 +136,7 @@ function UiKitPageContent({
   const [region, setRegion] = useState<string | null>(null)
   const [dialogRegion, setDialogRegion] = useState('us-east')
   const [confirmationOpen, setConfirmationOpen] = useState(false)
+  const [alertVisible, setAlertVisible] = useState(true)
   const locale = i18n.resolvedLanguage?.startsWith('zh-TW')
     ? 'zh-TW'
     : i18n.resolvedLanguage?.startsWith('zh')
@@ -145,7 +144,6 @@ function UiKitPageContent({
       : 'en'
   const variants = ['primary', 'secondary', 'tertiary', 'ghost', 'destructive'] as const
   const badgeTones = ['neutral', 'brand', 'success', 'warning', 'danger', 'info'] as const
-  const alertTones = ['info', 'success', 'warning', 'danger'] as const
   const variantLabels = {
     primary: t('uiKit.buttons.variantPrimary'),
     secondary: t('uiKit.buttons.variantSecondary'),
@@ -432,12 +430,18 @@ function UiKitPageContent({
               ))}
             </div>
             <div className="space-y-2">
-              {alertTones.map((tone) => (
-                <Alert key={tone} tone={tone}>
-                  <AlertTitle>{t('uiKit.feedback.alertTitle')}</AlertTitle>
-                  <AlertDescription>{t('uiKit.feedback.alertDescription')}</AlertDescription>
-                </Alert>
-              ))}
+              <h3 className="system-sm-semibold text-text-primary">Alert</h3>
+              {alertVisible ? (
+                <SourceAlert
+                  message={`${t('uiKit.feedback.alertTitle')} — ${t('uiKit.feedback.alertDescription')}`}
+                  closeLabel={t('common.close')}
+                  onHide={() => setAlertVisible(false)}
+                />
+              ) : (
+                <SourceButton variant="secondary" onClick={() => setAlertVisible(true)}>
+                  Alert
+                </SourceButton>
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
               <Button

@@ -329,7 +329,8 @@
     },
     "empty": {
       "title": "尚未建立資料來源",
-      "body": "新增一個由連接器驅動的資料來源，讓 Tapstate 可以使用即時資料。"
+      "body": "新增一個由連接器驅動的資料來源，讓 Tapstate 可以使用即時資料。",
+      "sampleDescription": "先透過範例資料來源探索，再連接自己的資料。"
     },
     "columns": {
       "comment": "備註",

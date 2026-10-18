@@ -743,54 +743,6 @@
     background: var(--ts-brand-primary);
   }
 
-  .ui-alert {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    border: 1px solid var(--ts-border-default);
-    border-radius: var(--ts-radius-control);
-    padding: 10px 12px;
-    background: var(--ts-bg-subtle);
-    color: var(--ts-text-primary);
-    font-size: 13px;
-    line-height: 20px;
-  }
-
-  .ui-alert[data-tone='info'] {
-    border-color: var(--ts-state-info-border);
-    background: var(--ts-state-info-bg);
-    color: var(--ts-state-info-text);
-  }
-
-  .ui-alert[data-tone='success'] {
-    border-color: var(--ts-state-success-border);
-    background: var(--ts-state-success-bg);
-    color: var(--ts-state-success-text);
-  }
-
-  .ui-alert[data-tone='warning'] {
-    border-color: var(--ts-state-warning-border);
-    background: var(--ts-state-warning-bg);
-    color: var(--ts-state-warning-text);
-  }
-
-  .ui-alert[data-tone='danger'] {
-    border-color: var(--ts-state-danger-border);
-    background: var(--ts-state-danger-bg);
-    color: var(--ts-state-danger-text);
-  }
-
-  .ui-alert-title {
-    margin: 0;
-    font-weight: 600;
-  }
-
-  .ui-alert-description {
-    margin: 2px 0 0;
-    color: inherit;
-    opacity: 0.88;
-  }
-
   .ui-empty-state {
     display: grid;
     justify-items: center;

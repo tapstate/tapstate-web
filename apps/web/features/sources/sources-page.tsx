@@ -19,6 +19,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@langgenius/dify-ui/dropdown-menu'
+import { FirstEmptyActionCard } from '@langgenius/dify-ui/first-empty-action-card'
+import { LoadingPlaceholder } from '@langgenius/dify-ui/loading-placeholder'
 import { SearchInput } from '@langgenius/dify-ui/search-input'
 import { StatusDot } from '@langgenius/dify-ui/status-dot'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -555,10 +557,7 @@ export function SourcesPage({
 
       <main className="bg-background-body flex min-h-0 min-w-0 flex-1 flex-col">
         {sourcesQuery.isLoading ? (
-          <div className="page-state">
-            <LoaderCircle className="h-7 w-7 animate-spin text-gray-300" aria-hidden="true" />
-            <div className="page-state__title">{t('sources.states.loading')}</div>
-          </div>
+          <LoadingPlaceholder className="h-full" label={t('sources.states.loading')} />
         ) : loadError ? (
           <div className="page-state">
             <AlertCircle className="h-8 w-8 text-orange-400" aria-hidden="true" />
@@ -850,6 +849,8 @@ export function SourcesPage({
             sources={sources}
             filteredSources={filteredSources}
             onCreate={() => setCreateOpen(true)}
+            onSample={() => setSampleDialogOpen(true)}
+            samplesAvailable={samplesAvailable}
             onSelect={selectSource}
             onTest={(source) => void runSourceTest(source.raw)}
             testingSourceId={testingSourceId}
@@ -1117,6 +1118,8 @@ function AllSourcesView({
   sources,
   filteredSources,
   onCreate,
+  onSample,
+  samplesAvailable,
   onSelect,
   onTest,
   testingSourceId,
@@ -1125,6 +1128,8 @@ function AllSourcesView({
   sources: Source[]
   filteredSources: Source[]
   onCreate: () => void
+  onSample: () => void
+  samplesAvailable: boolean
   onSelect: (source: Source) => void
   onTest: (source: Source) => void
   testingSourceId: string | null
@@ -1135,13 +1140,55 @@ function AllSourcesView({
     <div className="bg-background-body flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-auto px-4 pt-2 pb-6 md:px-8">
         {sources.length === 0 ? (
-          <div className="page-state">
-            <Database className="text-text-tertiary h-8 w-8" aria-hidden="true" />
-            <div className="page-state__title">{t('sources.empty.title')}</div>
-            <p className="page-state__body">{t('sources.empty.body')}</p>
-            <Button type="button" onClick={onCreate}>
-              {t('sources.actions.create')}
-            </Button>
+          <div className="relative min-h-130 overflow-hidden">
+            <div
+              className="pointer-events-none absolute inset-x-0 inset-y-2 grid grid-cols-[repeat(auto-fill,minmax(296px,1fr))] grid-rows-4 gap-3"
+              aria-hidden="true"
+            >
+              {Array.from({ length: 16 }, (_, index) => (
+                <div key={index} className="bg-background-default-lighter rounded-xl opacity-75" />
+              ))}
+            </div>
+            <div className="from-background-body/0 to-background-body pointer-events-none absolute inset-0 bg-linear-to-b" />
+            <section
+              className="absolute inset-0 flex items-center justify-center overflow-hidden p-2"
+              aria-labelledby="sources-first-empty-title"
+            >
+              <div className="flex w-full max-w-130 flex-col items-center gap-6">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="border-divider-regular bg-components-card-bg flex size-14 items-center justify-center overflow-hidden rounded-xl border border-dashed p-1 backdrop-blur-md">
+                    <Database className="text-text-tertiary size-6" aria-hidden="true" />
+                  </div>
+                  <div className="text-center">
+                    <h2
+                      id="sources-first-empty-title"
+                      className="system-sm-medium text-text-primary"
+                    >
+                      {t('sources.empty.title')}
+                    </h2>
+                    <p className="system-sm-regular text-text-tertiary mt-1">
+                      {t('sources.empty.body')}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex w-full flex-col gap-2 pb-8">
+                  <FirstEmptyActionCard
+                    title={t('sources.actions.create')}
+                    description={t('sources.empty.body')}
+                    icon={<Plus className="size-4" aria-hidden="true" />}
+                    onClick={onCreate}
+                  />
+                  {samplesAvailable && (
+                    <FirstEmptyActionCard
+                      title={t('overview.addSources.sample.action')}
+                      description={t('sources.empty.sampleDescription')}
+                      icon={<Database className="size-4" aria-hidden="true" />}
+                      onClick={onSample}
+                    />
+                  )}
+                </div>
+              </div>
+            </section>
           </div>
         ) : (
           <DataTable

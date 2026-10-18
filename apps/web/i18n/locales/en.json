@@ -329,7 +329,8 @@
     },
     "empty": {
       "title": "No sources yet",
-      "body": "Add a connector-backed source to make live data available to Tapstate."
+      "body": "Add a connector-backed source to make live data available to Tapstate.",
+      "sampleDescription": "Explore with a sample source before connecting your own data."
     },
     "columns": {
       "comment": "Comment",

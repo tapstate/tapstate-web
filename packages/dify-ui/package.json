@@ -4,9 +4,25 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./alert": {
+      "types": "./src/alert/index.tsx",
+      "import": "./src/alert/index.tsx"
+    },
     "./search-input": {
       "types": "./src/search-input/index.tsx",
       "import": "./src/search-input/index.tsx"
+    },
+    "./skeleton": {
+      "types": "./src/skeleton/index.tsx",
+      "import": "./src/skeleton/index.tsx"
+    },
+    "./loading-placeholder": {
+      "types": "./src/loading-placeholder/index.tsx",
+      "import": "./src/loading-placeholder/index.tsx"
+    },
+    "./first-empty-action-card": {
+      "types": "./src/first-empty-action-card/index.tsx",
+      "import": "./src/first-empty-action-card/index.tsx"
     },
     "./styles.css": "./src/styles/styles.css",
     "./cn": {
