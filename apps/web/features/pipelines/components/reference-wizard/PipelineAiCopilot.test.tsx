@@ -1,5 +1,6 @@
 import '@/i18n/index'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { readFileSync } from 'node:fs'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -12,6 +13,7 @@ Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 let root: Root | undefined
 let container: HTMLDivElement
 const encoder = new TextEncoder()
+const javaStreamFixturePath = process.env.TAPSTATE_ASSISTANT_JAVA_STREAM_FIXTURE
 function stream(parts: unknown[]) {
   return new Response(
     new ReadableStream({
@@ -93,13 +95,60 @@ function response() {
     { type: 'text-start', id: 'text' },
     { type: 'text-delta', id: 'text', delta: 'Suggested relation' },
     { type: 'text-end', id: 'text' },
-    { type: 'data-status', data: { phase: 'validating' } },
+    { type: 'data-status', data: { state: 'validating' } },
     { type: 'data-proposal', data: proposal },
     { type: 'finish', finishReason: 'stop' },
   ])
 }
 
 describe('Pipeline Builder assistant', () => {
+  it.skipIf(!javaStreamFixturePath)(
+    'consumes a Java-produced stream through the real AI SDK client',
+    async () => {
+      const javaBytes = readFileSync(javaStreamFixturePath!)
+      const javaParts = javaBytes
+        .toString('utf8')
+        .split(/\r?\n/)
+        .filter((line) => line.startsWith('data: ') && line !== 'data: [DONE]')
+        .map((line) => JSON.parse(line.slice('data: '.length)))
+      const javaProposalPart = javaParts.find((part) => part.type === 'data-proposal')
+      expect(javaProposalPart).toBeDefined()
+      const javaProposal = javaProposalPart.data
+      const apiFetch = vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(new Uint8Array(javaBytes), {
+            headers: {
+              'Content-Type': 'text/event-stream',
+              'x-vercel-ai-ui-message-stream': 'v1',
+            },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              valid: true,
+              candidateWizard: javaProposal.candidateWizard,
+              validation: javaProposal.validation,
+              diff: javaProposal.diff,
+            }),
+          ),
+        )
+      useAuthStore.setState({ apiFetch })
+      await mount({ ...context, revision: javaProposal.baseRevision })
+      await generate()
+
+      expect(container.textContent).toContain('I used the selected schema.')
+      expect(container.textContent).toContain('Review proposed')
+      await act(async () => button('Review proposed').click())
+      await act(async () => button('Validate and apply').click())
+
+      expect(apiFetch.mock.calls[0][0]).toBe('/api/pipelines/customers/draft:assistant')
+      expect(apiFetch.mock.calls[1][0]).toBe('/api/pipelines/customers/draft:assistant-validate')
+      expect(context.onApply).toHaveBeenCalledExactlyOnceWith(javaProposal.candidateWizard)
+    },
+  )
+
   it('streams through the authenticated SDK transport and applies only after explicit validation', async () => {
     const apiFetch = vi
       .fn()
@@ -247,6 +296,73 @@ describe('Pipeline Builder assistant', () => {
     await mount()
     await generate()
     expect(container.textContent).toContain('rejected the credentials')
+    expect(context.onApply).not.toHaveBeenCalled()
+  })
+  it('shows typed validation findings and omits unsafe diagnostic values', async () => {
+    useAuthStore.setState({
+      apiFetch: vi.fn().mockResolvedValue(
+        stream([
+          { type: 'start', messageId: 'invalid-proposal' },
+          { type: 'text-start', id: 'text' },
+          { type: 'text-delta', id: 'text', delta: 'Checking proposal' },
+          { type: 'text-end', id: 'text' },
+          {
+            type: 'data-status',
+            data: {
+              state: 'error',
+              status: 'error',
+              code: 'dsl.illegal-expression',
+              diagnostics: [
+                {
+                  code: 'dsl.illegal-expression',
+                  params: { path: 'transforms[0].expr', detail: 'private expression text' },
+                },
+              ],
+            },
+          },
+          { type: 'error', errorText: 'dsl.illegal-expression' },
+          { type: 'finish', finishReason: 'error' },
+        ]),
+      ),
+    })
+    await mount()
+    await generate()
+
+    expect(container.textContent).toContain('dsl.illegal-expression')
+    expect(container.textContent).toContain('transforms[0].expr')
+    expect(container.textContent).not.toContain('private expression text')
+    expect(context.onApply).not.toHaveBeenCalled()
+  })
+  it('shows typed domain diagnostics when the edited candidate fails server validation', async () => {
+    const apiFetch = vi
+      .fn()
+      .mockResolvedValueOnce(response())
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            valid: false,
+            validation: {
+              valid: false,
+              diagnostics: [
+                {
+                  code: 'dsl.illegal-expression',
+                  params: { path: 'transforms[0].expr', detail: 'private expression text' },
+                },
+              ],
+            },
+            diff: { changes: [] },
+          }),
+        ),
+      )
+    useAuthStore.setState({ apiFetch })
+    await mount()
+    await generate()
+    await act(async () => button('Review proposed').click())
+    await act(async () => button('Validate and apply').click())
+
+    expect(container.textContent).toContain('dsl.illegal-expression')
+    expect(container.textContent).toContain('transforms[0].expr')
+    expect(container.textContent).not.toContain('private expression text')
     expect(context.onApply).not.toHaveBeenCalled()
   })
   it('requires review of a newly computed diff after the candidate is edited', async () => {

@@ -67,6 +67,7 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
   ReferenceWizardBuilder: ({
     initial,
     onChange,
+    assistant,
     footer,
     actions,
     readOnly,
@@ -76,6 +77,7 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
   }: {
     initial: WizardViewState
     onChange: (state: WizardViewState) => void
+    assistant?: { onApply: (candidate: unknown) => void }
     footer: React.ReactNode
     actions?: React.ReactNode
     readOnly?: boolean
@@ -87,6 +89,7 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
       className="wizard-reference-editor-column"
       data-read-only={readOnly ? 'true' : 'false'}
       data-root-table={initial.root?.table ?? ''}
+      data-destination-table={initial.destinationTable ?? ''}
       data-live-preview-status={livePreviewStatus}
       data-live-preview-run={livePreview?.runId || ''}
     >
@@ -120,6 +123,37 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
       >
         Change wizard
       </button>
+      {assistant && (
+        <button
+          data-testid="apply-assistant-proposal"
+          onClick={() =>
+            assistant.onApply({
+              root: {
+                source: 'mysql',
+                table: 'AA_0716',
+                primaryKey: 'ID',
+                keys: ['ID'],
+                rowCount: '—',
+                columns: ['ID'],
+              },
+              relations: [],
+              transforms: [
+                {
+                  id: 'assistant_filter',
+                  name: 'Keep rows',
+                  type: 'filter',
+                  config: { filter: { expr: 'true' } },
+                },
+              ],
+              destinationSourceId: 'mysql',
+              destinationTable: 'assistant_generated',
+              destinationWriteMode: 'append',
+            })
+          }
+        >
+          Apply assistant proposal
+        </button>
+      )}
       <button data-testid="inspect-plan" onClick={() => void onInspectPlan()}>
         Inspect Plan
       </button>
@@ -212,6 +246,43 @@ afterEach(() => {
 })
 
 describe('WizardBuilder publish flow', () => {
+  it('does not run an automatic preview when an assistant proposal is applied', async () => {
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={initialDraft.pipelineId} draft={initialDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await vi.waitFor(() =>
+      expect(container?.querySelector('.wizard-reference-editor-column')).not.toBeNull(),
+    )
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 350)))
+    const previewCallsBeforeApply = streamPipelinePreview.mock.calls.length
+    const compileCallsBeforeApply = previewPipelineDraft.mock.calls.length
+    expect(container?.querySelector('[data-testid="apply-assistant-proposal"]')).not.toBeNull()
+
+    await act(async () => {
+      container
+        ?.querySelector<HTMLButtonElement>('[data-testid="apply-assistant-proposal"]')
+        ?.click()
+    })
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 400)))
+
+    expect(
+      container
+        ?.querySelector('.wizard-reference-editor-column')
+        ?.getAttribute('data-destination-table'),
+    ).toBe('assistant_generated')
+    expect(previewPipelineDraft).toHaveBeenCalledTimes(compileCallsBeforeApply)
+    expect(streamPipelinePreview).toHaveBeenCalledTimes(previewCallsBeforeApply)
+  })
+
   it('compiles an unfinished destination only for inspection without saving the temporary name', async () => {
     const draft: PipelineDraft = {
       ...initialDraft,

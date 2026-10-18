@@ -157,6 +157,7 @@ export function assistantErrorKind(
   | 'stale'
   | 'overloaded'
   | 'requestFailed' {
+  if (code.startsWith('dsl.')) return 'domain'
   switch (code) {
     case 'control.ai-not-configured':
       return 'notConfigured'

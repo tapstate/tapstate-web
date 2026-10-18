@@ -173,6 +173,7 @@ export function WizardBuilder({
   const pending = useRef<Promise<void> | null>(null)
   const previewAbort = useRef<AbortController | null>(null)
   const previewGeneration = useRef(0)
+  const skipAssistantApplyPreview = useRef<typeof wizard | null>(null)
   const reusableSampleId = useRef<string | null>(null)
   const savedFingerprint = useRef(JSON.stringify(draft.wizard))
   const currentWizard = useRef(wizard)
@@ -492,6 +493,10 @@ export function WizardBuilder({
   }
 
   useEffect(() => {
+    if (skipAssistantApplyPreview.current === wizard) {
+      skipAssistantApplyPreview.current = null
+      return
+    }
     const root = wizard?.root as { sourceId?: unknown; table?: unknown } | undefined
     const output = wizard?.output as
       | { config?: { sourceId?: unknown; table?: unknown } }
@@ -649,14 +654,14 @@ export function WizardBuilder({
                       previewAbort.current?.abort()
                       setLivePreviewStatus((current) => (current === 'idle' ? 'idle' : 'stale'))
                       setPreview(null)
-                      setWizard(
-                        writeWizard(
-                          candidate as unknown as WizardViewState,
-                          currentWizard.current,
-                          destination?.id || '',
-                          deploymentProfile,
-                        ),
+                      const appliedWizard = writeWizard(
+                        candidate as unknown as WizardViewState,
+                        currentWizard.current,
+                        destination?.id || '',
+                        deploymentProfile,
                       )
+                      skipAssistantApplyPreview.current = appliedWizard
+                      setWizard(appliedWizard)
                     },
                   }
             }

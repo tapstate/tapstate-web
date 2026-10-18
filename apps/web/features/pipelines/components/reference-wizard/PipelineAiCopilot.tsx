@@ -36,8 +36,27 @@ export interface BuilderAssistantContext {
   onUndoApply?: () => boolean
 }
 type AssistantMessage = UIMessage<unknown, { status: unknown; proposal: AssistantProposal }>
+interface AssistantValidationDiagnostic {
+  code: string
+  path?: string
+}
 function isRecord(value: unknown): value is PipelineJsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+function readAssistantValidationDiagnostics(value: unknown): AssistantValidationDiagnostic[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((raw) => {
+    if (!isRecord(raw) || typeof raw.code !== 'string') return []
+    const params = isRecord(raw.params) ? raw.params : {}
+    return [
+      {
+        code: raw.code.slice(0, 256),
+        ...(typeof params.path === 'string' && params.path.length <= 256
+          ? { path: params.path }
+          : {}),
+      },
+    ]
+  })
 }
 export function isAssistantProposal(value: unknown): value is AssistantProposal {
   return isRecord(value) && Number.isInteger(value.baseRevision) && isRecord(value.candidateWizard)
@@ -69,6 +88,9 @@ export function PipelineAiCopilot({
   const [applied, setApplied] = useState(false)
   const [undoError, setUndoError] = useState(false)
   const [reviewError, setReviewError] = useState('')
+  const [validationDiagnostics, setValidationDiagnostics] = useState<
+    AssistantValidationDiagnostic[]
+  >([])
   const [progress, setProgress] = useState('connecting')
   const [streamErrorCode, setStreamErrorCode] = useState('')
   const [canceled, setCanceled] = useState(false)
@@ -124,6 +146,8 @@ export function PipelineAiCopilot({
         )
           setProgress(state)
         if (typeof part.data.code === 'string') setStreamErrorCode(part.data.code)
+        if (Array.isArray(part.data.diagnostics))
+          setValidationDiagnostics(readAssistantValidationDiagnostics(part.data.diagnostics))
       }
       if (part.type === 'data-proposal' && isAssistantProposal(part.data)) {
         reviewedCandidate.current = JSON.stringify(part.data.candidateWizard)
@@ -163,6 +187,7 @@ export function PipelineAiCopilot({
     setApplied(false)
     setUndoError(false)
     setReviewError('')
+    setValidationDiagnostics([])
     setProgress('connecting')
     setStreamErrorCode('')
     setCanceled(false)
@@ -177,6 +202,7 @@ export function PipelineAiCopilot({
     const revision = context.revision
     setApplying(true)
     setReviewError('')
+    setValidationDiagnostics([])
     try {
       const candidate: unknown = JSON.parse(candidateText)
       if (!isRecord(candidate)) throw new Error('invalid-json')
@@ -196,7 +222,15 @@ export function PipelineAiCopilot({
       }
       setDiff(validated.diff)
       if (!validated.valid) {
-        setReviewError(t('wizard.assistant.errors.domain'))
+        const diagnostics = readAssistantValidationDiagnostics(
+          isRecord(validated.validation) ? validated.validation.diagnostics : undefined,
+        )
+        setValidationDiagnostics(diagnostics)
+        setReviewError(
+          t(
+            `wizard.assistant.errors.${assistantErrorKind(diagnostics[0]?.code ?? 'pipeline-draft.invalid')}`,
+          ),
+        )
         return
       }
       // Edited candidates need review of the newly computed canonical diff.
@@ -437,6 +471,16 @@ export function PipelineAiCopilot({
               <p role="alert" className="text-[12px] leading-relaxed text-red-700">
                 {reviewError}
               </p>
+            )}
+            {validationDiagnostics.length > 0 && (
+              <ul className="space-y-1 text-[10px] leading-relaxed text-red-700" role="list">
+                {validationDiagnostics.map(({ code, path }) => (
+                  <li key={`${code}:${path || ''}`}>
+                    <code className="font-mono">{code}</code>
+                    {path && <span> · {path}</span>}
+                  </li>
+                ))}
+              </ul>
             )}
             {stale && !applied && (
               <p role="alert" className="text-[12px] leading-relaxed text-amber-800">
