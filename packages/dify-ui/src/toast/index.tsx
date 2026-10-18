@@ -51,6 +51,7 @@ type ToastCardProps = {
   toast: ToastObject<ToastData>
   /** Additional content composed inside the card. */
   children?: React.ReactNode
+  closeLabel?: string
 }
 
 type ToasterOffset = Pick<React.CSSProperties, 'top' | 'right'>
@@ -61,6 +62,7 @@ type ToasterProps = Pick<BaseToast.Provider.Props, 'timeout' | 'limit'> &
   Pick<BaseToast.Viewport.Props, 'children'> & {
     toastManager: ToastManager
     offset?: ToasterOffset
+    closeLabel?: string
   }
 
 type ToastDismiss = (toastId?: string) => void
@@ -144,7 +146,7 @@ function createToastManager(): ToastManager {
   return BaseToast.createToastManager<ToastData>()
 }
 
-function ToastCard({ toast: toastItem, children }: ToastCardProps) {
+function ToastCard({ toast: toastItem, children, closeLabel = toastCloseLabel }: ToastCardProps) {
   return (
     <BaseToast.Root
       toast={toastItem}
@@ -205,7 +207,7 @@ function ToastCard({ toast: toastItem, children }: ToastCardProps) {
           {children}
           <div className="flex shrink-0 items-center justify-center rounded-md p-0.5">
             <BaseToast.Close
-              aria-label={toastCloseLabel}
+              aria-label={closeLabel}
               className={cn(
                 iconButtonVariants({ size: 'sm' }),
                 'focus-visible:bg-state-base-hover',
@@ -224,9 +226,9 @@ function useToasts(): ToastObject<ToastData>[] {
   return BaseToast.useToastManager<ToastData>().toasts
 }
 
-function ToastCards() {
+function ToastCards({ closeLabel }: { closeLabel: string }) {
   const toasts = useToasts()
-  return toasts.map((item) => <ToastCard key={item.id} toast={item} />)
+  return toasts.map((item) => <ToastCard key={item.id} toast={item} closeLabel={closeLabel} />)
 }
 
 function Toaster({
@@ -234,7 +236,8 @@ function Toaster({
   timeout,
   limit,
   offset,
-  children = <ToastCards />,
+  closeLabel = toastCloseLabel,
+  children = <ToastCards closeLabel={closeLabel} />,
 }: ToasterProps) {
   return (
     <BaseToast.Provider toastManager={toastManager} timeout={timeout} limit={limit}>

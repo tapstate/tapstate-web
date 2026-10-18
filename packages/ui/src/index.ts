@@ -75,6 +75,6 @@ export {
   SelectTrigger,
   SelectValue,
 } from './select'
-export { ToastProvider, useToast } from './toast'
+export { ToastProvider, useOptionalToast, useToast } from './toast'
 export type { ToastApi, ToastOptions, ToastPromiseMessages, ToastTone } from './toast'
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip'

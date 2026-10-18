@@ -1,6 +1,29 @@
 import { createForm } from '@formily/core'
 import { Field as FormilyField, FormProvider } from '@formily/react'
+import {
+  AlertDialog as SourceAlertDialog,
+  AlertDialogCancelButton as SourceAlertDialogCancelButton,
+  AlertDialogConfirmButton as SourceAlertDialogConfirmButton,
+  AlertDialogContent as SourceAlertDialogContent,
+  AlertDialogDescription as SourceAlertDialogDescription,
+  AlertDialogFooter as SourceAlertDialogFooter,
+  AlertDialogHeader as SourceAlertDialogHeader,
+  AlertDialogTitle as SourceAlertDialogTitle,
+  AlertDialogTrigger as SourceAlertDialogTrigger,
+} from '@langgenius/dify-ui/alert-dialog'
 import { Button as SourceButton } from '@langgenius/dify-ui/button'
+import {
+  Drawer as SourceDrawer,
+  DrawerBackdrop as SourceDrawerBackdrop,
+  DrawerClose as SourceDrawerClose,
+  DrawerContent as SourceDrawerContent,
+  DrawerDescription as SourceDrawerDescription,
+  DrawerPopup as SourceDrawerPopup,
+  DrawerPortal as SourceDrawerPortal,
+  DrawerTitle as SourceDrawerTitle,
+  DrawerTrigger as SourceDrawerTrigger,
+  DrawerViewport as SourceDrawerViewport,
+} from '@langgenius/dify-ui/drawer'
 import { Input as SourceInput } from '@langgenius/dify-ui/input'
 import { SearchInput as SourceSearchInput } from '@langgenius/dify-ui/search-input'
 import { createLazyFileRoute } from '@tanstack/react-router'
@@ -9,8 +32,6 @@ import {
   Alert,
   AlertDescription,
   AlertTitle,
-  AlertDialog,
-  AlertDialogContent,
   Badge,
   Button,
   Checkbox,
@@ -23,8 +44,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  Drawer,
-  DrawerContent,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -116,6 +135,7 @@ function UiKitPageContent({
   const [sourceSearch, setSourceSearch] = useState('')
   const [region, setRegion] = useState<string | null>(null)
   const [dialogRegion, setDialogRegion] = useState('us-east')
+  const [confirmationOpen, setConfirmationOpen] = useState(false)
   const locale = i18n.resolvedLanguage?.startsWith('zh-TW')
     ? 'zh-TW'
     : i18n.resolvedLanguage?.startsWith('zh')
@@ -651,49 +671,73 @@ function UiKitPageContent({
               </DialogContent>
             </Dialog>
 
-            <AlertDialog>
-              <DialogTrigger asChild>
-                <Button variant="destructive">{t('uiKit.overlays.alertDialogTrigger')}</Button>
-              </DialogTrigger>
-              <AlertDialogContent>
-                <DialogHeader>
-                  <DialogTitle>{t('uiKit.overlays.alertDialogTitle')}</DialogTitle>
-                  <DialogDescription>
+            <SourceAlertDialog open={confirmationOpen} onOpenChange={setConfirmationOpen}>
+              <SourceAlertDialogTrigger render={<SourceButton tone="destructive" />}>
+                {t('uiKit.overlays.alertDialogTrigger')}
+              </SourceAlertDialogTrigger>
+              <SourceAlertDialogContent>
+                <SourceAlertDialogHeader>
+                  <SourceAlertDialogTitle>
+                    {t('uiKit.overlays.alertDialogTitle')}
+                  </SourceAlertDialogTitle>
+                  <SourceAlertDialogDescription>
                     {t('uiKit.overlays.alertDialogDescription')}
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button variant="secondary">{t('uiKit.overlays.cancel')}</Button>
-                  </DialogClose>
-                  <DialogClose asChild>
-                    <Button variant="destructive">{t('uiKit.overlays.confirm')}</Button>
-                  </DialogClose>
-                </DialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                  </SourceAlertDialogDescription>
+                </SourceAlertDialogHeader>
+                <SourceAlertDialogFooter>
+                  <SourceAlertDialogCancelButton variant="secondary">
+                    {t('uiKit.overlays.cancel')}
+                  </SourceAlertDialogCancelButton>
+                  <SourceAlertDialogConfirmButton onClick={() => setConfirmationOpen(false)}>
+                    {t('uiKit.overlays.confirm')}
+                  </SourceAlertDialogConfirmButton>
+                </SourceAlertDialogFooter>
+              </SourceAlertDialogContent>
+            </SourceAlertDialog>
 
-            <Drawer>
-              <DialogTrigger asChild>
-                <Button variant="secondary">{t('uiKit.overlays.drawerTrigger')}</Button>
-              </DialogTrigger>
-              <DrawerContent>
-                <DialogHeader>
-                  <DialogTitle>{t('uiKit.overlays.drawerTitle')}</DialogTitle>
-                  <DialogDescription>{t('uiKit.overlays.drawerDescription')}</DialogDescription>
-                </DialogHeader>
-                <DialogBody className="space-y-3">
-                  {Array.from({ length: 24 }, (_, index) => (
-                    <p key={index}>{t('uiKit.overlays.drawerBody')}</p>
-                  ))}
-                </DialogBody>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button variant="secondary">{t('uiKit.overlays.close')}</Button>
-                  </DialogClose>
-                </DialogFooter>
-              </DrawerContent>
-            </Drawer>
+            <SourceDrawer swipeDirection="right">
+              <SourceDrawerTrigger render={<SourceButton variant="secondary" />}>
+                {t('uiKit.overlays.drawerTrigger')}
+              </SourceDrawerTrigger>
+              <SourceDrawerPortal>
+                <SourceDrawerBackdrop className="fixed" />
+                <SourceDrawerViewport>
+                  <SourceDrawerPopup>
+                    <div className="flex shrink-0 items-start justify-between gap-2 px-6 pt-6">
+                      <div>
+                        <SourceDrawerTitle className="system-md-semibold text-text-primary">
+                          {t('uiKit.overlays.drawerTitle')}
+                        </SourceDrawerTitle>
+                        <SourceDrawerDescription className="system-sm-regular text-text-tertiary">
+                          {t('uiKit.overlays.drawerDescription')}
+                        </SourceDrawerDescription>
+                      </div>
+                      <SourceDrawerClose
+                        render={
+                          <SourceButton
+                            variant="ghost"
+                            size="small"
+                            aria-label={t('common.close')}
+                          />
+                        }
+                      >
+                        <X className="size-4" aria-hidden="true" />
+                      </SourceDrawerClose>
+                    </div>
+                    <SourceDrawerContent className="space-y-3">
+                      {Array.from({ length: 24 }, (_, index) => (
+                        <p key={index}>{t('uiKit.overlays.drawerBody')}</p>
+                      ))}
+                    </SourceDrawerContent>
+                    <div className="flex shrink-0 justify-end px-6 pb-6">
+                      <SourceDrawerClose render={<SourceButton variant="secondary" />}>
+                        {t('uiKit.overlays.close')}
+                      </SourceDrawerClose>
+                    </div>
+                  </SourceDrawerPopup>
+                </SourceDrawerViewport>
+              </SourceDrawerPortal>
+            </SourceDrawer>
 
             <ActionRow
               aria-pressed={selectedCard}

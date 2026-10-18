@@ -42,7 +42,13 @@ function actionProps(action?: React.ReactNode) {
   return { children: action.props.children, onClick: action.props.onClick }
 }
 
-export function ToastProvider({ children }: { children: React.ReactNode; closeLabel: string }) {
+export function ToastProvider({
+  children,
+  closeLabel,
+}: {
+  children: React.ReactNode
+  closeLabel: string
+}) {
   const [manager] = React.useState(createToastManager)
   const sourceToast = React.useMemo(() => createToast(manager), [manager])
 
@@ -83,7 +89,7 @@ export function ToastProvider({ children }: { children: React.ReactNode; closeLa
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <Toaster toastManager={manager} limit={5} />
+      <Toaster toastManager={manager} limit={5} closeLabel={closeLabel} />
     </ToastContext.Provider>
   )
 }
@@ -92,4 +98,8 @@ export function useToast() {
   const value = React.useContext(ToastContext)
   if (!value) throw new Error('useToast must be used within ToastProvider.')
   return value
+}
+
+export function useOptionalToast() {
+  return React.useContext(ToastContext)
 }

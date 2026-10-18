@@ -4,6 +4,8 @@
 
 This is the review contract for all new and existing content inside Tapstate Web and Cloud. The outer `app-shell` and main surface, navigation, product marks, and product-specific graph canvas remain Tapstate-owned. Every ordinary control and overlay inside those boundaries follows the vendored Dify UI package and its semantic tokens. The exact component APIs and token source are indexed in [design-system.md](design-system.md).
 
+The system-level interaction inventory and per-flow review protocol live in [ui-interaction-audit.md](ui-interaction-audit.md). Use it whenever a page opens an overlay, displays feedback, accepts a value, or changes data.
+
 Source baseline: Dify `3552815c89415716dfd9cac80fd7c73aac3b051e`, 2026-10-17. The component implementation comes from `packages/dify-ui` in this repository. Page rules below were read from the upstream knowledge list header, dataset list/card, document header, and the package's styling/overlay/form guides. When a rule and a remembered screenshot disagree, inspect that pinned source and record the decision before inventing a new variant.
 
 ## Visual philosophy

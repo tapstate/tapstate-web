@@ -1,203 +1,118 @@
-import { Menu as MenuPrimitive } from '@base-ui/react/menu'
-import { CheckIcon, ChevronRightIcon } from 'lucide-react'
+import {
+  DropdownMenu as SourceDropdownMenu,
+  DropdownMenuCheckboxItem as SourceCheckboxItem,
+  DropdownMenuCheckboxItemIndicator as SourceCheckboxIndicator,
+  DropdownMenuContent as SourceContent,
+  DropdownMenuGroup as SourceGroup,
+  DropdownMenuGroupLabel as SourceGroupLabel,
+  DropdownMenuItem as SourceItem,
+  DropdownMenuPortal as SourcePortal,
+  DropdownMenuRadioGroup as SourceRadioGroup,
+  DropdownMenuRadioItem as SourceRadioItem,
+  DropdownMenuRadioItemIndicator as SourceRadioIndicator,
+  DropdownMenuSeparator as SourceSeparator,
+  DropdownMenuSub as SourceSub,
+  DropdownMenuSubContent as SourceSubContent,
+  DropdownMenuSubTrigger as SourceSubTrigger,
+  DropdownMenuTrigger as SourceTrigger,
+} from '@langgenius/dify-ui/dropdown-menu'
+import { Kbd } from '@langgenius/dify-ui/kbd'
 import * as React from 'react'
 
-import { cn } from './cn'
-
-interface DropdownMenuRootProps {
-  children?: React.ReactNode
-  open?: boolean
-  defaultOpen?: boolean
-  modal?: boolean
-  onOpenChange?: (open: boolean) => void
-}
-
-type DropdownMenuTriggerProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  asChild?: boolean
-  render?: React.ReactElement
-}
-
-interface PositionProps {
+type PositionProps = {
   align?: 'start' | 'center' | 'end'
   alignOffset?: number
   side?: 'top' | 'right' | 'bottom' | 'left'
   sideOffset?: number
 }
 
-function DropdownMenu(props: DropdownMenuRootProps) {
-  return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />
+type TriggerProps = React.ComponentProps<typeof SourceTrigger> & {
+  asChild?: boolean
 }
 
-function DropdownMenuPortal({ children }: { children?: React.ReactNode }) {
-  return <MenuPrimitive.Portal data-slot="dropdown-menu-portal">{children}</MenuPrimitive.Portal>
+function DropdownMenu(props: React.ComponentProps<typeof SourceDropdownMenu>) {
+  return <SourceDropdownMenu {...props} />
 }
 
-function DropdownMenuTrigger({
-  asChild = false,
-  render,
-  children,
-  ...props
-}: DropdownMenuTriggerProps) {
+function DropdownMenuPortal(props: React.ComponentProps<typeof SourcePortal>) {
+  return <SourcePortal {...props} />
+}
+
+function DropdownMenuTrigger({ asChild = false, children, render, ...props }: TriggerProps) {
   const child = render ?? (asChild && React.isValidElement(children) ? children : undefined)
   return (
-    <MenuPrimitive.Trigger data-slot="dropdown-menu-trigger" render={child} {...props}>
+    <SourceTrigger data-slot="dropdown-menu-trigger" render={child} {...props}>
       {child ? undefined : children}
-    </MenuPrimitive.Trigger>
+    </SourceTrigger>
   )
 }
 
 function DropdownMenuContent({
   align = 'start',
-  alignOffset = 0,
   side = 'bottom',
-  sideOffset = 4,
-  className,
   ...props
-}: React.ComponentProps<'div'> & PositionProps) {
-  return (
-    <MenuPrimitive.Portal>
-      <MenuPrimitive.Positioner
-        className="ui-menu-positioner"
-        align={align}
-        alignOffset={alignOffset}
-        side={side}
-        sideOffset={sideOffset}
-      >
-        <MenuPrimitive.Popup
-          data-slot="dropdown-menu-content"
-          className={cn('ui-menu-popup', className)}
-          {...props}
-        />
-      </MenuPrimitive.Positioner>
-    </MenuPrimitive.Portal>
-  )
+}: React.ComponentProps<typeof SourceContent> & PositionProps) {
+  return <SourceContent placement={align === 'center' ? side : `${side}-${align}`} {...props} />
 }
 
-function DropdownMenuGroup(props: React.ComponentProps<'div'>) {
-  return <MenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />
+function DropdownMenuGroup(props: React.ComponentProps<typeof SourceGroup>) {
+  return <SourceGroup {...props} />
 }
 
-function DropdownMenuLabel({ className, ...props }: React.ComponentProps<'div'>) {
-  return <MenuPrimitive.GroupLabel className={cn('ui-menu-label', className)} {...props} />
+function DropdownMenuLabel(props: React.ComponentProps<typeof SourceGroupLabel>) {
+  return <SourceGroupLabel {...props} />
 }
 
-function DropdownMenuItem({
-  className,
-  variant = 'default',
-  ...props
-}: React.ComponentProps<'div'> & {
-  variant?: 'default' | 'destructive'
-  value?: string
-  disabled?: boolean
-  onSelect?: (event: Event) => void
-}) {
-  return (
-    <MenuPrimitive.Item
-      data-slot="dropdown-menu-item"
-      data-tone={variant === 'destructive' ? 'danger' : 'neutral'}
-      className={cn('ui-menu-item', className)}
-      {...props}
-    />
-  )
+function DropdownMenuItem(props: React.ComponentProps<typeof SourceItem>) {
+  return <SourceItem {...props} />
 }
 
-function DropdownMenuSub(props: DropdownMenuRootProps) {
-  return <MenuPrimitive.SubmenuRoot data-slot="dropdown-menu-sub" {...props} />
+function DropdownMenuSub(props: React.ComponentProps<typeof SourceSub>) {
+  return <SourceSub {...props} />
 }
 
-function DropdownMenuSubTrigger({ className, children, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <MenuPrimitive.SubmenuTrigger
-      data-slot="dropdown-menu-sub-trigger"
-      className={cn('ui-menu-item', className)}
-      {...props}
-    >
-      {children}
-      <ChevronRightIcon className="ui-menu-chevron" aria-hidden="true" size={14} />
-    </MenuPrimitive.SubmenuTrigger>
-  )
+function DropdownMenuSubTrigger(props: React.ComponentProps<typeof SourceSubTrigger>) {
+  return <SourceSubTrigger {...props} />
 }
 
-function DropdownMenuSubContent(props: React.ComponentProps<typeof DropdownMenuContent>) {
-  return (
-    <DropdownMenuContent align="start" alignOffset={-3} side="right" sideOffset={0} {...props} />
-  )
+function DropdownMenuSubContent(props: React.ComponentProps<typeof SourceSubContent>) {
+  return <SourceSubContent {...props} />
 }
 
 function DropdownMenuCheckboxItem({
-  className,
   children,
   ...props
-}: React.ComponentProps<'div'> & {
-  checked?: boolean
-  defaultChecked?: boolean
-  onCheckedChange?: (checked: boolean) => void
-  disabled?: boolean
-  name?: string
-  value?: string
-}) {
+}: React.ComponentProps<typeof SourceCheckboxItem>) {
   return (
-    <MenuPrimitive.CheckboxItem
-      data-slot="dropdown-menu-checkbox-item"
-      className={cn('ui-menu-item ui-menu-check-item', className)}
-      {...props}
-    >
-      <MenuPrimitive.CheckboxItemIndicator className="ui-menu-indicator">
-        <CheckIcon aria-hidden="true" size={14} />
-      </MenuPrimitive.CheckboxItemIndicator>
+    <SourceCheckboxItem {...props}>
+      <SourceCheckboxIndicator />
       {children}
-    </MenuPrimitive.CheckboxItem>
+    </SourceCheckboxItem>
   )
 }
 
-function DropdownMenuRadioGroup({
-  value,
-  defaultValue,
-  onValueChange,
-  children,
-}: {
-  value?: string
-  defaultValue?: string
-  onValueChange?: (value: string) => void
-  children?: React.ReactNode
-}) {
-  return (
-    <MenuPrimitive.RadioGroup
-      data-slot="dropdown-menu-radio-group"
-      value={value}
-      defaultValue={defaultValue}
-      onValueChange={onValueChange}
-    >
-      {children}
-    </MenuPrimitive.RadioGroup>
-  )
+function DropdownMenuRadioGroup(props: React.ComponentProps<typeof SourceRadioGroup<string>>) {
+  return <SourceRadioGroup<string> {...props} />
 }
 
 function DropdownMenuRadioItem({
-  className,
   children,
   ...props
-}: React.ComponentProps<'div'> & { value: string; disabled?: boolean }) {
+}: React.ComponentProps<typeof SourceRadioItem<string>>) {
   return (
-    <MenuPrimitive.RadioItem
-      data-slot="dropdown-menu-radio-item"
-      className={cn('ui-menu-item ui-menu-check-item', className)}
-      {...props}
-    >
-      <MenuPrimitive.RadioItemIndicator className="ui-menu-indicator">
-        <CheckIcon aria-hidden="true" size={14} />
-      </MenuPrimitive.RadioItemIndicator>
+    <SourceRadioItem<string> {...props}>
+      <SourceRadioIndicator />
       {children}
-    </MenuPrimitive.RadioItem>
+    </SourceRadioItem>
   )
 }
 
-function DropdownMenuSeparator({ className, ...props }: React.ComponentProps<'div'>) {
-  return <MenuPrimitive.Separator className={cn('ui-menu-separator', className)} {...props} />
+function DropdownMenuSeparator(props: React.ComponentProps<typeof SourceSeparator>) {
+  return <SourceSeparator {...props} />
 }
 
-function DropdownMenuShortcut({ className, ...props }: React.ComponentProps<'kbd'>) {
-  return <kbd className={cn('ui-menu-shortcut', className)} {...props} />
+function DropdownMenuShortcut(props: React.ComponentProps<typeof Kbd>) {
+  return <Kbd {...props} />
 }
 
 export {

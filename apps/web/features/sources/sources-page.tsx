@@ -3,11 +3,11 @@ import type { ComponentType, SVGProps } from 'react'
 import { SearchInput } from '@langgenius/dify-ui/search-input'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
+import { useOptionalToast } from '@tapstate-web/ui'
 import {
   Activity,
   AlertCircle,
   ArrowLeft,
-  CheckCircle2,
   ChevronRight,
   Columns,
   Database,
@@ -154,6 +154,7 @@ export function SourcesPage({
   onArrivalCreateClosed,
 }: SourcesPageProps = {}) {
   const { t } = useTranslation()
+  const toast = useOptionalToast()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const apiFetch = useAuthStore((state) => state.apiFetch)
@@ -439,9 +440,10 @@ export function SourcesPage({
 
   useEffect(() => {
     if (!successMessage) return
+    toast?.show({ tone: 'success', title: successMessage, duration: 4000 })
     const timeoutId = window.setTimeout(() => setSuccessMessage(''), 4000)
     return () => window.clearTimeout(timeoutId)
-  }, [successMessage])
+  }, [successMessage, setSuccessMessage, toast])
 
   useEffect(() => {
     if (!selectedSource || !(sourceSchemaQuery.error instanceof SourceClientError)) return
@@ -507,19 +509,6 @@ export function SourcesPage({
           <Button type="button" variant="ghost" size="sm" onClick={() => setSampleRemoveError('')}>
             {t('sources.samples.dismiss')}
           </Button>
-        </div>
-      )}
-
-      {successMessage && (
-        <div
-          className="pointer-events-none fixed top-4 right-4 z-50"
-          role="status"
-          aria-live="polite"
-        >
-          <div className="border-border bg-background text-foreground flex items-center gap-2 rounded-lg border px-3 py-2 text-[13px] shadow-lg">
-            <CheckCircle2 className="text-primary size-4 shrink-0" aria-hidden="true" />
-            <span>{successMessage}</span>
-          </div>
         </div>
       )}
 

@@ -79,7 +79,7 @@ export function AppHeader() {
                 key={locale}
                 className="justify-between"
                 disabled={i18n.language === locale}
-                onSelect={() => switchLocale(locale)}
+                onClick={() => switchLocale(locale)}
               >
                 {t(`app.languageOptions.${locale}`)}
                 {i18n.language === locale && (
