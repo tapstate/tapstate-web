@@ -722,39 +722,6 @@
     line-height: 20px;
   }
 
-  .ui-table-container {
-    max-width: 100%;
-    overflow-x: auto;
-  }
-
-  .ui-table {
-    width: 100%;
-    border-collapse: collapse;
-    color: var(--ts-text-primary);
-    font-size: 13px;
-    line-height: 20px;
-    text-align: start;
-  }
-
-  .ui-table th {
-    border-bottom: 1px solid var(--ts-border-default);
-    padding: 8px 12px;
-    color: var(--ts-text-tertiary);
-    font-size: 11px;
-    font-weight: 500;
-    text-align: start;
-  }
-
-  .ui-table td {
-    border-bottom: 1px solid var(--ts-border-subtle);
-    padding: 10px 12px;
-    vertical-align: middle;
-  }
-
-  .ui-table tbody tr:hover {
-    background: var(--ts-bg-hover);
-  }
-
   .ui-scroll-area {
     position: relative;
     overflow: hidden;

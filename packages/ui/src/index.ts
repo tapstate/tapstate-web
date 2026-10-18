@@ -1,21 +1,6 @@
 export { Button, IconButton } from './button'
 export type { ButtonProps, ButtonSize, ButtonTone, ButtonVariant } from './button'
-export {
-  ActionRow,
-  EmptyState,
-  Panel,
-  RadioCard,
-  SelectableCard,
-  Skeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from './content'
+export { ActionRow, EmptyState, Panel, RadioCard, SelectableCard, Skeleton } from './content'
 export { cn } from './cn'
 export {
   Dialog,

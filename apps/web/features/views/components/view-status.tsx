@@ -1,9 +1,9 @@
+import { StatusDot } from '@langgenius/dify-ui/status-dot'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import type { ViewFreshness, ViewLocation } from '@/service/view-client'
 
-import { cn } from '@/lib/utils'
 import { MANAGED_VIEW_STORE_SOURCE_ID } from '@/service/source-client'
 
 import { durationParts } from '../views-model'
@@ -40,12 +40,15 @@ export function useFreshnessText() {
 
 export function ViewStatus({ status }: { status: ViewFreshness }) {
   const text = useFreshnessText()
+  const dotStatus = {
+    fresh: 'success',
+    stale: 'warning',
+    loading: 'normal',
+    'not-loaded': 'disabled',
+  } as const
   return (
     <span className="views-status">
-      <span
-        className={cn('views-status__dot', `views-status__dot--${status.state}`)}
-        aria-hidden="true"
-      />
+      <StatusDot status={dotStatus[status.state]} />
       {text(status)}
     </span>
   )

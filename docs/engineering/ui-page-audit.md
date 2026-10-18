@@ -2,33 +2,33 @@
 
 Inventory captured from the current worktree on 2026-10-18. “Direct” means a source import exists in that file; it does **not** prove the whole page follows the design. Every row remains pending visual/state review until the evidence matrix in [DESIGN.md](DESIGN.md) is completed. Child components and dialogs must be included during each page review.
 
-| Page                                                                  | Current component source in page file | Upstream page recipe   | Review  |
-| --------------------------------------------------------------------- | ------------------------------------- | ---------------------- | ------- |
-| `apps/cloud/app/features/access/access-denied-page.tsx`               | inspect child components              | inspect by task        | Pending |
-| `apps/cloud/app/features/auth/auth-page.tsx`                          | old shared                            | form / creation flow   | Pending |
-| `apps/cloud/app/features/billing/billing-page.tsx`                    | inspect child components              | detail / monitoring    | Pending |
-| `apps/cloud/app/features/clusters/clusters-page.tsx`                  | old shared                            | resource list / detail | Pending |
-| `apps/cloud/app/features/onboarding/onboarding-page.tsx`              | old shared                            | form / creation flow   | Pending |
-| `apps/cloud/app/features/onboarding/provisioning-view.tsx`            | old shared                            | form / creation flow   | Pending |
-| `apps/cloud/app/features/organizations/organizations-page.tsx`        | old shared                            | resource list / detail | Pending |
-| `apps/cloud/app/features/overview/cloud-overview-view.tsx`            | vendored direct, old shared           | detail / monitoring    | Pending |
-| `apps/cloud/app/features/overview/overview-page.tsx`                  | inspect child components              | detail / monitoring    | Pending |
-| `apps/cloud/app/features/settings/settings-page.tsx`                  | old shared                            | form / creation flow   | Pending |
-| `apps/web/features/ask-tapstate/ask-tapstate.tsx`                     | old Web UI                            | inspect by task        | Pending |
-| `apps/web/features/explorations/explorations-page.tsx`                | old Web UI                            | inspect by task        | Pending |
-| `apps/web/features/overview/overview-page.tsx`                        | old shared                            | detail / monitoring    | Pending |
-| `apps/web/features/pipelines/logs/pipeline-logs-page.tsx`             | old Web UI                            | inspect by task        | Pending |
-| `apps/web/features/pipelines/monitoring/pipeline-monitoring-page.tsx` | inspect child components              | detail / monitoring    | Pending |
-| `apps/web/features/pipelines/pages/pipeline-editor-page.tsx`          | old Web UI                            | inspect by task        | Pending |
-| `apps/web/features/pipelines/pages/pipelines-page.tsx`                | old Web UI                            | resource list / detail | Pending |
-| `apps/web/features/settings/state-store-page.tsx`                     | old Web UI                            | form / creation flow   | Pending |
-| `apps/web/features/sources/pages/source-detail-page.tsx`              | inspect child components              | resource list / detail | Pending |
-| `apps/web/features/sources/pages/source-table-detail-page.tsx`        | inspect child components              | resource list / detail | Pending |
-| `apps/web/features/sources/pages/sources-catalog-page.tsx`            | inspect child components              | resource list / detail | Pending |
-| `apps/web/features/sources/sources-page.tsx`                          | vendored direct, old shared           | resource list / detail | Pending |
-| `apps/web/features/views/view-collection-browser-page.tsx`            | old Web UI                            | resource list / detail | Pending |
-| `apps/web/features/views/view-detail-page.tsx`                        | old Web UI                            | resource list / detail | Pending |
-| `apps/web/features/views/views-page.tsx`                              | old Web UI                            | resource list / detail | Pending |
+| Page                                                                  | Current component source in page file                     | Upstream page recipe   | Review  |
+| --------------------------------------------------------------------- | --------------------------------------------------------- | ---------------------- | ------- |
+| `apps/cloud/app/features/access/access-denied-page.tsx`               | inspect child components                                  | inspect by task        | Pending |
+| `apps/cloud/app/features/auth/auth-page.tsx`                          | old shared                                                | form / creation flow   | Pending |
+| `apps/cloud/app/features/billing/billing-page.tsx`                    | inspect child components                                  | detail / monitoring    | Pending |
+| `apps/cloud/app/features/clusters/clusters-page.tsx`                  | old shared                                                | resource list / detail | Pending |
+| `apps/cloud/app/features/onboarding/onboarding-page.tsx`              | old shared                                                | form / creation flow   | Pending |
+| `apps/cloud/app/features/onboarding/provisioning-view.tsx`            | old shared                                                | form / creation flow   | Pending |
+| `apps/cloud/app/features/organizations/organizations-page.tsx`        | old shared                                                | resource list / detail | Pending |
+| `apps/cloud/app/features/overview/cloud-overview-view.tsx`            | vendored direct, old shared                               | detail / monitoring    | Pending |
+| `apps/cloud/app/features/overview/overview-page.tsx`                  | inspect child components                                  | detail / monitoring    | Pending |
+| `apps/cloud/app/features/settings/settings-page.tsx`                  | old shared                                                | form / creation flow   | Pending |
+| `apps/web/features/ask-tapstate/ask-tapstate.tsx`                     | old Web UI                                                | inspect by task        | Pending |
+| `apps/web/features/explorations/explorations-page.tsx`                | old Web UI                                                | inspect by task        | Pending |
+| `apps/web/features/overview/overview-page.tsx`                        | old shared                                                | detail / monitoring    | Pending |
+| `apps/web/features/pipelines/logs/pipeline-logs-page.tsx`             | old Web UI                                                | inspect by task        | Pending |
+| `apps/web/features/pipelines/monitoring/pipeline-monitoring-page.tsx` | inspect child components                                  | detail / monitoring    | Pending |
+| `apps/web/features/pipelines/pages/pipeline-editor-page.tsx`          | old Web UI                                                | inspect by task        | Pending |
+| `apps/web/features/pipelines/pages/pipelines-page.tsx`                | old Web UI                                                | resource list / detail | Pending |
+| `apps/web/features/settings/state-store-page.tsx`                     | old Web UI                                                | form / creation flow   | Pending |
+| `apps/web/features/sources/pages/source-detail-page.tsx`              | inspect child components                                  | resource list / detail | Pending |
+| `apps/web/features/sources/pages/source-table-detail-page.tsx`        | inspect child components                                  | resource list / detail | Pending |
+| `apps/web/features/sources/pages/sources-catalog-page.tsx`            | inspect child components                                  | resource list / detail | Pending |
+| `apps/web/features/sources/sources-page.tsx`                          | vendored direct, old shared                               | resource list / detail | Pending |
+| `apps/web/features/views/view-collection-browser-page.tsx`            | old Web UI                                                | resource list / detail | Pending |
+| `apps/web/features/views/view-detail-page.tsx`                        | old Web UI                                                | resource list / detail | Pending |
+| `apps/web/features/views/views-page.tsx`                              | source table pattern, vendored Badge/StatusDot, old shell | resource list / detail | Pending |
 
 ## Review record required for each page
 
@@ -59,3 +59,7 @@ Source inspected at the pinned revision: upstream `web/app/components/datasets/l
 | Overlays              | Dify package owns dialog portals, surface geometry and focus.                                                                                                            | The shared Dialog adapter delegates to source anatomy. Source deletion and bulk sample removal use source AlertDialog; the latter stays open on a refused/failed operation. Create/edit/test/sample dialogs still contain independent geometry and style overrides. Review real focus, pending and error states. |
 
 Source metadata text entry now uses the vendored Textarea through the shared adapter. Its controlled value and Formily adapter use `onValueChange`; the authenticated edit dialog still needs draft, validation and submit inspection.
+
+## Views list source alignment (code review only)
+
+`apps/web/features/views/views-page.tsx` now follows upstream `web/app/components/datasets/documents/components/list.tsx`, `document-list/components/document-table-row.tsx` and `style.module.css` for semantic table structure, 32 px header/rows, semantic divider/text/hover tokens, and source cell spacing. `ViewStatus` now maps fresh/stale/loading/not-loaded to source `StatusDot` with translated text. The old table wrapper and its local CSS have been removed. The Views shell, loading/empty/error states, other detail pages, authenticated viewport and keyboard/mobile review are still pending; this is not a completed page audit.

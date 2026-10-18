@@ -7,14 +7,6 @@ import type { ViewSummary } from '@/service/view-client'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { listSources } from '@/service/source-client'
 import { stateStoreSource } from '@/service/state-store-source'
 import { useAuthStore } from '@/stores/auth-store'
@@ -93,46 +85,47 @@ function ViewsList({ views }: { views: ViewSummary[] }) {
     <>
       <p className="text-foreground text-[13px] font-medium">{parts.join(' · ')}</p>
       <div className="views-table">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('views.table.name')}</TableHead>
-              <TableHead>{t('views.table.type')}</TableHead>
-              <TableHead className="views-table__wide">{t('views.table.storedIn')}</TableHead>
-              <TableHead>{t('views.table.status')}</TableHead>
-              <TableHead className="views-table__wide">{t('views.table.documents')}</TableHead>
-              <TableHead className="views-table__wide">{t('views.table.lastChange')}</TableHead>
-              <TableHead>{t('views.table.maintainedBy')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        <table className="text-text-secondary w-full max-w-full min-w-175 border-collapse border-0 text-sm">
+          <thead className="border-divider-subtle text-text-tertiary h-8 border-b text-xs/8 font-medium uppercase [&>tr>th]:text-left [&>tr>th]:font-[weight:inherit]">
+            <tr>
+              <th>{t('views.table.name')}</th>
+              <th>{t('views.table.type')}</th>
+              <th>{t('views.table.storedIn')}</th>
+              <th>{t('views.table.status')}</th>
+              <th>{t('views.table.documents')}</th>
+              <th>{t('views.table.lastChange')}</th>
+              <th>{t('views.table.maintainedBy')}</th>
+            </tr>
+          </thead>
+          <tbody>
             {sortViews(views).map((view) => (
-              <TableRow key={view.id}>
-                <TableCell>
+              <tr
+                key={view.id}
+                className="border-divider-subtle hover:bg-background-default-hover h-8 border-b"
+              >
+                <td>
                   <Link to="/views/$viewId" params={{ viewId: view.id }} className="views-link">
                     {view.location.collection}
                   </Link>
-                </TableCell>
-                <TableCell>
+                </td>
+                <td>
                   <Badge variant="dimm" uppercase={false}>
                     {t(`views.kind.${view.kind}`)}
                   </Badge>
-                </TableCell>
-                <TableCell className="views-table__wide">
+                </td>
+                <td>
                   <StoredIn location={view.location} />
-                </TableCell>
-                <TableCell>
+                </td>
+                <td>
                   <ViewStatus status={view.status} />
-                </TableCell>
-                <TableCell className="views-table__wide">
-                  {view.documents === null ? '—' : view.documents.toLocaleString()}
-                </TableCell>
-                <TableCell className="views-table__wide">
+                </td>
+                <td>{view.documents === null ? '—' : view.documents.toLocaleString()}</td>
+                <td>
                   {view.lastAppliedAt === null
                     ? '—'
                     : t('views.ago', { age: duration((now - view.lastAppliedAt) / 1000) })}
-                </TableCell>
-                <TableCell>
+                </td>
+                <td>
                   <Link
                     to="/pipelines/$pipelineId/edit"
                     params={{ pipelineId: view.pipelineId }}
@@ -140,11 +133,11 @@ function ViewsList({ views }: { views: ViewSummary[] }) {
                   >
                     {view.pipelineId}
                   </Link>
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ))}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
       <p className="text-muted-foreground text-[12px]">{t('views.footnote')}</p>
     </>

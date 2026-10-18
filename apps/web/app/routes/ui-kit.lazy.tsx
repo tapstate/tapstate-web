@@ -69,13 +69,6 @@ import {
   SelectableCard,
   Skeleton,
   Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableHeader,
-  TableRow,
   Textarea,
   ToastProvider,
   Tooltip,
@@ -568,39 +561,39 @@ function UiKitPageContent({
             </div>
             <div>
               <h3 className="mb-2 text-sm font-semibold">{t('uiKit.surfaces.tableTitle')}</h3>
-              <TableContainer className="max-w-full overflow-auto">
-                <Table className="min-w-[520px]">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('uiKit.surfaces.name')}</TableHead>
-                      <TableHead>{t('uiKit.surfaces.status')}</TableHead>
-                      <TableHead>{t('uiKit.surfaces.updated')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>{t('uiKit.surfaces.recordOne')}</TableCell>
-                      <TableCell>
+              <div className="max-w-full overflow-auto">
+                <table className="text-text-secondary w-full max-w-full min-w-130 border-collapse border-0 text-sm [&_td]:px-3 [&_td]:py-1.25 [&_th]:px-3">
+                  <thead className="border-divider-subtle text-text-tertiary h-8 border-b text-xs/8 font-medium uppercase [&>tr>th]:text-left [&>tr>th]:font-[weight:inherit]">
+                    <tr className="border-divider-subtle hover:bg-background-default-hover h-8 border-b">
+                      <th>{t('uiKit.surfaces.name')}</th>
+                      <th>{t('uiKit.surfaces.status')}</th>
+                      <th>{t('uiKit.surfaces.updated')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-divider-subtle hover:bg-background-default-hover h-8 border-b">
+                      <td>{t('uiKit.surfaces.recordOne')}</td>
+                      <td>
                         <span className="system-xs-regular text-text-secondary inline-flex items-center gap-1.5">
                           <StatusDot status="success" />
                           {t('uiKit.surfaces.ready')}
                         </span>
-                      </TableCell>
-                      <TableCell>{t('uiKit.surfaces.timeOne')}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>{t('uiKit.surfaces.recordTwo')}</TableCell>
-                      <TableCell>
+                      </td>
+                      <td>{t('uiKit.surfaces.timeOne')}</td>
+                    </tr>
+                    <tr className="border-divider-subtle hover:bg-background-default-hover h-8 border-b">
+                      <td>{t('uiKit.surfaces.recordTwo')}</td>
+                      <td>
                         <span className="system-xs-regular text-text-secondary inline-flex items-center gap-1.5">
                           <StatusDot status="warning" />
                           {t('uiKit.surfaces.inProgress')}
                         </span>
-                      </TableCell>
-                      <TableCell>{t('uiKit.surfaces.timeTwo')}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                      </td>
+                      <td>{t('uiKit.surfaces.timeTwo')}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </section>

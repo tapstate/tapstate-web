@@ -101,37 +101,3 @@ export function Skeleton({ className, ...props }: React.ComponentProps<'div'>) {
     <SkeletonRectangle aria-hidden="true" className={className} data-slot="skeleton" {...props} />
   )
 }
-
-export function TableContainer({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div className={cn('ui-table-container', className)} data-slot="table-container" {...props} />
-  )
-}
-
-export function Table({ className, ...props }: React.ComponentProps<'table'>) {
-  return <table className={cn('ui-table', className)} data-slot="table" {...props} />
-}
-
-export function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
-  return <thead className={className} data-slot="table-header" {...props} />
-}
-
-export function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {
-  return <tbody className={className} data-slot="table-body" {...props} />
-}
-
-export function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
-  return <tfoot className={className} data-slot="table-footer" {...props} />
-}
-
-export function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
-  return <tr className={className} data-slot="table-row" {...props} />
-}
-
-export function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
-  return <th className={className} data-slot="table-head" {...props} />
-}
-
-export function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
-  return <td className={className} data-slot="table-cell" {...props} />
-}
