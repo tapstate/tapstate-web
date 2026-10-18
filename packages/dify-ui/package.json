@@ -8,6 +8,10 @@
       "types": "./src/alert/index.tsx",
       "import": "./src/alert/index.tsx"
     },
+    "./badge": {
+      "types": "./src/badge/index.tsx",
+      "import": "./src/badge/index.tsx"
+    },
     "./search-input": {
       "types": "./src/search-input/index.tsx",
       "import": "./src/search-input/index.tsx"

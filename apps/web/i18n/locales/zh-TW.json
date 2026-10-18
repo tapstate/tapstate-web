@@ -138,6 +138,9 @@
       "regionTwo": "西歐"
     },
     "feedback": {
+      "badgeDefault": "預設徽標",
+      "badgeDimmed": "淡化徽標",
+      "badgeCornerMark": "角標",
       "alertTitle": "變更已儲存",
       "alertDescription": "目前畫面已反映最新的工作區狀態。",
       "toastInfo": "同步已開始",

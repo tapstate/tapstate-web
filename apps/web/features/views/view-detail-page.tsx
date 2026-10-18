@@ -48,7 +48,11 @@ export function ViewDetailPage({ viewId }: { viewId: string }) {
             <h1 className="text-foreground truncate text-[15px] font-semibold">
               {view?.location.collection ?? viewId}
             </h1>
-            {view && <Badge variant="secondary">{t(`views.kind.${view.kind}`)}</Badge>}
+            {view && (
+              <Badge variant="dimm" uppercase={false}>
+                {t(`views.kind.${view.kind}`)}
+              </Badge>
+            )}
             {view && (
               <span className="views-pill">
                 <ViewStatus status={view.status} />

@@ -2,7 +2,6 @@ export { Button, IconButton } from './button'
 export type { ButtonProps, ButtonSize, ButtonTone, ButtonVariant } from './button'
 export {
   ActionRow,
-  Badge,
   EmptyState,
   Panel,
   RadioCard,
@@ -17,7 +16,6 @@ export {
   TableHeader,
   TableRow,
 } from './content'
-export type { BadgeProps } from './content'
 export { cn } from './cn'
 export {
   Dialog,

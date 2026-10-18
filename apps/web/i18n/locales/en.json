@@ -138,6 +138,9 @@
       "regionTwo": "Europe West"
     },
     "feedback": {
+      "badgeDefault": "Default badge",
+      "badgeDimmed": "Dimmed badge",
+      "badgeCornerMark": "Corner mark",
       "alertTitle": "Changes saved",
       "alertDescription": "The current view reflects the latest workspace state.",
       "toastInfo": "Sync started",

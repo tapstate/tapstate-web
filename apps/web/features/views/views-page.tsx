@@ -114,7 +114,9 @@ function ViewsList({ views }: { views: ViewSummary[] }) {
                   </Link>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="secondary">{t(`views.kind.${view.kind}`)}</Badge>
+                  <Badge variant="dimm" uppercase={false}>
+                    {t(`views.kind.${view.kind}`)}
+                  </Badge>
                 </TableCell>
                 <TableCell className="views-table__wide">
                   <StoredIn location={view.location} />

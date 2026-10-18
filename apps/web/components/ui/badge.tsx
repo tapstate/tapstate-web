@@ -1,2 +1,1 @@
-export { Badge } from '@tapstate-web/ui'
-export type { BadgeProps } from '@tapstate-web/ui'
+export { default as Badge } from '@langgenius/dify-ui/badge'

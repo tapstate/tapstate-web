@@ -12,6 +12,7 @@ import {
   AlertDialogTitle as SourceAlertDialogTitle,
   AlertDialogTrigger as SourceAlertDialogTrigger,
 } from '@langgenius/dify-ui/alert-dialog'
+import SourceBadge from '@langgenius/dify-ui/badge'
 import { Button as SourceButton } from '@langgenius/dify-ui/button'
 import {
   Drawer as SourceDrawer,
@@ -27,10 +28,10 @@ import {
 } from '@langgenius/dify-ui/drawer'
 import { Input as SourceInput } from '@langgenius/dify-ui/input'
 import { SearchInput as SourceSearchInput } from '@langgenius/dify-ui/search-input'
+import { StatusDot } from '@langgenius/dify-ui/status-dot'
 import { createLazyFileRoute } from '@tanstack/react-router'
 import {
   ActionRow,
-  Badge,
   Button,
   Checkbox,
   Dialog,
@@ -143,21 +144,12 @@ function UiKitPageContent({
       ? 'zh-CN'
       : 'en'
   const variants = ['primary', 'secondary', 'tertiary', 'ghost', 'destructive'] as const
-  const badgeTones = ['neutral', 'brand', 'success', 'warning', 'danger', 'info'] as const
   const variantLabels = {
     primary: t('uiKit.buttons.variantPrimary'),
     secondary: t('uiKit.buttons.variantSecondary'),
     tertiary: t('uiKit.buttons.variantTertiary'),
     ghost: t('uiKit.buttons.variantGhost'),
     destructive: t('uiKit.buttons.variantDestructive'),
-  }
-  const toneLabels = {
-    neutral: t('uiKit.tones.neutral'),
-    brand: t('uiKit.tones.brand'),
-    success: t('uiKit.tones.success'),
-    warning: t('uiKit.tones.warning'),
-    danger: t('uiKit.tones.danger'),
-    info: t('uiKit.tones.info'),
   }
 
   const runPromise = (shouldReject: boolean) => {
@@ -411,8 +403,14 @@ function UiKitPageContent({
               </SelectableCard>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Badge tone="success">{t('uiKit.selection.selected')}</Badge>
-              <Badge>{t('uiKit.selection.notSelected')}</Badge>
+              <span className="system-xs-regular text-text-secondary inline-flex items-center gap-1.5">
+                <StatusDot status="success" />
+                {t('uiKit.selection.selected')}
+              </span>
+              <span className="system-xs-regular text-text-tertiary inline-flex items-center gap-1.5">
+                <StatusDot status="disabled" />
+                {t('uiKit.selection.notSelected')}
+              </span>
             </div>
           </Panel>
         </section>
@@ -423,11 +421,11 @@ function UiKitPageContent({
           </h2>
           <Panel className="space-y-4 p-4">
             <div className="flex flex-wrap gap-2">
-              {badgeTones.map((tone) => (
-                <Badge key={tone} tone={tone}>
-                  {toneLabels[tone]}
-                </Badge>
-              ))}
+              <SourceBadge>{t('uiKit.feedback.badgeDefault')}</SourceBadge>
+              <SourceBadge variant="dimm">{t('uiKit.feedback.badgeDimmed')}</SourceBadge>
+              <SourceBadge size="xs" hasRedCornerMark>
+                {t('uiKit.feedback.badgeCornerMark')}
+              </SourceBadge>
             </div>
             <div className="space-y-2">
               <h3 className="system-sm-semibold text-text-primary">Alert</h3>
@@ -583,14 +581,20 @@ function UiKitPageContent({
                     <TableRow>
                       <TableCell>{t('uiKit.surfaces.recordOne')}</TableCell>
                       <TableCell>
-                        <Badge tone="success">{t('uiKit.surfaces.ready')}</Badge>
+                        <span className="system-xs-regular text-text-secondary inline-flex items-center gap-1.5">
+                          <StatusDot status="success" />
+                          {t('uiKit.surfaces.ready')}
+                        </span>
                       </TableCell>
                       <TableCell>{t('uiKit.surfaces.timeOne')}</TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell>{t('uiKit.surfaces.recordTwo')}</TableCell>
                       <TableCell>
-                        <Badge tone="warning">{t('uiKit.surfaces.inProgress')}</Badge>
+                        <span className="system-xs-regular text-text-secondary inline-flex items-center gap-1.5">
+                          <StatusDot status="warning" />
+                          {t('uiKit.surfaces.inProgress')}
+                        </span>
                       </TableCell>
                       <TableCell>{t('uiKit.surfaces.timeTwo')}</TableCell>
                     </TableRow>

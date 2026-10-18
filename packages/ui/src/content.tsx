@@ -5,32 +5,6 @@ import * as React from 'react'
 
 import { cn } from './cn'
 
-type Tone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger' | 'info'
-
-export interface BadgeProps extends React.ComponentProps<'span'> {
-  tone?: Tone
-  variant?: 'default' | 'secondary' | 'destructive' | 'outline' | Tone
-}
-
-function normalizeTone(variant?: BadgeProps['variant'], tone?: Tone): Tone {
-  if (tone) return tone
-  if (variant === 'destructive') return 'danger'
-  if (variant === 'secondary' || variant === 'outline') return 'neutral'
-  if (variant === 'default') return 'brand'
-  return variant ?? 'neutral'
-}
-
-export function Badge({ className, variant, tone, ...props }: BadgeProps) {
-  return (
-    <span
-      className={cn('ui-badge', className)}
-      data-slot="badge"
-      data-tone={normalizeTone(variant, tone)}
-      {...props}
-    />
-  )
-}
-
 export function Panel({
   className,
   variant = 'bordered',

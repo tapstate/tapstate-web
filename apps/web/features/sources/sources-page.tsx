@@ -1336,7 +1336,9 @@ function SourceListRow({
           </span>
           <span className="text-text-primary font-medium">{source.name}</span>
           {isSampleSource(source.raw) && (
-            <Badge variant="secondary">{t('sources.samples.tag')}</Badge>
+            <Badge variant="dimm" uppercase={false}>
+              {t('sources.samples.tag')}
+            </Badge>
           )}
         </Button>
       </td>
