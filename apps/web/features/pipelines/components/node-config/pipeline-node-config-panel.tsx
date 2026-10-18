@@ -843,8 +843,7 @@ export function PipelineNodeConfigPanel({
               ref={descriptionRef}
               rows={1}
               value={description}
-              onChange={(event) => {
-                const nextDescription = event.target.value
+              onValueChange={(nextDescription) => {
                 setDescription(nextDescription)
                 onDescriptionChange?.(nextDescription)
               }}

@@ -103,7 +103,10 @@ export const FormilyInput = connect(
 
 export const FormilyTextarea = connect(
   Textarea as ComponentType<FormilyFieldProps>,
-  mapProps((props, field) => formilyProps(props, field as FormilyFieldState | undefined)),
+  mapProps((props, field) => {
+    const { onChange, ...mapped } = formilyProps(props, field as FormilyFieldState | undefined)
+    return { ...mapped, onValueChange: onChange }
+  }),
 )
 
 export const FormilyNumberInput = connect(

@@ -622,7 +622,7 @@ function PipelineWorkspaceNav({
                   rows={4}
                   value={description}
                   disabled={savePending}
-                  onChange={(event) => setDescription(event.target.value)}
+                  onValueChange={setDescription}
                 />
               </div>
               {saveError && (

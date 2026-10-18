@@ -55,6 +55,7 @@ import {
   Input,
   InputAddon,
   InputGroup,
+  InputGroupInput,
   Panel,
   Popover,
   PopoverContent,
@@ -133,6 +134,7 @@ function UiKitPageContent({
   const [cardValue, setCardValue] = useState('production')
   const [selectedCard, setSelectedCard] = useState(false)
   const [sourceSearch, setSourceSearch] = useState('')
+  const [notes, setNotes] = useState('')
   const [region, setRegion] = useState<string | null>(null)
   const [dialogRegion, setDialogRegion] = useState('us-east')
   const [confirmationOpen, setConfirmationOpen] = useState(false)
@@ -325,12 +327,14 @@ function UiKitPageContent({
                 <InputAddon aria-hidden="true">
                   <Search size={14} />
                 </InputAddon>
-                <Input placeholder={t('uiKit.fields.searchPlaceholder')} type="search" />
+                <InputGroupInput placeholder={t('uiKit.fields.searchPlaceholder')} type="search" />
               </InputGroup>
             </Field>
             <Field className="sm:col-span-2" id="ui-kit-notes" label={t('uiKit.fields.notes')}>
               <Textarea
                 className="min-h-20"
+                value={notes}
+                onValueChange={setNotes}
                 placeholder={t('uiKit.fields.notesPlaceholder')}
                 rows={3}
               />

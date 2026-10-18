@@ -52,8 +52,7 @@ export function JsEditor({ config, onChange }: TransformEditorProps) {
         rows={10}
         placeholder={t('pipelines.workspace.transform.script')}
         className="pipeline-transform__code-editor"
-        onChange={(event) => {
-          const next = event.target.value
+        onValueChange={(next) => {
           setScript(next)
           onChange?.({ body: mergeBody(config, { script: next, engine: language }) })
         }}

@@ -59,7 +59,7 @@ export {
 } from './dropdown-menu'
 export { Field, FieldDescription, FieldError, FieldLabel, useFieldContext } from './field'
 export type { FieldProps } from './field'
-export { Input, InputAddon, InputGroup, Textarea } from './input'
+export { Input, InputAddon, InputGroup, InputGroupInput, Textarea } from './input'
 export { Popover, PopoverClose, PopoverContent, PopoverTrigger } from './popover'
 export { Checkbox, RadioGroup, RadioGroupItem, Switch } from './selection'
 export { ScrollArea, ScrollBar } from './scroll-area'

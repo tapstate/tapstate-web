@@ -1,6 +1,11 @@
+import {
+  Field as SourceField,
+  FieldDescription as SourceFieldDescription,
+  FieldError as SourceFieldError,
+  FieldLabel as SourceFieldLabel,
+} from '@langgenius/dify-ui/field'
+import { SpinnerIcon } from '@langgenius/dify-ui/spinner'
 import * as React from 'react'
-
-import { cn } from './cn'
 
 interface FieldContextValue {
   id: string
@@ -10,6 +15,7 @@ interface FieldContextValue {
   required: boolean
   hasDescription: boolean
   hasError: boolean
+  pending: boolean
 }
 
 const FieldContext = React.createContext<FieldContextValue | null>(null)
@@ -49,14 +55,16 @@ export function Field({
       required,
       hasDescription: Boolean(description),
       hasError: Boolean(error),
+      pending,
     }),
-    [controlId, description, error, required],
+    [controlId, description, error, pending, required],
   )
 
   return (
     <FieldContext.Provider value={context}>
-      <div
-        className={cn('ui-field', className)}
+      <SourceField
+        className={className}
+        invalid={context.invalid}
         data-invalid={context.invalid || undefined}
         data-pending={pending || undefined}
         aria-busy={pending || undefined}
@@ -69,7 +77,7 @@ export function Field({
         {children}
         {description && <FieldDescription>{description}</FieldDescription>}
         {error && <FieldError>{error}</FieldError>}
-      </div>
+      </SourceField>
     </FieldContext.Provider>
   )
 }
@@ -77,30 +85,26 @@ export function Field({
 export function FieldLabel({ className, htmlFor, ...props }: React.ComponentProps<'label'>) {
   const context = useFieldContext()
   return (
-    <label
-      className={cn('ui-field-label', className)}
-      htmlFor={htmlFor ?? context?.id}
-      {...props}
-    />
+    <SourceFieldLabel className={className} htmlFor={htmlFor ?? context?.id} {...props}>
+      {props.children}
+      {context?.pending && <SpinnerIcon size="small" className="ms-1" />}
+    </SourceFieldLabel>
   )
 }
 
 export function FieldDescription({ className, id, ...props }: React.ComponentProps<'p'>) {
   const context = useFieldContext()
   return (
-    <p
-      className={cn('ui-field-description', className)}
-      id={id ?? context?.descriptionId}
-      {...props}
-    />
+    <SourceFieldDescription className={className} id={id ?? context?.descriptionId} {...props} />
   )
 }
 
 export function FieldError({ className, id, ...props }: React.ComponentProps<'p'>) {
   const context = useFieldContext()
   return (
-    <p
-      className={cn('ui-field-error', className)}
+    <SourceFieldError
+      match
+      className={className}
       id={id ?? context?.errorId}
       aria-live="polite"
       {...props}

@@ -518,7 +518,7 @@ export function SourceEditDialog({
                     disabled={submitting || testing}
                     aria-invalid={Boolean(fieldErrors.metadata)}
                     className="min-h-24 font-mono text-[12px]"
-                    onChange={(event) => setMetadata(event.target.value)}
+                    onValueChange={setMetadata}
                   />
                   {fieldErrors.metadata && (
                     <span className="text-destructive text-[12px] leading-relaxed">

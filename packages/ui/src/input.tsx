@@ -1,7 +1,12 @@
 import { Input as SourceInput } from '@langgenius/dify-ui/input'
+import {
+  InputGroup as SourceInputGroup,
+  InputGroupAddon as SourceInputGroupAddon,
+  InputGroupInput as SourceInputGroupInput,
+} from '@langgenius/dify-ui/input-group'
+import { Textarea as SourceTextarea } from '@langgenius/dify-ui/textarea'
 import * as React from 'react'
 
-import { cn } from './cn'
 import { useFieldContext } from './field'
 
 type InputProps = React.ComponentProps<'input'>
@@ -35,7 +40,7 @@ function Input({ className, id, ...props }: InputProps) {
   )
 }
 
-function Textarea({ className, id, ...props }: React.ComponentProps<'textarea'>) {
+function Textarea({ id, ...props }: React.ComponentProps<typeof SourceTextarea>) {
   const field = useFieldContext()
   const {
     'aria-describedby': customDescribedBy,
@@ -52,10 +57,9 @@ function Textarea({ className, id, ...props }: React.ComponentProps<'textarea'>)
     .join(' ')
 
   return (
-    <textarea
+    <SourceTextarea
       id={id ?? field?.id}
       data-slot="textarea"
-      className={cn('ui-textarea', className)}
       aria-describedby={describedBy || undefined}
       aria-invalid={ariaInvalid ?? field?.invalid ?? undefined}
       required={required ?? field?.required}
@@ -64,12 +68,37 @@ function Textarea({ className, id, ...props }: React.ComponentProps<'textarea'>)
   )
 }
 
-function InputGroup({ className, ...props }: React.ComponentProps<'div'>) {
-  return <div className={cn('ui-input-group', className)} data-slot="input-group" {...props} />
+function InputGroupInput({ id, ...props }: React.ComponentProps<typeof SourceInputGroupInput>) {
+  const field = useFieldContext()
+  const {
+    'aria-describedby': customDescribedBy,
+    'aria-invalid': ariaInvalid,
+    required,
+    ...rest
+  } = props
+  const describedBy = [
+    customDescribedBy,
+    field?.hasDescription ? field.descriptionId : undefined,
+    field?.hasError ? field.errorId : undefined,
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  return (
+    <SourceInputGroupInput
+      id={id ?? field?.id}
+      aria-describedby={describedBy || undefined}
+      aria-invalid={ariaInvalid ?? field?.invalid ?? undefined}
+      required={required ?? field?.required}
+      {...rest}
+    />
+  )
 }
 
-function InputAddon({ className, ...props }: React.ComponentProps<'span'>) {
-  return <span className={cn('ui-input-addon', className)} data-slot="input-addon" {...props} />
+export {
+  Input,
+  SourceInputGroupAddon as InputAddon,
+  SourceInputGroup as InputGroup,
+  InputGroupInput,
+  Textarea,
 }
-
-export { Input, InputAddon, InputGroup, Textarea }
