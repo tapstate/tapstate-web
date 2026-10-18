@@ -87,6 +87,20 @@ afterEach(async () => {
 })
 
 describe('Cloud invitation authentication', () => {
+  it('continues Google signup with an invitation after an invite-required callback', async () => {
+    const token = 'A'.repeat(43)
+    const link = new URL('/auth', window.location.origin)
+    link.searchParams.set('invite', token)
+    const props = await renderPage({ invitationToken: null, oauthOutcome: 'auth.invitation-required' })
+
+    await act(async () => changeInput('#auth-invitation-link', link.toString()))
+    await clickButton('Continue')
+    await clickButton('Sign up with Google')
+
+    expect(props.onOAuth).toHaveBeenCalledWith('google', 'register', token)
+    expect(props.onRequestCode).not.toHaveBeenCalled()
+  })
+
   it('registers an invited user after email verification and authenticates the new session', async () => {
     const props = await renderPage()
     await act(async () => changeInput('#auth-name', 'Member'))

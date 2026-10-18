@@ -97,6 +97,8 @@ export function AuthPage({
   onOAuth,
 }: AuthPageProps) {
   const { t } = useTranslation()
+  const [activeInvitationToken, setActiveInvitationToken] = useState(invitationToken)
+  const [invitationLink, setInvitationLink] = useState('')
   const [mode, setMode] = useState<AuthMode>(invitationToken ? 'register' : 'login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -135,9 +137,9 @@ export function AuthPage({
       let user: UserProfile
       if (mode === 'login') {
         user = await onLogin({ email: email.trim(), password })
-        if (invitationToken) user = await onAcceptInvitation(invitationToken)
+        if (activeInvitationToken) user = await onAcceptInvitation(activeInvitationToken)
       } else {
-        if (!invitationToken) {
+        if (!activeInvitationToken) {
           setError('auth.errors.invitationRequired')
           return
         }
@@ -147,7 +149,7 @@ export function AuthPage({
         }
         user = await onRegisterWithEmail({
           email: email.trim(),
-          invitationToken,
+          invitationToken: activeInvitationToken,
           code: verificationCode.trim(),
           password,
           displayName: displayName.trim(),
@@ -162,14 +164,14 @@ export function AuthPage({
   }
 
   const handleRequestCode = async () => {
-    if (!invitationToken) {
+    if (!activeInvitationToken) {
       setError('auth.errors.invitationRequired')
       return
     }
     setError(null)
     setIsSendingCode(true)
     try {
-      await onRequestCode(email.trim(), invitationToken)
+      await onRequestCode(email.trim(), activeInvitationToken)
       setVerificationSent(true)
     } catch (cause) {
       setError(errorMessageKey(cause))
@@ -182,7 +184,7 @@ export function AuthPage({
     setError(null)
     setIsStartingOAuth(true)
     try {
-      await onOAuth(provider, mode, invitationToken)
+      await onOAuth(provider, mode, activeInvitationToken)
     } catch (cause) {
       setError(errorMessageKey(cause))
       setIsStartingOAuth(false)
@@ -191,6 +193,33 @@ export function AuthPage({
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode)
+    setError(null)
+  }
+
+  const applyInvitationLink = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const input = invitationLink.trim()
+    let token = input
+    if (input.includes('://')) {
+      try {
+        const url = new URL(input)
+        if (url.origin !== window.location.origin || url.pathname !== '/auth') {
+          setError('auth.errors.invitationInvalid')
+          return
+        }
+        token = url.searchParams.get('invite') ?? url.searchParams.get('invitationToken') ?? ''
+      } catch {
+        setError('auth.errors.invitationInvalid')
+        return
+      }
+    }
+    if (!/^[A-Za-z0-9_-]{43}$/.test(token)) {
+      setError('auth.errors.invitationInvalid')
+      return
+    }
+    setActiveInvitationToken(token)
+    setInvitationLink('')
+    setMode('register')
     setError(null)
   }
 
@@ -234,10 +263,34 @@ export function AuthPage({
         </p>
       </div>
 
-      {invitationToken && (
+      {activeInvitationToken && (
         <p className="mt-4 rounded-md border border-[var(--border)] bg-[var(--app-background)] px-3 py-2 text-xs text-[var(--muted-foreground)]">
           {t('auth.invitationNotice')}
         </p>
+      )}
+
+      {!activeInvitationToken && (mode === 'register' || oauthOutcome === 'auth.invitation-required') && (
+        <form className="mt-4 space-y-2" onSubmit={applyInvitationLink}>
+          <label className="block text-sm font-medium" htmlFor="auth-invitation-link">
+            {t('auth.invitationLinkLabel')}
+          </label>
+          <div className="flex gap-2">
+            <input
+              autoComplete="off"
+              className={inputClassName}
+              id="auth-invitation-link"
+              onChange={(event) => setInvitationLink(event.target.value)}
+              placeholder={t('auth.invitationLinkPlaceholder')}
+              value={invitationLink}
+            />
+            <button
+              className="shrink-0 rounded-md bg-[var(--foreground)] px-4 text-sm font-medium text-[var(--surface)]"
+              type="submit"
+            >
+              {t('auth.useInvitation')}
+            </button>
+          </div>
+        </form>
       )}
 
       <div className="mt-6 space-y-4">
@@ -368,7 +421,7 @@ export function AuthPage({
           )}
         </form>
 
-        {invitationToken ? (
+        {activeInvitationToken ? (
           <p className="text-center text-sm text-[var(--muted-foreground)]">
             {t(mode === 'login' ? 'auth.haveAccount' : 'auth.haveInviteAccount')}{' '}
             <button
