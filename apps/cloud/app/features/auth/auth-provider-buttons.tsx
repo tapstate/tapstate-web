@@ -1,3 +1,4 @@
+import { Button } from '@langgenius/dify-ui/button'
 import { useTranslation } from 'react-i18next'
 
 interface AuthProviderButtonsProps {
@@ -11,40 +12,42 @@ export function AuthProviderButtons({ mode }: AuthProviderButtonsProps) {
   return (
     <>
       <div className="space-y-2 pt-1">
-        <button
+        <Button
           aria-describedby="auth-provider-coming-soon"
-          className="flex h-10 w-full items-center justify-center gap-2.5 rounded-lg border border-black/[0.08] bg-white px-4 text-[13px] font-medium text-[#374151] shadow-2xs transition-all hover:border-black/20 hover:bg-neutral-50 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-black/[0.08] disabled:hover:bg-white disabled:active:scale-100 dark:border-white/[0.1] dark:bg-[#202124] dark:text-neutral-200 dark:hover:border-white/20 dark:hover:bg-[#26282b] dark:disabled:hover:border-white/[0.1] dark:disabled:hover:bg-[#202124]"
+          className="w-full"
           disabled
           title={comingSoon}
           type="button"
+          variant="secondary"
         >
           <GoogleMark />
           <span>{t(mode === 'login' ? 'auth.continueWithGoogle' : 'auth.signUpWithGoogle')}</span>
-        </button>
+        </Button>
 
-        <button
+        <Button
           aria-describedby="auth-provider-coming-soon"
-          className="flex h-10 w-full items-center justify-center gap-2.5 rounded-lg border border-black/[0.08] bg-white px-4 text-[13px] font-medium text-[#374151] shadow-2xs transition-all hover:border-black/20 hover:bg-neutral-50 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-black/[0.08] disabled:hover:bg-white disabled:active:scale-100 dark:border-white/[0.1] dark:bg-[#202124] dark:text-neutral-200 dark:hover:border-white/20 dark:hover:bg-[#26282b] dark:disabled:hover:border-white/[0.1] dark:disabled:hover:bg-[#202124]"
+          className="w-full"
           disabled
           title={comingSoon}
           type="button"
+          variant="secondary"
         >
           <GitHubMark />
           <span>{t(mode === 'login' ? 'auth.continueWithGitHub' : 'auth.signUpWithGitHub')}</span>
-        </button>
+        </Button>
 
-        <p className="text-center text-[11px] text-neutral-400" id="auth-provider-coming-soon">
+        <p
+          className="body-xs-regular text-text-tertiary text-center"
+          id="auth-provider-coming-soon"
+        >
           {comingSoon}
         </p>
       </div>
 
-      <div className="relative flex items-center justify-center py-0.5">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-black/[0.06] dark:border-white/[0.08]" />
-        </div>
-        <span className="relative bg-white px-3 text-[11px] font-medium tracking-wider text-neutral-400 uppercase dark:bg-[#1c1d20]">
-          {t('auth.or')}
-        </span>
+      <div className="flex items-center py-0.5">
+        <div className="from-background-gradient-mask-transparent to-divider-regular h-px flex-1 bg-linear-to-r" />
+        <span className="system-xs-medium-uppercase text-text-tertiary px-3">{t('auth.or')}</span>
+        <div className="from-background-gradient-mask-transparent to-divider-regular h-px flex-1 bg-linear-to-l" />
       </div>
     </>
   )
@@ -77,7 +80,7 @@ function GitHubMark() {
   return (
     <svg
       aria-hidden="true"
-      className="h-4 w-4 shrink-0 fill-current text-[#111827] dark:text-white"
+      className="text-text-primary h-4 w-4 shrink-0 fill-current"
       viewBox="0 0 24 24"
     >
       <path

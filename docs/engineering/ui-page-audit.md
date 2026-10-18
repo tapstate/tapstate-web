@@ -60,6 +60,10 @@ Source inspected at the pinned revision: upstream `web/app/components/datasets/l
 
 Source metadata text entry now uses the vendored Textarea through the shared adapter. Its controlled value and Formily adapter use `onValueChange`; the authenticated edit dialog still needs draft, validation and submit inspection.
 
+## Cloud authentication source alignment (partial)
+
+Source inspected: upstream `web/app/signin/components/mail-and-password-auth.tsx` and `web/app/signin/normal-form.tsx`. The source form uses `Field`/`FieldLabel`, `Input`/`InputGroup`, an `IconButton` for password visibility, `Button` for submit and provider actions, and semantic tokens. `apps/cloud/app/features/auth/auth-page.tsx` and `auth-provider-buttons.tsx` now use those source components for the inner login/register controls and the source-style divider geometry. Tapstate's branded outer login shell and card surface remain. The page was inspected in the local browser at `/auth` in light and dark themes, including the registration form. The underlying API returned 502 at the root route; live submit/error, narrow viewport, all locales and focus/validation transitions have not been reviewed. The separate card CSS still contains independent visual treatment, so the audit row remains Pending.
+
 ## Views list source alignment (code review only)
 
 `apps/web/features/views/views-page.tsx` now follows upstream `web/app/components/datasets/documents/components/list.tsx`, `document-list/components/document-table-row.tsx` and `style.module.css` for semantic table structure, 32 px header/rows, semantic divider/text/hover tokens, and source cell spacing. `ViewStatus` now maps fresh/stale/loading/not-loaded to source `StatusDot` with translated text. The old table wrapper and its local CSS have been removed. The Views shell, loading/empty/error states, other detail pages, authenticated viewport and keyboard/mobile review are still pending; this is not a completed page audit.

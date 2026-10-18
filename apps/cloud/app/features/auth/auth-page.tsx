@@ -1,13 +1,9 @@
-import {
-  AlertCircle,
-  ArrowRight,
-  Eye,
-  EyeOff,
-  Moon,
-  RefreshCw,
-  ShieldCheck,
-  Sun,
-} from 'lucide-react'
+import { Button } from '@langgenius/dify-ui/button'
+import { Field, FieldDescription, FieldLabel } from '@langgenius/dify-ui/field'
+import { IconButton } from '@langgenius/dify-ui/icon-button'
+import { Input } from '@langgenius/dify-ui/input'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@langgenius/dify-ui/input-group'
+import { AlertCircle, Eye, EyeOff, Moon, ShieldCheck, Sun } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -35,9 +31,6 @@ function errorMessageKey(error: unknown) {
   if (error.status === 409) return 'auth.errors.emailExists'
   return 'auth.errors.generic'
 }
-
-const inputClassName =
-  'w-full h-10 px-3.5 rounded-lg border border-black/[0.1] dark:border-white/[0.12] bg-white dark:bg-[#202124] text-[13px] text-[#111827] dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-[#111827] dark:focus:border-white focus:ring-1 focus:ring-[#111827] dark:focus:ring-white transition-all font-mono'
 
 export function AuthPage({
   darkMode,
@@ -99,15 +92,14 @@ export function AuthPage({
           <span className="hidden text-xs text-neutral-500 sm:inline dark:text-neutral-400">
             {t('auth.headerNote')}
           </span>
-          <button
+          <IconButton
             aria-label={t('app.toggleTheme')}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-black/[0.04] hover:text-neutral-900 dark:hover:bg-white/[0.05] dark:hover:text-white"
             onClick={() => setDarkMode(!darkMode)}
             title={t('app.toggleTheme')}
-            type="button"
+            size="lg"
           >
             {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </button>
+          </IconButton>
         </div>
       </header>
 
@@ -120,7 +112,7 @@ export function AuthPage({
 
             {error && (
               <div
-                className="mb-4 flex items-start gap-2 rounded-xl border border-red-200/80 bg-red-50 p-2.5 text-xs text-red-600 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400"
+                className="system-xs-regular text-text-destructive border-components-input-border-destructive bg-components-input-bg-destructive mb-4 flex items-start gap-2 rounded-lg border p-3"
                 role="alert"
               >
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -130,10 +122,10 @@ export function AuthPage({
 
             <div className="space-y-6">
               <div className="space-y-1 text-center">
-                <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-[#111827] dark:text-white">
+                <h1 className="title-2xl-semi-bold text-text-primary">
                   {t(mode === 'login' ? 'auth.loginTitle' : 'auth.registerTitle')}
                 </h1>
-                <p className="text-[13px] text-neutral-500 dark:text-neutral-400">
+                <p className="body-sm-regular text-text-tertiary">
                   {t(mode === 'login' ? 'auth.loginDescription' : 'auth.registerDescription')}
                 </p>
               </div>
@@ -142,59 +134,38 @@ export function AuthPage({
 
               <form className="space-y-3.5" onSubmit={handleSubmit}>
                 {mode === 'register' && (
-                  <div className="space-y-1.5">
-                    <label
-                      className="block text-[12px] font-medium text-[#374151] dark:text-neutral-300"
-                      htmlFor="auth-name"
-                    >
-                      {t('auth.nameLabel')}
-                    </label>
-                    <input
+                  <Field name="displayName">
+                    <FieldLabel>{t('auth.nameLabel')}</FieldLabel>
+                    <Input
                       autoComplete="name"
-                      className={inputClassName}
-                      id="auth-name"
                       maxLength={100}
-                      onChange={(event) => setDisplayName(event.target.value)}
+                      onValueChange={setDisplayName}
                       placeholder={t('auth.namePlaceholder')}
                       required
                       value={displayName}
                     />
-                  </div>
+                  </Field>
                 )}
 
-                <div className="space-y-1.5">
-                  <label
-                    className="block text-[12px] font-medium text-[#374151] dark:text-neutral-300"
-                    htmlFor="auth-email"
-                  >
-                    {t('auth.emailLabel')}
-                  </label>
-                  <input
+                <Field name="email">
+                  <FieldLabel>{t('auth.emailLabel')}</FieldLabel>
+                  <Input
                     autoComplete="email"
-                    className={inputClassName}
-                    id="auth-email"
-                    onChange={(event) => setEmail(event.target.value)}
+                    onValueChange={setEmail}
                     placeholder={t('auth.emailPlaceholder')}
                     required
                     type="email"
                     value={email}
                   />
-                </div>
+                </Field>
 
-                <div className="space-y-1.5">
-                  <label
-                    className="block text-[12px] font-medium text-[#374151] dark:text-neutral-300"
-                    htmlFor="auth-password"
-                  >
-                    {t('auth.passwordLabel')}
-                  </label>
-                  <div className="relative">
-                    <input
+                <Field name="password">
+                  <FieldLabel>{t('auth.passwordLabel')}</FieldLabel>
+                  <InputGroup>
+                    <InputGroupInput
                       autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                      className={`${inputClassName} pr-10`}
-                      id="auth-password"
                       minLength={mode === 'register' ? 8 : undefined}
-                      onChange={(event) => setPassword(event.target.value)}
+                      onValueChange={setPassword}
                       placeholder={t(
                         mode === 'login'
                           ? 'auth.passwordPlaceholder'
@@ -204,45 +175,49 @@ export function AuthPage({
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                     />
-                    <button
-                      aria-label={t(showPassword ? 'auth.hidePassword' : 'auth.showPassword')}
-                      className="absolute top-3 right-3 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
-                      onClick={() => setShowPassword((visible) => !visible)}
-                      type="button"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
+                    <InputGroupAddon align="inline-end">
+                      <IconButton
+                        aria-label={t(showPassword ? 'auth.hidePassword' : 'auth.showPassword')}
+                        onClick={() => setShowPassword((visible) => !visible)}
+                        size="lg"
+                        type="button"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </IconButton>
+                    </InputGroupAddon>
+                  </InputGroup>
                   {mode === 'register' && (
-                    <p className="text-[11px] text-neutral-400">{t('auth.passwordHint')}</p>
+                    <FieldDescription>{t('auth.passwordHint')}</FieldDescription>
                   )}
-                </div>
+                </Field>
 
-                <button
-                  className="mt-1 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#111827] text-[13px] font-medium text-white shadow-xs transition-all hover:bg-[#1f2937] active:scale-[0.99] disabled:opacity-50 dark:bg-white dark:text-[#111827] dark:hover:bg-neutral-100"
-                  disabled={isSubmitting}
+                <Button
+                  aria-labelledby="auth-submit-label"
+                  className="mt-1 w-full"
+                  loading={isSubmitting}
                   type="submit"
+                  variant="primary"
                 >
-                  {isSubmitting ? (
-                    <>
-                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                      <span>{t('auth.working')}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>
-                        {t(mode === 'login' ? 'auth.loginAction' : 'auth.registerAction')}
-                      </span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </>
-                  )}
-                </button>
+                  <span id="auth-submit-label">
+                    {t(
+                      isSubmitting
+                        ? 'auth.working'
+                        : mode === 'login'
+                          ? 'auth.loginAction'
+                          : 'auth.registerAction',
+                    )}
+                  </span>
+                </Button>
               </form>
 
-              <div className="pt-2 text-center text-[13px] text-neutral-500 dark:text-neutral-400">
+              <div className="body-sm-regular text-text-tertiary pt-2 text-center">
                 {t(mode === 'login' ? 'auth.noAccount' : 'auth.haveAccount')}{' '}
                 <button
-                  className="ml-0.5 font-medium text-[#111827] transition-colors hover:underline dark:text-white"
+                  className="system-sm-medium text-components-button-secondary-accent-text focus-visible:outline-state-accent-solid ml-0.5 rounded-sm hover:underline focus-visible:outline-2"
                   onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
                   type="button"
                 >
@@ -250,7 +225,7 @@ export function AuthPage({
                 </button>
               </div>
 
-              <div className="flex items-center justify-center gap-2 border-t border-black/[0.06] pt-4 text-[11px] text-neutral-400 dark:border-white/[0.08]">
+              <div className="system-xs-regular text-text-tertiary border-divider-subtle flex items-center justify-center gap-2 border-t pt-4">
                 <ShieldCheck className="h-4 w-4" />
                 <span>{t('auth.securityNote')}</span>
               </div>
