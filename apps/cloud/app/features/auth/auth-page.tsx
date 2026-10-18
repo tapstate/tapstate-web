@@ -75,6 +75,7 @@ function errorMessageKey(error: unknown) {
 
 function oauthErrorMessage(outcome: string) {
   if (outcome === 'cancelled') return 'auth.errors.oauthCancelled'
+  if (outcome === 'auth.invitation-required') return 'auth.errors.invitationRequiredAfterOAuth'
   if (outcome === 'provider-unavailable') return 'auth.errors.providerUnavailable'
   if (outcome === 'provider-error' || outcome === 'provider-email-unavailable') {
     return 'auth.errors.providerError'

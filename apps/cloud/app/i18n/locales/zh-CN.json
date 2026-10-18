@@ -67,6 +67,7 @@
       "invalidCredentials": "邮箱或密码不正确。",
       "emailExists": "此邮箱已注册，请直接登录。",
       "invitationRequired": "请打开组织所有者发给你的邀请链接以创建账户。",
+      "invitationRequiredAfterOAuth": "身份验证已通过。要创建 Tapstate 账户，请在下方粘贴邀请链接，然后继续使用 Google 或 GitHub。",
       "invitationInvalid": "邀请链接无效。",
       "invitationExpired": "邀请已过期，请向组织所有者索取新的链接。",
       "invitationRevoked": "此邀请已被撤销。",

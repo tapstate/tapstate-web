@@ -67,6 +67,7 @@
       "invalidCredentials": "The email or password is incorrect.",
       "emailExists": "An account with this email already exists. Sign in instead.",
       "invitationRequired": "Open the invitation link from your organization owner to create an account.",
+      "invitationRequiredAfterOAuth": "Your identity was verified. To create a Tapstate account, paste an invitation link below and continue with Google or GitHub.",
       "invitationInvalid": "This invitation link is not valid.",
       "invitationExpired": "This invitation has expired. Ask the organization owner for a new link.",
       "invitationRevoked": "This invitation has been revoked.",
