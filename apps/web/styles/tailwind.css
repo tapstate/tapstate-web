@@ -5,7 +5,13 @@
 @import 'tailwindcss/utilities.css' layer(utilities);
 @import 'tw-animate-css';
 @import './shadcn.css';
+@import '../../../packages/ui/src/styles/theme.css';
+@import '@langgenius/dify-ui/styles.css';
 @import '@fontsource-variable/geist';
+
+@source '../../../packages/ui/src';
+@source '../../../packages/dify-ui/src';
+@plugin '../../../packages/dify-ui/src/plugins/icons.ts';
 
 @custom-variant dark (&:is(.dark *));
 

@@ -11,6 +11,11 @@
     "signedOut": "未登录",
     "toggleTheme": "切换主题"
   },
+  "common": {
+    "close": "关闭",
+    "searchClusters": "搜索集群",
+    "searchOrganizations": "搜索组织"
+  },
   "access": {
     "eyebrow": "安全云集群",
     "title": "请先登录",

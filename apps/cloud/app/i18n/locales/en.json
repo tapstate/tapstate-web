@@ -11,6 +11,11 @@
     "signedOut": "Signed out",
     "toggleTheme": "Toggle theme"
   },
+  "common": {
+    "close": "Close",
+    "searchClusters": "Search clusters",
+    "searchOrganizations": "Search organizations"
+  },
   "access": {
     "eyebrow": "SECURE CLOUD CLUSTER",
     "title": "Sign in to continue",

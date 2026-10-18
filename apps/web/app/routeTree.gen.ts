@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as PipelineEditorRouteImport } from './routes/_pipeline-editor'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SignedOutRouteImport } from './routes/signed-out'
+import { Route as UiKitRouteImport } from './routes/ui-kit'
 import { Route as AuthenticatedDestinationsRouteImport } from './routes/_authenticated.destinations'
 import { Route as AuthenticatedExplorationsRouteImport } from './routes/_authenticated.explorations'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated.overview'
@@ -57,6 +58,11 @@ const SignedOutRoute = SignedOutRouteImport.update({
   path: '/signed-out',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UiKitRoute = UiKitRouteImport.update({
+  id: '/ui-kit',
+  path: '/ui-kit',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/ui-kit.lazy').then((d) => d.Route))
 const AuthenticatedDestinationsRoute =
   AuthenticatedDestinationsRouteImport.update({
     id: '/destinations',
@@ -180,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signed-out': typeof SignedOutRoute
+  '/ui-kit': typeof UiKitRoute
   '/destinations': typeof AuthenticatedDestinationsRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/overview': typeof AuthenticatedOverviewRoute
@@ -204,6 +211,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signed-out': typeof SignedOutRoute
+  '/ui-kit': typeof UiKitRoute
   '/destinations': typeof AuthenticatedDestinationsRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/overview': typeof AuthenticatedOverviewRoute
@@ -227,6 +235,7 @@ export interface FileRoutesById {
   '/_pipeline-editor': typeof PipelineEditorRouteWithChildren
   '/login': typeof LoginRoute
   '/signed-out': typeof SignedOutRoute
+  '/ui-kit': typeof UiKitRoute
   '/_authenticated/destinations': typeof AuthenticatedDestinationsRoute
   '/_authenticated/explorations': typeof AuthenticatedExplorationsRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
@@ -253,6 +262,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/signed-out'
+    | '/ui-kit'
     | '/destinations'
     | '/explorations'
     | '/overview'
@@ -277,6 +287,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/signed-out'
+    | '/ui-kit'
     | '/destinations'
     | '/explorations'
     | '/overview'
@@ -299,6 +310,7 @@ export interface FileRouteTypes {
     | '/_pipeline-editor'
     | '/login'
     | '/signed-out'
+    | '/ui-kit'
     | '/_authenticated/destinations'
     | '/_authenticated/explorations'
     | '/_authenticated/overview'
@@ -326,6 +338,7 @@ export interface RootRouteChildren {
   PipelineEditorRoute: typeof PipelineEditorRouteWithChildren
   LoginRoute: typeof LoginRoute
   SignedOutRoute: typeof SignedOutRoute
+  UiKitRoute: typeof UiKitRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -363,6 +376,13 @@ declare module '@tanstack/react-router' {
       path: '/signed-out'
       fullPath: '/signed-out'
       preLoaderRoute: typeof SignedOutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ui-kit': {
+      id: '/ui-kit'
+      path: '/ui-kit'
+      fullPath: '/ui-kit'
+      preLoaderRoute: typeof UiKitRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/destinations': {
@@ -615,6 +635,7 @@ const rootRouteChildren: RootRouteChildren = {
   PipelineEditorRoute: PipelineEditorRouteWithChildren,
   LoginRoute: LoginRoute,
   SignedOutRoute: SignedOutRoute,
+  UiKitRoute: UiKitRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

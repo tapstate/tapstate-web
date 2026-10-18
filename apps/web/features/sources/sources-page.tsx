@@ -1,5 +1,6 @@
 import type { ComponentType, SVGProps } from 'react'
 
+import { SearchInput } from '@langgenius/dify-ui/search-input'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import {
@@ -16,7 +17,6 @@ import {
   LoaderCircle,
   Plus,
   RefreshCw,
-  Search,
   Server,
   Settings,
   Table as TableIcon,
@@ -526,17 +526,13 @@ export function SourcesPage({
       <div className="flex min-h-0 flex-1 flex-col bg-white md:flex-row">
         <aside className="flex w-full shrink-0 flex-col border-b border-gray-100/70 bg-[#fcfcfd]/80 md:w-64 md:border-r md:border-b-0">
           <div className="border-b border-gray-100/70 p-3">
-            <label className="relative block">
-              <span className="sr-only">{t('sources.search.label')}</span>
-              <Search className="absolute top-2 left-3 h-4 w-4 text-gray-400" aria-hidden="true" />
-              <input
-                value={searchText}
-                type="search"
-                className="w-full rounded-lg border border-gray-200/80 bg-white py-1.5 pr-3 pl-9 text-[13px] transition outline-none focus:border-gray-300 focus:ring-2 focus:ring-gray-900/10"
-                placeholder={t('sources.search.placeholder')}
-                onChange={(event) => setSearchText(event.target.value)}
-              />
-            </label>
+            <SearchInput
+              value={searchText}
+              onValueChange={setSearchText}
+              aria-label={t('sources.search.label')}
+              clearLabel={t('sources.search.clear')}
+              placeholder={t('sources.search.placeholder')}
+            />
 
             <label className="relative mt-2 block">
               <span className="sr-only">{t('sources.filters.connectionStatus.label')}</span>
