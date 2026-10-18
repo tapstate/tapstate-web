@@ -563,6 +563,8 @@
     "samples": {
       "tag": "Sample",
       "remove": "Remove sample sources",
+      "removeConfirmTitle": "Remove sample sources?",
+      "removeConfirmBody": "The sample sources will be deleted. Sources still used by pipelines cannot be removed.",
       "removing": "Removing…",
       "removed_one": "Removed {{count}} sample source.",
       "removed_other": "Removed {{count}} sample sources.",

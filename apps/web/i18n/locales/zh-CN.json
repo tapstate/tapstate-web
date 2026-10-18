@@ -563,6 +563,8 @@
     "samples": {
       "tag": "样例",
       "remove": "移除样例数据源",
+      "removeConfirmTitle": "移除样例数据源？",
+      "removeConfirmBody": "样例数据源将被删除。仍被 pipeline 使用的数据源无法移除。",
       "removing": "正在移除…",
       "removed_one": "已移除 {{count}} 个样例数据源。",
       "removed_other": "已移除 {{count}} 个样例数据源。",

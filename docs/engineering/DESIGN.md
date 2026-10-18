@@ -21,9 +21,9 @@ Source baseline: Dify `3552815c89415716dfd9cac80fd7c73aac3b051e`, 2026-10-17. Th
 
 ### Resource list
 
-Use title and one primary action, then filters/search/sort, then grid or table. Keep the header visible when the content scrolls if the task needs filters in view. Use a resource card only when the resource itself is the navigation target and summary metadata/actions share that surface. Use a table when users compare rows by columns. Keep filtered-empty and first-use empty states distinct. Use an accessible status announcement when asynchronous filtering settles.
+Use title and a compact secondary-action row, then filters/search and the single creation action, then grid or table. Keep the header visible when the content scrolls if the task needs filters in view. Do not duplicate the same resources in a navigation rail and a table, and do not show a filter that has only one effective value. Use a resource card only when the resource itself is the navigation target and summary metadata/actions share that surface. The card's navigation entry is a real link, with its own focus ring; item actions sit outside that link in an operations menu. Use a table when users compare rows by columns. Dify's document table is a bare table with an uppercase 32 px header, subtle row dividers, semantic text colors and hover background; it does not wrap every row in a shadowed card. Status pairs the source `StatusDot` with text. Keep filtered-empty and first-use empty states distinct. Dify's first-use state shows the future grid as a quiet placeholder behind an explanation and creation actions; a filtered-empty state should explain the current search instead. Loading skeletons reserve final card geometry, rather than replacing the content with an unrelated centered spinner. Use an accessible status announcement when asynchronous filtering settles.
 
-Evidence: upstream `web/app/components/datasets/list/header.tsx`, `datasets.tsx`, `dataset-card/index.tsx`, `list/index.tsx`.
+Evidence: upstream `web/app/components/datasets/list/header.tsx`, `datasets.tsx`, `dataset-card/index.tsx`, `dataset-card-skeleton.tsx`, `first-empty-state/index.tsx`, `list/index.tsx`, `web/app/components/datasets/documents/components/{documents-header,list}.tsx`, and `document-list/components/document-table-row.tsx`.
 
 ### Form and creation flow
 

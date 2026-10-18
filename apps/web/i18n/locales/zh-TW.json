@@ -563,6 +563,8 @@
     "samples": {
       "tag": "範例",
       "remove": "移除範例資料來源",
+      "removeConfirmTitle": "移除範例資料來源？",
+      "removeConfirmBody": "範例資料來源將被刪除。仍被 pipeline 使用的資料來源無法移除。",
       "removing": "正在移除…",
       "removed_one": "已移除 {{count}} 個範例資料來源。",
       "removed_other": "已移除 {{count}} 個範例資料來源。",
