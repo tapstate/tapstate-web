@@ -4,7 +4,11 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { PipelineClientError, type PipelineDraft } from '@/service/pipelines/pipeline-client'
+import {
+  PipelineClientError,
+  type PipelineDraft,
+  type PipelinePreviewRun,
+} from '@/service/pipelines/pipeline-client'
 
 import type { WizardViewState } from '../components/reference-wizard/ReferenceWizardBuilder'
 
@@ -613,7 +617,9 @@ describe('WizardBuilder publish flow', () => {
     })
 
     await vi.waitFor(() => expect(previewPipelineDraft).toHaveBeenCalledTimes(1))
-    await vi.waitFor(() => expect(streamPipelinePreview).toHaveBeenCalledTimes(1))
+    await act(async () => {
+      await vi.waitFor(() => expect(streamPipelinePreview).toHaveBeenCalledTimes(1))
+    })
     await vi.waitFor(() => {
       expect(
         container?.querySelector('[data-live-preview-run="status-pending-preview"]'),
@@ -667,6 +673,10 @@ describe('WizardBuilder publish flow', () => {
 
   it('aborts a stale preview when the unsaved candidate changes', async () => {
     let firstSignal: AbortSignal | undefined
+    let finishSecondPreview!: (value: PipelinePreviewRun) => void
+    const secondPreview = new Promise<PipelinePreviewRun>((resolve) => {
+      finishSecondPreview = resolve
+    })
     streamPipelinePreview
       .mockImplementationOnce(
         (request: { signal?: AbortSignal }) =>
@@ -677,19 +687,7 @@ describe('WizardBuilder publish flow', () => {
             })
           }),
       )
-      .mockResolvedValueOnce({
-        runId: 'preview-run-2',
-        candidateHash: 'candidate-2',
-        format: 'logical-json',
-        executionSpec: {},
-        contexts: [],
-        sample: { rootRows: 1, inputRows: 1 },
-        documents: [{ id: 'customer-1' }],
-        trace: [],
-        sampleId: 'sample-2',
-        rowCount: 1,
-        failure: null,
-      })
+      .mockReturnValueOnce(secondPreview)
 
     container = document.createElement('div')
     document.body.append(container)
@@ -710,7 +708,25 @@ describe('WizardBuilder publish flow', () => {
       container?.querySelector<HTMLButtonElement>('[data-testid="change-wizard"]')?.click()
     })
     await vi.waitFor(() => expect(streamPipelinePreview).toHaveBeenCalledTimes(2))
+    await act(async () => {
+      finishSecondPreview({
+        runId: 'preview-run-2',
+        candidateHash: 'candidate-2',
+        format: 'logical-json',
+        executionSpec: {},
+        contexts: [],
+        sample: { rootRows: 1, inputRows: 1 },
+        documents: [{ id: 'customer-1' }],
+        trace: [],
+        sampleId: 'sample-2',
+        rowCount: 1,
+        failure: null,
+      })
+      await secondPreview
+    })
 
+    expect(container?.querySelector('[data-live-preview-status="complete"]')).not.toBeNull()
+    expect(container?.querySelector('[data-live-preview-run="preview-run-2"]')).not.toBeNull()
     expect(firstSignal?.aborted).toBe(true)
     expect(previewPipelineDraft).toHaveBeenCalledWith(
       initialDraft.pipelineId,
@@ -725,8 +741,6 @@ describe('WizardBuilder publish flow', () => {
       rootLimit: 1,
       signal: expect.any(AbortSignal),
     })
-    expect(container?.querySelector('[data-live-preview-status="complete"]')).not.toBeNull()
-    expect(container?.querySelector('[data-live-preview-run="preview-run-2"]')).not.toBeNull()
   })
 
   it('keeps a completed preview stable across status-driven rerenders', async () => {
