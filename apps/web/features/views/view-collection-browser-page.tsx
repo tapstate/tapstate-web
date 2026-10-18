@@ -1,3 +1,4 @@
+import { SearchInput } from '@langgenius/dify-ui/search-input'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
@@ -7,7 +8,6 @@ import {
   Database,
   LoaderCircle,
   RefreshCw,
-  Search,
   Table2,
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
@@ -182,19 +182,14 @@ export function ViewCollectionBrowserPage() {
                 {numberFormatter.format(collections.length)}
               </span>
             </div>
-            <label className="relative mx-3 my-3 block">
-              <Search
-                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-                aria-hidden="true"
-              />
-              <span className="sr-only">{t('views.search.label')}</span>
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={t('views.search.placeholder')}
-                className="border-input bg-background placeholder:text-muted-foreground focus-visible:ring-ring h-9 w-full rounded-lg border pr-3 pl-9 text-sm outline-none focus-visible:ring-2"
-              />
-            </label>
+            <SearchInput
+              className="mx-3 my-3"
+              value={search}
+              onValueChange={setSearch}
+              aria-label={t('views.search.label')}
+              clearLabel={t('views.search.clear')}
+              placeholder={t('views.search.placeholder')}
+            />
             <div className="min-h-0 flex-1 space-y-1 overflow-y-auto px-2 pb-2">
               {visibleCollections.length > 0 ? (
                 visibleCollections.map((collection) => (

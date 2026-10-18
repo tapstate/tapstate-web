@@ -1696,6 +1696,7 @@
     "detailTabs": "View 详情",
     "search": {
       "label": "搜索 Views",
+      "clear": "清除 View 搜索",
       "placeholder": "搜索 Views...",
       "empty": "没有匹配的 View。"
     },

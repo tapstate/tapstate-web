@@ -1696,6 +1696,7 @@
     "detailTabs": "View details",
     "search": {
       "label": "Search views",
+      "clear": "Clear view search",
       "placeholder": "Search views...",
       "empty": "No views match this search."
     },

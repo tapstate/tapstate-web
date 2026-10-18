@@ -1696,6 +1696,7 @@
     "detailTabs": "View 詳情",
     "search": {
       "label": "搜尋 Views",
+      "clear": "清除 View 搜尋",
       "placeholder": "搜尋 Views...",
       "empty": "沒有符合的 View。"
     },
