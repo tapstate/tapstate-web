@@ -91,7 +91,10 @@ describe('Cloud invitation authentication', () => {
     const token = 'A'.repeat(43)
     const link = new URL('/auth', window.location.origin)
     link.searchParams.set('invite', token)
-    const props = await renderPage({ invitationToken: null, oauthOutcome: 'auth.invitation-required' })
+    const props = await renderPage({
+      invitationToken: null,
+      oauthOutcome: 'auth.invitation-required',
+    })
 
     await act(async () => changeInput('#auth-invitation-link', link.toString()))
     await clickButton('Continue')

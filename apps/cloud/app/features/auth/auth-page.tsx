@@ -269,29 +269,30 @@ export function AuthPage({
         </p>
       )}
 
-      {!activeInvitationToken && (mode === 'register' || oauthOutcome === 'auth.invitation-required') && (
-        <form className="mt-4 space-y-2" onSubmit={applyInvitationLink}>
-          <label className="block text-sm font-medium" htmlFor="auth-invitation-link">
-            {t('auth.invitationLinkLabel')}
-          </label>
-          <div className="flex gap-2">
-            <input
-              autoComplete="off"
-              className={inputClassName}
-              id="auth-invitation-link"
-              onChange={(event) => setInvitationLink(event.target.value)}
-              placeholder={t('auth.invitationLinkPlaceholder')}
-              value={invitationLink}
-            />
-            <button
-              className="shrink-0 rounded-md bg-[var(--foreground)] px-4 text-sm font-medium text-[var(--surface)]"
-              type="submit"
-            >
-              {t('auth.useInvitation')}
-            </button>
-          </div>
-        </form>
-      )}
+      {!activeInvitationToken &&
+        (mode === 'register' || oauthOutcome === 'auth.invitation-required') && (
+          <form className="mt-4 space-y-2" onSubmit={applyInvitationLink}>
+            <label className="block text-sm font-medium" htmlFor="auth-invitation-link">
+              {t('auth.invitationLinkLabel')}
+            </label>
+            <div className="flex gap-2">
+              <input
+                autoComplete="off"
+                className={inputClassName}
+                id="auth-invitation-link"
+                onChange={(event) => setInvitationLink(event.target.value)}
+                placeholder={t('auth.invitationLinkPlaceholder')}
+                value={invitationLink}
+              />
+              <button
+                className="shrink-0 rounded-md bg-[var(--foreground)] px-4 text-sm font-medium text-[var(--surface)]"
+                type="submit"
+              >
+                {t('auth.useInvitation')}
+              </button>
+            </div>
+          </form>
+        )}
 
       <div className="mt-6 space-y-4">
         <AuthProviderButtons
