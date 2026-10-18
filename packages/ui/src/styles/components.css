@@ -36,12 +36,6 @@
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--ts-border-focus) 30%, transparent);
   }
 
-  .ui-action-row:focus-visible,
-  .ui-radio-card:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ts-border-focus) 30%, transparent);
-  }
-
   .ui-button[data-size='small'] {
     height: 24px;
     padding-inline: 8px;
@@ -584,144 +578,6 @@
     transform: translateX(12px);
   }
 
-  .ui-panel {
-    border: 1px solid var(--ts-border-default);
-    border-radius: var(--ts-radius-popover);
-    background: var(--ts-bg-surface);
-  }
-
-  .ui-panel[data-variant='plain'] {
-    border-color: transparent;
-    background: transparent;
-  }
-
-  .ui-selectable-card {
-    display: block;
-    width: 100%;
-    border: 1px solid var(--ts-border-default);
-    border-radius: var(--ts-radius-popover);
-    padding: 12px;
-    background: var(--ts-bg-surface);
-    color: var(--ts-text-primary);
-    text-align: start;
-    cursor: pointer;
-    transition:
-      background-color 150ms ease-out,
-      border-color 150ms ease-out,
-      box-shadow 150ms ease-out;
-  }
-
-  .ui-selectable-card:hover:not(:disabled) {
-    background: var(--ts-bg-hover);
-  }
-
-  .ui-selectable-card[aria-pressed='true'] {
-    border-color: var(--ts-brand-primary);
-    background: var(--ts-bg-selected);
-  }
-
-  .ui-action-row {
-    display: flex;
-    width: 100%;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    border: 0;
-    border-radius: 0;
-    padding: 12px 16px;
-    background: transparent;
-    color: var(--ts-text-primary);
-    font: inherit;
-    text-align: start;
-    cursor: pointer;
-    transition: background-color 150ms ease-out;
-  }
-
-  .ui-action-row:hover:not(:disabled) {
-    background: var(--ts-bg-hover);
-  }
-
-  .ui-action-row:disabled {
-    color: var(--ts-text-disabled);
-    cursor: not-allowed;
-  }
-
-  .ui-radio-card {
-    position: relative;
-    display: flex;
-    width: 100%;
-    min-width: 0;
-    align-items: center;
-    gap: 12px;
-    border: 1px solid var(--ts-border-default);
-    border-radius: var(--ts-radius-popover);
-    padding: 12px;
-    background: var(--ts-bg-surface);
-    color: var(--ts-text-primary);
-    font: inherit;
-    text-align: start;
-    cursor: pointer;
-    transition:
-      background-color 150ms ease-out,
-      border-color 150ms ease-out,
-      box-shadow 150ms ease-out;
-  }
-
-  .ui-radio-card:hover:not(:disabled) {
-    background: var(--ts-bg-hover);
-  }
-
-  .ui-radio-card[data-checked] {
-    border-color: var(--ts-brand-primary);
-    background: var(--ts-bg-selected);
-  }
-
-  .ui-radio-card:disabled {
-    color: var(--ts-text-disabled);
-    cursor: not-allowed;
-  }
-
-  .ui-radio-card-indicator {
-    display: inline-grid;
-    width: 16px;
-    height: 16px;
-    flex: 0 0 auto;
-    place-items: center;
-    border: 1px solid var(--ts-border-strong);
-    border-radius: 50%;
-    color: var(--ts-text-inverse);
-  }
-
-  .ui-radio-card[data-checked] .ui-radio-card-indicator {
-    border-color: var(--ts-brand-primary);
-    background: var(--ts-brand-primary);
-  }
-
-  .ui-empty-state {
-    display: grid;
-    justify-items: center;
-    gap: 8px;
-    padding: 32px 16px;
-    color: var(--ts-text-secondary);
-    text-align: center;
-  }
-
-  .ui-empty-state-title {
-    margin: 0;
-    color: var(--ts-text-primary);
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 20px;
-  }
-
-  .ui-empty-state-description {
-    max-width: 40rem;
-    margin: 0;
-    color: var(--ts-text-tertiary);
-    font-size: 13px;
-    line-height: 20px;
-  }
-
   .ui-scroll-area {
     position: relative;
     overflow: hidden;
@@ -1087,7 +943,6 @@
     .ui-input,
     .ui-textarea,
     .ui-select-trigger,
-    .ui-selectable-card,
     .ui-switch,
     .ui-switch-thumb,
     .ui-skeleton,

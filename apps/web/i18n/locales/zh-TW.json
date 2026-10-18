@@ -127,6 +127,7 @@
       "checkbox": "包含已封存項目",
       "switch": "啟用即時重新整理",
       "radio": "預設區域",
+      "radioDescription": "選擇此工作區執行的區域。",
       "northAmerica": "北美",
       "asiaPacific": "亞太",
       "cardOne": "正式環境工作區",

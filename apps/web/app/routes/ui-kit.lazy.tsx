@@ -26,12 +26,14 @@ import {
   DrawerTrigger as SourceDrawerTrigger,
   DrawerViewport as SourceDrawerViewport,
 } from '@langgenius/dify-ui/drawer'
+import FilterEmptyState from '@langgenius/dify-ui/filter-empty-state'
 import { Input as SourceInput } from '@langgenius/dify-ui/input'
+import SourceRadioCard from '@langgenius/dify-ui/radio-card'
+import { RadioGroup as SourceRadioGroup } from '@langgenius/dify-ui/radio-group'
 import { SearchInput as SourceSearchInput } from '@langgenius/dify-ui/search-input'
 import { StatusDot } from '@langgenius/dify-ui/status-dot'
 import { createLazyFileRoute } from '@tanstack/react-router'
 import {
-  ActionRow,
   Button,
   Checkbox,
   Dialog,
@@ -48,25 +50,20 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  EmptyState,
   Field,
   IconButton,
   Input,
   InputAddon,
   InputGroup,
   InputGroupInput,
-  Panel,
   Popover,
   PopoverContent,
   PopoverTrigger,
-  RadioCard,
-  RadioGroup,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  SelectableCard,
   Skeleton,
   Switch,
   Textarea,
@@ -77,7 +74,7 @@ import {
   TooltipTrigger,
   useToast,
 } from '@tapstate-web/ui'
-import { Check, Plus, Search, X } from 'lucide-react'
+import { Plus, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -123,8 +120,6 @@ function UiKitPageContent({
   const [includeArchived, setIncludeArchived] = useState(true)
   const [liveRefresh, setLiveRefresh] = useState(false)
   const [radioValue, setRadioValue] = useState('north-america')
-  const [cardValue, setCardValue] = useState('production')
-  const [selectedCard, setSelectedCard] = useState(false)
   const [sourceSearch, setSourceSearch] = useState('')
   const [notes, setNotes] = useState('')
   const [region, setRegion] = useState<string | null>(null)
@@ -248,7 +243,7 @@ function UiKitPageContent({
           <h2 className="text-sm font-semibold" id="ui-kit-buttons">
             {t('uiKit.sections.buttons')}
           </h2>
-          <Panel className="space-y-4 p-4">
+          <section className="border-components-panel-border bg-components-panel-bg space-y-4 rounded-xl border p-4">
             <div className="flex flex-wrap items-center gap-2">
               {variants.map((variant) => (
                 <Button key={variant} variant={variant}>
@@ -276,14 +271,14 @@ function UiKitPageContent({
                 <Plus aria-hidden="true" size={16} />
               </IconButton>
             </div>
-          </Panel>
+          </section>
         </section>
 
         <section aria-labelledby="ui-kit-fields" className="min-w-0 space-y-3">
           <h2 className="text-sm font-semibold" id="ui-kit-fields">
             {t('uiKit.sections.fields')}
           </h2>
-          <Panel className="grid gap-4 p-4 sm:grid-cols-2">
+          <section className="border-components-panel-border bg-components-panel-bg grid gap-4 rounded-xl border p-4 sm:grid-cols-2">
             <Field
               id="ui-kit-email"
               label={t('uiKit.fields.email')}
@@ -331,14 +326,14 @@ function UiKitPageContent({
               </div>
               <UiKitFormilyFixture key={i18n.resolvedLanguage} />
             </div>
-          </Panel>
+          </section>
         </section>
 
         <section aria-labelledby="ui-kit-selection" className="min-w-0 space-y-3">
           <h2 className="text-sm font-semibold" id="ui-kit-selection">
             {t('uiKit.sections.selection')}
           </h2>
-          <Panel className="space-y-4 p-4">
+          <section className="border-components-panel-border bg-components-panel-bg space-y-4 rounded-xl border p-4">
             <div className="flex flex-wrap items-center gap-6">
               <div className="flex items-center gap-2 text-sm">
                 <Checkbox
@@ -360,14 +355,35 @@ function UiKitPageContent({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="ui-field">
                 <span className="ui-field-label">{t('uiKit.selection.radio')}</span>
-                <RadioGroup
+                <SourceRadioGroup
                   aria-label={t('uiKit.selection.radio')}
                   onValueChange={(value) => setRadioValue(String(value))}
                   value={radioValue}
+                  className="flex-col items-stretch"
                 >
-                  <RadioCard value="north-america">{t('uiKit.selection.northAmerica')}</RadioCard>
-                  <RadioCard value="asia-pacific">{t('uiKit.selection.asiaPacific')}</RadioCard>
-                </RadioGroup>
+                  <SourceRadioCard
+                    value="north-america"
+                    icon={
+                      <span
+                        className="i-ri-global-line text-text-accent size-4"
+                        aria-hidden="true"
+                      />
+                    }
+                    title={t('uiKit.selection.northAmerica')}
+                    description={t('uiKit.selection.radioDescription')}
+                  />
+                  <SourceRadioCard
+                    value="asia-pacific"
+                    icon={
+                      <span
+                        className="i-ri-global-line text-text-accent size-4"
+                        aria-hidden="true"
+                      />
+                    }
+                    title={t('uiKit.selection.asiaPacific')}
+                    description={t('uiKit.selection.radioDescription')}
+                  />
+                </SourceRadioGroup>
               </div>
               <Field id="ui-kit-select" label={t('uiKit.selection.selectOption')}>
                 <Select value={region} onValueChange={(value) => setRegion(String(value))}>
@@ -381,20 +397,6 @@ function UiKitPageContent({
                 </Select>
               </Field>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <SelectableCard
-                selected={cardValue === 'production'}
-                onClick={() => setCardValue('production')}
-              >
-                {t('uiKit.selection.cardOne')}
-              </SelectableCard>
-              <SelectableCard
-                selected={cardValue === 'staging'}
-                onClick={() => setCardValue('staging')}
-              >
-                {t('uiKit.selection.cardTwo')}
-              </SelectableCard>
-            </div>
             <div className="flex flex-wrap gap-2">
               <span className="system-xs-regular text-text-secondary inline-flex items-center gap-1.5">
                 <StatusDot status="success" />
@@ -405,14 +407,14 @@ function UiKitPageContent({
                 {t('uiKit.selection.notSelected')}
               </span>
             </div>
-          </Panel>
+          </section>
         </section>
 
         <section aria-labelledby="ui-kit-feedback" className="min-w-0 space-y-3">
           <h2 className="text-sm font-semibold" id="ui-kit-feedback">
             {t('uiKit.sections.feedback')}
           </h2>
-          <Panel className="space-y-4 p-4">
+          <section className="border-components-panel-border bg-components-panel-bg space-y-4 rounded-xl border p-4">
             <div className="flex flex-wrap gap-2">
               <SourceBadge>{t('uiKit.feedback.badgeDefault')}</SourceBadge>
               <SourceBadge variant="dimm">{t('uiKit.feedback.badgeDimmed')}</SourceBadge>
@@ -528,7 +530,7 @@ function UiKitPageContent({
                 {t('uiKit.feedback.promiseError')}
               </Button>
             </div>
-          </Panel>
+          </section>
         </section>
 
         <section aria-labelledby="ui-kit-surfaces" className="min-w-0 space-y-3">
@@ -536,28 +538,25 @@ function UiKitPageContent({
             {t('uiKit.sections.surfaces')}
           </h2>
           <div className="space-y-4">
-            <Panel className="space-y-1 p-3">
+            <section className="border-components-panel-border bg-components-panel-bg space-y-1 rounded-xl border p-3">
               <h3 className="text-sm font-semibold">{t('uiKit.surfaces.panelTitle')}</h3>
               <p className="text-ui-text-tertiary text-sm">
                 {t('uiKit.surfaces.panelDescription')}
               </p>
-            </Panel>
+            </section>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Panel className="p-0">
-                <EmptyState
-                  title={t('uiKit.surfaces.emptyTitle')}
-                  description={t('uiKit.surfaces.emptyDescription')}
-                />
-              </Panel>
-              <Panel
-                className="space-y-2 p-4"
+              <section className="border-components-panel-border bg-components-panel-bg relative min-h-60 overflow-hidden rounded-xl border p-0">
+                <FilterEmptyState title={t('uiKit.surfaces.emptyTitle')} className="px-2" />
+              </section>
+              <section
+                className="border-components-panel-border bg-components-panel-bg space-y-2 rounded-xl border p-4"
                 role="status"
                 aria-label={t('uiKit.surfaces.skeleton')}
               >
                 <Skeleton className="h-4 w-2/3" />
                 <Skeleton className="h-3 w-full" />
                 <Skeleton className="h-3 w-4/5" />
-              </Panel>
+              </section>
             </div>
             <div>
               <h3 className="mb-2 text-sm font-semibold">{t('uiKit.surfaces.tableTitle')}</h3>
@@ -602,7 +601,7 @@ function UiKitPageContent({
           <h2 className="text-sm font-semibold" id="ui-kit-overlays">
             {t('uiKit.sections.overlays')}
           </h2>
-          <Panel className="flex flex-wrap items-center gap-2 p-4">
+          <section className="border-components-panel-border bg-components-panel-bg flex flex-wrap items-center gap-2 rounded-xl border p-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="secondary">{t('uiKit.overlays.menuTrigger')}</Button>
@@ -743,22 +742,7 @@ function UiKitPageContent({
                 </SourceDrawerViewport>
               </SourceDrawerPortal>
             </SourceDrawer>
-
-            <ActionRow
-              aria-pressed={selectedCard}
-              className="max-w-80"
-              onClick={() => setSelectedCard((selected) => !selected)}
-            >
-              <span>
-                {selectedCard ? t('uiKit.selection.selected') : t('uiKit.selection.notSelected')}
-              </span>
-              {selectedCard ? (
-                <Check aria-hidden="true" size={16} />
-              ) : (
-                <X aria-hidden="true" size={16} />
-              )}
-            </ActionRow>
-          </Panel>
+          </section>
         </section>
       </main>
     </div>

@@ -127,6 +127,7 @@
       "checkbox": "Include archived items",
       "switch": "Enable live refresh",
       "radio": "Default region",
+      "radioDescription": "Choose where this workspace runs.",
       "northAmerica": "North America",
       "asiaPacific": "Asia Pacific",
       "cardOne": "Production workspace",

@@ -127,6 +127,7 @@
       "checkbox": "包含已归档项目",
       "switch": "启用实时刷新",
       "radio": "默认区域",
+      "radioDescription": "选择此工作区运行的区域。",
       "northAmerica": "北美",
       "asiaPacific": "亚太",
       "cardOne": "生产工作区",
