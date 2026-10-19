@@ -305,6 +305,51 @@ describe('ConnectorFormily', () => {
     })
   })
 
+  it('emits the companion filename when replacing a configured private key', async () => {
+    const specText = JSON.stringify({
+      properties: { tags: ['ssl'] },
+      configOptions: { connection: { type: 'object', properties: {} } },
+    })
+    const fields = connectorSpecConfigFields(specText, [], 'en')
+    const changes: Array<Record<string, unknown>> = []
+    const secretChanges: Array<{ name: string; action: string; value: string }> = []
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+
+    await act(async () => {
+      root?.render(
+        <ConnectorFormily
+          fields={fields}
+          schema={connectorSpecConnectionSchema(specText, 'en')}
+          initialValues={{ ...createInitialConfig(fields), sslKeyFile: 'old-client.key' }}
+          resetKey="configured-key-filename"
+          configuredSecrets={['sslKey']}
+          secretDrafts={{ sslKey: { action: 'replace', value: '' } }}
+          onValuesChange={(values) => changes.push(values)}
+          onSecretChange={(name, draft) => secretChanges.push({ name, ...draft })}
+        />,
+      )
+    })
+
+    const input = container.querySelector<HTMLInputElement>(
+      'input[type="file"][aria-label="Client key"]',
+    )
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [new File(['private-key'], 'new-client.key')],
+    })
+    await act(async () => {
+      input?.dispatchEvent(new Event('change', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 30))
+    })
+
+    expect(secretChanges).toEqual([
+      { name: 'sslKey', action: 'replace', value: 'cHJpdmF0ZS1rZXk=' },
+    ])
+    expect(changes.at(-1)).toMatchObject({ sslKeyFile: 'new-client.key' })
+  })
+
   it('does not let a pending key upload override a later clear action', async () => {
     const pendingReaders: FileReader[] = []
     vi.spyOn(FileReader.prototype, 'readAsDataURL').mockImplementation(function (this: FileReader) {
