@@ -95,7 +95,15 @@ export function WizardBuilder({
   const sources = sourcesQuery.data || []
   const inputSources = useMemo(() => sources.filter(isDataSource), [sources])
   const deploymentProfile = getDeploymentProfile()
-  const { catalog, schemasError, schemasPending } = useQueries({
+  const inputSourceIndexes = useMemo(
+    () => new Map(inputSources.map((source, index) => [source.id, index])),
+    [inputSources],
+  )
+  const {
+    catalog: allCatalog,
+    schemasError,
+    schemasPending,
+  } = useQueries({
     queries: inputSources.map((s) => ({
       queryKey: ['wizard', 'source-schema', s.id],
       queryFn: () => getSourceSchema(s.id, apiFetch),
@@ -104,8 +112,9 @@ export function WizardBuilder({
     combine: (schemas) => ({
       schemasError: schemas.find((schema) => schema.error)?.error?.message,
       schemasPending: schemas.some((schema) => schema.isPending),
-      catalog: inputSources.map((s, i) => {
-        const details = schemas[i]?.data?.tables || []
+      catalog: sources.map((s) => {
+        const index = inputSourceIndexes.get(s.id)
+        const details = index === undefined ? [] : schemas[index]?.data?.tables || []
         const names = sourceScopedTableNames(
           s,
           details.map((table) => table.name),
@@ -135,6 +144,10 @@ export function WizardBuilder({
       }),
     }),
   })
+  const catalog = useMemo(
+    () => allCatalog.filter((source) => inputSourceIndexes.has(source.id)),
+    [allCatalog, inputSourceIndexes],
+  )
   const guidedDraft = isGuidedCustomer360Pipeline(pipelineId, draft.wizard)
   const sampleSourceIds = useMemo(
     () => new Set(inputSources.filter(isSampleSource).map((source) => source.id)),
@@ -183,7 +196,16 @@ export function WizardBuilder({
   const outputConfig = draft.wizard?.output as
     | { kind?: string; config?: { sourceId?: string; writeMode?: string; table?: string } }
     | undefined
-  const availableDestinationSources = targetSources(sources, connectors, deploymentProfile)
+  // Wizard output retains Atlas semantics in every Cloud distribution.
+  const availableDestinationSources = useMemo(
+    () =>
+      targetSources(sources, connectors, { profile: deploymentProfile, localDevelopment: false }),
+    [sources, connectors, deploymentProfile],
+  )
+  const destinationCatalog = useMemo(() => {
+    const destinationIds = new Set(availableDestinationSources.map((source) => source.id))
+    return allCatalog.filter((source) => destinationIds.has(source.id))
+  }, [allCatalog, availableDestinationSources])
   const destination =
     availableDestinationSources.find((source) => source.id === outputConfig?.config?.sourceId) ||
     availableDestinationSources[0]
@@ -637,6 +659,7 @@ export function WizardBuilder({
             startBusy={busy}
             actionError={error}
             catalog={catalog}
+            destinationCatalog={destinationCatalog}
             initial={readWizard(
               wizard,
               catalog,
