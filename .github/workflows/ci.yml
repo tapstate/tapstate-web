@@ -47,3 +47,24 @@ jobs:
         run: pnpm --filter cloud build
       - name: require the Cloud bundle entry point
         run: test -s apps/cloud/dist/index.html
+      - name: build the local Cloud development Web bundle
+        env:
+          TAPSTATE_LOCAL_DEVELOPMENT: 'true'
+          VITE_CLOUD_CONSOLE_URL: http://localhost:28175
+        run: pnpm --filter web exec vite build --mode cloud --outDir "$RUNNER_TEMP/tapstate-web-local-cloud"
+      - name: verify the local Cloud Web build outputs
+        run: |
+          test -s "$RUNNER_TEMP/tapstate-web-local-cloud/index.html"
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict'
+          import { readFileSync } from 'node:fs'
+          import { join } from 'node:path'
+
+          const marker = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'tapstate-web-local-cloud/tapstate-web-build.json'), 'utf8'))
+          assert.deepEqual(marker, {
+            schemaVersion: 1,
+            profile: 'cloud',
+            purpose: 'local-development',
+            cloudConsoleUrl: 'http://localhost:28175/',
+          })
+          NODE
