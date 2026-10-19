@@ -81,7 +81,7 @@ export const Route = createFileRoute('/onboarding')({
 
         try {
           initialWorkspace = deps.subscriptionId
-            ? await loadOnboardingWorkspace(organization.id, deps.subscriptionId)
+            ? await loadOnboardingWorkspace(organization, deps.subscriptionId)
             : await findProvisioningWorkspace(organization)
         } catch (error) {
           if (error instanceof CloudApiError && error.status === 401) throw error

@@ -61,19 +61,16 @@ export function suggestedClusterName(organization: Organization, clusters: Clust
 }
 
 export async function loadOnboardingWorkspace(
-  organizationId: string,
+  organization: Organization,
   subscriptionId: string,
 ): Promise<OnboardingWorkspace> {
-  const [organization, subscription] = await Promise.all([
-    cloudApi.organization(organizationId),
-    cloudApi.subscriptionById(organizationId, subscriptionId),
-  ])
+  const subscription = await cloudApi.subscriptionById(organization.id, subscriptionId)
   const clusterId = subscriptionClusterId(subscription)
   if (!clusterId) {
     throw new CloudApiError('Subscription exists, but its Cluster record is not visible yet.', 202)
   }
 
-  const cluster = await cloudApi.cluster(organizationId, clusterId)
+  const cluster = await cloudApi.cluster(organization.id, clusterId)
   return { organization, subscription, cluster }
 }
 
