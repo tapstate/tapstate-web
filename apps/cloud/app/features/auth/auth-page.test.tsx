@@ -40,6 +40,7 @@ async function renderPage(props: Partial<ComponentProps<typeof AuthPage>> = {}) 
     darkMode: false,
     setDarkMode: vi.fn(),
     invitationToken: 'invite-token',
+    onAccessType: vi.fn().mockResolvedValue({ type: 'organization' }),
     onLogin: vi.fn().mockResolvedValue(user),
     onRequestCode: vi.fn().mockResolvedValue(undefined),
     onRegisterWithEmail: vi.fn().mockResolvedValue(user),

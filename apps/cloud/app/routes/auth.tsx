@@ -11,8 +11,11 @@ function AuthRoute() {
   const [authContext] = useState(() => {
     if (typeof window === 'undefined') return { invitationToken: null, oauthOutcome: undefined }
     const url = new URL(window.location.href)
+    const fragment = new URLSearchParams(url.hash.replace(/^#/, ''))
     const invitationToken =
-      url.searchParams.get('invite') ?? url.searchParams.get('invitationToken')
+      fragment.get('invite') ??
+      url.searchParams.get('invite') ??
+      url.searchParams.get('invitationToken')
     const oauthOutcome = url.searchParams.get('oauth') ?? undefined
     return { invitationToken, oauthOutcome }
   })
@@ -22,11 +25,13 @@ function AuthRoute() {
     if (
       url.searchParams.has('invite') ||
       url.searchParams.has('invitationToken') ||
-      url.searchParams.has('oauth')
+      url.searchParams.has('oauth') ||
+      url.hash.startsWith('#invite=')
     ) {
       url.searchParams.delete('invite')
       url.searchParams.delete('invitationToken')
       url.searchParams.delete('oauth')
+      if (url.hash.startsWith('#invite=')) url.hash = ''
       window.history.replaceState(
         window.history.state,
         '',
@@ -45,13 +50,15 @@ function AuthRoute() {
         await navigate({ to: '/', search: { organizationId: undefined } })
       }}
       onAcceptInvitation={cloudApi.acceptInvitation}
+      onAccessType={cloudApi.accessType}
       onCurrentSession={cloudApi.me}
       onLogin={(input) => cloudApi.login(input)}
-      onOAuth={async (provider, mode, invitationToken) => {
+      onOAuth={async (provider, mode, invitationToken, organizationName) => {
         const authorizationUrl = await cloudApi.oauthStart(
           provider,
           mode === 'register' ? 'signup' : 'login',
           invitationToken ?? undefined,
+          organizationName,
         )
         window.location.assign(authorizationUrl)
       }}

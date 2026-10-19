@@ -30,13 +30,15 @@ interface AuthPageProps {
   onLogin: (input: LoginInput) => Promise<UserProfile>
   onRequestCode: (email: string, invitationToken: string) => Promise<void>
   onRegisterWithEmail: (input: EmailRegistrationInput) => Promise<UserProfile>
-  onAcceptInvitation: (invitationToken: string) => Promise<UserProfile>
+  onAccessType: (code: string) => Promise<{ type: 'trial' | 'organization' }>
+  onAcceptInvitation: (invitationToken: string, organizationName?: string) => Promise<UserProfile>
   onCurrentSession: () => Promise<UserProfile>
   onAuthenticated: (user: UserProfile) => Promise<void>
   onOAuth: (
     provider: 'google' | 'github',
     mode: AuthMode,
     invitationToken: string | null,
+    organizationName?: string,
   ) => Promise<void>
 }
 
@@ -92,6 +94,7 @@ export function AuthPage({
   onLogin,
   onRequestCode,
   onRegisterWithEmail,
+  onAccessType,
   onAcceptInvitation,
   onCurrentSession,
   onAuthenticated,
@@ -100,6 +103,8 @@ export function AuthPage({
   const { t } = useTranslation()
   const [activeInvitationToken, setActiveInvitationToken] = useState(invitationToken)
   const [invitationLink, setInvitationLink] = useState('')
+  const [accessType, setAccessType] = useState<'trial' | 'organization' | null>(null)
+  const [organizationName, setOrganizationName] = useState('')
   const [mode, setMode] = useState<AuthMode>(invitationToken ? 'register' : 'login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -113,6 +118,27 @@ export function AuthPage({
   const [error, setError] = useState<string | null>(null)
   const [oauthCompleting, setOauthCompleting] = useState(false)
   const oauthHandled = useRef(false)
+
+  useEffect(() => {
+    if (!activeInvitationToken) {
+      setAccessType(null)
+      return
+    }
+    let live = true
+    void onAccessType(activeInvitationToken)
+      .then((result) => {
+        if (live) setAccessType(result.type)
+      })
+      .catch((cause: unknown) => {
+        if (live) {
+          setAccessType(null)
+          setError(errorMessageKey(cause))
+        }
+      })
+    return () => {
+      live = false
+    }
+  }, [activeInvitationToken, onAccessType])
 
   useEffect(() => {
     if (!oauthOutcome || oauthHandled.current) return
@@ -131,6 +157,11 @@ export function AuthPage({
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (activeInvitationToken && !accessType) return
+    if (accessType === 'trial' && !organizationName.trim()) {
+      setError('auth.errors.organizationNameRequired')
+      return
+    }
     setError(null)
     setIsSubmitting(true)
 
@@ -138,7 +169,8 @@ export function AuthPage({
       let user: UserProfile
       if (mode === 'login') {
         user = await onLogin({ email: email.trim(), password })
-        if (activeInvitationToken) user = await onAcceptInvitation(activeInvitationToken)
+        if (activeInvitationToken)
+          user = await onAcceptInvitation(activeInvitationToken, organizationName.trim())
       } else {
         if (!activeInvitationToken) {
           setError('auth.errors.invitationRequired')
@@ -154,6 +186,7 @@ export function AuthPage({
           code: verificationCode.trim(),
           password,
           displayName: displayName.trim(),
+          organizationName: organizationName.trim(),
         })
       }
       await onAuthenticated(user)
@@ -169,6 +202,7 @@ export function AuthPage({
       setError('auth.errors.invitationRequired')
       return
     }
+    if (!accessType) return
     setError(null)
     setIsSendingCode(true)
     try {
@@ -182,10 +216,15 @@ export function AuthPage({
   }
 
   const handleOAuth = async (provider: 'google' | 'github') => {
+    if (activeInvitationToken && !accessType) return
+    if (accessType === 'trial' && !organizationName.trim()) {
+      setError('auth.errors.organizationNameRequired')
+      return
+    }
     setError(null)
     setIsStartingOAuth(true)
     try {
-      await onOAuth(provider, mode, activeInvitationToken)
+      await onOAuth(provider, mode, activeInvitationToken, organizationName.trim())
     } catch (cause) {
       setError(errorMessageKey(cause))
       setIsStartingOAuth(false)
@@ -208,7 +247,11 @@ export function AuthPage({
           setError('auth.errors.invitationInvalid')
           return
         }
-        token = url.searchParams.get('invite') ?? url.searchParams.get('invitationToken') ?? ''
+        token =
+          new URLSearchParams(url.hash.replace(/^#/, '')).get('invite') ??
+          url.searchParams.get('invite') ??
+          url.searchParams.get('invitationToken') ??
+          ''
       } catch {
         setError('auth.errors.invitationInvalid')
         return
@@ -219,6 +262,9 @@ export function AuthPage({
       return
     }
     setActiveInvitationToken(token)
+    setAccessType(null)
+    setVerificationSent(false)
+    setVerificationCode('')
     setInvitationLink('')
     setMode('register')
     setError(null)
@@ -265,39 +311,71 @@ export function AuthPage({
       </div>
 
       {activeInvitationToken && (
-        <p className="mt-4 rounded-md border border-[var(--border)] bg-[var(--app-background)] px-3 py-2 text-xs text-[var(--muted-foreground)]">
-          {t('auth.invitationNotice')}
-        </p>
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--app-background)] px-3 py-2 text-xs text-[var(--muted-foreground)]">
+          <span>{t('auth.invitationNotice')}</span>
+          <button
+            className="shrink-0 font-medium text-[var(--foreground)] hover:underline"
+            onClick={() => {
+              setActiveInvitationToken(null)
+              setVerificationSent(false)
+              setVerificationCode('')
+              setError(null)
+            }}
+            type="button"
+          >
+            {t('auth.changeCode')}
+          </button>
+        </div>
       )}
 
-      {!activeInvitationToken &&
-        (mode === 'register' || oauthOutcome === 'auth.invitation-required') && (
-          <form className="mt-4 space-y-2" onSubmit={applyInvitationLink}>
-            <label className="block text-sm font-medium" htmlFor="auth-invitation-link">
-              {t('auth.invitationLinkLabel')}
-            </label>
-            <div className="flex gap-2">
-              <input
-                autoComplete="off"
-                className={inputClassName}
-                id="auth-invitation-link"
-                onChange={(event) => setInvitationLink(event.target.value)}
-                placeholder={t('auth.invitationLinkPlaceholder')}
-                value={invitationLink}
-              />
-              <button
-                className="shrink-0 rounded-md bg-[var(--foreground)] px-4 text-sm font-medium text-[var(--surface)]"
-                type="submit"
-              >
-                {t('auth.useInvitation')}
-              </button>
-            </div>
-          </form>
-        )}
+      {accessType === 'trial' && (
+        <div className="mt-4">
+          <Field label={t('auth.organizationNameLabel')} htmlFor="auth-organization-name">
+            <input
+              autoComplete="organization"
+              className={inputClassName}
+              id="auth-organization-name"
+              maxLength={100}
+              onChange={(event) => setOrganizationName(event.target.value)}
+              required
+              value={organizationName}
+            />
+          </Field>
+        </div>
+      )}
+
+      {!activeInvitationToken && (
+        <form className="mt-4 space-y-2" onSubmit={applyInvitationLink}>
+          <label className="block text-sm font-medium" htmlFor="auth-invitation-link">
+            {t('auth.invitationLinkLabel')}
+          </label>
+          <div className="flex gap-2">
+            <input
+              autoComplete="off"
+              className={inputClassName}
+              id="auth-invitation-link"
+              onChange={(event) => setInvitationLink(event.target.value)}
+              placeholder={t('auth.invitationLinkPlaceholder')}
+              value={invitationLink}
+            />
+            <button
+              className="shrink-0 rounded-md bg-[var(--foreground)] px-4 text-sm font-medium text-[var(--surface)]"
+              type="submit"
+            >
+              {t('auth.useInvitation')}
+            </button>
+          </div>
+        </form>
+      )}
 
       <div className="mt-6 space-y-4">
         <AuthProviderButtons
-          disabled={isSubmitting || isSendingCode || isStartingOAuth}
+          disabled={
+            isSubmitting ||
+            isSendingCode ||
+            isStartingOAuth ||
+            Boolean(activeInvitationToken && !accessType)
+          }
           mode={mode}
           onStart={(provider) => void handleOAuth(provider)}
         />
@@ -339,7 +417,7 @@ export function AuthPage({
             <div className="space-y-2">
               <button
                 className="h-10 w-full rounded-md border border-[var(--border)] px-3 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--app-background)] disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={!email.trim() || isSendingCode || isSubmitting}
+                disabled={!email.trim() || isSendingCode || isSubmitting || !accessType}
                 onClick={handleRequestCode}
                 type="button"
               >
@@ -405,7 +483,9 @@ export function AuthPage({
           {(mode === 'login' || verificationSent) && (
             <button
               className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--foreground)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={isSubmitting || isSendingCode}
+              disabled={
+                isSubmitting || isSendingCode || Boolean(activeInvitationToken && !accessType)
+              }
               type="submit"
             >
               {isSubmitting ? (

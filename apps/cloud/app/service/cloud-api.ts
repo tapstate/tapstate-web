@@ -55,6 +55,7 @@ export interface EmailRegistrationInput {
   code: string
   password: string
   displayName?: string
+  organizationName?: string
 }
 
 export interface Region {
@@ -245,16 +246,22 @@ export const cloudApi = {
     request<void>(`${apiPrefix}/auth/email/code`, jsonBody({ email, invitationToken })),
   registerWithEmailCode: (input: EmailRegistrationInput) =>
     request<LoginResult>(`${apiPrefix}/auth/email/register`, jsonBody(input)),
-  acceptInvitation: (invitationToken: string) =>
-    request<LoginResult>(`${apiPrefix}/auth/invitations/accept`, jsonBody({ invitationToken })),
+  accessType: (code: string) =>
+    request<{ type: 'trial' | 'organization' }>(`${apiPrefix}/auth/access`, jsonBody({ code })),
+  acceptInvitation: (invitationToken: string, organizationName?: string) =>
+    request<LoginResult>(
+      `${apiPrefix}/auth/invitations/accept`,
+      jsonBody({ invitationToken, organizationName }),
+    ),
   oauthStart: async (
     provider: 'google' | 'github',
     flow: 'login' | 'signup' | 'link',
     invitationToken?: string,
+    organizationName?: string,
   ) => {
     const result = await request<{ authorizationUrl: string }>(
       `${apiPrefix}/auth/oauth/${provider}/start`,
-      jsonBody({ flow, invitationToken: invitationToken ?? null }),
+      jsonBody({ flow, invitationToken: invitationToken ?? null, organizationName }),
     )
     const authorizationBase = cloudApiOrigin || window.location.origin
     return new URL(result.authorizationUrl, authorizationBase).toString()
