@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 
 import { ConnectorFormily } from '@/features/sources/connector-formily'
 import {
+  connectorSpecConfigFields,
   connectorSpecConnectionSchema,
   connectorSpecInitialValues,
   normalizeConnectorConfigFields,
@@ -49,7 +50,10 @@ export function AtlasStoreDialog({ open, onOpenChange, onCreated }: AtlasStoreDi
       .then((detail) => {
         if (!active) return
         if (detail.spec.text === null) throw new Error('Atlas connector form is unavailable')
-        const fields = normalizeConnectorConfigFields(detail.id, detail.config)
+        const fields = normalizeConnectorConfigFields(
+          detail.id,
+          connectorSpecConfigFields(detail.spec.text, detail.config, 'en'),
+        )
         setSchema(
           withoutTextHints(connectorSpecConnectionSchema(detail.spec.text, 'en', detail.id)),
         )
