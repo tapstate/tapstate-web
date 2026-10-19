@@ -41,10 +41,16 @@ describe('pipeline graph edit model', () => {
       typeof validatePipelineGraph
     >[2]
     expect(
-      validatePipelineGraph(draft, view.sources, catalog, 'cloud', false).map(({ code }) => code),
+      validatePipelineGraph(draft, view.sources, catalog, {
+        profile: 'cloud',
+        localDevelopment: false,
+      }).map(({ code }) => code),
     ).toContain('unsupported-target-connector')
     expect(
-      validatePipelineGraph(draft, view.sources, catalog, 'cloud', true).map(({ code }) => code),
+      validatePipelineGraph(draft, view.sources, catalog, {
+        profile: 'cloud',
+        localDevelopment: true,
+      }).map(({ code }) => code),
     ).not.toContain('unsupported-target-connector')
   })
 

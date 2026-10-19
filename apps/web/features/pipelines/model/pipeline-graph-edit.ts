@@ -9,7 +9,6 @@ import type {
 import type { ConnectorSummary } from '@/service/source-client'
 
 import type { PipelineNodeChoice } from '../components/node-library/pipeline-node-library-types'
-import type { DeploymentProfile } from './deployment-profile'
 import type {
   PipelineNodeConfiguration,
   PipelineNodeConfigurationChange,
@@ -23,7 +22,11 @@ import {
   type PipelineTargetTableMapping,
 } from './pipeline-node-model'
 import { isPipelineDagEdgeValid } from './pipeline-node-rules'
-import { isTargetConnector, type SourceIdentity } from './pipeline-target-connectors'
+import {
+  isTargetConnector,
+  type SourceIdentity,
+  type TargetConnectorPolicy,
+} from './pipeline-target-connectors'
 
 export interface PipelineGraphDraft {
   pipeline: PipelineView
@@ -639,8 +642,7 @@ export function validatePipelineGraph(
   draft: PipelineGraphDraft,
   availableSources?: readonly (string | SourceIdentity)[],
   connectorCatalog: readonly ConnectorSummary[] = [],
-  deploymentProfile: DeploymentProfile = 'on-prem',
-  localDevelopment?: boolean,
+  targetPolicy: TargetConnectorPolicy = { profile: 'on-prem', localDevelopment: false },
 ): PipelineGraphDiagnostic[] {
   const diagnostics: PipelineGraphDiagnostic[] = []
   const availableSourceIds = availableSources?.map((source) =>
@@ -765,12 +767,7 @@ export function validatePipelineGraph(
       config.kind === 'target' &&
       config.sourceId &&
       connectorBySourceId.has(config.sourceId) &&
-      !isTargetConnector(
-        connectorBySourceId.get(config.sourceId),
-        deploymentProfile,
-        connectorCatalog,
-        localDevelopment,
-      )
+      !isTargetConnector(connectorBySourceId.get(config.sourceId), connectorCatalog, targetPolicy)
     ) {
       diagnostics.push({
         code: 'unsupported-target-connector',

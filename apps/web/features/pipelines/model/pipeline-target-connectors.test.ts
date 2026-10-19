@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { ConnectorSummary } from '@/service/source-client'
 
@@ -11,34 +11,45 @@ const connectors = [
   { id: 'mysql', sink: false },
 ] as unknown as ConnectorSummary[]
 
+const localCloud = { profile: 'cloud', localDevelopment: true } as const
+const releaseCloud = { profile: 'cloud', localDevelopment: false } as const
+const onPrem = { profile: 'on-prem', localDevelopment: false } as const
+
+afterEach(() => vi.unstubAllEnvs())
+
 describe('pipeline target connectors', () => {
+  it('uses only the explicit policy even when the compiled environment disagrees', () => {
+    vi.stubEnv('VITE_LOCAL_DEVELOPMENT', 'true')
+    expect(isTargetConnector('mongodb', connectors, releaseCloud)).toBe(false)
+    vi.stubEnv('VITE_LOCAL_DEVELOPMENT', 'false')
+    expect(isTargetConnector('mongodb', connectors, localCloud)).toBe(true)
+  })
   it('allows a catalog-confirmed MongoDB target only in a local Cloud distribution', () => {
-    expect(isTargetConnector('mongodb', 'cloud', connectors, true)).toBe(true)
-    expect(isTargetConnector('mongodb', 'cloud', connectors, false)).toBe(false)
-    expect(isTargetConnector('postgres', 'cloud', connectors, true)).toBe(false)
-    expect(isTargetConnector('mysql', 'cloud', connectors, true)).toBe(false)
-    expect(isTargetConnector('mongodb', 'cloud', [], true)).toBe(false)
+    expect(isTargetConnector('mongodb', connectors, localCloud)).toBe(true)
+    expect(isTargetConnector('mongodb', connectors, releaseCloud)).toBe(false)
+    expect(isTargetConnector('postgres', connectors, localCloud)).toBe(false)
+    expect(isTargetConnector('mysql', connectors, localCloud)).toBe(false)
+    expect(isTargetConnector('mongodb', [], localCloud)).toBe(false)
     expect(
       isTargetConnector(
         'mongodb',
-        'cloud',
         [{ id: 'mongodb', sink: false }] as unknown as ConnectorSummary[],
-        true,
+        localCloud,
       ),
     ).toBe(false)
     expect(
-      targetSources([{ id: 'local_out', connector: 'mongodb' }], connectors, 'cloud', true).map(
+      targetSources([{ id: 'local_out', connector: 'mongodb' }], connectors, localCloud).map(
         ({ id }) => id,
       ),
     ).toEqual(['local_out'])
   })
 
   it('limits cloud to Atlas and uses declared sink capability in OP', () => {
-    expect(isTargetConnector('mongodb-atlas', 'cloud', connectors)).toBe(true)
-    expect(isTargetConnector('mongodb', 'cloud', connectors)).toBe(false)
-    expect(isTargetConnector('postgres', 'on-prem', connectors)).toBe(true)
-    expect(isTargetConnector('mysql', 'on-prem', connectors)).toBe(false)
-    expect(isTargetConnector(null, 'on-prem', connectors)).toBe(false)
+    expect(isTargetConnector('mongodb-atlas', connectors, releaseCloud)).toBe(true)
+    expect(isTargetConnector('mongodb', connectors, releaseCloud)).toBe(false)
+    expect(isTargetConnector('postgres', connectors, onPrem)).toBe(true)
+    expect(isTargetConnector('mysql', connectors, onPrem)).toBe(false)
+    expect(isTargetConnector(null, connectors, onPrem)).toBe(false)
   })
 
   it('keeps Atlas store markers required while confining the MongoDB exception to local builds', () => {
@@ -49,12 +60,12 @@ describe('pipeline target connectors', () => {
       { id: 'marked_mongo', connector: 'mongodb', metadata: { labels: { store: true } } },
       { id: 'marked_postgres', connector: 'postgres', metadata: { labels: { store: true } } },
     ]
-    expect(targetSources(sources, connectors, 'cloud', true).map(({ id }) => id)).toEqual([
+    expect(targetSources(sources, connectors, localCloud).map(({ id }) => id)).toEqual([
       'store_atlas',
       'local_mongo',
       'marked_mongo',
     ])
-    expect(targetSources(sources, connectors, 'cloud', false).map(({ id }) => id)).toEqual([
+    expect(targetSources(sources, connectors, releaseCloud).map(({ id }) => id)).toEqual([
       'store_atlas',
     ])
   })
@@ -66,12 +77,14 @@ describe('pipeline target connectors', () => {
       { id: 'atlas_out', connector: 'mongodb-atlas', metadata: { labels: { store: 'true' } } },
       { id: 'mongo_out', connector: 'mongodb' },
     ]
-    expect(targetSources(sources, connectors, 'on-prem').map(({ id }) => id)).toEqual([
+    expect(targetSources(sources, connectors, onPrem).map(({ id }) => id)).toEqual([
       'pg_warehouse',
       'atlas_out',
       'mongo_out',
     ])
-    expect(targetSources(sources, connectors, 'cloud').map(({ id }) => id)).toEqual(['atlas_out'])
-    expect(targetSources([], connectors, 'on-prem')).toEqual([])
+    expect(targetSources(sources, connectors, releaseCloud).map(({ id }) => id)).toEqual([
+      'atlas_out',
+    ])
+    expect(targetSources([], connectors, onPrem)).toEqual([])
   })
 })
