@@ -284,7 +284,6 @@
     "title": "Data Sources",
     "subtitle": "Browse connected systems, tables, schema, and preview data.",
     "allSources": "All Sources",
-    "allSourcesDescription": "Manage connected databases, warehouses, and streaming platforms.",
     "connectionError": "This source is reachable in the catalog, but the latest connection check failed.",
     "generatedEndpoint": "Generated API endpoint",
     "noTablesTitle": "No tables found",

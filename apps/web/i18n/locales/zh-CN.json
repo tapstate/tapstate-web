@@ -284,7 +284,6 @@
     "title": "数据源",
     "subtitle": "浏览已连接系统、表、Schema 和数据预览。",
     "allSources": "全部数据源",
-    "allSourcesDescription": "管理已连接的数据库、数仓和流式平台。",
     "connectionError": "该数据源已在目录中，但最近一次连接检查失败。",
     "generatedEndpoint": "生成的 API 端点",
     "noTablesTitle": "没有发现表",

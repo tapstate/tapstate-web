@@ -284,7 +284,6 @@
     "title": "資料來源",
     "subtitle": "瀏覽已連接系統、資料表、Schema 和資料預覽。",
     "allSources": "全部資料來源",
-    "allSourcesDescription": "管理已連接的資料庫、數倉和串流平台。",
     "connectionError": "該資料來源已在目錄中，但最近一次連線檢查失敗。",
     "generatedEndpoint": "產生的 API 端點",
     "noTablesTitle": "沒有發現資料表",
