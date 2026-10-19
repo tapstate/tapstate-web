@@ -317,6 +317,7 @@ export function AuthPage({
             className="shrink-0 font-medium text-[var(--foreground)] hover:underline"
             onClick={() => {
               setActiveInvitationToken(null)
+              setMode('login')
               setVerificationSent(false)
               setVerificationCode('')
               setError(null)

@@ -101,7 +101,7 @@ describe('Cloud invitation authentication', () => {
     await clickButton('Continue')
     await clickButton('Sign up with Google')
 
-    expect(props.onOAuth).toHaveBeenCalledWith('google', 'register', token)
+    expect(props.onOAuth).toHaveBeenCalledWith('google', 'register', token, '')
     expect(props.onRequestCode).not.toHaveBeenCalled()
   })
 
@@ -121,6 +121,7 @@ describe('Cloud invitation authentication', () => {
       code: '123456',
       password: 'correct-horse-battery',
       displayName: 'Member',
+      organizationName: '',
     })
     expect(props.onAuthenticated).toHaveBeenCalledWith(user)
   })
@@ -186,7 +187,7 @@ describe('Cloud invitation authentication', () => {
   it('starts the selected provider with the invitation signup intent', async () => {
     const props = await renderPage()
     await clickButton('Sign up with Google')
-    expect(props.onOAuth).toHaveBeenCalledWith('google', 'register', 'invite-token')
+    expect(props.onOAuth).toHaveBeenCalledWith('google', 'register', 'invite-token', '')
   })
 
   it('sends the invitation token in the OAuth-start request body, not in its URL', async () => {
