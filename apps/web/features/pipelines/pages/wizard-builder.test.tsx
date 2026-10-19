@@ -6,9 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { PipelineClientError, type PipelineDraft } from '@/service/pipelines/pipeline-client'
 
-import type { WizardViewState } from '../components/reference-wizard/ReferenceWizardBuilder'
+import type { WizardBuilderProps } from '../components/reference-wizard/ReferenceWizardBuilder'
 
 const {
+  getDeploymentProfile,
   getPipelineDraft,
   previewPipelineDraft,
   streamPipelinePreview,
@@ -19,7 +20,10 @@ const {
   listConnectors,
   listSources,
   apiFetch,
+  wizardRendering,
 } = vi.hoisted(() => ({
+  wizardRendering: { real: false },
+  getDeploymentProfile: vi.fn(),
   getPipelineDraft: vi.fn(),
   previewPipelineDraft: vi.fn(),
   streamPipelinePreview: vi.fn(),
@@ -59,75 +63,79 @@ vi.mock('@/service/source-client', async (importOriginal) => ({
   listSources,
 }))
 
+vi.mock('../model/deployment-profile', () => ({ getDeploymentProfile }))
+
 vi.mock('@/stores/auth-store', () => ({
   useAuthStore: <T,>(selector: (state: { apiFetch: typeof fetch }) => T) => selector({ apiFetch }),
 }))
 
-vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
-  ReferenceWizardBuilder: ({
-    initial,
-    onChange,
-    footer,
-    actions,
-    readOnly,
-    livePreview,
-    livePreviewStatus,
-    onInspectPlan,
-  }: {
-    initial: WizardViewState
-    onChange: (state: WizardViewState) => void
-    footer: React.ReactNode
-    actions?: React.ReactNode
-    readOnly?: boolean
-    livePreview: { runId: string } | null
-    livePreviewStatus: string
-    onInspectPlan: () => Promise<string>
-  }) => (
-    <section
-      className="wizard-reference-editor-column"
-      data-read-only={readOnly ? 'true' : 'false'}
-      data-root-table={initial.root?.table ?? ''}
-      data-live-preview-status={livePreviewStatus}
-      data-live-preview-run={livePreview?.runId || ''}
-    >
-      <button
-        data-testid="change-wizard"
-        disabled={readOnly}
-        onClick={() =>
-          onChange({
-            root: {
-              source: 'mysql',
-              table: 'AA_0716',
-              primaryKey: 'ID',
-              keys: ['ID'],
-              rowCount: '—',
-              columns: ['ID'],
-            },
-            relations: [],
-            transforms: [
-              {
-                id: 'verify_filter',
-                name: 'Keep rows',
-                type: 'filter',
-                config: { filter: { expr: 'true' } },
-              },
-            ],
-            destinationSourceId: 'mysql',
-            destinationTable: 'codex_wizard_component_test',
-            destinationWriteMode: 'append',
-          })
-        }
-      >
-        Change wizard
-      </button>
-      <button data-testid="inspect-plan" onClick={() => void onInspectPlan()}>
-        Inspect Plan
-      </button>
-      {footer}
-      {actions}
-    </section>
-  ),
-}))
+vi.mock('../components/reference-wizard/ReferenceWizardBuilder', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../components/reference-wizard/ReferenceWizardBuilder')>()
+  return {
+    ReferenceWizardBuilder: (props: WizardBuilderProps) => {
+      if (wizardRendering.real) return <actual.ReferenceWizardBuilder {...props} />
+      const {
+        initial,
+        onChange,
+        footer,
+        actions,
+        readOnly,
+        destinationName,
+        livePreview,
+        livePreviewStatus,
+        onInspectPlan,
+      } = props
+      return (
+        <section
+          className="wizard-reference-editor-column"
+          data-read-only={readOnly ? 'true' : 'false'}
+          data-destination-name={destinationName}
+          data-destination-source={initial.destinationSourceId}
+          data-root-table={initial.root?.table ?? ''}
+          data-live-preview-status={livePreviewStatus}
+          data-live-preview-run={livePreview?.runId || ''}
+        >
+          <button
+            data-testid="change-wizard"
+            disabled={readOnly}
+            onClick={() =>
+              onChange({
+                root: {
+                  source: 'mysql',
+                  table: 'AA_0716',
+                  primaryKey: 'ID',
+                  keys: ['ID'],
+                  rowCount: '—',
+                  columns: ['ID'],
+                },
+                relations: [],
+                transforms: [
+                  {
+                    id: 'verify_filter',
+                    name: 'Keep rows',
+                    type: 'filter',
+                    config: { filter: { expr: 'true' } },
+                  },
+                ],
+                destinationSourceId: 'mysql',
+                destinationTable: 'codex_wizard_component_test',
+                destinationWriteMode: 'append',
+              })
+            }
+          >
+            Change wizard
+          </button>
+          <button data-testid="inspect-plan" onClick={() => void onInspectPlan?.()}>
+            Inspect Plan
+          </button>
+          {footer}
+          {actions}
+        </section>
+      )
+    },
+  }
+})
 
 import { WizardBuilder } from './wizard-builder'
 
@@ -162,6 +170,8 @@ const initialDraft: PipelineDraft = {
 }
 
 beforeEach(() => {
+  wizardRendering.real = false
+  getDeploymentProfile.mockReturnValue('on-prem')
   vi.clearAllMocks()
   listSources.mockResolvedValue([{ id: 'mysql', connector: 'mysql' }])
   listConnectors.mockResolvedValue([
@@ -207,11 +217,121 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root?.unmount())
   container?.remove()
+  vi.unstubAllEnvs()
   root = undefined
   container = undefined
 })
 
 describe('WizardBuilder publish flow', () => {
+  it('offers the marked Atlas destination through the real picker without treating it as an input', async () => {
+    wizardRendering.real = true
+    getDeploymentProfile.mockReturnValue('cloud')
+    vi.stubEnv('VITE_LOCAL_DEVELOPMENT', 'true')
+    listSources.mockResolvedValue([
+      { id: 'mysql', connector: 'mysql' },
+      { id: 'mongo_out', connector: 'mongodb' },
+      { id: 'atlas_out', connector: 'mongodb-atlas', metadata: { labels: { store: 'true' } } },
+    ])
+    listConnectors.mockResolvedValue([
+      { id: 'mysql', name: 'MySQL', sink: false },
+      { id: 'mongodb', name: 'MongoDB', sink: true, writeModes: ['upsert'] },
+      { id: 'mongodb-atlas', name: 'MongoDB Atlas', sink: true, writeModes: ['upsert'] },
+    ])
+    const draft = {
+      ...initialDraft,
+      wizard: {
+        ...initialDraft.wizard!,
+        output: {
+          kind: 'atlas',
+          config: { sourceId: 'atlas_out', table: 'orders', writeMode: 'upsert' },
+        },
+      },
+    }
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () =>
+      root?.render(
+        <QueryClientProvider client={client}>
+          <WizardBuilder pipelineId={draft.pipelineId} draft={draft} etag='"1"' />
+        </QueryClientProvider>,
+      ),
+    )
+    await vi.waitFor(() =>
+      expect(
+        container?.querySelector('[aria-labelledby="wizard-destination-source-label"]'),
+      ).not.toBeNull(),
+    )
+    const trigger = container.querySelector<HTMLButtonElement>(
+      '[aria-labelledby="wizard-destination-source-label"]',
+    )
+    await act(async () => trigger?.click())
+    await vi.waitFor(() => expect(document.body.querySelector('[role="listbox"]')).not.toBeNull())
+    const options = Array.from(document.body.querySelectorAll('[role="option"]')).map(
+      (item) => item.textContent,
+    )
+    expect(options.some((text) => text?.includes('atlas_out'))).toBe(true)
+    expect(options.some((text) => text?.includes('mongo_out'))).toBe(false)
+    expect(getSourceSchema).not.toHaveBeenCalledWith('atlas_out', expect.anything())
+  })
+
+  it('keeps Cloud wizard output aligned with its Atlas picker in a local build', async () => {
+    vi.stubEnv('VITE_LOCAL_DEVELOPMENT', 'true')
+    let resolveSchemas!: (value: { tables: [] }) => void
+    getSourceSchema.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSchemas = resolve
+      }),
+    )
+    getDeploymentProfile.mockReturnValue('cloud')
+    listSources.mockResolvedValue([
+      { id: 'mongo_out', connector: 'mongodb' },
+      { id: 'atlas_out', connector: 'mongodb-atlas', metadata: { labels: { store: 'true' } } },
+      { id: 'mysql', connector: 'mysql' },
+    ])
+    listConnectors.mockResolvedValue([
+      { id: 'mongodb', name: 'MongoDB', sink: true, writeModes: ['upsert'] },
+      { id: 'mongodb-atlas', name: 'MongoDB Atlas', sink: true, writeModes: ['upsert'] },
+      { id: 'mysql', name: 'MySQL', sink: false },
+    ])
+    const cloudDraft = {
+      ...initialDraft,
+      wizard: {
+        ...initialDraft.wizard!,
+        output: {
+          kind: 'atlas',
+          config: { sourceId: 'missing', table: 'orders', writeMode: 'upsert' },
+        },
+      },
+    }
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={cloudDraft.pipelineId} draft={cloudDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(queryClient.getQueryState(['wizard', 'sources'])?.status).toBe('success')
+        expect(queryClient.getQueryState(['wizard', 'connectors'])?.status).toBe('success')
+      })
+    })
+    expect(container?.textContent).toContain('Loading sources')
+    await act(async () => resolveSchemas({ tables: [] }))
+    await vi.waitFor(() => {
+      expect(
+        container?.querySelector('[data-destination-name]')?.getAttribute('data-destination-name'),
+      ).toBe('MongoDB Atlas (atlas_out)')
+      expect(container?.querySelector('[data-destination-source="atlas_out"]')).not.toBeNull()
+    })
+  })
+
   it('compiles an unfinished destination only for inspection without saving the temporary name', async () => {
     const draft: PipelineDraft = {
       ...initialDraft,
@@ -638,7 +758,9 @@ describe('WizardBuilder publish flow', () => {
     await act(async () => {
       container?.querySelector<HTMLButtonElement>('[data-testid="change-wizard"]')?.click()
     })
-    await vi.waitFor(() => expect(streamPipelinePreview).toHaveBeenCalledTimes(2))
+    await act(async () => {
+      await vi.waitFor(() => expect(streamPipelinePreview).toHaveBeenCalledTimes(2))
+    })
 
     expect(firstSignal?.aborted).toBe(true)
     expect(previewPipelineDraft).toHaveBeenCalledWith(

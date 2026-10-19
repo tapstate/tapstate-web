@@ -961,15 +961,18 @@ function PipelineOrchestrationPage({
   // A target writes through one connector only, so its picker offers a narrower catalog than a
   // source node's. Two lists rather than one filtered at the form: the panel takes whichever the
   // current selection is entitled to, and neither kind can read the other's.
+  const deploymentProfile = getDeploymentProfile()
+  const localDevelopment = import.meta.env.VITE_LOCAL_DEVELOPMENT === 'true'
   const targetSourceOptions = useMemo<PipelineSchemaOption[]>(
     () =>
-      targetSources(sources.data ?? [], connectors.data ?? [], getDeploymentProfile()).map(
-        (source) => ({
-          label: source.id,
-          value: source.id,
-        }),
-      ),
-    [connectors.data, sources.data],
+      targetSources(sources.data ?? [], connectors.data ?? [], {
+        profile: deploymentProfile,
+        localDevelopment,
+      }).map((source) => ({
+        label: source.id,
+        value: source.id,
+      })),
+    [connectors.data, sources.data, deploymentProfile, localDevelopment],
   )
   const configuredTableOptionsBySourceId = useMemo(() => {
     const options = new Map<string, PipelineSchemaOption[]>()
@@ -1149,12 +1152,10 @@ function PipelineOrchestrationPage({
   async function handleSave(): Promise<PipelineDraftSaveResult | null> {
     if (isReadOnly) return null
     if (!draft || autosave.isSaving) return null
-    const nextDiagnostics = validatePipelineGraph(
-      draft,
-      sources.data,
-      connectors.data,
-      getDeploymentProfile(),
-    )
+    const nextDiagnostics = validatePipelineGraph(draft, sources.data, connectors.data, {
+      profile: deploymentProfile,
+      localDevelopment,
+    })
     if (!sources.isSuccess) {
       setDiagnostics([])
       pushActionError(t('pipelines.workspace.nodeSelector.sourcesError'))
