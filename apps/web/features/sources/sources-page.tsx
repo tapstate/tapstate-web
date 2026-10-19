@@ -482,51 +482,37 @@ export function SourcesPage({
 
   return (
     <section className="flex h-full w-full flex-col overflow-hidden bg-white">
-      <header className="border-divider-subtle z-10 flex shrink-0 flex-col gap-3 border-b bg-white px-4 pt-4 pb-2 md:px-8">
-        <div className="flex min-h-6 flex-wrap items-center justify-between gap-2">
-          <div className="min-w-0">
-            <h1 className="text-text-primary truncate text-[18px]/[21.6px] font-semibold">
-              {t('sources.title')}
-            </h1>
-            {!selectedSource && (
-              <p className="system-sm-regular text-text-tertiary mt-1">
-                {t('sources.allSourcesDescription')}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {samplesAvailable && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setSampleDialogOpen(true)}
-              >
-                {t('overview.addSources.sample.action')}
-              </Button>
-            )}
-            {(sourcesQuery.data ?? []).some(isSampleSource) && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                disabled={removingSamples}
-                onClick={() => {
-                  setSampleRemoveError('')
-                  setSampleRemoveConfirmOpen(true)
-                }}
-              >
-                {removingSamples ? t('sources.samples.removing') : t('sources.samples.remove')}
-              </Button>
-            )}
-          </div>
+      <header className="border-divider-subtle z-10 flex shrink-0 flex-col gap-3 border-b bg-white px-4 py-4 md:px-8 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-text-primary truncate text-[18px]/[21.6px] font-semibold">
+            {t('sources.title')}
+          </h1>
         </div>
-        <div
-          className={cn(
-            'flex flex-wrap items-center gap-2',
-            selectedSource ? 'justify-between' : 'justify-end',
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {samplesAvailable && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setSampleDialogOpen(true)}
+            >
+              {t('overview.addSources.sample.action')}
+            </Button>
           )}
-        >
+          {(sourcesQuery.data ?? []).some(isSampleSource) && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={removingSamples}
+              onClick={() => {
+                setSampleRemoveError('')
+                setSampleRemoveConfirmOpen(true)
+              }}
+            >
+              {removingSamples ? t('sources.samples.removing') : t('sources.samples.remove')}
+            </Button>
+          )}
           {selectedSource && (
             <Button type="button" variant="ghost" onClick={() => selectSource(null)}>
               <ArrowLeft className="size-4" aria-hidden="true" />

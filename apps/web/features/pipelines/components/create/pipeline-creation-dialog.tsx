@@ -158,8 +158,8 @@ export function PipelineCreationDialog({
     >
       <DialogContent
         showCloseButton={false}
-        overlayClassName="pipeline-create-dialog-overlay"
-        className="top-0 left-0 h-screen max-h-none w-screen max-w-none translate-0 overflow-hidden rounded-none border-none bg-transparent p-4 shadow-none sm:max-w-none"
+        overlayClassName="pipeline-create-dialog-overlay z-40"
+        className="top-0 left-0 z-50 h-screen max-h-none w-screen max-w-none translate-0 overflow-hidden rounded-none border-none bg-transparent p-4 shadow-none sm:max-w-none"
         style={{ top: 0, left: 0, transform: 'none' }}
       >
         <DialogTitle className="sr-only">{t('pipelines.createEntry.title')}</DialogTitle>
