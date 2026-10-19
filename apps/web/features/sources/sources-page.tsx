@@ -481,8 +481,8 @@ export function SourcesPage({
   const editLoading = editingSourceId === selectedSource?.id && editingSourceQuery.isFetching
 
   return (
-    <section className="bg-background-body flex h-full w-full flex-col overflow-hidden">
-      <header className="bg-background-body z-10 flex shrink-0 flex-col gap-3 px-4 pt-4 pb-2 md:px-8">
+    <section className="flex h-full w-full flex-col overflow-hidden bg-white">
+      <header className="border-divider-subtle z-10 flex shrink-0 flex-col gap-3 border-b bg-white px-4 pt-4 pb-2 md:px-8">
         <div className="flex min-h-6 flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <h1 className="text-text-primary truncate text-[18px]/[21.6px] font-semibold">
@@ -521,21 +521,17 @@ export function SourcesPage({
             )}
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          {selectedSource ? (
+        <div
+          className={cn(
+            'flex flex-wrap items-center gap-2',
+            selectedSource ? 'justify-between' : 'justify-end',
+          )}
+        >
+          {selectedSource && (
             <Button type="button" variant="ghost" onClick={() => selectSource(null)}>
               <ArrowLeft className="size-4" aria-hidden="true" />
               {t('sources.allSources')}
             </Button>
-          ) : (
-            <SearchInput
-              className="w-50 max-w-full"
-              value={searchText}
-              onValueChange={setSearchText}
-              aria-label={t('sources.search.label')}
-              clearLabel={t('sources.search.clear')}
-              placeholder={t('sources.search.placeholder')}
-            />
           )}
           <Button type="button" onClick={() => setCreateOpen(true)}>
             <Plus className="size-4" aria-hidden="true" />
@@ -555,309 +551,375 @@ export function SourcesPage({
         </div>
       )}
 
-      <main className="bg-background-body flex min-h-0 min-w-0 flex-1 flex-col">
-        {sourcesQuery.isLoading ? (
-          <LoadingPlaceholder className="h-full" label={t('sources.states.loading')} />
-        ) : loadError ? (
-          <div className="page-state">
-            <AlertCircle className="h-8 w-8 text-orange-400" aria-hidden="true" />
-            <div className="page-state__title">{t('state.error.title')}</div>
-            <p className="page-state__body">{loadError}</p>
+      <div className="flex min-h-0 flex-1 flex-col bg-white md:flex-row">
+        <aside className="bg-components-card-bg border-divider-subtle flex w-full shrink-0 flex-col border-b md:w-64 md:border-r md:border-b-0">
+          <div className="border-divider-subtle border-b p-3">
+            <SearchInput
+              className="w-full"
+              value={searchText}
+              onValueChange={setSearchText}
+              aria-label={t('sources.search.label')}
+              clearLabel={t('sources.search.clear')}
+              placeholder={t('sources.search.placeholder')}
+            />
+          </div>
+          <nav
+            aria-label={t('sources.allSources')}
+            className="flex min-h-[150px] flex-1 gap-1 overflow-auto p-2 md:flex-col"
+          >
             <Button
               type="button"
-              className="px-3 text-[13px] font-medium"
-              onClick={() => void sourcesQuery.refetch()}
-            >
-              {t('state.error.retry')}
-            </Button>
-          </div>
-        ) : selectedSource && !selectedTable ? (
-          <>
-            <div className="bg-background-body border-divider-subtle shrink-0 border-b px-4 py-4 md:px-8">
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div className="flex min-w-0 items-start gap-3">
-                  <div className="bg-background-default-subtle border-divider-subtle flex size-10 shrink-0 items-center justify-center rounded-xl border">
-                    <ConnectorIcon
-                      connectorId={selectedSource.type}
-                      name={selectedSource.connectorName}
-                      iconPath={selectedSource.connectorIcon}
-                      size={24}
-                      className="size-6 rounded-lg border-0 bg-transparent"
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <h2 className="text-text-primary truncate text-base font-semibold">
-                      {selectedSource.name}
-                    </h2>
-                    <div className="system-xs-regular text-text-tertiary mt-1 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1.5">
-                        <Server className="size-3.5" aria-hidden="true" />
-                        {selectedSource.host}
-                      </span>
-                      <span>{selectedSource.type}</span>
-                      <span className="inline-flex items-center gap-1.5">
-                        {t('sources.details.secretConfiguredCount', {
-                          count: selectedSource.raw.configuredSecrets.length,
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {editLoadFailed && (
-                    <div
-                      className="text-destructive flex items-center gap-1.5 text-[12px]"
-                      role="alert"
-                    >
-                      <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
-                      <span>{t('sources.edit.errors.unknown')}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        type="button"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => void editingSourceQuery.refetch()}
-                      >
-                        {t('state.error.retry')}
-                      </Button>
-                    </div>
-                  )}
-                  <Button
-                    variant="secondary"
-                    type="button"
-                    disabled={editLoading}
-                    onClick={() => setEditingSourceId(selectedSource.id)}
-                  >
-                    {editLoading && <LoaderCircle className="size-3.5 animate-spin" />}
-                    {t('sources.detail.edit')}
-                  </Button>
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger
-                      render={
-                        <SourceButton variant="tertiary" type="button">
-                          <MoreHorizontal className="size-4" aria-hidden="true" />
-                          {t('common.more')}
-                        </SourceButton>
-                      }
-                    />
-                    <DropdownMenuContent placement="bottom-end" sideOffset={4}>
-                      <DropdownMenuItem
-                        disabled={testingSourceId !== null}
-                        onClick={() => void runSourceTest(selectedSource.raw)}
-                      >
-                        {testingSourceId === selectedSource.id ? (
-                          <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
-                        ) : (
-                          <Activity className="size-4" aria-hidden="true" />
-                        )}
-                        {t(
-                          testingSourceId === selectedSource.id
-                            ? 'sources.test.testing'
-                            : 'sources.actions.test',
-                        )}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        disabled={schemaRefreshingSourceId !== null}
-                        onClick={() => void refreshSourceSchema(selectedSource.raw)}
-                      >
-                        <RefreshCw
-                          className={cn(
-                            'size-4',
-                            schemaRefreshingSourceId === selectedSource.id && 'animate-spin',
-                          )}
-                          aria-hidden="true"
-                        />
-                        {t(
-                          schemaRefreshingSourceId === selectedSource.id
-                            ? 'sources.schema.refreshing'
-                            : 'sources.actions.refreshSchema',
-                        )}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={() => setDeletingSource(selectedSource)}
-                      >
-                        <Trash2 className="size-4" aria-hidden="true" />
-                        {t('sources.delete.confirm')}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-auto bg-gray-50/40 p-4 md:p-6">
-              <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-                <h3 className="text-[13px] font-semibold text-gray-900">
-                  {t('sources.tablesIn', { name: selectedSource.name })}
-                </h3>
-                {sourceSchemaQuery.data && (
-                  <span className="text-[12px] text-gray-500">
-                    {t('sources.schema.discoveredAt', {
-                      date: new Intl.DateTimeFormat(undefined, {
-                        dateStyle: 'medium',
-                        timeStyle: 'short',
-                      }).format(new Date(sourceSchemaQuery.data.discoveredAt)),
-                    })}
-                  </span>
-                )}
-              </div>
-
-              {schemaRefreshError && (
-                <div
-                  className="border-destructive/30 bg-destructive/10 text-destructive mb-4 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-[13px]"
-                  role="alert"
-                >
-                  <span>{schemaRefreshError}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    type="button"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => void refreshSourceSchema(selectedSource.raw)}
-                  >
-                    {t('state.error.retry')}
-                  </Button>
-                </div>
+              variant="ghost"
+              size="sm"
+              aria-pressed={selectedSource === null}
+              className={cn(
+                'h-auto min-h-8 min-w-[160px] shrink-0 justify-start px-3 py-2 text-left md:min-w-0',
+                selectedSource === null
+                  ? 'bg-background-default-hover text-text-primary font-medium'
+                  : 'text-text-secondary',
               )}
+              onClick={() => selectSource(null)}
+            >
+              <Database className="size-4 shrink-0" aria-hidden="true" />
+              <span className="truncate">{t('sources.allSources')}</span>
+            </Button>
+            {filteredSources.map((source) => (
+              <Button
+                key={source.id}
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-pressed={selectedSource?.id === source.id}
+                className={cn(
+                  'h-auto min-h-8 min-w-[190px] shrink-0 justify-start px-3 py-2 text-left md:min-w-0',
+                  selectedSource?.id === source.id
+                    ? 'bg-background-default-hover text-text-primary font-medium'
+                    : 'text-text-secondary',
+                )}
+                onClick={() => selectSource(source)}
+              >
+                <ConnectorIcon
+                  connectorId={source.type}
+                  name={source.connectorName}
+                  iconPath={source.connectorIcon}
+                  size={16}
+                  className="size-4 shrink-0 rounded-md border-0 bg-transparent"
+                />
+                <span className="min-w-0 flex-1 truncate">{source.name}</span>
+                {isSampleSource(source.raw) && (
+                  <Badge variant="dimm" uppercase={false}>
+                    {t('sources.samples.tag')}
+                  </Badge>
+                )}
+              </Button>
+            ))}
+          </nav>
+        </aside>
 
-              {sourceSchemaQuery.isLoading ||
-              (selectedSchemaDiscovering && !sourceSchemaQuery.data) ? (
-                <div
-                  className="mb-4 flex items-center gap-2 rounded-lg bg-white px-3 py-2.5 text-[13px] text-gray-500 shadow-sm"
-                  role="status"
-                >
-                  <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
-                  {t('sources.schema.loading')}
-                </div>
-              ) : sourceSchemaQuery.error &&
-                sourceSchemaQuery.error instanceof SourceClientError &&
-                sourceSchemaQuery.error.status !== 404 ? (
-                <div
-                  className="border-destructive/30 bg-destructive/10 text-destructive mb-4 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-[13px]"
-                  role="alert"
-                >
-                  <span>{schemaErrorMessage(sourceSchemaQuery.error, t)}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    type="button"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => void sourceSchemaQuery.refetch()}
-                  >
-                    {t('state.error.retry')}
-                  </Button>
-                </div>
-              ) : sourceSchemaQuery.error instanceof SourceClientError &&
-                sourceSchemaQuery.error.status === 404 ? (
-                <div className="mb-4 flex items-center gap-2 rounded-lg bg-white px-3 py-2.5 text-[13px] text-gray-500 shadow-sm">
-                  <TableIcon className="size-4" aria-hidden="true" />
-                  {t('sources.schema.notDiscovered')}
-                </div>
-              ) : null}
-
-              {!sourceSchemaQuery.data &&
-              (sourceSchemaQuery.isLoading ||
-                selectedSchemaDiscovering) ? null : visibleTables.length === 0 &&
-                sourceSchemaQuery.data ? (
-                <div className="page-state rounded-lg border border-gray-200/70 bg-white">
-                  <TableIcon className="h-8 w-8 text-gray-300" aria-hidden="true" />
-                  <div className="page-state__title">{t('sources.noTablesTitle')}</div>
-                  <p className="page-state__body">{t('sources.details.noTables')}</p>
-                </div>
-              ) : visibleTables.length > 0 ? (
-                <DataTable
-                  headers={[
-                    t('sources.table.name'),
-                    t('sources.table.type'),
-                    t('sources.table.selector'),
-                    t('common.actions'),
-                  ]}
-                >
-                  {visibleTables.map((table) => (
-                    <tr
-                      key={table.id}
-                      className="group cursor-pointer transition-colors hover:bg-gray-50/70"
-                      onClick={() => selectTable(table)}
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-white">
+          {sourcesQuery.isLoading ? (
+            <LoadingPlaceholder className="h-full" label={t('sources.states.loading')} />
+          ) : loadError ? (
+            <div className="page-state">
+              <AlertCircle className="h-8 w-8 text-orange-400" aria-hidden="true" />
+              <div className="page-state__title">{t('state.error.title')}</div>
+              <p className="page-state__body">{loadError}</p>
+              <Button
+                type="button"
+                className="px-3 text-[13px] font-medium"
+                onClick={() => void sourcesQuery.refetch()}
+              >
+                {t('state.error.retry')}
+              </Button>
+            </div>
+          ) : selectedSource && !selectedTable ? (
+            <>
+              <div className="border-divider-subtle shrink-0 border-b bg-white px-4 py-4 md:px-8">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div className="bg-background-default-subtle border-divider-subtle flex size-10 shrink-0 items-center justify-center rounded-xl border">
+                      <ConnectorIcon
+                        connectorId={selectedSource.type}
+                        name={selectedSource.connectorName}
+                        iconPath={selectedSource.connectorIcon}
+                        size={24}
+                        className="size-6 rounded-lg border-0 bg-transparent"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <h2 className="text-text-primary truncate text-base font-semibold">
+                        {selectedSource.name}
+                      </h2>
+                      <div className="system-xs-regular text-text-tertiary mt-1 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Server className="size-3.5" aria-hidden="true" />
+                          {selectedSource.host}
+                        </span>
+                        <span>{selectedSource.type}</span>
+                        <span className="inline-flex items-center gap-1.5">
+                          {t('sources.details.secretConfiguredCount', {
+                            count: selectedSource.raw.configuredSecrets.length,
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {editLoadFailed && (
+                      <div
+                        className="text-destructive flex items-center gap-1.5 text-[12px]"
+                        role="alert"
+                      >
+                        <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
+                        <span>{t('sources.edit.errors.unknown')}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => void editingSourceQuery.refetch()}
+                        >
+                          {t('state.error.retry')}
+                        </Button>
+                      </div>
+                    )}
+                    <Button
+                      variant="secondary"
+                      type="button"
+                      disabled={editLoading}
+                      onClick={() => setEditingSourceId(selectedSource.id)}
                     >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <TableIcon
-                            className="h-4 w-4 text-gray-400 transition-colors group-hover:text-gray-700"
+                      {editLoading && <LoaderCircle className="size-3.5 animate-spin" />}
+                      {t('sources.detail.edit')}
+                    </Button>
+                    <DropdownMenu modal={false}>
+                      <DropdownMenuTrigger
+                        render={
+                          <SourceButton variant="tertiary" type="button">
+                            <MoreHorizontal className="size-4" aria-hidden="true" />
+                            {t('common.more')}
+                          </SourceButton>
+                        }
+                      />
+                      <DropdownMenuContent placement="bottom-end" sideOffset={4}>
+                        <DropdownMenuItem
+                          disabled={testingSourceId !== null}
+                          onClick={() => void runSourceTest(selectedSource.raw)}
+                        >
+                          {testingSourceId === selectedSource.id ? (
+                            <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <Activity className="size-4" aria-hidden="true" />
+                          )}
+                          {t(
+                            testingSourceId === selectedSource.id
+                              ? 'sources.test.testing'
+                              : 'sources.actions.test',
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={schemaRefreshingSourceId !== null}
+                          onClick={() => void refreshSourceSchema(selectedSource.raw)}
+                        >
+                          <RefreshCw
+                            className={cn(
+                              'size-4',
+                              schemaRefreshingSourceId === selectedSource.id && 'animate-spin',
+                            )}
                             aria-hidden="true"
                           />
-                          <span className="font-medium text-gray-900">{table.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">{table.type}</td>
-                      <td className="max-w-[320px] truncate px-4 py-3 font-mono text-[12px] text-gray-500">
-                        {table.selector}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <ChevronRight
-                          className="inline-block h-4 w-4 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100"
-                          aria-hidden="true"
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </DataTable>
-              ) : null}
-            </div>
-          </>
-        ) : selectedSource && selectedTable ? (
-          <div className="flex h-full min-h-0 flex-col">
-            <SourceTableDetailHeader
-              sourceName={selectedSource.name}
-              tableName={selectedTable.name}
-              activeTab={activeTab}
-              onBack={() => {
-                if (onNavigate) {
-                  onNavigate({ sourceId: selectedSource.id })
-                } else {
-                  setSelectedTableId(null)
-                }
-              }}
-              onSelectTab={selectTab}
-            />
-            <div className="flex min-h-0 flex-1 flex-col bg-white lg:flex-row">
-              <div className="min-w-0 flex-1 overflow-auto">
-                {activeTab === 'columns' ? (
-                  <TableSchemaView
-                    schemaTable={selectedSchemaTable}
-                    loading={sourceSchemaQuery.isLoading}
-                    unavailable={sourceSchemaQuery.error instanceof SourceClientError}
-                  />
-                ) : (
-                  <div className="page-state">
-                    {(() => {
-                      const Icon = tabIcon(activeTab)
-                      return <Icon className="h-8 w-8 text-gray-300" aria-hidden="true" />
-                    })()}
-                    <div className="page-state__title">
-                      {t('sources.observationUnavailableTitle', { tab: activeTabLabel })}
-                    </div>
-                    <p className="page-state__body">{t('sources.observationUnavailableBody')}</p>
+                          {t(
+                            schemaRefreshingSourceId === selectedSource.id
+                              ? 'sources.schema.refreshing'
+                              : 'sources.actions.refreshSchema',
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() => setDeletingSource(selectedSource)}
+                        >
+                          <Trash2 className="size-4" aria-hidden="true" />
+                          {t('sources.delete.confirm')}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              </div>
+
+              <div className="min-h-0 flex-1 overflow-auto bg-gray-50/40 p-4 md:p-6">
+                <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 className="text-[13px] font-semibold text-gray-900">
+                    {t('sources.tablesIn', { name: selectedSource.name })}
+                  </h3>
+                  {sourceSchemaQuery.data && (
+                    <span className="text-[12px] text-gray-500">
+                      {t('sources.schema.discoveredAt', {
+                        date: new Intl.DateTimeFormat(undefined, {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        }).format(new Date(sourceSchemaQuery.data.discoveredAt)),
+                      })}
+                    </span>
+                  )}
+                </div>
+
+                {schemaRefreshError && (
+                  <div
+                    className="border-destructive/30 bg-destructive/10 text-destructive mb-4 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-[13px]"
+                    role="alert"
+                  >
+                    <span>{schemaRefreshError}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      type="button"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => void refreshSourceSchema(selectedSource.raw)}
+                    >
+                      {t('state.error.retry')}
+                    </Button>
                   </div>
                 )}
+
+                {sourceSchemaQuery.isLoading ||
+                (selectedSchemaDiscovering && !sourceSchemaQuery.data) ? (
+                  <div
+                    className="mb-4 flex items-center gap-2 rounded-lg bg-white px-3 py-2.5 text-[13px] text-gray-500 shadow-sm"
+                    role="status"
+                  >
+                    <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+                    {t('sources.schema.loading')}
+                  </div>
+                ) : sourceSchemaQuery.error &&
+                  sourceSchemaQuery.error instanceof SourceClientError &&
+                  sourceSchemaQuery.error.status !== 404 ? (
+                  <div
+                    className="border-destructive/30 bg-destructive/10 text-destructive mb-4 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-[13px]"
+                    role="alert"
+                  >
+                    <span>{schemaErrorMessage(sourceSchemaQuery.error, t)}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      type="button"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => void sourceSchemaQuery.refetch()}
+                    >
+                      {t('state.error.retry')}
+                    </Button>
+                  </div>
+                ) : sourceSchemaQuery.error instanceof SourceClientError &&
+                  sourceSchemaQuery.error.status === 404 ? (
+                  <div className="mb-4 flex items-center gap-2 rounded-lg bg-white px-3 py-2.5 text-[13px] text-gray-500 shadow-sm">
+                    <TableIcon className="size-4" aria-hidden="true" />
+                    {t('sources.schema.notDiscovered')}
+                  </div>
+                ) : null}
+
+                {!sourceSchemaQuery.data &&
+                (sourceSchemaQuery.isLoading ||
+                  selectedSchemaDiscovering) ? null : visibleTables.length === 0 &&
+                  sourceSchemaQuery.data ? (
+                  <div className="page-state rounded-lg border border-gray-200/70 bg-white">
+                    <TableIcon className="h-8 w-8 text-gray-300" aria-hidden="true" />
+                    <div className="page-state__title">{t('sources.noTablesTitle')}</div>
+                    <p className="page-state__body">{t('sources.details.noTables')}</p>
+                  </div>
+                ) : visibleTables.length > 0 ? (
+                  <DataTable
+                    headers={[
+                      t('sources.table.name'),
+                      t('sources.table.type'),
+                      t('sources.table.selector'),
+                      t('common.actions'),
+                    ]}
+                  >
+                    {visibleTables.map((table) => (
+                      <tr
+                        key={table.id}
+                        className="group cursor-pointer transition-colors hover:bg-gray-50/70"
+                        onClick={() => selectTable(table)}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <TableIcon
+                              className="h-4 w-4 text-gray-400 transition-colors group-hover:text-gray-700"
+                              aria-hidden="true"
+                            />
+                            <span className="font-medium text-gray-900">{table.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">{table.type}</td>
+                        <td className="max-w-[320px] truncate px-4 py-3 font-mono text-[12px] text-gray-500">
+                          {table.selector}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <ChevronRight
+                            className="inline-block h-4 w-4 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100"
+                            aria-hidden="true"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </DataTable>
+                ) : null}
+              </div>
+            </>
+          ) : selectedSource && selectedTable ? (
+            <div className="flex h-full min-h-0 flex-col">
+              <SourceTableDetailHeader
+                sourceName={selectedSource.name}
+                tableName={selectedTable.name}
+                activeTab={activeTab}
+                onBack={() => {
+                  if (onNavigate) {
+                    onNavigate({ sourceId: selectedSource.id })
+                  } else {
+                    setSelectedTableId(null)
+                  }
+                }}
+                onSelectTab={selectTab}
+              />
+              <div className="flex min-h-0 flex-1 flex-col bg-white lg:flex-row">
+                <div className="min-w-0 flex-1 overflow-auto">
+                  {activeTab === 'columns' ? (
+                    <TableSchemaView
+                      schemaTable={selectedSchemaTable}
+                      loading={sourceSchemaQuery.isLoading}
+                      unavailable={sourceSchemaQuery.error instanceof SourceClientError}
+                    />
+                  ) : (
+                    <div className="page-state">
+                      {(() => {
+                        const Icon = tabIcon(activeTab)
+                        return <Icon className="h-8 w-8 text-gray-300" aria-hidden="true" />
+                      })()}
+                      <div className="page-state__title">
+                        {t('sources.observationUnavailableTitle', { tab: activeTabLabel })}
+                      </div>
+                      <p className="page-state__body">{t('sources.observationUnavailableBody')}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ) : (
-          <AllSourcesView
-            sources={sources}
-            filteredSources={filteredSources}
-            onCreate={() => setCreateOpen(true)}
-            onSample={() => setSampleDialogOpen(true)}
-            samplesAvailable={samplesAvailable}
-            onSelect={selectSource}
-            onTest={(source) => void runSourceTest(source.raw)}
-            testingSourceId={testingSourceId}
-            autoDiscoveryAttempted={autoDiscoveryAttempted.current}
-          />
-        )}
-      </main>
+          ) : (
+            <AllSourcesView
+              sources={sources}
+              filteredSources={filteredSources}
+              onCreate={() => setCreateOpen(true)}
+              onSample={() => setSampleDialogOpen(true)}
+              samplesAvailable={samplesAvailable}
+              onSelect={selectSource}
+              onTest={(source) => void runSourceTest(source.raw)}
+              testingSourceId={testingSourceId}
+              autoDiscoveryAttempted={autoDiscoveryAttempted.current}
+            />
+          )}
+        </main>
+      </div>
 
       <SourceAlertDialog
         open={sampleRemoveConfirmOpen}
@@ -1012,7 +1074,7 @@ function DataTable({ headers, children }: { headers: string[]; children: React.R
               <th
                 key={`${header}-${index}`}
                 className={cn(
-                  'px-4 font-[weight:inherit]',
+                  'px-4 font-[weight:inherit] whitespace-nowrap',
                   index === headers.length - 1 && 'text-right',
                 )}
               >
@@ -1137,7 +1199,7 @@ function AllSourcesView({
 }) {
   const { t } = useTranslation()
   return (
-    <div className="bg-background-body flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col bg-white">
       <div className="min-h-0 flex-1 overflow-auto px-4 pt-2 pb-6 md:px-8">
         {sources.length === 0 ? (
           <div className="relative min-h-130 overflow-hidden">
@@ -1346,6 +1408,7 @@ function SourceListRow({
       <td className="px-4 py-3">
         <span className="text-text-secondary inline-flex items-center gap-2">
           <StatusDot
+            className="size-1 rounded-full"
             status={
               testQuery.data?.outcome === 'PASSED'
                 ? 'success'

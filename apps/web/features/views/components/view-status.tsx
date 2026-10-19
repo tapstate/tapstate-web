@@ -48,7 +48,7 @@ export function ViewStatus({ status }: { status: ViewFreshness }) {
   } as const
   return (
     <span className="views-status">
-      <StatusDot status={dotStatus[status.state]} />
+      <StatusDot className="views-status__dot rounded-full" status={dotStatus[status.state]} />
       {text(status)}
     </span>
   )

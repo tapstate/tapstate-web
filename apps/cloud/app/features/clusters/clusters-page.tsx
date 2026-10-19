@@ -153,7 +153,11 @@ export function ClustersPage() {
                   </td>
                   <td className="px-3 py-2">
                     <span className="inline-flex items-center gap-1.5">
-                      <StatusDot status={statusTone(cluster.state)} size="small" />
+                      <StatusDot
+                        className="rounded-full"
+                        status={statusTone(cluster.state)}
+                        size="small"
+                      />
                       <span>{t(`clusterList.states.${cluster.state}`)}</span>
                     </span>
                   </td>

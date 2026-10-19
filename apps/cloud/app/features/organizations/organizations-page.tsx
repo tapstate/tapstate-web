@@ -102,6 +102,7 @@ export function OrganizationsPage() {
                   <td className="px-3 py-2">
                     <span className="inline-flex items-center gap-1.5">
                       <StatusDot
+                        className="rounded-full"
                         status={organization.status === 'SUSPENDED' ? 'error' : 'success'}
                         size="small"
                       />

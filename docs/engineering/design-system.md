@@ -31,6 +31,8 @@ The CSS entry imports `src/themes/theme.css`, `light.css`, `dark.css`, `styles/u
 
 The full public export list and exact prop types live in `packages/dify-ui/package.json` and each `src/<component>/index.tsx`. Do not document guessed props in app code. `cn`, `merge-props`, `use-render` and ref helpers have public subpaths for package composition.
 
+`StatusDot` source defaults are rounded squares. Product status markers retain the existing circular silhouette by passing `className="rounded-full"` at the call site; choose `small` or `medium` to preserve the existing surface's size, and keep the source status color.
+
 ## Verified dimensions and states
 
 | Component      | Source-backed dimensions                                                             | State owner                                                                                                      |

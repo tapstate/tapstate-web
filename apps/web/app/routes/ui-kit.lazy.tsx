@@ -399,11 +399,11 @@ function UiKitPageContent({
             </div>
             <div className="flex flex-wrap gap-2">
               <span className="system-xs-regular text-text-secondary inline-flex items-center gap-1.5">
-                <StatusDot status="success" />
+                <StatusDot className="rounded-full" status="success" />
                 {t('uiKit.selection.selected')}
               </span>
               <span className="system-xs-regular text-text-tertiary inline-flex items-center gap-1.5">
-                <StatusDot status="disabled" />
+                <StatusDot className="rounded-full" status="disabled" />
                 {t('uiKit.selection.notSelected')}
               </span>
             </div>
@@ -574,7 +574,7 @@ function UiKitPageContent({
                       <td>{t('uiKit.surfaces.recordOne')}</td>
                       <td>
                         <span className="system-xs-regular text-text-secondary inline-flex items-center gap-1.5">
-                          <StatusDot status="success" />
+                          <StatusDot className="rounded-full" status="success" />
                           {t('uiKit.surfaces.ready')}
                         </span>
                       </td>
@@ -584,7 +584,7 @@ function UiKitPageContent({
                       <td>{t('uiKit.surfaces.recordTwo')}</td>
                       <td>
                         <span className="system-xs-regular text-text-secondary inline-flex items-center gap-1.5">
-                          <StatusDot status="warning" />
+                          <StatusDot className="rounded-full" status="warning" />
                           {t('uiKit.surfaces.inProgress')}
                         </span>
                       </td>
