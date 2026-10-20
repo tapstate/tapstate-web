@@ -1,4 +1,5 @@
 import '@/i18n/index'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -48,6 +49,7 @@ const detail: ConnectorDetail = {
 
 let host: HTMLDivElement
 let root: Root
+let queryClient: QueryClient
 
 function changeInput(input: HTMLInputElement, value: string) {
   const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
@@ -59,6 +61,7 @@ beforeEach(() => {
   host = document.createElement('div')
   document.body.append(host)
   root = createRoot(host)
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   getConnector.mockReset().mockResolvedValue(detail)
   testConnection.mockReset().mockResolvedValue({ outcome: 'PASSED' })
   apiFetch.mockReset().mockResolvedValue({
@@ -69,6 +72,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   await act(async () => root.unmount())
+  queryClient.clear()
   host.remove()
   vi.clearAllMocks()
 })
@@ -77,7 +81,9 @@ describe('AtlasStoreDialog', () => {
   it('keeps tag-injected TLS settings in the test and state-store payloads', async () => {
     await act(async () => {
       root.render(
-        <AtlasStoreDialog open onOpenChange={() => undefined} onCreated={() => undefined} />,
+        <QueryClientProvider client={queryClient}>
+          <AtlasStoreDialog open onOpenChange={() => undefined} onCreated={() => undefined} />
+        </QueryClientProvider>,
       )
     })
 
