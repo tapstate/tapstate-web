@@ -160,7 +160,7 @@
     "noTrialChargeNote": "The first month is charged immediately.",
     "planDescription": "Fully managed Tapstate cluster for production data pipelines.",
     "checkoutNote": "Payment, 3-D Secure and billing details are completed on Stripe's secure checkout page.",
-    "consent": "I authorize Tapstate Cloud to charge my payment method now and automatically at the end of each billing period until I cancel.",
+    "consent": "I authorize Tapstate Cloud to charge my payment method for this subscription and automatically at the end of each billing period until I cancel.",
     "selectedSummary": "{{plan}} · {{price}} / month",
     "selectPrompt": "Select a plan to continue.",
     "subscribeAction": "Continue to secure checkout",

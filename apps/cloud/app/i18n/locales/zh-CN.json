@@ -160,7 +160,7 @@
     "noTrialChargeNote": "订阅后立即收取首月费用。",
     "planDescription": "面向生产数据管道的全托管 Tapstate 集群。",
     "checkoutNote": "支付、3D Secure 与账单信息均在 Stripe 安全支付页完成。",
-    "consent": "我授权 Tapstate Cloud 现在扣款，并在每个计费周期结束时自动续费，直至我取消订阅。",
+    "consent": "我授权 Tapstate Cloud 就本订阅扣款，并在每个计费周期结束时自动续费，直至我取消订阅。",
     "selectedSummary": "{{plan}} · {{price}} / 月",
     "selectPrompt": "请选择一个套餐继续。",
     "subscribeAction": "前往安全支付",
