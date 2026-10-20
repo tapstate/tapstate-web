@@ -16,9 +16,14 @@ function statusLabel(status: string) {
 
 export function OverviewPage() {
   const navigate = useNavigate()
-  const { activeOrganization, clusters } = useCloudAppState()
+  const { activeOrganization, clusters, setClusters } = useCloudAppState()
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const { enterCluster, enteringId, entryError } = useClusterEntry()
+
+  const hasEgressAddressOperation = clusters.some(
+    (cluster) =>
+      cluster.egressAddressStatus === 'STABILIZING' || cluster.egressAddressStatus === 'ATTACHING',
+  )
 
   useEffect(() => {
     setSubscription(null)
@@ -36,6 +41,27 @@ export function OverviewPage() {
       current = false
     }
   }, [activeOrganization?.id])
+
+  useEffect(() => {
+    const organizationId = activeOrganization?.id
+    if (!organizationId || !hasEgressAddressOperation) return
+
+    let current = true
+    const refreshClusters = () => {
+      void cloudApi
+        .activeClusters(organizationId)
+        .then((nextClusters) => {
+          if (current) setClusters(nextClusters)
+        })
+        .catch(() => undefined)
+    }
+    const timer = window.setInterval(refreshClusters, 4000)
+
+    return () => {
+      current = false
+      window.clearInterval(timer)
+    }
+  }, [activeOrganization?.id, hasEgressAddressOperation, setClusters])
 
   return (
     <CloudOverviewView
