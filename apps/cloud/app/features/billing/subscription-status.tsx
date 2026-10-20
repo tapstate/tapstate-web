@@ -67,12 +67,12 @@ export function SubscriptionStatus({
   onRefresh,
   onStartOver,
 }: SubscriptionStatusProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const status = subscription.status
   const isProvisioning = subscription.resourceState === 'PROVISIONING'
   const progressPercent = Math.min(100, Math.max(0, subscription.installProgress?.percent ?? 0))
   const periodLine = t(periodLineKey(status), {
-    date: formatDate(subscription.currentPeriodEnd),
+    date: formatDate(subscription.currentPeriodEnd, i18n.language),
   })
 
   return (
@@ -145,8 +145,8 @@ export function SubscriptionStatus({
           <div className="flex items-center justify-between gap-4 py-2.5">
             <dt className="text-neutral-500 dark:text-neutral-400">{t('billing.periodLabel')}</dt>
             <dd className="text-neutral-900 dark:text-white">
-              {formatDate(subscription.currentPeriodStart)} –{' '}
-              {formatDate(subscription.currentPeriodEnd)}
+              {formatDate(subscription.currentPeriodStart, i18n.language)} –{' '}
+              {formatDate(subscription.currentPeriodEnd, i18n.language)}
             </dd>
           </div>
           {clusterName && (
@@ -174,7 +174,9 @@ export function SubscriptionStatus({
           >
             <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>
-              {t('billing.cancelPendingNote', { date: formatDate(subscription.currentPeriodEnd) })}
+              {t('billing.cancelPendingNote', {
+                date: formatDate(subscription.currentPeriodEnd, i18n.language),
+              })}
             </span>
           </div>
         )}

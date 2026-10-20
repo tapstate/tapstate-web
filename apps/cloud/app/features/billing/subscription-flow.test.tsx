@@ -248,7 +248,7 @@ describe('Cloud subscription flow', () => {
     expect(dialogOverlay()?.getAttribute('aria-hidden')).toBe('true')
     await click(buttonWithText('Cancel subscription'))
     expect(dialogOverlay()?.getAttribute('aria-hidden')).toBe('false')
-    expect(dialogOverlay()?.textContent).toContain(formatDate(periodEnd))
+    expect(dialogOverlay()?.textContent).toContain(formatDate(periodEnd, 'en'))
     expect(dialogOverlay()?.textContent).toContain(
       'Your instance will be released and all data will be deleted',
     )

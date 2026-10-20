@@ -27,12 +27,14 @@ export function CancelSubscriptionDialog({
   onConfirm,
   onOpenChange,
 }: CancelSubscriptionDialogProps) {
-  const { t } = useTranslation()
-  const confirmRef = useRef<HTMLButtonElement>(null)
+  const { t, i18n } = useTranslation()
+  const keepRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (!open) return
-    confirmRef.current?.focus()
+    // Focus the safe action first: this dialog only stops auto-renew, and the
+    // destructive choice should never be one Enter keypress away.
+    keepRef.current?.focus()
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onOpenChange(false)
     }
@@ -83,7 +85,7 @@ export function CancelSubscriptionDialog({
         <div className="flex items-start gap-2.5 rounded-lg border border-red-200/80 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/30">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
           <div className="space-y-1.5 text-[12px] leading-relaxed text-red-700 dark:text-red-300">
-            <p>{t('billing.cancelBody', { date: formatDate(periodEnd) })}</p>
+            <p>{t('billing.cancelBody', { date: formatDate(periodEnd, i18n.language) })}</p>
             <p>{t('billing.cancelWarning')}</p>
           </div>
         </div>
@@ -99,6 +101,7 @@ export function CancelSubscriptionDialog({
             className="h-9 rounded-lg border border-black/[0.1] bg-white px-4 text-[13px] font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:opacity-50 dark:border-white/[0.12] dark:bg-[#1a1b1e] dark:text-neutral-300 dark:hover:bg-white/[0.05]"
             disabled={submitting}
             onClick={close}
+            ref={keepRef}
             type="button"
           >
             {t('billing.cancelKeep')}
@@ -107,7 +110,6 @@ export function CancelSubscriptionDialog({
             className="flex h-9 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-[13px] font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
             disabled={submitting}
             onClick={onConfirm}
-            ref={confirmRef}
             type="button"
           >
             {submitting ? (
