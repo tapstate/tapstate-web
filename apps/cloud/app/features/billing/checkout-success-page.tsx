@@ -43,9 +43,10 @@ function uniqueClusterName(slug: string, existing: string[]): string {
 export function CheckoutSuccessPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { activeOrganization } = useCloudAppState()
+  const { activeOrganization, organizations } = useCloudAppState()
   const attempt = useMemo(() => readCheckoutAttempt(), [])
   const organizationId = attempt?.orgId ?? activeOrganization?.id ?? null
+  const organizationSlug = organizations.find((item) => item.id === organizationId)?.slug ?? null
 
   const [phase, setPhase] = useState<Phase>('resolving')
   const [subscription, setSubscription] = useState<Subscription | null>(null)
@@ -53,14 +54,13 @@ export function CheckoutSuccessPage() {
   const [errorKey, setErrorKey] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!organizationId) return
+    if (!organizationId || !organizationSlug) return
     let active = true
     let timer: number | undefined
     let finalized = false
 
     const resolveTarget = async (): Promise<ProvisioningTarget> => {
-      const [organization, regions, clusters] = await Promise.all([
-        cloudApi.organization(organizationId),
+      const [regions, clusters] = await Promise.all([
         cloudApi.regions(),
         cloudApi.clusters(organizationId),
       ])
@@ -69,7 +69,7 @@ export function CheckoutSuccessPage() {
       return {
         region,
         clusterName: uniqueClusterName(
-          organization.slug || organization.name,
+          organizationSlug,
           clusters
             .filter((cluster) => cluster.state !== 'TERMINATED')
             .map((cluster) => cluster.name),
@@ -167,7 +167,7 @@ export function CheckoutSuccessPage() {
       active = false
       if (timer !== undefined) window.clearTimeout(timer)
     }
-  }, [navigate, organizationId])
+  }, [navigate, organizationId, organizationSlug])
 
   const progress = Math.min(100, Math.max(0, subscription?.installProgress?.percent ?? 0))
   const backToPlans = () =>
