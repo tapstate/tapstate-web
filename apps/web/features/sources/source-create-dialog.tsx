@@ -1,5 +1,6 @@
 import type { ISchema } from '@formily/json-schema'
 
+import { useQuery } from '@tanstack/react-query'
 import {
   AlertCircle,
   ArrowLeft,
@@ -19,10 +20,12 @@ import type {
   SourceView,
 } from '@/service/source-client'
 
+import { ClusterEgressAddressGuidance } from '@/components/cluster-egress-address-guidance'
 import { ConnectorIcon } from '@/components/connector-icon'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { loadCloudWorkspaceContext } from '@/service/cloud-workspace-client'
 import {
   createSource,
   getConnector,
@@ -81,6 +84,7 @@ export function SourceCreateDialog({
   const { i18n, t } = useTranslation()
   const currentLocale = i18n.resolvedLanguage ?? i18n.language
   const apiFetch = useAuthStore((state) => state.apiFetch)
+  const isCloudDeployment = getDeploymentProfile() === 'cloud'
   const [connectors, setConnectors] = useState<ConnectorSummary[]>([])
   const [connector, setConnector] = useState<ConnectorDetail | null>(null)
   const [schema, setSchema] = useState<ISchema | null>(null)
@@ -88,6 +92,13 @@ export function SourceCreateDialog({
   const [connectorId, setConnectorId] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [step, setStep] = useState<CreateSourceStep>('select')
+  const cloudContext = useQuery({
+    queryKey: ['cloud-workspace-context'],
+    queryFn: () => loadCloudWorkspaceContext(apiFetch),
+    enabled: isCloudDeployment && open && step === 'configure',
+    staleTime: 0,
+    retry: 1,
+  })
   const [sourceMode, setSourceMode] = useState('')
   const [config, setConfig] = useState<SourceConfigState>({})
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -98,6 +109,8 @@ export function SourceCreateDialog({
   const [testing, setTesting] = useState(false)
   const [testReport, setTestReport] = useState<ConnectionTestReport | null>(null)
   const [testError, setTestError] = useState<unknown>(null)
+  const [egressAddressCopied, setEgressAddressCopied] = useState(false)
+  const [egressAddressCopyFailed, setEgressAddressCopyFailed] = useState(false)
   const connectorButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
   const initializedForOpen = useRef(false)
 
@@ -120,6 +133,8 @@ export function SourceCreateDialog({
     setRequestError('')
     setTestReport(null)
     setTestError(null)
+    setEgressAddressCopied(false)
+    setEgressAddressCopyFailed(false)
     if (connectors.length === 0) {
       setLoadingConnectors(true)
       listConnectors(apiFetch)
@@ -289,6 +304,20 @@ export function SourceCreateDialog({
     : sourceConnectors
   const selectedConnector = connectors.find((item) => item.id === connectorId)
   const configuredConnectorName = connector?.name ?? selectedConnector?.name
+  const egressAddress = cloudContext.isError ? null : cloudContext.data?.ec2PublicIp?.trim() || null
+  const egressStatus = cloudContext.data?.egressAddressStatus ?? (egressAddress ? 'DYNAMIC' : null)
+
+  async function copyEgressAddress() {
+    if (!egressAddress) return
+    setEgressAddressCopied(false)
+    setEgressAddressCopyFailed(false)
+    try {
+      await navigator.clipboard.writeText(egressAddress)
+      setEgressAddressCopied(true)
+    } catch {
+      setEgressAddressCopyFailed(true)
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -416,6 +445,18 @@ export function SourceCreateDialog({
                 <div className="flex-1 overflow-y-auto">
                   <section className="mx-auto grid w-full max-w-3xl gap-6 p-6 lg:p-8">
                     {requestError && <RequestError message={requestError} />}
+
+                    {isCloudDeployment && (
+                      <ClusterEgressAddressGuidance
+                        isLoading={cloudContext.isLoading}
+                        isError={cloudContext.isError}
+                        address={egressAddress}
+                        status={egressStatus}
+                        copied={egressAddressCopied}
+                        copyFailed={egressAddressCopyFailed}
+                        onCopy={() => void copyEgressAddress()}
+                      />
+                    )}
 
                     {loadingConnector ? (
                       <div className="text-muted-foreground flex min-h-24 items-center justify-center gap-2 text-[13px]">

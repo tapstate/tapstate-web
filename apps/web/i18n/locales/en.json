@@ -145,6 +145,22 @@
     "tabComingSoonBody": "This tab is represented as an empty state in the migration preview.",
     "observationUnavailableTitle": "{{tab}} observation unavailable",
     "observationUnavailableBody": "This Source has static artifact data only. Runtime observations will appear when the observation API is available.",
+    "egressAddress": {
+      "title": "Cluster outbound IP",
+      "addressLabel": "Cluster IP address",
+      "loading": "Checking the IP this Cluster uses to reach your source...",
+      "unavailable": "Could not load this Cluster's outbound IP right now.",
+      "changing": "Stable IP setup is in progress. Wait for it to finish before updating firewall rules.",
+      "stableHelp": "Allowlist this IP in your database firewall to let this Cluster connect. If it was just updated, re-enter the Cluster to refresh this panel.",
+      "dynamicHelp": "This is the current outbound IP. It may change if the Cluster instance is replaced; ask an organization admin to make it stable before relying on an allowlist.",
+      "currentHelp": "Use this current outbound IP in your database firewall allowlist. Check the Clusters page for its stability status.",
+      "failedHelp": "Stable IP setup failed. This current address may change. Ask an organization admin to retry setup in Cloud Console.",
+      "missing": "This Cluster has not reported an outbound IP yet. Source configuration can continue.",
+      "copy": "Copy IP",
+      "copied": "Copied",
+      "copyFailed": "Clipboard access failed. Select the IP and copy it manually.",
+      "continueSetup": "You can still configure and create this source."
+    },
     "actions": {
       "create": "Create source",
       "refresh": "Refresh sources",
