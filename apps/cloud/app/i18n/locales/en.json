@@ -126,6 +126,7 @@
     "resourceStateLabel": "Resource state",
     "openingCluster": "Opening Cluster Console…",
     "openCluster": "Open Cluster Console",
+    "viewSubscriptions": "View Subscriptions",
     "failedTitle": "Provisioning interrupted",
     "failedBadge": "Deployment stopped",
     "failedDescription": "Cloud reported that cluster provisioning failed.",

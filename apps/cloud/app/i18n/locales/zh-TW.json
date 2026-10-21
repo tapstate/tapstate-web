@@ -126,6 +126,7 @@
     "resourceStateLabel": "資源狀態",
     "openingCluster": "正在開啟叢集主控台…",
     "openCluster": "開啟叢集主控台",
+    "viewSubscriptions": "查看訂閱",
     "failedTitle": "供給已中斷",
     "failedBadge": "部署已停止",
     "failedDescription": "Cloud 回報叢集供給失敗。",

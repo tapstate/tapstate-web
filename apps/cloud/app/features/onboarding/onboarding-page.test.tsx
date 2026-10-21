@@ -109,6 +109,16 @@ const cancelledSubscription: Subscription = {
   status: 'CANCELLED',
 }
 
+const readyCluster: Cluster = {
+  ...failedCluster,
+  state: 'READY',
+}
+
+const readySubscription: Subscription = {
+  ...activeSubscription,
+  resourceState: 'READY',
+}
+
 const failedWorkspace: OnboardingWorkspace = {
   organization,
   cluster: failedCluster,
@@ -154,6 +164,36 @@ async function renderPage(onCreateWorkspace: (input: OnboardingInput) => Promise
 
   await vi.waitFor(() => expect(buttonWithText('US West')).toBeDefined())
   await vi.waitFor(() => expect(host?.textContent).toContain('Starter'))
+}
+
+async function renderReadyPage() {
+  host = document.createElement('div')
+  document.body.append(host)
+  root = createRoot(host)
+  const readyWorkspace: OnboardingWorkspace = {
+    organization,
+    cluster: readyCluster,
+    subscription: readySubscription,
+  }
+
+  await act(async () => {
+    root?.render(
+      <I18nextProvider i18n={i18n}>
+        <OnboardingPage
+          darkMode={false}
+          entryError={null}
+          initialWorkspace={readyWorkspace}
+          isOpeningCluster={false}
+          onComplete={() => undefined}
+          onCreateWorkspace={async () => readyWorkspace}
+          setDarkMode={() => undefined}
+          user={{ email: 'user@example.com', displayName: 'Test User' }}
+        />
+      </I18nextProvider>,
+    )
+  })
+
+  await vi.waitFor(() => expect(buttonWithText('View Subscriptions')).toBeDefined())
 }
 
 async function submitSetup() {
@@ -236,6 +276,25 @@ describe('Cloud onboarding payment', () => {
 
     expect(onCreateWorkspace).not.toHaveBeenCalled()
     expect(buttonWithText('Continue to secure payment')?.hasAttribute('disabled')).toBe(true)
+  })
+})
+
+describe('Cloud onboarding ready actions', () => {
+  it('places View Subscriptions to the left of Open Cluster Console and opens billing', async () => {
+    await renderReadyPage()
+
+    const viewSubscriptions = buttonWithText('View Subscriptions')
+    const openCluster = buttonWithText('Open Cluster Console')
+    expect(viewSubscriptions).toBeDefined()
+    expect(openCluster).toBeDefined()
+    expect(viewSubscriptions?.nextElementSibling).toBe(openCluster)
+
+    await clickButton('View Subscriptions')
+
+    expect(navigate).toHaveBeenCalledWith({
+      to: '/billing',
+      search: { organizationId: organization.id },
+    })
   })
 })
 

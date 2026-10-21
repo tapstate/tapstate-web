@@ -1015,6 +1015,12 @@ export function OnboardingPage({
             cleanupPending={screen === 'cancelled' && workspace.cluster.state !== 'TERMINATED'}
             cleanupStatusError={hasCleanupStatusError}
             onOpenCluster={() => onComplete(workspace.organization, workspace.cluster)}
+            onViewSubscriptions={() =>
+              void navigate({
+                to: '/billing',
+                search: { organizationId: workspace.organization.id },
+              })
+            }
             onCancel={() => void handleCancelSubscription()}
             onRetry={() => void handleRetry()}
             organization={workspace.organization}

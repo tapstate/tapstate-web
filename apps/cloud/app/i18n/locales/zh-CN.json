@@ -126,6 +126,7 @@
     "resourceStateLabel": "资源状态",
     "openingCluster": "正在打开集群控制台…",
     "openCluster": "打开集群控制台",
+    "viewSubscriptions": "查看订阅",
     "failedTitle": "供给已中断",
     "failedBadge": "部署已停止",
     "failedDescription": "Cloud 报告集群供给失败。",
