@@ -1,5 +1,5 @@
 .atlas-store-dialog__fields .tap-formily-item {
-  margin-bottom: calc(var(--spacing) * 2) !important;
+  margin-bottom: var(--spacing) !important;
 }
 
 .atlas-store-dialog__fields fieldset[data-formily-compact-section] {
@@ -14,7 +14,7 @@
   fieldset[data-formily-header-control]
   > .tap-formily-item:first-of-type {
   position: absolute;
-  top: calc(var(--spacing) * -0.5);
+  top: calc(var(--spacing) * -6);
   right: calc(var(--spacing) * 4);
   width: auto;
   margin-bottom: 0 !important;
