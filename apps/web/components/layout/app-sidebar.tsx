@@ -8,7 +8,6 @@ import {
   Database,
   GitMerge,
   LayoutDashboard,
-  MessageSquareText,
   Settings,
   Table2,
   Terminal,
@@ -33,7 +32,6 @@ const navigation: NavigationItem[] = [
   { labelKey: 'nav.sources', to: '/sources', icon: Database },
   { labelKey: 'nav.pipelines', to: '/pipelines', icon: GitMerge },
   { labelKey: 'nav.views', to: '/views', icon: Table2 },
-  { labelKey: 'nav.explorations', to: '/explorations', icon: MessageSquareText },
 ]
 
 /** Kept apart from the places above, at the foot of the sidebar. */
