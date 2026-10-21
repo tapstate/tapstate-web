@@ -722,6 +722,63 @@ describe('PipelineEditorPage', () => {
     expect(getPipelineStatus).not.toHaveBeenCalled()
   })
 
+  it('does not request runtime status for an unpublished DAG draft', async () => {
+    getPipelineDraft.mockResolvedValue({
+      draft: {
+        pipelineId: 'orders_to_warehouse',
+        schemaVersion: 1,
+        revision: 3,
+        mode: 'dag',
+        name: 'orders_to_warehouse',
+        description: null,
+        graph: { nodes: [], edges: [], viewport: null },
+        wizard: null,
+        baseArtifactHash: null,
+        publishedDraftRevision: null,
+        publishedArtifactHash: null,
+        createdAt: '2026-09-21T00:00:00Z',
+        updatedAt: '2026-09-21T00:00:00Z',
+        updatedBy: 'test',
+      },
+      etag: '"3"',
+    })
+
+    await renderPage()
+
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="pipeline-canvas"]')).not.toBeNull(),
+    )
+    expect(getPipelineStatus).not.toHaveBeenCalled()
+  })
+
+  it('keeps draft monitoring out of runtime status and metrics APIs', async () => {
+    getPipelineDraft.mockResolvedValue({
+      draft: {
+        pipelineId: 'orders_to_warehouse',
+        schemaVersion: 1,
+        revision: 3,
+        mode: 'dag',
+        name: 'orders_to_warehouse',
+        description: null,
+        graph: { nodes: [], edges: [], viewport: null },
+        wizard: null,
+        baseArtifactHash: null,
+        publishedDraftRevision: null,
+        publishedArtifactHash: null,
+        createdAt: '2026-09-21T00:00:00Z',
+        updatedAt: '2026-09-21T00:00:00Z',
+        updatedBy: 'test',
+      },
+      etag: '"3"',
+    })
+
+    await renderPage('monitoring')
+
+    await vi.waitFor(() => expect(container?.textContent).toContain('This Pipeline is a draft'))
+    expect(getPipelineStatus).not.toHaveBeenCalled()
+    expect(getPipelineMetrics).not.toHaveBeenCalled()
+  })
+
   it('keeps a published Wizard visible and read-only while runtime status is pending', async () => {
     getPipelineDraft.mockResolvedValue({
       draft: {
@@ -1074,7 +1131,9 @@ describe('PipelineEditorPage', () => {
 
     await vi.waitFor(() => expect(container?.textContent).toContain('No log lines'))
     expect(getPipelineLogs).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function))
-    expect(getPipelineStatus).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function))
+    await vi.waitFor(() =>
+      expect(getPipelineStatus).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function)),
+    )
     expect(getPipelineMetrics).not.toHaveBeenCalled()
   })
 

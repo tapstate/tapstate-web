@@ -273,7 +273,7 @@ describe('source client', () => {
         fetcherFor(jsonResponse(report, 200, `"${source.contentHash}"`), requests),
       ),
     ).resolves.toEqual(report)
-    expect(new URL(requests[1].url).pathname).toBe('/api/connections/orders/schema')
+    expect(new URL(requests[1].url).pathname).toBe('/api/sources/orders/schema')
   })
 
   it('rejects malformed or mismatched source schema reports', async () => {

@@ -2,6 +2,12 @@ export type JsonPrimitive = string | number | boolean | null
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue }
 export type ApiFetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 
+/**
+ * Id under which the server registers its own managed store for views. It is listed with the
+ * sources, but it is where views are kept rather than something to build pipelines from.
+ */
+export const MANAGED_VIEW_STORE_SOURCE_ID = 'views'
+
 export interface SourceTableView {
   type: string
   name: string | null
@@ -367,13 +373,11 @@ async function requestJson(
   if (!response.ok) {
     const code = isRecord(payload) && typeof payload.code === 'string' ? payload.code : null
     const params = isRecord(payload) && isRecord(payload.params) ? payload.params : {}
-    throw new SourceClientError(
-      'server',
-      'the source request was refused',
-      code,
-      response.status,
-      params,
-    )
+    const message =
+      isRecord(payload) && typeof payload.message === 'string'
+        ? payload.message
+        : 'the source request was refused'
+    throw new SourceClientError('server', message, code, response.status, params)
   }
 
   return { payload, response }
@@ -441,6 +445,19 @@ export async function testConnection(
   return payload
 }
 
+export async function getConnectionTestResult(
+  id: string,
+  fetcher: ApiFetcher = fetch,
+): Promise<ConnectionTestReport> {
+  const { payload } = await requestJson(
+    `/connections/${encodeURIComponent(id)}/test-result`,
+    fetcher,
+  )
+  if (!isConnectionTestReport(payload) || payload.connectionId !== id)
+    throw new SourceClientError('protocol', 'the connection test result is malformed')
+  return payload
+}
+
 export async function discoverSourceSchema(
   request: SourceSchemaRequest,
   fetcher: ApiFetcher = fetch,
@@ -463,7 +480,7 @@ export async function getSourceSchema(
   id: string,
   fetcher: ApiFetcher = fetch,
 ): Promise<SourceSchemaReport> {
-  const { payload } = await requestJson(`/connections/${encodeURIComponent(id)}/schema`, fetcher)
+  const { payload } = await requestJson(`/sources/${encodeURIComponent(id)}/schema`, fetcher)
   if (!isSourceSchemaReport(payload) || payload.connectionId !== id)
     throw new SourceClientError('protocol', 'the source schema response is malformed')
   return payload

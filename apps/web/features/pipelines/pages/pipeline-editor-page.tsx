@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { ReactFlowProvider } from '@xyflow/react'
 import {
@@ -46,6 +46,7 @@ import {
   getPipeline,
   getPipelineLayout,
   getPipelineStatus,
+  listPipelines,
   previewPipelineDraft,
   publishPipelineDraft,
   updatePipelineDraft,
@@ -54,6 +55,7 @@ import {
   type PipelineDraft,
   type PipelineDraftMutation,
   type PipelineRuntimeState,
+  type PipelineCatalogState,
 } from '@/service/pipelines/pipeline-client'
 import { getSourceSchema, listConnectors, listSources } from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
@@ -73,6 +75,7 @@ import type {
 import type {
   PipelineNodeConfiguration,
   PipelineNodeConfigurationChange,
+  PipelineSourceTableSelection,
 } from '../model/pipeline-node-model'
 
 import { PipelineLifecycleMenu } from '../components/pipeline-lifecycle-menu'
@@ -82,6 +85,7 @@ import {
   type PipelineDraftSaveResult,
 } from '../hooks/use-pipeline-draft-autosave'
 import { PipelineLogsPage } from '../logs/pipeline-logs-page'
+import { isGuidedCustomer360Pipeline } from '../model/customer-360-guide'
 import { getDeploymentProfile } from '../model/deployment-profile'
 import {
   buildPipelineDraftMutation,
@@ -99,7 +103,6 @@ import {
 } from '../model/pipeline-graph-edit'
 import { pipelineNodeConnectors } from '../model/pipeline-node-connectors'
 import { sourceTableSelections } from '../model/pipeline-node-model'
-import { pipelineStatusRefetchInterval } from '../model/pipeline-status-polling'
 import { targetSources } from '../model/pipeline-target-connectors'
 import { PipelineMonitoringPage } from '../monitoring/pipeline-monitoring-page'
 import { PipelineStartNotices } from '../start-checks/pipeline-start-notice'
@@ -113,6 +116,20 @@ export type PipelineWorkspaceSection = 'orchestrate' | 'api' | 'logs' | 'monitor
 
 function isPipelineReadOnly(status?: PipelineRuntimeState) {
   return status === 'RUNNING' || status === 'PAUSED' || status === 'FAILED'
+}
+
+function runtimeStateFromCatalog(state?: PipelineCatalogState): PipelineRuntimeState | undefined {
+  switch (state) {
+    case 'NEW':
+    case 'RUNNING':
+    case 'PAUSED':
+    case 'STOPPED':
+    case 'COMPLETED':
+    case 'FAILED':
+      return state
+    default:
+      return undefined
+  }
 }
 
 function connectorForConfiguration(
@@ -217,6 +234,33 @@ function upstreamSourceTables(
     visited.add(currentId)
     const configuration = draft.configurations.get(currentId)
     if (configuration?.kind === 'source') return sourceTableSelections(configuration)
+    return draft.dag.edges
+      .filter((edge) => edge.target === currentId)
+      .flatMap((edge) => walk(edge.source))
+  }
+  return walk(nodeId)
+}
+
+interface UpstreamSourceTableRef extends PipelineSourceTableSelection {
+  sourceId: string
+}
+
+function upstreamSourceTableRefs(
+  draft: PipelineGraphDraft | null,
+  nodeId: string | undefined,
+): UpstreamSourceTableRef[] {
+  if (!draft || !nodeId) return []
+  const visited = new Set<string>()
+  const walk = (currentId: string): UpstreamSourceTableRef[] => {
+    if (visited.has(currentId)) return []
+    visited.add(currentId)
+    const configuration = draft.configurations.get(currentId)
+    if (configuration?.kind === 'source') {
+      return sourceTableSelections(configuration).map((selection) => ({
+        ...selection,
+        sourceId: configuration.sourceId,
+      }))
+    }
     return draft.dag.edges
       .filter((edge) => edge.target === currentId)
       .flatMap((edge) => walk(edge.source))
@@ -330,6 +374,7 @@ function PipelineWorkspaceNav({
   collapsed,
   onCollapsedChange,
   status,
+  hasArtifact,
   canEditBasicInfo,
   onSaveBasicInfo,
 }: {
@@ -338,7 +383,8 @@ function PipelineWorkspaceNav({
   activeSection: PipelineWorkspaceSection
   collapsed: boolean
   onCollapsedChange: (collapsed: boolean) => void
-  status?: PipelineRuntimeState
+  status?: PipelineCatalogState
+  hasArtifact: boolean
   canEditBasicInfo: boolean
   onSaveBasicInfo: SavePipelineDraftBasicInfo
 }) {
@@ -468,7 +514,17 @@ function PipelineWorkspaceNav({
                   >
                     {basicInfo.name}
                   </span>
-                  <PipelineStatusBadge status={status} />
+                  {hasArtifact ? (
+                    <PipelineStatusBadge status={status} />
+                  ) : (
+                    <span
+                      className="inline-flex h-6 items-center rounded-md border border-amber-200 bg-amber-50 px-2 text-[11px] font-semibold text-amber-800"
+                      data-testid="pipeline-status"
+                      data-state="draft"
+                    >
+                      {t('wizard.draft')}
+                    </span>
+                  )}
                 </div>
                 <Button
                   type="button"
@@ -603,6 +659,7 @@ function PipelineWorkspaceNav({
 function PipelineOrchestrationPage({
   pipelineId,
   runtimeStatus,
+  lifecycleStatus,
   runtimeObservationPending,
   runtimeObservationError,
   onRetryRuntimeObservation,
@@ -610,6 +667,7 @@ function PipelineOrchestrationPage({
 }: {
   pipelineId: string
   runtimeStatus?: PipelineRuntimeState
+  lifecycleStatus?: PipelineCatalogState
   runtimeObservationPending: boolean
   runtimeObservationError: boolean
   onRetryRuntimeObservation: () => void
@@ -838,11 +896,7 @@ function PipelineOrchestrationPage({
       : null
   const isWizard = wizardDocument !== null
   const wizardReadOnly =
-    isReadOnly ||
-    (isWizard &&
-      (runtimeObservationPending ||
-        runtimeObservationError ||
-        (wizardDocument?.draft.publishedDraftRevision !== null && !runtimeStatus)))
+    isReadOnly || (isWizard && (runtimeObservationPending || runtimeObservationError))
   const stopAction = isReadOnly ? (
     <PipelineLifecycleMenu
       pipelineId={pipelineId}
@@ -916,15 +970,18 @@ function PipelineOrchestrationPage({
   // A target writes through one connector only, so its picker offers a narrower catalog than a
   // source node's. Two lists rather than one filtered at the form: the panel takes whichever the
   // current selection is entitled to, and neither kind can read the other's.
+  const deploymentProfile = getDeploymentProfile()
+  const localDevelopment = import.meta.env.VITE_LOCAL_DEVELOPMENT === 'true'
   const targetSourceOptions = useMemo<PipelineSchemaOption[]>(
     () =>
-      targetSources(sources.data ?? [], connectors.data ?? [], getDeploymentProfile()).map(
-        (source) => ({
-          label: source.id,
-          value: source.id,
-        }),
-      ),
-    [connectors.data, sources.data],
+      targetSources(sources.data ?? [], connectors.data ?? [], {
+        profile: deploymentProfile,
+        localDevelopment,
+      }).map((source) => ({
+        label: source.id,
+        value: source.id,
+      })),
+    [connectors.data, sources.data, deploymentProfile, localDevelopment],
   )
   const configuredTableOptionsBySourceId = useMemo(() => {
     const options = new Map<string, PipelineSchemaOption[]>()
@@ -947,6 +1004,51 @@ function PipelineOrchestrationPage({
       selection?.configuration?.kind === 'target' ? upstreamSourceTables(draft, selection.id) : [],
     [draft, selection?.configuration?.kind, selection?.id],
   )
+  const selectedFilterSourceRefs = useMemo(() => {
+    const configuration = selection?.configuration
+    return configuration?.kind === 'transform' && configuration.transformType === 'filter'
+      ? upstreamSourceTableRefs(draft, selection?.id)
+      : []
+  }, [draft, selection?.configuration, selection?.id])
+  const selectedFilterSourceIds = useMemo(
+    () => [...new Set(selectedFilterSourceRefs.map((reference) => reference.sourceId))],
+    [selectedFilterSourceRefs],
+  )
+  const filterSourceSchemas = useQueries({
+    queries: selectedFilterSourceIds.map((sourceId) => ({
+      queryKey: ['source-schema', sourceId],
+      queryFn: () => getSourceSchema(sourceId, apiFetch),
+      staleTime: 5 * 60 * 1000,
+    })),
+  })
+  const selectedFilterFieldTypes = useMemo(() => {
+    const fieldTypes: Record<string, string> = {}
+    const ambiguousFields = new Set<string>()
+    const schemasBySourceId = new Map(
+      selectedFilterSourceIds.map((sourceId, index) => [
+        sourceId,
+        filterSourceSchemas[index]?.data,
+      ]),
+    )
+
+    for (const reference of selectedFilterSourceRefs) {
+      if (reference.tableKind === 'regex') continue
+      const table = schemasBySourceId
+        .get(reference.sourceId)
+        ?.tables.find((candidate) => candidate.name === reference.table)
+      for (const field of table?.fields ?? []) {
+        if (!field.type || ambiguousFields.has(field.name)) continue
+        const existingType = fieldTypes[field.name]
+        if (existingType && existingType.toLowerCase() !== field.type.toLowerCase()) {
+          delete fieldTypes[field.name]
+          ambiguousFields.add(field.name)
+          continue
+        }
+        fieldTypes[field.name] = field.type
+      }
+    }
+    return fieldTypes
+  }, [filterSourceSchemas, selectedFilterSourceIds, selectedFilterSourceRefs])
   const loadPipelineTables = useCallback<PipelineTableLoader>(
     async (sourceId) => {
       const report = await getSourceSchema(sourceId, apiFetch)
@@ -1059,12 +1161,10 @@ function PipelineOrchestrationPage({
   async function handleSave(): Promise<PipelineDraftSaveResult | null> {
     if (isReadOnly) return null
     if (!draft || autosave.isSaving) return null
-    const nextDiagnostics = validatePipelineGraph(
-      draft,
-      sources.data,
-      connectors.data,
-      getDeploymentProfile(),
-    )
+    const nextDiagnostics = validatePipelineGraph(draft, sources.data, connectors.data, {
+      profile: deploymentProfile,
+      localDevelopment,
+    })
     if (!sources.isSuccess) {
       setDiagnostics([])
       pushActionError(t('pipelines.workspace.nodeSelector.sourcesError'))
@@ -1162,6 +1262,7 @@ function PipelineOrchestrationPage({
                 etag={wizardDocument.etag}
                 readOnly={wizardReadOnly}
                 runtimeStatus={runtimeStatus}
+                lifecycleStatus={lifecycleStatus}
                 runtimeObservationPending={runtimeObservationPending}
                 runtimeObservationError={runtimeObservationError}
                 onRetryRuntimeObservation={onRetryRuntimeObservation}
@@ -1233,6 +1334,7 @@ function PipelineOrchestrationPage({
                 selection?.configuration?.kind === 'target' ? targetSourceOptions : sourceOptions,
               tableOptions: selectedTargetTableOptions,
               upstreamSourceTables: selectedTargetSourceTables,
+              fieldTypes: selectedFilterFieldTypes,
               loadTables: loadPipelineTables,
             }}
           />
@@ -1495,17 +1597,43 @@ export function PipelineWorkspacePage({
     basicInfoSaverRef.current = save
     setBasicInfoSaverReady(Boolean(save))
   }, [])
-  const statusEnabled =
-    pipelineDraft.isSuccess &&
-    (pipelineDraft.data === null || pipelineDraft.data?.draft.publishedDraftRevision !== null)
-  const status = useQuery({
+  const catalog = useQuery({
+    queryKey: ['pipelines'],
+    queryFn: () => listPipelines(apiFetch),
+    refetchInterval: 5000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  })
+  const catalogItem = catalog.data?.find((item) => item.id === pipelineId)
+  const hasArtifact =
+    Boolean(
+      pipelineDraft.data?.draft?.publishedArtifactHash ||
+      pipelineDraft.data?.draft?.baseArtifactHash,
+    ) ||
+    catalogItem?.hasArtifact === true ||
+    Boolean(pipelineInfo.data)
+  const mergedStatus = useQuery({
     queryKey: ['pipelines', pipelineId, 'status'],
     queryFn: () => getPipelineStatus(pipelineId, apiFetch),
-    enabled: statusEnabled,
+    enabled: pipelineDraft.isSuccess && hasArtifact,
     retry: false,
-    refetchInterval: (query) => pipelineStatusRefetchInterval(query.state.error),
-    refetchIntervalInBackground: false,
+    refetchInterval: 5000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   })
+  const lifecycleStatus =
+    mergedStatus.data?.displayState ?? mergedStatus.data?.state ?? catalogItem?.status.state
+  const runtimeStatus = hasArtifact
+    ? lifecycleStatus === 'STARTING' || lifecycleStatus === 'RESUMING'
+      ? 'RUNNING'
+      : (mergedStatus.data?.observedState ??
+        mergedStatus.data?.desiredState ??
+        catalogItem?.status.observedState ??
+        catalogItem?.status.desiredState ??
+        runtimeStateFromCatalog(lifecycleStatus) ??
+        'NEW')
+    : undefined
   const basicInfo = useMemo<PipelineDraftBasicInfo>(() => {
     const draft = pipelineDraft.data?.draft
     if (draft) {
@@ -1599,10 +1727,13 @@ export function PipelineWorkspacePage({
     [apiFetch, pipelineId, queryClient, section, t],
   )
   const canEditBasicInfo =
+    !isGuidedCustomer360Pipeline(
+      pipelineId,
+      pipelineDraft.data?.draft.mode === 'wizard' ? pipelineDraft.data.draft.wizard : null,
+    ) &&
     pipelineDraft.isSuccess &&
     (pipelineDraft.data !== null || pipelineInfo.isSuccess) &&
-    (!statusEnabled || status.isSuccess) &&
-    !isPipelineReadOnly(status.data?.state) &&
+    !isPipelineReadOnly(runtimeStatus) &&
     (section !== 'orchestrate' || basicInfoSaverReady)
 
   return (
@@ -1616,17 +1747,22 @@ export function PipelineWorkspacePage({
         activeSection={section}
         collapsed={navigationCollapsed}
         onCollapsedChange={setNavigationCollapsed}
-        status={status.data?.state}
+        status={lifecycleStatus}
+        hasArtifact={hasArtifact}
         canEditBasicInfo={canEditBasicInfo}
         onSaveBasicInfo={saveBasicInfo}
       />
       {section === 'orchestrate' ? (
         <PipelineOrchestrationPage
           pipelineId={pipelineId}
-          runtimeStatus={status.data?.state}
-          runtimeObservationPending={statusEnabled && status.isPending}
-          runtimeObservationError={statusEnabled && status.isError}
-          onRetryRuntimeObservation={() => void status.refetch()}
+          runtimeStatus={runtimeStatus}
+          lifecycleStatus={lifecycleStatus}
+          runtimeObservationPending={hasArtifact && mergedStatus.isPending}
+          runtimeObservationError={hasArtifact && mergedStatus.isError}
+          onRetryRuntimeObservation={() => {
+            void catalog.refetch()
+            void mergedStatus.refetch()
+          }}
           onRegisterBasicInfoSaver={registerBasicInfoSaver}
         />
       ) : (
@@ -1635,7 +1771,9 @@ export function PipelineWorkspacePage({
           section={section}
           showHeading={section !== 'logs'}
         >
-          {section === 'monitoring' && <PipelineMonitoringPage pipelineId={pipelineId} />}
+          {section === 'monitoring' && (
+            <PipelineMonitoringPage pipelineId={pipelineId} hasArtifact={hasArtifact} />
+          )}
           {section === 'logs' && <PipelineLogsPage pipelineId={pipelineId} />}
           {section === 'api' && <ApiAccessPage pipelineId={pipelineId} />}
         </WorkspacePageFrame>

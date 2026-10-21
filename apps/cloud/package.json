@@ -1,0 +1,34 @@
+{
+  "name": "cloud",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "vitest run",
+    "preview": "vite preview",
+    "lint": "oxlint . && oxfmt --check . '!app/routeTree.gen.ts'",
+    "typecheck": "tsc --noEmit",
+    "i18n:check": "node ./scripts/check-i18n.mjs"
+  },
+  "dependencies": {
+    "@tanstack/react-router": "^1.170.18",
+    "i18next": "^26.3.6",
+    "lucide-react": "^1.26.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-i18next": "^17.0.11"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/router-plugin": "^1.168.23",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "jsdom": "^29.1.1",
+    "tailwindcss": "^4.3.2",
+    "vite": "^8.1.0",
+    "vitest": "^4.1.10"
+  }
+}

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 const routeState = vi.hoisted(() => ({
   navigate: vi.fn(),
   params: { sourceId: 'orders', tableName: 'orders' },
-  search: { tab: 'columns' },
+  search: { tab: 'columns' } as Record<string, unknown>,
   props: null as Record<string, any> | null,
 }))
 
@@ -87,6 +87,38 @@ describe('source route pages', () => {
       params: { sourceId: 'orders', tableName: 'orders' },
       search: { tab: 'lineage' },
     })
+  })
+
+  it('opens the new-source form when linked with create, and drops it from the URL on close', () => {
+    const previous = routeState.search
+    routeState.search = { create: true }
+    try {
+      renderRoute(<SourcesCatalogPage />)
+
+      expect(routeState.props?.createOnArrival).toBe(true)
+      act(() => routeState.props?.onArrivalCreateClosed())
+      expect(routeState.navigate).toHaveBeenCalledWith({
+        to: '/sources',
+        search: {},
+        replace: true,
+      })
+    } finally {
+      routeState.search = previous
+    }
+  })
+
+  it('does not open the new-source form on a plain visit', () => {
+    const previous = routeState.search
+    routeState.search = {}
+    try {
+      renderRoute(<SourcesCatalogPage />)
+
+      expect(routeState.props?.createOnArrival).toBe(false)
+      act(() => routeState.props?.onArrivalCreateClosed())
+      expect(routeState.navigate).not.toHaveBeenCalled()
+    } finally {
+      routeState.search = previous
+    }
   })
 
   it('hydrates the table view from route params and search', () => {

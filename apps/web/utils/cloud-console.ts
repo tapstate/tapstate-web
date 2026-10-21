@@ -1,13 +1,36 @@
-const PREVIEW_CLOUD_CONSOLE_URL = 'https://dev.cloud.tapstate.com/'
+import { PREVIEW_CLOUD_CONSOLE_URL, validateCloudConsoleUrl } from './cloud-console-url'
+
+const PRODUCTION_CLOUD_CONSOLE_URL = 'https://cloud.tapstate.com/'
+
+function getCloudConsoleUrlForHostname(hostname: string): string | undefined {
+  const normalizedHostname = hostname.toLowerCase().replace(/\.$/, '')
+
+  if (
+    normalizedHostname === 'dev.cloud.tapstate.com' ||
+    normalizedHostname.endsWith('.dev.cloud.tapstate.com')
+  ) {
+    return PREVIEW_CLOUD_CONSOLE_URL
+  }
+
+  if (
+    normalizedHostname === 'cloud.tapstate.com' ||
+    normalizedHostname.endsWith('.cloud.tapstate.com')
+  ) {
+    return PRODUCTION_CLOUD_CONSOLE_URL
+  }
+
+  return undefined
+}
 
 export function getCloudConsoleUrl(
   configuredUrl: string | undefined = import.meta.env.VITE_CLOUD_CONSOLE_URL,
+  hostname: string = typeof window === 'undefined' ? '' : window.location.hostname,
+  localDevelopment: boolean = import.meta.env.VITE_LOCAL_DEVELOPMENT === 'true',
 ): string {
-  const url = new URL(configuredUrl?.trim() || PREVIEW_CLOUD_CONSOLE_URL)
-  if (url.protocol !== 'https:' || url.username || url.password || url.hash) {
-    throw new Error('VITE_CLOUD_CONSOLE_URL must be an HTTPS URL without credentials or a fragment')
-  }
-  return url.toString()
+  const selectedUrl = localDevelopment
+    ? configuredUrl
+    : getCloudConsoleUrlForHostname(hostname) || configuredUrl || PREVIEW_CLOUD_CONSOLE_URL
+  return validateCloudConsoleUrl(selectedUrl, localDevelopment)
 }
 
 export const cloudConsoleUrl = getCloudConsoleUrl()

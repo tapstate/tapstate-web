@@ -7,12 +7,10 @@ import type { ApiFetcher } from '@/service/source-client'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
 import { listPipelines, type PipelineCatalogItem } from '@/service/pipelines/pipeline-client'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { PipelineCreationDialog } from '../components/create/pipeline-creation-dialog'
-import { TreeItem } from '../components/navigation/tree-item'
 import {
   PipelineLifecycleMenu,
   type PipelineLifecycleAction,
@@ -30,7 +28,6 @@ import { useStartPipeline, type PipelineStartOutcome } from '../start-checks/use
 export function PipelinesPage() {
   const { i18n, t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [isCreationDialogOpen, setIsCreationDialogOpen] = useState(false)
@@ -60,11 +57,6 @@ export function PipelinesPage() {
         .some((value) => value.toLocaleLowerCase(i18n.language).includes(query)),
     )
   }, [i18n.language, pipelines, search])
-  const selectedRow = useMemo(
-    () => pipelines.find((pipeline) => pipeline.id === selectedId) ?? null,
-    [pipelines, selectedId],
-  )
-
   return (
     <section className="flex h-full w-full flex-col overflow-hidden bg-white">
       <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-gray-100/70 px-4 md:px-6">
@@ -81,50 +73,8 @@ export function PipelinesPage() {
         </Button>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col bg-white md:flex-row">
-        <aside className="flex w-full shrink-0 flex-col border-b border-gray-100/70 bg-[#fcfcfd]/80 md:w-64 md:border-r md:border-b-0">
-          <div className="flex items-center justify-between border-b border-gray-100/70 p-3">
-            <h2 className="ml-1 text-[11px] font-semibold tracking-wide text-gray-500 uppercase">
-              {t('pipelines.explorer')}
-            </h2>
-          </div>
-          <div className="flex min-h-[160px] flex-1 gap-1 overflow-auto p-2 md:flex-col">
-            <Button
-              type="button"
-              variant="ghost"
-              className={cn(
-                'h-auto min-w-[160px] justify-start px-2 py-1.5 text-[13px] md:min-w-0',
-                selectedId === null
-                  ? 'bg-gray-100 font-medium text-gray-900'
-                  : 'text-gray-600 hover:bg-gray-50',
-              )}
-              onClick={() => setSelectedId(null)}
-            >
-              <GitMerge className="h-4 w-4 text-gray-400" aria-hidden="true" />
-              <span>{t('pipelines.allPipelines')}</span>
-            </Button>
-            {pipelinesQuery.isLoading ? (
-              <div className="space-y-2 px-2 py-1.5" aria-label={t('pipelines.states.loading')}>
-                <div className="h-3 w-36 animate-pulse rounded bg-gray-100" />
-                <div className="h-3 w-24 animate-pulse rounded bg-gray-100" />
-              </div>
-            ) : (
-              pipelines.map((pipeline) => (
-                <TreeItem
-                  key={pipeline.id}
-                  node={{ id: pipeline.id, name: pipeline.name, type: 'pipeline' }}
-                  expandedIds={new Set()}
-                  selectedId={selectedId}
-                  onToggle={() => undefined}
-                  onSelect={setSelectedId}
-                />
-              ))
-            )}
-          </div>
-        </aside>
-
+      <div className="flex min-h-0 flex-1 bg-white">
         <main className="flex min-w-0 flex-1 flex-col bg-white">
-          {selectedRow && <PipelineHeader pipeline={selectedRow} />}
           <div className="min-h-0 flex-1 overflow-auto bg-white p-4 md:p-6">
             <PipelineStartNotices
               notices={starter.notices}
@@ -235,27 +185,6 @@ function serverErrorMessage(error: unknown): string | undefined {
     : undefined
 }
 
-function PipelineHeader({ pipeline }: { pipeline: PipelineCatalogItem }) {
-  return (
-    <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-gray-100/70 px-4 md:px-6">
-      <div className="flex min-w-0 items-center gap-2">
-        <GitMerge className="h-4 w-4 shrink-0 text-blue-500" aria-hidden="true" />
-        <h2 className="truncate text-[14px] font-semibold text-gray-900">{pipeline.name}</h2>
-        {(pipeline.revision != null || pipeline.contentHash) && (
-          <code
-            className="hidden shrink-0 rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] text-gray-500 sm:inline"
-            title={pipeline.contentHash ?? undefined}
-          >
-            {pipeline.revision != null
-              ? `r${pipeline.revision}`
-              : pipeline.contentHash?.slice(0, 12)}
-          </code>
-        )}
-      </div>
-    </div>
-  )
-}
-
 function PipelineListState({ message, action }: { message: string; action?: React.ReactNode }) {
   return (
     <div className="flex min-h-48 max-w-xl flex-col items-start justify-center gap-3 rounded-lg border border-dashed border-gray-200 bg-gray-50/40 px-5 py-8 text-[13px] text-gray-600">
@@ -290,9 +219,6 @@ function PipelineTable({
             <th className="hidden px-4 py-3 font-semibold sm:table-cell">
               {t('pipelines.table.type')}
             </th>
-            <th className="hidden px-4 py-3 font-semibold md:table-cell">
-              {t('pipelines.table.version')}
-            </th>
             <th className="px-4 py-3 font-semibold">{t('pipelines.table.status')}</th>
             <th className="w-20 px-4 py-3" aria-hidden="true" />
           </tr>
@@ -322,20 +248,6 @@ function PipelineTable({
               </td>
               <td className="hidden px-4 py-3 text-[13px] text-gray-500 sm:table-cell">
                 {t('pipelines.type.pipeline')}
-              </td>
-              <td className="hidden px-4 py-3 md:table-cell">
-                {pipeline.revision != null ? (
-                  <code
-                    className="font-mono text-[12px] text-gray-400"
-                    title={pipeline.contentHash ?? undefined}
-                  >
-                    r{pipeline.revision}
-                  </code>
-                ) : (
-                  <span className="font-mono text-[12px] text-gray-500">
-                    {pipeline.contentHash?.slice(0, 12) ?? '—'}
-                  </span>
-                )}
               </td>
               <td className="px-4 py-3">
                 {pipeline.hasArtifact ? (
