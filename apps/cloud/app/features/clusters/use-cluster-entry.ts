@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Cluster } from '../../service/cloud-api'
 
 import { CloudApiError, cloudApi } from '../../service/cloud-api'
+import { isAllowedCloudClusterOrigin } from './cluster-entry-host'
 
 const activeEntryCancellations = new Set<() => void>()
-const cloudConsoleHosts = new Set(['cloud.tapstate.com', 'dev.cloud.tapstate.com'])
 
 export function cancelPendingClusterEntries() {
   for (const cancel of activeEntryCancellations) cancel()
@@ -49,16 +49,17 @@ export function useClusterEntry() {
       const localTarget = ['localhost', '127.0.0.1'].includes(origin.hostname)
       const localApp = ['localhost', '127.0.0.1'].includes(window.location.hostname)
       const consoleHost = window.location.hostname
-      const expectedClusterHost = cloudConsoleHosts.has(consoleHost)
-        ? `${cluster.id}.${consoleHost}`
-        : null
+      const allowedCloudOrigin = isAllowedCloudClusterOrigin(
+        origin,
+        consoleHost,
+        import.meta.env.DEV,
+      )
       if (
         !success ||
         !exchangeCode ||
         origin.username ||
         origin.password ||
-        (origin.hostname !== expectedClusterHost && !(localApp && localTarget)) ||
-        (!localTarget && origin.port !== '') ||
+        (!allowedCloudOrigin && !(localApp && localTarget)) ||
         (origin.protocol !== 'https:' && !(localApp && localTarget && origin.protocol === 'http:'))
       ) {
         throw new Error('The Cluster address is unavailable. Please try again later.')
