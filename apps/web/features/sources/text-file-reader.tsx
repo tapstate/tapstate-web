@@ -182,12 +182,13 @@ function TextFileReaderBase({
             {(!configuredSecret || action === 'replace') && (
               <Button
                 type="button"
-                size="sm"
-                variant="outline"
+                size="xs"
+                variant="ghost"
+                className="border-0"
                 disabled={disabled || readOnly}
                 onClick={() => inputRef.current?.click()}
               >
-                <Upload className="size-4" aria-hidden="true" />
+                <Upload className="size-3" aria-hidden="true" />
                 {hasSelectedFile
                   ? t('sources.fileReader.replaceFile')
                   : t('sources.fileReader.chooseFile')}
@@ -196,12 +197,12 @@ function TextFileReaderBase({
             {!configuredSecret && hasSelectedFile && !disabled && !readOnly && (
               <Button
                 type="button"
-                size="sm"
+                size="xs"
                 variant="ghost"
                 className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                 onClick={clearFile}
               >
-                <X className="size-4" aria-hidden="true" />
+                <X className="size-3" aria-hidden="true" />
                 {t('common.remove')}
               </Button>
             )}
@@ -211,12 +212,7 @@ function TextFileReaderBase({
       {configuredSecret && !disabled && !readOnly && (
         <div className="flex flex-wrap gap-2">
           {cleared ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={keepConfiguredFile}
-            >
+            <Button type="button" size="xs" variant="ghost" onClick={keepConfiguredFile}>
               {t('sources.edit.secretKeep')}
             </Button>
           ) : (
@@ -224,8 +220,9 @@ function TextFileReaderBase({
               {action === 'keep' ? (
                 <Button
                   type="button"
-                  size="sm"
-                  variant="outline"
+                  size="xs"
+                  variant="ghost"
+                  className="border-0"
                   onClick={() =>
                     fieldName && onSecretChange?.(fieldName, { action: 'replace', value: '' })
                   }
@@ -233,18 +230,13 @@ function TextFileReaderBase({
                   {t('sources.fileReader.replaceFile')}
                 </Button>
               ) : (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={keepConfiguredFile}
-                >
+                <Button type="button" size="xs" variant="ghost" onClick={keepConfiguredFile}>
                   {t('sources.edit.secretKeep')}
                 </Button>
               )}
               <Button
                 type="button"
-                size="sm"
+                size="xs"
                 variant="ghost"
                 className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                 onClick={clearFile}
