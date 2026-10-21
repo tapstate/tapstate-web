@@ -1,6 +1,7 @@
 import type { Field } from '@formily/core'
 
 import { connect, mapProps } from '@formily/react'
+import { FileText, Upload, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -50,10 +51,23 @@ function TextFileReaderBase({
   const originalFileName = useRef(fileName)
   const readGeneration = useRef(0)
   const [fileError, setFileError] = useState('')
+  const [fileNameOverride, setFileNameOverride] = useState<string | null | undefined>()
   const action = draft?.action ?? 'keep'
-  const waitingForFile = configuredSecret && action === 'replace' && !draft?.value
   const configured = configuredSecret && action === 'keep'
   const cleared = configuredSecret && action === 'clear'
+  const hasFileValue =
+    (value !== null && value !== undefined && value !== '') || Boolean(draft?.value)
+  const hasSelectedFile = configuredSecret ? configured || Boolean(draft?.value) : hasFileValue
+  const fieldFileName = typeof fileName === 'string' && fileName.trim() ? fileName : undefined
+  const selectedFileName = fileNameOverride !== undefined ? fileNameOverride : fieldFileName
+  const fileLabel =
+    selectedFileName ??
+    (configured ? t('sources.edit.secretConfigured') : t('sources.fileReader.filenameUnavailable'))
+
+  useEffect(() => {
+    setFileNameOverride(undefined)
+    if (action === 'keep' && fileName !== undefined) originalFileName.current = fileName
+  }, [action, fileName])
 
   useEffect(
     () => () => {
@@ -91,6 +105,7 @@ function TextFileReaderBase({
         else reader.readAsText(file)
       })
       if (generation !== readGeneration.current) return
+      setFileNameOverride(file.name)
       if (configuredSecret && fieldName)
         onSecretChange?.(fieldName, { action: 'replace', value: content })
       else onChange?.(content)
@@ -105,6 +120,7 @@ function TextFileReaderBase({
   function clearFile() {
     readGeneration.current += 1
     setFileError('')
+    setFileNameOverride(null)
     if (configuredSecret && fieldName) {
       onSecretChange?.(fieldName, { action: 'clear', value: '' })
     } else {
@@ -115,6 +131,9 @@ function TextFileReaderBase({
 
   function keepConfiguredFile() {
     readGeneration.current += 1
+    setFileNameOverride(
+      typeof originalFileName.current === 'string' ? originalFileName.current : null,
+    )
     if (fieldName) onSecretChange?.(fieldName, { action: 'keep', value: '' })
     updateFileName(typeof originalFileName.current === 'string' ? originalFileName.current : null)
   }
@@ -122,43 +141,84 @@ function TextFileReaderBase({
   return (
     <div className="grid gap-2">
       {configured && (
-        <span className="text-muted-foreground text-[12px]">
+        <span className="sr-only" role="status">
           {t('sources.edit.secretConfigured')}
         </span>
       )}
       {cleared && (
         <span className="text-muted-foreground text-[12px]">{t('sources.edit.secretCleared')}</span>
       )}
-      {!configured &&
-        !cleared &&
-        ((value !== null && value !== undefined && value !== '') || Boolean(draft?.value)) &&
-        !waitingForFile && (
-          <span className="text-muted-foreground text-[12px]">
-            {t('sources.fileReader.fileSelected')}
-          </span>
-        )}
-      {(!configuredSecret || waitingForFile) && (
-        <input
-          ref={inputRef}
-          type="file"
-          accept={accept}
-          aria-label={ariaLabel ?? t('sources.fileReader.chooseFile')}
-          disabled={disabled || readOnly}
-          className="border-input bg-background text-foreground file:border-border file:bg-background file:text-foreground focus-visible:ring-ring min-h-11 w-full rounded-lg border px-3 py-2 text-[13px] file:mr-3 file:min-h-7 file:rounded-lg file:border file:px-3 file:py-1.5 file:text-[12px] focus-visible:ring-2 focus-visible:outline-none"
-          onChange={(event) => {
-            const file = event.currentTarget.files?.[0]
-            if (file) void readFile(file)
-          }}
-        />
+      {hasSelectedFile && (
+        <span className="sr-only" role="status" aria-live="polite">
+          {t('sources.fileReader.fileSelected')}: {fileLabel}
+        </span>
       )}
-      {configuredSecret && !disabled && (
+      {!cleared && (
+        <div className="border-input bg-background flex min-h-11 min-w-0 flex-wrap items-center gap-3 rounded-lg border p-2">
+          <input
+            ref={inputRef}
+            type="file"
+            accept={accept}
+            aria-label={ariaLabel ?? t('sources.fileReader.chooseFile')}
+            tabIndex={-1}
+            disabled={disabled || readOnly}
+            className="sr-only"
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0]
+              if (file) void readFile(file)
+            }}
+          />
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <span className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-md">
+              <FileText className="size-4" aria-hidden="true" />
+            </span>
+            <span
+              className={`min-w-0 flex-1 text-[13px] [overflow-wrap:anywhere] break-words ${
+                hasSelectedFile ? 'text-foreground font-medium' : 'text-muted-foreground'
+              }`}
+            >
+              {hasSelectedFile ? fileLabel : t('sources.fileReader.noFileSelected')}
+            </span>
+          </div>
+          <div className="flex w-full shrink-0 flex-wrap items-center justify-end gap-1 sm:w-auto">
+            {(!configuredSecret || action === 'replace') && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="min-h-11 px-4 py-2 transition-[color,background-color,border-color,box-shadow,transform] duration-150"
+                disabled={disabled || readOnly}
+                onClick={() => inputRef.current?.click()}
+              >
+                <Upload className="size-4" aria-hidden="true" />
+                {hasSelectedFile
+                  ? t('sources.fileReader.replaceFile')
+                  : t('sources.fileReader.chooseFile')}
+              </Button>
+            )}
+            {!configuredSecret && hasSelectedFile && !disabled && !readOnly && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive min-h-11 px-4 py-2 transition-[color,background-color,border-color,box-shadow,transform] duration-150"
+                onClick={clearFile}
+              >
+                <X className="size-4" aria-hidden="true" />
+                {t('common.remove')}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+      {configuredSecret && !disabled && !readOnly && (
         <div className="flex flex-wrap gap-2">
           {cleared ? (
             <Button
               type="button"
               size="sm"
               variant="ghost"
-              className="min-h-11 px-4 py-2"
+              className="min-h-11 px-4 py-2 transition-[color,background-color,border-color,box-shadow,transform] duration-150"
               onClick={keepConfiguredFile}
             >
               {t('sources.edit.secretKeep')}
@@ -170,7 +230,7 @@ function TextFileReaderBase({
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="min-h-11 px-4 py-2"
+                  className="min-h-11 px-4 py-2 transition-[color,background-color,border-color,box-shadow,transform] duration-150"
                   onClick={() =>
                     fieldName && onSecretChange?.(fieldName, { action: 'replace', value: '' })
                   }
@@ -182,7 +242,7 @@ function TextFileReaderBase({
                   type="button"
                   size="sm"
                   variant="ghost"
-                  className="min-h-11 px-4 py-2"
+                  className="min-h-11 px-4 py-2 transition-[color,background-color,border-color,box-shadow,transform] duration-150"
                   onClick={keepConfiguredFile}
                 >
                   {t('sources.edit.secretKeep')}
@@ -192,7 +252,7 @@ function TextFileReaderBase({
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="min-h-11 px-4 py-2"
+                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive min-h-11 px-4 py-2 transition-[color,background-color,border-color,box-shadow,transform] duration-150"
                 onClick={clearFile}
               >
                 {t('sources.edit.secretClear')}
@@ -200,17 +260,6 @@ function TextFileReaderBase({
             </>
           )}
         </div>
-      )}
-      {!configuredSecret && value !== null && value !== undefined && value !== '' && !disabled && (
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          className="min-h-11 w-fit px-4 py-2"
-          onClick={clearFile}
-        >
-          {t('common.remove')}
-        </Button>
       )}
       {fileError && (
         <span className="text-destructive text-[12px]" role="alert">
