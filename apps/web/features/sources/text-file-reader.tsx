@@ -2,7 +2,7 @@ import type { Field } from '@formily/core'
 
 import { connect, mapProps } from '@formily/react'
 import { FileText, Upload, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { JsonValue } from '@/service/source-client'
@@ -27,6 +27,7 @@ interface TextFileReaderProps {
   'aria-label'?: string
   onFileNameChange?: (name: string, value: JsonValue) => void
   onSecretChange?: (name: string, draft: SecretDraft) => void
+  onPendingFileReadChange?: (name: string, pending: boolean) => void
 }
 
 function TextFileReaderBase({
@@ -45,11 +46,13 @@ function TextFileReaderBase({
   onSecretChange,
   onFileNameChange,
   'aria-label': ariaLabel,
+  onPendingFileReadChange,
 }: TextFileReaderProps) {
   const { t } = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
   const originalFileName = useRef(fileName)
   const readGeneration = useRef(0)
+  const isReading = useRef(false)
   const [fileError, setFileError] = useState('')
   const [fileNameOverride, setFileNameOverride] = useState<string | null | undefined>()
   const action = draft?.action ?? 'keep'
@@ -64,6 +67,15 @@ function TextFileReaderBase({
     selectedFileName ??
     (configured ? t('sources.edit.secretConfigured') : t('sources.fileReader.filenameUnavailable'))
 
+  const updateReadState = useCallback(
+    (pending: boolean) => {
+      if (isReading.current === pending) return
+      isReading.current = pending
+      if (fieldName) onPendingFileReadChange?.(fieldName, pending)
+    },
+    [fieldName, onPendingFileReadChange],
+  )
+
   useEffect(() => {
     setFileNameOverride(undefined)
     if (action === 'keep' && fileName !== undefined) originalFileName.current = fileName
@@ -72,8 +84,9 @@ function TextFileReaderBase({
   useEffect(
     () => () => {
       readGeneration.current += 1
+      updateReadState(false)
     },
-    [],
+    [updateReadState],
   )
 
   function updateFileName(nextValue: JsonValue) {
@@ -89,6 +102,7 @@ function TextFileReaderBase({
       return
     }
 
+    updateReadState(true)
     try {
       const content = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader()
@@ -113,12 +127,16 @@ function TextFileReaderBase({
     } catch {
       if (generation === readGeneration.current) setFileError(t('sources.fileReader.readFailed'))
     } finally {
-      if (generation === readGeneration.current && inputRef.current) inputRef.current.value = ''
+      if (generation === readGeneration.current) {
+        updateReadState(false)
+        if (inputRef.current) inputRef.current.value = ''
+      }
     }
   }
 
   function clearFile() {
     readGeneration.current += 1
+    updateReadState(false)
     setFileError('')
     setFileNameOverride(null)
     if (configuredSecret && fieldName) {
@@ -131,6 +149,7 @@ function TextFileReaderBase({
 
   function keepConfiguredFile() {
     readGeneration.current += 1
+    updateReadState(false)
     setFileNameOverride(
       typeof originalFileName.current === 'string' ? originalFileName.current : null,
     )

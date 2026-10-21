@@ -213,6 +213,7 @@ export function SourceEditDialog({
   const [refreshing, setRefreshing] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [testing, setTesting] = useState(false)
+  const [pendingFileReads, setPendingFileReads] = useState(false)
   const [testReport, setTestReport] = useState<ConnectionTestReport | null>(null)
   const [testError, setTestError] = useState<unknown>(null)
 
@@ -231,6 +232,7 @@ export function SourceEditDialog({
   }
 
   function reset(nextSource: SourceView, nextEtag: string) {
+    setPendingFileReads(false)
     setCurrentSource(nextSource)
     setCurrentEtag(nextEtag)
     setConfig(sourceConfig(nextSource))
@@ -306,6 +308,7 @@ export function SourceEditDialog({
   }, [apiFetch, currentLocale, etag, open, source, t])
 
   async function refreshLatest(replaceDraft: boolean) {
+    if (pendingFileReads) return
     setRefreshing(true)
     try {
       const latest = await getSource(currentSource.id, apiFetch)
@@ -324,6 +327,7 @@ export function SourceEditDialog({
   }
 
   async function submit() {
+    if (pendingFileReads) return
     if (!connector || !schema) return
 
     setRequestError('')
@@ -379,6 +383,7 @@ export function SourceEditDialog({
   }
 
   async function runConnectionTest() {
+    if (pendingFileReads) return
     if (!connector || !schema) return
 
     setTestError(null)
@@ -415,10 +420,12 @@ export function SourceEditDialog({
   return (
     <Dialog
       open={open}
-      onOpenChange={(nextOpen) => (!submitting && !testing ? onOpenChange(nextOpen) : undefined)}
+      onOpenChange={(nextOpen) =>
+        !submitting && !testing && !pendingFileReads ? onOpenChange(nextOpen) : undefined
+      }
     >
       <DialogContent
-        closeDisabled={submitting || testing}
+        closeDisabled={submitting || testing || pendingFileReads}
         closeLabel={t('ask.actions.close')}
         className="bg-background border-border flex h-[90vh] max-h-[800px] w-full max-w-[1100px] flex-col gap-0 overflow-hidden rounded-2xl border p-0 shadow-2xl ring-0 sm:max-w-[1100px]"
       >
@@ -447,7 +454,7 @@ export function SourceEditDialog({
                         variant="outline"
                         size="sm"
                         type="button"
-                        disabled={refreshing || testing}
+                        disabled={refreshing || testing || pendingFileReads}
                         onClick={() => void refreshLatest(true)}
                       >
                         <RefreshCw className={refreshing ? 'animate-spin' : undefined} />
@@ -457,7 +464,7 @@ export function SourceEditDialog({
                         variant="ghost"
                         size="sm"
                         type="button"
-                        disabled={refreshing || testing}
+                        disabled={refreshing || testing || pendingFileReads}
                         onClick={() => void refreshLatest(false)}
                       >
                         <RefreshCw className={refreshing ? 'animate-spin' : undefined} />
@@ -537,6 +544,7 @@ export function SourceEditDialog({
                       secretDrafts={secretDrafts}
                       errors={fieldErrors}
                       disabled={submitting || testing}
+                      onPendingFileReadsChange={setPendingFileReads}
                       onValuesChange={(values) => {
                         setConfig(values)
                         setTestReport(null)
@@ -658,7 +666,7 @@ export function SourceEditDialog({
                 <Button
                   variant="outline"
                   type="button"
-                  disabled={submitting || testing}
+                  disabled={submitting || testing || pendingFileReads}
                   onClick={() => onOpenChange(false)}
                 >
                   {t('sources.edit.cancel')}
@@ -666,7 +674,9 @@ export function SourceEditDialog({
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={submitting || testing || loading || !connector || !schema}
+                  disabled={
+                    submitting || testing || pendingFileReads || loading || !connector || !schema
+                  }
                   onClick={() => void runConnectionTest()}
                 >
                   {testing && <LoaderCircle className="size-3.5 animate-spin" />}
@@ -674,7 +684,9 @@ export function SourceEditDialog({
                 </Button>
                 <Button
                   type="button"
-                  disabled={submitting || testing || loading || !connector || !schema}
+                  disabled={
+                    submitting || testing || pendingFileReads || loading || !connector || !schema
+                  }
                   onClick={() => void submit()}
                 >
                   {submitting && <LoaderCircle className="size-3.5 animate-spin" />}

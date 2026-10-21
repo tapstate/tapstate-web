@@ -6,7 +6,7 @@ import * as AntdFormily from '@potop/formily-antd-v6'
 import { FormilySchema, useFormilyForm, type FormilyComponentMap } from '@tapstate-web/formily'
 import { Input as AntdInput } from 'antd'
 import { Eye, EyeOff, KeyRound, Pencil, Trash2 } from 'lucide-react'
-import { useEffect, useMemo, useState, type ComponentProps } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { ConnectorConfigField, JsonValue } from '@/service/source-client'
@@ -206,6 +206,7 @@ export interface ConnectorFormilyProps {
   disabled?: boolean
   onValuesChange?: (values: SourceConfigState) => void
   onSecretChange?: (name: string, draft: SecretDraft) => void
+  onPendingFileReadsChange?: (pending: boolean) => void
 }
 
 function sourceConfigState(values: FormValues): SourceConfigState {
@@ -242,6 +243,7 @@ function createSchema(
   secretDrafts: Record<string, SecretDraft>,
   disabled: boolean,
   onSecretChange?: (name: string, draft: SecretDraft) => void,
+  onPendingFileReadChange?: (name: string, pending: boolean) => void,
   sourceSchema?: ISchema,
 ) {
   const base = (sourceSchema ?? connectorFieldsToFormilySchema(fields)) as ISchema & {
@@ -267,6 +269,7 @@ function createSchema(
         const componentPropsFromSchema = property['x-component-props'] as
           | Record<string, unknown>
           | undefined
+        const component = property['x-component']
         const fieldTitle = typeof property.title === 'string' ? property.title : field?.label
         const decoratorProps = {
           ...decoratorPropsFromSchema,
@@ -290,6 +293,7 @@ function createSchema(
             ? { 'aria-label': fieldTitle }
             : {}),
           disabled,
+          ...(component === 'TextFileReader' ? { fieldName, onPendingFileReadChange } : {}),
           ...(configuredFieldSecret
             ? {
                 requiredSecret: field?.required ?? false,
@@ -300,7 +304,6 @@ function createSchema(
               }
             : {}),
         }
-        const component = property['x-component']
         const childProperties = propertyRecord.properties
         return [
           name,
@@ -372,7 +375,19 @@ export function ConnectorFormily({
   disabled = false,
   onValuesChange,
   onSecretChange,
+  onPendingFileReadsChange,
 }: ConnectorFormilyProps) {
+  const pendingFileReaders = useRef(new Set<string>())
+  const handlePendingFileReadChange = useCallback(
+    (name: string, pending: boolean) => {
+      const wasPending = pendingFileReaders.current.size > 0
+      if (pending) pendingFileReaders.current.add(name)
+      else pendingFileReaders.current.delete(name)
+      const isPending = pendingFileReaders.current.size > 0
+      if (wasPending !== isPending) onPendingFileReadsChange?.(isPending)
+    },
+    [onPendingFileReadsChange],
+  )
   const formKey = connectorFormKey(fields, resetKey)
   const form = useFormilyForm<FormValues>({
     resetKey: formKey,
@@ -389,9 +404,19 @@ export function ConnectorFormily({
         secretDrafts,
         disabled,
         onSecretChange,
+        handlePendingFileReadChange,
         sourceSchema,
       ),
-    [configuredSecrets, disabled, errors, fields, onSecretChange, secretDrafts, sourceSchema],
+    [
+      configuredSecrets,
+      disabled,
+      errors,
+      fields,
+      handlePendingFileReadChange,
+      onSecretChange,
+      secretDrafts,
+      sourceSchema,
+    ],
   )
   const components = useMemo<FormilyComponentMap>(
     () => ({
