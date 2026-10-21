@@ -8,7 +8,6 @@ export function isAllowedCloudClusterHostname(hostname: string, consoleHost: str
   const clusterLabel = hostname.endsWith(suffix) ? hostname.slice(0, -suffix.length) : ''
   return clusterLabelPattern.test(clusterLabel)
 }
-
 export function isAllowedCloudClusterOrigin(
   origin: URL,
   consoleHost: string,

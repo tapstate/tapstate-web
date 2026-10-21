@@ -7,6 +7,7 @@ describe('isAllowedCloudClusterHostname', () => {
     ['feynman.dev.cloud.tapstate.com', 'dev.cloud.tapstate.com'],
     ['feynman.cloud.tapstate.com', 'cloud.tapstate.com'],
     ['26c64d59d72bf8a58984900a.dev.cloud.tapstate.com', 'dev.cloud.tapstate.com'],
+    ['5a8f4c2d.dev.cloud.tapstate.com', 'dev.cloud.tapstate.com'],
   ])('accepts %s from the %s console', (clusterHostname, consoleHostname) => {
     expect(isAllowedCloudClusterHostname(clusterHostname, consoleHostname)).toBe(true)
   })

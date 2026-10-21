@@ -3,6 +3,19 @@ import { describe, expect, it } from 'vitest'
 import { getCloudConsoleUrl } from '@/utils/cloud-console'
 
 describe('Cloud Console return URL', () => {
+  it('explains the explicit local development flag for a localhost HTTP build URL', () => {
+    for (const url of ['http://localhost:28175', 'http://localhost:80/']) {
+      expect(() => getCloudConsoleUrl(url, 'localhost', false)).toThrow(
+        /TAPSTATE_LOCAL_DEVELOPMENT/,
+      )
+    }
+  })
+
+  it('reports the configuration field for malformed URLs instead of a raw parser failure', () => {
+    expect(() => getCloudConsoleUrl('not a URL', 'custom.example', false)).toThrow(
+      /VITE_CLOUD_CONSOLE_URL/,
+    )
+  })
   it('uses the preview origin for local hosts and configured URL for custom hosts', () => {
     expect(getCloudConsoleUrl(undefined, 'localhost')).toBe('https://dev.cloud.tapstate.com/')
     expect(getCloudConsoleUrl('https://cloud.example.com/console', 'console.example.com')).toBe(
@@ -32,8 +45,12 @@ describe('Cloud Console return URL', () => {
   })
 
   it('allows only explicit literal localhost origins in a local development bundle', () => {
-    expect(getCloudConsoleUrl('http://localhost:28175', true)).toBe('http://localhost:28175/')
-    expect(getCloudConsoleUrl('http://localhost:80/', true)).toBe('http://localhost:80/')
+    expect(getCloudConsoleUrl('http://localhost:28175', 'localhost', true)).toBe(
+      'http://localhost:28175/',
+    )
+    expect(getCloudConsoleUrl('http://localhost:80/', 'localhost', true)).toBe(
+      'http://localhost:80/',
+    )
     for (const value of [
       undefined,
       'http://127.0.0.1:28175',
@@ -46,8 +63,8 @@ describe('Cloud Console return URL', () => {
       'http://localhost:28175?code=x',
       'http://localhost:28175#code',
     ]) {
-      expect(() => getCloudConsoleUrl(value, true)).toThrow()
+      expect(() => getCloudConsoleUrl(value, 'localhost', true)).toThrow()
     }
-    expect(() => getCloudConsoleUrl('http://localhost:28175', false)).toThrow()
+    expect(() => getCloudConsoleUrl('http://localhost:28175', 'localhost', false)).toThrow()
   })
 })

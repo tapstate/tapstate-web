@@ -1,4 +1,5 @@
 import { validateCloudConsoleUrl } from '../utils/cloud-console-url'
+import { isCloudDeploymentMode } from '../utils/deployment-mode'
 
 export interface WebBuildInputs {
   schemaVersion: 1
@@ -17,7 +18,7 @@ export function getWebBuildInputs(
     throw new Error('TAPSTATE_LOCAL_DEVELOPMENT must be explicitly true or false')
   }
   const localDevelopment = flag === 'true'
-  const profile = mode.trim().toLowerCase() === 'cloud' ? 'cloud' : 'op'
+  const profile = isCloudDeploymentMode(mode) ? 'cloud' : 'op'
   return {
     schemaVersion: 1,
     profile,

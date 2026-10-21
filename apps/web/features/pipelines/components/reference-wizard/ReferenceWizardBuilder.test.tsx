@@ -147,6 +147,60 @@ function previewPanel() {
   return container?.querySelector<HTMLElement>('.wizard-reference-preview')
 }
 
+describe('ReferenceWizardBuilder destination picker', () => {
+  it.each(['cloud', 'on-prem'] as const)(
+    'enforces the %s destination policy in the real picker',
+    async (profile) => {
+      const host = renderBuilder({
+        deploymentProfile: profile,
+        catalog: [
+          {
+            id: 'mongo_out',
+            name: 'Local Mongo output',
+            badge: 'Mongo',
+            connector: 'mongodb',
+            sink: true,
+            tables: [],
+          },
+          {
+            id: 'atlas_out',
+            name: 'Atlas output',
+            badge: 'Atlas',
+            connector: 'mongodb-atlas',
+            sink: true,
+            tables: [],
+          },
+          {
+            id: 'readonly_atlas',
+            name: 'Read-only Atlas',
+            badge: 'Atlas',
+            connector: 'mongodb-atlas',
+            sink: false,
+            tables: [],
+          },
+        ],
+        initial: { ...renderInitial, destinationSourceId: 'atlas_out' },
+      })
+      const trigger = host.querySelector<HTMLButtonElement>(
+        '[aria-labelledby="wizard-destination-source-label"]',
+      )
+      expect(trigger).not.toBeNull()
+      await act(async () => trigger?.click())
+      await vi.waitFor(() =>
+        expect(document.body.querySelectorAll('[role="option"]').length).toBeGreaterThan(0),
+      )
+      const options = Array.from(document.body.querySelectorAll('[role="option"]')).map(
+        (item) => item.textContent,
+      )
+      expect(options.some((text) => text?.includes('Atlas output'))).toBe(true)
+      expect(options.some((text) => text?.includes('Read-only Atlas'))).toBe(false)
+      expect(options.some((text) => text?.includes('Local Mongo output'))).toBe(
+        profile === 'on-prem',
+      )
+    },
+  )
+})
+
 describe('ReferenceWizardBuilder preview panel', () => {
   it('links root, relation, and transform focus to the streamed result', () => {
     const host = renderBuilder()

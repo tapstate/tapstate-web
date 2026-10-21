@@ -35,6 +35,25 @@ const view = {
 } satisfies PipelineView
 
 describe('pipeline graph edit model', () => {
+  it('validates an existing local Cloud MongoDB sink without widening release targets', () => {
+    const draft = createPipelineGraphDraft(view)
+    const catalog = [{ id: 'mongodb', sink: true }] as unknown as Parameters<
+      typeof validatePipelineGraph
+    >[2]
+    expect(
+      validatePipelineGraph(draft, view.sources, catalog, {
+        profile: 'cloud',
+        localDevelopment: false,
+      }).map(({ code }) => code),
+    ).toContain('unsupported-target-connector')
+    expect(
+      validatePipelineGraph(draft, view.sources, catalog, {
+        profile: 'cloud',
+        localDevelopment: true,
+      }).map(({ code }) => code),
+    ).not.toContain('unsupported-target-connector')
+  })
+
   it('adds a typed draft transform and removes it with connected edges', () => {
     const draft = createPipelineGraphDraft(view)
     const added = addPipelineNode(

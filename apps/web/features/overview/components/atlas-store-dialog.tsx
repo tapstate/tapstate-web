@@ -1,8 +1,10 @@
 import type { ISchema } from '@formily/json-schema'
 
+import { useQuery } from '@tanstack/react-query'
 import { Layers, LoaderCircle, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { ClusterEgressAddressGuidance } from '@/components/cluster-egress-address-guidance'
 import { ConnectorFormily } from '@/features/sources/connector-formily'
 import {
   connectorSpecConnectionSchema,
@@ -15,6 +17,7 @@ import {
   createInitialConfig,
   type SourceConfigState,
 } from '@/features/sources/source-form'
+import { loadCloudWorkspaceContext } from '@/service/cloud-workspace-client'
 import {
   getConnector,
   testConnection,
@@ -22,6 +25,7 @@ import {
   type SourceView,
 } from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
+import { getDeploymentProfile } from '@/utils/deployment-profile'
 
 interface AtlasStoreDialogProps {
   open: boolean
@@ -32,12 +36,29 @@ interface AtlasStoreDialogProps {
 /** The Atlas setup step keeps the prototype modal and renders the live connector contract. */
 export function AtlasStoreDialog({ open, onOpenChange, onCreated }: AtlasStoreDialogProps) {
   const apiFetch = useAuthStore((state) => state.apiFetch)
+  const isCloudDeployment = getDeploymentProfile() === 'cloud'
+  const cloudContext = useQuery({
+    queryKey: ['cloud-workspace-context'],
+    queryFn: () => loadCloudWorkspaceContext(apiFetch),
+    enabled: isCloudDeployment && open,
+    staleTime: 0,
+    retry: 1,
+  })
+  const [egressAddressCopied, setEgressAddressCopied] = useState(false)
+  const [egressAddressCopyFailed, setEgressAddressCopyFailed] = useState(false)
   const [connector, setConnector] = useState<ConnectorDetail | null>(null)
   const [schema, setSchema] = useState<ISchema | null>(null)
   const [config, setConfig] = useState<SourceConfigState>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [requestError, setRequestError] = useState('')
   const [saving, setSaving] = useState(false)
+  const egressAddress = cloudContext.isError ? null : cloudContext.data?.ec2PublicIp?.trim() || null
+  const egressStatus = cloudContext.data?.egressAddressStatus ?? (egressAddress ? 'DYNAMIC' : null)
+
+  useEffect(() => {
+    setEgressAddressCopied(false)
+    setEgressAddressCopyFailed(false)
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -111,6 +132,18 @@ export function AtlasStoreDialog({ open, onOpenChange, onCreated }: AtlasStoreDi
     }
   }
 
+  async function copyEgressAddress() {
+    if (!egressAddress) return
+    setEgressAddressCopied(false)
+    setEgressAddressCopyFailed(false)
+    try {
+      await navigator.clipboard.writeText(egressAddress)
+      setEgressAddressCopied(true)
+    } catch {
+      setEgressAddressCopyFailed(true)
+    }
+  }
+
   if (!open) return null
   return (
     <div
@@ -147,6 +180,17 @@ export function AtlasStoreDialog({ open, onOpenChange, onCreated }: AtlasStoreDi
           </button>
         </div>
         <form onSubmit={(event) => void save(event)} className="space-y-4 p-6">
+          {isCloudDeployment && (
+            <ClusterEgressAddressGuidance
+              isLoading={cloudContext.isLoading}
+              isError={cloudContext.isError}
+              address={egressAddress}
+              status={egressStatus}
+              copied={egressAddressCopied}
+              copyFailed={egressAddressCopyFailed}
+              onCopy={() => void copyEgressAddress()}
+            />
+          )}
           {requestError && (
             <p role="alert" className="text-[12px] text-red-600">
               {requestError}
