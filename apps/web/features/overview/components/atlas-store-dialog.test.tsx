@@ -89,7 +89,9 @@ describe('AtlasStoreDialog', () => {
 
     let password: HTMLInputElement | null = null
     await vi.waitFor(() => {
-      password = host.querySelector<HTMLInputElement>('input[aria-label="Client key password"]')
+      password = document.body.querySelector<HTMLInputElement>(
+        'input[aria-label="Client key password"]',
+      )
       expect(password).not.toBeNull()
     })
 
@@ -97,7 +99,7 @@ describe('AtlasStoreDialog', () => {
       changeInput(password as HTMLInputElement, 'key-password')
     })
     await act(async () => {
-      host.querySelector<HTMLButtonElement>('button[type="submit"]')?.click()
+      document.body.querySelector<HTMLButtonElement>('button[type="submit"]')?.click()
     })
 
     await vi.waitFor(() => expect(testConnection).toHaveBeenCalled())
