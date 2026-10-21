@@ -16,12 +16,16 @@ vi.mock('@/stores/auth-store', () => ({
   useAuthStore: <T,>(selector: (state: { apiFetch: typeof fetch }) => T) => selector({ apiFetch }),
 }))
 
+vi.mock('@/features/storage/storage-context', () => ({
+  useStorage: () => ({ snapshot: undefined, refresh: vi.fn() }),
+}))
+
 import { StateStorePage } from './state-store-page'
 
 function source(id: string, config: SourceView['config'] = {}): SourceView {
   return {
     id,
-    metadata: null,
+    metadata: id === 'views' ? { labels: { store: 'true' } } : null,
     connector: 'mongodb',
     config,
     configuredSecrets: [],

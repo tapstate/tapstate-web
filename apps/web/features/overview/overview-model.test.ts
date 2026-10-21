@@ -10,7 +10,7 @@ import { buildOverview, pipelineHealth } from './overview-model'
 function source(id: string, connector = 'postgres'): SourceView {
   return {
     id,
-    metadata: null,
+    metadata: id === 'views' ? { labels: { store: 'true' } } : null,
     connector,
     config: {},
     configuredSecrets: [],
