@@ -38,9 +38,18 @@ type ControlProps = {
   onSecretChange?: (name: string, draft: SecretDraft) => void
 }
 
-function ConfigSection({ title, children }: ComponentProps<'fieldset'> & { title?: string }) {
+function ConfigSection({
+  title,
+  children,
+  compact = false,
+  headerControl = false,
+}: ComponentProps<'fieldset'> & { title?: string; compact?: boolean; headerControl?: boolean }) {
   return (
-    <fieldset className="border-border grid gap-4 rounded-lg border p-4">
+    <fieldset
+      data-formily-compact-section={compact || undefined}
+      data-formily-header-control={headerControl || undefined}
+      className="border-border grid gap-4 rounded-lg border p-4"
+    >
       {title && <legend className="text-foreground px-1 text-[13px] font-semibold">{title}</legend>}
       {children}
     </fieldset>

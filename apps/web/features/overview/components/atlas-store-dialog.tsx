@@ -36,6 +36,8 @@ import {
 import { useAuthStore } from '@/stores/auth-store'
 import { getDeploymentProfile } from '@/utils/deployment-profile'
 
+import './atlas-store-dialog.css'
+
 interface AtlasStoreDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -84,7 +86,9 @@ export function AtlasStoreDialog({ open, onOpenChange, onCreated }: AtlasStoreDi
           connectorSpecConfigFields(detail.spec.text, detail.config, 'en'),
         )
         setSchema(
-          withoutTextHints(connectorSpecConnectionSchema(detail.spec.text, 'en', detail.id)),
+          atlasDialogSchema(
+            withoutTextHints(connectorSpecConnectionSchema(detail.spec.text, 'en', detail.id)),
+          ),
         )
         setConfig({
           ...createInitialConfig(fields),
@@ -204,18 +208,20 @@ export function AtlasStoreDialog({ open, onOpenChange, onCreated }: AtlasStoreDi
                 </div>
               )}
               {connector && schema ? (
-                <ConnectorFormily
-                  fields={connector.config}
-                  schema={schema}
-                  resetKey={`${connector.id}:${connector.spec.contentHash}`}
-                  initialValues={config}
-                  errors={errors}
-                  disabled={saving}
-                  onValuesChange={(values) => {
-                    setConfig(values)
-                    setErrors({})
-                  }}
-                />
+                <div className="atlas-store-dialog__fields">
+                  <ConnectorFormily
+                    fields={connector.config}
+                    schema={schema}
+                    resetKey={`${connector.id}:${connector.spec.contentHash}`}
+                    initialValues={config}
+                    errors={errors}
+                    disabled={saving}
+                    onValuesChange={(values) => {
+                      setConfig(values)
+                      setErrors({})
+                    }}
+                  />
+                </div>
               ) : !requestError ? (
                 <div
                   role="status"
@@ -252,5 +258,30 @@ function withoutTextHints(schema: ISchema): ISchema {
         .filter(([, field]) => field['x-component'] !== 'Text')
         .map(([name, field]) => [name, withoutTextHints(field)]),
     ),
+  }
+}
+
+function atlasDialogSchema(schema: ISchema): ISchema {
+  const properties = Object.fromEntries(Object.entries(schema.properties ?? {})) as Record<
+    string,
+    ISchema
+  >
+  const tlsSection = properties.__tapstateSsl
+  if (tlsSection?.['x-component'] !== 'ConfigSection') return schema
+
+  const componentProps = tlsSection['x-component-props'] as Record<string, unknown> | undefined
+  return {
+    ...schema,
+    properties: {
+      ...properties,
+      __tapstateSsl: {
+        ...tlsSection,
+        'x-component-props': {
+          ...componentProps,
+          compact: true,
+          headerControl: true,
+        },
+      },
+    },
   }
 }
