@@ -256,6 +256,98 @@ describe('PipelineNodeConfigPanel', () => {
     expect(host.querySelector('[role="combobox"]')).not.toBeNull()
   })
 
+  it('offers the full-load policy next to the write mode and emits only a picked policy', async () => {
+    const changes: Array<{ kind: string; values: Record<string, unknown> }> = []
+    const host = await renderPanel(
+      {
+        ...sourceSelection,
+        id: 'target:mongodb_target:Player',
+        label: 'Player',
+        nodeType: 'target',
+        configuration: {
+          kind: 'target',
+          nodeId: 'target:mongodb_target:Player',
+          sourceId: 'mongodb_target',
+          table: 'Player',
+          connectorId: 'mongodb',
+          writeMode: 'upsert',
+        },
+      },
+      (change) => changes.push({ kind: change.kind, values: change.values }),
+    )
+
+    const labels = [...host.querySelectorAll('.tap-formily-item-label')].map(
+      (label) => label.textContent,
+    )
+    expect(labels.indexOf('On full load')).toBe(labels.indexOf('Write mode') + 1)
+    const policy = [...host.querySelectorAll('.tap-formily-item')].find((item) =>
+      item.querySelector('.tap-formily-item-label')?.textContent?.includes('On full load'),
+    )
+    expect(policy?.textContent).toContain('Keep existing rows (default)')
+    expect(changes).toHaveLength(0)
+
+    await act(async () => {
+      policy
+        ?.querySelector('.tap-select')
+        ?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+    })
+    expect(
+      [...document.querySelectorAll('.tap-select-item-option')].map((option) =>
+        option.getAttribute('title'),
+      ),
+    ).toEqual(expect.arrayContaining(['Keep existing rows', 'Clear first', 'Refuse if not empty']))
+    await act(async () => {
+      document.querySelector<HTMLElement>('.tap-select-item-option[title="Clear first"]')?.click()
+    })
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 0)))
+
+    expect(changes.at(-1)).toMatchObject({
+      kind: 'target',
+      values: { writeMode: 'upsert', onFullLoad: 'clear' },
+    })
+  })
+
+  it('shows a view node write settings without offering to edit them', async () => {
+    const viewSelection = (settings: { writeMode?: string; onFullLoad?: string }) => ({
+      id: 'view:lead',
+      label: 'lead',
+      detail: null,
+      description: '',
+      nodeType: 'view' as const,
+      connector: null,
+      configuration: {
+        kind: 'view' as const,
+        nodeId: 'view:lead',
+        viewId: 'lead',
+        from: null,
+        body: { primaryKey: 'id' },
+        ...settings,
+      },
+    })
+
+    const host = await renderPanel(viewSelection({ writeMode: 'append', onFullLoad: 'clear' }))
+    const setting = (name: string) =>
+      host.querySelector(`[data-pipeline-view-setting="${name}"]`)?.textContent
+    expect(setting('writeMode')).toBe('Append')
+    expect(setting('onFullLoad')).toBe('Clear first')
+    expect(host.textContent).toContain(
+      'Views are derived from the Pipeline definition and cannot be edited here.',
+    )
+    expect(
+      host.querySelector('[data-pipeline-view-write-settings] input, [role="combobox"]'),
+    ).toBeNull()
+
+    await act(async () => root?.unmount())
+    container?.remove()
+    const undeclared = await renderPanel(viewSelection({}))
+    expect(undeclared.querySelector('[data-pipeline-view-setting="writeMode"]')?.textContent).toBe(
+      'Upsert (default)',
+    )
+    expect(undeclared.querySelector('[data-pipeline-view-setting="onFullLoad"]')?.textContent).toBe(
+      'Keep existing rows (default)',
+    )
+  })
+
   it('allows a Target table to be selected from the catalog or entered as a new name', async () => {
     const changes: Array<{ kind: string; values: Record<string, unknown> }> = []
     const targetSelection: PipelineCanvasSelection = {

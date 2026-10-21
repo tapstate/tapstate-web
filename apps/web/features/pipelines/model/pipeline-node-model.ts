@@ -37,6 +37,41 @@ export interface PipelineTargetNodeConfiguration {
   tableMappings?: PipelineTargetTableMapping[]
   connectorId: string | null
   writeMode: string
+  /**
+   * What a new full load does to rows already in the target. Absent when the Pipeline does not
+   * say, so a node that never mentioned it publishes exactly what it did before.
+   */
+  onFullLoad?: string
+}
+
+/** The full-load policies a draft spells in lowercase; the detail endpoint reports enum names. */
+export const PIPELINE_ON_FULL_LOAD_POLICIES = ['append', 'clear', 'fail'] as const
+
+export type PipelineOnFullLoad = (typeof PIPELINE_ON_FULL_LOAD_POLICIES)[number]
+
+const PIPELINE_WRITE_MODES = ['upsert', 'append'] as const
+
+/**
+ * Normalizes a write setting to the spelling a draft carries. Known values are lowercased because
+ * the detail endpoint reports them as enum names; a value this client does not know is kept as
+ * written, so a round trip never drops or rewrites it.
+ */
+function writeSettingValue(value: unknown, known: readonly string[]): string | undefined {
+  if (typeof value !== 'string' || value.trim().length === 0) return undefined
+  const lowercase = value.toLowerCase()
+  return known.includes(lowercase) ? lowercase : value
+}
+
+export function writeModeValue(value: unknown): string | undefined {
+  return writeSettingValue(value, PIPELINE_WRITE_MODES)
+}
+
+export function onFullLoadValue(value: unknown): string | undefined {
+  return writeSettingValue(value, PIPELINE_ON_FULL_LOAD_POLICIES)
+}
+
+export function isPipelineOnFullLoad(value: unknown): value is PipelineOnFullLoad {
+  return (PIPELINE_ON_FULL_LOAD_POLICIES as readonly unknown[]).includes(value)
 }
 
 export function sourceTableSelections(
@@ -71,6 +106,32 @@ export interface PipelineViewNodeConfiguration {
   viewId: string
   from: unknown
   body: PipelineJsonObject
+  /** How rows are written to the view; absent when the Pipeline does not say. */
+  writeMode?: string
+  /** What a new full load does to rows already in the view; absent when the Pipeline does not say. */
+  onFullLoad?: string
+}
+
+const VIEW_WRITE_SETTING_KEYS = new Set(['writeMode', 'write_mode', 'onFullLoad', 'on_full_load'])
+
+/**
+ * Splits a view's write settings out of its block, in the spelling a draft carries. The block itself
+ * stays as it was otherwise, so every key this client does not model round-trips untouched.
+ */
+export function viewWriteSettings(block: PipelineJsonObject): {
+  body: PipelineJsonObject
+  writeMode?: string
+  onFullLoad?: string
+} {
+  const writeMode = writeModeValue(block.writeMode ?? block.write_mode)
+  const onFullLoad = onFullLoadValue(block.onFullLoad ?? block.on_full_load)
+  return {
+    body: Object.fromEntries(
+      Object.entries(block).filter(([key]) => !VIEW_WRITE_SETTING_KEYS.has(key)),
+    ),
+    ...(writeMode ? { writeMode } : {}),
+    ...(onFullLoad ? { onFullLoad } : {}),
+  }
 }
 
 export type PipelineNodeConfiguration =
@@ -112,10 +173,10 @@ function transformType(step: PipelineTransformStep) {
   return 'transform'
 }
 
-function targetWriteMode(view: PipelineView, nodeId: string) {
+function targetSyncItem(view: PipelineView, nodeId: string) {
   const { sourceId } = nodeParts(nodeId)
   const syncItems = view.serve?.sync ?? []
-  const target = syncItems.find((item) => {
+  return syncItems.find((item) => {
     if (!isRecord(item)) return false
     // The target DAG node is keyed by the destination source id. The sync
     // entry id often names the mapping rather than the destination source.
@@ -126,9 +187,16 @@ function targetWriteMode(view: PipelineView, nodeId: string) {
       item.id === sourceId
     )
   })
-  if (typeof target?.writeMode === 'string') return target.writeMode
-  if (typeof target?.write_mode === 'string') return target.write_mode
-  return 'upsert'
+}
+
+/** The write settings of the sync element a target node publishes, in the draft's spelling. */
+function targetWriteSettings(view: PipelineView, nodeId: string) {
+  const target = targetSyncItem(view, nodeId)
+  const onFullLoad = onFullLoadValue(target?.onFullLoad ?? target?.on_full_load)
+  return {
+    writeMode: writeModeValue(target?.writeMode ?? target?.write_mode) ?? 'upsert',
+    ...(onFullLoad ? { onFullLoad } : {}),
+  }
 }
 
 /** Maps the structured PipelineView to node-level editor models without parsing YAML in the browser. */
@@ -156,7 +224,7 @@ export function pipelineNodeConfigurations(view: PipelineView) {
         table: parts.table || node.label,
         connectorId:
           sourceById(view.sources, parts.sourceId || node.detail || '')?.connector ?? null,
-        writeMode: targetWriteMode(view, node.id),
+        ...targetWriteSettings(view, node.id),
       })
       continue
     }
@@ -184,7 +252,7 @@ export function pipelineNodeConfigurations(view: PipelineView) {
         nodeId: node.id,
         viewId: parts.sourceId || node.label,
         from: view.view.from,
-        body: view.view,
+        ...viewWriteSettings(view.view),
       })
     }
   }

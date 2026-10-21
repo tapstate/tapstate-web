@@ -183,6 +183,10 @@
 .wizard-reference .wizard-reference-canvas {
   padding: var(--wizard-canvas-gutter) 0 var(--wizard-canvas-gutter) var(--wizard-canvas-gutter);
 }
+.wizard-reference .wizard-reference-notices {
+  flex: 0 0 auto;
+  padding: var(--wizard-canvas-gutter) 0 0 var(--wizard-canvas-gutter);
+}
 .wizard-reference .wizard-reference-canvas [data-guide-callout='canvas'] {
   scroll-margin-block-start: var(--wizard-canvas-gutter);
 }
@@ -243,6 +247,9 @@
     flex: none;
     overflow: visible;
     padding: 16px;
+  }
+  .wizard-reference .wizard-reference-notices {
+    padding: var(--wizard-mobile-gutter) var(--wizard-mobile-gutter) 0;
   }
   .wizard-reference .wizard-reference-editor-column {
     flex: none;

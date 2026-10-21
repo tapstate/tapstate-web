@@ -4,7 +4,11 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { PipelineClientError, type PipelineDraft } from '@/service/pipelines/pipeline-client'
+import {
+  PipelineClientError,
+  type PipelineDraft,
+  type StartCheckReport,
+} from '@/service/pipelines/pipeline-client'
 
 import type { WizardBuilderProps } from '../components/reference-wizard/ReferenceWizardBuilder'
 
@@ -80,6 +84,7 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', async (importOr
         onChange,
         footer,
         actions,
+        notices,
         readOnly,
         destinationName,
         livePreview,
@@ -96,6 +101,7 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', async (importOr
           data-live-preview-status={livePreviewStatus}
           data-live-preview-run={livePreview?.runId || ''}
         >
+          {notices}
           <button
             data-testid="change-wizard"
             disabled={readOnly}
@@ -137,7 +143,39 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', async (importOr
   }
 })
 
+import fixture from '../start-checks/__fixtures__/client-fixture-v1.json'
 import { WizardBuilder } from './wizard-builder'
+
+const answerable: StartCheckReport = fixture.answerable
+const leadFinding = 'target-not-empty/views/lead'
+const driftFinding = 'derived-schema-drift/join_orders'
+
+/** The error a start stopped by its start checks rejects with, as the Pipeline client builds it. */
+function startRefusal(report: StartCheckReport) {
+  return Object.assign(new Error('Starting wizard-ui-test needs an answer.'), {
+    status: 409,
+    code: 'lifecycle.start-needs-confirmation',
+    params: { pipeline: 'wizard-ui-test', count: 2 },
+    startChecks: report,
+    decisionsApplied: [],
+  })
+}
+
+function startChecksDialog() {
+  return document.querySelector<HTMLElement>('[data-testid="start-checks-dialog"]')
+}
+
+function dialogButton(text: string) {
+  return [...(startChecksDialog()?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find(
+    (candidate) => candidate.textContent?.trim() === text,
+  )
+}
+
+function answerRadio(finding: string, action: string) {
+  return startChecksDialog()?.querySelector<HTMLElement>(
+    `[data-check-item="${finding}"] [data-check-choice="${action}"] [role="radio"]`,
+  )
+}
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
@@ -1026,5 +1064,114 @@ describe('WizardBuilder publish flow', () => {
     expect(container?.textContent).toContain(
       'The draft is saved and published, but this Pipeline is already running.',
     )
+  })
+
+  it('asks start checks in the shared dialog and saves on the draft the answer rewrote', async () => {
+    const warning = answerable.findings.find(({ behavior }) => behavior === 'WARN')!
+    const publishedDraft = {
+      ...initialDraft,
+      revision: 2,
+      publishedDraftRevision: 2,
+      publishedArtifactHash: 'a'.repeat(64),
+    }
+    const rewrittenDraft: PipelineDraft = {
+      ...publishedDraft,
+      revision: 3,
+      publishedDraftRevision: 3,
+      publishedArtifactHash: 'e'.repeat(64),
+      wizard: {
+        ...initialDraft.wizard,
+        output: {
+          kind: 'source',
+          config: {
+            sourceId: 'mysql',
+            table: 'codex_wizard_component_test',
+            writeMode: 'append',
+            onFullLoad: 'clear',
+          },
+        },
+      },
+    }
+    getPipelineDraft
+      .mockResolvedValueOnce({ draft: publishedDraft, etag: '"2"' })
+      .mockResolvedValueOnce({ draft: rewrittenDraft, etag: '"3"' })
+    runPipeline.mockRejectedValueOnce(startRefusal(answerable)).mockResolvedValueOnce({
+      pipelineId: initialDraft.pipelineId,
+      startChecks: { ...answerable, outcome: 'READY', findings: [warning] },
+      decisionsApplied: [
+        {
+          finding: leadFinding,
+          action: 'clear',
+          kind: 'CHANGE_DEFINITION',
+          changes: [{ element: 'lead', field: 'on_full_load', from: 'append', to: 'clear' }],
+          contentHash: 'e'.repeat(64),
+        },
+      ],
+      staleDecisions: [],
+    })
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={initialDraft.pipelineId} draft={initialDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await act(async () => new Promise((resolve) => window.setTimeout(resolve, 50)))
+    await act(async () => {
+      Array.from(
+        container?.querySelectorAll<HTMLButtonElement>('[data-workflow-header] button') || [],
+      )
+        .find((button) => button.textContent?.includes('Save & start'))
+        ?.click()
+    })
+
+    await vi.waitFor(() => expect(startChecksDialog()).not.toBeNull())
+    expect(startChecksDialog()?.getAttribute('role')).toBe('alertdialog')
+    expect(publishPipelineDraft).toHaveBeenCalledTimes(1)
+    expect(runPipeline).toHaveBeenCalledTimes(1)
+    expect(container?.querySelector('[data-read-only="true"]')).not.toBeNull()
+    expect(dialogButton('Start')?.disabled).toBe(true)
+    await act(async () => answerRadio(leadFinding, 'clear')?.click())
+    await act(async () => answerRadio(driftFinding, 'accept')?.click())
+    await act(async () => dialogButton('Start')?.click())
+
+    await vi.waitFor(() => expect(runPipeline).toHaveBeenCalledTimes(2))
+    expect(runPipeline).toHaveBeenLastCalledWith(initialDraft.pipelineId, expect.any(Function), {
+      decisions: [
+        { finding: leadFinding, action: 'clear' },
+        { finding: driftFinding, action: 'accept' },
+      ],
+      ifMatch: `"${answerable.contentHash}"`,
+    })
+    await vi.waitFor(() => expect(getPipelineDraft).toHaveBeenCalledTimes(2))
+    await vi.waitFor(() => expect(startChecksDialog()).toBeNull())
+    const notice = container?.querySelector('[data-testid="pipeline-start-notice"]')
+    expect(notice?.textContent).toContain(warning.message)
+    expect(notice?.textContent).toContain('lead: on_full_load append → clear')
+    await vi.waitFor(() =>
+      expect(container?.querySelector('[data-read-only="false"]')).not.toBeNull(),
+    )
+
+    await act(async () => {
+      container?.querySelector<HTMLButtonElement>('[data-testid="change-wizard"]')?.click()
+    })
+    await act(async () => new Promise((resolve) => window.setTimeout(resolve, 650)))
+    expect(updatePipelineDraft).toHaveBeenLastCalledWith(
+      initialDraft.pipelineId,
+      expect.objectContaining({
+        wizard: expect.objectContaining({
+          output: expect.objectContaining({
+            config: expect.objectContaining({ onFullLoad: 'clear' }),
+          }),
+        }),
+      }),
+      '"3"',
+      expect.any(Function),
+    )
+    expect(container?.querySelector('[data-testid="pipeline-start-notice"]')).not.toBeNull()
   })
 })

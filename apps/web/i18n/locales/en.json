@@ -545,6 +545,47 @@
       "confirmStopClearState": "Stop and clear state",
       "dismissFeedback": "Dismiss lifecycle error"
     },
+    "startChecks": {
+      "title": "Start checks for {{id}}",
+      "descriptionBlocked": "Something stops this start. Resolve it, then start the Pipeline again.",
+      "descriptionConfirm": "Choose how to handle each question, then start.",
+      "descriptionReady": "Review the results, then start.",
+      "changedWhileConfirming": "{{id}} changed while you were confirming. Its checks were run again, so review them before starting.",
+      "staleTitle": "These answers no longer apply and were not used:",
+      "choiceLabel": "Answer for {{subject}}",
+      "showPassed": "Show passed checks ({{count}})",
+      "hidePassed": "Hide passed checks",
+      "cancel": "Cancel",
+      "close": "Close",
+      "start": "Start",
+      "starting": "Starting…",
+      "groups": {
+        "block": "Stops the start",
+        "confirm": "Needs your answer",
+        "warn": "Warnings",
+        "pass": "Passed"
+      },
+      "behavior": {
+        "BLOCK": "Blocked",
+        "CONFIRM": "Needs answer",
+        "WARN": "Warning",
+        "PASS": "Passed"
+      },
+      "plan": {
+        "title": "How each target loads",
+        "target": "Target",
+        "load": "Load",
+        "onFullLoad": "On full load"
+      },
+      "notice": {
+        "titleWarnings": "{{id}} started with warnings",
+        "titleStarted": "{{id}} started",
+        "titleNotStarted": "{{id}} did not start",
+        "definitionChanged": "Definition changed",
+        "staleTitle": "Answers not used because the question is no longer asked",
+        "dismiss": "Dismiss start notice for {{id}}"
+      }
+    },
     "delete": {
       "title": "Delete {{id}}?",
       "body": "This permanently removes the stored Pipeline and its runtime state.",
@@ -775,6 +816,14 @@
         "noTableOptions": "No existing tables match. You can enter a new name.",
         "noUpstreamTables": "No upstream tables are selected.",
         "writeMode": "Write mode",
+        "onFullLoad": "On full load",
+        "onFullLoadPlaceholder": "Keep existing rows (default)",
+        "onFullLoadOptions": {
+          "append": "Keep existing rows",
+          "clear": "Clear first",
+          "fail": "Refuse if not empty"
+        },
+        "writeModeDefault": "Upsert (default)",
         "sourceScope": "Source scope",
         "openSourceScope": "All tables",
         "configuredSourceScope": "{{count}} in scope",
