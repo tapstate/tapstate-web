@@ -8,11 +8,8 @@ import type { Cluster, Organization, Spec, Subscription } from '../../service/cl
 const mocks = vi.hoisted(() => ({
   specs: vi.fn(),
   subscriptions: vi.fn(),
-  createCheckout: vi.fn(),
   cancelAtPeriodEnd: vi.fn(),
-  subscriptionById: vi.fn(),
   navigate: vi.fn(),
-  navigateToCheckout: vi.fn(),
   state: { current: undefined as unknown },
 }))
 
@@ -26,9 +23,7 @@ vi.mock('../../service/cloud-api', async (importOriginal) => {
       ...actual.cloudApi,
       specs: mocks.specs,
       subscriptions: mocks.subscriptions,
-      createCheckout: mocks.createCheckout,
       cancelAtPeriodEnd: mocks.cancelAtPeriodEnd,
-      subscriptionById: mocks.subscriptionById,
     },
   }
 })
@@ -37,12 +32,7 @@ vi.mock('../../state/cloud-app-state', () => ({
   useCloudAppState: () => mocks.state.current,
 }))
 
-vi.mock('./checkout-navigation', () => ({
-  navigateToCheckout: mocks.navigateToCheckout,
-}))
-
 import { i18n } from '../../i18n'
-import { CloudApiError } from '../../service/cloud-api'
 import { formatDate } from './billing-format'
 import { BillingPage } from './billing-page'
 
@@ -125,10 +115,6 @@ function buttonWithText(text: string) {
   )
 }
 
-function checkbox() {
-  return host?.querySelector<HTMLInputElement>('input[type="checkbox"]')
-}
-
 function dialogOverlay() {
   return host?.querySelector('[role="dialog"]')?.parentElement ?? null
 }
@@ -173,59 +159,31 @@ afterEach(async () => {
 })
 
 describe('Cloud subscription flow', () => {
-  it('renders the API catalog in USD with each plan trial policy', async () => {
-    await renderBilling()
-    await vi.waitFor(() => expect(host?.textContent).toContain('2C8G Starter'))
+  it('sends an organization without a valid subscription to onboarding', async () => {
+    mocks.subscriptions.mockResolvedValue([])
 
-    const text = host?.textContent ?? ''
-    expect(text).toContain('$199.00')
-    expect(text).toContain('$399.00')
-    expect(text).toContain('$799.00')
-    expect(text).toContain('2 vCPU · 8 GB RAM · 10 GB managed storage')
-    expect(text.match(/7-day free trial/g)).toHaveLength(1)
-    expect(text.match(/No trial/g)).toHaveLength(2)
-    expect(buttonWithText('Continue to secure checkout')?.hasAttribute('disabled')).toBe(true)
+    await renderBilling()
+
+    await vi.waitFor(() =>
+      expect(mocks.navigate).toHaveBeenCalledWith({
+        to: '/onboarding',
+        search: { organizationId: organization.id, subscriptionId: undefined },
+        replace: true,
+      }),
+    )
   })
 
-  it('requires auto-renew consent and reuses the idempotency key after a failed checkout', async () => {
-    mocks.createCheckout
-      .mockRejectedValueOnce(new CloudApiError('The Cloud service is unreachable.', 0))
-      .mockResolvedValueOnce({
-        subscriptionId: 'subscription-new',
-        status: 'PENDING_PAYMENT',
-        checkoutUrl: 'https://checkout.stripe.com/c/pay/test',
-      })
+  it('sends a canceled subscription to onboarding', async () => {
+    mocks.subscriptions.mockResolvedValue([{ ...trialSubscription, status: 'CANCELLED' }])
 
     await renderBilling()
-    await vi.waitFor(() => expect(host?.textContent).toContain('2C8G Starter'))
 
-    const subscribe = buttonWithText('Continue to secure checkout')
-    expect(subscribe?.hasAttribute('disabled')).toBe(true)
-
-    await click(checkbox())
-    expect(subscribe?.hasAttribute('disabled')).toBe(false)
-
-    await click(subscribe)
     await vi.waitFor(() =>
-      expect(host?.textContent).toContain('The Cloud service could not be reached'),
-    )
-    expect(mocks.createCheckout).toHaveBeenCalledTimes(1)
-    const firstRequestId = mocks.createCheckout.mock.calls[0]?.[1]?.clientRequestId
-
-    await click(buttonWithText('Continue to secure checkout'))
-    await vi.waitFor(() =>
-      expect(mocks.navigateToCheckout).toHaveBeenCalledWith(
-        'https://checkout.stripe.com/c/pay/test',
-      ),
-    )
-
-    expect(mocks.createCheckout).toHaveBeenCalledTimes(2)
-    expect(mocks.createCheckout.mock.calls[1]?.[1]).toMatchObject({
-      specKey: '2c8g',
-      clientRequestId: firstRequestId,
-    })
-    expect(window.sessionStorage.getItem('tapstate.cloud.checkout-attempt')).toContain(
-      'subscription-new',
+      expect(mocks.navigate).toHaveBeenCalledWith({
+        to: '/onboarding',
+        search: { organizationId: organization.id, subscriptionId: undefined },
+        replace: true,
+      }),
     )
   })
 
@@ -263,9 +221,10 @@ describe('Cloud subscription flow', () => {
   it('keeps non-owners on a read-only summary', async () => {
     mocks.state.current = {
       activeOrganization: organization,
-      clusters: [],
+      clusters: [cluster],
       user: { email: 'member@example.com', displayName: 'Member' },
     }
+    mocks.subscriptions.mockResolvedValue([trialSubscription])
 
     await renderBilling()
     await vi.waitFor(() =>
@@ -274,8 +233,7 @@ describe('Cloud subscription flow', () => {
       ),
     )
 
-    expect(checkbox()).toBeNull()
-    expect(buttonWithText('Continue to secure checkout')).toBeUndefined()
-    expect(host?.textContent).toContain('$199.00')
+    expect(host?.textContent).toContain('2C8G Starter')
+    expect(buttonWithText('Cancel subscription')).toBeUndefined()
   })
 })

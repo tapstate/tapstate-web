@@ -9,14 +9,7 @@ import { CloudApiError, cloudApi } from '../../service/cloud-api'
 import { useCloudAppState } from '../../state/cloud-app-state'
 import { formatPrice, newestFirst } from './billing-format'
 import { CancelSubscriptionDialog } from './cancel-subscription-dialog'
-import {
-  clearCheckoutAttempt,
-  newClientRequestId,
-  readCheckoutAttempt,
-  rememberCheckoutAttempt,
-} from './checkout-attempt'
-import { navigateToCheckout } from './checkout-navigation'
-import { PlanSelection } from './plan-selection'
+import { readCheckoutAttempt } from './checkout-attempt'
 import { SubscriptionStatus } from './subscription-status'
 
 const liveStatuses = new Set(['TRIAL', 'ACTIVE', 'PAST_DUE', 'PENDING_CANCEL'])
@@ -25,20 +18,8 @@ function errorKey(error: unknown, fallback: string): string {
   if (!(error instanceof CloudApiError)) return fallback
   if (error.status === 0) return 'billing.errors.network'
   switch (error.code) {
-    case 'subscription.spec-not-found':
-      return 'billing.errors.specNotFound'
-    case 'subscription.pricing-not-configured':
-      return 'billing.errors.pricingNotConfigured'
-    case 'subscription.already-active':
-      return 'billing.errors.alreadyActive'
-    case 'subscription.pending-payment':
-      return 'billing.errors.pendingPayment'
-    case 'subscription.not-active':
-      return 'billing.errors.notActive'
     case 'subscription.cannot-cancel':
       return 'billing.errors.cannotCancel'
-    case 'org.limit-reached':
-      return 'billing.errors.orgLimitReached'
     default:
       return fallback
   }
@@ -52,18 +33,13 @@ export function BillingPage() {
 
   const [specs, setSpecs] = useState<Awaited<ReturnType<typeof cloudApi.specs>>>([])
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
-  const [selectedKey, setSelectedKey] = useState<string | null>(null)
-  const [consent, setConsent] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [hasLoadError, setHasLoadError] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [isCancelling, setIsCancelling] = useState(false)
   const [cancelError, setCancelError] = useState<string | null>(null)
-  const [attempt, setAttempt] = useState(() => readCheckoutAttempt())
-  const requestIdRef = useRef<string | null>(null)
+  const [attempt] = useState(() => readCheckoutAttempt())
   const cancelButtonRef = useRef<HTMLButtonElement | null>(null)
 
   const load = useCallback(
@@ -98,25 +74,12 @@ export function BillingPage() {
   useEffect(() => {
     if (!organizationId) return
     setSubscriptions([])
-    setSelectedKey(null)
-    setConsent(false)
-    setCheckoutError(null)
     setCancelError(null)
-    setAttempt(readCheckoutAttempt())
     void load('full')
   }, [load, organizationId])
 
-  useEffect(() => {
-    if (specs.length === 0) return
-    setSelectedKey((current) =>
-      current && specs.some((spec) => spec.key === current) ? current : specs[0].key,
-    )
-  }, [specs])
-
   const orderedSubscriptions = useMemo(() => newestFirst(subscriptions), [subscriptions])
   const subscription = orderedSubscriptions.find((item) => liveStatuses.has(item.status)) ?? null
-  const pendingSubscription =
-    orderedSubscriptions.find((item) => item.status === 'PENDING_PAYMENT') ?? null
 
   const shouldPoll = subscription?.resourceState === 'PROVISIONING'
 
@@ -126,6 +89,15 @@ export function BillingPage() {
     return () => window.clearInterval(timer)
   }, [load, shouldPoll])
 
+  useEffect(() => {
+    if (!organizationId || isLoading || hasLoadError || subscription) return
+    void navigate({
+      to: '/onboarding',
+      search: { organizationId, subscriptionId: undefined },
+      replace: true,
+    })
+  }, [hasLoadError, isLoading, navigate, organizationId, subscription])
+
   const cluster = subscription
     ? (clusters.find((item) => item.id === subscription.clusterId) ?? null)
     : null
@@ -133,65 +105,11 @@ export function BillingPage() {
     cluster?.specKey ??
     (attempt && subscription && attempt.subscriptionId === subscription.id ? attempt.specKey : null)
   const spec = specKey ? (specs.find((item) => item.key === specKey) ?? null) : null
-  const selectedSpec = specs.find((item) => item.key === selectedKey) ?? null
   const canManage =
     !activeOrganization?.ownerEmail ||
     activeOrganization.ownerEmail.toLowerCase() === (user?.email ?? '').toLowerCase()
 
-  const selectPlan = (key: string) => {
-    setSelectedKey(key)
-    setCheckoutError(null)
-    requestIdRef.current = null
-  }
-
-  const startCheckout = async () => {
-    if (!organizationId || !selectedSpec || !consent || isSubmitting) return
-    if (!requestIdRef.current) requestIdRef.current = newClientRequestId()
-    const clientRequestId = requestIdRef.current
-    setIsSubmitting(true)
-    setCheckoutError(null)
-    try {
-      const session = await cloudApi.createCheckout(organizationId, {
-        specKey: selectedSpec.key,
-        clientRequestId,
-      })
-      const nextAttempt = {
-        orgId: organizationId,
-        subscriptionId: session.subscriptionId,
-        specKey: selectedSpec.key,
-        clientRequestId,
-        startedAt: new Date().toISOString(),
-      }
-      rememberCheckoutAttempt(nextAttempt)
-      setAttempt(nextAttempt)
-      navigateToCheckout(session.checkoutUrl)
-    } catch (error) {
-      if (error instanceof CloudApiError && error.status === 401) {
-        void navigate({ to: '/auth' })
-        return
-      }
-      if (
-        error instanceof CloudApiError &&
-        (error.code === 'subscription.already-active' || error.status === 409)
-      ) {
-        await load('subscriptions')
-      }
-      setCheckoutError(t(errorKey(error, 'billing.errors.generic')))
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
   const refresh = () => {
-    void load('subscriptions')
-  }
-
-  const startOver = () => {
-    clearCheckoutAttempt()
-    setAttempt(null)
-    requestIdRef.current = null
-    setConsent(false)
-    setCancelError(null)
     void load('subscriptions')
   }
 
@@ -233,8 +151,22 @@ export function BillingPage() {
       </header>
 
       <div className="max-w-4xl space-y-6 p-6">
-        {!organizationId ? (
+        {!organizationId || isLoading ? (
           <p className="text-xs text-neutral-400">{t('billing.loading')}</p>
+        ) : hasLoadError ? (
+          <div
+            className="flex items-center justify-between gap-4 rounded-xl border border-red-200/80 bg-red-50 p-4 text-xs text-red-600 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400"
+            role="alert"
+          >
+            <span>{t('billing.loadError')}</span>
+            <button
+              className="font-medium underline hover:text-red-800 dark:hover:text-red-300"
+              onClick={() => void load('full')}
+              type="button"
+            >
+              {t('billing.retry')}
+            </button>
+          </div>
         ) : subscription ? (
           <SubscriptionStatus
             canManage={canManage}
@@ -248,24 +180,9 @@ export function BillingPage() {
               setCancelOpen(true)
             }}
             onRefresh={refresh}
-            onStartOver={startOver}
           />
         ) : (
-          <PlanSelection
-            canManage={canManage}
-            consent={consent}
-            errorMessage={checkoutError}
-            hasError={hasLoadError}
-            isLoading={isLoading}
-            pendingNotice={pendingSubscription !== null}
-            selectedKey={selectedKey}
-            specs={specs}
-            submitting={isSubmitting}
-            onConsentChange={setConsent}
-            onRetry={() => void load('full')}
-            onSelect={selectPlan}
-            onSubmit={() => void startCheckout()}
-          />
+          <p className="text-xs text-neutral-400">{t('billing.loading')}</p>
         )}
       </div>
 

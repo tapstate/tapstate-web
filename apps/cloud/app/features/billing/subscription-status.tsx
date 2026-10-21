@@ -53,7 +53,6 @@ interface SubscriptionStatusProps {
   subscription: Subscription
   onCancel: () => void
   onRefresh: () => void
-  onStartOver: () => void
 }
 
 export function SubscriptionStatus({
@@ -65,7 +64,6 @@ export function SubscriptionStatus({
   subscription,
   onCancel,
   onRefresh,
-  onStartOver,
 }: SubscriptionStatusProps) {
   const { t, i18n } = useTranslation()
   const status = subscription.status
@@ -212,23 +210,7 @@ export function SubscriptionStatus({
         )}
 
         <div className="flex flex-wrap items-center gap-2 border-t border-black/[0.04] pt-4 dark:border-white/[0.04]">
-          {status === 'CANCELLED' ? (
-            <button
-              className="h-9 rounded-lg bg-neutral-900 px-4 text-[13px] font-medium text-white transition-colors hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100"
-              onClick={onStartOver}
-              type="button"
-            >
-              {t('billing.choosePlan')}
-            </button>
-          ) : status === 'PENDING_PAYMENT' ? (
-            <button
-              className="h-9 rounded-lg bg-neutral-900 px-4 text-[13px] font-medium text-white transition-colors hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100"
-              onClick={onStartOver}
-              type="button"
-            >
-              {t('billing.choosePlan')}
-            </button>
-          ) : canManage && (status === 'TRIAL' || status === 'ACTIVE') ? (
+          {canManage && (status === 'TRIAL' || status === 'ACTIVE') ? (
             <button
               className="h-9 rounded-lg border border-black/[0.1] bg-white px-4 text-[13px] font-medium text-neutral-700 transition-colors hover:bg-neutral-50 dark:border-white/[0.12] dark:bg-[#1a1b1e] dark:text-neutral-300 dark:hover:bg-white/[0.05]"
               onClick={onCancel}

@@ -46,12 +46,44 @@ export function CheckoutSuccessPage() {
   const { activeOrganization, organizations } = useCloudAppState()
   const attempt = useMemo(() => readCheckoutAttempt(), [])
   const organizationId = attempt?.orgId ?? activeOrganization?.id ?? null
-  const organizationSlug = organizations.find((item) => item.id === organizationId)?.slug ?? null
+  const [resolvedSlug, setResolvedSlug] = useState<string | null>(null)
+  const organizationSlug =
+    organizations.find((item) => item.id === organizationId)?.slug ?? resolvedSlug
 
   const [phase, setPhase] = useState<Phase>('resolving')
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [target, setTarget] = useState<ProvisioningTarget | null>(null)
   const [errorKey, setErrorKey] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!organizationId || organizationSlug) return
+    let active = true
+    const resolve = async () => {
+      try {
+        const list = await cloudApi.organizations()
+        if (!active) return
+        const slug = list.find((item) => item.id === organizationId)?.slug
+        if (slug) {
+          setResolvedSlug(slug)
+          return
+        }
+        setPhase('error')
+        setErrorKey('billing.success.error')
+      } catch (error) {
+        if (!active) return
+        if (error instanceof CloudApiError && error.status === 401) {
+          void navigate({ to: '/auth' })
+          return
+        }
+        setPhase('error')
+        setErrorKey('billing.success.error')
+      }
+    }
+    void resolve()
+    return () => {
+      active = false
+    }
+  }, [navigate, organizationId, organizationSlug])
 
   useEffect(() => {
     if (!organizationId || !organizationSlug) return
@@ -64,16 +96,23 @@ export function CheckoutSuccessPage() {
         cloudApi.regions(),
         cloudApi.clusters(organizationId),
       ])
-      const region = regions.find((item) => item.open)?.code
+      const stored = readCheckoutAttempt()
+      const region =
+        regions.find((item) => item.open && item.code === stored?.region)?.code ??
+        regions.find((item) => item.open)?.code
       if (!region) throw new CloudApiError('No open region is available.', 503)
+      const taken = new Set(
+        clusters
+          .filter((cluster) => cluster.state !== 'TERMINATED')
+          .map((cluster) => cluster.name.toLowerCase()),
+      )
+      const preferred = stored?.clusterName?.trim()
       return {
         region,
-        clusterName: uniqueClusterName(
-          organizationSlug,
-          clusters
-            .filter((cluster) => cluster.state !== 'TERMINATED')
-            .map((cluster) => cluster.name),
-        ),
+        clusterName:
+          preferred && !taken.has(preferred.toLowerCase())
+            ? preferred
+            : uniqueClusterName(organizationSlug, [...taken]),
       }
     }
 
@@ -98,8 +137,19 @@ export function CheckoutSuccessPage() {
         specKey: stored?.specKey ?? '',
         clientRequestId: stored?.clientRequestId ?? '',
         startedAt: new Date().toISOString(),
+        region: stored?.orgId === organizationId ? stored.region : undefined,
+        clusterName: stored?.orgId === organizationId ? stored.clusterName : undefined,
       })
       return newest
+    }
+
+    const openDeployment = (subscriptionId: string) => {
+      clearCheckoutAttempt()
+      void navigate({
+        to: '/onboarding',
+        search: { organizationId, subscriptionId },
+        replace: true,
+      })
     }
 
     const tick = async () => {
@@ -116,15 +166,26 @@ export function CheckoutSuccessPage() {
           setErrorKey('billing.success.ended')
           keepPolling = false
         } else if (current.status === 'TRIAL' || current.status === 'ACTIVE') {
-          if (!current.resourceState) {
+          if (current.clusterId) {
+            openDeployment(current.id)
+            keepPolling = false
+          } else if (!current.resourceState) {
             setPhase('provisioning')
             if (!finalized) {
               const provisioningTarget = await resolveTarget()
               if (!active) return
               setTarget(provisioningTarget)
               try {
-                await cloudApi.finalizeProvisioning(organizationId, current.id, provisioningTarget)
+                const updated = await cloudApi.finalizeProvisioning(
+                  organizationId,
+                  current.id,
+                  provisioningTarget,
+                )
                 finalized = true
+                if (updated.clusterId) {
+                  openDeployment(current.id)
+                  keepPolling = false
+                }
               } catch (error) {
                 if (
                   error instanceof CloudApiError &&
@@ -136,10 +197,6 @@ export function CheckoutSuccessPage() {
                 }
               }
             }
-          } else if (current.resourceState === 'READY') {
-            setPhase('ready')
-            clearCheckoutAttempt()
-            keepPolling = false
           } else {
             setPhase('provisioning')
           }

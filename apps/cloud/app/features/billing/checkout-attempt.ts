@@ -4,6 +4,8 @@ export interface CheckoutAttempt {
   specKey: string
   clientRequestId: string
   startedAt: string
+  region?: string
+  clusterName?: string
 }
 
 const STORAGE_KEY = 'tapstate.cloud.checkout-attempt'
@@ -23,7 +25,9 @@ function isAttempt(value: unknown): value is CheckoutAttempt {
     typeof candidate.subscriptionId === 'string' &&
     typeof candidate.specKey === 'string' &&
     typeof candidate.clientRequestId === 'string' &&
-    typeof candidate.startedAt === 'string'
+    typeof candidate.startedAt === 'string' &&
+    (candidate.region === undefined || typeof candidate.region === 'string') &&
+    (candidate.clusterName === undefined || typeof candidate.clusterName === 'string')
   )
 }
 

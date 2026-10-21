@@ -5,4 +5,5 @@ export interface OnboardingInput {
   organizationSlug: string
   region: Region
   clusterName: string
+  specKey: string
 }
