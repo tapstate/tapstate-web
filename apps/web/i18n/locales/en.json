@@ -1898,22 +1898,16 @@
     "title": "State stores",
     "intro": "Where Tapstate keeps your views. Every view a pipeline builds is written to the default store.",
     "listLabel": "State stores",
-    "add": "Add store",
-    "addLimit": "One store in this release",
     "default": "Default",
-    "delete": "Delete",
     "fields": {
       "type": "Type",
       "location": "Database",
-      "checks": "Checks",
-      "usage": "Usage",
       "access": "Access"
     },
     "managed": {
       "name": "Tapstate state store",
       "type": "MongoDB · server metadata database",
-      "access": "Shares the MongoDB this server already uses. For production, use a separate MongoDB.",
-      "deleteReason": "The server manages this store"
+      "access": "Shares the MongoDB this server already uses. For production, use a separate MongoDB."
     },
     "cloud": {
       "name": "Atlas state store",
@@ -1928,9 +1922,7 @@
     "settings": "Settings",
     "sectionsLabel": "Settings sections",
     "sections": {
-      "stateStore": "State store",
-      "members": "Members",
-      "apiKeys": "API keys"
+      "stateStore": "State store"
     }
   }
 }

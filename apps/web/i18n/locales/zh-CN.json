@@ -1898,22 +1898,16 @@
     "title": "State store",
     "intro": "Tapstate 保存视图的地方。pipeline 构建的每个视图都写入默认 store。",
     "listLabel": "State store 列表",
-    "add": "添加 store",
-    "addLimit": "本版本只支持一个 store",
     "default": "默认",
-    "delete": "删除",
     "fields": {
       "type": "类型",
       "location": "数据库",
-      "checks": "检查",
-      "usage": "用量",
       "access": "访问"
     },
     "managed": {
       "name": "Tapstate state store",
       "type": "MongoDB · 服务器元数据库",
-      "access": "与此服务器已使用的 MongoDB 共用。生产环境请使用单独的 MongoDB。",
-      "deleteReason": "此 store 由服务器管理"
+      "access": "与此服务器已使用的 MongoDB 共用。生产环境请使用单独的 MongoDB。"
     },
     "cloud": {
       "name": "Atlas state store",
@@ -1928,9 +1922,7 @@
     "settings": "设置",
     "sectionsLabel": "设置分区",
     "sections": {
-      "stateStore": "State store",
-      "members": "成员",
-      "apiKeys": "API 密钥"
+      "stateStore": "State store"
     }
   }
 }
