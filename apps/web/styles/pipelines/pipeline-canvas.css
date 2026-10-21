@@ -358,10 +358,19 @@
     transform 150ms ease;
 }
 
-.pipeline-canvas__tool-button:hover,
+.pipeline-canvas__tool-button:hover {
+  background: var(--color-state-base-hover);
+  color: var(--color-text-secondary);
+}
+
 .pipeline-canvas__tool-button[aria-pressed='true'] {
-  background: color-mix(in srgb, var(--pipeline-selection) 12%, transparent);
-  color: var(--pipeline-selection);
+  background: var(--color-state-accent-active);
+  color: var(--color-text-accent);
+}
+
+.pipeline-canvas__tool-button[aria-pressed='true']:hover {
+  background: var(--color-state-base-hover);
+  color: var(--color-text-secondary);
 }
 
 .pipeline-canvas__tool-button:active {
