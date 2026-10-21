@@ -1,5 +1,5 @@
 .atlas-store-dialog__fields .tap-formily-item {
-  margin-bottom: 20px !important;
+  margin-bottom: calc(var(--spacing) * 4) !important;
 }
 
 .atlas-store-dialog__fields .tap-formily-item-label {
@@ -14,7 +14,7 @@
 }
 
 .atlas-store-dialog__fields fieldset[data-formily-compact-section] {
-  row-gap: 20px;
+  row-gap: calc(var(--spacing) * 4);
 }
 
 .atlas-store-dialog__fields fieldset[data-formily-compact-section] > .tap-formily-item {
