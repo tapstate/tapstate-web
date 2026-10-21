@@ -35,6 +35,7 @@ type SearchInputProps = {
   'aria-label': string
   clearLabel: string
   className?: string
+  'data-testid'?: string
 } & Pick<
   InputGroupInputProps,
   'aria-describedby' | 'autoFocus' | 'disabled' | 'name'
@@ -52,6 +53,7 @@ export function SearchInput({
   disabled,
   'aria-describedby': ariaDescribedBy,
   'aria-label': ariaLabel,
+  'data-testid': dataTestId,
 }: SearchInputProps) {
   const { inputProps, canClear, clearProps } = useSearchInput({ value, onValueChange, ref })
 
@@ -62,6 +64,7 @@ export function SearchInput({
         name={name}
         aria-describedby={ariaDescribedBy}
         aria-label={ariaLabel}
+        data-testid={dataTestId}
         placeholder={placeholder ?? ariaLabel}
         disabled={disabled}
         autoComplete="off"

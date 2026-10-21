@@ -1,3 +1,4 @@
+import { Spinner } from '@langgenius/dify-ui/spinner'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -6,6 +7,7 @@ import { PipelineClientError, type PipelineCatalogState } from '@/service/pipeli
 
 import { PipelineRefreshControls } from '../components/pipeline-refresh-controls'
 import { PipelineMetricChart } from './pipeline-metric-chart'
+import styles from './pipeline-monitoring-page.module.css'
 import { usePipelineMonitoringQueries } from './pipeline-monitoring-queries'
 import { PipelineReadSurface } from './pipeline-read-surface'
 
@@ -55,7 +57,7 @@ export function PipelineMonitoringPage({
 
   if (!hasArtifact) {
     return (
-      <section className="pipeline-monitoring__state mt-6" aria-live="polite">
+      <section className={`${styles.page} pipeline-monitoring__state mt-6`} aria-live="polite">
         <h2 className="pipeline-monitoring__state-title">
           {t('pipelines.workspace.runtime.monitoring.draftTitle')}
         </h2>
@@ -68,7 +70,15 @@ export function PipelineMonitoringPage({
 
   if (isLoading) {
     return (
-      <div className="pipeline-monitoring__state mt-6" role="status">
+      <div
+        className={`${styles.page} ${styles.loadingState} pipeline-monitoring__state mt-6`}
+        role="status"
+        aria-busy="true"
+      >
+        <Spinner
+          aria-label={t('pipelines.workspace.runtime.monitoring.loading')}
+          className="text-text-accent"
+        />
         {t('pipelines.workspace.runtime.monitoring.loading')}
       </div>
     )
@@ -77,7 +87,7 @@ export function PipelineMonitoringPage({
   if (hasError) {
     const unavailable = isObservationUnavailable(error)
     return (
-      <section className="pipeline-monitoring__state mt-6" aria-live="polite">
+      <section className={`${styles.page} pipeline-monitoring__state mt-6`} aria-live="polite">
         <h2 className="pipeline-monitoring__state-title">
           {t(
             unavailable
@@ -106,7 +116,7 @@ export function PipelineMonitoringPage({
   }
 
   return (
-    <section className="pipeline-monitoring mt-6">
+    <section className={`${styles.page} pipeline-monitoring mt-6`}>
       <div className="pipeline-monitoring__toolbar">
         <div className="pipeline-monitoring__toolbar-heading">
           <p className="pipeline-monitoring__eyebrow">

@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { Button } from '@langgenius/dify-ui/button'
+import { Spinner } from '@langgenius/dify-ui/spinner'
+import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type {
@@ -7,8 +9,6 @@ import type {
   PipelineHistorySegment,
   PipelineMetricsHistory,
 } from '@/service/pipelines/pipeline-observability-client'
-
-import { Button } from '@/components/ui/button'
 
 import {
   usePipelineReadSurfaceQueries,
@@ -44,27 +44,47 @@ function pathForSegments(
   )
   const max = Math.max(...values.map(({ value }) => value), 0)
   const min = Math.min(...values.map(({ value }) => value), 0)
-  const extent = Math.max(1, max - min)
-  let commands: string[] = []
-  const paths: string[] = []
+  const axisMax = max === min ? min + 1 : max
+  const extent = axisMax - min
+  const project = (point: { at: string; value: number }) => ({
+    ...point,
+    x: 48 + ((Date.parse(point.at) - from) / span) * 656,
+    y: 16 + ((axisMax - point.value) / extent) * 112,
+  })
+  const chunks: ReturnType<typeof project>[][] = []
 
   for (const segment of segments) {
+    let chunk: ReturnType<typeof project>[] = []
     for (const point of segment.points) {
       const value = valueFor(point)
       if (value === undefined) {
-        if (commands.length > 0) paths.push(commands.join(' '))
-        commands = []
+        if (chunk.length > 0) chunks.push(chunk)
+        chunk = []
         continue
       }
-      const x = 48 + ((Date.parse(point.intervalEnd) - from) / span) * 656
-      const y = 16 + ((max - value) / extent) * 112
-      commands.push(`${commands.length === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)}`)
+      chunk.push(project({ at: point.intervalEnd, value }))
     }
-    if (commands.length > 0) paths.push(commands.join(' '))
-    commands = []
+    if (chunk.length > 0) chunks.push(chunk)
   }
 
-  return { paths, values, min, max }
+  const pathForChunk = (chunk: ReturnType<typeof project>[]) =>
+    chunk
+      .map(
+        (point, index) => `${index === 0 ? 'M' : 'L'}${point.x.toFixed(2)},${point.y.toFixed(2)}`,
+      )
+      .join(' ')
+  const paths = chunks.map(pathForChunk)
+  const areaPaths = chunks
+    .filter((chunk) => chunk.length > 1)
+    .map((chunk) => {
+      const line = pathForChunk(chunk)
+      const first = chunk[0]!
+      const last = chunk.at(-1)!
+      return `${line} L${last.x.toFixed(2)},128 L${first.x.toFixed(2)},128 Z`
+    })
+  const points = chunks.flat()
+
+  return { paths, areaPaths, points, values, min, max: axisMax }
 }
 
 function RateChart({
@@ -83,6 +103,8 @@ function RateChart({
   formatter: Intl.NumberFormat
 }) {
   const { i18n, t } = useTranslation()
+  const gradientId = useId().replaceAll(':', '')
+  const areaOpacity = metric === 'recordsOut' ? [0.3, 0.1] : [0.2, 0.08]
   const result = pathForSegments(history.segments, range, (point) => point[metric]?.averageRate)
   const latest = result.values.at(-1)
   const formatTime = (value: string) => {
@@ -109,39 +131,78 @@ function RateChart({
         </p>
       ) : (
         <>
-          <svg
-            className="pipeline-monitoring__trend-chart"
-            viewBox="0 0 720 148"
-            role="img"
-            aria-label={`${label}: ${formatter.format(result.min)} to ${formatter.format(result.max)}`}
-            preserveAspectRatio="none"
-          >
-            {[16, 72, 128].map((y) => (
-              <line
-                key={y}
-                x1="48"
-                x2="704"
-                y1={y}
-                y2={y}
-                className="pipeline-monitoring__chart-gridline"
-              />
-            ))}
-            {result.paths.map((path, index) => (
-              <path
-                key={`${metric}-${index}`}
-                d={path}
-                fill="none"
-                stroke={color}
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                vectorEffect="non-scaling-stroke"
-              />
-            ))}
-          </svg>
+          <div className="pipeline-monitoring__plot">
+            <div className="pipeline-monitoring__value-axis" aria-hidden="true">
+              <span>{formatter.format(result.max)}</span>
+              <span>{formatter.format(result.min)}</span>
+            </div>
+            <svg
+              className="pipeline-monitoring__trend-chart"
+              viewBox="40 0 672 148"
+              role="group"
+              aria-label={`${label}: ${formatter.format(result.min)} to ${formatter.format(result.max)}`}
+              preserveAspectRatio="none"
+            >
+              {[16, 72, 128].map((y) => (
+                <line
+                  key={y}
+                  x1="48"
+                  x2="704"
+                  y1={y}
+                  y2={y}
+                  className="pipeline-monitoring__chart-gridline"
+                />
+              ))}
+              <defs>
+                <linearGradient id={`${gradientId}-${metric}-area`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={color} stopOpacity={areaOpacity[0]} />
+                  <stop offset="100%" stopColor={color} stopOpacity={areaOpacity[1]} />
+                </linearGradient>
+              </defs>
+              {result.areaPaths.map((path, index) => (
+                <path
+                  key={`${metric}-area-${index}`}
+                  d={path}
+                  fill={`url(#${gradientId}-${metric}-area)`}
+                  stroke="none"
+                />
+              ))}
+              {result.paths.map((path, index) => (
+                <path
+                  key={`${metric}-${index}`}
+                  d={path}
+                  fill="none"
+                  stroke={color}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+              ))}
+              {result.points.map((point, index) => {
+                const pointLabel = `${formatTime(point.at)} · ${formatter.format(point.value)}`
+                return (
+                  <circle
+                    key={`${metric}-point-${point.at}-${index}`}
+                    className="pipeline-monitoring__sample-point"
+                    cx={point.x}
+                    cy={point.y}
+                    r="2"
+                    fill={color}
+                    tabIndex={0}
+                    focusable="true"
+                    role="img"
+                    aria-label={pointLabel}
+                  >
+                    <title>{pointLabel}</title>
+                  </circle>
+                )
+              })}
+            </svg>
+          </div>
           <div className="pipeline-monitoring__chart-axis">
-            <span>{formatTime(history.effectiveFrom)}</span>
-            <span>{formatTime(history.effectiveTo)}</span>
+            <span>{formatTime(range.from)}</span>
+            <span>{formatTime(range.to)}</span>
           </div>
         </>
       )}
@@ -287,14 +348,21 @@ export function PipelineReadSurface({
     <div className="pipeline-monitoring__read-surfaces">
       <ExplainPanel explain={explain.data} />
       {explain.isLoading && (
-        <div className="pipeline-monitoring__state" role="status">
+        <div
+          className="pipeline-monitoring__state pipeline-monitoring__inline-loading"
+          role="status"
+        >
+          <Spinner
+            aria-label={t('pipelines.workspace.runtime.monitoring.explainLoading')}
+            className="text-text-accent"
+          />
           {t('pipelines.workspace.runtime.monitoring.explainLoading')}
         </div>
       )}
       {explain.isError && (
         <section className="pipeline-monitoring__state" role="status">
           <p>{t('pipelines.workspace.runtime.monitoring.explainError')}</p>
-          <Button size="sm" variant="outline" onClick={() => void explain.refetch()}>
+          <Button size="small" variant="secondary" onClick={() => void explain.refetch()}>
             {t('pipelines.workspace.runtime.monitoring.retry')}
           </Button>
         </section>
@@ -322,7 +390,7 @@ export function PipelineReadSurface({
             {(['1h', '6h', '24h', '7d'] as const).map((range) => (
               <Button
                 key={range}
-                size="sm"
+                size="small"
                 variant={selectedRange === range ? 'secondary' : 'ghost'}
                 aria-pressed={selectedRange === range}
                 onClick={() => {
@@ -337,13 +405,20 @@ export function PipelineReadSurface({
         </div>
 
         {history.isLoading ? (
-          <p className="pipeline-monitoring__empty-inline" role="status">
+          <div
+            className="pipeline-monitoring__empty-inline pipeline-monitoring__inline-loading"
+            role="status"
+          >
+            <Spinner
+              aria-label={t('pipelines.workspace.runtime.monitoring.historyLoading')}
+              className="text-text-accent"
+            />
             {t('pipelines.workspace.runtime.monitoring.historyLoading')}
-          </p>
+          </div>
         ) : history.isError ? (
           <div className="pipeline-monitoring__state pipeline-monitoring__history-error">
             <p>{t('pipelines.workspace.runtime.monitoring.historyError')}</p>
-            <Button size="sm" variant="outline" onClick={() => void history.refetch()}>
+            <Button size="small" variant="secondary" onClick={() => void history.refetch()}>
               {t('pipelines.workspace.runtime.monitoring.retry')}
             </Button>
           </div>
@@ -409,8 +484,8 @@ export function PipelineReadSurface({
             {history.hasNextPage && (
               <div className="pipeline-monitoring__load-more">
                 <Button
-                  size="sm"
-                  variant="outline"
+                  size="small"
+                  variant="secondary"
                   onClick={() => void history.fetchNextPage()}
                   disabled={history.isFetchingNextPage}
                 >
