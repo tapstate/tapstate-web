@@ -74,10 +74,12 @@ export async function loadOnboardingWorkspace(
   organizationId: string,
   subscriptionId: string,
 ): Promise<OnboardingWorkspace> {
-  const [organization, subscription] = await Promise.all([
-    cloudApi.organization(organizationId),
+  const [organizations, subscription] = await Promise.all([
+    cloudApi.organizations(),
     cloudApi.subscriptionById(organizationId, subscriptionId),
   ])
+  const organization = organizations.find((item) => item.id === organizationId)
+  if (!organization) throw new CloudApiError('Organization not found.', 404)
   const clusterId = subscriptionClusterId(subscription)
   if (!clusterId) {
     throw new CloudApiError('Subscription exists, but its Cluster record is not visible yet.', 202)
