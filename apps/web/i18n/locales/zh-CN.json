@@ -1993,7 +1993,18 @@
       "confirm": "确认全量重建",
       "clusterConfirmHelp": "我已通过部署工具停止并隔离全部旧 Cluster 成员，并确认源/目标端旧连接和在途写入均已结束。我确认本次完整范围。Cluster 核验本机释放和存储身份，跨机器隔离由我负责。所有受影响 Pipeline 将保持停止。",
       "clusterConfirm": "确认恢复运行存储",
-      "clusterComplete": "运行存储已就绪。所有受影响 Pipeline 保持停止，需要逐个明确确认全量重建；这不表示 Pipeline 数据或目标已恢复。"
+      "clusterComplete": "运行存储已就绪。所有受影响 Pipeline 保持停止，需要逐个明确确认全量重建；这不表示 Pipeline 数据或目标已恢复。",
+      "continueOriginal": "继续此原操作",
+      "targets": "本次全量的目标处理方式",
+      "executionFailed": "此操作尚未完成。请查看任务错误；运行失败时，先停止任务，再明确继续此原操作。",
+      "stalePreview": "当前输入已不匹配此预检。请核对原范围并重新预检，再确认执行。",
+      "selectPipeline": "选择一个任务做全量重建",
+      "repreview": "重新预检此范围",
+      "policy": {
+        "APPEND": "保留已有数据，按配置的写入模式写入。",
+        "CLEAR": "先清空选中的目标表，再重新全量读取源数据。",
+        "FAIL": "选中的目标表已有数据时，拒绝执行全量。"
+      }
     },
     "transfer": {
       "title": "配置转移",

@@ -219,6 +219,121 @@ describe('explicit recovery and import', () => {
     expect(storage.refresh).toHaveBeenCalledOnce()
     expect(container.textContent).toContain(i18n.t('storage.recovery.clusterComplete'))
   })
+  it('continues only the original confirmed recovery after querying its result', async () => {
+    storage.snapshot = {
+      ...base,
+      businessPhase: 'AWAITING_REBUILD_CONFIRMATION',
+      allowedActions: ['storage.recovery.status', 'storage.recovery.confirm'],
+    }
+    const running = {
+      operationId: 'original-recovery',
+      scope: 'CLUSTER',
+      affectedPipelineIds: ['pipeline-a'],
+      phase: 'RUNNING',
+      controlRevision: 8,
+      planHash: 'fixed-hash',
+    }
+    storage.fetcher.mockImplementation(async () => Response.json(running))
+    await render(<StorageRecovery />)
+    expect(storage.fetcher).not.toHaveBeenCalled()
+    await click('storage.queryResult')
+    expect(container.querySelector('input[type="checkbox"]')).toBeNull()
+    await click('storage.recovery.continueOriginal')
+    expect(storage.fetcher.mock.calls[1][0]).toContain('/storage/recovery/confirm')
+    expect(JSON.parse(String(storage.fetcher.mock.calls[1][1]?.body))).toEqual({
+      operationId: 'original-recovery',
+      planHash: 'fixed-hash',
+      controlRevision: 8,
+      confirmed: true,
+    })
+    expect(storage.fetcher.mock.calls.some(([url]) => String(url).endsWith('/plan'))).toBe(false)
+  })
+  it('shows target handling and requires a fresh preview before a pipeline confirmation', async () => {
+    storage.snapshot = {
+      ...base,
+      businessPhase: 'READY',
+      allowedActions: [
+        'storage.recovery.plan',
+        'storage.recovery.status',
+        'storage.recovery.confirm',
+      ],
+    }
+    const plan = {
+      operationId: 'full-a',
+      phase: 'PLANNED',
+      scope: 'PIPELINE',
+      pipelineIds: ['pipeline-a'],
+      affectedPipelineIds: ['pipeline-a'],
+      controlRevision: 8,
+      planHash: 'fixed-hash',
+      preflightCurrent: false,
+      targetPolicies: [],
+    }
+    storage.fetcher.mockImplementation(async (url) =>
+      Response.json(
+        String(url).endsWith('/plan')
+          ? {
+              ...plan,
+              preflightCurrent: true,
+              targetPolicies: [{ node: 'copy', source: 'warehouse', policy: 'CLEAR' }],
+            }
+          : plan,
+      ),
+    )
+    await render(<StorageRecovery />)
+    await click('storage.queryResult')
+    await act(async () =>
+      container.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click(),
+    )
+    const confirm = () =>
+      [...container.querySelectorAll('button')].find(
+        (button) => button.textContent === i18n.t('storage.recovery.confirm'),
+      )!
+    expect(confirm().disabled).toBe(true)
+    expect(container.textContent).toContain(i18n.t('storage.recovery.stalePreview'))
+    await click('storage.recovery.repreview')
+    expect(JSON.parse(String(storage.fetcher.mock.calls[1][1]?.body))).toEqual({
+      scope: 'PIPELINE',
+      pipelineIds: ['pipeline-a'],
+      operationId: 'full-a',
+    })
+    expect(container.textContent).toContain('copy → warehouse')
+    expect(container.textContent).toContain(i18n.t('storage.recovery.policy.CLEAR'))
+    expect(confirm().disabled).toBe(true)
+    await act(async () =>
+      container.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click(),
+    )
+    expect(confirm().disabled).toBe(false)
+    expect(storage.fetcher.mock.calls.some(([url]) => String(url).endsWith('/confirm'))).toBe(false)
+  })
+  it('carries a completed cluster operation only into a user-selected pipeline preview', async () => {
+    storage.snapshot = {
+      ...base,
+      businessPhase: 'READY',
+      allowedActions: ['storage.recovery.plan', 'storage.recovery.status'],
+    }
+    storage.fetcher.mockImplementation(async () =>
+      Response.json({
+        operationId: 'cluster-recovery',
+        phase: 'COMPLETE',
+        scope: 'CLUSTER',
+        pipelineIds: [],
+        affectedPipelineIds: ['a', 'b'],
+      }),
+    )
+    await render(<StorageRecovery />)
+    await click('storage.queryResult')
+    await click('storage.recovery.selectPipeline')
+    expect(storage.fetcher).toHaveBeenCalledOnce()
+    await fill('storage.resourceIds', 'a')
+    await click('storage.recovery.preview')
+    expect(JSON.parse(String(storage.fetcher.mock.calls[1][1]?.body))).toEqual({
+      scope: 'PIPELINE',
+      pipelineIds: ['a'],
+      previousOperationId: 'cluster-recovery',
+    })
+    expect(storage.fetcher.mock.calls.some(([url]) => String(url).endsWith('/confirm'))).toBe(false)
+  })
   it('keeps an unknown import attached to the original ID and queries before another submission', async () => {
     storage.snapshot = {
       ...base,

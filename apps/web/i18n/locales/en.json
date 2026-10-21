@@ -1993,7 +1993,18 @@
       "confirm": "Confirm full rebuild",
       "clusterConfirmHelp": "I have stopped and isolated every old cluster member using the deployment tools and verified that old source/target connections and in-flight writes have ended. I confirm this entire scope. The cluster checks local cleanup and storage identity; I am responsible for isolation across machines. All affected pipelines will remain stopped.",
       "clusterConfirm": "Confirm runtime storage recovery",
-      "clusterComplete": "Runtime storage is ready. Every affected pipeline remains stopped until you explicitly confirm its full rebuild. This does not mean its data or targets have recovered."
+      "clusterComplete": "Runtime storage is ready. Every affected pipeline remains stopped until you explicitly confirm its full rebuild. This does not mean its data or targets have recovered.",
+      "continueOriginal": "Continue this operation",
+      "targets": "Target handling for this full rebuild",
+      "executionFailed": "This operation has not completed. Inspect the pipeline error. If its run failed, stop it before explicitly continuing this original operation.",
+      "stalePreview": "The current inputs no longer match this preview. Check the original scope and preview it again before confirming.",
+      "selectPipeline": "Select one pipeline to rebuild",
+      "repreview": "Recheck this scope",
+      "policy": {
+        "APPEND": "Keep existing rows and apply the configured write mode.",
+        "CLEAR": "Clear the selected target tables before loading the full source again.",
+        "FAIL": "Refuse the full load if a selected target table already contains rows."
+      }
     },
     "transfer": {
       "title": "Transfer configuration",

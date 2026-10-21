@@ -120,8 +120,83 @@ export function StorageRecovery() {
               }),
             })}
           </p>
+          {plan.executionErrorCode && (
+            <div
+              role="alert"
+              className="border-destructive/30 bg-destructive/5 rounded-md border p-3 text-sm"
+            >
+              <p>{t('storage.recovery.executionFailed')}</p>
+              <code className="mt-1 block text-xs">{plan.executionErrorCode}</code>
+            </div>
+          )}
+          {plan.scope === 'PIPELINE' && (plan.targetPolicies ?? []).length > 0 && (
+            <div className="space-y-2 text-sm">
+              <p className="font-medium">{t('storage.recovery.targets')}</p>
+              <ul className="space-y-2">
+                {plan.targetPolicies!.map((target) => (
+                  <li
+                    key={`${target.node}:${target.source}`}
+                    className="border-border rounded-md border p-3"
+                  >
+                    <p className="break-words">
+                      {target.node} → {target.source}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {t(`storage.recovery.policy.${target.policy}`)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {plan.preflightCurrent === false && (
+            <p role="status" className="text-muted-foreground text-sm">
+              {t('storage.recovery.stalePreview')}
+            </p>
+          )}
           {plan.phase === 'COMPLETE' && plan.scope === 'CLUSTER' && (
-            <p className="text-muted-foreground text-sm">{t('storage.recovery.clusterComplete')}</p>
+            <>
+              <p className="text-muted-foreground text-sm">
+                {t('storage.recovery.clusterComplete')}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={action.busy}
+                onClick={() => {
+                  setPreviousOperationId(plan.operationId)
+                  setScope('PIPELINE')
+                  setPipelineIds('')
+                  clearPlan()
+                }}
+              >
+                {t('storage.recovery.selectPipeline')}
+              </Button>
+            </>
+          )}
+          {plan.phase === 'PLANNED' && canPlan && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={action.busy}
+              onClick={() => {
+                setConfirmed(false)
+                void action.run(
+                  () =>
+                    storageRequest<RecoveryPlan>(fetcher, 'storage.recovery.plan', {
+                      scope: plan.scope,
+                      pipelineIds: plan.pipelineIds,
+                      operationId: plan.operationId,
+                    }),
+                  (result) => {
+                    setPlan(result)
+                    setConfirmed(false)
+                  },
+                )
+              }}
+            >
+              {t('storage.recovery.repreview')}
+            </Button>
           )}
           {plan.phase === 'PLANNED' && canPlan && (
             <>
@@ -144,7 +219,13 @@ export function StorageRecovery() {
               <Button
                 className="min-h-11 sm:min-h-8"
                 type="button"
-                disabled={!confirmed || action.busy}
+                disabled={
+                  !confirmed ||
+                  action.busy ||
+                  plan.preflightCurrent === false ||
+                  (plan.scope === 'PIPELINE' &&
+                    (plan.preflightCurrent !== true || !plan.targetPolicies?.length))
+                }
                 onClick={() =>
                   void action.run(
                     () =>
@@ -170,6 +251,33 @@ export function StorageRecovery() {
               </Button>
             </>
           )}
+          {['CONFIRMED', 'RUNNING', 'COMPLETE'].includes(plan.phase) &&
+            snapshot?.allowedActions.includes('storage.recovery.confirm') &&
+            (plan.phase !== 'COMPLETE' || snapshot.businessPhase !== 'READY') && (
+              <Button
+                className="min-h-11 sm:min-h-8"
+                type="button"
+                variant="outline"
+                disabled={action.busy}
+                onClick={() =>
+                  void action.run(
+                    () =>
+                      storageRequest<RecoveryPlan>(fetcher, 'storage.recovery.confirm', {
+                        operationId: plan.operationId,
+                        planHash: plan.planHash,
+                        controlRevision: plan.controlRevision,
+                        confirmed: true,
+                      }),
+                    async (result) => {
+                      setPlan(result)
+                      await refresh()
+                    },
+                  )
+                }
+              >
+                {t('storage.recovery.continueOriginal')}
+              </Button>
+            )}
         </div>
       )}
       <label className="block space-y-1 text-sm">

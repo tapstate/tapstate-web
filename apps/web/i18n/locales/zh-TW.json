@@ -1993,7 +1993,18 @@
       "confirm": "確認全量重建",
       "clusterConfirmHelp": "我已透過部署工具停止並隔離全部舊 Cluster 成員，並確認來源/目標端舊連線和進行中的寫入均已結束。我確認本次完整範圍。Cluster 核驗本機釋放和儲存身分，跨機器隔離由我負責。所有受影響 Pipeline 將保持停止。",
       "clusterConfirm": "確認恢復執行儲存",
-      "clusterComplete": "執行儲存已就緒。所有受影響 Pipeline 保持停止，需要逐一明確確認全量重建；這不表示 Pipeline 資料或目標已恢復。"
+      "clusterComplete": "執行儲存已就緒。所有受影響 Pipeline 保持停止，需要逐一明確確認全量重建；這不表示 Pipeline 資料或目標已恢復。",
+      "continueOriginal": "繼續此原操作",
+      "targets": "本次全量的目標處理方式",
+      "executionFailed": "此操作尚未完成。請查看任務錯誤；執行失敗時，先停止任務，再明確繼續此原操作。",
+      "stalePreview": "目前輸入已不符合此預檢。請核對原範圍並重新預檢，再確認執行。",
+      "selectPipeline": "選擇一個任務進行全量重建",
+      "repreview": "重新預檢此範圍",
+      "policy": {
+        "APPEND": "保留既有資料，依設定的寫入模式寫入。",
+        "CLEAR": "先清空選中的目標表，再重新全量讀取來源資料。",
+        "FAIL": "選中的目標表已有資料時，拒絕執行全量。"
+      }
     },
     "transfer": {
       "title": "設定轉移",

@@ -51,6 +51,10 @@ export interface RecoveryPlan {
   affectedPipelineIds: string[]
   controlRevision: number
   planHash: string
+  preflightCurrent?: boolean
+  targetPolicies?: { node: string; source: string; policy: 'APPEND' | 'CLEAR' | 'FAIL' }[]
+  executionErrorCode?: string | null
+  authGeneration?: number
 }
 export interface ImportReceipt {
   id: string
