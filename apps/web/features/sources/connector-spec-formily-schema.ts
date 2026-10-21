@@ -256,6 +256,17 @@ function fieldSchema(
   }
 }
 
+function tlsEnabledReaction(): JsonRecord {
+  return {
+    dependencies: ['useSSL'],
+    fulfill: {
+      state: {
+        visible: '{{$deps[0] === true || $deps[0] === "true"}}',
+      },
+    },
+  }
+}
+
 function withInjectedConnectionSections(
   connection: JsonRecord,
   spec: JsonRecord,
@@ -266,28 +277,34 @@ function withInjectedConnectionSections(
     properties.__tapstateSsl = {
       type: 'void',
       'x-component': 'ConfigSection',
-      'x-component-props': { title: injectedLabel(locale, 'sslSettings') },
+      'x-component-props': { title: injectedLabel(locale, 'sslSettings'), headerControl: true },
       properties: {
         useSSL: fieldSchema('boolean', injectedLabel(locale, 'useSSL'), 'Switch'),
         sslCa: {
           ...fieldSchema('string', injectedLabel(locale, 'sslCa'), 'TextFileReader', {
             base64: true,
           }),
+          'x-reactions': tlsEnabledReaction(),
           fileNameField: 'sslCAFile',
         },
         sslCert: {
           ...fieldSchema('string', injectedLabel(locale, 'sslCert'), 'TextFileReader', {
             base64: true,
           }),
+          'x-reactions': tlsEnabledReaction(),
           fileNameField: 'sslCertFile',
         },
         sslKey: {
           ...fieldSchema('string', injectedLabel(locale, 'sslKey'), 'TextFileReader', {
             base64: true,
           }),
+          'x-reactions': tlsEnabledReaction(),
           fileNameField: 'sslKeyFile',
         },
-        sslKeyPassword: fieldSchema('string', injectedLabel(locale, 'sslKeyPassword'), 'Password'),
+        sslKeyPassword: {
+          ...fieldSchema('string', injectedLabel(locale, 'sslKeyPassword'), 'Password'),
+          'x-reactions': tlsEnabledReaction(),
+        },
       },
     }
   }

@@ -288,6 +288,28 @@ describe('ConnectorFormily', () => {
     expect(container.textContent).toContain('SSH tunnel')
     expect(container.querySelector('[aria-label="SSH host"]')).not.toBeNull()
 
+    const tlsToggle = fieldControl('Use TLS')
+    expect(tlsToggle?.getAttribute('aria-checked')).toBe('false')
+    const tlsFieldSelectors = [
+      'input[type="file"][aria-label="CA certificate"]',
+      'input[type="file"][aria-label="Client certificate"]',
+      'input[type="file"][aria-label="Client key"]',
+      'input[aria-label="Client key password"]',
+    ]
+    expect(tlsFieldSelectors.map((selector) => container!.querySelector(selector))).toEqual([
+      null,
+      null,
+      null,
+      null,
+    ])
+
+    await act(async () => {
+      tlsToggle?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(
+      tlsFieldSelectors.map((selector) => container!.querySelector(selector) !== null),
+    ).toEqual([true, true, true, true])
     const input = container.querySelector<HTMLInputElement>(
       'input[type="file"][aria-label="CA certificate"]',
     )
@@ -303,6 +325,16 @@ describe('ConnectorFormily', () => {
       sslCa: 'Y2VydA==',
       sslCAFile: 'ca.pem',
     })
+
+    await act(async () => {
+      tlsToggle?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    expect(tlsFieldSelectors.map((selector) => container!.querySelector(selector))).toEqual([
+      null,
+      null,
+      null,
+      null,
+    ])
   })
 
   it('emits the companion filename when replacing a configured private key', async () => {
@@ -330,6 +362,10 @@ describe('ConnectorFormily', () => {
           onSecretChange={(name, draft) => secretChanges.push({ name, ...draft })}
         />,
       )
+    })
+
+    await act(async () => {
+      fieldControl('Use TLS')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
 
     const input = container.querySelector<HTMLInputElement>(
@@ -377,6 +413,10 @@ describe('ConnectorFormily', () => {
           onSecretChange={(name, draft) => secretChanges.push({ name, ...draft })}
         />,
       )
+    })
+
+    await act(async () => {
+      fieldControl('Use TLS')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
 
     const input = container.querySelector<HTMLInputElement>(

@@ -87,6 +87,10 @@ describe('AtlasStoreDialog', () => {
       )
     })
 
+    await act(async () => {
+      document.body.querySelector<HTMLElement>('[role="switch"][aria-label="Use TLS"]')?.click()
+    })
+
     let password: HTMLInputElement | null = null
     await vi.waitFor(() => {
       password = document.body.querySelector<HTMLInputElement>(

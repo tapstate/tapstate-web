@@ -225,11 +225,50 @@ describe('connector spec Formily schema', () => {
     expect(connectorSpecConnectionSchema(taggedSpec, 'en').properties).toMatchObject({
       __tapstateSsl: {
         'x-component': 'ConfigSection',
+        'x-component-props': { title: 'TLS settings', headerControl: true },
         properties: {
           sslCa: {
             'x-component': 'TextFileReader',
             'x-component-props': { base64: true },
+            'x-reactions': {
+              dependencies: ['useSSL'],
+              fulfill: {
+                state: {
+                  visible: '{{$deps[0] === true || $deps[0] === "true"}}',
+                },
+              },
+            },
             fileNameField: 'sslCAFile',
+          },
+          sslCert: {
+            'x-reactions': {
+              dependencies: ['useSSL'],
+              fulfill: {
+                state: {
+                  visible: '{{$deps[0] === true || $deps[0] === "true"}}',
+                },
+              },
+            },
+          },
+          sslKey: {
+            'x-reactions': {
+              dependencies: ['useSSL'],
+              fulfill: {
+                state: {
+                  visible: '{{$deps[0] === true || $deps[0] === "true"}}',
+                },
+              },
+            },
+          },
+          sslKeyPassword: {
+            'x-reactions': {
+              dependencies: ['useSSL'],
+              fulfill: {
+                state: {
+                  visible: '{{$deps[0] === true || $deps[0] === "true"}}',
+                },
+              },
+            },
           },
         },
       },
