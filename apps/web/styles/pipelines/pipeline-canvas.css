@@ -369,8 +369,8 @@
 }
 
 .pipeline-canvas__tool-button[aria-pressed='true']:hover {
-  background: var(--color-state-base-hover);
-  color: var(--color-text-secondary);
+  background: var(--color-state-accent-active);
+  color: var(--color-text-accent);
 }
 
 .pipeline-canvas__tool-button:active {

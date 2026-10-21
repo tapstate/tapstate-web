@@ -13,9 +13,9 @@ import { PipelineCanvasExport } from './pipeline-canvas-export'
 type CanvasInteractionMode = 'pointer' | 'hand'
 
 const pressedToolStateClassName =
-  'data-pressed:bg-state-accent-active data-pressed:text-text-accent data-pressed:hover:bg-state-base-hover data-pressed:hover:text-text-secondary'
+  'data-pressed:bg-state-accent-active data-pressed:text-text-accent'
 const ariaPressedToolStateClassName =
-  'aria-pressed:bg-state-accent-active aria-pressed:text-text-accent aria-pressed:hover:bg-state-base-hover aria-pressed:hover:text-text-secondary'
+  'aria-pressed:bg-state-accent-active aria-pressed:text-text-accent'
 
 interface PipelineCanvasToolbarProps {
   interactionMode: CanvasInteractionMode
