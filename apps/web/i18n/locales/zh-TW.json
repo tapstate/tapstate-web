@@ -1109,7 +1109,8 @@
           "STOPPED": "已停止",
           "COMPLETED": "已完成",
           "FAILED": "失敗",
-          "UNAVAILABLE": "無法使用"
+          "UNAVAILABLE": "無法使用",
+          "RECOVERY_REQUIRED": "需要全量恢復"
         }
       },
       "apiAccess": {
@@ -2004,7 +2005,8 @@
         "APPEND": "保留既有資料，依設定的寫入模式寫入。",
         "CLEAR": "先清空選中的目標表，再重新全量讀取來源資料。",
         "FAIL": "選中的目標表已有資料時，拒絕執行全量。"
-      }
+      },
+      "reviewRequired": "查看全量恢復"
     },
     "transfer": {
       "title": "設定轉移",

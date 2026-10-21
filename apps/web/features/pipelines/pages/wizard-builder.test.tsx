@@ -6,8 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { PipelineClientError, type PipelineDraft } from '@/service/pipelines/pipeline-client'
 
-import type { WizardViewState } from '../components/reference-wizard/ReferenceWizardBuilder'
-
 const {
   getPipelineDraft,
   previewPipelineDraft,
@@ -19,7 +17,9 @@ const {
   listConnectors,
   listSources,
   apiFetch,
+  useRealReferenceWizard,
 } = vi.hoisted(() => ({
+  useRealReferenceWizard: { value: false },
   getPipelineDraft: vi.fn(),
   previewPipelineDraft: vi.fn(),
   streamPipelinePreview: vi.fn(),
@@ -63,71 +63,72 @@ vi.mock('@/stores/auth-store', () => ({
   useAuthStore: <T,>(selector: (state: { apiFetch: typeof fetch }) => T) => selector({ apiFetch }),
 }))
 
-vi.mock('../components/reference-wizard/ReferenceWizardBuilder', () => ({
-  ReferenceWizardBuilder: ({
-    initial,
-    onChange,
-    footer,
-    actions,
-    readOnly,
-    livePreview,
-    livePreviewStatus,
-    onInspectPlan,
-  }: {
-    initial: WizardViewState
-    onChange: (state: WizardViewState) => void
-    footer: React.ReactNode
-    actions?: React.ReactNode
-    readOnly?: boolean
-    livePreview: { runId: string } | null
-    livePreviewStatus: string
-    onInspectPlan: () => Promise<string>
-  }) => (
-    <section
-      className="wizard-reference-editor-column"
-      data-read-only={readOnly ? 'true' : 'false'}
-      data-root-table={initial.root?.table ?? ''}
-      data-live-preview-status={livePreviewStatus}
-      data-live-preview-run={livePreview?.runId || ''}
-    >
-      <button
-        data-testid="change-wizard"
-        disabled={readOnly}
-        onClick={() =>
-          onChange({
-            root: {
-              source: 'mysql',
-              table: 'AA_0716',
-              primaryKey: 'ID',
-              keys: ['ID'],
-              rowCount: '—',
-              columns: ['ID'],
-            },
-            relations: [],
-            transforms: [
-              {
-                id: 'verify_filter',
-                name: 'Keep rows',
-                type: 'filter',
-                config: { filter: { expr: 'true' } },
-              },
-            ],
-            destinationSourceId: 'mysql',
-            destinationTable: 'codex_wizard_component_test',
-            destinationWriteMode: 'append',
-          })
-        }
-      >
-        Change wizard
-      </button>
-      <button data-testid="inspect-plan" onClick={() => void onInspectPlan()}>
-        Inspect Plan
-      </button>
-      {footer}
-      {actions}
-    </section>
-  ),
-}))
+vi.mock('../components/reference-wizard/ReferenceWizardBuilder', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../components/reference-wizard/ReferenceWizardBuilder')>()
+  return {
+    ReferenceWizardBuilder: (
+      props: import('../components/reference-wizard/ReferenceWizardBuilder').WizardBuilderProps,
+    ) => {
+      if (useRealReferenceWizard.value) return <actual.ReferenceWizardBuilder {...props} />
+      const {
+        initial,
+        onChange,
+        footer,
+        actions,
+        readOnly,
+        livePreview,
+        livePreviewStatus,
+        onInspectPlan,
+      } = props
+      return (
+        <section
+          className="wizard-reference-editor-column"
+          data-read-only={readOnly ? 'true' : 'false'}
+          data-root-table={initial.root?.table ?? ''}
+          data-live-preview-status={livePreviewStatus}
+          data-live-preview-run={livePreview?.runId || ''}
+        >
+          <button
+            data-testid="change-wizard"
+            disabled={readOnly}
+            onClick={() =>
+              onChange({
+                root: {
+                  source: 'mysql',
+                  table: 'AA_0716',
+                  primaryKey: 'ID',
+                  keys: ['ID'],
+                  rowCount: '—',
+                  columns: ['ID'],
+                },
+                relations: [],
+                transforms: [
+                  {
+                    id: 'verify_filter',
+                    name: 'Keep rows',
+                    type: 'filter',
+                    config: { filter: { expr: 'true' } },
+                  },
+                ],
+                destinationSourceId: 'mysql',
+                destinationTable: 'codex_wizard_component_test',
+                destinationWriteMode: 'append',
+              })
+            }
+          >
+            Change wizard
+          </button>
+          <button data-testid="inspect-plan" onClick={() => void onInspectPlan?.()}>
+            Inspect Plan
+          </button>
+          {footer}
+          {actions}
+        </section>
+      )
+    },
+  }
+})
 
 import { WizardBuilder } from './wizard-builder'
 
@@ -163,6 +164,7 @@ const initialDraft: PipelineDraft = {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  useRealReferenceWizard.value = false
   listSources.mockResolvedValue([{ id: 'mysql', connector: 'mysql' }])
   listConnectors.mockResolvedValue([
     {
@@ -212,6 +214,80 @@ afterEach(() => {
 })
 
 describe('WizardBuilder publish flow', () => {
+  it.each([false, true])(
+    'blocks every recovery-required Wizard launch (guided=%s)',
+    async (guided) => {
+      useRealReferenceWizard.value = true
+      const draft: PipelineDraft = {
+        ...initialDraft,
+        wizard: {
+          ...initialDraft.wizard!,
+          output: {
+            kind: 'source',
+            config: {
+              sourceId: 'mysql',
+              table: 'codex_wizard_component_test',
+              writeMode: 'append',
+              ...(guided ? { onboardingGuide: 'order-360-sample' } : {}),
+            },
+          },
+        },
+      }
+      if (guided) {
+        listSources.mockResolvedValue([
+          { id: 'mysql', connector: 'mysql', metadata: { labels: { sample: 'true' } } },
+        ])
+        getSourceSchema.mockResolvedValue({
+          tables: ['bmsql_customer', 'bmsql_oorder', 'bmsql_order_line'].map((name) => ({
+            name,
+            primaryKey: ['id'],
+            fields: [{ name: 'id' }],
+          })),
+        })
+      }
+      container = document.createElement('div')
+      document.body.append(container)
+      root = createRoot(container)
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      await act(async () =>
+        root?.render(
+          <QueryClientProvider client={queryClient}>
+            <WizardBuilder
+              pipelineId={draft.pipelineId}
+              draft={draft}
+              etag='"1"'
+              runtimeStatus="STOPPED"
+              lifecycleStatus="RECOVERY_REQUIRED"
+              stopAction={<a href="/settings">Review full recovery</a>}
+            />
+          </QueryClientProvider>,
+        ),
+      )
+      await vi.waitFor(() =>
+        expect(container?.querySelector('[data-testid="wizard-builder-shell"]')).not.toBeNull(),
+      )
+      if (guided) {
+        for (let step = 0; step < 4; step++) {
+          const next = Array.from(container!.querySelectorAll('button')).find(
+            (button) => button.textContent?.trim() === 'Next',
+          )
+          expect(next).toBeDefined()
+          await act(async () => next!.click())
+        }
+      }
+      const launch = Array.from(container!.querySelectorAll('button')).filter((button) =>
+        /^(Save & start|Launch)/.test(button.textContent?.trim() || ''),
+      )
+      expect(launch).toHaveLength(guided ? 1 : 0)
+      expect(launch.every((button) => button.disabled)).toBe(true)
+      await act(async () => launch.forEach((button) => button.click()))
+      expect(container!.querySelector('a[href="/settings"]')).not.toBeNull()
+      expect(previewPipelineDraft).not.toHaveBeenCalled()
+      expect(publishPipelineDraft).not.toHaveBeenCalled()
+      expect(runPipeline).not.toHaveBeenCalled()
+    },
+  )
+
   it('compiles an unfinished destination only for inspection without saving the temporary name', async () => {
     const draft: PipelineDraft = {
       ...initialDraft,

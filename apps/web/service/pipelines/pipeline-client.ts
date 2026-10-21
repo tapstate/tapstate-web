@@ -222,6 +222,7 @@ export interface PipelineStatus {
 export type PipelineCatalogState =
   | PipelineRuntimeState
   | 'DRAFT'
+  | 'RECOVERY_REQUIRED'
   | 'STARTING'
   | 'PAUSING'
   | 'RESUMING'
@@ -230,6 +231,7 @@ export type PipelineCatalogState =
 
 export interface PipelineCatalogStatus {
   state: PipelineCatalogState
+  displayState?: PipelineCatalogState
   desiredState?: PipelineRuntimeState | null
   observedState?: PipelineRuntimeState | null
   failure?: PipelineStatusFailure | null
@@ -507,6 +509,7 @@ function isPipelineStatus(value: unknown): value is PipelineStatus {
       'COMPLETED',
       'FAILED',
       'UNAVAILABLE',
+      'RECOVERY_REQUIRED',
     ].includes(value.state as string) &&
     (value.failure === undefined ||
       value.failure === null ||
@@ -526,6 +529,7 @@ function isPipelineCatalogStatus(value: unknown): value is PipelineCatalogStatus
       'RESUMING',
       'STOPPING',
       'UNAVAILABLE',
+      'RECOVERY_REQUIRED',
     ].includes(value.state as string) &&
     (value.desiredState === undefined ||
       value.desiredState === null ||
@@ -1437,7 +1441,11 @@ export async function listPipelines(fetcher: ApiFetcher = fetch): Promise<Pipeli
   ) {
     throw new PipelineClientError('protocol', 'Tapstate returned an invalid Pipeline list.')
   }
-  return payload.items
+  return payload.items.map((item) =>
+    item.status.displayState === 'RECOVERY_REQUIRED'
+      ? { ...item, status: { ...item.status, state: 'RECOVERY_REQUIRED' as const } }
+      : item,
+  )
 }
 
 export async function getPipelineStatus(

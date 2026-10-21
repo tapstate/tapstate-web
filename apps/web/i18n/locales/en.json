@@ -1109,7 +1109,8 @@
           "STOPPED": "Stopped",
           "COMPLETED": "Completed",
           "FAILED": "Failed",
-          "UNAVAILABLE": "Unavailable"
+          "UNAVAILABLE": "Unavailable",
+          "RECOVERY_REQUIRED": "Full recovery required"
         }
       },
       "apiAccess": {
@@ -2004,7 +2005,8 @@
         "APPEND": "Keep existing rows and apply the configured write mode.",
         "CLEAR": "Clear the selected target tables before loading the full source again.",
         "FAIL": "Refuse the full load if a selected target table already contains rows."
-      }
+      },
+      "reviewRequired": "Review full recovery"
     },
     "transfer": {
       "title": "Transfer configuration",

@@ -1109,7 +1109,8 @@
           "STOPPED": "已停止",
           "COMPLETED": "已完成",
           "FAILED": "失败",
-          "UNAVAILABLE": "不可用"
+          "UNAVAILABLE": "不可用",
+          "RECOVERY_REQUIRED": "需要全量恢复"
         }
       },
       "apiAccess": {
@@ -2004,7 +2005,8 @@
         "APPEND": "保留已有数据，按配置的写入模式写入。",
         "CLEAR": "先清空选中的目标表，再重新全量读取源数据。",
         "FAIL": "选中的目标表已有数据时，拒绝执行全量。"
-      }
+      },
+      "reviewRequired": "查看全量恢复"
     },
     "transfer": {
       "title": "配置转移",

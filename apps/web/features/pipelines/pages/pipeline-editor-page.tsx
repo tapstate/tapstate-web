@@ -888,20 +888,25 @@ function PipelineOrchestrationPage({
   const isWizard = wizardDocument !== null
   const wizardReadOnly =
     isReadOnly || (isWizard && (runtimeObservationPending || runtimeObservationError))
-  const stopAction = isReadOnly ? (
-    <PipelineLifecycleMenu
-      pipelineId={pipelineId}
-      status={runtimeStatus}
-      apiFetch={apiFetch}
-      contentHash="published"
-      presentation="stop-button"
-      onMutationError={(_action, cause) =>
-        pushActionError(
-          cause instanceof Error ? cause.message : t('pipelines.lifecycle.stopFailed'),
-        )
-      }
-    />
-  ) : undefined
+  const stopAction =
+    lifecycleStatus === 'RECOVERY_REQUIRED' ? (
+      <Button asChild variant="outline">
+        <Link to="/settings">{t('storage.recovery.reviewRequired')}</Link>
+      </Button>
+    ) : isReadOnly ? (
+      <PipelineLifecycleMenu
+        pipelineId={pipelineId}
+        status={runtimeStatus}
+        apiFetch={apiFetch}
+        contentHash="published"
+        presentation="stop-button"
+        onMutationError={(_action, cause) =>
+          pushActionError(
+            cause instanceof Error ? cause.message : t('pipelines.lifecycle.stopFailed'),
+          )
+        }
+      />
+    ) : undefined
   const saveBasicInfo = useCallback(
     async (basicInfo: PipelineDraftBasicInfo) => {
       if (isReadOnly) throw new Error(t('pipelines.workspace.readOnly.editorStatus'))
@@ -1178,7 +1183,7 @@ function PipelineOrchestrationPage({
   }
 
   async function handleRun() {
-    if (isReadOnly) return
+    if (isReadOnly || lifecycleStatus === 'RECOVERY_REQUIRED') return
     try {
       const saved = isDirty ? await handleSave() : await autosave.saveLatest()
       if (isDirty && !saved) return
