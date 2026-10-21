@@ -1980,17 +1980,20 @@
       "network": "The response could not be verified. Check the connection and the original operation result."
     },
     "recovery": {
-      "title": "Rebuild missing runtime state",
-      "help": "Preview the affected pipelines before confirming a full rebuild. Saved configuration remains. This is a new full load, not continuation from the old position.",
+      "title": "Recover runtime storage and pipelines",
+      "help": "Cluster recovery prepares new runtime storage and leaves every affected pipeline stopped. Then preview and explicitly confirm a full rebuild for each pipeline, including its source and target requirements.",
       "scope": "Rebuild scope",
-      "cluster": "Whole cluster",
-      "pipelines": "Selected pipelines",
+      "cluster": "Runtime storage for the cluster",
+      "pipelines": "One pipeline full rebuild",
       "previous": "Previous recovery operation ID, if requested by the server",
       "preview": "Preview impact",
       "affected": "Affected pipelines",
       "noPipelines": "No pipelines are included in this plan.",
-      "confirmHelp": "I have reviewed this entire scope and confirm the full rebuild, including interruption, target handling and any required sign-in. A changed scope needs a new preview.",
-      "confirm": "Confirm full rebuild"
+      "confirmHelp": "I have reviewed this pipeline, its source full-load capability, models, and target handling, and explicitly confirm a new full rebuild. A changed scope needs a new preview.",
+      "confirm": "Confirm full rebuild",
+      "clusterConfirmHelp": "I have stopped and isolated every old cluster member using the deployment tools and verified that old source/target connections and in-flight writes have ended. I confirm this entire scope. The cluster checks local cleanup and storage identity; I am responsible for isolation across machines. All affected pipelines will remain stopped.",
+      "clusterConfirm": "Confirm runtime storage recovery",
+      "clusterComplete": "Runtime storage is ready. Every affected pipeline remains stopped until you explicitly confirm its full rebuild. This does not mean its data or targets have recovered."
     },
     "transfer": {
       "title": "Transfer configuration",

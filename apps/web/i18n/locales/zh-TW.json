@@ -1980,17 +1980,20 @@
       "network": "無法確認回應，請檢查連接並核對原操作結果。"
     },
     "recovery": {
-      "title": "重建缺失的執行狀態",
-      "help": "先預檢受影響的 Pipeline，再確認全量重建。已儲存設定保留；這是新的全量，並非從舊位置續跑。",
+      "title": "恢復執行儲存與 Pipeline",
+      "help": "整庫恢復只準備新的執行儲存，所有受影響 Pipeline 保持停止。隨後逐一預檢並明確確認全量重建，核對來源資料及目標處理前置。",
       "scope": "重建範圍",
-      "cluster": "整個叢集",
-      "pipelines": "指定 Pipeline",
+      "cluster": "叢集執行儲存",
+      "pipelines": "單一 Pipeline 全量重建",
       "previous": "伺服器要求時填寫原恢復操作 ID",
       "preview": "預檢影響範圍",
       "affected": "受影響的 Pipeline",
       "noPipelines": "此方案不包含 Pipeline。",
-      "confirmHelp": "我已核對完整範圍，確認全量重建及其中斷、目標處理和重新登入影響。範圍變更後須重新預檢。",
-      "confirm": "確認全量重建"
+      "confirmHelp": "我已核對這個 Pipeline、來源全量能力、模型與目標處理，明確確認發起新的全量重建。範圍變更後須重新預檢。",
+      "confirm": "確認全量重建",
+      "clusterConfirmHelp": "我已透過部署工具停止並隔離全部舊 Cluster 成員，並確認來源/目標端舊連線和進行中的寫入均已結束。我確認本次完整範圍。Cluster 核驗本機釋放和儲存身分，跨機器隔離由我負責。所有受影響 Pipeline 將保持停止。",
+      "clusterConfirm": "確認恢復執行儲存",
+      "clusterComplete": "執行儲存已就緒。所有受影響 Pipeline 保持停止，需要逐一明確確認全量重建；這不表示 Pipeline 資料或目標已恢復。"
     },
     "transfer": {
       "title": "設定轉移",

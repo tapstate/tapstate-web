@@ -79,7 +79,7 @@ export function StorageRecovery() {
             className="min-h-11 sm:min-h-8"
             type="button"
             variant="outline"
-            disabled={scope === 'PIPELINE' && !pipelineIds.trim()}
+            disabled={scope === 'PIPELINE' && splitIds(pipelineIds).length !== 1}
             onClick={() => {
               clearPlan()
               void action.run(
@@ -120,6 +120,9 @@ export function StorageRecovery() {
               }),
             })}
           </p>
+          {plan.phase === 'COMPLETE' && plan.scope === 'CLUSTER' && (
+            <p className="text-muted-foreground text-sm">{t('storage.recovery.clusterComplete')}</p>
+          )}
           {plan.phase === 'PLANNED' && canPlan && (
             <>
               <label className="flex items-start gap-2 text-sm">
@@ -130,7 +133,13 @@ export function StorageRecovery() {
                   disabled={action.busy}
                   onChange={(e) => setConfirmed(e.target.checked)}
                 />
-                <span>{t('storage.recovery.confirmHelp')}</span>
+                <span>
+                  {t(
+                    plan.scope === 'CLUSTER'
+                      ? 'storage.recovery.clusterConfirmHelp'
+                      : 'storage.recovery.confirmHelp',
+                  )}
+                </span>
               </label>
               <Button
                 className="min-h-11 sm:min-h-8"
@@ -153,7 +162,11 @@ export function StorageRecovery() {
                   )
                 }
               >
-                {t('storage.recovery.confirm')}
+                {t(
+                  plan.scope === 'CLUSTER'
+                    ? 'storage.recovery.clusterConfirm'
+                    : 'storage.recovery.confirm',
+                )}
               </Button>
             </>
           )}

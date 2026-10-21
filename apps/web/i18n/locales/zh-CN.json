@@ -1980,17 +1980,20 @@
       "network": "无法确认响应，请检查连接并核对原操作结果。"
     },
     "recovery": {
-      "title": "重建缺失的运行状态",
-      "help": "先预检受影响的 Pipeline，再确认全量重建。已保存配置保留；这是新的全量，不是从旧位点续跑。",
+      "title": "恢复运行存储与 Pipeline",
+      "help": "整库恢复只准备新的运行存储，所有受影响 Pipeline 保持停止。随后逐个预检并明确确认全量重建，核对源数据和目标处理前置。",
       "scope": "重建范围",
-      "cluster": "整个集群",
-      "pipelines": "指定 Pipeline",
+      "cluster": "集群运行存储",
+      "pipelines": "单个 Pipeline 全量重建",
       "previous": "服务端要求时填写原恢复操作 ID",
       "preview": "预检影响范围",
       "affected": "受影响的 Pipeline",
       "noPipelines": "此方案不包含 Pipeline。",
-      "confirmHelp": "我已核对完整范围，确认全量重建及其执行中断、目标处理和重新登录影响。范围变化后需重新预检。",
-      "confirm": "确认全量重建"
+      "confirmHelp": "我已核对这个 Pipeline、源全量能力、模型与目标处理，明确确认发起新的全量重建。范围变化后须重新预检。",
+      "confirm": "确认全量重建",
+      "clusterConfirmHelp": "我已通过部署工具停止并隔离全部旧 Cluster 成员，并确认源/目标端旧连接和在途写入均已结束。我确认本次完整范围。Cluster 核验本机释放和存储身份，跨机器隔离由我负责。所有受影响 Pipeline 将保持停止。",
+      "clusterConfirm": "确认恢复运行存储",
+      "clusterComplete": "运行存储已就绪。所有受影响 Pipeline 保持停止，需要逐个明确确认全量重建；这不表示 Pipeline 数据或目标已恢复。"
     },
     "transfer": {
       "title": "配置转移",

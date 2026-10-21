@@ -202,13 +202,14 @@ describe('explicit recovery and import', () => {
     expect(container.textContent).toContain('pipeline-b')
     expect(
       [...container.querySelectorAll('button')].find(
-        (button) => button.textContent === i18n.t('storage.recovery.confirm'),
+        (button) => button.textContent === i18n.t('storage.recovery.clusterConfirm'),
       )?.disabled,
     ).toBe(true)
     await act(async () =>
       container.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click(),
     )
-    await click('storage.recovery.confirm')
+    expect(container.textContent).toContain(i18n.t('storage.recovery.clusterConfirmHelp'))
+    await click('storage.recovery.clusterConfirm')
     expect(JSON.parse(String(storage.fetcher.mock.calls[1][1]?.body))).toEqual({
       operationId: 'recovery-id',
       planHash: 'original-hash',
@@ -216,6 +217,7 @@ describe('explicit recovery and import', () => {
       confirmed: true,
     })
     expect(storage.refresh).toHaveBeenCalledOnce()
+    expect(container.textContent).toContain(i18n.t('storage.recovery.clusterComplete'))
   })
   it('keeps an unknown import attached to the original ID and queries before another submission', async () => {
     storage.snapshot = {
