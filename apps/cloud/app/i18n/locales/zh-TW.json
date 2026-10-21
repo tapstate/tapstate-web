@@ -50,6 +50,49 @@
     "goLogin": "登入",
     "securityNote": "工作階段由安全的 HttpOnly Cookie 保護。",
     "footer": "© 2026 Tapstate Systems Inc.",
+    "showcase": {
+      "headlinePrimary": "一次定義業務檢視。",
+      "headlineSecondary": "資料變更時，檢視持續保持最新。",
+      "description": "Tapstate Cloud 擷取各業務資料庫中的變更，整合相關記錄，並在 MongoDB Atlas 中維護最終檢視，讓應用程式和 AI 無需每次請求時重新拼接跨系統狀態。",
+      "workspaceSummary": "讓 MongoDB Atlas 中的統一客戶檢視持續保持最新。",
+      "menu": {
+        "overview": "總覽",
+        "sources": "資料來源",
+        "pipelines": "資料管線",
+        "views": "檢視",
+        "settings": "設定"
+      },
+      "status": {
+        "handshake": "HANDSHAKE SYNC...",
+        "running": "執行中"
+      },
+      "actions": {
+        "createPipeline": "+ 建立資料管線",
+        "createPipelineHint": "點擊以模擬即時 CDC 變更流"
+      },
+      "sources": {
+        "title": "資料來源",
+        "connectedCount": "已連線 3 個",
+        "pinned": "已固定",
+        "connected": "已連線"
+      },
+      "views": {
+        "title": "業務檢視",
+        "count": "4 個檢視",
+        "toggleHint": "在結構欄位和即時物化值之間切換",
+        "fields": "欄位",
+        "json": "JSON"
+      },
+      "target": {
+        "title": "目標",
+        "synced": "已同步"
+      },
+      "consumers": {
+        "title": "使用者",
+        "applicationsAndAi": "應用程式與 AI",
+        "channels": "儀表板 · API · 智慧代理"
+      }
+    },
     "errors": {
       "generic": "要求未能完成。請檢查填寫內容後再試一次。",
       "network": "暫時無法連線至 Cloud 服務，請稍後再試。",

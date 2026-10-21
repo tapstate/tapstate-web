@@ -50,6 +50,49 @@
     "goLogin": "登录",
     "securityNote": "会话由安全的 HttpOnly Cookie 保护。",
     "footer": "© 2026 Tapstate Systems Inc.",
+    "showcase": {
+      "headlinePrimary": "一次定义业务视图。",
+      "headlineSecondary": "数据变化时，视图持续保持最新。",
+      "description": "Tapstate Cloud 捕获各业务数据库中的变更，将相关记录整合到一起，并在 MongoDB Atlas 中维护最终视图，让应用和 AI 无需每次请求时重新拼接跨系统状态。",
+      "workspaceSummary": "让 MongoDB Atlas 中的统一客户视图持续保持最新。",
+      "menu": {
+        "overview": "概览",
+        "sources": "数据源",
+        "pipelines": "数据管道",
+        "views": "视图",
+        "settings": "设置"
+      },
+      "status": {
+        "handshake": "HANDSHAKE SYNC...",
+        "running": "运行中"
+      },
+      "actions": {
+        "createPipeline": "+ 创建数据管道",
+        "createPipelineHint": "点击以模拟实时 CDC 变更流"
+      },
+      "sources": {
+        "title": "数据源",
+        "connectedCount": "已连接 3 个",
+        "pinned": "已固定",
+        "connected": "已连接"
+      },
+      "views": {
+        "title": "业务视图",
+        "count": "4 个视图",
+        "toggleHint": "在结构字段和实时物化值之间切换",
+        "fields": "字段",
+        "json": "JSON"
+      },
+      "target": {
+        "title": "目标",
+        "synced": "已同步"
+      },
+      "consumers": {
+        "title": "使用方",
+        "applicationsAndAi": "应用与 AI",
+        "channels": "仪表盘 · API · 智能体"
+      }
+    },
     "errors": {
       "generic": "请求未能完成。请检查填写内容后重试。",
       "network": "暂时无法连接 Cloud 服务，请稍后重试。",

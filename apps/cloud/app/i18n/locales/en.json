@@ -50,6 +50,49 @@
     "goLogin": "Sign in",
     "securityNote": "Your session is protected by a secure, HttpOnly cookie.",
     "footer": "© 2026 Tapstate Systems Inc.",
+    "showcase": {
+      "headlinePrimary": "Define your business view once.",
+      "headlineSecondary": "Keep it current as data changes.",
+      "description": "Tapstate Cloud captures changes across your operational databases, brings related records together, and maintains the resulting view in MongoDB Atlas—ready for applications and AI without rebuilding cross-system state on every request.",
+      "workspaceSummary": "Keep a unified customer view up to date in MongoDB Atlas.",
+      "menu": {
+        "overview": "Overview",
+        "sources": "Sources",
+        "pipelines": "Pipelines",
+        "views": "Views",
+        "settings": "Settings"
+      },
+      "status": {
+        "handshake": "HANDSHAKE SYNC...",
+        "running": "Running"
+      },
+      "actions": {
+        "createPipeline": "+ Create pipeline",
+        "createPipelineHint": "Click to simulate a real-time CDC mutation wave"
+      },
+      "sources": {
+        "title": "Sources",
+        "connectedCount": "3 connected",
+        "pinned": "PINNED",
+        "connected": "Connected"
+      },
+      "views": {
+        "title": "Business view",
+        "count": "4 views",
+        "toggleHint": "Toggle between Schema Fields and Live Materialized Values",
+        "fields": "Fields",
+        "json": "JSON"
+      },
+      "target": {
+        "title": "Target",
+        "synced": "Synced"
+      },
+      "consumers": {
+        "title": "Consumers",
+        "applicationsAndAi": "Applications & AI",
+        "channels": "Dashboards · APIs · Agents"
+      }
+    },
     "errors": {
       "generic": "We could not complete that request. Check your details and try again.",
       "network": "The Cloud service could not be reached. Try again shortly.",
