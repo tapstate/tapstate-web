@@ -224,7 +224,7 @@ export const InteractiveCustomer360Showcase: FC<{
         ref={stageRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        className="relative z-10 w-full max-w-[690px] pt-3 pr-1 pb-5 pl-3 xl:max-w-[720px] 2xl:max-w-[740px]"
+        className="relative z-10 w-full max-w-[690px] px-1 py-2 sm:pt-3 sm:pr-1 sm:pb-5 sm:pl-3 xl:max-w-[720px] 2xl:max-w-[740px]"
         style={{ perspective: '1400px' }}
       >
         {/* Ambient Cyan-Sky Backlight Glow behind the 3D Console */}
@@ -277,32 +277,32 @@ export const InteractiveCustomer360Showcase: FC<{
             }}
           />
 
-          <div className="relative z-10 flex min-h-[372px] xl:min-h-[396px]">
+          <div className="relative z-10 flex min-h-0 flex-col sm:min-h-[372px] sm:flex-row xl:min-h-[396px]">
             {/* Left Console Sidebar - Compact fixed width so the 3-column topology has ample room */}
-            <div className="flex w-[118px] shrink-0 flex-col justify-between border-r border-slate-200/70 bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9]/70 p-4 xl:w-[132px] xl:p-4.5 dark:border-white/[0.06] dark:from-[#11141D] dark:to-[#0E1118]">
-              <div className="space-y-6">
+            <div className="flex w-full shrink-0 flex-col justify-between border-b border-slate-200/70 bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9]/70 p-3 sm:w-[118px] sm:border-r sm:border-b-0 sm:p-4 xl:w-[132px] xl:p-4.5 dark:border-white/[0.06] dark:from-[#11141D] dark:to-[#0E1118]">
+              <div className="w-full space-y-3 sm:space-y-6">
                 <div className="px-0.5 pt-0.5">
                   <TapstateBrandLogo size="sm" />
                 </div>
 
-                <div className="space-y-1.5 text-[11px] font-medium xl:text-[11.5px]">
-                  <div className="flex items-center gap-2 rounded-lg px-2.5 py-2 whitespace-nowrap text-slate-600 dark:text-slate-400">
+                <div className="grid grid-cols-5 gap-1 text-[8px] leading-none font-medium sm:block sm:space-y-1.5 sm:text-[11px] sm:leading-normal xl:text-[11.5px]">
+                  <div className="flex flex-col items-center justify-center gap-1 rounded-lg px-0.5 py-1.5 whitespace-nowrap text-slate-600 sm:flex-row sm:justify-start sm:gap-2 sm:px-2.5 sm:py-2 dark:text-slate-400">
                     <LayoutGrid className="h-3.5 w-3.5 shrink-0 opacity-70" />
                     <span>{t('auth.showcase.menu.overview')}</span>
                   </div>
-                  <div className="flex items-center gap-2 rounded-lg px-2.5 py-2 whitespace-nowrap text-slate-600 dark:text-slate-400">
+                  <div className="flex flex-col items-center justify-center gap-1 rounded-lg px-0.5 py-1.5 whitespace-nowrap text-slate-600 sm:flex-row sm:justify-start sm:gap-2 sm:px-2.5 sm:py-2 dark:text-slate-400">
                     <Database className="h-3.5 w-3.5 shrink-0 opacity-70" />
                     <span>{t('auth.showcase.menu.sources')}</span>
                   </div>
-                  <div className="flex items-center gap-2 rounded-lg bg-[#E6F0FF] px-2.5 py-2 font-semibold whitespace-nowrap text-[#1D4ED8] dark:bg-blue-500/20 dark:text-blue-400">
+                  <div className="flex flex-col items-center justify-center gap-1 rounded-lg bg-[#E6F0FF] px-0.5 py-1.5 font-semibold whitespace-nowrap text-[#1D4ED8] sm:flex-row sm:justify-start sm:gap-2 sm:px-2.5 sm:py-2 dark:bg-blue-500/20 dark:text-blue-400">
                     <GitCommit className="h-3.5 w-3.5 shrink-0" />
                     <span>{t('auth.showcase.menu.pipelines')}</span>
                   </div>
-                  <div className="flex items-center gap-2 rounded-lg px-2.5 py-2 whitespace-nowrap text-slate-600 dark:text-slate-400">
+                  <div className="flex flex-col items-center justify-center gap-1 rounded-lg px-0.5 py-1.5 whitespace-nowrap text-slate-600 sm:flex-row sm:justify-start sm:gap-2 sm:px-2.5 sm:py-2 dark:text-slate-400">
                     <Layers className="h-3.5 w-3.5 shrink-0 opacity-70" />
                     <span>{t('auth.showcase.menu.views')}</span>
                   </div>
-                  <div className="flex items-center gap-2 rounded-lg px-2.5 py-2 whitespace-nowrap text-slate-600 dark:text-slate-400">
+                  <div className="flex flex-col items-center justify-center gap-1 rounded-lg px-0.5 py-1.5 whitespace-nowrap text-slate-600 sm:flex-row sm:justify-start sm:gap-2 sm:px-2.5 sm:py-2 dark:text-slate-400">
                     <Settings className="h-3.5 w-3.5 shrink-0 opacity-70" />
                     <span>{t('auth.showcase.menu.settings')}</span>
                   </div>
@@ -311,7 +311,7 @@ export const InteractiveCustomer360Showcase: FC<{
             </div>
 
             {/* Right Pipeline Workspace Canvas */}
-            <div className="flex min-w-0 flex-1 flex-col justify-between space-y-5 bg-white p-5 xl:p-6 dark:bg-[#151821]">
+            <div className="flex w-full min-w-0 flex-1 flex-col justify-between space-y-4 bg-white p-3 sm:space-y-5 sm:p-5 xl:p-6 dark:bg-[#151821]">
               {/* Top Breadcrumb & Header Row */}
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -368,7 +368,7 @@ export const InteractiveCustomer360Showcase: FC<{
               </div>
 
               {/* 3-Column Topology with Dedicated Narrow Connector Tracks (Zero text truncation) */}
-              <div className="relative grid flex-1 grid-cols-[1.08fr_22px_1.05fr_22px_1.18fr] items-stretch gap-0 pt-1 xl:grid-cols-[1.1fr_26px_1.06fr_26px_1.22fr]">
+              <div className="relative grid flex-1 grid-cols-1 items-stretch gap-2 pt-1 sm:grid-cols-[1.08fr_22px_1.05fr_22px_1.18fr] sm:gap-0 xl:grid-cols-[1.1fr_26px_1.06fr_26px_1.22fr]">
                 {/* COLUMN 1: Sources (3 connected) */}
                 <div className="z-10 flex flex-col justify-between space-y-2.5 rounded-xl border border-slate-200/80 bg-[#F8FAFC] p-2.5 xl:p-3 dark:border-white/[0.08] dark:bg-white/[0.02]">
                   <div className="flex items-center justify-between gap-1">
@@ -423,7 +423,7 @@ export const InteractiveCustomer360Showcase: FC<{
                 </div>
 
                 {/* SVG CONNECTOR BRIDGE 1: Sources -> Business view (with Live Traveling Data Packets) */}
-                <div className="pointer-events-none relative z-20 -mx-0.5 flex items-center justify-center">
+                <div className="pointer-events-none relative z-20 -mx-0.5 hidden items-center justify-center sm:flex">
                   <svg
                     className="h-[180px] w-full overflow-visible"
                     viewBox="0 0 36 180"
@@ -479,6 +479,32 @@ export const InteractiveCustomer360Showcase: FC<{
                     {/* Converging Arrowhead */}
                     <path
                       d="M 28 92.5 L 33.5 96 L 28 99.5"
+                      stroke="#00B4B8"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
+
+                <div className="pointer-events-none flex h-5 items-center justify-center sm:hidden">
+                  <svg className="h-5 w-7" viewBox="0 0 24 20" fill="none">
+                    <path
+                      d="M12 1V16"
+                      stroke={activeSource === 'oracle' ? '#00B4B8' : '#94A3B8'}
+                      strokeWidth="1.5"
+                      strokeDasharray="3 2.5"
+                    />
+                    <circle r="2.2" fill="#00B4B8">
+                      <animateMotion
+                        key={`${activeSource}-${burstCount}-mobile`}
+                        dur={isAuthenticating ? '0.45s' : '1.25s'}
+                        repeatCount="indefinite"
+                        path="M 12 1 L 12 16"
+                      />
+                    </circle>
+                    <path
+                      d="M8.5 12.5L12 17L15.5 12.5"
                       stroke="#00B4B8"
                       strokeWidth="1.5"
                       strokeLinecap="round"
@@ -562,7 +588,7 @@ export const InteractiveCustomer360Showcase: FC<{
                 </div>
 
                 {/* SVG CONNECTOR BRIDGE 2: Business view -> Target & Consumers (with Traveling Particles) */}
-                <div className="pointer-events-none relative z-20 -mx-0.5 flex items-center justify-center">
+                <div className="pointer-events-none relative z-20 -mx-0.5 hidden items-center justify-center sm:flex">
                   <svg
                     className="h-[180px] w-full overflow-visible"
                     viewBox="0 0 32 180"
@@ -608,6 +634,26 @@ export const InteractiveCustomer360Showcase: FC<{
                       d="M 24 138.5 L 29.5 142 L 24 145.5"
                       stroke="#3B82F6"
                       strokeWidth="1.4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
+
+                <div className="pointer-events-none flex h-5 items-center justify-center sm:hidden">
+                  <svg className="h-5 w-7" viewBox="0 0 24 20" fill="none">
+                    <path d="M12 1V16" stroke="#10B981" strokeWidth="1.5" strokeDasharray="3 2.5" />
+                    <circle r="2.2" fill="#10B981">
+                      <animateMotion
+                        dur={isAuthenticating ? '0.4s' : '1.1s'}
+                        repeatCount="indefinite"
+                        path="M 12 1 L 12 16"
+                      />
+                    </circle>
+                    <path
+                      d="M8.5 12.5L12 17L15.5 12.5"
+                      stroke="#10B981"
+                      strokeWidth="1.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />

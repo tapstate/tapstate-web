@@ -117,7 +117,7 @@ export function AuthPage({
         </div>
       </header>
 
-      <main className="relative z-10 flex w-full flex-1 items-center justify-center px-6 py-8 sm:px-10 lg:px-12 xl:px-16">
+      <main className="relative z-10 flex w-full flex-1 items-center justify-center px-3 py-6 sm:px-10 sm:py-8 lg:px-12 xl:px-16">
         <div className="flex w-full max-w-[1260px] flex-col items-center justify-center gap-10 lg:flex-row lg:gap-12 xl:gap-16 2xl:gap-20">
           <div className="flex w-full max-w-[690px] items-center justify-center lg:flex-1 lg:justify-start xl:max-w-[720px] 2xl:max-w-[740px]">
             <InteractiveCustomer360Showcase
