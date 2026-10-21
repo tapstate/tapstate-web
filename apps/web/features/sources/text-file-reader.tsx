@@ -154,7 +154,7 @@ function TextFileReaderBase({
         </span>
       )}
       {!cleared && (
-        <div className="border-input bg-background flex min-h-11 min-w-0 flex-wrap items-center gap-3 rounded-lg border p-2">
+        <div className="border-input bg-background flex h-8 min-w-0 items-center gap-2 rounded-lg border px-2">
           <input
             ref={inputRef}
             type="file"
@@ -168,25 +168,22 @@ function TextFileReaderBase({
               if (file) void readFile(file)
             }}
           />
-          <div className="flex min-w-0 flex-1 items-center gap-2.5">
-            <span className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-md">
-              <FileText className="size-4" aria-hidden="true" />
-            </span>
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <FileText className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
             <span
-              className={`min-w-0 flex-1 text-[13px] [overflow-wrap:anywhere] break-words ${
+              className={`min-w-0 flex-1 truncate text-sm ${
                 hasSelectedFile ? 'text-foreground font-medium' : 'text-muted-foreground'
               }`}
             >
               {hasSelectedFile ? fileLabel : t('sources.fileReader.noFileSelected')}
             </span>
           </div>
-          <div className="flex w-full shrink-0 flex-wrap items-center justify-end gap-1 sm:w-auto">
+          <div className="ml-auto flex shrink-0 items-center gap-1">
             {(!configuredSecret || action === 'replace') && (
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                className="min-h-11 px-4 py-2 transition-[color,background-color,border-color,box-shadow,transform] duration-150"
                 disabled={disabled || readOnly}
                 onClick={() => inputRef.current?.click()}
               >
@@ -201,7 +198,7 @@ function TextFileReaderBase({
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive min-h-11 px-4 py-2 transition-[color,background-color,border-color,box-shadow,transform] duration-150"
+                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                 onClick={clearFile}
               >
                 <X className="size-4" aria-hidden="true" />
@@ -218,7 +215,6 @@ function TextFileReaderBase({
               type="button"
               size="sm"
               variant="ghost"
-              className="min-h-11 px-4 py-2 transition-[color,background-color,border-color,box-shadow,transform] duration-150"
               onClick={keepConfiguredFile}
             >
               {t('sources.edit.secretKeep')}
@@ -230,7 +226,6 @@ function TextFileReaderBase({
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="min-h-11 px-4 py-2 transition-[color,background-color,border-color,box-shadow,transform] duration-150"
                   onClick={() =>
                     fieldName && onSecretChange?.(fieldName, { action: 'replace', value: '' })
                   }
@@ -242,7 +237,6 @@ function TextFileReaderBase({
                   type="button"
                   size="sm"
                   variant="ghost"
-                  className="min-h-11 px-4 py-2 transition-[color,background-color,border-color,box-shadow,transform] duration-150"
                   onClick={keepConfiguredFile}
                 >
                   {t('sources.edit.secretKeep')}
@@ -252,7 +246,7 @@ function TextFileReaderBase({
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive min-h-11 px-4 py-2 transition-[color,background-color,border-color,box-shadow,transform] duration-150"
+                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                 onClick={clearFile}
               >
                 {t('sources.edit.secretClear')}
