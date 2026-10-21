@@ -408,9 +408,9 @@ export function ProvisioningView({
             {entryError}
           </div>
         )}
-        <div className="flex items-center gap-5">
+        <div className="flex items-end gap-5">
           <button
-            className="shrink-0 text-[13.5px] font-medium text-blue-600 transition-colors hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+            className="shrink-0 text-[13.5px] leading-none font-medium text-emerald-600 transition-colors hover:text-emerald-700 hover:underline dark:text-emerald-400 dark:hover:text-emerald-300"
             onClick={onViewSubscriptions}
             type="button"
           >
