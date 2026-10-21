@@ -8,7 +8,9 @@ import {
   ChevronRight,
   CreditCard,
   Home,
+  LifeBuoy,
   LogOut,
+  MoreHorizontal,
   Moon,
   Search,
   Server,
@@ -16,6 +18,7 @@ import {
   Sun,
 } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import type { Cluster, Organization } from '../service/cloud-api'
 import type { UserProfile } from '../types'
@@ -32,6 +35,7 @@ const navigation = [
   { label: 'Organizations', path: '/organizations', icon: Building2, exact: false },
   { label: 'Clusters', path: '/clusters', icon: Server, exact: false },
   { label: 'Billing', path: '/billing', icon: CreditCard, exact: false },
+  { label: 'Support', path: '/support', icon: LifeBuoy, exact: false },
 ] as const
 
 interface CloudConsoleShellProps {
@@ -49,10 +53,17 @@ export function CloudConsoleShell({
   clusters: loaderClusters,
   user,
 }: CloudConsoleShellProps) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const currentPath = useRouterState({
     select: (state) =>
-      state.location.pathname as '/' | '/organizations' | '/clusters' | '/billing' | '/settings',
+      state.location.pathname as
+        | '/'
+        | '/organizations'
+        | '/clusters'
+        | '/billing'
+        | '/support'
+        | '/settings',
   })
   const {
     activeOrganization,
@@ -64,6 +75,7 @@ export function CloudConsoleShell({
   } = useCloudAppState()
   const [showOrganizationMenu, setShowOrganizationMenu] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [search, setSearch] = useState('')
   const { enterCluster, enteringId, entryError } = useClusterEntry()
 
@@ -78,6 +90,7 @@ export function CloudConsoleShell({
   const selectOrganization = (nextOrganization: Organization) => {
     setActiveOrganization(nextOrganization)
     setShowOrganizationMenu(false)
+    setShowMobileMenu(false)
     void navigate({
       to: currentPath,
       search: { organizationId: nextOrganization.id },
@@ -97,9 +110,9 @@ export function CloudConsoleShell({
 
   return (
     <div
-      className={`app-shell flex h-screen gap-2 overflow-hidden p-2 font-sans transition-colors duration-200 select-none ${darkMode ? 'dark text-[#f0f1f3]' : 'text-[#202124]'}`}
+      className={`app-shell flex h-screen flex-col gap-2 overflow-hidden p-2 font-sans transition-colors duration-200 select-none md:flex-row ${darkMode ? 'dark text-[#f0f1f3]' : 'text-[#202124]'}`}
     >
-      <aside className="flex h-full w-[240px] shrink-0 flex-col px-2 py-3 text-neutral-800 dark:text-neutral-200">
+      <aside className="hidden h-full w-[240px] shrink-0 flex-col px-2 py-3 text-neutral-800 md:flex dark:text-neutral-200">
         <div className="relative mb-3 px-1">
           <button
             aria-expanded={showOrganizationMenu}
@@ -130,7 +143,7 @@ export function CloudConsoleShell({
               />
               <div className="absolute top-11 right-1 left-1 z-50 space-y-0.5 rounded-xl border border-black/[0.08] bg-white p-1 text-xs shadow-lg dark:border-white/[0.08] dark:bg-[#202124]">
                 <div className="px-2.5 py-1 text-[10px] font-medium tracking-wider text-neutral-400 uppercase">
-                  Organizations
+                  {t('support.organization')}
                 </div>
                 {organizations.map((item) => (
                   <button
@@ -172,13 +185,13 @@ export function CloudConsoleShell({
                 className:
                   'flex h-8.5 w-full items-center gap-2.5 rounded-lg bg-white px-3 text-left text-xs font-medium text-neutral-900 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_1px_rgba(0,0,0,0.03)] dark:bg-[#25272a] dark:text-white',
               }}
-              className="flex h-8.5 w-full items-center gap-2.5 rounded-lg px-3 text-left text-xs font-normal text-neutral-600 transition-all duration-150 hover:bg-black/[0.04] hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-white/[0.05] dark:hover:text-white"
+              className="flex h-8.5 w-full items-center gap-2.5 rounded-lg px-3 text-left text-xs font-normal text-neutral-600 transition-colors duration-150 hover:bg-black/[0.04] hover:text-neutral-900 active:scale-[0.96] dark:text-neutral-400 dark:hover:bg-white/[0.05] dark:hover:text-white"
               key={path}
               search={{ organizationId: currentOrganization?.id }}
               to={path}
             >
               <Icon className="h-4 w-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
-              <span className="truncate">{label}</span>
+              <span className="truncate">{path === '/support' ? t('support.nav') : label}</span>
             </Link>
           ))}
 
@@ -236,7 +249,7 @@ export function CloudConsoleShell({
             to="/settings"
           >
             <Settings className="h-4 w-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
-            <span>Settings</span>
+            <span>{t('support.settings')}</span>
           </Link>
 
           <div className="relative mt-1 flex items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]">
@@ -256,10 +269,10 @@ export function CloudConsoleShell({
               </span>
             </button>
             <button
-              aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-label={t(darkMode ? 'support.switchToLightMode' : 'support.switchToDarkMode')}
               className="ml-1 shrink-0 rounded p-1 text-neutral-400 transition-colors hover:text-neutral-700 dark:hover:text-neutral-200"
               onClick={() => setDarkMode(!darkMode)}
-              title="Toggle theme"
+              title={t(darkMode ? 'support.switchToLightMode' : 'support.switchToDarkMode')}
               type="button"
             >
               {darkMode ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
@@ -268,7 +281,7 @@ export function CloudConsoleShell({
             {showUserMenu && (
               <>
                 <button
-                  aria-label="Close account menu"
+                  aria-label={t('support.closeAccountMenu')}
                   className="fixed inset-0 z-40 cursor-default"
                   onClick={() => setShowUserMenu(false)}
                   type="button"
@@ -284,7 +297,7 @@ export function CloudConsoleShell({
                       type="button"
                     >
                       <LogOut className="h-3.5 w-3.5" />
-                      <span>Sign Out</span>
+                      <span>{t('support.signOut')}</span>
                     </button>
                   </div>
                 </div>
@@ -294,7 +307,122 @@ export function CloudConsoleShell({
         </div>
       </aside>
 
-      <main className="main-surface relative flex min-w-0 flex-1 flex-col overflow-hidden">
+      <main className="main-surface relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <div className={`relative shrink-0 md:hidden ${showMobileMenu ? 'z-50' : ''}`}>
+          <nav
+            aria-label={t('support.navigationLabel')}
+            className="flex items-center gap-1 overflow-x-auto border-b border-[var(--border-subtle)] py-1 pr-12 pl-2"
+          >
+            {navigation.map(({ exact, icon: Icon, label, path }) => (
+              <Link
+                activeOptions={{ exact }}
+                activeProps={{
+                  className:
+                    'flex min-h-10 shrink-0 items-center gap-2 rounded-lg bg-white px-3 text-xs font-medium text-neutral-900 dark:bg-[#25272a] dark:text-white',
+                }}
+                className="flex min-h-10 shrink-0 items-center gap-2 rounded-lg px-3 text-xs text-neutral-600 transition-colors hover:bg-black/[0.04] active:scale-[0.96] dark:text-neutral-400 dark:hover:bg-white/[0.05]"
+                key={path}
+                search={{ organizationId: currentOrganization?.id }}
+                to={path}
+              >
+                <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+                <span>{path === '/support' ? t('support.nav') : label}</span>
+              </Link>
+            ))}
+          </nav>
+          <button
+            aria-controls="cloud-mobile-account-menu"
+            aria-expanded={showMobileMenu}
+            aria-label={t('support.accountMenu')}
+            className="absolute top-1 right-2 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-white text-neutral-600 active:scale-[0.96] dark:bg-[#202124] dark:text-neutral-300"
+            onClick={() => setShowMobileMenu((open) => !open)}
+            type="button"
+          >
+            <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
+          </button>
+          {showMobileMenu && (
+            <>
+              <button
+                aria-label={t('support.closeAccountMenu')}
+                className="fixed inset-0 z-40 cursor-default"
+                onClick={() => setShowMobileMenu(false)}
+                type="button"
+              />
+              <section
+                aria-label={t('support.accountMenu')}
+                className="absolute top-full right-2 z-50 max-h-[min(70vh,32rem)] w-72 max-w-[calc(100vw-1rem)] overflow-y-auto rounded-xl border border-black/[0.08] bg-white p-2 text-sm shadow-lg dark:border-white/[0.08] dark:bg-[#202124]"
+                id="cloud-mobile-account-menu"
+              >
+                <div className="border-b border-black/[0.06] px-2 py-2 dark:border-white/[0.06]">
+                  <p className="truncate font-medium text-neutral-900 dark:text-white">
+                    {displayName}
+                  </p>
+                  <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">
+                    {user.email}
+                  </p>
+                </div>
+                <div className="space-y-1 border-b border-black/[0.06] py-2 dark:border-white/[0.06]">
+                  <p className="px-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                    {t('support.organization')}
+                  </p>
+                  {organizations.map((item) => (
+                    <button
+                      aria-pressed={item.id === currentOrganization?.id}
+                      className={`flex min-h-10 w-full items-center justify-between gap-2 rounded-lg px-2 text-left text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current active:scale-[0.96] ${item.id === currentOrganization?.id ? 'bg-black/[0.06] font-medium dark:bg-white/[0.08]' : 'text-neutral-700 hover:bg-black/[0.03] dark:text-neutral-300 dark:hover:bg-white/[0.04]'}`}
+                      key={item.id}
+                      onClick={() => selectOrganization(item)}
+                      type="button"
+                    >
+                      <span className="truncate">{item.name}</span>
+                      {item.id === currentOrganization?.id && (
+                        <Check
+                          aria-hidden="true"
+                          className="h-3.5 w-3.5 shrink-0 text-neutral-700 dark:text-neutral-300"
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div className="space-y-1 pt-2">
+                  <Link
+                    className="flex min-h-10 items-center gap-2 rounded-lg px-2 text-neutral-700 hover:bg-black/[0.04] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current active:scale-[0.96] dark:text-neutral-300 dark:hover:bg-white/[0.05]"
+                    onClick={() => setShowMobileMenu(false)}
+                    search={{ organizationId: currentOrganization?.id }}
+                    to="/settings"
+                  >
+                    <Settings aria-hidden="true" className="h-4 w-4" />
+                    <span>{t('support.settings')}</span>
+                  </Link>
+                  <button
+                    className="flex min-h-10 w-full items-center gap-2 rounded-lg px-2 text-left text-neutral-700 hover:bg-black/[0.04] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current active:scale-[0.96] dark:text-neutral-300 dark:hover:bg-white/[0.05]"
+                    onClick={() => setDarkMode(!darkMode)}
+                    type="button"
+                  >
+                    {darkMode ? (
+                      <Sun aria-hidden="true" className="h-4 w-4" />
+                    ) : (
+                      <Moon aria-hidden="true" className="h-4 w-4" />
+                    )}
+                    <span>
+                      {t(darkMode ? 'support.switchToLightMode' : 'support.switchToDarkMode')}
+                    </span>
+                  </button>
+                  <button
+                    className="flex min-h-10 w-full items-center gap-2 rounded-lg px-2 text-left text-neutral-700 hover:bg-black/[0.04] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current active:scale-[0.96] dark:text-neutral-300 dark:hover:bg-white/[0.05]"
+                    onClick={() => {
+                      setShowMobileMenu(false)
+                      void signOut()
+                    }}
+                    type="button"
+                  >
+                    <LogOut aria-hidden="true" className="h-4 w-4" />
+                    <span>{t('support.signOut')}</span>
+                  </button>
+                </div>
+              </section>
+            </>
+          )}
+        </div>
         {children}
       </main>
     </div>

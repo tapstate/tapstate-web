@@ -138,6 +138,31 @@ export interface CreateSubscriptionInput {
   specKey?: string
 }
 
+export interface CloudTicket {
+  id: string
+  jiraKey: string
+  summary: string
+  description: string
+  status: string
+  statusCategory: string
+  createdAt: string
+  canClose: boolean
+}
+
+export interface CloudTicketPage {
+  items: CloudTicket[]
+  page: number
+  size: number
+  totalItems: number
+  totalPages: number
+  hasNext: boolean
+}
+
+export interface CreateCloudTicketInput {
+  summary: string
+  description: string
+}
+
 export class CloudApiError extends Error {
   constructor(
     message: string,
@@ -291,6 +316,14 @@ export const cloudApi = {
       `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
       post,
     ),
+  tickets: (page = 0, size = 20) =>
+    request<CloudTicketPage>(`${apiPrefix}/tickets?page=${page}&size=${size}`),
+  createTicket: (input: CreateCloudTicketInput) =>
+    request<CloudTicket>(`${apiPrefix}/tickets`, jsonBody(input)),
+  ticket: (cloudTicketId: string) =>
+    request<CloudTicket>(`${apiPrefix}/tickets/${encodeURIComponent(cloudTicketId)}`),
+  closeTicket: (cloudTicketId: string) =>
+    request<CloudTicket>(`${apiPrefix}/tickets/${encodeURIComponent(cloudTicketId)}/close`, post),
   resolveCluster: async (clusterId: string, orgId: string) => {
     const query = new URLSearchParams({ orgId })
     const result = await request<unknown>(

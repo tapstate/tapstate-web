@@ -17,6 +17,7 @@ import { Route as ConsoleBillingRouteImport } from './routes/_console.billing'
 import { Route as ConsoleClustersRouteImport } from './routes/_console.clusters'
 import { Route as ConsoleOrganizationsRouteImport } from './routes/_console.organizations'
 import { Route as ConsoleSettingsRouteImport } from './routes/_console.settings'
+import { Route as ConsoleSupportRouteImport } from './routes/_console.support'
 
 const ConsoleRoute = ConsoleRouteImport.update({
   id: '/_console',
@@ -57,6 +58,11 @@ const ConsoleSettingsRoute = ConsoleSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => ConsoleRoute,
 } as any)
+const ConsoleSupportRoute = ConsoleSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => ConsoleRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof ConsoleIndexRoute
@@ -66,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/clusters': typeof ConsoleClustersRoute
   '/organizations': typeof ConsoleOrganizationsRoute
   '/settings': typeof ConsoleSettingsRoute
+  '/support': typeof ConsoleSupportRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/clusters': typeof ConsoleClustersRoute
   '/organizations': typeof ConsoleOrganizationsRoute
   '/settings': typeof ConsoleSettingsRoute
+  '/support': typeof ConsoleSupportRoute
   '/': typeof ConsoleIndexRoute
 }
 export interface FileRoutesById {
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/_console/clusters': typeof ConsoleClustersRoute
   '/_console/organizations': typeof ConsoleOrganizationsRoute
   '/_console/settings': typeof ConsoleSettingsRoute
+  '/_console/support': typeof ConsoleSupportRoute
   '/_console/': typeof ConsoleIndexRoute
 }
 export interface FileRouteTypes {
@@ -97,6 +106,7 @@ export interface FileRouteTypes {
     | '/clusters'
     | '/organizations'
     | '/settings'
+    | '/support'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
     | '/clusters'
     | '/organizations'
     | '/settings'
+    | '/support'
     | '/'
   id:
     | '__root__'
@@ -115,6 +126,7 @@ export interface FileRouteTypes {
     | '/_console/clusters'
     | '/_console/organizations'
     | '/_console/settings'
+    | '/_console/support'
     | '/_console/'
   fileRoutesById: FileRoutesById
 }
@@ -182,6 +194,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleSettingsRouteImport
       parentRoute: typeof ConsoleRoute
     }
+    '/_console/support': {
+      id: '/_console/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof ConsoleSupportRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
   }
 }
 
@@ -190,6 +209,7 @@ interface ConsoleRouteChildren {
   ConsoleClustersRoute: typeof ConsoleClustersRoute
   ConsoleOrganizationsRoute: typeof ConsoleOrganizationsRoute
   ConsoleSettingsRoute: typeof ConsoleSettingsRoute
+  ConsoleSupportRoute: typeof ConsoleSupportRoute
   ConsoleIndexRoute: typeof ConsoleIndexRoute
 }
 
@@ -198,6 +218,7 @@ const ConsoleRouteChildren: ConsoleRouteChildren = {
   ConsoleClustersRoute: ConsoleClustersRoute,
   ConsoleOrganizationsRoute: ConsoleOrganizationsRoute,
   ConsoleSettingsRoute: ConsoleSettingsRoute,
+  ConsoleSupportRoute: ConsoleSupportRoute,
   ConsoleIndexRoute: ConsoleIndexRoute,
 }
 
