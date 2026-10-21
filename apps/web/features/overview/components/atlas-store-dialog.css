@@ -1,28 +1,61 @@
 .atlas-store-dialog__fields .tap-formily-item {
-  margin-bottom: var(--spacing) !important;
+  margin-bottom: 20px !important;
+}
+
+.atlas-store-dialog__fields .tap-formily-item-label {
+  min-height: 24px !important;
+  padding-bottom: 4px !important;
+  line-height: 20px !important;
+}
+
+.atlas-store-dialog__fields .tap-formily-item-label-content,
+.atlas-store-dialog__fields .tap-formily-item-label-content label {
+  line-height: 20px !important;
 }
 
 .atlas-store-dialog__fields fieldset[data-formily-compact-section] {
-  row-gap: 0;
+  row-gap: 20px;
 }
 
-.atlas-store-dialog__fields fieldset[data-formily-header-control] {
-  position: relative;
-}
-
-.atlas-store-dialog__fields
-  fieldset[data-formily-header-control]
-  > .tap-formily-item:first-of-type {
-  position: absolute;
-  top: calc(var(--spacing) * -6);
-  right: calc(var(--spacing) * 4);
-  width: auto;
+.atlas-store-dialog__fields fieldset[data-formily-compact-section] > .tap-formily-item {
   margin-bottom: 0 !important;
 }
 
+.atlas-store-dialog__fields fieldset[data-formily-header-control] {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  margin-top: 28px;
+}
+
+.atlas-store-dialog__fields fieldset[data-formily-header-control] > [data-formily-section-header] {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+}
+
 .atlas-store-dialog__fields
   fieldset[data-formily-header-control]
-  > .tap-formily-item:first-of-type
+  > [data-formily-section-header]
+  + .tap-formily-item {
+  position: static;
+  grid-column: 2;
+  grid-row: 1;
+  width: auto;
+  margin: 0 !important;
+}
+
+.atlas-store-dialog__fields
+  fieldset[data-formily-header-control]
+  > [data-formily-section-header]
+  + .tap-formily-item
+  ~ .tap-formily-item {
+  grid-column: 1 / -1;
+}
+
+.atlas-store-dialog__fields
+  fieldset[data-formily-header-control]
+  > [data-formily-section-header]
+  + .tap-formily-item
   .tap-formily-item-label {
   position: absolute;
   width: 1px;
@@ -34,11 +67,13 @@
   border: 0;
   clip: rect(0, 0, 0, 0);
   clip-path: inset(50%);
+  min-height: 0 !important;
 }
 
 .atlas-store-dialog__fields
   fieldset[data-formily-header-control]
-  > .tap-formily-item:first-of-type
+  > [data-formily-section-header]
+  + .tap-formily-item
   .tap-formily-item-control {
   flex: 0 0 auto;
   margin-top: 0 !important;

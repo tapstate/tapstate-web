@@ -50,7 +50,22 @@ function ConfigSection({
       data-formily-header-control={headerControl || undefined}
       className="border-border grid gap-4 rounded-lg border p-4"
     >
-      {title && <legend className="text-foreground px-1 text-[13px] font-semibold">{title}</legend>}
+      {title && (
+        <legend
+          className={headerControl ? 'sr-only' : 'text-foreground px-1 text-[13px] font-semibold'}
+        >
+          {title}
+        </legend>
+      )}
+      {title && headerControl && (
+        <div
+          data-formily-section-header
+          aria-hidden="true"
+          className="text-foreground flex min-w-0 items-center px-1 text-[13px] leading-5 font-semibold"
+        >
+          {title}
+        </div>
+      )}
       {children}
     </fieldset>
   )
