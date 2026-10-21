@@ -24,6 +24,7 @@ import {
   cancelPendingClusterEntries,
   useClusterEntry,
 } from '../features/clusters/use-cluster-entry'
+import { TawkFeedbackWidget } from '../features/feedback/tawk-feedback-widget'
 import { CloudApiError, cloudApi } from '../service/cloud-api'
 import { useCloudAppState } from '../state/cloud-app-state'
 
@@ -297,6 +298,7 @@ export function CloudConsoleShell({
       <main className="main-surface relative flex min-w-0 flex-1 flex-col overflow-hidden">
         {children}
       </main>
+      <TawkFeedbackWidget />
     </div>
   )
 }
