@@ -6,26 +6,36 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   apiFetch,
+  createPipelineDraft,
   deletePipelineDraft,
   getPipelineDraft,
   listPipelines,
   listPipelineDrafts,
   listSources,
+  navigate,
   runPipeline,
   stopPipeline,
 } = vi.hoisted(() => ({
   apiFetch: vi.fn(),
+  createPipelineDraft: vi.fn(),
   deletePipelineDraft: vi.fn(),
   getPipelineDraft: vi.fn(),
   listPipelines: vi.fn(),
   listPipelineDrafts: vi.fn(),
   listSources: vi.fn(),
+  navigate: vi.fn(),
   runPipeline: vi.fn(),
   stopPipeline: vi.fn(),
 }))
 
+vi.mock('@tanstack/react-router', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@tanstack/react-router')>()),
+  useNavigate: () => navigate,
+}))
+
 vi.mock('@/service/source-client', () => ({ listSources }))
 vi.mock('@/service/pipelines/pipeline-client', () => ({
+  createPipelineDraft,
   deletePipelineDraft,
   getPipelineDraft,
   listPipelineDrafts,
@@ -130,6 +140,8 @@ beforeEach(() => {
   getPipelineDraft.mockResolvedValue({ etag: '"3"' })
   deletePipelineDraft.mockResolvedValue(undefined)
   apiFetch.mockResolvedValue({ ok: true })
+  createPipelineDraft.mockResolvedValue(undefined)
+  navigate.mockReset()
 })
 
 afterEach(async () => {
@@ -458,6 +470,96 @@ describe('PipelinesPage', () => {
     expect(closeButton).not.toBeNull()
     await act(async () => closeButton?.click())
     expect(document.querySelector('[data-testid="pipeline-creation-dialog"]')).toBeNull()
+  })
+
+  it('offers only supported builders and creates a pipeline with either selected mode', async () => {
+    await renderPage()
+
+    const openCreation = async () => {
+      await act(async () => elementWithText('button', 'Create')?.click())
+      await vi.waitFor(() =>
+        expect(document.querySelector('[data-testid="pipeline-creation-dialog"]')).not.toBeNull(),
+      )
+      return document.querySelector<HTMLElement>('[data-testid="pipeline-creation-dialog"]')!
+    }
+    const setPipelineId = async (dialog: HTMLElement, value: string) => {
+      const input = dialog.querySelector<HTMLInputElement>(
+        'input[aria-describedby="pipeline-create-id-hint"]',
+      )
+      expect(input).not.toBeNull()
+      await act(async () => {
+        if (!input) return
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(
+          input,
+          value,
+        )
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+      })
+      return input
+    }
+    const submit = (dialog: HTMLElement) =>
+      dialog.querySelector<HTMLButtonElement>('.pipeline-create-dialog__submit')
+
+    const wizardDialog = await openCreation()
+    const modeButtons = [
+      ...wizardDialog.querySelectorAll<HTMLButtonElement>('button[aria-pressed]'),
+    ]
+    expect(modeButtons).toHaveLength(2)
+    expect(wizardDialog.textContent).not.toContain('DuckDB SQL')
+    expect(wizardDialog.textContent).not.toContain('Build with AI')
+
+    const dagOption = modeButtons.find((button) =>
+      button.textContent?.includes('Build with DAG Designer'),
+    )
+    const wizardOption = modeButtons.find((button) =>
+      button.textContent?.includes('Pipeline builder'),
+    )
+    expect(dagOption?.getAttribute('aria-pressed')).toBe('true')
+    await act(async () => wizardOption?.click())
+    expect(wizardOption?.getAttribute('aria-pressed')).toBe('true')
+
+    const invalidId = await setPipelineId(wizardDialog, 'invalid id')
+    expect(invalidId?.getAttribute('aria-invalid')).toBe('true')
+    expect(submit(wizardDialog)?.disabled).toBe(true)
+    expect(createPipelineDraft).not.toHaveBeenCalled()
+
+    await setPipelineId(wizardDialog, 'wizard_pipeline')
+    expect(submit(wizardDialog)?.disabled).toBe(false)
+    await act(async () => submit(wizardDialog)?.click())
+    await vi.waitFor(() => expect(createPipelineDraft).toHaveBeenCalledTimes(1))
+    expect(createPipelineDraft.mock.calls[0]?.[0]).toBe('wizard_pipeline')
+    expect(createPipelineDraft.mock.calls[0]?.[1]).toMatchObject({
+      mode: 'wizard',
+      graph: null,
+      wizard: { root: { id: 'root' } },
+    })
+    expect(navigate).toHaveBeenCalledWith({
+      to: '/pipelines/$pipelineId/edit',
+      params: { pipelineId: 'wizard_pipeline' },
+    })
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="pipeline-creation-dialog"]')).toBeNull(),
+    )
+
+    const dagDialog = await openCreation()
+    const dagModeOption = [
+      ...dagDialog.querySelectorAll<HTMLButtonElement>('button[aria-pressed]'),
+    ].find((button) => button.textContent?.includes('Build with DAG Designer'))
+    expect(dagModeOption?.getAttribute('aria-pressed')).toBe('true')
+    await setPipelineId(dagDialog, 'dag_pipeline')
+    await act(async () => submit(dagDialog)?.click())
+
+    await vi.waitFor(() => expect(createPipelineDraft).toHaveBeenCalledTimes(2))
+    expect(createPipelineDraft.mock.calls[1]?.[0]).toBe('dag_pipeline')
+    expect(createPipelineDraft.mock.calls[1]?.[1]).toMatchObject({
+      mode: 'dag',
+      graph: { nodes: [], edges: [] },
+      wizard: null,
+    })
+    expect(navigate).toHaveBeenLastCalledWith({
+      to: '/pipelines/$pipelineId/edit',
+      params: { pipelineId: 'dag_pipeline' },
+    })
   })
 
   it('omits the Explorer while keeping the Pipeline table as the editor entry point', async () => {
