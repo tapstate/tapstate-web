@@ -65,10 +65,12 @@ export function BillingPage() {
   const [attempt, setAttempt] = useState(() => readCheckoutAttempt())
   const requestIdRef = useRef<string | null>(null)
   const cancelButtonRef = useRef<HTMLButtonElement | null>(null)
+  const loadGenerationRef = useRef(0)
 
   const load = useCallback(
     async (mode: 'full' | 'subscriptions') => {
       if (!organizationId) return
+      const generation = loadGenerationRef.current
       if (mode === 'subscriptions') setIsRefreshing(true)
       else {
         setIsLoading(true)
@@ -79,17 +81,21 @@ export function BillingPage() {
           mode === 'full' ? cloudApi.specs() : Promise.resolve(null),
           cloudApi.subscriptions(organizationId),
         ])
+        if (generation !== loadGenerationRef.current) return
         if (nextSpecs) setSpecs(nextSpecs)
         setSubscriptions(nextSubscriptions)
       } catch (error) {
+        if (generation !== loadGenerationRef.current) return
         if (error instanceof CloudApiError && error.status === 401) {
           void navigate({ to: '/auth' })
           return
         }
         if (mode === 'full') setHasLoadError(true)
       } finally {
-        if (mode === 'subscriptions') setIsRefreshing(false)
-        else setIsLoading(false)
+        if (generation === loadGenerationRef.current) {
+          if (mode === 'subscriptions') setIsRefreshing(false)
+          else setIsLoading(false)
+        }
       }
     },
     [navigate, organizationId],
@@ -97,6 +103,7 @@ export function BillingPage() {
 
   useEffect(() => {
     if (!organizationId) return
+    const generation = ++loadGenerationRef.current
     setSubscriptions([])
     setSelectedKey(null)
     setConsent(false)
@@ -104,6 +111,9 @@ export function BillingPage() {
     setCancelError(null)
     setAttempt(readCheckoutAttempt())
     void load('full')
+    return () => {
+      if (loadGenerationRef.current === generation) loadGenerationRef.current += 1
+    }
   }, [load, organizationId])
 
   useEffect(() => {

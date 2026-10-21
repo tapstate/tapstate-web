@@ -173,6 +173,61 @@ afterEach(async () => {
 })
 
 describe('Cloud subscription flow', () => {
+  it('ignores subscriptions returned for an organization that is no longer active', async () => {
+    let resolveFirstRequest!: (subscriptions: Subscription[]) => void
+    const firstRequest = new Promise<Subscription[]>((resolve) => {
+      resolveFirstRequest = resolve
+    })
+    const nextOrganization: Organization = {
+      ...organization,
+      id: 'org-2',
+      name: 'Other Data',
+      slug: 'other-data',
+    }
+    const firstSubscription: Subscription = {
+      ...trialSubscription,
+      id: 'subscription-org-1',
+    }
+    const nextSubscription: Subscription = {
+      ...trialSubscription,
+      id: 'subscription-org-2',
+      orgId: nextOrganization.id,
+    }
+
+    mocks.subscriptions.mockReturnValueOnce(firstRequest).mockResolvedValueOnce([nextSubscription])
+    mocks.cancelAtPeriodEnd.mockResolvedValue({
+      ...nextSubscription,
+      status: 'PENDING_CANCEL',
+    })
+
+    await renderBilling()
+    await vi.waitFor(() => expect(mocks.subscriptions).toHaveBeenCalledTimes(1))
+
+    await act(async () => {
+      mocks.state.current = {
+        activeOrganization: nextOrganization,
+        clusters: [],
+        user: { email: 'owner@example.com', displayName: 'Owner' },
+      }
+      root?.render(
+        <I18nextProvider i18n={i18n}>
+          <BillingPage />
+        </I18nextProvider>,
+      )
+    })
+
+    await vi.waitFor(() => expect(buttonWithText('Cancel subscription')).toBeDefined())
+    await act(async () => {
+      resolveFirstRequest([firstSubscription])
+      await firstRequest
+    })
+
+    await click(buttonWithText('Cancel subscription'))
+    await click(buttonWithText('Yes, cancel'))
+
+    expect(mocks.cancelAtPeriodEnd).toHaveBeenCalledWith(nextOrganization.id, nextSubscription.id)
+  })
+
   it('renders the API catalog in USD with each plan trial policy', async () => {
     await renderBilling()
     await vi.waitFor(() => expect(host?.textContent).toContain('2C8G Starter'))
