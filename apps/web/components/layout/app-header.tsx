@@ -23,6 +23,7 @@ export function AppHeader() {
   const logoutSession = useAuthStore((state) => state.logout)
   const authProfile = useAuthStore((state) => state.profile)
   const setAskTapstateOpen = useUiStore((state) => state.setAskTapstateOpen)
+  const [languageMenuOpen, setLanguageMenuOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState(false)
 
@@ -61,7 +62,7 @@ export function AppHeader() {
           <kbd>{t('app.shortcuts.ask')}</kbd>
         </Button>
 
-        <DropdownMenu>
+        <DropdownMenu open={languageMenuOpen} onOpenChange={setLanguageMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button
               type="button"
@@ -79,11 +80,11 @@ export function AppHeader() {
                 key={locale}
                 className="justify-between"
                 disabled={i18n.language === locale}
-                onSelect={() => switchLocale(locale)}
+                onClick={() => switchLocale(locale)}
               >
                 {t(`app.languageOptions.${locale}`)}
                 {i18n.language === locale && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-gray-900" aria-hidden="true" />
+                  <span className="bg-foreground h-1.5 w-1.5 rounded-full" aria-hidden="true" />
                 )}
               </DropdownMenuItem>
             ))}

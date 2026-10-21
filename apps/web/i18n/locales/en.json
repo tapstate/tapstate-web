@@ -1895,14 +1895,14 @@
     },
     "managed": {
       "name": "Tapstate state store",
-      "type": "MongoDB · server metadata database",
-      "access": "Shares the MongoDB this server already uses. For production, use a separate MongoDB.",
+      "type": "MongoDB · application database",
+      "access": "Application data uses this system-owned default Source. Configuration and durable cache use their separately configured databases.",
       "deleteReason": "The server manages this store"
     },
     "cloud": {
       "name": "Atlas state store",
-      "type": "MongoDB Atlas",
-      "access": "The single Atlas destination for this organization. Connection details are managed by Tapstate."
+      "type": "MongoDB Atlas · application database",
+      "access": "The default application-data destination for this cluster. Configuration and durable cache use their separately configured databases."
     },
     "states": {
       "loading": "Loading state stores…",

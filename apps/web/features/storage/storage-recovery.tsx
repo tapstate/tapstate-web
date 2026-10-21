@@ -307,6 +307,11 @@ export function StorageRecovery() {
             async (result) => {
               setPlan(result)
               setConfirmed(false)
+              if (result.scope === 'CLUSTER' || result.scope === 'PIPELINE') {
+                setScope(result.scope)
+                setPipelineIds((result.pipelineIds ?? []).join(', '))
+                setPreviousOperationId(result.previousOperationId ?? '')
+              }
               if (result.phase === 'COMPLETE') await refresh()
             },
           )

@@ -8,11 +8,11 @@ import { useStorage } from '@/features/storage/storage-context'
 import { StorageRecovery } from '@/features/storage/storage-recovery'
 import { StorageHealthPanel } from '@/features/storage/storage-ui'
 import { listSources } from '@/service/source-client'
-import { stateStoreSource } from '@/service/state-store-source'
+import { stateStoreDatabase, stateStoreSource } from '@/service/state-store-source'
 import { useAuthStore } from '@/stores/auth-store'
 import { getDeploymentProfile } from '@/utils/deployment-profile'
 
-/** Settings, State stores: one deployment-managed destination, never a data source. */
+/** Settings show the system-owned default Source used for application data. */
 export function StateStorePage() {
   const { t } = useTranslation()
   const { snapshot, refresh } = useStorage()
@@ -114,11 +114,7 @@ export function StateStorePage() {
                   </div>
                   <div>
                     <dt>{t('stateStorePage.fields.location')}</dt>
-                    <dd>
-                      {typeof managed.config.database === 'string'
-                        ? managed.config.database
-                        : t('overview.notReported')}
-                    </dd>
+                    <dd>{stateStoreDatabase(managed) ?? t('overview.notReported')}</dd>
                   </div>
                   <div>
                     <dt>{t('stateStorePage.fields.checks')}</dt>

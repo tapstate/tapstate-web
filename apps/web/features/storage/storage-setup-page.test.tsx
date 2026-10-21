@@ -282,6 +282,9 @@ describe('explicit recovery and import', () => {
     )
     await render(<StorageRecovery />)
     await click('storage.queryResult')
+    expect(container.querySelectorAll<HTMLInputElement>('input[type="radio"]')[1].checked).toBe(
+      true,
+    )
     await act(async () =>
       container.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click(),
     )

@@ -1895,14 +1895,14 @@
     },
     "managed": {
       "name": "Tapstate state store",
-      "type": "MongoDB · 伺服器中繼資料庫",
-      "access": "與此伺服器已使用的 MongoDB 共用。正式環境請使用獨立的 MongoDB。",
+      "type": "MongoDB · 應用資料庫",
+      "access": "應用資料寫入此系統管理的預設資料來源。設定與耐久快取分別使用各自設定的資料庫。",
       "deleteReason": "此 store 由伺服器管理"
     },
     "cloud": {
       "name": "Atlas state store",
-      "type": "MongoDB Atlas",
-      "access": "此組織唯一的 Atlas 目標，由 Tapstate 管理連線資訊。"
+      "type": "MongoDB Atlas · 應用資料庫",
+      "access": "此 Cluster 的預設應用資料目的地。設定與耐久快取分別使用各自設定的資料庫。"
     },
     "states": {
       "loading": "正在載入 state store…",
