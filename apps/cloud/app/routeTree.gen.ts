@@ -17,8 +17,6 @@ import { Route as ConsoleBillingRouteImport } from './routes/_console.billing'
 import { Route as ConsoleClustersRouteImport } from './routes/_console.clusters'
 import { Route as ConsoleOrganizationsRouteImport } from './routes/_console.organizations'
 import { Route as ConsoleSettingsRouteImport } from './routes/_console.settings'
-import { Route as ConsoleCheckoutCancelRouteImport } from './routes/_console.checkout.cancel'
-import { Route as ConsoleCheckoutSuccessRouteImport } from './routes/_console.checkout.success'
 
 const ConsoleRoute = ConsoleRouteImport.update({
   id: '/_console',
@@ -59,16 +57,6 @@ const ConsoleSettingsRoute = ConsoleSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => ConsoleRoute,
 } as any)
-const ConsoleCheckoutCancelRoute = ConsoleCheckoutCancelRouteImport.update({
-  id: '/checkout/cancel',
-  path: '/checkout/cancel',
-  getParentRoute: () => ConsoleRoute,
-} as any)
-const ConsoleCheckoutSuccessRoute = ConsoleCheckoutSuccessRouteImport.update({
-  id: '/checkout/success',
-  path: '/checkout/success',
-  getParentRoute: () => ConsoleRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof ConsoleIndexRoute
@@ -78,8 +66,6 @@ export interface FileRoutesByFullPath {
   '/clusters': typeof ConsoleClustersRoute
   '/organizations': typeof ConsoleOrganizationsRoute
   '/settings': typeof ConsoleSettingsRoute
-  '/checkout/cancel': typeof ConsoleCheckoutCancelRoute
-  '/checkout/success': typeof ConsoleCheckoutSuccessRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -89,8 +75,6 @@ export interface FileRoutesByTo {
   '/organizations': typeof ConsoleOrganizationsRoute
   '/settings': typeof ConsoleSettingsRoute
   '/': typeof ConsoleIndexRoute
-  '/checkout/cancel': typeof ConsoleCheckoutCancelRoute
-  '/checkout/success': typeof ConsoleCheckoutSuccessRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -102,8 +86,6 @@ export interface FileRoutesById {
   '/_console/organizations': typeof ConsoleOrganizationsRoute
   '/_console/settings': typeof ConsoleSettingsRoute
   '/_console/': typeof ConsoleIndexRoute
-  '/_console/checkout/cancel': typeof ConsoleCheckoutCancelRoute
-  '/_console/checkout/success': typeof ConsoleCheckoutSuccessRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -115,8 +97,6 @@ export interface FileRouteTypes {
     | '/clusters'
     | '/organizations'
     | '/settings'
-    | '/checkout/cancel'
-    | '/checkout/success'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -126,8 +106,6 @@ export interface FileRouteTypes {
     | '/organizations'
     | '/settings'
     | '/'
-    | '/checkout/cancel'
-    | '/checkout/success'
   id:
     | '__root__'
     | '/_console'
@@ -138,8 +116,6 @@ export interface FileRouteTypes {
     | '/_console/organizations'
     | '/_console/settings'
     | '/_console/'
-    | '/_console/checkout/cancel'
-    | '/_console/checkout/success'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -206,20 +182,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleSettingsRouteImport
       parentRoute: typeof ConsoleRoute
     }
-    '/_console/checkout/cancel': {
-      id: '/_console/checkout/cancel'
-      path: '/checkout/cancel'
-      fullPath: '/checkout/cancel'
-      preLoaderRoute: typeof ConsoleCheckoutCancelRouteImport
-      parentRoute: typeof ConsoleRoute
-    }
-    '/_console/checkout/success': {
-      id: '/_console/checkout/success'
-      path: '/checkout/success'
-      fullPath: '/checkout/success'
-      preLoaderRoute: typeof ConsoleCheckoutSuccessRouteImport
-      parentRoute: typeof ConsoleRoute
-    }
   }
 }
 
@@ -229,8 +191,6 @@ interface ConsoleRouteChildren {
   ConsoleOrganizationsRoute: typeof ConsoleOrganizationsRoute
   ConsoleSettingsRoute: typeof ConsoleSettingsRoute
   ConsoleIndexRoute: typeof ConsoleIndexRoute
-  ConsoleCheckoutCancelRoute: typeof ConsoleCheckoutCancelRoute
-  ConsoleCheckoutSuccessRoute: typeof ConsoleCheckoutSuccessRoute
 }
 
 const ConsoleRouteChildren: ConsoleRouteChildren = {
@@ -239,8 +199,6 @@ const ConsoleRouteChildren: ConsoleRouteChildren = {
   ConsoleOrganizationsRoute: ConsoleOrganizationsRoute,
   ConsoleSettingsRoute: ConsoleSettingsRoute,
   ConsoleIndexRoute: ConsoleIndexRoute,
-  ConsoleCheckoutCancelRoute: ConsoleCheckoutCancelRoute,
-  ConsoleCheckoutSuccessRoute: ConsoleCheckoutSuccessRoute,
 }
 
 const ConsoleRouteWithChildren =

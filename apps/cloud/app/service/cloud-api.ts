@@ -77,55 +77,12 @@ export interface Cluster {
   readyAt?: string | null
 }
 
-export interface Spec {
-  key: string
-  displayName: string
-  cpuCores: number
-  memoryGb: number
-  trialDays: number
-  mdbSizeGb: number
-  currency: string
-  unitPriceCents: number
-  stripePriceId: string
-  paymentMethod: string
-}
-
-export interface CheckoutSession {
-  subscriptionId: string
-  status: string
-  checkoutUrl: string
-}
-
-export interface CreateCheckoutInput {
-  specKey: string
-  clientRequestId: string
-}
-
-export interface FinalizeProvisioningInput {
-  region: string
-  clusterName: string
-}
-
-export interface DeploymentProgressSummary {
-  overallStatus: string
-  percent: number
-}
-
 export interface Subscription {
   id: string
   orgId: string
-  status:
-    | 'PENDING_PAYMENT'
-    | 'TRIAL'
-    | 'ACTIVE'
-    | 'PAST_DUE'
-    | 'PENDING_CANCEL'
-    | 'CANCELLED'
-    | string
+  status: 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELLED' | string
   provisioningAllowed: boolean
   resourceState?: 'PROVISIONING' | 'READY' | string | null
-  installProgress?: DeploymentProgressSummary | null
-  uninstallProgress?: DeploymentProgressSummary | null
   resourcesReadyAt?: string | null
   clusterId?: string | null
   mdbAllocationId?: string | null
@@ -275,7 +232,6 @@ export const cloudApi = {
     request<Organization>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}`),
   regions: async () => asList<Region>(await request<unknown>(`${apiPrefix}/regions`)),
   region: (code: string) => request<Region>(`${apiPrefix}/regions/${encodeURIComponent(code)}`),
-  specs: async () => asList<Spec>(await request<unknown>(`${apiPrefix}/specs`)),
   clusters: async (orgId: string) =>
     asList<Cluster>(
       await request<unknown>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/clusters`),
@@ -287,16 +243,6 @@ export const cloudApi = {
   createSubscription: (orgId: string, input: CreateSubscriptionInput) =>
     request<Subscription>(
       `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions`,
-      jsonBody(input),
-    ),
-  createCheckout: (orgId: string, input: CreateCheckoutInput) =>
-    request<CheckoutSession>(
-      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions/checkout`,
-      jsonBody(input),
-    ),
-  finalizeProvisioning: (orgId: string, subscriptionId: string, input: FinalizeProvisioningInput) =>
-    request<Subscription>(
-      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions/${encodeURIComponent(subscriptionId)}/finalize-provisioning`,
       jsonBody(input),
     ),
   subscriptions: async (orgId: string) =>
@@ -343,11 +289,6 @@ export const cloudApi = {
   cancelSubscription: (orgId: string, subscriptionId: string) =>
     request<Subscription>(
       `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
-      post,
-    ),
-  cancelAtPeriodEnd: (orgId: string, subscriptionId: string) =>
-    request<Subscription>(
-      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions/${encodeURIComponent(subscriptionId)}/cancel-at-period-end`,
       post,
     ),
   resolveCluster: async (clusterId: string, orgId: string) => {
