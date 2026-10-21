@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 
 import { AskTapstate } from '@/features/ask-tapstate/ask-tapstate'
+import { TawkFeedbackWidget } from '@/features/feedback/tawk-feedback-widget'
+import { deploymentProfile } from '@/utils/deployment-profile'
 
 import { AppSidebar } from './app-sidebar'
 
@@ -14,6 +16,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </main>
 
       <AskTapstate />
+      {deploymentProfile === 'cloud' ? <TawkFeedbackWidget /> : null}
     </div>
   )
 }

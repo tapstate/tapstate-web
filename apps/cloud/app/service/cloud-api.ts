@@ -225,6 +225,11 @@ export const cloudApi = {
   login: (input: LoginInput) => request<LoginResult>(`${apiPrefix}/auth/login`, jsonBody(input)),
   logout: () => request<unknown>(`${apiPrefix}/auth/logout`, post),
   me: () => request<LoginResult>(`${apiPrefix}/auth/me`),
+  notifyTawkOfflineSubmission: (eventId: string, propertyId: string) =>
+    request<{ queued: boolean }>(`${apiPrefix}/feedback/tawk/offline-submissions`, {
+      ...jsonBody({ eventId, propertyId }),
+      keepalive: true,
+    }),
   organizations: async () => asList<Organization>(await request<unknown>(`${apiPrefix}/orgs`)),
   createOrganization: (input: CreateOrganizationInput) =>
     request<Organization>(`${apiPrefix}/orgs`, jsonBody(input)),
