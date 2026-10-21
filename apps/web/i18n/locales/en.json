@@ -197,6 +197,15 @@
         "serverMessage": "Server message"
       }
     },
+    "fileReader": {
+      "chooseFile": "Choose a file",
+      "fileSelected": "File ready",
+      "filenameUnavailable": "Filename unavailable",
+      "noFileSelected": "No file selected",
+      "replaceFile": "Replace file",
+      "tooLarge": "Choose a file smaller than {{size}} KB.",
+      "readFailed": "The file could not be read. Try another file."
+    },
     "empty": {
       "title": "No sources yet",
       "body": "Add a connector-backed source to make live data available to Tapstate."

@@ -40,6 +40,7 @@ import { ConnectionTestResultDialog } from './connection-test-result'
 import { ConnectorFormily } from './connector-formily'
 import {
   connectorSpecConnectionSchema,
+  connectorSpecConfigFields,
   connectorSpecInitialValues,
   normalizeConnectorConfigFields,
   normalizeConnectorConfigValues,
@@ -106,6 +107,7 @@ export function SourceCreateDialog({
   const [submitting, setSubmitting] = useState(false)
   const [requestError, setRequestError] = useState('')
   const [testing, setTesting] = useState(false)
+  const [pendingFileReads, setPendingFileReads] = useState(false)
   const [testReport, setTestReport] = useState<ConnectionTestReport | null>(null)
   const [testError, setTestError] = useState<unknown>(null)
   const [egressAddressCopied, setEgressAddressCopied] = useState(false)
@@ -132,6 +134,7 @@ export function SourceCreateDialog({
     setRequestError('')
     setTestReport(null)
     setTestError(null)
+    setPendingFileReads(false)
     setEgressAddressCopied(false)
     setEgressAddressCopyFailed(false)
     if (connectors.length === 0) {
@@ -165,7 +168,10 @@ export function SourceCreateDialog({
           return
         }
         try {
-          const normalizedFields = normalizeConnectorConfigFields(detail.id, detail.config)
+          const normalizedFields = normalizeConnectorConfigFields(
+            detail.id,
+            connectorSpecConfigFields(detail.spec.text, detail.config, currentLocale),
+          )
           const nextSchema = connectorSpecConnectionSchema(
             detail.spec.text,
             currentLocale,
@@ -218,6 +224,7 @@ export function SourceCreateDialog({
   }
 
   async function submit() {
+    if (pendingFileReads) return
     setRequestError('')
     const draft = connectionDraft()
     if (!draft) return
@@ -243,6 +250,7 @@ export function SourceCreateDialog({
   }
 
   async function runConnectionTest() {
+    if (pendingFileReads) return
     setTestError(null)
     setTestReport(null)
     const draft = connectionDraft()
@@ -259,7 +267,7 @@ export function SourceCreateDialog({
   }
 
   function handleOpenChange(nextOpen: boolean) {
-    if ((submitting || testing) && !nextOpen) return
+    if ((submitting || testing || pendingFileReads) && !nextOpen) return
     onOpenChange(nextOpen)
   }
 
@@ -273,7 +281,7 @@ export function SourceCreateDialog({
   }
 
   function chooseAnotherConnector() {
-    if (submitting || testing) return
+    if (submitting || testing || pendingFileReads) return
     const previousConnectorId = connectorId
     setConnectorId('')
     setConnector(null)
@@ -318,7 +326,7 @@ export function SourceCreateDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        closeDisabled={submitting || testing}
+        closeDisabled={submitting || testing || pendingFileReads}
         closeLabel={t('ask.actions.close')}
         className="bg-background border-border flex h-[90vh] max-h-[800px] w-full max-w-[1100px] flex-col gap-0 overflow-hidden rounded-2xl border p-0 shadow-2xl ring-0 sm:max-w-[1100px]"
       >
@@ -413,7 +421,7 @@ export function SourceCreateDialog({
                 <Button
                   variant="ghost"
                   type="button"
-                  disabled={submitting || testing}
+                  disabled={submitting || testing || pendingFileReads}
                   aria-label={t('sources.create.chooseAnother')}
                   className="size-11 shrink-0 p-0 sm:size-9"
                   onClick={chooseAnotherConnector}
@@ -526,6 +534,7 @@ export function SourceCreateDialog({
                           initialValues={config}
                           errors={fieldErrors}
                           disabled={submitting || testing}
+                          onPendingFileReadsChange={setPendingFileReads}
                           onValuesChange={(values) => {
                             setConfig(values)
                             setTestReport(null)
@@ -542,7 +551,7 @@ export function SourceCreateDialog({
                     <Button
                       variant="outline"
                       type="button"
-                      disabled={submitting || testing}
+                      disabled={submitting || testing || pendingFileReads}
                       className="h-11 px-[22px] sm:h-9 sm:px-4"
                       onClick={() => onOpenChange(false)}
                     >
@@ -551,7 +560,13 @@ export function SourceCreateDialog({
                     <Button
                       variant="outline"
                       type="button"
-                      disabled={connector === null || schema === null || submitting || testing}
+                      disabled={
+                        connector === null ||
+                        schema === null ||
+                        submitting ||
+                        testing ||
+                        pendingFileReads
+                      }
                       className="h-11 px-[22px] sm:h-9 sm:px-4"
                       onClick={() => void runConnectionTest()}
                     >
@@ -560,7 +575,13 @@ export function SourceCreateDialog({
                     </Button>
                     <Button
                       type="button"
-                      disabled={connector === null || schema === null || submitting || testing}
+                      disabled={
+                        connector === null ||
+                        schema === null ||
+                        submitting ||
+                        testing ||
+                        pendingFileReads
+                      }
                       className="h-11 px-[22px] sm:h-9 sm:px-4"
                       onClick={() => void submit()}
                     >

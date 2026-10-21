@@ -197,6 +197,15 @@
         "serverMessage": "伺服器訊息"
       }
     },
+    "fileReader": {
+      "chooseFile": "選擇檔案",
+      "fileSelected": "檔案已就緒",
+      "filenameUnavailable": "檔名無法取得",
+      "noFileSelected": "尚未選擇檔案",
+      "replaceFile": "取代檔案",
+      "tooLarge": "請選擇小於 {{size}} KB 的檔案。",
+      "readFailed": "無法讀取此檔案，請嘗試其他檔案。"
+    },
     "empty": {
       "title": "尚未建立資料來源",
       "body": "新增一個由連接器驅動的資料來源，讓 Tapstate 可以使用即時資料。"

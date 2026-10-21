@@ -1,12 +1,21 @@
 import type { ISchema } from '@formily/json-schema'
 
 import { useQuery } from '@tanstack/react-query'
-import { Layers, LoaderCircle, X } from 'lucide-react'
+import { AlertCircle, Database, LoaderCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { ClusterEgressAddressGuidance } from '@/components/cluster-egress-address-guidance'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { ConnectorFormily } from '@/features/sources/connector-formily'
 import {
+  connectorSpecConfigFields,
   connectorSpecConnectionSchema,
   connectorSpecInitialValues,
   normalizeConnectorConfigFields,
@@ -26,6 +35,8 @@ import {
 } from '@/service/source-client'
 import { useAuthStore } from '@/stores/auth-store'
 import { getDeploymentProfile } from '@/utils/deployment-profile'
+
+import './atlas-store-dialog.css'
 
 interface AtlasStoreDialogProps {
   open: boolean
@@ -70,9 +81,14 @@ export function AtlasStoreDialog({ open, onOpenChange, onCreated }: AtlasStoreDi
       .then((detail) => {
         if (!active) return
         if (detail.spec.text === null) throw new Error('Atlas connector form is unavailable')
-        const fields = normalizeConnectorConfigFields(detail.id, detail.config)
+        const fields = normalizeConnectorConfigFields(
+          detail.id,
+          connectorSpecConfigFields(detail.spec.text, detail.config, 'en'),
+        )
         setSchema(
-          withoutTextHints(connectorSpecConnectionSchema(detail.spec.text, 'en', detail.id)),
+          atlasDialogSchema(
+            withoutTextHints(connectorSpecConnectionSchema(detail.spec.text, 'en', detail.id)),
+          ),
         )
         setConfig({
           ...createInitialConfig(fields),
@@ -146,92 +162,90 @@ export function AtlasStoreDialog({ open, onOpenChange, onCreated }: AtlasStoreDi
 
   if (!open) return null
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
-      role="presentation"
-    >
-      <div
-        className="animate-in fade-in zoom-in-95 w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Connect MongoDB Atlas"
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        closeLabel="Close"
+        className="border-border bg-background flex max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg flex-col gap-0 overflow-hidden rounded-xl border p-0 shadow-xl ring-0 sm:max-w-lg"
       >
-        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-6 py-4">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs">
-              <Layers className="h-4 w-4" />
-            </div>
-            <div>
-              <h3 className="text-[14px] font-bold text-slate-900">
-                Connect MongoDB Atlas (Step 1)
-              </h3>
-              <p className="text-[11px] text-slate-500">
-                Authorize the target cluster where real-time collections will materialize.
-              </p>
+        <DialogHeader className="border-border flex shrink-0 flex-row items-start gap-3 border-b px-5 py-4 pr-12">
+          <span className="bg-muted text-foreground mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg">
+            <Database className="size-4" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <DialogTitle className="text-foreground text-base leading-6 font-semibold">
+              Connect MongoDB Atlas
+            </DialogTitle>
+            <DialogDescription className="mt-1 text-[13px] leading-5">
+              Connect an Atlas cluster to store materialized collections.
+            </DialogDescription>
+          </div>
+        </DialogHeader>
+
+        <form onSubmit={(event) => void save(event)} className="flex min-h-0 flex-1 flex-col">
+          <div
+            data-atlas-dialog-scroll
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5"
+          >
+            <div className="grid gap-5">
+              {isCloudDeployment && (
+                <ClusterEgressAddressGuidance
+                  isLoading={cloudContext.isLoading}
+                  isError={cloudContext.isError}
+                  address={egressAddress}
+                  status={egressStatus}
+                  copied={egressAddressCopied}
+                  copyFailed={egressAddressCopyFailed}
+                  onCopy={() => void copyEgressAddress()}
+                />
+              )}
+              {requestError && (
+                <div
+                  role="alert"
+                  className="border-destructive/20 bg-destructive/10 text-destructive flex items-start gap-2 rounded-lg border px-3 py-2.5 text-[13px] leading-5"
+                >
+                  <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                  <span>{requestError}</span>
+                </div>
+              )}
+              {connector && schema ? (
+                <div className="atlas-store-dialog__fields">
+                  <ConnectorFormily
+                    fields={connector.config}
+                    schema={schema}
+                    resetKey={`${connector.id}:${connector.spec.contentHash}`}
+                    initialValues={config}
+                    errors={errors}
+                    disabled={saving}
+                    onValuesChange={(values) => {
+                      setConfig(values)
+                      setErrors({})
+                    }}
+                  />
+                </div>
+              ) : !requestError ? (
+                <div
+                  role="status"
+                  className="text-muted-foreground flex min-h-20 items-center justify-center gap-2 text-[13px]"
+                >
+                  <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+                  Loading Atlas connector…
+                </div>
+              ) : null}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="cursor-pointer rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-            aria-label="Close"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <form onSubmit={(event) => void save(event)} className="space-y-4 p-6">
-          {isCloudDeployment && (
-            <ClusterEgressAddressGuidance
-              isLoading={cloudContext.isLoading}
-              isError={cloudContext.isError}
-              address={egressAddress}
-              status={egressStatus}
-              copied={egressAddressCopied}
-              copyFailed={egressAddressCopyFailed}
-              onCopy={() => void copyEgressAddress()}
-            />
-          )}
-          {requestError && (
-            <p role="alert" className="text-[12px] text-red-600">
-              {requestError}
-            </p>
-          )}
-          {connector && schema ? (
-            <ConnectorFormily
-              fields={connector.config}
-              schema={schema}
-              resetKey={`${connector.id}:${connector.spec.contentHash}`}
-              initialValues={config}
-              errors={errors}
-              disabled={saving}
-              onValuesChange={(values) => {
-                setConfig(values)
-                setErrors({})
-              }}
-            />
-          ) : !requestError ? (
-            <p className="text-[12px] text-slate-500">Loading Atlas connector…</p>
-          ) : null}
-          <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="cursor-pointer rounded-xl border border-slate-300 px-4 py-2 text-[12px] font-medium text-slate-700 transition-colors hover:bg-slate-50"
-            >
+
+          <div className="border-border bg-background flex shrink-0 items-center justify-end gap-2 border-t px-5 py-4">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!connector || saving}
-              className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-[12px] font-bold text-white shadow-xs transition-all hover:bg-emerald-700 disabled:opacity-60"
-            >
-              {saving && <LoaderCircle className="h-3.5 w-3.5 animate-spin" />}
+            </Button>
+            <Button type="submit" disabled={!connector || saving}>
+              {saving && <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />}
               {saving ? 'Verifying…' : 'Save & Authorize'}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -244,5 +258,30 @@ function withoutTextHints(schema: ISchema): ISchema {
         .filter(([, field]) => field['x-component'] !== 'Text')
         .map(([name, field]) => [name, withoutTextHints(field)]),
     ),
+  }
+}
+
+function atlasDialogSchema(schema: ISchema): ISchema {
+  const properties = Object.fromEntries(Object.entries(schema.properties ?? {})) as Record<
+    string,
+    ISchema
+  >
+  const tlsSection = properties.__tapstateSsl
+  if (tlsSection?.['x-component'] !== 'ConfigSection') return schema
+
+  const componentProps = tlsSection['x-component-props'] as Record<string, unknown> | undefined
+  return {
+    ...schema,
+    properties: {
+      ...properties,
+      __tapstateSsl: {
+        ...tlsSection,
+        'x-component-props': {
+          ...componentProps,
+          compact: true,
+          headerControl: true,
+        },
+      },
+    },
   }
 }

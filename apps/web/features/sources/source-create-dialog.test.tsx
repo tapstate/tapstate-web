@@ -599,4 +599,93 @@ describe('SourceCreateDialog', () => {
       expect(document.body.textContent).toContain('Connected')
     })
   })
+
+  it('blocks testing and saving while a selected TLS file is still being read', async () => {
+    const spec = JSON.parse(detail.spec.text ?? '{}')
+    spec.properties = { tags: ['ssl'] }
+    getConnector.mockResolvedValue({
+      ...detail,
+      spec: { ...detail.spec, text: JSON.stringify(spec) },
+    })
+
+    const pendingReaders: FileReader[] = []
+    const readAsDataURL = vi
+      .spyOn(FileReader.prototype, 'readAsDataURL')
+      .mockImplementation(function (this: FileReader) {
+        pendingReaders.push(this)
+      })
+
+    host = document.createElement('div')
+    document.body.append(host)
+    root = createRoot(host)
+
+    await act(async () => {
+      root?.render(
+        <SourceCreateDialog
+          open
+          onOpenChange={() => undefined}
+          onCreated={(_source: SourceView) => undefined}
+        />,
+      )
+    })
+    await vi.waitFor(() => expect(connectorCard()).toBeDefined())
+    await act(async () => connectorCard()?.click())
+    await vi.waitFor(() => expect(fieldInput('Spec host')).toBeDefined())
+
+    const tlsToggle = [...document.body.querySelectorAll<HTMLElement>('[class*="formily-item"]')]
+      .find((element) => element.querySelector('label')?.textContent?.trim() === 'Use TLS')
+      ?.querySelector('input, textarea, button')
+    expect(tlsToggle).not.toBeNull()
+    await act(async () => {
+      tlsToggle?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    const fileInput = document.body.querySelector<HTMLInputElement>(
+      'input[type="file"][aria-label="CA certificate"]',
+    )
+    expect(fileInput).not.toBeNull()
+    Object.defineProperty(fileInput, 'files', {
+      configurable: true,
+      value: [new File(['certificate'], 'ca.pem', { type: 'application/x-pem-file' })],
+    })
+    await act(async () => {
+      fileInput?.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    expect(pendingReaders).toHaveLength(1)
+
+    const testButton = [...document.body.querySelectorAll<HTMLButtonElement>('button')].find(
+      (button) => button.textContent?.trim() === 'Test connection',
+    )
+    const saveButton = [...document.body.querySelectorAll<HTMLButtonElement>('button')].find(
+      (button) => button.textContent?.trim() === 'Create source',
+    )
+    expect(testButton?.disabled).toBe(true)
+    expect(saveButton?.disabled).toBe(true)
+    await act(async () => {
+      testButton?.click()
+      saveButton?.click()
+    })
+    expect(testConnection).not.toHaveBeenCalled()
+
+    await act(async () => {
+      Object.defineProperty(pendingReaders[0], 'result', {
+        configurable: true,
+        value: 'data:application/x-pem-file;base64,Y2VydGlmaWNhdGU=',
+      })
+      pendingReaders[0]?.dispatchEvent(new ProgressEvent('load'))
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(
+      [...document.body.querySelectorAll<HTMLButtonElement>('button')].find(
+        (button) => button.textContent?.trim() === 'Test connection',
+      )?.disabled,
+    ).toBe(false)
+    expect(
+      [...document.body.querySelectorAll<HTMLButtonElement>('button')].find(
+        (button) => button.textContent?.trim() === 'Create source',
+      )?.disabled,
+    ).toBe(false)
+    readAsDataURL.mockRestore()
+  })
 })
