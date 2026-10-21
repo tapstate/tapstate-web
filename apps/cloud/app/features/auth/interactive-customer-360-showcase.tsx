@@ -318,7 +318,7 @@ export const InteractiveCustomer360Showcase: FC<{
                   <div className="flex items-center gap-1 text-[10.5px] font-medium whitespace-nowrap text-slate-400 dark:text-slate-500">
                     {workspaceDomain && (
                       <>
-                        <span className="font-mono font-semibold text-[#00B4B8] dark:text-[#00D2D6]">
+                        <span className="min-w-0 font-mono font-semibold break-all whitespace-normal text-[#00B4B8] dark:text-[#00D2D6]">
                           tapstate.com · {workspaceDomain}
                         </span>
                         <span>›</span>
