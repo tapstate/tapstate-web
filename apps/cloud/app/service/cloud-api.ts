@@ -51,11 +51,15 @@ export interface LinkedIdentity {
 
 export interface EmailRegistrationInput {
   email: string
-  invitationToken: string
+  invitationToken?: string
   code: string
   password: string
   displayName?: string
   organizationName?: string
+}
+
+export interface RegistrationPolicy {
+  trialCodeRequired: boolean
 }
 
 export interface Region {
@@ -242,8 +246,12 @@ const apiPrefix = '/v1/api'
 
 export const cloudApi = {
   login: (input: LoginInput) => request<LoginResult>(`${apiPrefix}/auth/login`, jsonBody(input)),
-  requestEmailCode: (email: string, invitationToken: string) =>
-    request<void>(`${apiPrefix}/auth/email/code`, jsonBody({ email, invitationToken })),
+  registrationPolicy: () => request<RegistrationPolicy>(`${apiPrefix}/auth/registration-policy`),
+  requestEmailCode: (email: string, invitationToken: string | null) =>
+    request<void>(
+      `${apiPrefix}/auth/email/code`,
+      jsonBody({ email, ...(invitationToken ? { invitationToken } : {}) }),
+    ),
   registerWithEmailCode: (input: EmailRegistrationInput) =>
     request<LoginResult>(`${apiPrefix}/auth/email/register`, jsonBody(input)),
   accessType: (code: string) =>

@@ -26,9 +26,13 @@ interface AuthPageProps {
   darkMode: boolean
   setDarkMode: (enabled: boolean) => void
   invitationToken: string | null
+  initialMode?: 'login' | 'register'
   oauthOutcome?: string
+  registrationPolicyStatus: 'loading' | 'ready' | 'error'
+  trialCodeRequired: boolean
+  onRetryRegistrationPolicy: () => void
   onLogin: (input: LoginInput) => Promise<UserProfile>
-  onRequestCode: (email: string, invitationToken: string) => Promise<void>
+  onRequestCode: (email: string, invitationToken: string | null) => Promise<void>
   onRegisterWithEmail: (input: EmailRegistrationInput) => Promise<UserProfile>
   onAccessType: (code: string) => Promise<{ type: 'trial' | 'organization' }>
   onAcceptInvitation: (invitationToken: string, organizationName?: string) => Promise<UserProfile>
@@ -90,7 +94,11 @@ export function AuthPage({
   darkMode,
   setDarkMode,
   invitationToken,
+  initialMode,
   oauthOutcome,
+  registrationPolicyStatus,
+  trialCodeRequired,
+  onRetryRegistrationPolicy,
   onLogin,
   onRequestCode,
   onRegisterWithEmail,
@@ -105,7 +113,9 @@ export function AuthPage({
   const [invitationLink, setInvitationLink] = useState('')
   const [accessType, setAccessType] = useState<'trial' | 'organization' | null>(null)
   const [organizationName, setOrganizationName] = useState('')
-  const [mode, setMode] = useState<AuthMode>(invitationToken ? 'register' : 'login')
+  const [mode, setMode] = useState<AuthMode>(
+    initialMode ?? (invitationToken ? 'register' : 'login'),
+  )
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -118,6 +128,13 @@ export function AuthPage({
   const [error, setError] = useState<string | null>(null)
   const [oauthCompleting, setOauthCompleting] = useState(false)
   const oauthHandled = useRef(false)
+  const registrationPolicyBlocked =
+    mode === 'register' && !activeInvitationToken && registrationPolicyStatus !== 'ready'
+  const trialCodeBlocked =
+    mode === 'register' &&
+    !activeInvitationToken &&
+    registrationPolicyStatus === 'ready' &&
+    trialCodeRequired
 
   useEffect(() => {
     if (!activeInvitationToken) {
@@ -157,8 +174,18 @@ export function AuthPage({
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (registrationPolicyBlocked) {
+      setError('auth.errors.registrationPolicyUnavailable')
+      return
+    }
     if (activeInvitationToken && !accessType) return
-    if (accessType === 'trial' && !organizationName.trim()) {
+    const needsOrganizationName =
+      accessType === 'trial' ||
+      (mode === 'register' &&
+        !activeInvitationToken &&
+        registrationPolicyStatus === 'ready' &&
+        !trialCodeRequired)
+    if (needsOrganizationName && !organizationName.trim()) {
       setError('auth.errors.organizationNameRequired')
       return
     }
@@ -172,7 +199,7 @@ export function AuthPage({
         if (activeInvitationToken)
           user = await onAcceptInvitation(activeInvitationToken, organizationName.trim())
       } else {
-        if (!activeInvitationToken) {
+        if (!activeInvitationToken && trialCodeRequired) {
           setError('auth.errors.invitationRequired')
           return
         }
@@ -182,7 +209,7 @@ export function AuthPage({
         }
         user = await onRegisterWithEmail({
           email: email.trim(),
-          invitationToken: activeInvitationToken,
+          ...(activeInvitationToken ? { invitationToken: activeInvitationToken } : {}),
           code: verificationCode.trim(),
           password,
           displayName: displayName.trim(),
@@ -198,11 +225,15 @@ export function AuthPage({
   }
 
   const handleRequestCode = async () => {
-    if (!activeInvitationToken) {
+    if (registrationPolicyBlocked) {
+      setError('auth.errors.registrationPolicyUnavailable')
+      return
+    }
+    if (!activeInvitationToken && trialCodeRequired) {
       setError('auth.errors.invitationRequired')
       return
     }
-    if (!accessType) return
+    if (activeInvitationToken && !accessType) return
     setError(null)
     setIsSendingCode(true)
     try {
@@ -216,8 +247,22 @@ export function AuthPage({
   }
 
   const handleOAuth = async (provider: 'google' | 'github') => {
+    if (registrationPolicyBlocked) {
+      setError('auth.errors.registrationPolicyUnavailable')
+      return
+    }
+    if (mode === 'register' && trialCodeRequired && !activeInvitationToken) {
+      setError('auth.errors.invitationRequired')
+      return
+    }
     if (activeInvitationToken && !accessType) return
-    if (accessType === 'trial' && !organizationName.trim()) {
+    const needsOrganizationName =
+      accessType === 'trial' ||
+      (mode === 'register' &&
+        !activeInvitationToken &&
+        registrationPolicyStatus === 'ready' &&
+        !trialCodeRequired)
+    if (needsOrganizationName && !organizationName.trim()) {
       setError('auth.errors.organizationNameRequired')
       return
     }
@@ -257,10 +302,11 @@ export function AuthPage({
         return
       }
     }
-    if (!/^[A-Za-z0-9_-]{43}$/.test(token)) {
+    if (!/^[2-9A-HJ-NP-Z]{12}$/i.test(token)) {
       setError('auth.errors.invitationInvalid')
       return
     }
+    token = token.toUpperCase()
     setActiveInvitationToken(token)
     setAccessType(null)
     setVerificationSent(false)
@@ -306,9 +352,40 @@ export function AuthPage({
           {t(mode === 'login' ? 'auth.loginTitle' : 'auth.registerTitle')}
         </h1>
         <p className="text-sm text-[var(--muted-foreground)]">
-          {t(mode === 'login' ? 'auth.loginDescription' : 'auth.registerDescription')}
+          {t(
+            mode === 'login'
+              ? 'auth.loginDescription'
+              : activeInvitationToken
+                ? 'auth.registerDescription'
+                : registrationPolicyStatus !== 'ready'
+                  ? 'auth.registerDescriptionChecking'
+                  : trialCodeRequired
+                    ? 'auth.registerDescription'
+                    : 'auth.registerDescriptionOpen',
+          )}
         </p>
       </div>
+
+      {mode === 'register' && !activeInvitationToken && registrationPolicyStatus === 'loading' && (
+        <p aria-live="polite" className="mt-3 text-center text-xs text-[var(--muted-foreground)]">
+          {t('auth.registrationPolicyLoading')}
+        </p>
+      )}
+      {mode === 'register' && !activeInvitationToken && registrationPolicyStatus === 'error' && (
+        <div
+          className="mt-3 flex items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--app-background)] p-3 text-sm text-[var(--foreground)]"
+          role="alert"
+        >
+          <span>{t('auth.registrationPolicyUnavailable')}</span>
+          <button
+            className="shrink-0 font-medium underline-offset-4 hover:underline"
+            onClick={onRetryRegistrationPolicy}
+            type="button"
+          >
+            {t('auth.retryRegistrationPolicy')}
+          </button>
+        </div>
+      )}
 
       {activeInvitationToken && (
         <div className="mt-4 flex items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--app-background)] px-3 py-2 text-xs text-[var(--muted-foreground)]">
@@ -329,7 +406,8 @@ export function AuthPage({
         </div>
       )}
 
-      {accessType === 'trial' && (
+      {(accessType === 'trial' ||
+        (mode === 'register' && !activeInvitationToken && !trialCodeRequired)) && (
         <div className="mt-4">
           <Field label={t('auth.organizationNameLabel')} htmlFor="auth-organization-name">
             <input
@@ -345,29 +423,38 @@ export function AuthPage({
         </div>
       )}
 
-      {!activeInvitationToken && (
-        <form className="mt-4 space-y-2" onSubmit={applyInvitationLink}>
-          <label className="block text-sm font-medium" htmlFor="auth-invitation-link">
-            {t('auth.invitationLinkLabel')}
-          </label>
-          <div className="flex gap-2">
-            <input
-              autoComplete="off"
-              className={inputClassName}
-              id="auth-invitation-link"
-              onChange={(event) => setInvitationLink(event.target.value)}
-              placeholder={t('auth.invitationLinkPlaceholder')}
-              value={invitationLink}
-            />
-            <button
-              className="shrink-0 rounded-md bg-[var(--foreground)] px-4 text-sm font-medium text-[var(--surface)]"
-              type="submit"
-            >
-              {t('auth.useInvitation')}
-            </button>
-          </div>
-        </form>
-      )}
+      {!activeInvitationToken &&
+        (mode === 'login' || registrationPolicyStatus !== 'ready' || trialCodeRequired) && (
+          <form className="mt-4 space-y-2" onSubmit={applyInvitationLink}>
+            <label className="block text-sm font-medium" htmlFor="auth-invitation-link">
+              {t('auth.invitationLinkLabel')}
+            </label>
+            <div className="flex gap-2">
+              <input
+                autoComplete="off"
+                className={inputClassName}
+                id="auth-invitation-link"
+                onChange={(event) => setInvitationLink(event.target.value)}
+                placeholder={t('auth.invitationLinkPlaceholder')}
+                value={invitationLink}
+              />
+              <button
+                className="shrink-0 rounded-md bg-[var(--foreground)] px-4 text-sm font-medium text-[var(--surface)]"
+                type="submit"
+              >
+                {t('auth.useInvitation')}
+              </button>
+            </div>
+          </form>
+        )}
+      {mode === 'register' &&
+        !activeInvitationToken &&
+        registrationPolicyStatus === 'ready' &&
+        trialCodeRequired && (
+          <p className="mt-2 text-xs leading-relaxed text-[var(--muted-foreground)]">
+            {t('auth.invitationRequiredForRegistration')}
+          </p>
+        )}
 
       <div className="mt-6 space-y-4">
         <AuthProviderButtons
@@ -375,6 +462,8 @@ export function AuthPage({
             isSubmitting ||
             isSendingCode ||
             isStartingOAuth ||
+            registrationPolicyBlocked ||
+            trialCodeBlocked ||
             Boolean(activeInvitationToken && !accessType)
           }
           mode={mode}
@@ -418,7 +507,14 @@ export function AuthPage({
             <div className="space-y-2">
               <button
                 className="h-10 w-full rounded-md border border-[var(--border)] px-3 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--app-background)] disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={!email.trim() || isSendingCode || isSubmitting || !accessType}
+                disabled={
+                  !email.trim() ||
+                  isSendingCode ||
+                  isSubmitting ||
+                  registrationPolicyBlocked ||
+                  trialCodeBlocked ||
+                  Boolean(activeInvitationToken && !accessType)
+                }
                 onClick={handleRequestCode}
                 type="button"
               >
@@ -485,7 +581,10 @@ export function AuthPage({
             <button
               className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--foreground)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={
-                isSubmitting || isSendingCode || Boolean(activeInvitationToken && !accessType)
+                isSubmitting ||
+                isSendingCode ||
+                registrationPolicyBlocked ||
+                Boolean(activeInvitationToken && !accessType)
               }
               type="submit"
             >
@@ -504,9 +603,9 @@ export function AuthPage({
           )}
         </form>
 
-        {activeInvitationToken ? (
-          <p className="text-center text-sm text-[var(--muted-foreground)]">
-            {t(mode === 'login' ? 'auth.haveAccount' : 'auth.haveInviteAccount')}{' '}
+        <div className="space-y-1 text-center">
+          <p className="text-sm text-[var(--muted-foreground)]">
+            {t(mode === 'login' ? 'auth.noAccount' : 'auth.haveInviteAccount')}{' '}
             <button
               className="font-medium text-[var(--foreground)] underline-offset-4 hover:underline"
               onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
@@ -515,11 +614,14 @@ export function AuthPage({
               {t(mode === 'login' ? 'auth.goRegister' : 'auth.goLogin')}
             </button>
           </p>
-        ) : (
-          <p className="text-center text-xs text-[var(--muted-foreground)]">
-            {t('auth.invitationRequiredForRegistration')}
-          </p>
-        )}
+          {mode === 'login' && !activeInvitationToken && (
+            <p className="text-xs leading-relaxed text-[var(--muted-foreground)]">
+              {registrationPolicyStatus === 'ready' &&
+                trialCodeRequired &&
+                t('auth.invitationRequiredForRegistration')}
+            </p>
+          )}
+        </div>
 
         <div className="flex items-center justify-center gap-2 border-t border-[var(--border)] pt-4 text-xs text-[var(--muted-foreground)]">
           <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0" />
@@ -575,9 +677,13 @@ function AuthShell({
       </header>
 
       <main className="my-auto flex w-full max-w-md items-center justify-center py-10">
-        <section className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--main-shadow)] sm:p-8">
-          {children}
-        </section>
+        <div className="auth-card flowing-card-container material-fusion w-full">
+          <div aria-hidden="true" className="flowing-border-glow" />
+          <section className="liquid-glass-card relative z-10 w-full overflow-hidden p-6 sm:p-8">
+            <div aria-hidden="true" className="liquid-glass-meniscus" />
+            {children}
+          </section>
+        </div>
       </main>
 
       <footer className="w-full max-w-5xl text-center text-xs text-[var(--muted-foreground)]">

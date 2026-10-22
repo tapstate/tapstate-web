@@ -34,13 +34,15 @@ export function AuthProviderButtons({ mode, disabled = false, onStart }: AuthPro
         </button>
       </div>
 
-      <div className="relative flex items-center justify-center py-0.5">
-        <div className="absolute inset-0 flex items-center">
-          <div className="border-border w-full border-t" />
-        </div>
-        <span className="bg-card text-muted-foreground relative px-3 text-xs font-medium tracking-wide uppercase">
+      <div aria-label={t('auth.or')} className="flex items-center gap-3 py-1" role="separator">
+        <span aria-hidden="true" className="h-px flex-1 bg-[var(--border)]" />
+        <span
+          aria-hidden="true"
+          className="text-muted-foreground text-xs font-medium tracking-wide"
+        >
           {t('auth.or')}
         </span>
+        <span aria-hidden="true" className="h-px flex-1 bg-[var(--border)]" />
       </div>
     </>
   )

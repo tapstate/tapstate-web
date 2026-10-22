@@ -40,6 +40,9 @@ async function renderPage(props: Partial<ComponentProps<typeof AuthPage>> = {}) 
     darkMode: false,
     setDarkMode: vi.fn(),
     invitationToken: 'invite-token',
+    registrationPolicyStatus: 'ready',
+    trialCodeRequired: true,
+    onRetryRegistrationPolicy: vi.fn(),
     onAccessType: vi.fn().mockResolvedValue({ type: 'organization' }),
     onLogin: vi.fn().mockResolvedValue(user),
     onRequestCode: vi.fn().mockResolvedValue(undefined),
@@ -89,20 +92,57 @@ afterEach(async () => {
 
 describe('Cloud invitation authentication', () => {
   it('continues Google signup with an invitation after an invite-required callback', async () => {
-    const token = 'A'.repeat(43)
+    const token = 'A2B3C4D5E6F7'
     const link = new URL('/auth', window.location.origin)
     link.searchParams.set('invite', token)
     const props = await renderPage({
       invitationToken: null,
+      initialMode: 'register',
       oauthOutcome: 'auth.invitation-required',
     })
 
+    expect(host?.querySelector('h1')?.textContent).toContain('Create your Tapstate account')
     await act(async () => changeInput('#auth-invitation-link', link.toString()))
     await clickButton('Continue')
     await clickButton('Sign up with Google')
 
     expect(props.onOAuth).toHaveBeenCalledWith('google', 'register', token, '')
     expect(props.onRequestCode).not.toHaveBeenCalled()
+  })
+
+  it('keeps sign-up reachable for users who do not have an account yet', async () => {
+    const props = await renderPage({ invitationToken: null })
+
+    expect(host?.querySelector('h1')?.textContent).toContain('Sign in to Tapstate Cloud')
+    await clickButton('Sign up')
+
+    expect(host?.querySelector('h1')?.textContent).toContain('Create your Tapstate account')
+    expect(host?.querySelector('#auth-name')).not.toBeNull()
+    const googleButton = buttonWithText('Sign up with Google') as HTMLButtonElement
+    const githubButton = buttonWithText('Sign up with GitHub') as HTMLButtonElement
+    expect(googleButton.disabled).toBe(true)
+    expect(githubButton.disabled).toBe(true)
+    expect((buttonWithText('Email me a verification code') as HTMLButtonElement).disabled).toBe(
+      true,
+    )
+    expect(host?.textContent).toContain('During early access, enter a trial code')
+    expect(host?.textContent).toContain('Already have an account?')
+    await clickButton('Sign up with Google')
+    await clickButton('Sign up with GitHub')
+    expect(props.onOAuth).not.toHaveBeenCalled()
+    expect(props.onRequestCode).not.toHaveBeenCalled()
+  })
+
+  it('rejects legacy 43-character invitation codes', async () => {
+    const props = await renderPage({ invitationToken: null })
+    await act(async () => changeInput('#auth-invitation-link', 'A'.repeat(43)))
+    await clickButton('Continue')
+
+    expect(host?.querySelector('[role="alert"]')?.textContent).toContain(
+      'This invitation link is not valid.',
+    )
+    expect(props.onAccessType).not.toHaveBeenCalled()
+    expect(props.onOAuth).not.toHaveBeenCalled()
   })
 
   it('registers an invited user after email verification and authenticates the new session', async () => {
@@ -122,6 +162,41 @@ describe('Cloud invitation authentication', () => {
       password: 'correct-horse-battery',
       displayName: 'Member',
       organizationName: '',
+    })
+    expect(props.onAuthenticated).toHaveBeenCalledWith(user)
+  })
+
+  it('starts Google signup without a trial code after the gate is disabled', async () => {
+    const props = await renderPage({ invitationToken: null, trialCodeRequired: false })
+    await clickButton('Sign up')
+    await act(async () => changeInput('#auth-organization-name', 'Member Workspace'))
+    await clickButton('Sign up with Google')
+
+    expect(props.onOAuth).toHaveBeenCalledWith('google', 'register', null, 'Member Workspace')
+  })
+
+  it('registers a new account and organization without a trial code when the gate is disabled', async () => {
+    const props = await renderPage({ invitationToken: null, trialCodeRequired: false })
+    await clickButton('Sign up')
+    await act(async () => changeInput('#auth-name', 'Member'))
+    await act(async () => changeInput('#auth-organization-name', 'Member Workspace'))
+    await act(async () => changeInput('#auth-email', 'member@example.com'))
+
+    const requestCodeButton = buttonWithText('Email me a verification code') as HTMLButtonElement
+    expect(requestCodeButton.disabled).toBe(false)
+    expect(host?.querySelector('#auth-invitation-link')).toBeNull()
+    await clickButton('Email me a verification code')
+    await act(async () => changeInput('#auth-code', '123456'))
+    await act(async () => changeInput('#auth-password', 'correct-horse-battery'))
+    await submitForm()
+
+    expect(props.onRequestCode).toHaveBeenCalledWith('member@example.com', null)
+    expect(props.onRegisterWithEmail).toHaveBeenCalledWith({
+      email: 'member@example.com',
+      code: '123456',
+      password: 'correct-horse-battery',
+      displayName: 'Member',
+      organizationName: 'Member Workspace',
     })
     expect(props.onAuthenticated).toHaveBeenCalledWith(user)
   })
