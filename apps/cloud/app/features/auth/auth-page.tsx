@@ -25,6 +25,8 @@ import { InteractiveCustomer360Showcase } from './interactive-customer-360-showc
 
 type AuthMode = 'login' | 'register'
 
+const emailCodeCooldownSeconds = 60
+
 interface AuthPageProps {
   darkMode: boolean
   setDarkMode: (enabled: boolean) => void
@@ -124,6 +126,7 @@ export function AuthPage({
   const [displayName, setDisplayName] = useState('')
   const [verificationCode, setVerificationCode] = useState('')
   const [verificationSent, setVerificationSent] = useState(false)
+  const [resendAvailableIn, setResendAvailableIn] = useState(0)
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSendingCode, setIsSendingCode] = useState(false)
@@ -177,6 +180,14 @@ export function AuthPage({
     const message = oauthErrorMessage(oauthOutcome)
     if (message) setError(message)
   }, [oauthOutcome, onAuthenticated, onCurrentSession])
+
+  useEffect(() => {
+    if (resendAvailableIn === 0) return
+    const interval = window.setInterval(() => {
+      setResendAvailableIn((remaining) => Math.max(0, remaining - 1))
+    }, 1000)
+    return () => window.clearInterval(interval)
+  }, [resendAvailableIn])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -245,6 +256,7 @@ export function AuthPage({
     try {
       await onRequestCode(email.trim(), activeInvitationToken)
       setVerificationSent(true)
+      setResendAvailableIn(emailCodeCooldownSeconds)
     } catch (cause) {
       setError(errorMessageKey(cause))
     } finally {
@@ -317,6 +329,7 @@ export function AuthPage({
     setAccessType(null)
     setVerificationSent(false)
     setVerificationCode('')
+    setResendAvailableIn(0)
     setInvitationLink('')
     setMode('register')
     setError(null)
@@ -527,6 +540,7 @@ export function AuthPage({
                   !email.trim() ||
                   isSendingCode ||
                   isSubmitting ||
+                  resendAvailableIn > 0 ||
                   registrationPolicyBlocked ||
                   trialCodeBlocked ||
                   Boolean(activeInvitationToken && !accessType)
@@ -536,9 +550,11 @@ export function AuthPage({
               >
                 {isSendingCode
                   ? t('auth.sendingCode')
-                  : verificationSent
-                    ? t('auth.resendCode')
-                    : t('auth.sendCode')}
+                  : resendAvailableIn > 0
+                    ? t('auth.resendCodeIn', { count: resendAvailableIn })
+                    : verificationSent
+                      ? t('auth.resendCode')
+                      : t('auth.sendCode')}
               </button>
               {verificationSent && (
                 <Field label={t('auth.codeLabel')} htmlFor="auth-code">

@@ -86,6 +86,7 @@ afterEach(async () => {
   host?.remove()
   host = undefined
   root = undefined
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   vi.clearAllMocks()
 })
@@ -216,6 +217,23 @@ describe('Cloud invitation authentication', () => {
 
     await clickButton('Email me a verification code')
     expect(host?.querySelector('#auth-code')).not.toBeNull()
+  })
+
+  it('waits 60 seconds before allowing another verification code request', async () => {
+    vi.useFakeTimers()
+    const props = await renderPage()
+
+    await act(async () => changeInput('#auth-email', 'member@example.com'))
+    await clickButton('Email me a verification code')
+
+    const resendButton = buttonWithText('Send another code in 60 seconds') as HTMLButtonElement
+    expect(resendButton.disabled).toBe(true)
+
+    await act(async () => vi.advanceTimersByTimeAsync(60_000))
+    expect(buttonWithText('Send another code')?.disabled).toBe(false)
+
+    await clickButton('Send another code')
+    expect(props.onRequestCode).toHaveBeenCalledTimes(2)
   })
 
   it('shows an expired invitation error without switching to open registration', async () => {

@@ -61,6 +61,7 @@
     "goLogin": "Sign in",
     "sendCode": "Email me a verification code",
     "resendCode": "Send another code",
+    "resendCodeIn": "Send another code in {{count}} seconds",
     "sendingCode": "Sending code…",
     "codeLabel": "Email verification code",
     "codeSentTo": "A code was sent to {{email}}. It expires in 10 minutes.",

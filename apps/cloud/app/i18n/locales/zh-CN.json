@@ -61,6 +61,7 @@
     "goLogin": "登录",
     "sendCode": "发送邮箱验证码",
     "resendCode": "重新发送验证码",
+    "resendCodeIn": "{{count}} 秒后可重新发送",
     "sendingCode": "正在发送验证码…",
     "codeLabel": "邮箱验证码",
     "codeSentTo": "验证码已发送至 {{email}}，十分钟后过期。",
