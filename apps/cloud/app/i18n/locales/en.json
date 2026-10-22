@@ -296,6 +296,88 @@
       "back": "Back to plans"
     }
   },
+  "events": {
+    "title": "Events & alerts",
+    "subtitle": "Key events and alert delivery for {{organization}}.",
+    "organizationFallback": "your organization",
+    "tabPolicies": "Alert policies",
+    "tabDeliveries": "Delivery history",
+    "policySubtitle": "Email alert rules for {{organization}}.",
+    "deliverySubtitle": "Notification delivery attempts for {{organization}}.",
+    "loading": "Loading…",
+    "loadError": "Could not load this view.",
+    "retry": "Refresh",
+    "empty": "Nothing to show yet.",
+    "filterType": "Event type",
+    "filterTypePlaceholder": "All event types",
+    "filterSeverity": "Severity",
+    "allSeverities": "All severities",
+    "severity": {
+      "INFO": "Info",
+      "WARNING": "Warning",
+      "CRITICAL": "Critical"
+    },
+    "columns": {
+      "time": "Time",
+      "type": "Type",
+      "severity": "Severity",
+      "subject": "Subject",
+      "actor": "Actor",
+      "source": "Source",
+      "recipient": "Recipient",
+      "status": "Status",
+      "attempts": "Attempts",
+      "lastError": "Last error",
+      "recipients": "Recipients",
+      "cooldown": "Cooldown",
+      "quietHours": "Quiet hours",
+      "enabled": "Enabled"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "SENDING": "Sending",
+      "SENT": "Sent",
+      "FAILED": "Failed",
+      "DEAD": "Dead",
+      "SUPPRESSED": "Suppressed"
+    },
+    "actions": {
+      "create": "New policy",
+      "save": "Save",
+      "edit": "Edit",
+      "delete": "Delete",
+      "close": "Close"
+    },
+    "policyForm": {
+      "name": "Name",
+      "namePlaceholder": "Critical pipeline alerts",
+      "eventTypes": "Event types (comma separated)",
+      "eventTypesHint": "Use * for all events, or a prefix such as pipeline.*",
+      "minSeverity": "Minimum severity",
+      "recipients": "Recipients (comma separated member emails)",
+      "cooldown": "Cooldown (seconds)",
+      "quietStart": "Quiet hours start (HH:mm)",
+      "quietEnd": "Quiet hours end (HH:mm)",
+      "timezone": "Timezone",
+      "enabled": "Enabled"
+    },
+    "validation": {
+      "name": "Name is required.",
+      "recipients": "At least one recipient is required.",
+      "quietHours": "Set both quiet-hour fields in HH:mm format."
+    },
+    "detailTitle": "Event detail",
+    "detail": {
+      "id": "Event ID"
+    },
+    "payload": "Payload",
+    "noPayload": "No payload recorded.",
+    "adminOnly": "Only an organization administrator can manage alert policies.",
+    "deleteConfirm": "Delete this alert policy?",
+    "errors": {
+      "generic": "The request could not be completed."
+    }
+  },
   "sections": {
     "overview": {
       "title": "Overview",

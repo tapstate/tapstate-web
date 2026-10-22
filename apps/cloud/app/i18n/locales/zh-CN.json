@@ -296,6 +296,88 @@
       "back": "返回套餐"
     }
   },
+  "events": {
+    "title": "事件与告警",
+    "subtitle": "{{organization}} 的关键事件与告警投递。",
+    "organizationFallback": "你的组织",
+    "tabPolicies": "告警策略",
+    "tabDeliveries": "投递历史",
+    "policySubtitle": "{{organization}} 的邮件告警规则。",
+    "deliverySubtitle": "{{organization}} 的通知投递记录。",
+    "loading": "加载中…",
+    "loadError": "无法加载此视图。",
+    "retry": "刷新",
+    "empty": "暂无内容。",
+    "filterType": "事件类型",
+    "filterTypePlaceholder": "全部事件类型",
+    "filterSeverity": "严重级",
+    "allSeverities": "全部严重级",
+    "severity": {
+      "INFO": "信息",
+      "WARNING": "警告",
+      "CRITICAL": "严重"
+    },
+    "columns": {
+      "time": "时间",
+      "type": "类型",
+      "severity": "严重级",
+      "subject": "主题",
+      "actor": "操作者",
+      "source": "来源",
+      "recipient": "接收人",
+      "status": "状态",
+      "attempts": "尝试次数",
+      "lastError": "最后错误",
+      "recipients": "接收人",
+      "cooldown": "冷却",
+      "quietHours": "静默时段",
+      "enabled": "启用"
+    },
+    "status": {
+      "PENDING": "待发送",
+      "SENDING": "发送中",
+      "SENT": "已发送",
+      "FAILED": "失败",
+      "DEAD": "已终止",
+      "SUPPRESSED": "已抑制"
+    },
+    "actions": {
+      "create": "新建策略",
+      "save": "保存",
+      "edit": "编辑",
+      "delete": "删除",
+      "close": "关闭"
+    },
+    "policyForm": {
+      "name": "名称",
+      "namePlaceholder": "关键 Pipeline 告警",
+      "eventTypes": "事件类型（逗号分隔）",
+      "eventTypesHint": "使用 * 匹配全部事件，或使用 pipeline.* 这样的前缀",
+      "minSeverity": "最低严重级",
+      "recipients": "接收人（逗号分隔的组织成员邮箱）",
+      "cooldown": "冷却时间（秒）",
+      "quietStart": "静默开始（HH:mm）",
+      "quietEnd": "静默结束（HH:mm）",
+      "timezone": "时区",
+      "enabled": "启用"
+    },
+    "validation": {
+      "name": "名称不能为空。",
+      "recipients": "至少需要一个接收人。",
+      "quietHours": "静默开始与结束需同时填写，格式为 HH:mm。"
+    },
+    "detailTitle": "事件详情",
+    "detail": {
+      "id": "事件 ID"
+    },
+    "payload": "载荷",
+    "noPayload": "未记录载荷。",
+    "adminOnly": "只有组织管理员可以管理告警策略。",
+    "deleteConfirm": "删除此告警策略？",
+    "errors": {
+      "generic": "请求无法完成。"
+    }
+  },
   "sections": {
     "overview": { "title": "概览", "description": "查看 Cloud 组织和托管集群摘要。" },
     "clusters": {
