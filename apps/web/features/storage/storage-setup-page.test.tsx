@@ -2,9 +2,8 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { StorageSnapshot } from '@/service/storage-client'
-
 import { i18n } from '@/i18n'
+import { storageRequest, type StorageSnapshot } from '@/service/storage-client'
 import { useAuthStore } from '@/stores/auth-store'
 
 const storage = vi.hoisted(() => ({
@@ -18,6 +17,7 @@ vi.mock('./storage-context', () => ({ useStorage: () => storage }))
 import { ConfigurationTransfer } from './configuration-transfer'
 import { StorageRecovery } from './storage-recovery'
 import { StorageSetupForm } from './storage-setup-form'
+import { StorageError } from './storage-ui'
 
 let container: HTMLDivElement
 let root: Root
@@ -399,5 +399,30 @@ describe('explicit recovery and import', () => {
       storage.fetcher.mock.calls.filter(([url]) => String(url).endsWith('/commit')),
     ).toHaveLength(1)
     expect(container.textContent).toContain('Committed')
+  })
+})
+
+describe('storage connection failure guidance', () => {
+  it.each([
+    ['io.store-unauthorized', 'The database rejected these credentials'],
+    ['store.database-access-failed', 'required database permissions'],
+    ['store.unreachable', 'DNS, network access'],
+  ])('distinguishes database failure %s from the Cloud session', async (causeCode, guidance) => {
+    const error = await storageRequest(
+      async () =>
+        Response.json(
+          {
+            code: 'control.storage-test-failed',
+            params: { causeCode, layer: 'CACHE' },
+            message: 'unsafe-secret-message',
+          },
+          { status: 400 },
+        ),
+      'storage.test',
+    ).catch((failure) => failure)
+    await render(<StorageError error={error} />)
+    expect(container.textContent).toContain(guidance)
+    expect(container.textContent).not.toContain('unsafe-secret-message')
+    expect(container.textContent).not.toContain('Your session has expired')
   })
 })

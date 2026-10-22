@@ -4,6 +4,7 @@ import {
   acceptSnapshot,
   storageCandidate,
   storageRequest,
+  StorageClientError,
   type StorageSnapshot,
 } from './storage-client'
 
@@ -93,5 +94,43 @@ describe('storage wire and snapshot admission', () => {
     await expect(
       storageRequest(fetcher, 'storage.status', {}, controller.signal),
     ).rejects.toMatchObject({ name: 'AbortError' })
+  })
+})
+
+describe('storage connection diagnostics', () => {
+  it.each(['io.store-unauthorized', 'store.unreachable', 'store.database-access-failed'])(
+    'retains the safe database failure category %s without arbitrary server details',
+    async (causeCode) => {
+      const fetcher = vi.fn<typeof fetch>(async () =>
+        Response.json(
+          {
+            code: 'control.storage-test-failed',
+            params: { causeCode, layer: 'CACHE', uri: 'mongodb://user:secret@host' },
+            message: 'unsafe-secret-message',
+          },
+          { status: 400 },
+        ),
+      )
+      const failure = await storageRequest(fetcher, 'storage.test').catch((error) => error)
+      expect(failure).toBeInstanceOf(StorageClientError)
+      if (!(failure instanceof StorageClientError))
+        throw new Error('Expected a typed storage failure')
+      expect(failure.causeCode).toBe(causeCode)
+      expect(JSON.stringify(failure)).not.toMatch(/user:secret|unsafe-secret-message|mongodb/)
+    },
+  )
+  it.each([
+    ['control.storage-test-failed', 'mongodb://user:secret@host'],
+    ['control.storage-test-failed', 'vendor.unverified-error'],
+    ['control.storage-unavailable', 'io.store-unauthorized'],
+  ])('drops unrecognized or unrelated cause metadata %s', async (code, causeCode) => {
+    const failure = await storageRequest(
+      async () => Response.json({ code, params: { causeCode } }, { status: 400 }),
+      'storage.test',
+    ).catch((error) => error)
+    expect(failure).toBeInstanceOf(StorageClientError)
+    if (!(failure instanceof StorageClientError))
+      throw new Error('Expected a typed storage failure')
+    expect(failure.causeCode).toBeUndefined()
   })
 })

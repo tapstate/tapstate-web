@@ -37,8 +37,21 @@ export function StorageFrame({ children }: { children: ReactNode }) {
 }
 export function StorageError({ error }: { error: unknown }) {
   const { t } = useTranslation()
+  const connectionKind =
+    error instanceof StorageClientError &&
+    error.status === 400 &&
+    error.code === 'control.storage-test-failed'
+      ? (
+          {
+            'io.store-unauthorized': 'databaseCredentials',
+            'store.database-access-failed': 'databasePermissions',
+            'store.unreachable': 'databaseConnection',
+          } as Record<string, string>
+        )[error.causeCode ?? '']
+      : undefined
   const kind =
-    error instanceof StorageClientError
+    connectionKind ??
+    (error instanceof StorageClientError
       ? error.status === 401
         ? 'authentication'
         : error.status === 409
@@ -48,7 +61,7 @@ export function StorageError({ error }: { error: unknown }) {
             : error.status === 503
               ? 'dependency'
               : 'request'
-      : 'network'
+      : 'network')
   return (
     <div
       role="alert"

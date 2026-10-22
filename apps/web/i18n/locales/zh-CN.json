@@ -2045,7 +2045,10 @@
       "conflict": "状态已改变，请刷新并重新核对后再确认。",
       "dependency": "存储暂不可用，请恢复原存储后刷新。重新登录不能绕过此依赖故障。",
       "request": "请求被拒绝，请核对设置或查询原操作结果后再重试。",
-      "network": "无法确认响应，请检查连接并核对原操作结果。"
+      "network": "无法确认响应，请检查连接并核对原操作结果。",
+      "databaseCredentials": "数据库拒绝了这些凭据。请检查数据库用户名、密码和认证数据库。",
+      "databasePermissions": "此账号缺少所需的数据库权限。请检查所选数据库的读、写、索引和事务权限。",
+      "databaseConnection": "无法连接数据库。请检查 DNS、网络访问、Atlas IP 访问列表和 TLS 设置。"
     },
     "recovery": {
       "title": "恢复运行存储与 Pipeline",

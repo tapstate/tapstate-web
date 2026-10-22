@@ -2045,7 +2045,10 @@
       "conflict": "The state has changed. Refresh and review it again before confirming.",
       "dependency": "Storage is temporarily unavailable. Restore the original storage and refresh. Sign-in cannot bypass this dependency.",
       "request": "The request was refused. Review the settings or check the original operation result before retrying.",
-      "network": "The response could not be verified. Check the connection and the original operation result."
+      "network": "The response could not be verified. Check the connection and the original operation result.",
+      "databaseCredentials": "The database rejected these credentials. Check the database username, password and authentication database.",
+      "databasePermissions": "This account does not have the required database permissions. Check read, write, index and transaction access on the selected database.",
+      "databaseConnection": "The database could not be reached. Check DNS, network access, the Atlas IP access list and TLS settings."
     },
     "recovery": {
       "title": "Recover runtime storage and pipelines",

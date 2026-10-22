@@ -83,6 +83,7 @@ export class StorageClientError extends Error {
   constructor(
     readonly code: string,
     readonly status: number,
+    readonly causeCode?: string,
   ) {
     super(code)
     this.name = 'StorageClientError'
@@ -118,7 +119,23 @@ export async function storageRequest<T>(
       /^[a-z]+\.[a-z-]+$/.test(result.code)
         ? result.code
         : 'unavailable'
-    throw new StorageClientError(code, response.status)
+    const cause =
+      response.status === 400 &&
+      code === 'control.storage-test-failed' &&
+      typeof result === 'object' &&
+      result !== null &&
+      'params' in result &&
+      typeof result.params === 'object' &&
+      result.params !== null &&
+      'causeCode' in result.params
+        ? result.params.causeCode
+        : undefined
+    const causeCode =
+      typeof cause === 'string' &&
+      ['io.store-unauthorized', 'store.unreachable', 'store.database-access-failed'].includes(cause)
+        ? cause
+        : undefined
+    throw new StorageClientError(code, response.status, causeCode)
   }
   return result as T
 }
