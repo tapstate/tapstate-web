@@ -1635,7 +1635,8 @@
         "nullable-key-not-unique": "目标无法保证含空值的匹配键在重放时不产生重复记录。",
         "other-unique-constraint": "目标的其他唯一约束与展开结果冲突，请调整目标结构或字段映射。",
         "multiple-identity-fields": "目标涉及多个身份字段，需要显式配置映射。",
-        "invalid-field-name": "请填写非空的顶层源标识保留字段名。"
+        "invalid-field-name": "请填写非空的顶层源标识保留字段名。",
+        "key-representation-unsupported": "无法确认目标键类型能无损保留源标识。请使用兼容的键字段类型或显式配置映射。"
       }
     }
   },

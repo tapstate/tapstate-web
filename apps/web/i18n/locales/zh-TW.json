@@ -1635,7 +1635,8 @@
         "nullable-key-not-unique": "目標無法保證含空值的比對鍵在重播時不產生重複記錄。",
         "other-unique-constraint": "目標的其他唯一限制與展開結果衝突，請調整目標結構或欄位映射。",
         "multiple-identity-fields": "目標涉及多個識別欄位，需要明確設定映射。",
-        "invalid-field-name": "請填寫非空的頂層來源識別值保留欄位名稱。"
+        "invalid-field-name": "請填寫非空的頂層來源識別值保留欄位名稱。",
+        "key-representation-unsupported": "無法確認目標鍵類型能無損保留來源識別值。請使用相容的鍵欄位類型或明確設定對應。"
       }
     }
   },

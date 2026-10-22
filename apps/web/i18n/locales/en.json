@@ -1635,7 +1635,8 @@
         "nullable-key-not-unique": "The target cannot guarantee replay-safe matching for nullable key fields.",
         "other-unique-constraint": "Another target unique constraint conflicts with the expanded rows. Adjust the target schema or mapping.",
         "multiple-identity-fields": "This target has multiple identity fields requiring an explicit mapping.",
-        "invalid-field-name": "Choose a nonblank top-level source identity field name."
+        "invalid-field-name": "Choose a nonblank top-level source identity field name.",
+        "key-representation-unsupported": "The target key type cannot be verified to preserve source identifiers without loss. Use compatible key columns or an explicit mapping."
       }
     }
   },
