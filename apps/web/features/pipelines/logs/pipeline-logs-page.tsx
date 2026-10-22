@@ -1,4 +1,4 @@
-import { Button } from '@langgenius/dify-ui/button'
+import Chip, { type Item as ChipItem } from '@langgenius/dify-ui/chip'
 import {
   Drawer,
   DrawerBackdrop,
@@ -23,6 +23,67 @@ import { PipelineLogDetailPanel } from './pipeline-log-detail-panel'
 import styles from './pipeline-logs-page.module.css'
 import { usePipelineLogsQuery } from './pipeline-logs-queries'
 
+const logPeriodDefinitions = [
+  ['today', 'today'],
+  ['last7Days', 'last7Days'],
+  ['last4Weeks', 'last4Weeks'],
+  ['last3Months', 'last3Months'],
+  ['last12Months', 'last12Months'],
+  ['monthToDate', 'monthToDate'],
+  ['quarterToDate', 'quarterToDate'],
+  ['yearToDate', 'yearToDate'],
+  ['allTime', 'allTime'],
+] as const
+
+const standardLogLevels = ['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR'] as const
+
+type LogPeriod = (typeof logPeriodDefinitions)[number][0]
+
+function startOfLocalDay(date: Date) {
+  const start = new Date(date)
+  start.setHours(0, 0, 0, 0)
+  return start
+}
+
+function subtractCalendarMonths(date: Date, months: number) {
+  const result = new Date(date)
+  const day = result.getDate()
+  result.setDate(1)
+  result.setMonth(result.getMonth() - months)
+  result.setDate(Math.min(day, new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate()))
+  return result
+}
+
+function getLogPeriodStart(period: LogPeriod, now: Date) {
+  const start = startOfLocalDay(now)
+
+  switch (period) {
+    case 'today':
+      return start
+    case 'last7Days':
+      start.setDate(start.getDate() - 7)
+      return start
+    case 'last4Weeks':
+      start.setDate(start.getDate() - 28)
+      return start
+    case 'last3Months':
+      return startOfLocalDay(subtractCalendarMonths(now, 3))
+    case 'last12Months':
+      return startOfLocalDay(subtractCalendarMonths(now, 12))
+    case 'monthToDate':
+      start.setDate(1)
+      return start
+    case 'quarterToDate':
+      start.setMonth(Math.floor(start.getMonth() / 3) * 3, 1)
+      return start
+    case 'yearToDate':
+      start.setMonth(0, 1)
+      return start
+    case 'allTime':
+      return null
+  }
+}
+
 function normalizedLevel(level: string) {
   return level.trim().toUpperCase()
 }
@@ -45,6 +106,7 @@ export function PipelineLogsPage({ pipelineId }: { pipelineId: string }) {
   const { i18n, t } = useTranslation()
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null)
+  const [selectedPeriod, setSelectedPeriod] = useState<LogPeriod>('last7Days')
   const [search, setSearch] = useState('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [selectedLineKey, setSelectedLineKey] = useState<string | null>(null)
@@ -57,16 +119,35 @@ export function PipelineLogsPage({ pipelineId }: { pipelineId: string }) {
       ),
     [logs.data?.lines],
   )
+  const levelOptions = [
+    ...new Set([...standardLogLevels, ...levels, ...(selectedLevel ? [selectedLevel] : [])]),
+  ]
+  const levelFilterItems: ChipItem<string>[] = [
+    { value: 'all', name: t('pipelines.workspace.runtime.logs.allFilterLevels') },
+    ...levelOptions.map((level) => ({ value: level, name: level })),
+  ]
+  const periodFilterItems: ChipItem<string>[] = logPeriodDefinitions.map(([value, label]) => ({
+    value,
+    name: t(`pipelines.workspace.runtime.logs.periods.${label}`),
+  }))
+  const nowMillis = Date.now()
+  const periodStartMillis =
+    getLogPeriodStart(selectedPeriod, new Date(nowMillis))?.getTime() ?? null
   const visibleLines = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase(i18n.language)
     const matchingLines = (logs.data?.lines ?? []).flatMap((line, index) => {
       const level = normalizedLevel(line.level)
       const matchesLevel = selectedLevel === null || level === selectedLevel
+      const matchesPeriod =
+        periodStartMillis === null ||
+        (line.timestampMillis >= periodStartMillis && line.timestampMillis <= nowMillis)
       const matchesSearch =
         normalizedSearch.length === 0 ||
         line.message.toLocaleLowerCase(i18n.language).includes(normalizedSearch) ||
         level.toLocaleLowerCase(i18n.language).includes(normalizedSearch)
-      return matchesLevel && matchesSearch ? [{ key: lineKey(line, index), line }] : []
+      return matchesLevel && matchesPeriod && matchesSearch
+        ? [{ key: lineKey(line, index), line }]
+        : []
     })
 
     return matchingLines.sort(({ line: left, key: leftKey }, { line: right, key: rightKey }) => {
@@ -74,7 +155,15 @@ export function PipelineLogsPage({ pipelineId }: { pipelineId: string }) {
       if (timestampOrder !== 0) return sortOrder === 'asc' ? timestampOrder : -timestampOrder
       return sortOrder === 'asc' ? leftKey.localeCompare(rightKey) : rightKey.localeCompare(leftKey)
     })
-  }, [i18n.language, logs.data?.lines, search, selectedLevel, sortOrder])
+  }, [
+    i18n.language,
+    logs.data?.lines,
+    nowMillis,
+    periodStartMillis,
+    search,
+    selectedLevel,
+    sortOrder,
+  ])
   const selectedLine = useMemo(
     () => visibleLines.find(({ key }) => key === selectedLineKey)?.line ?? null,
     [selectedLineKey, visibleLines],
@@ -92,7 +181,8 @@ export function PipelineLogsPage({ pipelineId }: { pipelineId: string }) {
     }).format(timestampMillis)
 
   const hasLines = (logs.data?.lines.length ?? 0) > 0
-  const hasFilters = selectedLevel !== null || search.trim().length > 0
+  const hasFilters =
+    selectedLevel !== null || selectedPeriod !== 'allTime' || search.trim().length > 0
   const refreshLabels = {
     refresh: t('pipelines.workspace.runtime.logs.refresh'),
     refreshAria: t('pipelines.workspace.runtime.logs.refreshAria'),
@@ -119,23 +209,46 @@ export function PipelineLogsPage({ pipelineId }: { pipelineId: string }) {
       >
         <PipelineLogsIntro />
         <div className="pipeline-logs__workbench">
-          <header className="pipeline-logs__controls">
-            <div className="pipeline-logs__toolbar">
-              <div className="pipeline-logs__toolbar-heading">
-                <p className="pipeline-logs__tail-note">
-                  {t('pipelines.workspace.runtime.logs.tail')}
-                </p>
-                <p className="pipeline-logs__refresh-state" aria-live="polite">
-                  {autoRefresh
-                    ? t('pipelines.workspace.runtime.logs.active')
-                    : t('pipelines.workspace.runtime.logs.paused')}
-                  {logs.dataUpdatedAt > 0 &&
-                    ` · ${t('pipelines.workspace.runtime.logs.lastRefreshed', {
-                      time: formatTime(logs.dataUpdatedAt),
-                    })}`}
-                </p>
-              </div>
-              <div className="pipeline-logs__actions">
+          <header className="pipeline-logs__filter-header">
+            <div className="pipeline-logs__filter-bar">
+              <Chip
+                value={selectedLevel ?? 'all'}
+                items={levelFilterItems}
+                selectLabel={t('pipelines.workspace.runtime.logs.level')}
+                getClearLabel={(label) =>
+                  `${t('pipelines.workspace.runtime.logs.clearLevelFilter')} ${label}`
+                }
+                onSelect={(item) => setSelectedLevel(item.value === 'all' ? null : item.value)}
+                onClear={() => setSelectedLevel(null)}
+              />
+              <Chip
+                className="min-w-37.5"
+                panelClassName="w-[270px]"
+                leftIcon={
+                  <span
+                    aria-hidden="true"
+                    className="i-ri-calendar-line text-text-secondary block size-4"
+                  />
+                }
+                value={selectedPeriod}
+                items={periodFilterItems}
+                selectLabel={t('pipelines.workspace.runtime.logs.timeRange')}
+                getClearLabel={(label) =>
+                  `${t('pipelines.workspace.runtime.logs.clearTimeRange')} ${label}`
+                }
+                onSelect={(item) => setSelectedPeriod(item.value as LogPeriod)}
+                onClear={() => setSelectedPeriod('allTime')}
+              />
+              <SearchInput
+                className="pipeline-logs__filter-search"
+                data-testid="pipeline-log-search"
+                value={search}
+                onValueChange={setSearch}
+                aria-label={t('pipelines.workspace.runtime.logs.search')}
+                clearLabel={t('pipelines.workspace.nodeSelector.clearSearch')}
+                placeholder={t('pipelines.workspace.runtime.logs.searchPlaceholder')}
+              />
+              <div className="pipeline-logs__filter-actions">
                 <PipelineRefreshControls
                   autoRefresh={autoRefresh}
                   isFetching={logs.isFetching}
@@ -145,44 +258,19 @@ export function PipelineLogsPage({ pipelineId }: { pipelineId: string }) {
                 />
               </div>
             </div>
-
-            <div className="pipeline-logs__filters">
-              <div
-                className="pipeline-logs__level-filters"
-                aria-label={t('pipelines.workspace.runtime.logs.level')}
-              >
-                <Button
-                  type="button"
-                  variant={selectedLevel === null ? 'secondary' : 'ghost'}
-                  size="small"
-                  aria-pressed={selectedLevel === null}
-                  onClick={() => setSelectedLevel(null)}
-                >
-                  {t('pipelines.workspace.runtime.logs.allLevels')}
-                </Button>
-                {levels.map((level) => (
-                  <Button
-                    key={level}
-                    type="button"
-                    variant={selectedLevel === level ? 'secondary' : 'ghost'}
-                    size="small"
-                    data-log-level={level}
-                    aria-pressed={selectedLevel === level}
-                    onClick={() => setSelectedLevel(level)}
-                  >
-                    {level}
-                  </Button>
-                ))}
-              </div>
-              <SearchInput
-                className="pipeline-logs__search"
-                data-testid="pipeline-log-search"
-                value={search}
-                onValueChange={setSearch}
-                aria-label={t('pipelines.workspace.runtime.logs.search')}
-                clearLabel={t('pipelines.workspace.nodeSelector.clearSearch')}
-                placeholder={t('pipelines.workspace.runtime.logs.search')}
-              />
+            <div className="pipeline-logs__filter-context">
+              <p className="pipeline-logs__tail-note">
+                {t('pipelines.workspace.runtime.logs.tail')}
+              </p>
+              <p className="pipeline-logs__refresh-state" aria-live="polite">
+                {autoRefresh
+                  ? t('pipelines.workspace.runtime.logs.active')
+                  : t('pipelines.workspace.runtime.logs.paused')}
+                {logs.dataUpdatedAt > 0 &&
+                  ` · ${t('pipelines.workspace.runtime.logs.lastRefreshed', {
+                    time: formatTime(logs.dataUpdatedAt),
+                  })}`}
+              </p>
             </div>
           </header>
 
@@ -225,6 +313,24 @@ export function PipelineLogsPage({ pipelineId }: { pipelineId: string }) {
               <div className="pipeline-logs__state-card">
                 <h2 className="pipeline-logs__state-title">
                   {t('pipelines.workspace.runtime.logs.emptyTitle')}
+                  {/* Mirrors Dify's workflow-log empty-state mark in app/log/empty-element.tsx. */}
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="text-text-secondary relative -top-3 -left-1.5 inline"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M5 6.5V5M8.93934 7.56066L10 6.5M10.0103 11.5H11.5103"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                 </h2>
                 <p className="pipeline-logs__state-description">
                   {t('pipelines.workspace.runtime.logs.emptyBody')}

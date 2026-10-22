@@ -1,7 +1,7 @@
+import { Button } from '@langgenius/dify-ui/button'
 import { IconButton } from '@langgenius/dify-ui/icon-button'
 import { Pause, Play, RefreshCw } from 'lucide-react'
 
-import { Button } from '@langgenius/dify-ui/button'
 import { cn } from '@/lib/utils'
 
 export const PIPELINE_AUTO_REFRESH_INTERVAL_MS = 5_000
@@ -15,6 +15,32 @@ export interface PipelineRefreshControlLabels {
   pauseAria: string
   resume: string
   resumeAria: string
+}
+
+export function PipelineRefreshButton({
+  isFetching,
+  label,
+  ariaLabel,
+  onRefresh,
+}: {
+  isFetching: boolean
+  label: string
+  ariaLabel: string
+  onRefresh: () => void
+}) {
+  return (
+    <IconButton
+      type="button"
+      variant="secondary"
+      size="lg"
+      aria-label={ariaLabel}
+      title={label}
+      onClick={onRefresh}
+      disabled={isFetching}
+    >
+      <RefreshCw className={cn('size-4', isFetching && 'animate-spin')} aria-hidden="true" />
+    </IconButton>
+  )
 }
 
 export function PipelineRefreshControls({

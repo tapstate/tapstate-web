@@ -32,22 +32,35 @@
   background: var(--pipeline-logs-surface);
 }
 
-.pipeline-logs__toolbar,
-.pipeline-logs__filters,
-.pipeline-logs__actions,
-.pipeline-logs__level-filters {
+.pipeline-logs__filter-header {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.pipeline-logs__filter-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 0.5rem;
 }
 
-.pipeline-logs__toolbar {
-  justify-content: space-between;
-  gap: 1rem;
-  padding: var(--pipeline-logs-control-padding);
-}
-
-.pipeline-logs__toolbar-heading {
+.pipeline-logs__filter-bar .pipeline-logs__filter-search {
+  width: 12.5rem;
   min-width: 0;
+  max-width: 100%;
+  flex: 0 1 12.5rem;
+}
+
+.pipeline-logs__filter-actions {
+  margin-inline-start: auto;
+}
+
+.pipeline-logs__filter-context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
 }
 
 .pipeline-logs__tail-note,
@@ -63,35 +76,6 @@
 
 .pipeline-logs__refresh-state {
   color: var(--pipeline-text-subtle);
-}
-
-.pipeline-logs__actions {
-  flex: 0 0 auto;
-  gap: 0.5rem;
-}
-
-.pipeline-logs__filters {
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.625rem 1rem;
-  border-top: 1px solid var(--pipeline-logs-border);
-  background: var(--pipeline-logs-surface-subtle);
-}
-
-.pipeline-logs__level-filters {
-  min-width: 0;
-  gap: 0.25rem;
-  overflow-x: auto;
-}
-
-.pipeline-logs__level-filters [data-slot='button'] {
-  border: 1px solid transparent;
-}
-
-.pipeline-logs__level-filters [data-slot='button'][aria-pressed='true'] {
-  border-color: color-mix(in srgb, var(--pipeline-selection) 20%, var(--pipeline-logs-border));
-  background: color-mix(in srgb, var(--pipeline-selection) 9%, var(--pipeline-logs-surface));
-  color: var(--pipeline-selection);
 }
 
 .pipeline-logs__content {
@@ -337,19 +321,8 @@
 }
 
 @media (max-width: 640px) {
-  .pipeline-logs__toolbar,
-  .pipeline-logs__filters {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .pipeline-logs__actions {
-    justify-content: flex-end;
-  }
-
-  .pipeline-logs__search {
-    width: 100%;
-    max-width: none;
+  .pipeline-logs__filter-bar .pipeline-logs__filter-search {
+    flex: 1 1 10rem;
   }
 
   .pipeline-logs__table-header,

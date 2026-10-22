@@ -1,11 +1,10 @@
 import { Spinner } from '@langgenius/dify-ui/spinner'
 import { useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { PipelineClientError, type PipelineCatalogState } from '@/service/pipelines/pipeline-client'
 
-import { PipelineRefreshControls } from '../components/pipeline-refresh-controls'
+import { PipelineRefreshButton } from '../components/pipeline-refresh-controls'
 import { PipelineMetricChart } from './pipeline-metric-chart'
 import styles from './pipeline-monitoring-page.module.css'
 import { usePipelineMonitoringQueries } from './pipeline-monitoring-queries'
@@ -28,8 +27,7 @@ export function PipelineMonitoringPage({
 }) {
   const { i18n, t } = useTranslation()
   const queryClient = useQueryClient()
-  const [autoRefresh, setAutoRefresh] = useState(true)
-  const { status, metrics } = usePipelineMonitoringQueries(pipelineId, autoRefresh, hasArtifact)
+  const { status, metrics } = usePipelineMonitoringQueries(pipelineId, hasArtifact)
   const isLoading = status.isLoading || metrics.isLoading
   const error = status.error ?? metrics.error
   const hasError = status.isError || metrics.isError
@@ -47,12 +45,6 @@ export function PipelineMonitoringPage({
   const refreshLabels = {
     refresh: t('pipelines.workspace.runtime.monitoring.refresh'),
     refreshAria: t('pipelines.workspace.runtime.monitoring.refreshAria'),
-    active: t('pipelines.workspace.runtime.monitoring.active'),
-    paused: t('pipelines.workspace.runtime.monitoring.paused'),
-    pause: t('pipelines.workspace.runtime.monitoring.pause'),
-    pauseAria: t('pipelines.workspace.runtime.monitoring.pauseAria'),
-    resume: t('pipelines.workspace.runtime.monitoring.resume'),
-    resumeAria: t('pipelines.workspace.runtime.monitoring.resumeAria'),
   }
 
   if (!hasArtifact) {
@@ -103,12 +95,11 @@ export function PipelineMonitoringPage({
           )}
         </p>
         <div className="mt-4">
-          <PipelineRefreshControls
-            autoRefresh={autoRefresh}
+          <PipelineRefreshButton
             isFetching={status.isFetching || metrics.isFetching}
+            label={refreshLabels.refresh}
+            ariaLabel={refreshLabels.refreshAria}
             onRefresh={refreshMonitoring}
-            onToggle={() => setAutoRefresh((current) => !current)}
-            labels={refreshLabels}
           />
         </div>
       </section>
@@ -123,26 +114,22 @@ export function PipelineMonitoringPage({
             {t('pipelines.workspace.runtime.monitoring.snapshot')}
           </p>
           <p className="pipeline-monitoring__refresh-state" aria-live="polite">
-            {autoRefresh
-              ? t('pipelines.workspace.runtime.monitoring.active')
-              : t('pipelines.workspace.runtime.monitoring.paused')}
             {lastUpdated > 0 &&
-              ` · ${t('pipelines.workspace.runtime.monitoring.lastRefreshed', {
+              t('pipelines.workspace.runtime.monitoring.lastRefreshed', {
                 time: new Intl.DateTimeFormat(i18n.language, {
                   hour: '2-digit',
                   minute: '2-digit',
                   second: '2-digit',
                 }).format(lastUpdated),
-              })}`}
+              })}
           </p>
         </div>
         <div className="pipeline-monitoring__actions">
-          <PipelineRefreshControls
-            autoRefresh={autoRefresh}
+          <PipelineRefreshButton
             isFetching={status.isFetching || metrics.isFetching}
+            label={refreshLabels.refresh}
+            ariaLabel={refreshLabels.refreshAria}
             onRefresh={refreshMonitoring}
-            onToggle={() => setAutoRefresh((current) => !current)}
-            labels={refreshLabels}
           />
         </div>
       </div>
