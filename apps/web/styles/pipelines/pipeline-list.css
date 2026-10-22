@@ -105,6 +105,14 @@
   color: var(--app-text);
 }
 
+.pipeline-list__action-button.pipeline-list__lifecycle-trigger {
+  height: 1.625rem;
+  min-height: 1.625rem;
+  width: auto;
+  min-width: 0;
+  padding: 0 0.625rem;
+}
+
 .pipeline-mutation-feedback {
   position: fixed;
   right: 1.5rem;
