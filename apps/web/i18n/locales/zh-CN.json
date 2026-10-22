@@ -1995,7 +1995,7 @@
     "uri": "连接 URI",
     "platformProvided": "平台提供",
     "tlsHelp": "支持 mongodb:// 和 mongodb+srv://。TLS 严格验证服务端证书和主机名，不支持客户端证书及私钥。",
-    "atlasHelp": "Atlas 须使用公网端点，将集群出口 IP 加入白名单，并启用 TLS 和 SCRAM-SHA-256；保留 authSource=admin。",
+    "atlasHelp": "Atlas 须使用公网端点，将集群出口 IP 加入白名单，并启用 TLS。密码认证优先使用 SCRAM-SHA-256，也支持 SCRAM-SHA-1 账号；保留 authSource=admin。",
     "customCa": "配置库和缓存库的自定义 CA",
     "customCaHelp": "可选 PEM 证书集合，每份不超过 64 KiB。本期默认主数据库不支持仅自定义 CA 的连接。不要填写私钥。",
     "configCa": "配置库 CA 证书",

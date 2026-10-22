@@ -1995,7 +1995,7 @@
     "uri": "連接 URI",
     "platformProvided": "平台提供",
     "tlsHelp": "支援 mongodb:// 和 mongodb+srv://。TLS 嚴格驗證伺服器憑證和主機名稱，不支援用戶端憑證及私鑰。",
-    "atlasHelp": "Atlas 須使用公網端點，將叢集出口 IP 加入允許清單，並啟用 TLS 和 SCRAM-SHA-256；保留 authSource=admin。",
+    "atlasHelp": "Atlas 須使用公網端點，將叢集出口 IP 加入允許清單，並啟用 TLS。密碼驗證優先使用 SCRAM-SHA-256，也支援 SCRAM-SHA-1 帳號；保留 authSource=admin。",
     "customCa": "設定庫和快取庫的自訂 CA",
     "customCaHelp": "選填 PEM 憑證集合，每份不超過 64 KiB。本期預設主資料庫不支援僅自訂 CA 的連接。請勿填寫私鑰。",
     "configCa": "設定庫 CA 憑證",

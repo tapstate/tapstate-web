@@ -1995,7 +1995,7 @@
     "uri": "Connection URI",
     "platformProvided": "Provided by the platform",
     "tlsHelp": "Standard mongodb:// and mongodb+srv:// URIs are supported. TLS verifies the server certificate and hostname. Client certificates and private keys are not supported.",
-    "atlasHelp": "Atlas requires public endpoints, the cluster egress IP in its access list, TLS and SCRAM-SHA-256. Keep authSource=admin.",
+    "atlasHelp": "Atlas requires public endpoints, the cluster egress IP in its access list, and TLS. Password authentication prefers SCRAM-SHA-256 and supports SCRAM-SHA-1 accounts. Keep authSource=admin.",
     "customCa": "Custom CA for configuration and cache",
     "customCaHelp": "Optional PEM certificate bundles, up to 64 KiB each. Custom CA-only connections for the default application database are outside this release. No private keys.",
     "configCa": "Configuration CA bundle",
