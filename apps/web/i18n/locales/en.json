@@ -1058,7 +1058,7 @@
           "identitySettings": "Source identity",
           "sourceIdField": "Source identity field name",
           "restoreSourceIdDefault": "Restore default",
-          "sourceIdFieldHelp": "Used only when expanded rows conflict with the target identity constraint. The original value and type are preserved; each target is checked separately."
+          "sourceIdFieldHelp": "Used only when expanded rows conflict with the target identity constraint. The original value and type are preserved; each target is checked separately. An omitted setting inherits the previous unwind’s name, shown here. Restore default explicitly selects _unwind_source_id."
         }
       },
       "runtime": {
@@ -1636,6 +1636,8 @@
         "other-unique-constraint": "Another target unique constraint conflicts with the expanded rows. Adjust the target schema or mapping.",
         "multiple-identity-fields": "This target has multiple identity fields requiring an explicit mapping.",
         "invalid-field-name": "Choose a nonblank top-level source identity field name.",
+        "target-key-conflict": "Streams writing to this target require incompatible automatic matching keys. Use one matching key or separate targets.",
+        "ambiguous-source-id-field": "Several expansions reaching this target use different source identity field names. Choose one name for this target.",
         "key-representation-unsupported": "The target key type cannot be verified to preserve source identifiers without loss. Use compatible key columns or an explicit mapping."
       }
     }

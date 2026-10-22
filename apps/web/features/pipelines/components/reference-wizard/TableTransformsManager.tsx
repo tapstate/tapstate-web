@@ -93,7 +93,19 @@ export interface TransformStep {
   }
 }
 
+export function effectiveUnwindSourceIdField(
+  steps: TransformStep[] = [],
+  inherited = DEFAULT_UNWIND_SOURCE_ID_FIELD,
+): string {
+  return steps.reduce(
+    (field, step) =>
+      step.type === 'unwind' ? (step.config.unwind?.source_id_field ?? field) : field,
+    inherited,
+  )
+}
+
 export interface TableTransformsManagerProps {
+  inheritedSourceIdField?: string
   identityPlans?: PipelineTargetIdentity[]
   tableName: string
   sourceName?: string
@@ -168,6 +180,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
   onChange,
   hideHeader = false,
   identityPlans,
+  inheritedSourceIdField = DEFAULT_UNWIND_SOURCE_ID_FIELD,
 }) => {
   const { t } = useTranslation()
   const [isAddingStep, setIsAddingStep] = React.useState(false)
@@ -511,6 +524,10 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                   {/* 3. UNWIND TYPE EDITOR */}
                   {step.type === 'unwind' && (
                     <UnwindEditor
+                      inheritedSourceIdField={effectiveUnwindSourceIdField(
+                        transforms.slice(0, idx),
+                        inheritedSourceIdField,
+                      )}
                       identityPlans={identityPlans}
                       config={
                         step.config.unwind || {
@@ -979,6 +996,7 @@ const MapEditor: React.FC<MapEditorProps> = ({ config, columns, onChange }) => {
    3. Unwind Editor Component
    ========================================================================= */
 interface UnwindEditorProps {
+  inheritedSourceIdField: string
   identityPlans?: PipelineTargetIdentity[]
   config: UnwindTransformConfig
   columns: string[]
@@ -986,6 +1004,7 @@ interface UnwindEditorProps {
 }
 
 const UnwindEditor: React.FC<UnwindEditorProps> = ({
+  inheritedSourceIdField,
   config,
   columns,
   onChange,
@@ -996,7 +1015,7 @@ const UnwindEditor: React.FC<UnwindEditorProps> = ({
     (plan) =>
       plan.status === 'action-required' &&
       plan.reason === 'field-collision' &&
-      plan.preservedField === (config.source_id_field ?? DEFAULT_UNWIND_SOURCE_ID_FIELD),
+      plan.preservedField === (config.source_id_field ?? inheritedSourceIdField),
   )
   const sourceIdentityId = React.useId()
   return (
@@ -1127,7 +1146,7 @@ const UnwindEditor: React.FC<UnwindEditorProps> = ({
           <div className="flex items-center gap-2">
             <Input
               id={sourceIdentityId}
-              value={config.source_id_field ?? DEFAULT_UNWIND_SOURCE_ID_FIELD}
+              value={config.source_id_field ?? inheritedSourceIdField}
               onChange={(event) => onChange({ ...config, source_id_field: event.target.value })}
               onBlur={() => {
                 if (config.source_id_field === '')
@@ -1140,7 +1159,9 @@ const UnwindEditor: React.FC<UnwindEditorProps> = ({
             <Button
               type="button"
               variant="ghost"
-              onClick={() => onChange({ ...config, source_id_field: undefined })}
+              onClick={() =>
+                onChange({ ...config, source_id_field: DEFAULT_UNWIND_SOURCE_ID_FIELD })
+              }
             >
               {t('pipelines.workspace.transform.wizard.restoreSourceIdDefault')}
             </Button>
@@ -1148,7 +1169,7 @@ const UnwindEditor: React.FC<UnwindEditorProps> = ({
           {collision && (
             <p className="text-destructive text-xs" role="alert">
               {t('wizard.targetIdentity.reasons.field-collision', {
-                preserved: config.source_id_field ?? DEFAULT_UNWIND_SOURCE_ID_FIELD,
+                preserved: config.source_id_field ?? inheritedSourceIdField,
               })}
             </p>
           )}

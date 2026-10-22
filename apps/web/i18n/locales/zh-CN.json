@@ -1058,7 +1058,7 @@
           "identitySettings": "源标识处理",
           "sourceIdField": "源标识保留字段名",
           "restoreSourceIdDefault": "恢复默认",
-          "sourceIdFieldHelp": "仅在展开结果与目标标识约束冲突时使用。原值和类型会被保留；系统按每个目标分别检查。"
+          "sourceIdFieldHelp": "仅在展开结果与目标标识约束冲突时使用。原值和类型会被保留；系统按每个目标分别检查。 未设置时继承前一个展开算子的字段名，并显示在此处；恢复默认会明确选择 _unwind_source_id。"
         }
       },
       "runtime": {
@@ -1636,6 +1636,8 @@
         "other-unique-constraint": "目标的其他唯一约束与展开结果冲突，请调整目标结构或字段映射。",
         "multiple-identity-fields": "目标涉及多个身份字段，需要显式配置映射。",
         "invalid-field-name": "请填写非空的顶层源标识保留字段名。",
+        "target-key-conflict": "写入此目标的多个数据流需要不兼容的自动匹配键。请统一匹配键，或使用不同目标。",
+        "ambiguous-source-id-field": "到达此目标的展开配置使用了不同的源标识字段名，请为此目标统一名称。",
         "key-representation-unsupported": "无法确认目标键类型能无损保留源标识。请使用兼容的键字段类型或显式配置映射。"
       }
     }

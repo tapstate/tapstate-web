@@ -144,6 +144,45 @@ function previewPanel() {
   return container?.querySelector<HTMLElement>('.wizard-reference-preview')
 }
 
+describe('unwind identity across wizard sections', () => {
+  it.each([false, true])('matches inherited execution with relations=%s', (withRelations) => {
+    const panel = renderBuilder({
+      initial: {
+        ...renderInitial,
+        root: {
+          ...renderInitial.root!,
+          transforms: [
+            {
+              id: 'root_unwind',
+              name: 'Unwind',
+              type: 'unwind',
+              config: {
+                unwind: {
+                  path: 'items',
+                  include_array_index: 'position',
+                  source_id_field: 'parent_id',
+                },
+              },
+            },
+          ],
+        },
+        relations: withRelations ? [relation] : [],
+        transforms: [
+          {
+            id: 'pipeline_unwind',
+            name: 'Unwind',
+            type: 'unwind',
+            isExpanded: true,
+            config: { unwind: { path: 'nested', include_array_index: 'nested_position' } },
+          },
+        ],
+      },
+    })
+    const inputs = Array.from(panel.querySelectorAll<HTMLInputElement>('details input'))
+    expect(inputs.at(-1)?.value).toBe(withRelations ? '_unwind_source_id' : 'parent_id')
+  })
+})
+
 describe('ReferenceWizardBuilder destination picker', () => {
   it.each(['cloud', 'on-prem'] as const)(
     'enforces the %s destination policy in the real picker',

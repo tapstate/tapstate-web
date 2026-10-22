@@ -36,7 +36,11 @@ import { cn } from '@/lib/utils'
 import type { DeploymentProfile } from '../../model/deployment-profile'
 
 import { UnwindTargetIdentitySummary } from '../unwind-target-identity-summary'
-import { TableTransformsManager, type TransformStep } from './TableTransformsManager'
+import {
+  TableTransformsManager,
+  effectiveUnwindSourceIdField,
+  type TransformStep,
+} from './TableTransformsManager'
 import { reparentRelation } from './wizard-tree'
 
 export interface WizardBuilderProps {
@@ -2591,6 +2595,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                           ),
                         ]),
                       )}
+                      inheritedSourceIdField={
+                        relations.length === 0
+                          ? effectiveUnwindSourceIdField(rootConfig?.transforms)
+                          : undefined
+                      }
                       transforms={pipelineTransforms}
                       onChange={setPipelineTransforms}
                       hideHeader={true}

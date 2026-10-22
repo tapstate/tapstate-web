@@ -1058,7 +1058,7 @@
           "identitySettings": "來源識別值處理",
           "sourceIdField": "來源識別值保留欄位名稱",
           "restoreSourceIdDefault": "恢復預設",
-          "sourceIdFieldHelp": "僅在展開結果與目標識別值限制衝突時使用。保留原始值及類型；系統會分別檢查每個目標。"
+          "sourceIdFieldHelp": "僅在展開結果與目標識別值限制衝突時使用。保留原始值及類型；系統會分別檢查每個目標。 未設定時繼承前一個展開運算子的欄位名稱，並顯示於此處；恢復預設會明確選擇 _unwind_source_id。"
         }
       },
       "runtime": {
@@ -1636,6 +1636,8 @@
         "other-unique-constraint": "目標的其他唯一限制與展開結果衝突，請調整目標結構或欄位映射。",
         "multiple-identity-fields": "目標涉及多個識別欄位，需要明確設定映射。",
         "invalid-field-name": "請填寫非空的頂層來源識別值保留欄位名稱。",
+        "target-key-conflict": "寫入此目標的多個資料流需要不相容的自動比對鍵。請統一比對鍵，或使用不同目標。",
+        "ambiguous-source-id-field": "到達此目標的展開設定使用了不同的來源識別欄位名稱，請為此目標統一名稱。",
         "key-representation-unsupported": "無法確認目標鍵類型能無損保留來源識別值。請使用相容的鍵欄位類型或明確設定對應。"
       }
     }

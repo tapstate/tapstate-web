@@ -54,7 +54,55 @@ describe('wizard transform picker', () => {
       'original_order_id',
     )
     await act(async () => container?.querySelector<HTMLButtonElement>('details button')?.click())
-    expect(onChange.mock.lastCall?.[0]?.[0]?.config.unwind?.source_id_field).toBeUndefined()
+    expect(onChange.mock.lastCall?.[0]?.[0]?.config.unwind?.source_id_field).toBe(
+      '_unwind_source_id',
+    )
+  })
+
+  it('shows the inherited name and restores an explicit default for successive unwinds', async () => {
+    const onChange = vi.fn<(steps: TransformStep[]) => void>()
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    const steps: TransformStep[] = [
+      {
+        id: 'first',
+        name: 'Unwind',
+        type: 'unwind',
+        isExpanded: true,
+        config: {
+          unwind: { path: 'items', include_array_index: 'position', source_id_field: 'parent_id' },
+        },
+      },
+      {
+        id: 'second',
+        name: 'Unwind',
+        type: 'unwind',
+        isExpanded: true,
+        config: { unwind: { path: 'nested', include_array_index: 'nested_position' } },
+      },
+    ]
+    await act(async () =>
+      root?.render(
+        <TableTransformsManager
+          tableName="orders"
+          columns={['_id', 'items', 'nested']}
+          transforms={steps}
+          onChange={onChange}
+        />,
+      ),
+    )
+    expect(
+      Array.from(container.querySelectorAll<HTMLInputElement>('details input')).map(
+        (input) => input.value,
+      ),
+    ).toEqual(['parent_id', 'parent_id'])
+    await act(async () =>
+      container?.querySelectorAll<HTMLButtonElement>('details button')[1]?.click(),
+    )
+    const updated = onChange.mock.lastCall?.[0]
+    expect(updated?.[0]?.config.unwind?.source_id_field).toBe('parent_id')
+    expect(updated?.[1]?.config.unwind?.source_id_field).toBe('_unwind_source_id')
   })
 
   it('offers publishable transforms and seeds a runnable JavaScript step', async () => {
