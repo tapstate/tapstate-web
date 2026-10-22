@@ -13,6 +13,7 @@ import {
   type NodeChange,
   type EdgeTypes,
   type NodeTypes,
+  type Viewport,
   useReactFlow,
   useEdgesState,
   useNodesState,
@@ -44,7 +45,7 @@ import {
 } from '../../model/pipeline-node-rules'
 import { PipelineNodeSelector } from '../node-library/pipeline-node-selector'
 import { PipelineCanvasNote } from './pipeline-canvas-note'
-import { readCanvasNotes } from './pipeline-canvas-notes'
+import { applyCanvasNotePositions, readCanvasNotes } from './pipeline-canvas-notes'
 import { PipelineCanvasOperator } from './pipeline-canvas-operator'
 import { PipelineCanvasToolbar } from './pipeline-canvas-toolbar'
 import { PipelineConnectionLine } from './pipeline-connection-line'
@@ -179,6 +180,15 @@ export function PipelineCanvasContent({
     setViewport: panViewport,
   } = useReactFlow()
 
+  const persistViewport = useCallback(
+    (nextViewport: Viewport) => {
+      if (readOnly) return
+      setViewport(nextViewport)
+      onLayoutChange(toLayout(nodesRef.current, nextViewport))
+    },
+    [onLayoutChange, readOnly, setViewport],
+  )
+
   const keepSelectedNodeVisible = useCallback(
     (nodeId: string) => {
       requestAnimationFrame(() => {
@@ -265,8 +275,10 @@ export function PipelineCanvasContent({
     nodesRef.current = nextNodes
     setNodes(nextNodes)
     onLayoutChange(toLayout(nextNodes, viewport))
-    void fitCanvasView({ padding: 0.3, maxZoom: 1, duration: 180 })
-  }, [fitCanvasView, onLayoutChange, setNodes, viewport])
+    void fitCanvasView({ padding: 0.3, maxZoom: 1, duration: 180 }).then(() => {
+      persistViewport(getViewport())
+    })
+  }, [fitCanvasView, getViewport, onLayoutChange, persistViewport, setNodes, viewport])
 
   useEffect(() => {
     if (notesPipelineIdRef.current !== pipelineId) {
@@ -604,6 +616,7 @@ export function PipelineCanvasContent({
         onUndo={onUndo}
         onRedo={onRedo}
         onJumpHistory={onJumpHistory}
+        onViewportChange={persistViewport}
         readOnly={readOnly}
       />
       <ReactFlow
@@ -657,12 +670,15 @@ export function PipelineCanvasContent({
           if (!event) return
           onLayoutChange(toLayout(nodesRef.current, nextViewport))
         }}
-        onNodeDragStop={(_, node) => {
+        onNodeDragStop={(_, node, draggedNodes) => {
           if (readOnly) return
           if (node.type === 'note') {
             updateNotes(
-              notes.map((note) =>
-                note.id === node.id ? { ...note, position: node.position } : note,
+              applyCanvasNotePositions(
+                notes,
+                draggedNodes
+                  .filter((draggedNode) => draggedNode.type === 'note')
+                  .map(({ id, position }) => ({ id, position })),
               ),
             )
             return

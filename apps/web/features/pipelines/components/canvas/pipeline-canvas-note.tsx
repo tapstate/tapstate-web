@@ -24,7 +24,7 @@ export function PipelineCanvasNote({ id, data, selected }: NodeProps<CanvasNode>
         </button>
       )}
       <textarea
-        className="nodrag nowheel pipeline-canvas__note-input"
+        className="nodrag nopan nowheel pipeline-canvas__note-input"
         aria-label={t('pipelines.workspace.actions.noteText')}
         placeholder={t('pipelines.workspace.actions.notePlaceholder')}
         value={data.noteText ?? ''}

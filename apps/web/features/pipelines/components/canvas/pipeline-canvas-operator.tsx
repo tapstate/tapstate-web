@@ -1,7 +1,7 @@
 import { IconButton } from '@langgenius/dify-ui/icon-button'
 import { Popover, PopoverContent, PopoverTrigger } from '@langgenius/dify-ui/popover'
 import { Separator } from '@langgenius/dify-ui/separator'
-import { MiniMap } from '@xyflow/react'
+import { MiniMap, type Viewport } from '@xyflow/react'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -16,6 +16,7 @@ export function PipelineCanvasOperator({
   onUndo,
   onRedo,
   onJumpHistory,
+  onViewportChange,
   readOnly = false,
 }: {
   canUndo?: boolean
@@ -25,6 +26,7 @@ export function PipelineCanvasOperator({
   onUndo?: () => void
   onRedo?: () => void
   onJumpHistory?: (direction: 'undo' | 'redo', steps: number) => void
+  onViewportChange: (viewport: Viewport) => void
   readOnly?: boolean
 }) {
   const { t } = useTranslation()
@@ -157,7 +159,7 @@ export function PipelineCanvasOperator({
             pannable
             zoomable
           />
-          <PipelineCanvasViewportToolbar />
+          <PipelineCanvasViewportToolbar onViewportChange={onViewportChange} />
         </div>
       </div>
     </div>
