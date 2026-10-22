@@ -2475,7 +2475,8 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   disabled={readOnly}
                   label={readOnlyLabel ?? t('pipelines.workspace.readOnly.editorStatus')}
                 >
-                  <div>{assistantHelper('relations', 'relations')}</div>
+                  <div className="wizard-reference-relation-list flex flex-col gap-4">
+                    <div>{assistantHelper('relations', 'relations')}</div>
                   {/* Dynamically Render Each Relation Node */}
                   {relations.map((rel) => renderRelation(rel))}
 
@@ -2733,6 +2734,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                         </div>
                       </div>
                     )}
+                  </div>
                   </div>
                 </ReadOnlyFieldset>
               </div>
