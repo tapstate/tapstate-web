@@ -181,6 +181,10 @@ Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
 let root: Root | undefined
 let container: HTMLDivElement | undefined
+const originalScrollIntoView = Object.getOwnPropertyDescriptor(
+  HTMLElement.prototype,
+  'scrollIntoView',
+)
 
 const initialDraft: PipelineDraft = {
   pipelineId: 'wizard-ui-test',
@@ -208,6 +212,24 @@ const initialDraft: PipelineDraft = {
 }
 
 beforeEach(() => {
+  vi.stubGlobal('scrollTo', vi.fn())
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+    configurable: true,
+    value: vi.fn(),
+  })
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn((media: string) => ({
+      matches: false,
+      media,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(() => true),
+    })),
+  )
   wizardRendering.real = false
   getDeploymentProfile.mockReturnValue('on-prem')
   vi.clearAllMocks()
@@ -257,6 +279,10 @@ afterEach(() => {
   act(() => root?.unmount())
   container?.remove()
   vi.unstubAllEnvs()
+  vi.unstubAllGlobals()
+  if (originalScrollIntoView)
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', originalScrollIntoView)
+  else Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView')
   root = undefined
   container = undefined
 })
@@ -330,7 +356,10 @@ describe('WizardBuilder publish flow', () => {
       expect(launch.every((button) => button.disabled)).toBe(true)
       await act(async () => launch.forEach((button) => button.click()))
       expect(container!.querySelector('a[href="/settings"]')).not.toBeNull()
-      expect(previewPipelineDraft).not.toHaveBeenCalled()
+      // Candidate-bearing live previews inspect the draft; launch validation and execution remain blocked.
+      expect(previewPipelineDraft.mock.calls.filter((call) => call[4] === undefined)).toHaveLength(
+        0,
+      )
       expect(publishPipelineDraft).not.toHaveBeenCalled()
       expect(runPipeline).not.toHaveBeenCalled()
     },

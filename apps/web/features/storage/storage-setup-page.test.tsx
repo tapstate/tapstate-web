@@ -17,7 +17,7 @@ vi.mock('./storage-context', () => ({ useStorage: () => storage }))
 import { ConfigurationTransfer } from './configuration-transfer'
 import { StorageRecovery } from './storage-recovery'
 import { StorageSetupForm } from './storage-setup-form'
-import { StorageError } from './storage-ui'
+import { StorageError, StorageHealthPanel } from './storage-ui'
 
 let container: HTMLDivElement
 let root: Root
@@ -40,15 +40,21 @@ async function render(component: React.ReactNode) {
 }
 async function click(key: string) {
   const button = [...container.querySelectorAll('button')].find(
-    (value) => value.textContent === i18n.t(key),
+    (value) =>
+      value.textContent === i18n.t(key) || value.getAttribute('aria-label') === i18n.t(key),
   )
   expect(button).toBeTruthy()
   await act(async () => button!.click())
 }
 async function fill(label: string, value: string) {
-  const element = [...container.querySelectorAll('label')]
-    .find((labelElement) => labelElement.querySelector('span')?.textContent === i18n.t(label))
-    ?.querySelector('input')
+  const labelElement = [...container.querySelectorAll('label')].find(
+    (value) => value.querySelector('span')?.textContent === i18n.t(label),
+  )
+  const element =
+    labelElement?.querySelector('input') ??
+    (labelElement?.htmlFor
+      ? (document.getElementById(labelElement.htmlFor) as HTMLInputElement)
+      : null)
   expect(element, label).toBeTruthy()
   await act(async () => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(element, value)
@@ -60,6 +66,7 @@ beforeEach(async () => {
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
+  storage.session = 0
   storage.snapshot = base
   storage.fetcher.mockReset()
   storage.refresh.mockClear()
@@ -72,6 +79,166 @@ afterEach(() => {
 })
 
 describe('storage setup form', () => {
+  it('keeps the URI hidden by default and reveals it only on explicit toggle', async () => {
+    await render(<StorageSetupForm />)
+    await fill('storage.uri', 'mongodb://user:visibility-sentinel@localhost/admin')
+    const input = container.querySelector<HTMLInputElement>('input[type="password"]')!
+    expect(input).toBeTruthy()
+    await click('storage.showUri')
+    expect(input.type).toBe('text')
+    expect(input.value).toContain('visibility-sentinel')
+    expect(container.querySelector('button[aria-pressed="true"]')).toBeTruthy()
+    await click('storage.hideUri')
+    expect(input.type).toBe('password')
+    expect(storage.fetcher).not.toHaveBeenCalled()
+  })
+  it.each(['en', 'zh-CN', 'zh-TW'])(
+    'checks platform CONFIG with the first Cloud database test in %s',
+    async (locale) => {
+      await i18n.changeLanguage(locale)
+      storage.snapshot = { ...base, mode: 'CLOUD', health: { ...base.health, CONFIG: 'AVAILABLE' } }
+      storage.fetcher.mockImplementation(async (url, init) => {
+        const body = JSON.parse(String(init?.body))
+        return String(url).endsWith('/test')
+          ? Response.json({
+              layer: body.layer,
+              testStamp: `proof-${body.layer}`,
+              expiresAt: new Date(Date.now() + 600000).toISOString(),
+            })
+          : Response.json({ setupPhase: 'COMPLETE' })
+      })
+      await render(<StorageSetupForm />)
+      await fill('storage.uri', 'mongodb+srv://user:secret@cluster.example/')
+      expect(storage.fetcher).not.toHaveBeenCalled()
+      const buttons = [...container.querySelectorAll('button')].filter(
+        (button) => button.textContent === i18n.t('storage.test'),
+      )
+      expect(buttons).toHaveLength(2)
+      await act(async () => buttons[0].click())
+      expect(
+        storage.fetcher.mock.calls.map(([, init]) => JSON.parse(String(init?.body)).layer),
+      ).toEqual(['CONFIG', 'CACHE'])
+      await act(async () => buttons[1].click())
+      await click('storage.save')
+      const commit = storage.fetcher.mock.calls.find(([url]) => String(url).endsWith('/commit'))!
+      expect(JSON.parse(String(commit[1]?.body)).testStamps).toEqual({
+        CONFIG: 'proof-CONFIG',
+        CACHE: 'proof-CACHE',
+        MASTER: 'proof-MASTER',
+      })
+    },
+  )
+  it('does not send the customer check after an old automatic CONFIG response changes session', async () => {
+    storage.snapshot = { ...base, mode: 'CLOUD' }
+    let finish!: (response: Response) => void
+    storage.fetcher.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    await render(<StorageSetupForm />)
+    await fill('storage.uri', 'mongodb+srv://user:secret@cluster.example/')
+    await click('storage.test')
+    storage.session = 1
+    useAuthStore.setState({ sessionRevision: 1 })
+    await render(<StorageSetupForm />)
+    await act(async () =>
+      finish(
+        Response.json({
+          layer: 'CONFIG',
+          testStamp: 'old',
+          expiresAt: new Date(Date.now() + 600000).toISOString(),
+        }),
+      ),
+    )
+    expect(storage.fetcher).toHaveBeenCalledTimes(1)
+    expect(container.textContent).not.toContain(i18n.t('storage.testPassed'))
+  })
+  it('shows red failure and invalidates a previously passed layer on a failed retest', async () => {
+    let fail = false
+    storage.fetcher.mockImplementation(async (_url, init) => {
+      const { layer } = JSON.parse(String(init?.body))
+      return fail
+        ? Response.json(
+            { code: 'control.storage-test-failed', params: { causeCode: 'store.unreachable' } },
+            { status: 400 },
+          )
+        : Response.json({
+            layer,
+            testStamp: layer,
+            expiresAt: new Date(Date.now() + 600000).toISOString(),
+          })
+    })
+    await render(<StorageSetupForm />)
+    await fill('storage.uri', 'mongodb://user:secret@localhost/admin')
+    for (const button of [...container.querySelectorAll('button')].filter(
+      (button) => button.textContent === i18n.t('storage.test'),
+    ))
+      await act(async () => button.click())
+    expect(container.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(
+      false,
+    )
+    const cache = [...container.querySelectorAll('[role="group"]')].find(
+      (group) => group.getAttribute('aria-label') === i18n.t('storage.layers.CACHE'),
+    )!
+    expect(cache.querySelector('.text-success svg')).toBeTruthy()
+    fail = true
+    await act(async () => cache.querySelector<HTMLButtonElement>('button')!.click())
+    expect(cache.querySelector('.text-destructive svg')).toBeTruthy()
+    expect(cache.textContent).toContain(i18n.t('storage.testFailed'))
+    expect(container.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(true)
+  })
+  it('expires the displayed passed state and save permission without another interaction', async () => {
+    vi.useFakeTimers()
+    try {
+      storage.fetcher.mockImplementation(async (_url, init) => {
+        const { layer } = JSON.parse(String(init?.body))
+        return Response.json({
+          layer,
+          testStamp: layer,
+          expiresAt: new Date(Date.now() + 1000).toISOString(),
+        })
+      })
+      await render(<StorageSetupForm />)
+      await fill('storage.uri', 'mongodb://localhost/admin')
+      for (const button of [...container.querySelectorAll('button')].filter(
+        (button) => button.textContent === i18n.t('storage.test'),
+      ))
+        await act(async () => button.click())
+      expect(container.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(
+        false,
+      )
+      await act(async () => {
+        vi.advanceTimersByTime(1002)
+      })
+      expect(container.textContent).not.toContain(i18n.t('storage.testPassed'))
+      expect(container.textContent).toContain(i18n.t('storage.testExpired'))
+      expect(container.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(
+        true,
+      )
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+  it('uses status icons and readable labels for available, failed and unverified storage', async () => {
+    await render(
+      <StorageHealthPanel
+        snapshot={{
+          ...base,
+          health: { CONFIG: 'AVAILABLE', CACHE: 'UNAVAILABLE', MASTER: 'UNKNOWN' },
+        }}
+      />,
+    )
+    expect(container.querySelectorAll('dd svg[aria-hidden="true"]')).toHaveLength(3)
+    expect(container.querySelector('dd .text-success')!.textContent).toBe(
+      i18n.t('storage.health.AVAILABLE'),
+    )
+    expect(container.querySelector('dd .text-destructive')!.textContent).toBe(
+      i18n.t('storage.health.UNAVAILABLE'),
+    )
+    expect(container.textContent).toContain(i18n.t('storage.health.UNKNOWN'))
+  })
+
   it.each(['en', 'zh-CN', 'zh-TW'])(
     'requires explicit layer tests and confirmation in %s',
     async (locale) => {

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 
+import { CheckCircle2, CircleHelp, CircleX, Loader2, TriangleAlert } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
@@ -8,6 +9,37 @@ import { StorageClientError, type StorageSnapshot } from '@/service/storage-clie
 
 export const inputClass =
   'min-h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-ring'
+export function StorageIndicator({
+  tone,
+  children,
+}: {
+  tone: 'success' | 'error' | 'pending' | 'working' | 'warning'
+  children: ReactNode
+}) {
+  const Icon = {
+    success: CheckCircle2,
+    error: CircleX,
+    pending: CircleHelp,
+    working: Loader2,
+    warning: TriangleAlert,
+  }[tone]
+  const color = {
+    success: 'text-success',
+    error: 'text-destructive',
+    pending: 'text-muted-foreground',
+    working: 'text-primary',
+    warning: 'text-warning',
+  }[tone]
+  return (
+    <span className={`inline-flex items-center gap-2 font-medium ${color}`}>
+      <Icon
+        className={`size-5 shrink-0 ${tone === 'working' ? 'animate-spin' : ''}`}
+        aria-hidden="true"
+      />
+      <span>{children}</span>
+    </span>
+  )
+}
 export function StorageFrame({ children }: { children: ReactNode }) {
   const { t, i18n } = useTranslation()
   return (
@@ -89,7 +121,19 @@ export function StorageHealthPanel({ snapshot }: { snapshot: StorageSnapshot }) 
           <div key={layer} className="border-border rounded-lg border p-4">
             <dt className="text-sm font-medium">{t(`storage.layers.${layer}`)}</dt>
             <dd className="text-muted-foreground mt-2 text-sm">
-              {t(`storage.health.${snapshot.health[layer]}`)}
+              <StorageIndicator
+                tone={
+                  snapshot.health[layer] === 'AVAILABLE'
+                    ? 'success'
+                    : snapshot.health[layer] === 'UNAVAILABLE'
+                      ? 'error'
+                      : snapshot.health[layer] === 'AUTH_READY'
+                        ? 'warning'
+                        : 'pending'
+                }
+              >
+                {t(`storage.health.${snapshot.health[layer]}`)}
+              </StorageIndicator>
             </dd>
           </div>
         ))}

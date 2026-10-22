@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
@@ -12,7 +13,7 @@ import {
 import { useAuthStore } from '@/stores/auth-store'
 
 import { useStorage } from './storage-context'
-import { inputClass, StorageError } from './storage-ui'
+import { inputClass, StorageError, StorageIndicator } from './storage-ui'
 import { useStorageAction } from './use-storage-action'
 
 export function StorageSetupForm() {
@@ -28,36 +29,89 @@ export function StorageSetupForm() {
     cacheCaPem: '',
   })
   const [proofs, setProofs] = useState<Partial<Record<StorageLayer, StorageTest>>>({})
+  const [showUri, setShowUri] = useState(false)
+  const [testingLayer, setTestingLayer] = useState<StorageLayer | null>(null)
+  const [failedLayer, setFailedLayer] = useState<StorageLayer | null>(null)
+  const [now, setNow] = useState(Date.now)
+  const uriId = useId()
   const version = useRef(0)
   const action = useStorageAction()
+  useEffect(() => {
+    const future = Object.values(proofs)
+      .map((proof) => Date.parse(proof.expiresAt))
+      .filter((expiresAt) => expiresAt > Date.now())
+    if (!future.length) return
+    const timer = setTimeout(() => setNow(Date.now()), Math.min(...future) - Date.now() + 1)
+    return () => clearTimeout(timer)
+  }, [proofs, now])
   if (!snapshot) return null
-  const candidate = storageCandidate(form, snapshot.mode)
+  const mode = snapshot.mode
+  const candidate = storageCandidate(form, mode)
   function edit(key: keyof StorageForm, value: string) {
     version.current += 1
     setForm((current) => ({ ...current, [key]: value }))
     setProofs({})
+    setTestingLayer(null)
+    setFailedLayer(null)
     action.reset()
   }
   const scope = { operationId: snapshot.operationId, generation: snapshot.setupGeneration }
   const databaseNames = [
     form.cacheDatabase,
     form.masterDatabase,
-    ...(snapshot.mode === 'OP' ? [form.configDatabase] : []),
+    ...(mode === 'OP' ? [form.configDatabase] : []),
   ]
   const valid =
     Boolean(form.uri.trim()) &&
     databaseNames.every((name) => name.trim()) &&
     new Set(databaseNames).size === databaseNames.length
-  const tested = (['CONFIG', 'CACHE', 'MASTER'] as const).every(
-    (layer) => proofs[layer] && Date.parse(proofs[layer]!.expiresAt) > Date.now(),
-  )
+  const fresh = (layer: StorageLayer) =>
+    Boolean(proofs[layer] && Date.parse(proofs[layer]!.expiresAt) > Date.now())
+  const tested = (['CONFIG', 'CACHE', 'MASTER'] as const).every(fresh)
+  function testLayer(layer: StorageLayer) {
+    const selectedVersion = version.current
+    let attempted = layer
+    setFailedLayer(null)
+    void action.run(
+      async (isCurrent) => {
+        const check = async (next: StorageLayer) => {
+          if (!isCurrent() || version.current !== selectedVersion) return
+          attempted = next
+          setTestingLayer(next)
+          setProofs((current) => {
+            const retained = { ...current }
+            delete retained[next]
+            return retained
+          })
+          const result = await storageRequest<StorageTest>(fetcher, 'storage.test', {
+            ...scope,
+            candidate,
+            layer: next,
+          })
+          if (isCurrent() && version.current === selectedVersion) {
+            setProofs((current) => ({ ...current, [next]: result }))
+          }
+        }
+        // Cloud owns CONFIG. Its existing server-issued proof is acquired with the customer's check.
+        if (mode === 'CLOUD' && !fresh('CONFIG')) await check('CONFIG')
+        await check(layer)
+      },
+      () => setTestingLayer(null),
+      () => {
+        if (version.current === selectedVersion) {
+          setFailedLayer(attempted)
+          setTestingLayer(null)
+        }
+      },
+    )
+  }
   return (
     <form
       className="space-y-5"
       autoComplete="off"
       onSubmit={(event) => {
         event.preventDefault()
-        if (!tested || !valid) return
+        if (!(['CONFIG', 'CACHE', 'MASTER'] as const).every(fresh) || !valid) return
         void action.run(
           async () =>
             storageRequest<{ setupPhase: string }>(fetcher, 'storage.setup.commit', {
@@ -71,7 +125,8 @@ export function StorageSetupForm() {
             if (result.setupPhase === 'COMPLETE') {
               setForm((current) => ({ ...current, uri: '', configCaPem: '', cacheCaPem: '' }))
               setProofs({})
-              if (snapshot.mode === 'CLOUD') useAuthStore.getState().clear()
+              setShowUri(false)
+              if (mode === 'CLOUD') useAuthStore.getState().clear()
               else authorize('')
             }
             await refresh()
@@ -82,11 +137,11 @@ export function StorageSetupForm() {
       <div>
         <h2 className="text-base font-semibold">{t('storage.setupTitle')}</h2>
         <p className="text-muted-foreground mt-2 text-sm">
-          {t(snapshot.mode === 'CLOUD' ? 'storage.cloudSetup' : 'storage.opSetup')}
+          {t(mode === 'CLOUD' ? 'storage.cloudSetup' : 'storage.opSetup')}
         </p>
       </div>
       <fieldset disabled={action.busy} className="space-y-4">
-        {snapshot.mode === 'OP' && (
+        {mode === 'OP' && (
           <div className="block space-y-1 text-sm">
             <span>{t('storage.connector')}</span>
             <span className="flex gap-4">
@@ -104,20 +159,41 @@ export function StorageSetupForm() {
             </span>
           </div>
         )}
-        <label className="block space-y-1 text-sm">
-          <span>{t('storage.uri')}</span>
-          <input
-            className={inputClass}
-            type="password"
-            spellCheck={false}
-            autoComplete="off"
-            value={form.uri}
-            onChange={(e) => edit('uri', e.target.value)}
-            required
-          />
-        </label>
+        <div className="space-y-1 text-sm">
+          <label htmlFor={uriId}>
+            <span>{t('storage.uri')}</span>
+          </label>
+          <div className="relative">
+            <input
+              id={uriId}
+              className={`${inputClass} pr-14`}
+              type={showUri ? 'text' : 'password'}
+              spellCheck={false}
+              autoComplete="off"
+              value={form.uri}
+              onChange={(e) => edit('uri', e.target.value)}
+              required
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="absolute top-1/2 right-1 min-h-10 min-w-10 -translate-y-1/2"
+              aria-label={t(showUri ? 'storage.hideUri' : 'storage.showUri')}
+              title={t(showUri ? 'storage.hideUri' : 'storage.showUri')}
+              aria-pressed={showUri}
+              onClick={() => setShowUri((current) => !current)}
+            >
+              {showUri ? (
+                <EyeOff className="size-4" aria-hidden="true" />
+              ) : (
+                <Eye className="size-4" aria-hidden="true" />
+              )}
+            </Button>
+          </div>
+        </div>
         <p className="text-muted-foreground text-sm">{t('storage.tlsHelp')}</p>
-        {(snapshot.mode === 'CLOUD' || form.kind === 'ATLAS') && (
+        {(mode === 'CLOUD' || form.kind === 'ATLAS') && (
           <p className="text-muted-foreground text-sm">{t('storage.atlasHelp')}</p>
         )}
         <div className="grid gap-4 sm:grid-cols-3">
@@ -129,10 +205,15 @@ export function StorageSetupForm() {
                   ? 'cacheDatabase'
                   : 'masterDatabase'
             return (
-              <div key={layer} className="border-border space-y-2 rounded-lg border p-3">
+              <div
+                key={layer}
+                role="group"
+                aria-label={t(`storage.layers.${layer}`)}
+                className="border-border space-y-2 rounded-lg border p-3"
+              >
                 <label className="block space-y-1 text-sm">
                   <span>{t(`storage.layers.${layer}`)}</span>
-                  {layer === 'CONFIG' && snapshot.mode === 'CLOUD' ? (
+                  {layer === 'CONFIG' && mode === 'CLOUD' ? (
                     <p className="text-muted-foreground py-2">{t('storage.platformProvided')}</p>
                   ) : (
                     <input
@@ -143,31 +224,45 @@ export function StorageSetupForm() {
                     />
                   )}
                 </label>
-                <Button
-                  className="min-h-11 sm:min-h-8"
-                  type="button"
-                  variant="outline"
-                  disabled={!valid}
-                  onClick={() => {
-                    const selectedVersion = version.current
-                    void action.run(
-                      () =>
-                        storageRequest<StorageTest>(fetcher, 'storage.test', {
-                          ...scope,
-                          candidate,
-                          layer,
-                        }),
-                      (result) => {
-                        if (version.current === selectedVersion)
-                          setProofs((current) => ({ ...current, [layer]: result }))
-                      },
-                    )
-                  }}
-                >
-                  {t('storage.test')}
-                </Button>
+                {!(layer === 'CONFIG' && mode === 'CLOUD') && (
+                  <Button
+                    className="min-h-11 sm:min-h-8"
+                    type="button"
+                    variant="outline"
+                    disabled={!valid}
+                    onClick={() => testLayer(layer)}
+                  >
+                    {t('storage.test')}
+                  </Button>
+                )}
                 <p aria-live="polite" className="text-muted-foreground text-xs">
-                  {t(proofs[layer] ? 'storage.testPassed' : 'storage.testRequired')}
+                  <StorageIndicator
+                    tone={
+                      testingLayer === layer
+                        ? 'working'
+                        : failedLayer === layer
+                          ? 'error'
+                          : fresh(layer)
+                            ? 'success'
+                            : proofs[layer]
+                              ? 'warning'
+                              : 'pending'
+                    }
+                  >
+                    {t(
+                      testingLayer === layer
+                        ? 'storage.testWorking'
+                        : failedLayer === layer
+                          ? 'storage.testFailed'
+                          : fresh(layer)
+                            ? 'storage.testPassed'
+                            : proofs[layer]
+                              ? 'storage.testExpired'
+                              : layer === 'CONFIG' && mode === 'CLOUD'
+                                ? 'storage.testAutomatic'
+                                : 'storage.testRequired',
+                    )}
+                  </StorageIndicator>
                 </p>
               </div>
             )
@@ -181,21 +276,19 @@ export function StorageSetupForm() {
         <details className="border-border rounded-lg border p-3">
           <summary className="cursor-pointer text-sm">{t('storage.customCa')}</summary>
           <p className="text-muted-foreground my-3 text-sm">{t('storage.customCaHelp')}</p>
-          {(snapshot.mode === 'OP' ? ['configCaPem', 'cacheCaPem'] : ['cacheCaPem']).map(
-            (field) => (
-              <label key={field} className="mb-3 block space-y-1 text-sm">
-                <span>{t(field === 'configCaPem' ? 'storage.configCa' : 'storage.cacheCa')}</span>
-                <textarea
-                  className={inputClass}
-                  rows={4}
-                  value={form[field as 'configCaPem' | 'cacheCaPem']}
-                  onChange={(e) => edit(field as keyof StorageForm, e.target.value)}
-                  maxLength={65536}
-                  spellCheck={false}
-                />
-              </label>
-            ),
-          )}
+          {(mode === 'OP' ? ['configCaPem', 'cacheCaPem'] : ['cacheCaPem']).map((field) => (
+            <label key={field} className="mb-3 block space-y-1 text-sm">
+              <span>{t(field === 'configCaPem' ? 'storage.configCa' : 'storage.cacheCa')}</span>
+              <textarea
+                className={inputClass}
+                rows={4}
+                value={form[field as 'configCaPem' | 'cacheCaPem']}
+                onChange={(e) => edit(field as keyof StorageForm, e.target.value)}
+                maxLength={65536}
+                spellCheck={false}
+              />
+            </label>
+          ))}
         </details>
       </fieldset>
       {Boolean(action.error) && <StorageError error={action.error} />}
