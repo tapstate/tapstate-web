@@ -58,14 +58,28 @@ export function AssistantProviderForm({ onBack }: { onBack: () => void }) {
   })
   const disabled = mutation.isPending || query.isPending
   return (
-    <div className="pipeline-ai-settings flex-1 overflow-y-auto p-4 text-[12px]">
-      <button type="button" className="mb-4 text-blue-700 hover:underline" onClick={onBack}>
+    <div className="pipeline-ai-settings min-h-0 flex-1 overflow-y-auto bg-white px-4 py-4 text-[12px] text-gray-800">
+      <button
+        type="button"
+        className="mb-3 text-[11px] font-medium text-blue-700 hover:underline"
+        onClick={onBack}
+      >
         {t('wizard.assistant.back')}
       </button>
-      <h3 className="mb-2 text-[13px] font-semibold">{t('wizard.assistant.provider.title')}</h3>
-      <p className="mb-4 leading-relaxed text-gray-500">
-        {t('wizard.assistant.provider.description')}
-      </p>
+      <div className="mb-5 border-b border-gray-200 pb-4">
+        <h3 className="text-[14px] font-semibold text-gray-900">
+          {t('wizard.assistant.provider.title')}
+        </h3>
+        <p className="mt-1.5 text-[11px] leading-5 text-gray-500">
+          {t('wizard.assistant.provider.description')}
+        </p>
+        {query.data?.configured && (
+          <span className="mt-3 inline-flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-medium text-emerald-800">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+            {t('wizard.assistant.provider.configured')}
+          </span>
+        )}
+      </div>
       {query.isPending ? (
         <Loader2 className="animate-spin" aria-label={t('wizard.assistant.loading')} />
       ) : query.isError ? (
@@ -76,12 +90,12 @@ export function AssistantProviderForm({ onBack }: { onBack: () => void }) {
           e.preventDefault()
           mutation.mutate('save')
         }}
-        className="space-y-3"
+        className="space-y-4"
       >
         <label className="block">
           {t('wizard.assistant.provider.endpoint')}
           <input
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+            className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-[12px] text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none"
             type="url"
             value={baseUrl ?? query.data?.baseUrl ?? DEFAULT_PROVIDER_BASE_URL}
             onChange={(e) => setBaseUrl(e.target.value)}
@@ -92,7 +106,7 @@ export function AssistantProviderForm({ onBack }: { onBack: () => void }) {
         <label className="block">
           {t('wizard.assistant.provider.model')}
           <input
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+            className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-[12px] text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none"
             required
             value={model ?? query.data?.model ?? ''}
             onChange={(e) => setModel(e.target.value)}
@@ -102,7 +116,7 @@ export function AssistantProviderForm({ onBack }: { onBack: () => void }) {
         <label className="block">
           {t('wizard.assistant.provider.key')}
           <input
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+            className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-[12px] text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none"
             type="password"
             autoComplete="off"
             required={!query.data?.configured}
@@ -113,19 +127,19 @@ export function AssistantProviderForm({ onBack }: { onBack: () => void }) {
             disabled={disabled}
           />
         </label>
-        <p className="text-[11px] leading-relaxed text-gray-500">
+        <p className="rounded-lg bg-gray-50 px-3 py-2.5 text-[11px] leading-5 text-gray-500">
           {t('wizard.assistant.provider.secretHint')}
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2 border-t border-gray-200 pt-4">
           <button
-            className="rounded-lg bg-blue-600 px-3 py-1.5 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-lg bg-blue-600 px-3 py-2 font-medium text-white hover:bg-blue-700 active:scale-[0.98] disabled:opacity-50"
             disabled={disabled || !apiKey}
             type="submit"
           >
             {t('wizard.assistant.provider.save')}
           </button>
           <button
-            className="rounded-lg border border-gray-200 px-3 py-1.5 hover:bg-gray-50 disabled:opacity-50"
+            className="rounded-lg border border-gray-300 px-3 py-2 font-medium text-gray-700 hover:bg-gray-50 active:scale-[0.98] disabled:opacity-50"
             disabled={disabled || (!apiKey && !query.data?.configured)}
             type="button"
             onClick={() => mutation.mutate('check')}
@@ -134,7 +148,7 @@ export function AssistantProviderForm({ onBack }: { onBack: () => void }) {
           </button>
           {query.data?.configured && (
             <button
-              className="rounded-lg px-3 py-1.5 text-red-700 hover:bg-red-50 disabled:opacity-50"
+              className="rounded-lg px-3 py-2 text-red-700 hover:bg-red-50 active:scale-[0.98] disabled:opacity-50"
               disabled={disabled}
               type="button"
               onClick={() => mutation.mutate('delete')}

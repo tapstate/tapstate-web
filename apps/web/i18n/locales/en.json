@@ -1622,6 +1622,7 @@
         "endpoint": "API base URL",
         "model": "Model ID",
         "key": "API key",
+        "configured": "Provider configured",
         "rotate": "Enter a new key to replace the saved key",
         "secretHint": "The key is stored securely by the server. It is never saved in browser storage or returned to this panel.",
         "save": "Save provider",

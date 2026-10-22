@@ -1622,6 +1622,7 @@
         "endpoint": "API 基礎位址",
         "model": "模型 ID",
         "key": "API 金鑰",
+        "configured": "已設定 AI 服務",
         "rotate": "輸入新金鑰以取代已儲存金鑰",
         "secretHint": "金鑰由伺服器安全儲存，不寫入瀏覽器儲存，也不會傳回此面板。",
         "save": "儲存設定",
