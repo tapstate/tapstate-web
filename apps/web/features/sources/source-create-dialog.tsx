@@ -1,14 +1,20 @@
 import type { ISchema } from '@formily/json-schema'
 
+import { Button } from '@langgenius/dify-ui/button'
+import { cn } from '@langgenius/dify-ui/cn'
 import {
-  AlertCircle,
-  ArrowLeft,
-  Check,
-  ChevronRight,
-  Database,
-  LoaderCircle,
-  Search,
-} from 'lucide-react'
+  Dialog,
+  DialogBody,
+  DialogCloseButton,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@langgenius/dify-ui/dialog'
+import { Input } from '@langgenius/dify-ui/input'
+import RadioCard from '@langgenius/dify-ui/radio-card'
+import { RadioGroup } from '@langgenius/dify-ui/radio-group'
+import { SearchInput } from '@langgenius/dify-ui/search-input'
+import { AlertCircle, ArrowLeft, Check, Database, LoaderCircle } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -20,9 +26,6 @@ import type {
 } from '@/service/source-client'
 
 import { ConnectorIcon } from '@/components/connector-icon'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import {
   createSource,
   getConnector,
@@ -71,6 +74,21 @@ function RequestError({ message }: { message: string }) {
   )
 }
 
+function ConnectorEmptyState({ message }: { message: string }) {
+  return (
+    <div className="flex min-h-0 flex-1 items-center justify-center px-4 text-center">
+      <div className="flex max-w-sm flex-col items-center gap-3">
+        <span className="flex size-14 items-center justify-center rounded-lg">
+          <span className="border-divider-regular bg-components-card-bg flex size-full min-w-px items-center justify-center overflow-hidden rounded-xl border border-dashed p-1">
+            <span className="i-ri-database-2-line text-text-tertiary size-6" aria-hidden="true" />
+          </span>
+        </span>
+        <p className="system-sm-regular text-text-tertiary">{message}</p>
+      </div>
+    </div>
+  )
+}
+
 export function SourceCreateDialog({
   open,
   onOpenChange,
@@ -97,7 +115,7 @@ export function SourceCreateDialog({
   const [testing, setTesting] = useState(false)
   const [testReport, setTestReport] = useState<ConnectionTestReport | null>(null)
   const [testError, setTestError] = useState<unknown>(null)
-  const connectorButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
+  const connectorButtonRefs = useRef<Record<string, HTMLElement | null>>({})
   const initializedForOpen = useRef(false)
 
   useEffect(() => {
@@ -289,84 +307,85 @@ export function SourceCreateDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        closeDisabled={submitting || testing}
-        closeLabel={t('ask.actions.close')}
-        className="bg-background border-border flex h-[90vh] max-h-[800px] w-full max-w-[1100px] flex-col gap-0 overflow-hidden rounded-2xl border p-0 shadow-2xl ring-0 sm:max-w-[1100px]"
+        data-slot="dialog-content"
+        className={cn(
+          'flex max-w-none flex-col gap-0 overflow-hidden p-0 shadow-xl',
+          step === 'select'
+            ? 'h-[min(560px,calc(100dvh-2rem))] w-[min(760px,calc(100vw-2rem))]'
+            : 'h-[min(800px,calc(100dvh-2rem))] w-[min(1120px,calc(100vw-2rem))]',
+        )}
       >
         {step === 'select' ? (
           <>
-            <DialogHeader className="bg-background flex h-14 shrink-0 flex-row items-center justify-between border-b border-gray-200/60 px-6">
-              <DialogTitle className="text-foreground text-base font-semibold">
+            <DialogHeader className="border-divider-subtle bg-components-panel-bg flex h-16 shrink-0 flex-row items-center justify-between border-b px-6 py-0">
+              <DialogTitle data-slot="dialog-title" className="min-w-0 truncate">
                 {t('sources.create.chooseConnector')}
               </DialogTitle>
+              <DialogCloseButton
+                disabled={submitting || testing}
+                aria-label={t('ask.actions.close')}
+              />
             </DialogHeader>
 
-            <div className="flex-1 overflow-y-auto bg-gray-50/40 p-6 lg:p-8">
+            <DialogBody className="bg-components-panel-bg flex min-h-0 flex-1 flex-col gap-4 px-6 py-5">
               <section
-                className="mx-auto grid w-full max-w-5xl gap-6"
+                className="flex min-h-0 flex-1 flex-col gap-4"
                 aria-label={t('sources.create.chooseConnector')}
               >
-                <label className="border-input bg-background text-muted-foreground focus-within:border-ring focus-within:ring-ring/20 mx-auto flex h-11 w-full max-w-[460px] items-center gap-2 rounded-lg border px-3 transition-colors focus-within:ring-3">
-                  <Search className="size-4 shrink-0" aria-hidden="true" />
-                  <Input
+                <div className="w-full max-w-[400px]">
+                  <SearchInput
                     value={searchTerm}
                     placeholder={t('sources.create.searchConnectors')}
                     aria-label={t('sources.create.searchConnectors')}
-                    className="h-9 min-w-0 border-0 bg-transparent px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0"
-                    onChange={(event) => setSearchTerm(event.target.value)}
+                    clearLabel={t('sources.create.clearSearch')}
+                    onValueChange={setSearchTerm}
                   />
-                </label>
-
-                {requestError && <RequestError message={requestError} />}
+                </div>
 
                 {loadingConnectors ? (
-                  <div className="text-muted-foreground flex min-h-24 items-center justify-center gap-2 text-[13px]">
-                    <LoaderCircle className="size-4 animate-spin" />
+                  <div className="system-sm-regular text-text-tertiary flex min-h-24 flex-1 items-center justify-center gap-2">
+                    <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" />
                     {t('sources.create.loadingConnectors')}
                   </div>
-                ) : connectors.length === 0 ? (
-                  <div className="text-muted-foreground flex min-h-24 items-center justify-center text-center text-[13px] leading-relaxed">
-                    {t('sources.create.noConnectors')}
-                  </div>
+                ) : requestError ? (
+                  <ConnectorEmptyState message={requestError} />
+                ) : sourceConnectors.length === 0 ? (
+                  <ConnectorEmptyState message={t('sources.create.noConnectors')} />
                 ) : visibleConnectors.length === 0 ? (
-                  <div className="text-muted-foreground flex min-h-24 items-center justify-center text-center text-[13px] leading-relaxed">
-                    {t('sources.create.noMatchingConnectors')}
-                  </div>
+                  <ConnectorEmptyState message={t('sources.create.noMatchingConnectors')} />
                 ) : (
-                  <div
-                    className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
-                    role="list"
+                  <RadioGroup
+                    aria-label={t('sources.create.chooseConnector')}
+                    value={connectorId}
+                    onValueChange={chooseConnector}
+                    className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
                   >
                     {visibleConnectors.map((item) => (
-                      <div key={item.id} role="listitem">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="lg"
-                          className="focus-visible:ring-ring h-16 w-full justify-start rounded-xl px-4 text-left shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-px hover:shadow-[0_8px_20px_-4px_rgba(0,0,0,0.08)] focus-visible:z-10 focus-visible:ring-2 focus-visible:outline-none active:translate-y-0"
-                          ref={(element) => {
-                            connectorButtonRefs.current[item.id] = element
-                          }}
-                          onClick={() => chooseConnector(item.id)}
-                        >
+                      <RadioCard
+                        key={item.id}
+                        value={item.id}
+                        icon={
                           <ConnectorIcon
                             connectorId={item.id}
                             name={item.name}
                             iconPath={item.icon}
-                            size={32}
-                            className="size-8 shrink-0"
+                            size={24}
+                            className="border-divider-regular bg-text-primary-on-surface size-6 rounded-md border-[0.5px]"
                           />
-                          <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                            {item.name}
-                          </span>
-                          <ChevronRight
-                            className="text-muted-foreground size-4 shrink-0"
-                            aria-hidden="true"
-                          />
-                        </Button>
-                      </div>
+                        }
+                        iconBgClassName="bg-components-panel-on-panel-item-bg"
+                        title={item.name}
+                        description={item.group || item.id}
+                        className={cn(
+                          'h-full transition-[border-color,background-color,box-shadow]',
+                          'hover:border-components-option-card-option-border-hover hover:bg-components-option-card-option-bg-hover hover:shadow-md',
+                        )}
+                        ref={(element) => {
+                          connectorButtonRefs.current[item.id] = element
+                        }}
+                      />
                     ))}
-                  </div>
+                  </RadioGroup>
                 )}
 
                 {fieldErrors.connector && (
@@ -375,18 +394,19 @@ export function SourceCreateDialog({
                   </span>
                 )}
               </section>
-            </div>
+            </DialogBody>
           </>
         ) : (
           <>
-            <DialogHeader className="border-border bg-background flex h-14 shrink-0 flex-row items-center justify-between gap-3 border-b px-6">
+            <DialogHeader className="border-divider-subtle bg-components-panel-bg flex h-16 shrink-0 flex-row items-center justify-between gap-3 border-b px-6 py-0">
               <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                 <Button
                   variant="ghost"
+                  size="medium"
                   type="button"
                   disabled={submitting || testing}
                   aria-label={t('sources.create.chooseAnother')}
-                  className="size-11 shrink-0 p-0 sm:size-9"
+                  className="size-8 shrink-0 p-0"
                   onClick={chooseAnotherConnector}
                 >
                   <ArrowLeft className="size-4" />
@@ -401,10 +421,14 @@ export function SourceCreateDialog({
                     className="hidden size-6 shrink-0 sm:block"
                   />
                 )}
-                <DialogTitle className="text-foreground truncate text-base font-semibold">
+                <DialogTitle data-slot="dialog-title" className="min-w-0 truncate">
                   {configuredConnectorName ?? t('sources.create.connectionTitle')}
                 </DialogTitle>
               </div>
+              <DialogCloseButton
+                disabled={submitting || testing}
+                aria-label={t('ask.actions.close')}
+              />
             </DialogHeader>
 
             <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -456,7 +480,7 @@ export function SourceCreateDialog({
                                     key={mode}
                                     type="button"
                                     variant={selected ? 'secondary' : 'ghost'}
-                                    size="sm"
+                                    size="small"
                                     aria-pressed={selected}
                                     disabled={submitting || testing}
                                     className={`h-11 shrink-0 rounded-md px-5 text-[13px] font-medium sm:h-8 sm:px-3 ${
@@ -499,19 +523,19 @@ export function SourceCreateDialog({
                 <footer className="border-border bg-background shrink-0 border-t px-6 pb-4 sm:px-8">
                   <div className="mx-auto flex w-full max-w-3xl justify-end gap-3 pt-4 sm:pt-6">
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       type="button"
                       disabled={submitting || testing}
-                      className="h-11 px-[22px] sm:h-9 sm:px-4"
+                      size="large"
                       onClick={() => onOpenChange(false)}
                     >
                       {t('sources.create.cancel')}
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       type="button"
                       disabled={connector === null || schema === null || submitting || testing}
-                      className="h-11 px-[22px] sm:h-9 sm:px-4"
+                      size="large"
                       onClick={() => void runConnectionTest()}
                     >
                       {testing && <LoaderCircle className="size-4 animate-spin" />}
@@ -520,7 +544,8 @@ export function SourceCreateDialog({
                     <Button
                       type="button"
                       disabled={connector === null || schema === null || submitting || testing}
-                      className="h-11 px-[22px] sm:h-9 sm:px-4"
+                      variant="primary"
+                      size="large"
                       onClick={() => void submit()}
                     >
                       {submitting && <LoaderCircle className="size-4 animate-spin" />}
