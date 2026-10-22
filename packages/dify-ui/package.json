@@ -93,6 +93,10 @@
       "types": "./src/checkbox-group/index.tsx",
       "import": "./src/checkbox-group/index.tsx"
     },
+    "./chip": {
+      "types": "./src/chip/index.tsx",
+      "import": "./src/chip/index.tsx"
+    },
     "./combobox": {
       "types": "./src/combobox/index.tsx",
       "import": "./src/combobox/index.tsx"
