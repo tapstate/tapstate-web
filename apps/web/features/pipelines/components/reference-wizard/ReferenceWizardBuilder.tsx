@@ -2243,9 +2243,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                               <Button
                                 type="submit"
                                 size="sm"
-                                disabled={
-                                  !rootPrompt.trim() || Boolean(assistantPrompt?.submit)
-                                }
+                                disabled={!rootPrompt.trim() || Boolean(assistantPrompt?.submit)}
                                 className="h-9 shrink-0 text-xs"
                               >
                                 <Sparkles aria-hidden="true" />
@@ -2481,264 +2479,264 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                 >
                   <div className="wizard-reference-relation-list flex flex-col gap-4">
                     <div>{assistantHelper('relations', 'relations')}</div>
-                  {/* Dynamically Render Each Relation Node */}
-                  {relations.map((rel) => renderRelation(rel))}
+                    {/* Dynamically Render Each Relation Node */}
+                    {relations.map((rel) => renderRelation(rel))}
 
-                  {/* =========================================================== */}
-                  {/* INLINE ADD RELATION CARD (在流中就地添加，完全对齐树形导轨) */}
-                  {/* =========================================================== */}
-                  <div className="relative">
-                    {/* Exact branch connector from border-dashed guide to this button/card */}
-                    <div className="absolute top-4 -left-6 w-6 border-b border-dashed border-gray-300" />
+                    {/* =========================================================== */}
+                    {/* INLINE ADD RELATION CARD (在流中就地添加，完全对齐树形导轨) */}
+                    {/* =========================================================== */}
+                    <div className="relative">
+                      {/* Exact branch connector from border-dashed guide to this button/card */}
+                      <div className="absolute top-4 -left-6 w-6 border-b border-dashed border-gray-300" />
 
-                    {/* ADD BUTTON (When closed) */}
-                    {!isAddingRelation ? (
-                      <div>
-                        <button
-                          type="button"
-                          onClick={openInlineAddRelation}
-                          disabled={!isRootConfigured}
-                          className="group inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-[12px] font-medium text-gray-700 shadow-2xs transition-all hover:border-gray-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <Plus className="h-3.5 w-3.5 text-blue-600 transition-transform group-hover:scale-110" />
-                          <span>Add Related Table</span>
-                          <span className="font-normal text-gray-400">
-                            (1:N Array or 1:1 Document)
-                          </span>
-                        </button>
-                        {!isRootConfigured && (
-                          <div className="mt-1 text-[11px] text-amber-600">
-                            Please confirm the Root Table above first.
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      /* INLINE FORM CARD (When open) */
-                      <div className="animate-in fade-in zoom-in-95 rounded-xl border-2 border-blue-400 bg-white p-4 text-[12px] shadow-md">
-                        <div className="mb-3 flex items-center justify-between border-b border-gray-100 pb-2">
-                          <div className="flex items-center gap-1.5 text-[13px] font-semibold text-gray-900">
-                            <Plus className="h-4 w-4 text-blue-600" />
-                            Add Related Table to{' '}
-                            <span className="font-mono text-blue-700">
-                              {rootConfig?.table || 'Root'}
-                            </span>
-                          </div>
+                      {/* ADD BUTTON (When closed) */}
+                      {!isAddingRelation ? (
+                        <div>
                           <button
                             type="button"
-                            onClick={() => setIsAddingRelation(false)}
-                            className="cursor-pointer text-gray-400 hover:text-gray-600"
+                            onClick={openInlineAddRelation}
+                            disabled={!isRootConfigured}
+                            className="group inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-[12px] font-medium text-gray-700 shadow-2xs transition-all hover:border-gray-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            <X className="h-4 w-4" />
+                            <Plus className="h-3.5 w-3.5 text-blue-600 transition-transform group-hover:scale-110" />
+                            <span>Add Related Table</span>
+                            <span className="font-normal text-gray-400">
+                              (1:N Array or 1:1 Document)
+                            </span>
                           </button>
+                          {!isRootConfigured && (
+                            <div className="mt-1 text-[11px] text-amber-600">
+                              Please confirm the Root Table above first.
+                            </div>
+                          )}
                         </div>
-
-                        <div className="space-y-3">
-                          {/* 1. Semantic Relationship Type */}
-                          <div>
-                            <label className="mb-1.5 block text-[11px] font-medium text-gray-600">
-                              Relationship Semantic *
-                            </label>
-                            <div className="grid grid-cols-3 gap-2">
-                              <button
-                                type="button"
-                                onClick={() => setNewRelType('sub_doc')}
-                                className={cn(
-                                  'cursor-pointer rounded-lg border p-2.5 text-left transition-all',
-                                  newRelType === 'sub_doc'
-                                    ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-400'
-                                    : 'border-gray-200 bg-white hover:border-gray-300',
-                                )}
-                              >
-                                <div className="flex items-center gap-1 text-[11px] font-semibold text-indigo-700">
-                                  <Braces className="h-3.5 w-3.5" />
-                                  Document &#123; &#125;
-                                </div>
-                                <div className="mt-0.5 text-[10px] text-gray-500">
-                                  Embed as nested object map
-                                </div>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => setNewRelType('sub_array')}
-                                className={cn(
-                                  'cursor-pointer rounded-lg border p-2.5 text-left transition-all',
-                                  newRelType === 'sub_array'
-                                    ? 'border-purple-500 bg-purple-50/50 ring-1 ring-purple-400'
-                                    : 'border-gray-200 bg-white hover:border-gray-300',
-                                )}
-                              >
-                                <div className="flex items-center gap-1 text-[11px] font-semibold text-purple-700">
-                                  <FolderTree className="h-3.5 w-3.5" />
-                                  Array [ ]
-                                </div>
-                                <div className="mt-0.5 text-[10px] text-gray-500">
-                                  Embed rows as array (1:N)
-                                </div>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => setNewRelType('flatten')}
-                                className={cn(
-                                  'cursor-pointer rounded-lg border p-2.5 text-left transition-all',
-                                  newRelType === 'flatten'
-                                    ? 'border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-400'
-                                    : 'border-gray-200 bg-white hover:border-gray-300',
-                                )}
-                              >
-                                <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
-                                  <Layers className="h-3.5 w-3.5" />
-                                  Flatten
-                                </div>
-                                <div className="mt-0.5 text-[10px] text-gray-500">
-                                  Merge fields directly into root
-                                </div>
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* 2. Source & Table Pickers */}
-                          <div className="grid grid-cols-2 gap-2.5">
-                            <div>
-                              <label className="mb-1 block text-[11px] font-medium text-gray-600">
-                                Child Data Source
-                              </label>
-                              <Select
-                                value={newRelSource || undefined}
-                                onValueChange={(value) => {
-                                  if (value === null) return
-                                  setNewRelSource(value)
-                                  const tables = getTablesForSource(value)
-                                  if (tables.length > 0) handleNewRelTableSelect(tables[0].name)
-                                  else setNewRelTable('')
-                                }}
-                              >
-                                <SelectTrigger
-                                  aria-label="Child Data Source"
-                                  className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
-                                >
-                                  <SelectValue placeholder="Select a source" />
-                                </SelectTrigger>
-                                <SelectContent className="wizard-reference-select-content rounded-lg">
-                                  {AVAILABLE_DATA_SOURCES.map((ds) => (
-                                    <SelectItem
-                                      key={ds.id}
-                                      value={ds.name}
-                                      className="rounded-md px-1.5 py-1 text-[12px]"
-                                    >
-                                      <span className="flex min-w-0 items-center gap-2">
-                                        <ConnectorIcon
-                                          connectorId={ds.connector || ds.badge}
-                                          name={ds.connectorName || ds.badge}
-                                          iconPath={ds.iconPath}
-                                          size={18}
-                                        />
-                                        <span className="truncate">{ds.name}</span>
-                                      </span>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div>
-                              <label className="mb-1 block text-[11px] font-medium text-gray-600">
-                                Child Table
-                              </label>
-                              <Select
-                                value={newRelTable || undefined}
-                                onValueChange={(value) => {
-                                  if (value !== null) handleNewRelTableSelect(value)
-                                }}
-                              >
-                                <SelectTrigger
-                                  aria-label="Child Table"
-                                  className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 font-mono text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
-                                >
-                                  <SelectValue placeholder="Select a source table" />
-                                </SelectTrigger>
-                                <SelectContent className="wizard-reference-select-content rounded-lg">
-                                  {getTablesForSource(newRelSource).map((t) => (
-                                    <SelectItem
-                                      key={t.name}
-                                      value={t.name}
-                                      className="rounded-md px-1.5 py-1 font-mono text-[12px]"
-                                    >
-                                      <span className="flex items-center gap-2">
-                                        <Table2 className="size-4 text-gray-500" />
-                                        {t.name}
-                                      </span>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-
-                          {/* 3. Join Condition */}
-                          <div>
-                            <label className="mb-1 block text-[11px] font-medium text-gray-600">
-                              Join Condition
-                            </label>
-                            <div className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 p-2 text-[11px]">
-                              <span className="font-mono text-gray-600">
-                                {newRelTable.split('.').pop()}.
+                      ) : (
+                        /* INLINE FORM CARD (When open) */
+                        <div className="animate-in fade-in zoom-in-95 rounded-xl border-2 border-blue-400 bg-white p-4 text-[12px] shadow-md">
+                          <div className="mb-3 flex items-center justify-between border-b border-gray-100 pb-2">
+                            <div className="flex items-center gap-1.5 text-[13px] font-semibold text-gray-900">
+                              <Plus className="h-4 w-4 text-blue-600" />
+                              Add Related Table to{' '}
+                              <span className="font-mono text-blue-700">
+                                {rootConfig?.table || 'Root'}
                               </span>
-                              <input
-                                value={newRelKey}
-                                onChange={(e) => setNewRelKey(e.target.value)}
-                                className="w-28 rounded-lg border border-gray-300 bg-white px-1.5 py-1 font-mono text-gray-900"
-                                placeholder="foreign_key"
-                              />
-                              <span className="font-bold text-gray-400">=</span>
-                              <span className="font-mono text-gray-600">
-                                {rootConfig?.table || 'root'}.
-                              </span>
-                              <input
-                                value={newRelParentKey}
-                                onChange={(e) => setNewRelParentKey(e.target.value)}
-                                className="w-20 rounded-lg border border-gray-300 bg-white px-1.5 py-1 font-mono text-gray-900"
-                                placeholder="primary_key"
-                              />
                             </div>
-                          </div>
-
-                          {/* 4. Embed Field Name */}
-                          <div>
-                            <label className="mb-1 block text-[11px] font-medium text-gray-600">
-                              Target Field in Document
-                            </label>
-                            <input
-                              value={newRelTargetField}
-                              onChange={(e) => setNewRelTargetField(e.target.value)}
-                              className="w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 font-mono text-[11px] text-gray-800"
-                              placeholder="e.g. orders"
-                            />
-                          </div>
-
-                          {/* Actions */}
-                          <div className="flex items-center justify-end gap-2 pt-2">
                             <button
                               type="button"
                               onClick={() => setIsAddingRelation(false)}
-                              className="cursor-pointer px-3 py-1.5 text-[11px] font-medium text-gray-600 hover:text-gray-900"
+                              className="cursor-pointer text-gray-400 hover:text-gray-600"
                             >
-                              Cancel
-                            </button>
-                            <button
-                              type="button"
-                              onClick={confirmAddRelation}
-                              className="flex cursor-pointer items-center gap-1 rounded-lg bg-blue-600 px-3.5 py-1.5 text-[11px] font-medium text-white shadow-2xs transition-colors hover:bg-blue-700"
-                            >
-                              <Check className="h-3 w-3" />
-                              Embed Relation
+                              <X className="h-4 w-4" />
                             </button>
                           </div>
+
+                          <div className="space-y-3">
+                            {/* 1. Semantic Relationship Type */}
+                            <div>
+                              <label className="mb-1.5 block text-[11px] font-medium text-gray-600">
+                                Relationship Semantic *
+                              </label>
+                              <div className="grid grid-cols-3 gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setNewRelType('sub_doc')}
+                                  className={cn(
+                                    'cursor-pointer rounded-lg border p-2.5 text-left transition-all',
+                                    newRelType === 'sub_doc'
+                                      ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-400'
+                                      : 'border-gray-200 bg-white hover:border-gray-300',
+                                  )}
+                                >
+                                  <div className="flex items-center gap-1 text-[11px] font-semibold text-indigo-700">
+                                    <Braces className="h-3.5 w-3.5" />
+                                    Document &#123; &#125;
+                                  </div>
+                                  <div className="mt-0.5 text-[10px] text-gray-500">
+                                    Embed as nested object map
+                                  </div>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setNewRelType('sub_array')}
+                                  className={cn(
+                                    'cursor-pointer rounded-lg border p-2.5 text-left transition-all',
+                                    newRelType === 'sub_array'
+                                      ? 'border-purple-500 bg-purple-50/50 ring-1 ring-purple-400'
+                                      : 'border-gray-200 bg-white hover:border-gray-300',
+                                  )}
+                                >
+                                  <div className="flex items-center gap-1 text-[11px] font-semibold text-purple-700">
+                                    <FolderTree className="h-3.5 w-3.5" />
+                                    Array [ ]
+                                  </div>
+                                  <div className="mt-0.5 text-[10px] text-gray-500">
+                                    Embed rows as array (1:N)
+                                  </div>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setNewRelType('flatten')}
+                                  className={cn(
+                                    'cursor-pointer rounded-lg border p-2.5 text-left transition-all',
+                                    newRelType === 'flatten'
+                                      ? 'border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-400'
+                                      : 'border-gray-200 bg-white hover:border-gray-300',
+                                  )}
+                                >
+                                  <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
+                                    <Layers className="h-3.5 w-3.5" />
+                                    Flatten
+                                  </div>
+                                  <div className="mt-0.5 text-[10px] text-gray-500">
+                                    Merge fields directly into root
+                                  </div>
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* 2. Source & Table Pickers */}
+                            <div className="grid grid-cols-2 gap-2.5">
+                              <div>
+                                <label className="mb-1 block text-[11px] font-medium text-gray-600">
+                                  Child Data Source
+                                </label>
+                                <Select
+                                  value={newRelSource || undefined}
+                                  onValueChange={(value) => {
+                                    if (value === null) return
+                                    setNewRelSource(value)
+                                    const tables = getTablesForSource(value)
+                                    if (tables.length > 0) handleNewRelTableSelect(tables[0].name)
+                                    else setNewRelTable('')
+                                  }}
+                                >
+                                  <SelectTrigger
+                                    aria-label="Child Data Source"
+                                    className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                                  >
+                                    <SelectValue placeholder="Select a source" />
+                                  </SelectTrigger>
+                                  <SelectContent className="wizard-reference-select-content rounded-lg">
+                                    {AVAILABLE_DATA_SOURCES.map((ds) => (
+                                      <SelectItem
+                                        key={ds.id}
+                                        value={ds.name}
+                                        className="rounded-md px-1.5 py-1 text-[12px]"
+                                      >
+                                        <span className="flex min-w-0 items-center gap-2">
+                                          <ConnectorIcon
+                                            connectorId={ds.connector || ds.badge}
+                                            name={ds.connectorName || ds.badge}
+                                            iconPath={ds.iconPath}
+                                            size={18}
+                                          />
+                                          <span className="truncate">{ds.name}</span>
+                                        </span>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div>
+                                <label className="mb-1 block text-[11px] font-medium text-gray-600">
+                                  Child Table
+                                </label>
+                                <Select
+                                  value={newRelTable || undefined}
+                                  onValueChange={(value) => {
+                                    if (value !== null) handleNewRelTableSelect(value)
+                                  }}
+                                >
+                                  <SelectTrigger
+                                    aria-label="Child Table"
+                                    className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 font-mono text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                                  >
+                                    <SelectValue placeholder="Select a source table" />
+                                  </SelectTrigger>
+                                  <SelectContent className="wizard-reference-select-content rounded-lg">
+                                    {getTablesForSource(newRelSource).map((t) => (
+                                      <SelectItem
+                                        key={t.name}
+                                        value={t.name}
+                                        className="rounded-md px-1.5 py-1 font-mono text-[12px]"
+                                      >
+                                        <span className="flex items-center gap-2">
+                                          <Table2 className="size-4 text-gray-500" />
+                                          {t.name}
+                                        </span>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                            {/* 3. Join Condition */}
+                            <div>
+                              <label className="mb-1 block text-[11px] font-medium text-gray-600">
+                                Join Condition
+                              </label>
+                              <div className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 p-2 text-[11px]">
+                                <span className="font-mono text-gray-600">
+                                  {newRelTable.split('.').pop()}.
+                                </span>
+                                <input
+                                  value={newRelKey}
+                                  onChange={(e) => setNewRelKey(e.target.value)}
+                                  className="w-28 rounded-lg border border-gray-300 bg-white px-1.5 py-1 font-mono text-gray-900"
+                                  placeholder="foreign_key"
+                                />
+                                <span className="font-bold text-gray-400">=</span>
+                                <span className="font-mono text-gray-600">
+                                  {rootConfig?.table || 'root'}.
+                                </span>
+                                <input
+                                  value={newRelParentKey}
+                                  onChange={(e) => setNewRelParentKey(e.target.value)}
+                                  className="w-20 rounded-lg border border-gray-300 bg-white px-1.5 py-1 font-mono text-gray-900"
+                                  placeholder="primary_key"
+                                />
+                              </div>
+                            </div>
+
+                            {/* 4. Embed Field Name */}
+                            <div>
+                              <label className="mb-1 block text-[11px] font-medium text-gray-600">
+                                Target Field in Document
+                              </label>
+                              <input
+                                value={newRelTargetField}
+                                onChange={(e) => setNewRelTargetField(e.target.value)}
+                                className="w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 font-mono text-[11px] text-gray-800"
+                                placeholder="e.g. orders"
+                              />
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center justify-end gap-2 pt-2">
+                              <button
+                                type="button"
+                                onClick={() => setIsAddingRelation(false)}
+                                className="cursor-pointer px-3 py-1.5 text-[11px] font-medium text-gray-600 hover:text-gray-900"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                onClick={confirmAddRelation}
+                                className="flex cursor-pointer items-center gap-1 rounded-lg bg-blue-600 px-3.5 py-1.5 text-[11px] font-medium text-white shadow-2xs transition-colors hover:bg-blue-700"
+                              >
+                                <Check className="h-3 w-3" />
+                                Embed Relation
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
                   </div>
                 </ReadOnlyFieldset>
               </div>
