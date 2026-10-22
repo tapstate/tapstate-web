@@ -1,7 +1,7 @@
 import type { ISchema } from '@formily/json-schema'
 import type { ComponentType } from 'react'
 
-import { createForm, onFieldValueChange, type Form } from '@formily/core'
+import { createForm, onFormValuesChange, type Form } from '@formily/core'
 import { createSchemaField, FormProvider } from '@formily/react'
 import { useMemo, useRef } from 'react'
 
@@ -52,7 +52,7 @@ export function useFormilyForm<T extends Record<string, unknown>>({
       createForm({
         initialValues,
         effects: () => {
-          onFieldValueChange('*', (_field, nextForm) => {
+          onFormValuesChange((nextForm) => {
             notify(nextForm.values as T)
           })
         },

@@ -197,6 +197,15 @@
         "serverMessage": "Server message"
       }
     },
+    "fileReader": {
+      "chooseFile": "Choose a file",
+      "fileSelected": "File ready",
+      "filenameUnavailable": "Filename unavailable",
+      "noFileSelected": "No file selected",
+      "replaceFile": "Replace file",
+      "tooLarge": "Choose a file smaller than {{size}} KB.",
+      "readFailed": "The file could not be read. Try another file."
+    },
     "empty": {
       "title": "No sources yet",
       "body": "Add a connector-backed source to make live data available to Tapstate."
@@ -545,6 +554,47 @@
       "confirmStopClearState": "Stop and clear state",
       "dismissFeedback": "Dismiss lifecycle error"
     },
+    "startChecks": {
+      "title": "Start checks for {{id}}",
+      "descriptionBlocked": "Something stops this start. Resolve it, then start the Pipeline again.",
+      "descriptionConfirm": "Choose how to handle each question, then start.",
+      "descriptionReady": "Review the results, then start.",
+      "changedWhileConfirming": "{{id}} changed while you were confirming. Its checks were run again, so review them before starting.",
+      "staleTitle": "These answers no longer apply and were not used:",
+      "choiceLabel": "Answer for {{subject}}",
+      "showPassed": "Show passed checks ({{count}})",
+      "hidePassed": "Hide passed checks",
+      "cancel": "Cancel",
+      "close": "Close",
+      "start": "Start",
+      "starting": "Starting…",
+      "groups": {
+        "block": "Stops the start",
+        "confirm": "Needs your answer",
+        "warn": "Warnings",
+        "pass": "Passed"
+      },
+      "behavior": {
+        "BLOCK": "Blocked",
+        "CONFIRM": "Needs answer",
+        "WARN": "Warning",
+        "PASS": "Passed"
+      },
+      "plan": {
+        "title": "How each target loads",
+        "target": "Target",
+        "load": "Load",
+        "onFullLoad": "On full load"
+      },
+      "notice": {
+        "titleWarnings": "{{id}} started with warnings",
+        "titleStarted": "{{id}} started",
+        "titleNotStarted": "{{id}} did not start",
+        "definitionChanged": "Definition changed",
+        "staleTitle": "Answers not used because the question is no longer asked",
+        "dismiss": "Dismiss start notice for {{id}}"
+      }
+    },
     "delete": {
       "title": "Delete {{id}}?",
       "body": "This permanently removes the stored Pipeline and its runtime state.",
@@ -775,6 +825,14 @@
         "noTableOptions": "No existing tables match. You can enter a new name.",
         "noUpstreamTables": "No upstream tables are selected.",
         "writeMode": "Write mode",
+        "onFullLoad": "On full load",
+        "onFullLoadPlaceholder": "Keep existing rows (default)",
+        "onFullLoadOptions": {
+          "append": "Keep existing rows",
+          "clear": "Clear first",
+          "fail": "Refuse if not empty"
+        },
+        "writeModeDefault": "Upsert (default)",
         "sourceScope": "Source scope",
         "openSourceScope": "All tables",
         "configuredSourceScope": "{{count}} in scope",
@@ -2005,22 +2063,16 @@
     "title": "State stores",
     "intro": "Where Tapstate keeps your views. Every view a pipeline builds is written to the default store.",
     "listLabel": "State stores",
-    "add": "Add store",
-    "addLimit": "One store in this release",
     "default": "Default",
-    "delete": "Delete",
     "fields": {
       "type": "Type",
       "location": "Database",
-      "checks": "Checks",
-      "usage": "Usage",
       "access": "Access"
     },
     "managed": {
       "name": "Tapstate state store",
       "type": "MongoDB · server metadata database",
-      "access": "Shares the MongoDB this server already uses. For production, use a separate MongoDB.",
-      "deleteReason": "The server manages this store"
+      "access": "Shares the MongoDB this server already uses. For production, use a separate MongoDB."
     },
     "cloud": {
       "name": "Atlas state store",
@@ -2035,9 +2087,7 @@
     "settings": "Settings",
     "sectionsLabel": "Settings sections",
     "sections": {
-      "stateStore": "State store",
-      "members": "Members",
-      "apiKeys": "API keys"
+      "stateStore": "State store"
     }
   }
 }

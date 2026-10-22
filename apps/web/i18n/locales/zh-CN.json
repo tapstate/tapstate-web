@@ -197,6 +197,15 @@
         "serverMessage": "服务端信息"
       }
     },
+    "fileReader": {
+      "chooseFile": "选择文件",
+      "fileSelected": "文件已就绪",
+      "filenameUnavailable": "文件名不可用",
+      "noFileSelected": "未选择文件",
+      "replaceFile": "替换文件",
+      "tooLarge": "请选择小于 {{size}} KB 的文件。",
+      "readFailed": "无法读取该文件，请尝试其他文件。"
+    },
     "empty": {
       "title": "还没有数据源",
       "body": "添加一个由连接器驱动的数据源，让 Tapstate 可以使用实时数据。"
@@ -545,6 +554,47 @@
       "confirmStopClearState": "停止并清除状态",
       "dismissFeedback": "关闭生命周期错误"
     },
+    "startChecks": {
+      "title": "启动 {{id}} 前的检查",
+      "descriptionBlocked": "有问题阻止了这次启动。处理后再重新启动 Pipeline。",
+      "descriptionConfirm": "为每个问题选择处理方式，然后启动。",
+      "descriptionReady": "查看检查结果，然后启动。",
+      "changedWhileConfirming": "你确认期间 {{id}} 已被修改。检查已重新运行，请在启动前重新查看。",
+      "staleTitle": "以下答复已不再适用，未被采用：",
+      "choiceLabel": "{{subject}} 的答复",
+      "showPassed": "显示通过的检查（{{count}}）",
+      "hidePassed": "隐藏通过的检查",
+      "cancel": "取消",
+      "close": "关闭",
+      "start": "启动",
+      "starting": "正在启动…",
+      "groups": {
+        "block": "阻止启动",
+        "confirm": "需要你的答复",
+        "warn": "警告",
+        "pass": "已通过"
+      },
+      "behavior": {
+        "BLOCK": "已阻止",
+        "CONFIRM": "待答复",
+        "WARN": "警告",
+        "PASS": "通过"
+      },
+      "plan": {
+        "title": "各目标的加载方式",
+        "target": "目标",
+        "load": "加载",
+        "onFullLoad": "全量加载时"
+      },
+      "notice": {
+        "titleWarnings": "{{id}} 已启动，但有警告",
+        "titleStarted": "{{id}} 已启动",
+        "titleNotStarted": "{{id}} 未启动",
+        "definitionChanged": "定义已修改",
+        "staleTitle": "因问题已不再提出而未采用的答复",
+        "dismiss": "关闭 {{id}} 的启动提示"
+      }
+    },
     "delete": {
       "title": "删除 {{id}}？",
       "body": "此操作会永久删除已存储的流水线及其运行状态。",
@@ -775,6 +825,14 @@
         "noTableOptions": "没有匹配的已有表，你可以输入新表名。",
         "noUpstreamTables": "尚未选择上游表。",
         "writeMode": "写入模式",
+        "onFullLoad": "全量加载时",
+        "onFullLoadPlaceholder": "保留已有数据（默认）",
+        "onFullLoadOptions": {
+          "append": "保留已有数据",
+          "clear": "先清空",
+          "fail": "非空时拒绝"
+        },
+        "writeModeDefault": "更新或插入（默认）",
         "sourceScope": "Source 表范围",
         "openSourceScope": "全部表",
         "configuredSourceScope": "范围内 {{count}} 项",
@@ -2005,22 +2063,16 @@
     "title": "State store",
     "intro": "Tapstate 保存视图的地方。pipeline 构建的每个视图都写入默认 store。",
     "listLabel": "State store 列表",
-    "add": "添加 store",
-    "addLimit": "本版本只支持一个 store",
     "default": "默认",
-    "delete": "删除",
     "fields": {
       "type": "类型",
       "location": "数据库",
-      "checks": "检查",
-      "usage": "用量",
       "access": "访问"
     },
     "managed": {
       "name": "Tapstate state store",
       "type": "MongoDB · 服务器元数据库",
-      "access": "与此服务器已使用的 MongoDB 共用。生产环境请使用单独的 MongoDB。",
-      "deleteReason": "此 store 由服务器管理"
+      "access": "与此服务器已使用的 MongoDB 共用。生产环境请使用单独的 MongoDB。"
     },
     "cloud": {
       "name": "Atlas state store",
@@ -2035,9 +2087,7 @@
     "settings": "设置",
     "sectionsLabel": "设置分区",
     "sections": {
-      "stateStore": "State store",
-      "members": "成员",
-      "apiKeys": "API 密钥"
+      "stateStore": "State store"
     }
   }
 }

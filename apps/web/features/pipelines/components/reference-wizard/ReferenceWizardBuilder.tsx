@@ -56,6 +56,8 @@ export interface WizardBuilderProps {
   deploymentProfile: DeploymentProfile
   footer: React.ReactNode
   actions?: React.ReactNode
+  /** Notices kept above the editor, outside its read-only fieldset so they can be dismissed. */
+  notices?: React.ReactNode
   compiledSpec: string
   livePreview: PipelinePreviewRun | null
   livePreviewStatus: 'idle' | 'loading' | 'stale' | 'complete' | 'error'
@@ -185,6 +187,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   deploymentProfile,
   footer,
   actions,
+  notices,
   compiledSpec,
   livePreview,
   livePreviewStatus,
@@ -2073,6 +2076,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       <div className="wizard-reference-workspace flex min-h-0 flex-1 overflow-hidden">
         {/* Left / Center Canvas */}
         <div className="wizard-reference-editor-column">
+          {notices ? <div className="wizard-reference-notices">{notices}</div> : null}
           <main
             id="wizard-canvas-main"
             className="wizard-reference-canvas flex min-w-0 flex-1 flex-col overflow-y-auto"
