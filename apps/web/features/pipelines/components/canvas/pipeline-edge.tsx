@@ -42,7 +42,7 @@ export function PipelineEdge({
         markerEnd={markerEnd}
         interactionWidth={24}
         style={{
-          stroke: selected ? 'var(--pipeline-selection)' : 'var(--pipeline-edge)',
+          stroke: selected ? 'var(--color-workflow-link-line-active)' : 'var(--pipeline-edge)',
           strokeWidth: selected ? 2.25 : 1.75,
         }}
       />

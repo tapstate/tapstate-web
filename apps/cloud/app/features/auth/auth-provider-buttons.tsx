@@ -11,7 +11,7 @@ export function AuthProviderButtons({ mode }: AuthProviderButtonsProps) {
 
   return (
     <>
-      <div className="space-y-2 pt-1">
+      <div className="space-y-3 pt-1">
         <Button
           aria-describedby="auth-provider-coming-soon"
           className="w-full"

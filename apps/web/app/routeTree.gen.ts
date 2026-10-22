@@ -31,7 +31,6 @@ import { Route as AuthenticatedSourcesSourceIdIndexRouteImport } from './routes/
 import { Route as AuthenticatedSourcesSourceIdTableNameRouteImport } from './routes/_authenticated.sources.$sourceId.$tableName'
 import { Route as PipelineEditorPipelinesPipelineIdEditRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit'
 import { Route as PipelineEditorPipelinesPipelineIdEditIndexRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit.index'
-import { Route as PipelineEditorPipelinesPipelineIdEditApiRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit.api'
 import { Route as PipelineEditorPipelinesPipelineIdEditLogsRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit.logs'
 import { Route as PipelineEditorPipelinesPipelineIdEditMonitoringRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit.monitoring'
 
@@ -163,12 +162,6 @@ const PipelineEditorPipelinesPipelineIdEditIndexRoute =
     path: '/',
     getParentRoute: () => PipelineEditorPipelinesPipelineIdEditRoute,
   } as any)
-const PipelineEditorPipelinesPipelineIdEditApiRoute =
-  PipelineEditorPipelinesPipelineIdEditApiRouteImport.update({
-    id: '/api',
-    path: '/api',
-    getParentRoute: () => PipelineEditorPipelinesPipelineIdEditRoute,
-  } as any)
 const PipelineEditorPipelinesPipelineIdEditLogsRoute =
   PipelineEditorPipelinesPipelineIdEditLogsRouteImport.update({
     id: '/logs',
@@ -202,7 +195,6 @@ export interface FileRoutesByFullPath {
   '/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
   '/pipelines/$pipelineId/edit': typeof PipelineEditorPipelinesPipelineIdEditRouteWithChildren
   '/sources/$sourceId/': typeof AuthenticatedSourcesSourceIdIndexRoute
-  '/pipelines/$pipelineId/edit/api': typeof PipelineEditorPipelinesPipelineIdEditApiRoute
   '/pipelines/$pipelineId/edit/logs': typeof PipelineEditorPipelinesPipelineIdEditLogsRoute
   '/pipelines/$pipelineId/edit/monitoring': typeof PipelineEditorPipelinesPipelineIdEditMonitoringRoute
   '/pipelines/$pipelineId/edit/': typeof PipelineEditorPipelinesPipelineIdEditIndexRoute
@@ -223,7 +215,6 @@ export interface FileRoutesByTo {
   '/views': typeof AuthenticatedViewsIndexRoute
   '/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
   '/sources/$sourceId': typeof AuthenticatedSourcesSourceIdIndexRoute
-  '/pipelines/$pipelineId/edit/api': typeof PipelineEditorPipelinesPipelineIdEditApiRoute
   '/pipelines/$pipelineId/edit/logs': typeof PipelineEditorPipelinesPipelineIdEditLogsRoute
   '/pipelines/$pipelineId/edit/monitoring': typeof PipelineEditorPipelinesPipelineIdEditMonitoringRoute
   '/pipelines/$pipelineId/edit': typeof PipelineEditorPipelinesPipelineIdEditIndexRoute
@@ -251,7 +242,6 @@ export interface FileRoutesById {
   '/_authenticated/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
   '/_pipeline-editor/pipelines/$pipelineId/edit': typeof PipelineEditorPipelinesPipelineIdEditRouteWithChildren
   '/_authenticated/sources/$sourceId/': typeof AuthenticatedSourcesSourceIdIndexRoute
-  '/_pipeline-editor/pipelines/$pipelineId/edit/api': typeof PipelineEditorPipelinesPipelineIdEditApiRoute
   '/_pipeline-editor/pipelines/$pipelineId/edit/logs': typeof PipelineEditorPipelinesPipelineIdEditLogsRoute
   '/_pipeline-editor/pipelines/$pipelineId/edit/monitoring': typeof PipelineEditorPipelinesPipelineIdEditMonitoringRoute
   '/_pipeline-editor/pipelines/$pipelineId/edit/': typeof PipelineEditorPipelinesPipelineIdEditIndexRoute
@@ -278,7 +268,6 @@ export interface FileRouteTypes {
     | '/sources/$sourceId/$tableName'
     | '/pipelines/$pipelineId/edit'
     | '/sources/$sourceId/'
-    | '/pipelines/$pipelineId/edit/api'
     | '/pipelines/$pipelineId/edit/logs'
     | '/pipelines/$pipelineId/edit/monitoring'
     | '/pipelines/$pipelineId/edit/'
@@ -299,7 +288,6 @@ export interface FileRouteTypes {
     | '/views'
     | '/sources/$sourceId/$tableName'
     | '/sources/$sourceId'
-    | '/pipelines/$pipelineId/edit/api'
     | '/pipelines/$pipelineId/edit/logs'
     | '/pipelines/$pipelineId/edit/monitoring'
     | '/pipelines/$pipelineId/edit'
@@ -326,7 +314,6 @@ export interface FileRouteTypes {
     | '/_authenticated/sources/$sourceId/$tableName'
     | '/_pipeline-editor/pipelines/$pipelineId/edit'
     | '/_authenticated/sources/$sourceId/'
-    | '/_pipeline-editor/pipelines/$pipelineId/edit/api'
     | '/_pipeline-editor/pipelines/$pipelineId/edit/logs'
     | '/_pipeline-editor/pipelines/$pipelineId/edit/monitoring'
     | '/_pipeline-editor/pipelines/$pipelineId/edit/'
@@ -497,13 +484,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PipelineEditorPipelinesPipelineIdEditIndexRouteImport
       parentRoute: typeof PipelineEditorPipelinesPipelineIdEditRoute
     }
-    '/_pipeline-editor/pipelines/$pipelineId/edit/api': {
-      id: '/_pipeline-editor/pipelines/$pipelineId/edit/api'
-      path: '/api'
-      fullPath: '/pipelines/$pipelineId/edit/api'
-      preLoaderRoute: typeof PipelineEditorPipelinesPipelineIdEditApiRouteImport
-      parentRoute: typeof PipelineEditorPipelinesPipelineIdEditRoute
-    }
     '/_pipeline-editor/pipelines/$pipelineId/edit/logs': {
       id: '/_pipeline-editor/pipelines/$pipelineId/edit/logs'
       path: '/logs'
@@ -593,7 +573,6 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 )
 
 interface PipelineEditorPipelinesPipelineIdEditRouteChildren {
-  PipelineEditorPipelinesPipelineIdEditApiRoute: typeof PipelineEditorPipelinesPipelineIdEditApiRoute
   PipelineEditorPipelinesPipelineIdEditLogsRoute: typeof PipelineEditorPipelinesPipelineIdEditLogsRoute
   PipelineEditorPipelinesPipelineIdEditMonitoringRoute: typeof PipelineEditorPipelinesPipelineIdEditMonitoringRoute
   PipelineEditorPipelinesPipelineIdEditIndexRoute: typeof PipelineEditorPipelinesPipelineIdEditIndexRoute
@@ -601,8 +580,6 @@ interface PipelineEditorPipelinesPipelineIdEditRouteChildren {
 
 const PipelineEditorPipelinesPipelineIdEditRouteChildren: PipelineEditorPipelinesPipelineIdEditRouteChildren =
   {
-    PipelineEditorPipelinesPipelineIdEditApiRoute:
-      PipelineEditorPipelinesPipelineIdEditApiRoute,
     PipelineEditorPipelinesPipelineIdEditLogsRoute:
       PipelineEditorPipelinesPipelineIdEditLogsRoute,
     PipelineEditorPipelinesPipelineIdEditMonitoringRoute:

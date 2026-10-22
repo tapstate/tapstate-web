@@ -1,20 +1,24 @@
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@langgenius/dify-ui/dropdown-menu'
+import { IconButton } from '@langgenius/dify-ui/icon-button'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { ReactFlowProvider } from '@xyflow/react'
 import {
   Activity,
-  AlertCircle,
-  Braces,
   ChevronLeft,
   Gauge,
   LoaderCircle,
   PanelLeftClose,
   PanelLeftOpen,
   Pencil,
-  Radio,
   ScrollText,
+  Terminal,
   Workflow,
-  X,
 } from 'lucide-react'
 import {
   useCallback,
@@ -31,6 +35,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -62,7 +67,9 @@ import { getSourceSchema, listConnectors, listSources } from '@/service/source-c
 import { useAuthStore } from '@/stores/auth-store'
 
 import type {
+  CanvasNoteRecord,
   PipelineCanvasSelection,
+  PipelineCanvasNotesChangeOptions,
   PipelineNodeConnector,
 } from '../components/canvas/pipeline-canvas-types'
 import type {
@@ -79,6 +86,7 @@ import type {
   PipelineSourceTableSelection,
 } from '../model/pipeline-node-model'
 
+import { readCanvasNotes } from '../components/canvas/pipeline-canvas-notes'
 import { PipelineLifecycleMenu } from '../components/pipeline-lifecycle-menu'
 import { PipelineStatusBadge } from '../components/pipeline-status-badge'
 import {
@@ -97,6 +105,7 @@ import {
 import {
   addPipelineNodes,
   createPipelineGraphDraft,
+  removePipelineNode,
   updatePipelineNodeConfiguration,
   validatePipelineGraph,
   type PipelineGraphDiagnostic,
@@ -104,13 +113,14 @@ import {
 } from '../model/pipeline-graph-edit'
 import { pipelineNodeConnectors } from '../model/pipeline-node-connectors'
 import { sourceTableSelections } from '../model/pipeline-node-model'
+import { canPipelineNodeEmitOutput } from '../model/pipeline-node-rules'
 import { targetSources } from '../model/pipeline-target-connectors'
 import { PipelineMonitoringPage } from '../monitoring/pipeline-monitoring-page'
 import { PipelineWorkflowWithInnerContext } from '../workflow-app'
 import { PipelineWorkflow } from '../workflow-app/components/pipeline-workflow'
 import { WizardBuilder } from './wizard-builder'
 
-export type PipelineWorkspaceSection = 'orchestrate' | 'api' | 'logs' | 'monitoring'
+export type PipelineWorkspaceSection = 'orchestrate' | 'logs' | 'monitoring'
 
 function isPipelineReadOnly(status?: PipelineRuntimeState) {
   return status === 'RUNNING' || status === 'PAUSED' || status === 'FAILED'
@@ -184,6 +194,7 @@ function synchronizeCurrentSelection(
 function synchronizeConfiguredNodeIdentity(
   draft: PipelineGraphDraft,
   nodeId: string,
+  previousConfiguration?: PipelineNodeConfiguration,
 ): PipelineGraphDraft {
   const configuration = draft.configurations.get(nodeId)
   if (configuration?.kind !== 'source' && configuration?.kind !== 'target') return draft
@@ -196,10 +207,18 @@ function synchronizeConfiguredNodeIdentity(
         node.id === nodeId
           ? {
               ...node,
-              label:
-                configuration.kind === 'source'
+              label: (() => {
+                const previousLabel =
+                  previousConfiguration?.kind === 'source'
+                    ? sourceNodeLabel(previousConfiguration)
+                    : previousConfiguration?.kind === 'target'
+                      ? previousConfiguration.table || node.label
+                      : node.label
+                if (node.label !== previousLabel) return node.label
+                return configuration.kind === 'source'
                   ? sourceNodeLabel(configuration)
-                  : configuration.table || node.label,
+                  : configuration.table || node.label
+              })(),
               detail: configuration.sourceId || null,
             }
           : node,
@@ -272,49 +291,9 @@ const workspaceNavigation = [
     labelKey: 'pipelines.workspace.navigation.orchestrate',
     icon: Workflow,
   },
-  { section: 'api', labelKey: 'pipelines.workspace.navigation.api', icon: Braces },
   { section: 'logs', labelKey: 'pipelines.workspace.navigation.logs', icon: ScrollText },
   { section: 'monitoring', labelKey: 'pipelines.workspace.navigation.monitoring', icon: Gauge },
 ] as const
-
-function QueryIssue({ unavailable, onRetry }: { unavailable: boolean; onRetry: () => void }) {
-  const { t } = useTranslation()
-
-  return (
-    <div className="flex min-h-36 flex-col items-start justify-center gap-2 px-5 py-6">
-      <p className="text-[13px] font-semibold text-slate-800">
-        {t(
-          unavailable
-            ? 'pipelines.workspace.runtime.unavailableTitle'
-            : 'pipelines.workspace.runtime.errorTitle',
-        )}
-      </p>
-      <p className="max-w-[34ch] text-[12px] leading-5 text-slate-500">
-        {t(
-          unavailable
-            ? 'pipelines.workspace.runtime.unavailableBody'
-            : 'pipelines.workspace.runtime.errorBody',
-        )}
-      </p>
-      <button
-        type="button"
-        className="mt-1 h-8 rounded-lg bg-slate-900 px-3 text-[12px] font-semibold text-white transition-[background-color,transform] hover:bg-slate-700 focus-visible:ring-3 focus-visible:ring-blue-500/30 focus-visible:outline-none active:scale-95"
-        onClick={onRetry}
-      >
-        {t('pipelines.workspace.actions.retry')}
-      </button>
-    </div>
-  )
-}
-
-function LoadingPanel() {
-  const { t } = useTranslation()
-  return (
-    <div className="flex min-h-36 items-center px-5 py-6 text-[12px] text-slate-500">
-      {t('pipelines.workspace.runtime.loading')}
-    </div>
-  )
-}
 
 function WorkspaceNavLink({
   pipelineId,
@@ -337,13 +316,6 @@ function WorkspaceNavLink({
     'aria-current': isActive ? ('page' as const) : undefined,
   }
 
-  if (section === 'api') {
-    return (
-      <Link to="/pipelines/$pipelineId/edit/api" params={{ pipelineId }} {...commonProps}>
-        {children}
-      </Link>
-    )
-  }
   if (section === 'logs') {
     return (
       <Link to="/pipelines/$pipelineId/edit/logs" params={{ pipelineId }} {...commonProps}>
@@ -439,12 +411,12 @@ function PipelineWorkspaceNav({
       <aside
         className={cn(
           'pipeline-workspace__navigation relative flex h-full shrink-0 overflow-hidden transition-[width] duration-150 motion-reduce:transition-none',
-          collapsed ? 'w-14' : 'w-62 max-md:w-52 max-sm:w-14',
+          collapsed ? 'w-14' : 'w-60 max-md:w-52 max-sm:w-14',
         )}
         data-testid="workspace-navigation"
         data-collapsed={collapsed}
       >
-        <div className="pipeline-workspace__navigation-panel flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg px-3 py-3">
+        <div className="pipeline-workspace__navigation-panel flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg px-3 py-2">
           <div
             className={cn(
               'flex h-10 items-center',
@@ -496,45 +468,60 @@ function PipelineWorkspaceNav({
 
           <div
             className={cn(
-              'mt-5 flex items-start gap-3 px-2 max-sm:justify-center max-sm:px-0',
+              'mt-5 flex items-start gap-2 rounded-xl p-2 max-sm:justify-center max-sm:px-0',
               collapsed && 'justify-center px-0',
             )}
           >
-            <span className="pipeline-workspace__identity-mark mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg max-sm:hidden">
+            <span className="pipeline-workspace__identity-mark flex size-8 shrink-0 items-center justify-center rounded-lg max-sm:hidden">
               <Workflow className="size-4" aria-hidden="true" />
             </span>
             {!collapsed && (
-              <div className="flex min-w-0 flex-1 items-start justify-between gap-1 max-sm:sr-only">
-                <div className="flex min-w-0 flex-col gap-1">
+              <div className="flex min-w-0 flex-1 flex-col items-start justify-center gap-0.5 self-stretch max-sm:sr-only">
+                <div className="flex w-full min-w-0 items-center gap-2 pr-1">
                   <span
-                    className="block max-w-full min-w-0 truncate text-[13px] leading-5 font-semibold text-slate-800"
+                    className="text-text-secondary min-w-0 flex-1 truncate text-sm leading-5 font-semibold"
                     title={basicInfo.name}
                   >
                     {basicInfo.name}
                   </span>
-                  {hasArtifact ? (
-                    <PipelineStatusBadge status={status} />
-                  ) : (
-                    <span
-                      className="inline-flex h-6 items-center rounded-md border border-amber-200 bg-amber-50 px-2 text-[11px] font-semibold text-amber-800"
-                      data-testid="pipeline-status"
-                      data-state="draft"
-                    >
-                      {t('wizard.draft')}
-                    </span>
-                  )}
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger
+                      render={
+                        <IconButton
+                          size="md"
+                          className="data-popup-open:bg-state-base-hover data-popup-open:text-text-secondary -mx-1 -my-0.5 shrink-0"
+                          aria-label={t('pipelines.workspace.navigation.editBasicInfo')}
+                        >
+                          <span className="i-ri-more-fill size-4" aria-hidden="true" />
+                        </IconButton>
+                      }
+                    />
+                    <DropdownMenuContent placement="bottom-end" sideOffset={4} className="min-w-40">
+                      <DropdownMenuItem
+                        className="gap-2 px-3"
+                        disabled={!canEditBasicInfo}
+                        onClick={openBasicInfoEditor}
+                      >
+                        <span
+                          className="i-ri-edit-line text-text-tertiary size-4"
+                          aria-hidden="true"
+                        />
+                        <span>{t('pipelines.workspace.navigation.editBasicInfo')}</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className="-mt-1 shrink-0"
-                  aria-label={t('pipelines.workspace.navigation.editBasicInfo')}
-                  disabled={!canEditBasicInfo}
-                  onClick={openBasicInfoEditor}
-                >
-                  <Pencil aria-hidden="true" />
-                </Button>
+                {hasArtifact ? (
+                  <PipelineStatusBadge status={status} />
+                ) : (
+                  <span
+                    className="text-text-tertiary inline-flex items-center text-[10px] leading-3 font-medium uppercase"
+                    data-testid="pipeline-status"
+                    data-state="draft"
+                  >
+                    {t('wizard.draft')}
+                  </span>
+                )}
               </div>
             )}
             <Button
@@ -550,14 +537,17 @@ function PipelineWorkspaceNav({
             </Button>
           </div>
 
-          <nav className="mt-7 space-y-1" aria-label={t('pipelines.workspace.navigation.label')}>
+          <nav
+            className="mt-2 mr-2 space-y-0.5"
+            aria-label={t('pipelines.workspace.navigation.label')}
+          >
             {workspaceNavigation.map((item) => {
               const Icon = item.icon
               return (
                 <div
                   key={item.section}
                   className={cn(
-                    'pipeline-workspace__nav-row flex h-10 items-center gap-1 rounded-lg',
+                    'pipeline-workspace__nav-row flex h-8 items-center gap-1 rounded-lg',
                     item.section === activeSection && 'pipeline-workspace__nav-row--active',
                   )}
                 >
@@ -575,6 +565,19 @@ function PipelineWorkspaceNav({
               )
             })}
           </nav>
+          <Link
+            to="/overview"
+            className={cn(
+              'mt-auto flex h-10 items-center gap-2 rounded-lg px-2 text-[13px] font-semibold text-[var(--pipeline-text-muted)] hover:bg-[var(--pipeline-surface-subtle)]',
+              collapsed && 'justify-center px-0',
+            )}
+            aria-label={t('app.brand')}
+          >
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--pipeline-selection)] text-white">
+              <Terminal className="size-3" aria-hidden="true" />
+            </span>
+            {!collapsed && <span className="max-sm:sr-only">{t('app.brand')}</span>}
+          </Link>
         </div>
       </aside>
 
@@ -596,7 +599,7 @@ function PipelineWorkspaceNav({
                 {t('pipelines.workspace.navigation.editDescription')}
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4">
+            <DialogBody className="grid gap-4">
               <div className="grid gap-2">
                 <label className="text-sm font-medium" htmlFor="pipeline-basic-info-name">
                   {t('pipelines.workspace.navigation.nameLabel')}
@@ -630,7 +633,7 @@ function PipelineWorkspaceNav({
                   {saveError}
                 </p>
               )}
-            </div>
+            </DialogBody>
             <DialogFooter>
               <Button
                 type="button"
@@ -675,6 +678,10 @@ function PipelineOrchestrationPage({
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const queryClient = useQueryClient()
   const [selection, setSelection] = useState<PipelineCanvasSelection | null>(null)
+  const [focusNodeId, setFocusNodeId] = useState<string | null>(null)
+  const [requestedInsertion, setRequestedInsertion] = useState<PipelineNodeInsertionContext | null>(
+    null,
+  )
   const [draft, setDraft] = useState<PipelineGraphDraft | null>(null)
   const [isDirty, setIsDirty] = useState(false)
   const [diagnostics, setDiagnostics] = useState<PipelineGraphDiagnostic[]>([])
@@ -682,10 +689,29 @@ function PipelineOrchestrationPage({
   const [layoutDraft, setLayoutDraft] = useState<Pick<PipelineLayout, 'nodes' | 'viewport'> | null>(
     null,
   )
+  const [canvasNotes, setCanvasNotes] = useState<CanvasNoteRecord[]>(() =>
+    readCanvasNotes(pipelineId),
+  )
   const [basicInfoRevision, setBasicInfoRevision] = useState(0)
+  const [, setHistoryRevision] = useState(0)
   const surfaceRef = useRef<HTMLElement>(null)
   const draftRef = useRef<PipelineGraphDraft | null>(null)
   const layoutDraftRef = useRef<Pick<PipelineLayout, 'nodes' | 'viewport'> | null>(null)
+  const canvasNotesRef = useRef(canvasNotes)
+  const canvasNotesPipelineIdRef = useRef(pipelineId)
+  const suppressNextLayoutHistoryRef = useRef(false)
+  const historyRef = useRef<{
+    past: {
+      draft: PipelineGraphDraft
+      layout: Pick<PipelineLayout, 'nodes' | 'viewport'> | null
+      notes: CanvasNoteRecord[]
+    }[]
+    future: {
+      draft: PipelineGraphDraft
+      layout: Pick<PipelineLayout, 'nodes' | 'viewport'> | null
+      notes: CanvasNoteRecord[]
+    }[]
+  }>({ past: [], future: [] })
   const basicInfoRef = useRef<PipelineDraftBasicInfo | null>(null)
   const actionErrorSequence = useRef(0)
   const pipelineDraft = useQuery({
@@ -775,6 +801,16 @@ function PipelineOrchestrationPage({
   }
 
   useEffect(() => {
+    if (canvasNotesPipelineIdRef.current === pipelineId) return
+    canvasNotesPipelineIdRef.current = pipelineId
+    const nextNotes = readCanvasNotes(pipelineId)
+    canvasNotesRef.current = nextNotes
+    setCanvasNotes(nextNotes)
+    historyRef.current = { past: [], future: [] }
+    setHistoryRevision((value) => value + 1)
+  }, [pipelineId])
+
+  useEffect(() => {
     if (!pipelineData || !layoutData) return
     const nextDraft = serverDocument?.editor ?? null
     if (!nextDraft) return
@@ -787,10 +823,96 @@ function PipelineOrchestrationPage({
     setDiagnostics([])
     setActionErrors([])
     setSelection(null)
+    setRequestedInsertion(null)
+    historyRef.current = { past: [], future: [] }
+    setHistoryRevision((value) => value + 1)
   }, [layoutData, pipelineData?.contentHash, serverDocument?.editor])
+
+  function recordHistory() {
+    const current = draftRef.current
+    if (!current) return
+    const history = historyRef.current
+    historyRef.current = {
+      past: [
+        ...history.past.slice(-49),
+        { draft: current, layout: layoutDraftRef.current, notes: canvasNotesRef.current },
+      ],
+      future: [],
+    }
+    setHistoryRevision((value) => value + 1)
+  }
+
+  function handleCanvasNotesChange(
+    nextNotes: CanvasNoteRecord[],
+    options?: PipelineCanvasNotesChangeOptions,
+  ) {
+    if (JSON.stringify(canvasNotesRef.current) === JSON.stringify(nextNotes)) return
+    if (options?.recordHistory !== false) recordHistory()
+    canvasNotesRef.current = nextNotes
+    setCanvasNotes(nextNotes)
+  }
+
+  function restoreHistory(direction: 'undo' | 'redo', steps = 1) {
+    if (isReadOnly) return
+    const current = draftRef.current
+    if (!current) return
+    let { past, future } = historyRef.current
+    let target = {
+      draft: current,
+      layout: layoutDraftRef.current,
+      notes: canvasNotesRef.current,
+    }
+    for (let step = 0; step < steps; step++) {
+      if (direction === 'undo') {
+        const previous = past.at(-1)
+        if (!previous) break
+        past = past.slice(0, -1)
+        future = [...future, target]
+        target = previous
+      } else {
+        const next = future.at(-1)
+        if (!next) break
+        future = future.slice(0, -1)
+        past = [...past, target]
+        target = next
+      }
+    }
+    const pipelineStateChanged =
+      target.draft !== current || target.layout !== layoutDraftRef.current
+    if (
+      target.draft === current &&
+      target.layout === layoutDraftRef.current &&
+      target.notes === canvasNotesRef.current
+    )
+      return
+    historyRef.current = { past, future }
+    draftRef.current = target.draft
+    layoutDraftRef.current = target.layout
+    canvasNotesRef.current = target.notes
+    setDraft(target.draft)
+    setLayoutDraft(target.layout)
+    setCanvasNotes(target.notes)
+    setSelection((previous) =>
+      synchronizeCurrentSelection(previous, target.draft, connectorsBySourceId),
+    )
+    if (pipelineStateChanged) setIsDirty(true)
+    setHistoryRevision((value) => value + 1)
+  }
 
   function scheduleLayoutSave(next: Pick<PipelineLayout, 'nodes' | 'viewport'>) {
     if (isReadOnly) return
+    const shouldRecord = !suppressNextLayoutHistoryRef.current
+    suppressNextLayoutHistoryRef.current = false
+    const previousNodes = layoutDraftRef.current?.nodes
+    if (
+      shouldRecord &&
+      previousNodes &&
+      Object.keys(next.nodes).some(
+        (id) =>
+          previousNodes[id]?.x !== next.nodes[id]?.x || previousNodes[id]?.y !== next.nodes[id]?.y,
+      )
+    )
+      recordHistory()
     layoutDraftRef.current = next
     setLayoutDraft(next)
     setIsDirty(true)
@@ -804,6 +926,28 @@ function PipelineOrchestrationPage({
   )
   const configurations = draft?.configurations ?? new Map<string, PipelineNodeConfiguration>()
   const descriptions = draft?.descriptions ?? new Map<string, string>()
+  const selectedDagNode = draft?.dag.nodes.find((node) => node.id === selection?.id)
+  const selectedNextNodes = selection
+    ? (draft?.dag.edges ?? [])
+        .filter((edge) => edge.source === selection.id)
+        .flatMap((edge) => draft?.dag.nodes.find((node) => node.id === edge.target) ?? [])
+    : []
+  const canAddSelectedNextStep = Boolean(
+    selectedDagNode && draft && canPipelineNodeEmitOutput(selectedDagNode, draft.dag.edges),
+  )
+
+  function requestNextStep(screenPosition: { x: number; y: number }) {
+    if (isReadOnly || !selection || !canAddSelectedNextStep) return
+    const position = layoutDraftRef.current?.nodes[selection.id] ??
+      layoutData?.nodes[selection.id] ?? { x: 0, y: 0 }
+    setRequestedInsertion({
+      position: { x: position.x + 330, y: position.y },
+      screenPosition,
+      selectorOrigin: 'next-step',
+      connectFrom: selection.id,
+      connectTo: null,
+    })
+  }
   const canvasLayout = useMemo<PipelineLayout | null>(() => {
     if (!layoutData) return null
     return {
@@ -827,7 +971,7 @@ function PipelineOrchestrationPage({
     [basicInfoRevision, canvasLayout, draft],
   )
   const autosave = usePipelineDraftAutosave({
-    enabled: Boolean(draft && canvasLayout) && !isReadOnly,
+    enabled: pipelineDraft.isFetched && Boolean(draft && canvasLayout) && !isReadOnly,
     mutation: autosaveMutation,
     initialEtag: pipelineDraft.data?.etag ?? null,
     fetcher: apiFetch,
@@ -1054,6 +1198,7 @@ function PipelineOrchestrationPage({
   }, [connectorsBySourceId, draft])
 
   function handleSelectionChange(nextSelection: PipelineCanvasSelection | null) {
+    setFocusNodeId(null)
     if (!nextSelection) {
       setSelection(null)
       return
@@ -1070,7 +1215,14 @@ function PipelineOrchestrationPage({
     const next = synchronizeConfiguredNodeIdentity(
       updatePipelineNodeConfiguration(current, change),
       change.nodeId,
+      current.configurations.get(change.nodeId),
     )
+    if (
+      JSON.stringify(current.configurations.get(change.nodeId)) ===
+      JSON.stringify(next.configurations.get(change.nodeId))
+    )
+      return
+    recordHistory()
     draftRef.current = next
     setDraft(next)
     setSelection((previous) => synchronizeCurrentSelection(previous, next, connectorsBySourceId))
@@ -1082,6 +1234,7 @@ function PipelineOrchestrationPage({
     if (!selection) return
     const current = draftRef.current
     if (!current) return
+    recordHistory()
     const descriptions = new Map(current.descriptions).set(selection.id, description)
     const next = {
       ...current,
@@ -1099,6 +1252,46 @@ function PipelineOrchestrationPage({
     setIsDirty(true)
   }
 
+  function handleNodeTitleChange(title: string) {
+    if (isReadOnly || !selection) return
+    const current = draftRef.current
+    const nextTitle = title.trim()
+    if (!current || !nextTitle || selection.label === nextTitle) return
+    recordHistory()
+    const next = {
+      ...current,
+      dag: {
+        ...current.dag,
+        nodes: current.dag.nodes.map((node) =>
+          node.id === selection.id ? { ...node, label: nextTitle } : node,
+        ),
+      },
+    }
+    draftRef.current = next
+    setDraft(next)
+    setSelection((previous) => (previous ? { ...previous, label: nextTitle } : previous))
+    setIsDirty(true)
+  }
+
+  function handleDeleteSelectedNode() {
+    if (isReadOnly || !selection) return
+    const current = draftRef.current
+    if (!current) return
+    recordHistory()
+    const next = removePipelineNode(current, selection.id)
+    draftRef.current = next
+    setDraft(next)
+    setSelection(null)
+    const previousLayout = layoutDraftRef.current
+    if (previousLayout) {
+      const positions = { ...previousLayout.nodes }
+      delete positions[selection.id]
+      suppressNextLayoutHistoryRef.current = true
+      scheduleLayoutSave({ ...previousLayout, nodes: positions })
+    }
+    setIsDirty(true)
+  }
+
   function handleChooseNode(choice: PipelineNodeChoice, insertion: PipelineNodeInsertionContext) {
     handleChooseNodes([choice], insertion)
   }
@@ -1110,6 +1303,7 @@ function PipelineOrchestrationPage({
     if (isReadOnly) return
     const current = draftRef.current
     if (!current || choices.length === 0) return
+    recordHistory()
     const currentLayout = layoutDraft ?? layoutData
     const result = addPipelineNodes(
       current,
@@ -1118,6 +1312,7 @@ function PipelineOrchestrationPage({
       insertion.connectFrom ?? undefined,
       insertion.connectTo ?? undefined,
       insertion.insertEdge,
+      insertion.selectorOrigin === 'next-step' ? 'append' : 'insert',
     )
     draftRef.current = result.draft
     setDraft(result.draft)
@@ -1138,6 +1333,7 @@ function PipelineOrchestrationPage({
       })
     }
     if (Object.keys(result.positions).length > 0) {
+      suppressNextLayoutHistoryRef.current = true
       scheduleLayoutSave({
         nodes: { ...currentLayout?.nodes, ...result.positions },
         viewport: currentLayout?.viewport ?? null,
@@ -1210,7 +1406,7 @@ function PipelineOrchestrationPage({
       className="pipeline-canvas-surface relative h-full min-w-0 flex-1 overflow-hidden"
       style={
         {
-          '--pipeline-node-panel-width': selection ? '400px' : '0px',
+          '--pipeline-node-panel-width': selection ? '509px' : '0px',
         } as CSSProperties
       }
     >
@@ -1263,17 +1459,30 @@ function PipelineOrchestrationPage({
           </ReactFlowProvider>
         ) : draft && canvasLayout ? (
           <PipelineWorkflowWithInnerContext
+            key={pipelineId}
             canvas={{
+              pipelineId,
               dag: draft.dag,
               layout: canvasLayout,
               connectorsBySourceId,
               configurations,
               descriptions,
+              notes: canvasNotes,
+              onNotesChange: handleCanvasNotesChange,
               onLayoutChange: scheduleLayoutSave,
+              canUndo: historyRef.current.past.length > 0,
+              canRedo: historyRef.current.future.length > 0,
+              historyPastCount: historyRef.current.past.length,
+              historyFutureCount: historyRef.current.future.length,
+              onUndo: () => restoreHistory('undo'),
+              onRedo: () => restoreHistory('redo'),
+              onJumpHistory: (direction, steps) => restoreHistory(direction, steps),
               onGraphChange: (nextDag) => {
                 if (isReadOnly) return
                 const current = draftRef.current
                 if (!current) return
+                if (JSON.stringify(current.dag) === JSON.stringify(nextDag)) return
+                recordHistory()
                 const nodeIds = new Set(nextDag.nodes.map((node) => node.id))
                 const configurations = new Map(
                   Array.from(current.configurations).filter(([nodeId]) => nodeIds.has(nodeId)),
@@ -1293,13 +1502,20 @@ function PipelineOrchestrationPage({
               connectors: connectors.data,
               sourceState: sources.isPending ? 'loading' : sources.isError ? 'error' : 'success',
               onAddNode: handleChooseNode,
+              requestedInsertion,
               onAddNodes: handleChooseNodes,
               loadTables: loadPipelineTables,
               onSelectionChange: handleSelectionChange,
+              focusNodeId,
               readOnly: isReadOnly,
             }}
             header={{
               isDirty,
+              pipelineId,
+              draftUpdatedAt:
+                autosave.lastResult?.draft.updatedAt ?? pipelineDraft.data?.draft?.updatedAt,
+              hasPublishedArtifact: Boolean(pipelineDraft.data?.draft?.publishedArtifactHash),
+              selectedNodeId: selection?.id,
               isSaving: autosave.isSaving,
               isReadOnly,
               isRunning:
@@ -1317,6 +1533,27 @@ function PipelineOrchestrationPage({
               onClose: () => setSelection(null),
               onConfigurationChange: handleConfigurationChange,
               onDescriptionChange: handleDescriptionChange,
+              onTitleChange: handleNodeTitleChange,
+              onDelete: handleDeleteSelectedNode,
+              nextNodes: selectedNextNodes,
+              onSelectNextNode: (nodeId) => {
+                const node = draftRef.current?.dag.nodes.find(
+                  (candidate) => candidate.id === nodeId,
+                )
+                if (!node) return
+                handleSelectionChange({
+                  id: node.id,
+                  label: node.label,
+                  detail: node.detail,
+                  description: node.description ?? '',
+                  nodeType: node.type,
+                  connector: null,
+                  configuration: null,
+                })
+                setFocusNodeId(nodeId)
+              },
+              canAddNextStep: canAddSelectedNextStep,
+              onRequestNextStep: requestNextStep,
               onWidthChange: (width) => {
                 surfaceRef.current?.style.setProperty('--pipeline-node-panel-width', `${width}px`)
               },
@@ -1336,19 +1573,15 @@ function PipelineOrchestrationPage({
         (!isWizard && (runtimeObservationPending || runtimeObservationError))) && (
         <div className="pipeline-canvas__alerts" aria-live="assertive">
           {!isWizard && runtimeObservationPending && (
-            <div className="pipeline-workflow-feedback" role="status">
-              <LoaderCircle className="size-4 shrink-0 animate-spin" aria-hidden="true" />
-              <span>{t('wizard.checkingRuntime')}</span>
-            </div>
+            <PipelineWorkflowFeedback tone="loading" title={t('wizard.checkingRuntime')} />
           )}
           {!isWizard && runtimeObservationError && (
-            <div className="pipeline-workflow-feedback" role="alert">
-              <AlertCircle className="size-4 shrink-0" aria-hidden="true" />
-              <span className="min-w-0 flex-1">{t('wizard.runtimeStatusError')}</span>
-              <Button type="button" variant="outline" size="sm" onClick={onRetryRuntimeObservation}>
-                {t('pipelines.workspace.actions.retry')}
-              </Button>
-            </div>
+            <PipelineWorkflowFeedback
+              tone="error"
+              title={t('wizard.runtimeStatusError')}
+              actionLabel={t('pipelines.workspace.actions.retry')}
+              onAction={onRetryRuntimeObservation}
+            />
           )}
           {actionErrors.map((actionError) => (
             <PipelineWorkflowFeedback
@@ -1397,37 +1630,70 @@ function PipelineWorkflowFeedback({
   message,
   dismissLabel,
   onDismiss,
+  actionLabel,
+  onAction,
 }: {
-  tone: 'error' | 'warning'
+  tone: 'error' | 'warning' | 'loading'
   title: string
   message?: string
-  dismissLabel: string
-  onDismiss: () => void
+  dismissLabel?: string
+  onDismiss?: () => void
+  actionLabel?: string
+  onAction?: () => void
 }) {
   return (
     <div
-      className={cn(
-        'pipeline-workflow-feedback',
-        tone === 'warning' && 'pipeline-workflow-feedback--warning',
-      )}
-      role="alert"
+      className="pipeline-workflow-feedback border-components-panel-border bg-components-panel-bg-blur shadow-shadow-shadow-5 pointer-events-auto relative w-full overflow-hidden rounded-xl border shadow-lg backdrop-blur-[5px]"
+      role={tone === 'loading' ? 'status' : 'alert'}
       data-testid="pipeline-workflow-feedback"
     >
-      <div className="pipeline-workflow-feedback__icon-wrap" aria-hidden="true">
-        <AlertCircle className="pipeline-workflow-feedback__icon" />
+      <div
+        aria-hidden="true"
+        className={cn(
+          'to-background-gradient-mask-transparent pointer-events-none absolute -inset-px bg-linear-to-r opacity-40',
+          tone === 'loading' && 'from-components-badge-status-light-normal-halo',
+          tone === 'warning' && 'from-components-badge-status-light-warning-halo',
+          tone === 'error' && 'from-components-badge-status-light-error-halo',
+        )}
+      />
+      <div className="relative flex items-start gap-1 overflow-hidden p-3">
+        <div className="flex shrink-0 items-center justify-center p-0.5">
+          <span
+            aria-hidden="true"
+            className={cn(
+              'size-5',
+              tone === 'loading' &&
+                'i-ri-loader-2-line text-text-accent animate-spin motion-reduce:animate-none',
+              tone === 'warning' && 'i-ri-alert-fill text-text-warning-secondary',
+              tone === 'error' && 'i-ri-error-warning-fill text-text-destructive',
+            )}
+          />
+        </div>
+        <div className="min-w-0 flex-1 p-1">
+          <p className="system-sm-semibold text-text-primary min-w-0 wrap-break-word">{title}</p>
+          {message && (
+            <p className="system-xs-regular text-text-secondary mt-1 min-w-0 wrap-break-word">
+              {message}
+            </p>
+          )}
+          {onAction && actionLabel && (
+            <button
+              type="button"
+              className="border-components-button-secondary-border bg-components-button-secondary-bg text-components-button-secondary-text hover:bg-state-base-hover system-sm-medium mt-2 mb-1 rounded-md border-[0.5px] px-3 py-2 shadow-xs"
+              onClick={onAction}
+            >
+              {actionLabel}
+            </button>
+          )}
+        </div>
+        {onDismiss && dismissLabel && (
+          <div className="flex shrink-0 items-center justify-center rounded-md p-0.5">
+            <IconButton type="button" size="sm" aria-label={dismissLabel} onClick={onDismiss}>
+              <span className="i-ri-close-line text-text-tertiary size-4" aria-hidden="true" />
+            </IconButton>
+          </div>
+        )}
       </div>
-      <div className="pipeline-workflow-feedback__body">
-        <p className="pipeline-workflow-feedback__title">{title}</p>
-        {message && <p className="pipeline-workflow-feedback__message">{message}</p>}
-      </div>
-      <button
-        type="button"
-        className="pipeline-workflow-feedback__dismiss"
-        aria-label={dismissLabel}
-        onClick={onDismiss}
-      >
-        <X aria-hidden="true" />
-      </button>
     </div>
   )
 }
@@ -1477,74 +1743,6 @@ function WorkspacePageFrame({
   )
 }
 
-function ApiAccessPage({ pipelineId }: { pipelineId: string }) {
-  const { t } = useTranslation()
-  const apiFetch = useAuthStore((state) => state.apiFetch)
-  const pipeline = useQuery({
-    queryKey: ['pipelines', pipelineId],
-    queryFn: () => getPipeline(pipelineId, apiFetch),
-  })
-
-  if (pipeline.isLoading) return <LoadingPanel />
-  if (pipeline.isError) {
-    return <QueryIssue unavailable={false} onRetry={() => void pipeline.refetch()} />
-  }
-
-  const serveNodes = pipeline.data?.serve
-    ? [
-        {
-          id: pipeline.data.serve.id ?? 'serve',
-          label: pipeline.data.serve.id ?? pipelineId,
-          detail: typeof pipeline.data.serve.from === 'string' ? pipeline.data.serve.from : null,
-        },
-      ]
-    : (pipeline.data?.dag.nodes
-        .filter((node) => node.type === 'serve')
-        .map((node) => ({ id: node.id, label: node.label, detail: node.detail })) ?? [])
-  if (serveNodes.length === 0) {
-    return (
-      <div className="mt-6">
-        <p className="text-[13px] font-semibold text-slate-800">
-          {t('pipelines.workspace.apiAccess.emptyTitle')}
-        </p>
-        <p className="mt-1.5 max-w-[48ch] text-[12px] leading-5 text-slate-500">
-          {t('pipelines.workspace.apiAccess.emptyBody')}
-        </p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.1)]">
-      <div className="px-5 py-4">
-        <p className="text-[13px] font-semibold text-slate-800">
-          {t('pipelines.workspace.apiAccess.pendingTitle')}
-        </p>
-        <p className="mt-1.5 max-w-[48ch] text-[12px] leading-5 text-slate-500">
-          {t('pipelines.workspace.apiAccess.pendingBody')}
-        </p>
-      </div>
-      <ul className="divide-y divide-slate-100 border-t border-slate-100">
-        {serveNodes.map((node) => (
-          <li key={node.id} className="flex items-center gap-2.5 px-5 py-3.5">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
-              <Radio className="size-3.5" aria-hidden="true" />
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate text-[12px] font-semibold text-slate-700">
-                {node.label}
-              </span>
-              <span className="mt-0.5 block truncate text-[11px] text-slate-500">
-                {node.detail ?? t('pipelines.workspace.apiAccess.serveDetail')}
-              </span>
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
 export function PipelineWorkspacePage({
   pipelineId,
   section,
@@ -1554,6 +1752,7 @@ export function PipelineWorkspacePage({
 }) {
   const [navigationCollapsed, setNavigationCollapsed] = useState(false)
   const [basicInfoSaverReady, setBasicInfoSaverReady] = useState(false)
+  const shouldPollRuntime = section === 'orchestrate'
   const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const queryClient = useQueryClient()
@@ -1583,10 +1782,10 @@ export function PipelineWorkspacePage({
   const catalog = useQuery({
     queryKey: ['pipelines'],
     queryFn: () => listPipelines(apiFetch),
-    refetchInterval: 5000,
+    refetchInterval: shouldPollRuntime ? 5000 : false,
     refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    refetchOnWindowFocus: shouldPollRuntime,
+    refetchOnReconnect: shouldPollRuntime,
   })
   const catalogItem = catalog.data?.find((item) => item.id === pipelineId)
   const hasArtifact =
@@ -1601,9 +1800,9 @@ export function PipelineWorkspacePage({
     queryFn: () => getPipelineStatus(pipelineId, apiFetch),
     enabled: pipelineDraft.isSuccess && hasArtifact,
     retry: false,
-    refetchInterval: 5000,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    refetchInterval: shouldPollRuntime ? 5000 : false,
+    refetchOnWindowFocus: shouldPollRuntime,
+    refetchOnReconnect: shouldPollRuntime,
   })
   const lifecycleStatus =
     mergedStatus.data?.displayState ?? mergedStatus.data?.state ?? catalogItem?.status.state
@@ -1758,7 +1957,6 @@ export function PipelineWorkspacePage({
             <PipelineMonitoringPage pipelineId={pipelineId} hasArtifact={hasArtifact} />
           )}
           {section === 'logs' && <PipelineLogsPage pipelineId={pipelineId} />}
-          {section === 'api' && <ApiAccessPage pipelineId={pipelineId} />}
         </WorkspacePageFrame>
       )}
     </main>

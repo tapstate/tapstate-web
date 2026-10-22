@@ -1,10 +1,33 @@
+import { IconButton } from '@langgenius/dify-ui/icon-button'
+import { Popover, PopoverContent, PopoverTrigger } from '@langgenius/dify-ui/popover'
+import { Separator } from '@langgenius/dify-ui/separator'
 import { MiniMap } from '@xyflow/react'
 import { useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { PipelineCanvasViewportToolbar } from './pipeline-canvas-viewport-toolbar'
 
 /** Keeps the minimap and viewport controls in their own canvas layer. */
-export function PipelineCanvasOperator() {
+export function PipelineCanvasOperator({
+  canUndo = false,
+  canRedo = false,
+  historyPastCount = 0,
+  historyFutureCount = 0,
+  onUndo,
+  onRedo,
+  onJumpHistory,
+  readOnly = false,
+}: {
+  canUndo?: boolean
+  canRedo?: boolean
+  historyPastCount?: number
+  historyFutureCount?: number
+  onUndo?: () => void
+  onRedo?: () => void
+  onJumpHistory?: (direction: 'undo' | 'redo', steps: number) => void
+  readOnly?: boolean
+}) {
+  const { t } = useTranslation()
   const operatorRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -48,6 +71,82 @@ export function PipelineCanvasOperator() {
   return (
     <div className="pipeline-canvas__operator pointer-events-none" ref={operatorRef}>
       <div className="pipeline-canvas__operator-row">
+        <div
+          className="pipeline-canvas__history-toolbar pointer-events-auto"
+          role="toolbar"
+          aria-label={t('pipelines.workspace.actions.canvasHistory')}
+        >
+          <IconButton
+            size="lg"
+            aria-label={t('pipelines.workspace.actions.undo')}
+            title={t('pipelines.workspace.actions.undo')}
+            disabled={readOnly || !canUndo}
+            onClick={onUndo}
+          >
+            <span className="i-ri-arrow-go-back-line size-4" aria-hidden="true" />
+          </IconButton>
+          <IconButton
+            size="lg"
+            aria-label={t('pipelines.workspace.actions.redo')}
+            title={t('pipelines.workspace.actions.redo')}
+            disabled={readOnly || !canRedo}
+            onClick={onRedo}
+          >
+            <span className="i-ri-arrow-go-forward-fill size-4" aria-hidden="true" />
+          </IconButton>
+          <Separator orientation="vertical" className="mx-0.5 h-3.5" />
+          <Popover>
+            <PopoverTrigger
+              render={
+                <IconButton
+                  size="lg"
+                  aria-label={t('pipelines.workspace.actions.history')}
+                  title={t('pipelines.workspace.actions.history')}
+                  className="rounded-md"
+                >
+                  <span className="i-ri-history-line size-4" aria-hidden="true" />
+                </IconButton>
+              }
+            />
+            <PopoverContent placement="top-start" className="max-h-[50vh] w-64 overflow-y-auto p-2">
+              <div className="px-2 py-1 text-sm font-medium text-[var(--color-text-secondary)]">
+                {t('pipelines.workspace.actions.history')}
+              </div>
+              {historyPastCount === 0 && historyFutureCount === 0 && (
+                <div className="px-2 py-8 text-center text-xs text-[var(--color-text-tertiary)]">
+                  {t('pipelines.workspace.actions.noChangesYet')}
+                </div>
+              )}
+              {Array.from({ length: historyFutureCount }, (_, index) => (
+                <button
+                  key={`future-${index}`}
+                  type="button"
+                  className="pipeline-canvas__history-entry"
+                  onClick={() => onJumpHistory?.('redo', historyFutureCount - index)}
+                >
+                  {t('pipelines.workspace.actions.stepForward', {
+                    count: historyFutureCount - index,
+                  })}
+                </button>
+              ))}
+              {(historyPastCount > 0 || historyFutureCount > 0) && (
+                <div className="pipeline-canvas__history-current">
+                  {t('pipelines.workspace.actions.currentState')}
+                </div>
+              )}
+              {Array.from({ length: historyPastCount }, (_, index) => (
+                <button
+                  key={`past-${index}`}
+                  type="button"
+                  className="pipeline-canvas__history-entry"
+                  onClick={() => onJumpHistory?.('undo', index + 1)}
+                >
+                  {t('pipelines.workspace.actions.stepBackward', { count: index + 1 })}
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
+        </div>
         <div className="pipeline-canvas__operator-viewport">
           <MiniMap
             className="pipeline-canvas__minimap pipeline-canvas__minimap--operator max-md:!hidden"

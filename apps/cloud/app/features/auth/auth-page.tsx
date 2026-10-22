@@ -120,17 +120,17 @@ export function AuthPage({
               </div>
             )}
 
-            <div className="space-y-6">
-              <div className="space-y-1 text-center">
-                <h1 className="title-2xl-semi-bold text-text-primary">
+            <div className={mode === 'register' ? 'space-y-8' : 'space-y-6'}>
+              <div className="space-y-1">
+                <h1 className="title-4xl-semi-bold text-text-primary">
                   {t(mode === 'login' ? 'auth.loginTitle' : 'auth.registerTitle')}
                 </h1>
-                <p className="body-sm-regular text-text-tertiary">
+                <p className="body-md-regular text-text-tertiary">
                   {t(mode === 'login' ? 'auth.loginDescription' : 'auth.registerDescription')}
                 </p>
               </div>
 
-              <AuthProviderButtons mode={mode} />
+              {mode === 'login' && <AuthProviderButtons mode={mode} />}
 
               <form className="space-y-3.5" onSubmit={handleSubmit}>
                 {mode === 'register' && (
@@ -214,7 +214,7 @@ export function AuthPage({
                 </Button>
               </form>
 
-              <div className="body-sm-regular text-text-tertiary pt-2 text-center">
+              <div className="body-sm-regular text-text-tertiary pt-2">
                 {t(mode === 'login' ? 'auth.noAccount' : 'auth.haveAccount')}{' '}
                 <button
                   className="system-sm-medium text-components-button-secondary-accent-text focus-visible:outline-state-accent-solid ml-0.5 rounded-sm hover:underline focus-visible:outline-2"

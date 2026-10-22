@@ -419,14 +419,6 @@
     gap: 8px;
   }
 
-  .app-sidebar__ask,
-  .app-sidebar__icon-button,
-  .app-sidebar__avatar {
-    border: 1px solid var(--app-border);
-    background: var(--app-bg-elevated);
-    box-shadow: var(--app-shadow-sm);
-  }
-
   .app-sidebar__ask {
     display: inline-flex;
     width: 100%;
@@ -435,6 +427,9 @@
     gap: 6px;
     border-radius: var(--radius);
     padding: 6px 10px;
+    border: 1px solid var(--app-border);
+    background: var(--app-bg-elevated);
+    box-shadow: var(--app-shadow-sm);
     color: #374151;
     font-size: 12px;
     font-weight: 600;
@@ -443,8 +438,7 @@
       color 0.16s ease;
   }
 
-  .app-sidebar__ask:hover,
-  .app-sidebar__icon-button:hover {
+  .app-sidebar__ask:hover {
     background: #f8fafc;
     color: var(--app-text);
   }
@@ -458,33 +452,6 @@
     font-weight: 600;
     line-height: 1;
     padding: 3px 5px;
-  }
-
-  .app-sidebar__icon-button {
-    display: flex;
-    width: 30px;
-    height: 30px;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius);
-    color: var(--app-text-muted);
-    transition:
-      background 0.16s ease,
-      color 0.16s ease;
-  }
-
-  .app-sidebar__avatar {
-    display: flex;
-    width: 28px;
-    height: 28px;
-    align-items: center;
-    justify-content: center;
-    border-color: rgba(251, 146, 60, 0.35);
-    border-radius: 999px;
-    background: linear-gradient(135deg, #ffedd5, #fed7aa);
-    color: #9a3412;
-    font-size: 11px;
-    font-weight: 700;
   }
 
   .view {
@@ -764,279 +731,6 @@
     box-shadow: 0 22px 70px rgba(15, 23, 42, 0.18);
   }
 
-  .source-create-dialog__header,
-  .source-create-dialog__section-heading,
-  .source-create-dialog__footer,
-  .source-create-dialog__alert,
-  .source-create-dialog__loading {
-    display: flex;
-    align-items: center;
-  }
-
-  .source-create-dialog__header {
-    gap: 12px;
-  }
-
-  .source-create-dialog {
-    width: min(1020px, calc(100vw - 32px));
-    max-height: min(760px, calc(100vh - 32px));
-  }
-
-  .source-create-dialog__create-header {
-    display: block;
-    padding-right: 32px;
-    text-align: left;
-  }
-
-  .source-create-dialog__create-header h2 {
-    color: #171717;
-    font-size: 18px;
-    font-weight: 650;
-    letter-spacing: 0;
-    text-align: left;
-  }
-
-  .source-create-dialog__header h2,
-  .source-create-dialog__section-heading h3 {
-    margin: 0;
-    color: #171717;
-    font-weight: 650;
-    letter-spacing: 0;
-  }
-
-  .source-create-dialog__header h2 {
-    font-size: 18px;
-  }
-
-  .source-create-dialog__header p,
-  .source-create-dialog__section-heading p {
-    margin: 4px 0 0;
-    color: #737373;
-    font-size: 13px;
-  }
-
-  .source-create-dialog__icon {
-    display: grid;
-    width: 36px;
-    height: 36px;
-    place-items: center;
-    border: 1px solid #e5e5e5;
-    border-radius: 8px;
-    color: #262626;
-    background: #fafafa;
-  }
-
-  .source-create-dialog__body {
-    display: grid;
-    gap: 14px;
-    max-height: min(calc(100vh - 190px), 620px);
-    overflow-y: auto;
-    padding-right: 4px;
-  }
-
-  .source-create-dialog__create-body {
-    gap: 14px;
-    min-height: 0;
-  }
-
-  .source-create-dialog__picker {
-    display: grid;
-    gap: 16px;
-  }
-
-  .source-create-dialog__connection-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-  }
-
-  .source-create-dialog__connection-heading h3 {
-    margin: 0;
-    color: #171717;
-    font-size: 15px;
-    font-weight: 650;
-  }
-
-  .source-create-dialog__connector-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .source-create-dialog__connector-card {
-    display: flex;
-    min-height: 88px;
-    align-items: center;
-    gap: 12px;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    background: #ffffff;
-    padding: 12px;
-    color: #171717;
-    text-align: left;
-    transition:
-      border-color 160ms ease,
-      background-color 160ms ease;
-  }
-
-  .source-create-dialog__connector-card:hover {
-    border-color: #9ca3af;
-    background: #f9fafb;
-  }
-
-  .source-create-dialog__connector-card:focus-visible {
-    outline: none;
-    border-color: #4f46e5;
-    box-shadow: 0 0 0 4px rgb(79 70 229 / 10%);
-  }
-
-  .source-create-dialog__connector-icon {
-    position: relative;
-    display: block;
-    width: 44px;
-    height: 44px;
-    flex: 0 0 auto;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    background: #f9fafb;
-    color: #334155;
-    isolation: isolate;
-    overflow: hidden;
-  }
-
-  .source-create-dialog__connector-copy {
-    display: grid;
-    min-width: 0;
-    flex: 1;
-    gap: 6px;
-  }
-
-  .source-create-dialog__connector-name {
-    overflow: hidden;
-    font-size: 14px;
-    font-weight: 600;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .source-create-dialog__connector-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-
-  .source-create-dialog__connector-tags span {
-    flex: 0 0 auto;
-    border: 0;
-    border-radius: 4px;
-    background: transparent;
-    padding: 0;
-    color: #6b7280;
-    font-size: 11px;
-    line-height: 1.2;
-    white-space: nowrap;
-  }
-
-  .source-create-dialog__authoring {
-    display: grid;
-    grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.65fr);
-    align-items: start;
-    gap: 20px;
-    border-top: 1px solid #f0f0f0;
-    padding-top: 16px;
-  }
-
-  .source-create-dialog__form-column {
-    display: grid;
-    min-width: 0;
-    gap: 16px;
-  }
-
-  .source-create-dialog__back {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    border: 0;
-    background: transparent;
-    min-height: 44px;
-    padding: 10px 20px;
-    color: #737373;
-    font-size: 12px;
-    font-weight: 600;
-    white-space: nowrap;
-    transition:
-      color 160ms ease,
-      background-color 160ms ease;
-  }
-
-  .source-create-dialog__back:hover {
-    color: #171717;
-    background: #f5f5f5;
-  }
-
-  .source-create-dialog__back:focus-visible {
-    outline: none;
-    border-radius: 8px;
-    color: #171717;
-    box-shadow: 0 0 0 4px rgb(79 70 229 / 10%);
-  }
-
-  .source-create-dialog__documentation {
-    display: grid;
-    min-height: 180px;
-    align-content: start;
-    gap: 8px;
-    border-top: 0;
-    border-right: 0;
-    border-bottom: 0;
-    border-left: 1px solid #e5e7eb;
-    border-radius: 0;
-    background: #fbfbfb;
-    padding: 4px 4px 4px 20px;
-  }
-
-  .source-create-dialog__documentation-icon {
-    display: grid;
-    width: 24px;
-    height: 24px;
-    place-items: center;
-    border-radius: 6px;
-    background: #f0f0f0;
-    color: #525252;
-  }
-
-  .source-create-dialog__documentation h4 {
-    margin: 2px 0 0;
-    color: #262626;
-    font-size: 13px;
-    font-weight: 650;
-  }
-
-  .source-create-dialog__documentation p {
-    margin: 0;
-    color: #737373;
-    font-size: 12px;
-    line-height: 1.5;
-  }
-
-  .source-create-dialog__alert {
-    gap: 8px;
-    padding: 10px 12px;
-    border: 1px solid #fed7aa;
-    border-radius: 6px;
-    color: #9a3412;
-    background: #fff7ed;
-    font-size: 13px;
-  }
-
-  .source-create-dialog__identity,
-  .source-create-dialog__fields {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 18px 16px;
-  }
-
   .source-field {
     display: grid;
     align-content: start;
@@ -1076,85 +770,6 @@
     color: var(--destructive);
   }
 
-  .source-create-dialog__loading,
-  .source-create-dialog__no-fields {
-    min-height: 72px;
-    justify-content: center;
-    color: #737373;
-    font-size: 13px;
-  }
-
-  .source-create-dialog__section-heading {
-    justify-content: space-between;
-    gap: 16px;
-    align-items: baseline;
-    padding-top: 0;
-    border-top: 0;
-  }
-
-  .source-create-dialog__catalog-count {
-    color: #a3a3a3;
-    font-size: 11px;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .source-create-dialog__search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 44px;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    padding: 0 12px;
-    color: #9ca3af;
-    background: #fbfbfb;
-    transition:
-      border-color 160ms ease,
-      box-shadow 160ms ease,
-      background-color 160ms ease;
-  }
-
-  .source-create-dialog__search:focus-within {
-    border-color: #6366f1;
-    background: #ffffff;
-    box-shadow: 0 0 0 4px rgb(79 70 229 / 10%);
-  }
-
-  .source-create-dialog__search input {
-    height: 42px;
-    min-width: 0;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-    padding: 0;
-  }
-
-  .source-create-dialog__search input:focus-visible {
-    outline: 0;
-    box-shadow: none;
-  }
-
-  .source-create-dialog__origin {
-    display: inline-flex;
-    flex-shrink: 0;
-    align-items: center;
-    gap: 4px;
-    color: #525252;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 10px;
-    text-transform: uppercase;
-  }
-
-  .source-create-dialog__footer {
-    justify-content: flex-end;
-    gap: 8px;
-  }
-
-  .source-create-dialog__footer button {
-    min-height: 36px;
-    padding: 8px 16px;
-  }
-
   @media (max-width: 760px) {
     .ask-panel {
       right: 12px;
@@ -1165,53 +780,6 @@
     .ask-panel__window {
       width: 100%;
       height: min(580px, calc(100vh - 24px));
-    }
-  }
-
-  @media (max-width: 620px) {
-    .source-create-dialog__identity,
-    .source-create-dialog__fields {
-      grid-template-columns: 1fr;
-    }
-
-    .source-create-dialog__authoring {
-      grid-template-columns: 1fr;
-    }
-
-    .source-create-dialog__documentation {
-      min-height: auto;
-    }
-  }
-
-  @media (min-width: 980px) {
-    .source-create-dialog__connector-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (max-width: 520px) {
-    .source-create-dialog__connector-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .source-create-dialog__footer {
-      flex-direction: row !important;
-    }
-
-    .source-create-dialog__footer > * {
-      flex: 1;
-    }
-
-    .source-create-dialog__footer button {
-      width: 100%;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .source-create-dialog__connector-card,
-    .source-create-dialog__back,
-    .source-create-dialog__search {
-      transition: none;
     }
   }
 }

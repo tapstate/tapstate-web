@@ -1,4 +1,5 @@
 import '@xyflow/react/dist/style.css'
+import { useOptionalToast } from '@tapstate-web/ui'
 import {
   addEdge,
   applyEdgeChanges,
@@ -17,6 +18,7 @@ import {
   useNodesState,
 } from '@xyflow/react'
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import type { PipelineDag, PipelineLayout } from '@/service/pipelines/pipeline-client'
 import type { ConnectorSummary, SourceView } from '@/service/source-client'
@@ -30,7 +32,9 @@ import type {
 import type {
   CanvasEdge,
   CanvasNode,
+  CanvasNoteRecord,
   PipelineCanvasSelection,
+  PipelineCanvasNotesChangeOptions,
   PipelineNodeConnector,
 } from './pipeline-canvas-types'
 
@@ -39,6 +43,8 @@ import {
   canPipelineNodeEmitOutput,
 } from '../../model/pipeline-node-rules'
 import { PipelineNodeSelector } from '../node-library/pipeline-node-selector'
+import { PipelineCanvasNote } from './pipeline-canvas-note'
+import { readCanvasNotes } from './pipeline-canvas-notes'
 import { PipelineCanvasOperator } from './pipeline-canvas-operator'
 import { PipelineCanvasToolbar } from './pipeline-canvas-toolbar'
 import { PipelineConnectionLine } from './pipeline-connection-line'
@@ -53,6 +59,7 @@ const nodeTypes: NodeTypes = {
   view: PipelineNode,
   serve: PipelineNode,
   target: PipelineNode,
+  note: PipelineCanvasNote,
 }
 
 const edgeTypes: EdgeTypes = {
@@ -64,12 +71,15 @@ function toLayout(
   viewport: PipelineLayout['viewport'],
 ): Pick<PipelineLayout, 'nodes' | 'viewport'> {
   return {
-    nodes: Object.fromEntries(nodes.map((node) => [node.id, node.position])),
+    nodes: Object.fromEntries(
+      nodes.filter((node) => node.type !== 'note').map((node) => [node.id, node.position]),
+    ),
     viewport,
   }
 }
 
 export function PipelineCanvasContent({
+  pipelineId,
   dag,
   layout,
   connectorsBySourceId,
@@ -77,6 +87,14 @@ export function PipelineCanvasContent({
   descriptions,
   onLayoutChange,
   onGraphChange,
+  requestedInsertion,
+  canUndo = false,
+  canRedo = false,
+  historyPastCount = 0,
+  historyFutureCount = 0,
+  onUndo,
+  onRedo,
+  onJumpHistory,
   sources,
   connectors,
   sourceState,
@@ -84,8 +102,12 @@ export function PipelineCanvasContent({
   onAddNodes,
   loadTables,
   onSelectionChange,
+  notes: controlledNotes,
+  onNotesChange,
+  focusNodeId,
   readOnly = false,
 }: {
+  pipelineId: string
   dag: PipelineDag
   layout: PipelineLayout | null
   connectorsBySourceId: ReadonlyMap<string, PipelineNodeConnector>
@@ -93,6 +115,14 @@ export function PipelineCanvasContent({
   descriptions?: ReadonlyMap<string, string>
   onLayoutChange: (next: Pick<PipelineLayout, 'nodes' | 'viewport'>) => void
   onGraphChange: (next: PipelineDag) => void
+  requestedInsertion?: PipelineNodeInsertionContext | null
+  canUndo?: boolean
+  canRedo?: boolean
+  historyPastCount?: number
+  historyFutureCount?: number
+  onUndo?: () => void
+  onRedo?: () => void
+  onJumpHistory?: (direction: 'undo' | 'redo', steps: number) => void
   sources: SourceView[] | undefined
   connectors: ConnectorSummary[] | undefined
   sourceState: 'loading' | 'success' | 'error'
@@ -103,12 +133,36 @@ export function PipelineCanvasContent({
   ) => void
   loadTables?: PipelineTableLoader
   onSelectionChange: (selection: PipelineCanvasSelection | null) => void
+  notes?: CanvasNoteRecord[]
+  onNotesChange?: (notes: CanvasNoteRecord[], options?: PipelineCanvasNotesChangeOptions) => void
+  focusNodeId?: string | null
   readOnly?: boolean
 }) {
+  const { t } = useTranslation()
+  const toast = useOptionalToast()
   const [nodeInsertion, setNodeInsertion] = useState<PipelineNodeInsertionContext | null>(null)
+  const [localNotes, setLocalNotes] = useState<CanvasNoteRecord[]>(() =>
+    readCanvasNotes(pipelineId),
+  )
+  const notes = controlledNotes ?? localNotes
+  const [placingNote, setPlacingNote] = useState(false)
+  const notesPipelineIdRef = useRef(pipelineId)
+  const skipInitialNotesPersistenceRef = useRef(true)
+  const notesPersistenceWarningShownRef = useRef(false)
+  const updateNotes = useCallback(
+    (nextNotes: CanvasNoteRecord[], options?: PipelineCanvasNotesChangeOptions) => {
+      if (controlledNotes === undefined) setLocalNotes(nextNotes)
+      onNotesChange?.(nextNotes, options)
+    },
+    [controlledNotes, onNotesChange],
+  )
   const openNodeSelector = useCallback((context: PipelineNodeInsertionContext) => {
     setNodeInsertion(context)
   }, [])
+
+  useEffect(() => {
+    if (requestedInsertion) setNodeInsertion(requestedInsertion)
+  }, [requestedInsertion])
   const [nodes, setNodes] = useNodesState<CanvasNode>([])
   const [edges, setEdges] = useEdgesState<CanvasEdge>([])
   const [viewport, setViewport] = useState<PipelineLayout['viewport']>(null)
@@ -117,7 +171,161 @@ export function PipelineCanvasContent({
   const nodesRef = useRef(nodes)
   const edgesRef = useRef(edges)
   const preserveSelectionOnPaneClickRef = useRef(false)
-  const { screenToFlowPosition } = useReactFlow()
+  const {
+    screenToFlowPosition,
+    fitView: fitCanvasView,
+    getNode,
+    getViewport,
+    setViewport: panViewport,
+  } = useReactFlow()
+
+  const keepSelectedNodeVisible = useCallback(
+    (nodeId: string) => {
+      requestAnimationFrame(() => {
+        const workspace = document.querySelector<HTMLElement>(
+          '[data-testid="pipeline-workflow-container"]',
+        )
+        const panel = workspace?.querySelector<HTMLElement>('[data-workflow-right-panel]')
+        const canvas = workspace?.querySelector<HTMLElement>('.react-flow')
+        const node = getNode(nodeId)
+        if (!panel || !canvas || !node) return
+
+        const canvasRect = canvas.getBoundingClientRect()
+        const panelRect = panel.getBoundingClientRect()
+        const currentViewport = getViewport()
+        const nodeLeft =
+          canvasRect.left + currentViewport.x + node.position.x * currentViewport.zoom
+        const nodeRight = nodeLeft + (node.measured?.width ?? 240) * currentViewport.zoom
+        const safeRight = panelRect.left - 24
+        const safeLeft = canvasRect.left + 64
+        const shift = Math.min(0, safeRight - nodeRight)
+        if (shift === 0 || nodeLeft + shift < safeLeft) return
+
+        void panViewport({ ...currentViewport, x: currentViewport.x + shift }, { duration: 180 })
+      })
+    },
+    [getNode, getViewport, panViewport],
+  )
+
+  useEffect(() => {
+    if (!focusNodeId) return
+    requestAnimationFrame(() => {
+      const workspace = document.querySelector<HTMLElement>(
+        '[data-testid="pipeline-workflow-container"]',
+      )
+      const panel = workspace?.querySelector<HTMLElement>('[data-workflow-right-panel]')
+      const canvas = workspace?.querySelector<HTMLElement>('.react-flow')
+      const node = getNode(focusNodeId)
+      if (!canvas || !node) return
+      const canvasRect = canvas.getBoundingClientRect()
+      const panelRect = panel?.getBoundingClientRect()
+      const safeRight =
+        panelRect && panelRect.top < canvasRect.top + 80 ? panelRect.left : canvasRect.right
+      const viewport = getViewport()
+      const nodeCenterX = node.position.x + (node.measured?.width ?? 240) / 2
+      const nodeCenterY = node.position.y + (node.measured?.height ?? 52) / 2
+      void panViewport(
+        {
+          x: (canvasRect.left + safeRight) / 2 - canvasRect.left - nodeCenterX * viewport.zoom,
+          y: canvasRect.height / 2 - nodeCenterY * viewport.zoom,
+          zoom: viewport.zoom,
+        },
+        { duration: 180 },
+      )
+    })
+  }, [focusNodeId, getNode, getViewport, panViewport])
+
+  const organizeNodes = useCallback(() => {
+    const semanticNodes = nodesRef.current.filter((node) => node.type !== 'note')
+    const levels = new Map<string, number>(semanticNodes.map((node) => [node.id, 0]))
+    const successors = new Map<string, string[]>()
+    const indegree = new Map<string, number>(semanticNodes.map((node) => [node.id, 0]))
+    for (const edge of edgesRef.current) {
+      if (!levels.has(edge.source) || !levels.has(edge.target)) continue
+      successors.set(edge.source, [...(successors.get(edge.source) ?? []), edge.target])
+      indegree.set(edge.target, (indegree.get(edge.target) ?? 0) + 1)
+    }
+    const queue = semanticNodes.filter((node) => indegree.get(node.id) === 0).map((node) => node.id)
+    for (let index = 0; index < queue.length; index++) {
+      const source = queue[index]
+      for (const target of successors.get(source) ?? []) {
+        levels.set(target, Math.max(levels.get(target) ?? 0, (levels.get(source) ?? 0) + 1))
+        indegree.set(target, (indegree.get(target) ?? 1) - 1)
+        if (indegree.get(target) === 0) queue.push(target)
+      }
+    }
+    const rowByLevel = new Map<number, number>()
+    const nextNodes = nodesRef.current.map((node) => {
+      if (node.type === 'note') return node
+      const level = levels.get(node.id) ?? 0
+      const row = rowByLevel.get(level) ?? 0
+      rowByLevel.set(level, row + 1)
+      return { ...node, position: { x: level * 330, y: row * 170 } }
+    })
+    nodesRef.current = nextNodes
+    setNodes(nextNodes)
+    onLayoutChange(toLayout(nextNodes, viewport))
+    void fitCanvasView({ padding: 0.3, maxZoom: 1, duration: 180 })
+  }, [fitCanvasView, onLayoutChange, setNodes, viewport])
+
+  useEffect(() => {
+    if (notesPipelineIdRef.current !== pipelineId) {
+      notesPipelineIdRef.current = pipelineId
+      setLocalNotes(readCanvasNotes(pipelineId))
+      return
+    }
+    if (skipInitialNotesPersistenceRef.current) {
+      skipInitialNotesPersistenceRef.current = false
+      return
+    }
+
+    try {
+      const key = `tapstate:pipeline-notes:${pipelineId}`
+      if (notes.length === 0) localStorage.removeItem(key)
+      else localStorage.setItem(key, JSON.stringify(notes))
+    } catch {
+      if (notesPersistenceWarningShownRef.current) return
+      notesPersistenceWarningShownRef.current = true
+      toast?.show({
+        tone: 'warning',
+        title: t('pipelines.workspace.actions.notesStorageUnavailable'),
+        description: t('pipelines.workspace.actions.notesStorageUnavailableDescription'),
+        duration: 6000,
+      })
+    }
+  }, [notes, pipelineId, t, toast])
+
+  const changeNote = useCallback(
+    (id: string, text: string) => {
+      updateNotes(
+        notes.map((note) => (note.id === id ? { ...note, text } : note)),
+        { recordHistory: false },
+      )
+    },
+    [notes, updateNotes],
+  )
+  const deleteNote = useCallback(
+    (id: string) => {
+      updateNotes(notes.filter((note) => note.id !== id))
+    },
+    [notes, updateNotes],
+  )
+  const addNote = useCallback(
+    (screenPosition: { x: number; y: number }) => {
+      const position = screenToFlowPosition(screenPosition)
+      updateNotes([...notes, { id: `note:${crypto.randomUUID()}`, text: '', position }])
+    },
+    [notes, screenToFlowPosition, updateNotes],
+  )
+
+  useEffect(() => {
+    if (!placingNote) return
+    const cancel = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPlacingNote(false)
+    }
+    window.addEventListener('keydown', cancel)
+    return () => window.removeEventListener('keydown', cancel)
+  }, [placingNote])
 
   const handleDeleteNode = useCallback(
     (nodeId: string) => {
@@ -196,6 +404,37 @@ export function PipelineCanvasContent({
     openNodeSelector,
   ])
 
+  const noteNodes = useMemo(
+    () =>
+      notes.map(
+        (note): CanvasNode => ({
+          id: note.id,
+          type: 'note',
+          position: note.position,
+          selected: nodesRef.current.find((node) => node.id === note.id)?.selected ?? false,
+          data: {
+            label: '',
+            detail: null,
+            description: '',
+            nodeType: 'note',
+            connector: null,
+            hasInput: false,
+            hasOutput: false,
+            showInput: false,
+            showOutput: false,
+            configuration: null,
+            noteText: note.text,
+            noteReadOnly: readOnly,
+            onNoteChange: changeNote,
+            onNoteDelete: deleteNote,
+          },
+        }),
+      ),
+    [notes, readOnly, changeNote, deleteNote],
+  )
+  const noteNodesRef = useRef(noteNodes)
+  noteNodesRef.current = noteNodes
+
   useEffect(() => {
     nodesRef.current = nodes
   }, [nodes])
@@ -205,10 +444,17 @@ export function PipelineCanvasContent({
   }, [edges])
 
   useEffect(() => {
-    setNodes(graph.nodes)
+    setNodes([...graph.nodes, ...noteNodesRef.current])
     setEdges(graph.edges)
     setViewport(graph.viewport)
   }, [graph, setEdges, setNodes])
+
+  useEffect(() => {
+    setNodes((currentNodes) => [
+      ...currentNodes.filter((node) => node.type !== 'note'),
+      ...noteNodes,
+    ])
+  }, [noteNodes, setNodes])
 
   useEffect(() => {
     setNodes((currentNodes) => {
@@ -243,6 +489,17 @@ export function PipelineCanvasContent({
 
   function handleNodesChange(changes: NodeChange<CanvasNode>[]) {
     if (readOnly && changes.some((change) => change.type !== 'select')) return
+    const removedNoteIds = new Set(
+      changes.flatMap((change) =>
+        change.type === 'remove' &&
+        nodesRef.current.some((node) => node.id === change.id && node.type === 'note')
+          ? [change.id]
+          : [],
+      ),
+    )
+    if (removedNoteIds.size > 0) {
+      updateNotes(notes.filter((note) => !removedNoteIds.has(note.id)))
+    }
     setNodes((currentNodes) => {
       const isPaneDeselection =
         preserveSelectionOnPaneClickRef.current &&
@@ -257,7 +514,10 @@ export function PipelineCanvasContent({
       const removedNodeIds = new Set(
         changes.filter((change) => change.type === 'remove').map((change) => change.id),
       )
-      if (removedNodeIds.size > 0) {
+      const removedPipelineNode = currentNodes.some(
+        (node) => node.type !== 'note' && removedNodeIds.has(node.id),
+      )
+      if (removedPipelineNode) {
         const nextEdges = edgesRef.current.filter(
           (edge) => !removedNodeIds.has(edge.source) && !removedNodeIds.has(edge.target),
         )
@@ -308,6 +568,9 @@ export function PipelineCanvasContent({
         interactionMode={interactionMode}
         onInteractionModeChange={setInteractionMode}
         onRequestNodeSelector={openNodeSelector}
+        onRequestNote={() => setPlacingNote((current) => !current)}
+        notePlacementActive={placingNote}
+        onOrganize={organizeNodes}
         disabled={readOnly}
       />
       <PipelineNodeSelector
@@ -333,7 +596,16 @@ export function PipelineCanvasContent({
         }}
         disabled={readOnly}
       />
-      <PipelineCanvasOperator />
+      <PipelineCanvasOperator
+        canUndo={canUndo}
+        canRedo={canRedo}
+        historyPastCount={historyPastCount}
+        historyFutureCount={historyFutureCount}
+        onUndo={onUndo}
+        onRedo={onRedo}
+        onJumpHistory={onJumpHistory}
+        readOnly={readOnly}
+      />
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -344,8 +616,8 @@ export function PipelineCanvasContent({
         defaultViewport={graph.viewport ?? undefined}
         fitView={fitView}
         fitViewOptions={{ padding: 0.36, maxZoom: 0.92 }}
-        minZoom={0.2}
-        maxZoom={1.6}
+        minZoom={0.25}
+        maxZoom={2}
         onInit={() => setFitView(false)}
         panOnDrag={interactionMode === 'hand'}
         selectionOnDrag={interactionMode === 'pointer'}
@@ -355,7 +627,8 @@ export function PipelineCanvasContent({
         onEdgesChange={handleEdgesChange}
         onConnect={handleConnect}
         isValidConnection={isValidConnection}
-        onNodeClick={(_, node) =>
+        onNodeClick={(_, node) => {
+          if (node.type === 'note') return
           onSelectionChange({
             id: node.id,
             label: node.data.label,
@@ -365,20 +638,35 @@ export function PipelineCanvasContent({
             connector: node.data.connector,
             configuration: node.data.configuration,
           })
-        }
-        onPaneClick={() => {
+          keepSelectedNodeVisible(node.id)
+        }}
+        onPaneClick={(event) => {
+          if (placingNote) {
+            addNote({ x: event.clientX, y: event.clientY })
+            setPlacingNote(false)
+            return
+          }
           preserveSelectionOnPaneClickRef.current = true
           queueMicrotask(() => {
             preserveSelectionOnPaneClickRef.current = false
           })
         }}
-        onMoveEnd={(_, nextViewport) => {
+        onMoveEnd={(event, nextViewport) => {
           if (readOnly) return
           setViewport(nextViewport)
+          if (!event) return
           onLayoutChange(toLayout(nodesRef.current, nextViewport))
         }}
         onNodeDragStop={(_, node) => {
           if (readOnly) return
+          if (node.type === 'note') {
+            updateNotes(
+              notes.map((note) =>
+                note.id === node.id ? { ...note, position: node.position } : note,
+              ),
+            )
+            return
+          }
           const nextNodes = nodesRef.current.map((current) =>
             current.id === node.id ? { ...current, position: node.position } : current,
           )
@@ -396,10 +684,10 @@ export function PipelineCanvasContent({
             connectTo: null,
           })
         }}
-        className="pipeline-canvas"
+        className={`pipeline-canvas${placingNote ? ' pipeline-canvas--placing-note' : ''}`}
         proOptions={{ hideAttribution: true }}
       >
-        <Background color="var(--pipeline-grid-dot)" gap={18} size={1.15} />
+        <Background color="var(--pipeline-grid-dot)" gap={14} size={2} />
       </ReactFlow>
     </>
   )

@@ -1,16 +1,15 @@
 import type { MouseEvent } from 'react'
 
-import { MoreHorizontal, Trash2 } from 'lucide-react'
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
-
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from '@langgenius/dify-ui/dropdown-menu'
+import { MoreHorizontal, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+
 import { cn } from '@/lib/utils'
 
 interface PipelineNodeToolbarProps {
@@ -68,7 +67,7 @@ export function PipelineNodeToolbar({
             }
           />
           <DropdownMenuContent
-            align="end"
+            placement="bottom-end"
             sideOffset={4}
             className="w-auto min-w-40 whitespace-nowrap"
           >
@@ -83,7 +82,7 @@ export function PipelineNodeToolbar({
             >
               <Trash2 className="size-4" aria-hidden="true" />
               {t('pipelines.workspace.actions.nodeToolbar.delete', { node: nodeLabel })}
-              <DropdownMenuShortcut>⌫</DropdownMenuShortcut>
+              <span className="ml-auto pl-4 text-xs text-[var(--pipeline-text-subtle)]">⌫</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

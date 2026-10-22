@@ -378,7 +378,7 @@ function elementWithText(selector: string, text: string) {
   )
 }
 
-async function renderPage(section: 'orchestrate' | 'api' | 'logs' | 'monitoring' = 'orchestrate') {
+async function renderPage(section: 'orchestrate' | 'logs' | 'monitoring' = 'orchestrate') {
   container = document.createElement('div')
   document.body.append(container)
   root = createRoot(container)
@@ -1009,16 +1009,6 @@ describe('PipelineEditorPage', () => {
     expect(container?.textContent).toContain(
       'Inspect the latest runtime log lines captured for this Pipeline.',
     )
-  })
-
-  it('shows serve nodes as unpublished API access rather than fabricating an endpoint', async () => {
-    await renderPage('api')
-
-    await vi.waitFor(() =>
-      expect(container?.textContent).toContain('API publication is not configured'),
-    )
-    expect(container?.textContent).toContain('orders_api')
-    expect(container?.textContent).not.toContain('/api/pipelines/orders_to_warehouse')
   })
 
   it('returns to node configuration when a node is selected on the canvas', async () => {
