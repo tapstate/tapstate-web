@@ -317,10 +317,8 @@ export function SourceCreateDialog({
       >
         {step === 'select' ? (
           <>
-            <DialogHeader className="border-divider-subtle bg-components-panel-bg flex h-16 shrink-0 flex-row items-center justify-between border-b px-6 py-0">
-              <DialogTitle data-slot="dialog-title" className="min-w-0 truncate">
-                {t('sources.create.chooseConnector')}
-              </DialogTitle>
+            <DialogHeader>
+              <DialogTitle>{t('sources.create.chooseConnector')}</DialogTitle>
               <DialogCloseButton
                 disabled={submitting || testing}
                 aria-label={t('ask.actions.close')}
@@ -398,7 +396,7 @@ export function SourceCreateDialog({
           </>
         ) : (
           <>
-            <DialogHeader className="border-divider-subtle bg-components-panel-bg flex h-16 shrink-0 flex-row items-center justify-between gap-3 border-b px-6 py-0">
+            <DialogHeader>
               <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                 <Button
                   variant="ghost"
@@ -421,7 +419,7 @@ export function SourceCreateDialog({
                     className="hidden size-6 shrink-0 sm:block"
                   />
                 )}
-                <DialogTitle data-slot="dialog-title" className="min-w-0 truncate">
+                <DialogTitle>
                   {configuredConnectorName ?? t('sources.create.connectionTitle')}
                 </DialogTitle>
               </div>
