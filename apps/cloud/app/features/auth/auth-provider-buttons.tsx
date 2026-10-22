@@ -9,7 +9,7 @@ interface AuthProviderButtonsProps {
 export function AuthProviderButtons({ mode, disabled = false, onStart }: AuthProviderButtonsProps) {
   const { t } = useTranslation()
   const buttonClassName =
-    'flex h-10 w-full items-center justify-center gap-2.5 rounded-md border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60'
+    'flex h-10 w-full items-center justify-center gap-2.5 rounded-lg border border-black/[0.08] bg-white px-4 text-[13px] font-medium text-[#374151] shadow-2xs transition-all hover:border-black/20 hover:bg-neutral-50 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-black/[0.08] disabled:hover:bg-white disabled:active:scale-100 dark:border-white/[0.1] dark:bg-[#202124] dark:text-neutral-200 dark:hover:border-white/20 dark:hover:bg-[#26282b] dark:disabled:hover:border-white/[0.1] dark:disabled:hover:bg-[#202124]'
 
   return (
     <>
@@ -34,15 +34,17 @@ export function AuthProviderButtons({ mode, disabled = false, onStart }: AuthPro
         </button>
       </div>
 
-      <div aria-label={t('auth.or')} className="flex items-center gap-3 py-1" role="separator">
-        <span aria-hidden="true" className="h-px flex-1 bg-[var(--border)]" />
-        <span
-          aria-hidden="true"
-          className="text-muted-foreground text-xs font-medium tracking-wide"
-        >
+      <div
+        aria-label={t('auth.or')}
+        className="relative flex items-center justify-center py-0.5"
+        role="separator"
+      >
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-black/[0.06] dark:border-white/[0.08]" />
+        </div>
+        <span className="relative bg-white px-3 text-[11px] font-medium tracking-wider text-neutral-400 uppercase dark:bg-[#1c1d20]">
           {t('auth.or')}
         </span>
-        <span aria-hidden="true" className="h-px flex-1 bg-[var(--border)]" />
       </div>
     </>
   )

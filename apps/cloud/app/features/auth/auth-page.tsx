@@ -11,6 +11,8 @@ import {
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import './auth-pages.css'
+
 import type { UserProfile } from '../../types'
 
 import {
@@ -19,6 +21,7 @@ import {
   type LoginInput,
 } from '../../service/cloud-api'
 import { AuthProviderButtons } from './auth-provider-buttons'
+import { InteractiveCustomer360Showcase } from './interactive-customer-360-showcase'
 
 type AuthMode = 'login' | 'register'
 
@@ -47,7 +50,7 @@ interface AuthPageProps {
 }
 
 const inputClassName =
-  'h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]'
+  'h-10 w-full rounded-lg border border-black/[0.1] bg-white px-3.5 text-[13px] text-[#111827] placeholder:text-neutral-400 transition-all focus:border-[#111827] focus:outline-none focus:ring-1 focus:ring-[#111827] dark:border-white/[0.12] dark:bg-[#202124] dark:text-white dark:focus:border-white dark:focus:ring-white'
 
 const codeToMessage: Record<string, string> = {
   'auth.email-already-registered': 'auth.errors.emailExists',
@@ -128,6 +131,9 @@ export function AuthPage({
   const [error, setError] = useState<string | null>(null)
   const [oauthCompleting, setOauthCompleting] = useState(false)
   const oauthHandled = useRef(false)
+  const emailParts = email.trim().split('@')
+  const workspaceDomain = emailParts.length === 2 ? emailParts[1]?.trim() || undefined : undefined
+  const isAuthenticating = isSubmitting || isSendingCode || isStartingOAuth || oauthCompleting
   const registrationPolicyBlocked =
     mode === 'register' && !activeInvitationToken && registrationPolicyStatus !== 'ready'
   const trialCodeBlocked =
@@ -326,29 +332,39 @@ export function AuthPage({
 
   if (oauthCompleting) {
     return (
-      <AuthShell darkMode={darkMode} setDarkMode={setDarkMode}>
+      <AuthShell
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+        workspaceDomain={workspaceDomain}
+        isAuthenticating={isAuthenticating}
+      >
         <div className="flex min-h-64 flex-col items-center justify-center gap-3 text-center">
           <RefreshCw aria-hidden="true" className="h-5 w-5 animate-spin" />
-          <p className="text-sm text-[var(--muted-foreground)]">{t('auth.working')}</p>
+          <p className="text-[13px] text-neutral-500 dark:text-neutral-400">{t('auth.working')}</p>
         </div>
       </AuthShell>
     )
   }
 
   return (
-    <AuthShell darkMode={darkMode} setDarkMode={setDarkMode}>
+    <AuthShell
+      darkMode={darkMode}
+      setDarkMode={setDarkMode}
+      workspaceDomain={workspaceDomain}
+      isAuthenticating={isAuthenticating}
+    >
       {error && (
         <div
-          className="mb-5 flex items-start gap-2 rounded-md border border-[var(--border)] bg-[var(--app-background)] p-3 text-sm text-[var(--foreground)]"
+          className="mb-4 flex items-start gap-2 rounded-xl border border-red-200/80 bg-red-50 p-2.5 text-xs text-red-600 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400"
           role="alert"
         >
           <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>{t(error)}</span>
+          <span className="leading-snug">{t(error)}</span>
         </div>
       )}
 
       <div className="space-y-1 text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">
+        <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-[#111827] dark:text-white">
           {t(mode === 'login' ? 'auth.loginTitle' : 'auth.registerTitle')}
         </h1>
         <p className="text-sm text-[var(--muted-foreground)]">
@@ -636,59 +652,70 @@ function AuthShell({
   children,
   darkMode,
   setDarkMode,
+  workspaceDomain,
+  isAuthenticating,
 }: {
   children: ReactNode
   darkMode: boolean
   setDarkMode: (enabled: boolean) => void
+  workspaceDomain?: string
+  isAuthenticating: boolean
 }) {
   const { t } = useTranslation()
   return (
-    <div className="app-shell flex min-h-screen flex-col items-center justify-between px-4 py-6 text-[var(--foreground)]">
-      <header className="flex w-full max-w-5xl items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 dark:hidden">
-            <img alt="" className="h-7 w-7" src="/tapstate-app-icon.svg" />
-            <img alt="Tapstate" className="h-7 w-auto" src="/tapstate-wordmark-light.svg" />
-          </div>
-          <img
-            alt="Tapstate"
-            className="hidden h-7 w-auto dark:block"
-            src="/tapstate-lockup-dark.svg"
-          />
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="hidden text-xs text-[var(--muted-foreground)] sm:inline">
+    <div
+      className={`app-shell relative flex min-h-screen w-full flex-col items-center justify-between overflow-x-hidden px-4 py-6 font-sans transition-colors duration-200 ${darkMode ? 'dark text-[#f0f1f3]' : 'text-[#111827]'}`}
+    >
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <div
+          className="absolute -top-[18%] -left-[8%] h-[680px] w-[680px] rounded-full opacity-70 blur-3xl dark:opacity-20"
+          style={{
+            background:
+              'radial-gradient(circle, rgba(255, 255, 255, 0.85) 0%, rgba(240, 246, 255, 0.35) 50%, transparent 75%)',
+          }}
+        />
+        <div className="absolute -bottom-[28%] -left-[12%] hidden h-[640px] w-[640px] rounded-full border border-white/60 bg-gradient-to-tr from-sky-200/20 via-white/30 to-transparent backdrop-blur-[2px] lg:block dark:border-white/[0.04] dark:from-sky-950/15 dark:via-white/[0.01] dark:to-transparent" />
+      </div>
+
+      <header className="z-20 flex w-full max-w-5xl items-center justify-end">
+        <div className="flex items-center gap-2">
+          <span className="hidden text-xs text-neutral-500 sm:inline dark:text-neutral-400">
             {t('auth.headerNote')}
           </span>
           <button
             aria-label={t('app.toggleTheme')}
-            className="flex h-9 w-9 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-black/[0.04] hover:text-neutral-900 dark:hover:bg-white/[0.05] dark:hover:text-white"
             onClick={() => setDarkMode(!darkMode)}
             title={t('app.toggleTheme')}
             type="button"
           >
-            {darkMode ? (
-              <Sun aria-hidden="true" className="h-4 w-4" />
-            ) : (
-              <Moon aria-hidden="true" className="h-4 w-4" />
-            )}
+            {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
         </div>
       </header>
 
-      <main className="my-auto flex w-full max-w-md items-center justify-center py-10">
-        <div className="auth-card flowing-card-container material-fusion w-full">
-          <div aria-hidden="true" className="flowing-border-glow" />
-          <section className="liquid-glass-card relative z-10 w-full overflow-hidden p-6 sm:p-8">
-            <div aria-hidden="true" className="liquid-glass-meniscus" />
-            {children}
-          </section>
+      <main className="relative z-10 flex w-full flex-1 items-center justify-center px-3 py-6 sm:px-10 sm:py-8 lg:px-12 xl:px-16">
+        <div className="flex w-full max-w-[1260px] flex-col items-center justify-center gap-10 xl:flex-row xl:gap-16 2xl:gap-20">
+          <div className="hidden w-full max-w-[690px] items-center justify-center xl:flex xl:max-w-[720px] xl:flex-1 xl:justify-start 2xl:max-w-[740px]">
+            <InteractiveCustomer360Showcase
+              darkMode={darkMode}
+              workspaceDomain={workspaceDomain}
+              isAuthenticating={isAuthenticating}
+            />
+          </div>
+
+          <div className="flex w-full shrink-0 flex-col items-center justify-center lg:w-[410px] xl:w-[430px] 2xl:w-[440px]">
+            <div className="auth-card flowing-card-container material-fusion my-auto w-full max-w-[440px]">
+              <div aria-hidden="true" className="flowing-border-aura" />
+              <div aria-hidden="true" className="flowing-border-glow" />
+              <section className="liquid-glass-card relative z-10 flex w-full flex-col justify-between px-7 py-8 transition-all duration-200 sm:px-9 sm:py-9">
+                <div aria-hidden="true" className="liquid-glass-meniscus" />
+                <div className="mx-auto w-full max-w-[360px]">{children}</div>
+              </section>
+            </div>
+          </div>
         </div>
       </main>
-
-      <footer className="w-full max-w-5xl text-center text-xs text-[var(--muted-foreground)]">
-        {t('auth.footer')}
-      </footer>
     </div>
   )
 }
@@ -704,7 +731,10 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-sm font-medium text-[var(--foreground)]" htmlFor={htmlFor}>
+      <label
+        className="block text-[12px] font-medium text-[#374151] dark:text-neutral-300"
+        htmlFor={htmlFor}
+      >
         {label}
       </label>
       {children}

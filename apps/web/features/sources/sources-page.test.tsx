@@ -455,9 +455,14 @@ describe('SourcesPage', () => {
   })
 
   it('automatically discovers missing schema and retains manual refresh', async () => {
-    getSourceSchema.mockRejectedValueOnce(
-      new SourceClientError('server', 'not discovered', null, 404),
-    )
+    // List and detail observers must both see missing metadata until discovery completes.
+    getSourceSchema
+      .mockReset()
+      .mockRejectedValue(new SourceClientError('server', 'not discovered', null, 404))
+    discoverSourceSchema.mockImplementation(async () => {
+      getSourceSchema.mockResolvedValue(schemaReport)
+      return schemaReport
+    })
     container = document.createElement('div')
     document.body.append(container)
     root = createRoot(container)

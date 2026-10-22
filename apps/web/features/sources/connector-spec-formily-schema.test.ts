@@ -4,10 +4,12 @@ import type { ConnectorConfigField } from '@/service/source-client'
 
 import {
   connectorSpecConnectionSchema,
+  connectorSpecConfigFields,
   connectorSpecInitialValues,
   normalizeConnectorConfigFields,
   normalizeConnectorConfigValues,
 } from './connector-spec-formily-schema'
+import { buildSourceConfig } from './source-form'
 
 const specText = JSON.stringify({
   configOptions: {
@@ -190,6 +192,169 @@ describe('connector spec Formily schema', () => {
     expect(() =>
       connectorSpecConnectionSchema(JSON.stringify({ configOptions: {} }), 'en'),
     ).toThrow('configOptions.connection')
+  })
+
+  it('injects TLS and SSH sections only when the raw PDK tags declare them', () => {
+    const taggedSpec = JSON.stringify({
+      properties: { tags: ['ssl', 'ssh'] },
+      configOptions: {
+        connection: { type: 'object', properties: { host: { type: 'string' } } },
+      },
+    })
+    const fields = connectorSpecConfigFields(taggedSpec, [], 'en')
+
+    expect(fields.map((field) => field.name)).toEqual([
+      'useSSL',
+      'sslCa',
+      'sslCAFile',
+      'sslCert',
+      'sslCertFile',
+      'sslKey',
+      'sslKeyFile',
+      'sslKeyPassword',
+      '__TAPDATA.useSSH',
+      '__TAPDATA.sshHost',
+      '__TAPDATA.sshPort',
+      '__TAPDATA.sshUsername',
+      '__TAPDATA.sshPassword',
+    ])
+    expect(fields.find((field) => field.name === 'sslKey')).toMatchObject({ secret: true })
+    expect(fields.find((field) => field.name === '__TAPDATA.sshPassword')).toMatchObject({
+      secret: true,
+    })
+    expect(connectorSpecConnectionSchema(taggedSpec, 'en').properties).toMatchObject({
+      __tapstateSsl: {
+        'x-component': 'ConfigSection',
+        'x-component-props': { title: 'TLS settings', headerControl: true },
+        properties: {
+          sslCa: {
+            'x-component': 'TextFileReader',
+            'x-component-props': { base64: true },
+            'x-reactions': {
+              dependencies: ['useSSL'],
+              fulfill: {
+                state: {
+                  visible: '{{$deps[0] === true || $deps[0] === "true"}}',
+                },
+              },
+            },
+            fileNameField: 'sslCAFile',
+          },
+          sslCert: {
+            'x-reactions': {
+              dependencies: ['useSSL'],
+              fulfill: {
+                state: {
+                  visible: '{{$deps[0] === true || $deps[0] === "true"}}',
+                },
+              },
+            },
+          },
+          sslKey: {
+            'x-reactions': {
+              dependencies: ['useSSL'],
+              fulfill: {
+                state: {
+                  visible: '{{$deps[0] === true || $deps[0] === "true"}}',
+                },
+              },
+            },
+          },
+          sslKeyPassword: {
+            'x-reactions': {
+              dependencies: ['useSSL'],
+              fulfill: {
+                state: {
+                  visible: '{{$deps[0] === true || $deps[0] === "true"}}',
+                },
+              },
+            },
+          },
+        },
+      },
+      __tapstateSsh: {
+        properties: {
+          __TAPDATA: {
+            properties: {
+              sshHost: { 'x-component': 'Input' },
+              sshPassword: { 'x-component': 'Password' },
+            },
+          },
+        },
+      },
+    })
+  })
+
+  it('does not infer TLS or SSH support from connector IDs when tags are absent', () => {
+    const untaggedSpec = JSON.stringify({
+      configOptions: { connection: { type: 'object', properties: { host: { type: 'string' } } } },
+    })
+
+    expect(connectorSpecConfigFields(untaggedSpec, [], 'en')).toEqual([])
+    expect(connectorSpecConnectionSchema(untaggedSpec, 'en', 'mysql').properties).toEqual({
+      host: { type: 'string' },
+    })
+  })
+
+  it('keeps raw TextFileReader filename companions in submitted source settings', () => {
+    const fileSpec = JSON.stringify({
+      configOptions: {
+        connection: {
+          type: 'object',
+          properties: {
+            krb5Keytab: {
+              type: 'string',
+              title: 'Keytab',
+              'x-component': 'TextFileReader',
+              'x-component-props': { base64: true },
+              fileNameField: 'krb5KeytabFile',
+            },
+          },
+        },
+      },
+    })
+    const catalogFields: ConnectorConfigField[] = [
+      {
+        name: 'krb5Keytab',
+        type: 'string',
+        label: 'Keytab',
+        required: false,
+        defaultValue: null,
+        secret: false,
+        options: [],
+        visibleWhen: null,
+      },
+      {
+        name: 'sslKey',
+        type: 'string',
+        label: 'Client private key',
+        required: true,
+        defaultValue: null,
+        secret: false,
+        options: [],
+        visibleWhen: null,
+      },
+    ]
+    const configFields = connectorSpecConfigFields(fileSpec, catalogFields)
+    const fileFields = configFields.filter((field) => field.name.startsWith('krb5Keytab'))
+
+    expect(configFields.find((field) => field.name === 'sslKey')).toMatchObject({
+      required: true,
+      secret: true,
+    })
+    expect(configFields.find((field) => field.name === 'krb5KeytabFile')).toMatchObject({
+      type: 'string',
+      clearable: true,
+    })
+    expect(
+      buildSourceConfig(fileFields, {
+        krb5Keytab: 'a2V5dGFi',
+        krb5KeytabFile: 'client.keytab',
+      }),
+    ).toEqual({
+      config: { krb5Keytab: 'a2V5dGFi', krb5KeytabFile: 'client.keytab' },
+      errors: {},
+    })
   })
 
   it('normalizes the legacy MySQL port schema and values at the connector boundary', () => {

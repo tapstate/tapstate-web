@@ -49,7 +49,6 @@ import {
   listPipelines,
   previewPipelineDraft,
   publishPipelineDraft,
-  runPipeline,
   updatePipelineDraft,
   type PipelineLayout,
   PipelineClientError,
@@ -106,6 +105,9 @@ import { pipelineNodeConnectors } from '../model/pipeline-node-connectors'
 import { sourceTableSelections } from '../model/pipeline-node-model'
 import { targetSources } from '../model/pipeline-target-connectors'
 import { PipelineMonitoringPage } from '../monitoring/pipeline-monitoring-page'
+import { PipelineStartNotices } from '../start-checks/pipeline-start-notice'
+import { StartChecksDialog } from '../start-checks/start-checks-dialog'
+import { useStartPipeline } from '../start-checks/use-start-pipeline'
 import { PipelineWorkflowWithInnerContext } from '../workflow-app'
 import { PipelineWorkflow } from '../workflow-app/components/pipeline-workflow'
 import { WizardBuilder } from './wizard-builder'
@@ -878,8 +880,15 @@ function PipelineOrchestrationPage({
   useEffect(() => {
     if (!autosave.hasPendingChanges) setIsDirty(false)
   }, [autosave.hasPendingChanges])
+  const starter = useStartPipeline({
+    apiFetch,
+    // An answer that rewrote the definition also moved the stored draft; editing on without
+    // reloading it would conflict on the next save or write the old setting back.
+    onDefinitionChanged: () =>
+      queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId] }),
+  })
   const run = useMutation({
-    mutationFn: () => runPipeline(pipelineId, apiFetch),
+    mutationFn: () => starter.startPipeline(pipelineId),
   })
   const wizardDocument =
     pipelineDraft.data?.mode === 'wizard' && pipelineDraft.data.draft && pipelineDraft.data.etag
@@ -961,15 +970,18 @@ function PipelineOrchestrationPage({
   // A target writes through one connector only, so its picker offers a narrower catalog than a
   // source node's. Two lists rather than one filtered at the form: the panel takes whichever the
   // current selection is entitled to, and neither kind can read the other's.
+  const deploymentProfile = getDeploymentProfile()
+  const localDevelopment = import.meta.env.VITE_LOCAL_DEVELOPMENT === 'true'
   const targetSourceOptions = useMemo<PipelineSchemaOption[]>(
     () =>
-      targetSources(sources.data ?? [], connectors.data ?? [], getDeploymentProfile()).map(
-        (source) => ({
-          label: source.id,
-          value: source.id,
-        }),
-      ),
-    [connectors.data, sources.data],
+      targetSources(sources.data ?? [], connectors.data ?? [], {
+        profile: deploymentProfile,
+        localDevelopment,
+      }).map((source) => ({
+        label: source.id,
+        value: source.id,
+      })),
+    [connectors.data, sources.data, deploymentProfile, localDevelopment],
   )
   const configuredTableOptionsBySourceId = useMemo(() => {
     const options = new Map<string, PipelineSchemaOption[]>()
@@ -1149,12 +1161,10 @@ function PipelineOrchestrationPage({
   async function handleSave(): Promise<PipelineDraftSaveResult | null> {
     if (isReadOnly) return null
     if (!draft || autosave.isSaving) return null
-    const nextDiagnostics = validatePipelineGraph(
-      draft,
-      sources.data,
-      connectors.data,
-      getDeploymentProfile(),
-    )
+    const nextDiagnostics = validatePipelineGraph(draft, sources.data, connectors.data, {
+      profile: deploymentProfile,
+      localDevelopment,
+    })
     if (!sources.isSuccess) {
       setDiagnostics([])
       pushActionError(t('pipelines.workspace.nodeSelector.sourcesError'))
@@ -1331,10 +1341,17 @@ function PipelineOrchestrationPage({
         ) : null}
       </section>
 
+      <StartChecksDialog {...starter.dialog} />
       {(diagnostics.length > 0 ||
         actionErrors.length > 0 ||
+        starter.notices.length > 0 ||
         (!isWizard && (runtimeObservationPending || runtimeObservationError))) && (
         <div className="pipeline-canvas__alerts" aria-live="assertive">
+          <PipelineStartNotices
+            notices={starter.notices}
+            onDismiss={starter.dismissNotice}
+            placement="floating"
+          />
           {!isWizard && runtimeObservationPending && (
             <div className="pipeline-workflow-feedback" role="status">
               <LoaderCircle className="size-4 shrink-0 animate-spin" aria-hidden="true" />

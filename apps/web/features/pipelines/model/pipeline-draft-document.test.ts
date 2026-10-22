@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
+import type {
+  PipelineDraft,
+  PipelineDraftMutation,
+  PipelineView,
+} from '@/service/pipelines/pipeline-client'
+
 import type { PipelineGraphDraft } from './pipeline-graph-edit'
 
 import { buildPipelineDraftMutation, pipelineDraftDocument } from './pipeline-draft-document'
+import { createPipelineGraphDraft, updatePipelineNodeConfiguration } from './pipeline-graph-edit'
 
 const editor: PipelineGraphDraft = {
   pipeline: {
@@ -247,5 +254,185 @@ describe('Pipeline draft document', () => {
       kind: 'transform',
       from: ['mysql.orders', 'mysql.archived_orders'],
     })
+  })
+})
+
+/** A published Pipeline as the detail endpoint reports it: write settings arrive as enum names. */
+const publishedLeadPipeline: PipelineView = {
+  id: 'lead_view',
+  metadata: { labels: {}, description: null },
+  sources: [
+    { id: 'src_pg', metadata: null, connector: 'postgres' },
+    { id: 'warehouse', metadata: null, connector: 'mongodb' },
+  ],
+  transforms: [],
+  view: {
+    id: 'lead',
+    from: 'src_pg.leads',
+    primaryKey: 'id',
+    storage: null,
+    writeMode: 'APPEND',
+    onFullLoad: 'CLEAR',
+  },
+  serve: {
+    id: 'lead_out',
+    from: 'lead',
+    sync: [
+      {
+        id: 'lead_copy',
+        source: 'warehouse',
+        writeMode: 'UPSERT',
+        rename: null,
+        ddl: null,
+        onFullLoad: 'CLEAR',
+      },
+    ],
+    query: null,
+    push: null,
+  },
+  settings: null,
+  experimental: null,
+  dag: {
+    nodes: [
+      { id: 'source:src_pg:leads', type: 'source', label: 'leads', detail: 'src_pg' },
+      { id: 'view:lead', type: 'view', label: 'lead', detail: null },
+      { id: 'target:warehouse:lead', type: 'target', label: 'lead', detail: 'warehouse' },
+    ],
+    edges: [
+      { id: 'leads-view', source: 'source:src_pg:leads', target: 'view:lead', label: null },
+      { id: 'view-target', source: 'view:lead', target: 'target:warehouse:lead', label: null },
+    ],
+  },
+  contentHash: 'c'.repeat(64),
+  status: null,
+}
+
+function storedDraft(mutation: PipelineDraftMutation): PipelineDraft {
+  return {
+    ...mutation,
+    schemaVersion: 1,
+    revision: 4,
+    name: mutation.name ?? null,
+    description: mutation.description ?? null,
+    graph: mutation.graph ?? null,
+    wizard: null,
+    baseArtifactHash: mutation.baseArtifactHash ?? null,
+    publishedDraftRevision: 4,
+    publishedArtifactHash: 'c'.repeat(64),
+    createdAt: '2026-10-02T00:00:00Z',
+    updatedAt: '2026-10-02T00:00:01Z',
+    updatedBy: 'user@example.com',
+  }
+}
+
+function graphNode(mutation: PipelineDraftMutation, type: string) {
+  return mutation.graph?.nodes.find((node) => node.type === type)
+}
+
+describe('Pipeline draft full-load policy', () => {
+  it('carries the published full-load policy into a draft built from an existing Pipeline', () => {
+    const mutation = buildPipelineDraftMutation(createPipelineGraphDraft(publishedLeadPipeline), {
+      nodes: {},
+      viewport: null,
+    })
+
+    expect(graphNode(mutation, 'target')?.config.onFullLoad).toBe('clear')
+    expect(graphNode(mutation, 'target')?.config).toMatchObject({ writeMode: 'upsert' })
+    expect(graphNode(mutation, 'view')?.config).toMatchObject({
+      writeMode: 'append',
+      onFullLoad: 'clear',
+    })
+  })
+
+  it('keeps the full-load policy a stored draft carries through the editor', () => {
+    const published = buildPipelineDraftMutation(createPipelineGraphDraft(publishedLeadPipeline), {
+      nodes: {},
+      viewport: null,
+    })
+    const stored = storedDraft({
+      ...published,
+      graph: published.graph && {
+        ...published.graph,
+        nodes: published.graph.nodes.map((node) =>
+          node.type === 'target' || node.type === 'view'
+            ? { ...node, config: { ...node.config, onFullLoad: 'fail' } }
+            : node,
+        ),
+      },
+    })
+
+    const document = pipelineDraftDocument(stored)
+    const saved = buildPipelineDraftMutation(document.editor, document.layout)
+
+    expect(graphNode(saved, 'target')?.config.onFullLoad).toBe('fail')
+    expect(graphNode(saved, 'view')?.config).toMatchObject({
+      writeMode: 'append',
+      onFullLoad: 'fail',
+    })
+  })
+
+  it('writes the full-load policy a person picks on a target node into the draft', () => {
+    const undeclared: PipelineView = {
+      ...publishedLeadPipeline,
+      serve: {
+        ...publishedLeadPipeline.serve,
+        sync: [{ id: 'lead_copy', source: 'warehouse', writeMode: 'UPSERT', onFullLoad: null }],
+      },
+    }
+    const editorDraft = createPipelineGraphDraft(undeclared)
+    const formValues = { sourceId: 'warehouse', table: 'lead', writeMode: 'upsert' }
+
+    const untouched = updatePipelineNodeConfiguration(editorDraft, {
+      nodeId: 'target:warehouse:lead',
+      kind: 'target',
+      values: formValues,
+    })
+    expect(
+      graphNode(buildPipelineDraftMutation(untouched, { nodes: {}, viewport: null }), 'target')
+        ?.config,
+    ).not.toHaveProperty('onFullLoad')
+
+    const chosen = updatePipelineNodeConfiguration(untouched, {
+      nodeId: 'target:warehouse:lead',
+      kind: 'target',
+      values: { ...formValues, onFullLoad: 'clear' },
+    })
+    const kept = updatePipelineNodeConfiguration(chosen, {
+      nodeId: 'target:warehouse:lead',
+      kind: 'target',
+      values: { ...formValues, table: 'lead_copy' },
+    })
+
+    expect(
+      graphNode(buildPipelineDraftMutation(chosen, { nodes: {}, viewport: null }), 'target')
+        ?.config,
+    ).toMatchObject({ onFullLoad: 'clear' })
+    expect(
+      graphNode(buildPipelineDraftMutation(kept, { nodes: {}, viewport: null }), 'target')?.config,
+    ).toMatchObject({ onFullLoad: 'clear' })
+  })
+
+  it('leaves the policy out of a draft whose Pipeline never declared one', () => {
+    const undeclared: PipelineView = {
+      ...publishedLeadPipeline,
+      view: { ...publishedLeadPipeline.view, writeMode: null, onFullLoad: null },
+      serve: {
+        ...publishedLeadPipeline.serve,
+        sync: [{ id: 'lead_copy', source: 'warehouse', writeMode: null, onFullLoad: null }],
+      },
+    }
+
+    const mutation = buildPipelineDraftMutation(createPipelineGraphDraft(undeclared), {
+      nodes: {},
+      viewport: null,
+    })
+    const roundTrip = pipelineDraftDocument(storedDraft(mutation))
+    const saved = buildPipelineDraftMutation(roundTrip.editor, roundTrip.layout)
+
+    for (const draft of [mutation, saved]) {
+      expect(graphNode(draft, 'target')?.config).not.toHaveProperty('onFullLoad')
+      expect(graphNode(draft, 'view')?.config).not.toHaveProperty('writeMode')
+      expect(graphNode(draft, 'view')?.config).not.toHaveProperty('onFullLoad')
+    }
   })
 })
