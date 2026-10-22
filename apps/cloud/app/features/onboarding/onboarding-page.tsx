@@ -7,12 +7,12 @@ import RadioCard from '@langgenius/dify-ui/radio-card'
 import { RadioGroup } from '@langgenius/dify-ui/radio-group'
 import { SkeletonRectangle } from '@langgenius/dify-ui/skeleton'
 import { useNavigate } from '@tanstack/react-router'
-import { AlertCircle, ArrowRight, MapPin, Moon, RefreshCw, Sun } from 'lucide-react'
+import { AlertCircle, Check, CreditCard, MapPin, Moon, RefreshCw, Sun } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { UserProfile } from '../../types'
-import type { OnboardingWorkspace } from './onboarding-service'
+import type { OnboardingStart, OnboardingWorkspace } from './onboarding-service'
 import type { OnboardingInput } from './onboarding-types'
 
 import {
@@ -22,8 +22,11 @@ import {
   type DeploymentProgress,
   type Organization,
   type Region,
+  type Spec,
   type Subscription,
 } from '../../service/cloud-api'
+import { formatPrice } from '../billing/billing-format'
+import { navigateToCheckout } from '../billing/checkout-navigation'
 import {
   isProvisioningCancelled,
   isProvisioningFailed,
@@ -46,7 +49,7 @@ interface OnboardingPageProps {
     input: OnboardingInput,
     existingOrganization?: Organization | null,
     onOrganizationResolved?: (organization: Organization) => void,
-  ) => Promise<OnboardingWorkspace>
+  ) => Promise<OnboardingStart>
   isOpeningCluster: boolean
   entryError: string | null
 }
@@ -149,6 +152,11 @@ export function OnboardingPage({
   const [hasCancelSubscriptionError, setHasCancelSubscriptionError] = useState(false)
   const [hasCancelStatusError, setHasCancelStatusError] = useState(false)
   const [isCancelOutcomeUnknown, setIsCancelOutcomeUnknown] = useState(false)
+  const [specs, setSpecs] = useState<Spec[]>([])
+  const [selectedSpecKey, setSelectedSpecKey] = useState<string | null>(null)
+  const [isLoadingSpecs, setIsLoadingSpecs] = useState(true)
+  const [hasSpecsError, setHasSpecsError] = useState(false)
+  const [consent, setConsent] = useState(false)
   const hasRedirectedToAuth = useRef(false)
 
   const redirectToAuth = () => {
@@ -161,6 +169,13 @@ export function OnboardingPage({
     () => regions.find((region) => region.code === selectedRegionCode) ?? null,
     [regions, selectedRegionCode],
   )
+  const selectedSpec = useMemo(
+    () => specs.find((spec) => spec.key === selectedSpecKey) ?? null,
+    [selectedSpecKey, specs],
+  )
+  const canManage =
+    !currentOrganization?.ownerEmail ||
+    currentOrganization.ownerEmail.toLowerCase() === user.email.toLowerCase()
   const organizationSlug = currentOrganization?.slug ?? toSlug(organizationName)
   const organizationDisplayName = currentOrganization?.name ?? organizationName.trim()
   const clusterName = currentOrganization
@@ -206,6 +221,31 @@ export function OnboardingPage({
   useEffect(() => {
     void loadRegions()
   }, [])
+
+  const loadSpecs = async () => {
+    setIsLoadingSpecs(true)
+    setHasSpecsError(false)
+    try {
+      setSpecs(await cloudApi.specs())
+    } catch {
+      setHasSpecsError(true)
+    } finally {
+      setIsLoadingSpecs(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadSpecs()
+  }, [])
+
+  useEffect(() => {
+    if (specs.length === 0) return
+    setSelectedSpecKey((current) => {
+      if (current && specs.some((spec) => spec.key === current)) return current
+      const regionDefault = selectedRegion?.defaultSpecKey
+      return specs.find((spec) => spec.key === regionDefault)?.key ?? specs[0].key
+    })
+  }, [selectedRegion, specs])
 
   useEffect(() => {
     if ((screen !== 'provisioning' && screen !== 'failed') || !workspace) return
@@ -307,10 +347,18 @@ export function OnboardingPage({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setHasSubmitError(false)
-    if (!selectedRegion || !organizationSlug || !clusterName) return
+    if (
+      !selectedRegion ||
+      !organizationSlug ||
+      !clusterName ||
+      !selectedSpec ||
+      !consent ||
+      !canManage
+    )
+      return
 
     setIsSubmitting(true)
-    setScreen('starting')
+    let redirecting = false
     try {
       const result = await onCreateWorkspace(
         {
@@ -318,16 +366,15 @@ export function OnboardingPage({
           organizationSlug,
           region: selectedRegion,
           clusterName,
+          specKey: selectedSpec.key,
         },
         currentOrganization,
-        (organization) => {
-          void navigate({
-            to: '/onboarding',
-            search: { organizationId: organization.id, subscriptionId: undefined },
-            replace: true,
-          })
-        },
       )
+      if ('checkoutUrl' in result) {
+        redirecting = true
+        navigateToCheckout(result.checkoutUrl)
+        return
+      }
       setWorkspace(result)
       setDeploymentProgress(null)
       setUpdates([observedUpdate(result.cluster, result.subscription)])
@@ -344,7 +391,7 @@ export function OnboardingPage({
       setHasSubmitError(true)
       setScreen('form')
     } finally {
-      setIsSubmitting(false)
+      if (!redirecting) setIsSubmitting(false)
     }
   }
 
@@ -572,8 +619,13 @@ export function OnboardingPage({
             </div>
 
             {hasSubmitError && (
-              <div className="body-xs-regular text-text-destructive" role="alert">
-                <span>{t('onboarding.createError')}</span>
+              <div
+                className="system-xs-regular text-text-destructive border-components-input-border-destructive bg-components-input-bg-destructive mb-4 flex items-start gap-2 rounded-lg border p-3"
+                role="alert"
+              >
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{t('onboarding.checkoutError')}</span>
+              </div>
               </div>
             )}
 
@@ -680,18 +732,144 @@ export function OnboardingPage({
 
               <section aria-labelledby="onboarding-cluster-summary" className="grid gap-2 pt-1">
                 <div className="flex items-center justify-between">
-                  <h2
-                    className="system-sm-medium text-text-secondary m-0"
-                    id="onboarding-cluster-summary"
+                  <label className="block text-[13px] font-medium text-[#374151] dark:text-neutral-200">
+                    {t('onboarding.planLabel')}
+                  </label>
+                  {isLoadingSpecs && (
+                    <span className="flex items-center gap-1 font-mono text-[11px] text-neutral-400">
+                      <RefreshCw className="h-3 w-3 animate-spin" />
+                      <span>{t('onboarding.loadingPlans')}</span>
+                    </span>
+                  )}
+                </div>
+
+                {hasSpecsError ? (
+                  <div
+                    className="flex items-center justify-between gap-3 rounded-xl border border-red-200/80 bg-red-50 p-3.5 text-xs text-red-600 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400"
+                    role="alert"
                   >
+                    <span>{t('onboarding.plansError')}</span>
+                    <button
+                      className="font-medium underline hover:text-red-800 dark:hover:text-red-300"
+                      onClick={() => void loadSpecs()}
+                      type="button"
+                    >
+                      {t('onboarding.retry')}
+                    </button>
+                  </div>
+                ) : isLoadingSpecs ? (
+                  <div
+                    className="animate-pulse rounded-xl border border-black/[0.08] bg-white p-4 dark:border-white/[0.1] dark:bg-[#1a1b1e]"
+                    aria-hidden="true"
+                  >
+                    <div className="h-4 w-40 rounded bg-neutral-200 dark:bg-neutral-800" />
+                    <div className="mt-2 h-3 w-56 rounded bg-neutral-100 dark:bg-neutral-800/60" />
+                  </div>
+                ) : specs.length === 0 ? (
+                  <div className="rounded-xl border border-black/[0.08] p-4 text-xs text-neutral-500 dark:border-white/[0.1] dark:text-neutral-400">
+                    {t('onboarding.noPlans')}
+                  </div>
+                ) : (
+                  <div
+                    aria-label={t('onboarding.planLabel')}
+                    className="divide-y divide-black/[0.06] overflow-hidden rounded-xl border border-black/[0.12] bg-white shadow-2xs dark:divide-white/[0.06] dark:border-white/[0.14] dark:bg-[#1a1b1e]"
+                    role="radiogroup"
+                  >
+                    {specs.map((spec) => {
+                      const isSelected = spec.key === selectedSpecKey
+                      const hasTrial = spec.trialDays > 0
+                      return (
+                        <button
+                          aria-checked={isSelected}
+                          className={`flex w-full items-center justify-between gap-3 p-3.5 text-left transition-colors disabled:cursor-not-allowed ${isSelected ? 'bg-neutral-100/70 dark:bg-white/[0.05]' : 'hover:bg-neutral-50 dark:hover:bg-white/[0.02]'}`}
+                          disabled={!canManage}
+                          key={spec.key}
+                          onClick={() => {
+                            setSelectedSpecKey(spec.key)
+                            setHasSubmitError(false)
+                          }}
+                          role="radio"
+                          type="button"
+                        >
+                          <span className="min-w-0 space-y-0.5">
+                            <span className="block truncate text-[13px] font-semibold text-[#111827] dark:text-white">
+                              {spec.displayName}
+                            </span>
+                            <span className="block text-[11px] text-neutral-500 dark:text-neutral-400">
+                              {t('billing.specLine', {
+                                cpu: spec.cpuCores,
+                                memory: spec.memoryGb,
+                                storage: spec.mdbSizeGb,
+                              })}
+                            </span>
+                            <span
+                              className={`mt-1 inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                                hasTrial
+                                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                                  : 'bg-black/[0.05] text-neutral-600 dark:bg-white/[0.08] dark:text-neutral-300'
+                              }`}
+                            >
+                              {hasTrial
+                                ? t('billing.trialBadge', { count: spec.trialDays })
+                                : t('billing.noTrial')}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-right">
+                            <span className="block text-[13px] font-semibold text-[#111827] dark:text-white">
+                              {formatPrice(spec.unitPriceCents, spec.currency)}
+                            </span>
+                            <span className="block text-[10px] text-neutral-500 dark:text-neutral-400">
+                              {t('billing.perMonth')}
+                            </span>
+                          </span>
+                          <span
+                            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full transition-all ${isSelected ? 'bg-[#111827] text-white dark:bg-white dark:text-[#111827]' : 'border border-neutral-300 dark:border-neutral-600'}`}
+                            aria-hidden="true"
+                          >
+                            {isSelected && <Check className="h-2.5 w-2.5 stroke-[3]" />}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                <p className="text-[11px] leading-normal text-neutral-500 dark:text-neutral-400">
+                  {t('onboarding.planHint')}
+                </p>
+              </div>
+
+              {canManage ? (
+                <label className="flex cursor-pointer items-start gap-2.5 text-[12.5px] leading-relaxed text-neutral-700 dark:text-neutral-300">
+                  <input
+                    checked={consent}
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-black/[0.2] accent-neutral-900 dark:accent-white"
+                    disabled={isSubmitting}
+                    onChange={(event) => setConsent(event.target.checked)}
+                    type="checkbox"
+                  />
+                  <span>{t('billing.consent')}</span>
+                </label>
+              ) : (
+                <p
+                  className="rounded-xl border border-black/[0.06] p-3.5 text-xs text-neutral-500 dark:border-white/[0.06] dark:text-neutral-400"
+                  role="status"
+                >
+                  {t('billing.ownerOnly')}
+                </p>
+              )}
+
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[13px] font-medium text-[#374151] dark:text-neutral-200">
                     {t(
                       currentOrganization
                         ? 'onboarding.newClusterLabel'
                         : 'onboarding.clusterLabel',
                     )}
-                  </h2>
+                  </label>
                   <span className="system-xs-regular text-text-tertiary">
-                    {selectedRegion?.defaultSpecKey ?? t('onboarding.regionDefault')}
+                    {selectedSpec?.key ?? t('onboarding.regionDefault')}
                   </span>
                 </div>
 
@@ -715,10 +893,15 @@ export function OnboardingPage({
                 className="mt-4 w-full"
                 disabled={
                   isLoadingRegions ||
+                  isLoadingSpecs ||
                   hasLoadError ||
+                  hasSpecsError ||
                   !selectedRegion ||
                   !organizationSlug ||
                   !clusterName ||
+                  !selectedSpec ||
+                  !consent ||
+                  !canManage ||
                   isSubmitting
                 }
                 loading={isSubmitting}
@@ -726,16 +909,14 @@ export function OnboardingPage({
                 type="submit"
                 variant="primary"
               >
-                <span id="onboarding-submit-label">
-                  {isSubmitting
-                    ? t('onboarding.creating')
-                    : t(
-                        currentOrganization
-                          ? 'onboarding.createClusterAction'
-                          : 'onboarding.createAction',
-                      )}
-                </span>
-                {!isSubmitting && <ArrowRight aria-hidden="true" className="size-4" />}
+                {isSubmitting ? (
+                  <span id="onboarding-submit-label">{t('onboarding.startingCheckout')}</span>
+                ) : (
+                  <span id="onboarding-submit-label" className="inline-flex items-center gap-2">
+                    {t('onboarding.continueToPayment')}
+                    <CreditCard className="size-4" />
+                  </span>
+                )}
               </Button>
             </form>
 
@@ -782,6 +963,12 @@ export function OnboardingPage({
             cleanupPending={screen === 'cancelled' && workspace.cluster.state !== 'TERMINATED'}
             cleanupStatusError={hasCleanupStatusError}
             onOpenCluster={() => onComplete(workspace.organization, workspace.cluster)}
+            onViewSubscriptions={() =>
+              void navigate({
+                to: '/billing',
+                search: { organizationId: workspace.organization.id },
+              })
+            }
             onCancel={() => void handleCancelSubscription()}
             onRetry={() => void handleRetry()}
             organization={workspace.organization}

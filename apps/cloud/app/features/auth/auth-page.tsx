@@ -13,6 +13,7 @@ import type { UserProfile } from '../../types'
 
 import { CloudApiError, type LoginInput, type RegisterInput } from '../../service/cloud-api'
 import { AuthProviderButtons } from './auth-provider-buttons'
+import { InteractiveCustomer360Showcase } from './interactive-customer-360-showcase'
 
 type AuthMode = 'login' | 'register'
 
@@ -47,6 +48,9 @@ export function AuthPage({
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const emailParts = email.trim().split('@')
+  const extractedWorkspaceDomain =
+    emailParts.length === 2 ? emailParts[1]?.trim() || undefined : undefined
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -73,21 +77,23 @@ export function AuthPage({
 
   return (
     <div
-      className={`app-shell relative flex min-h-screen w-full flex-col items-center justify-between px-4 py-6 font-sans transition-colors duration-200 ${darkMode ? 'dark text-[#f0f1f3]' : 'text-[#111827]'}`}
+      className={`app-shell relative flex min-h-screen w-full flex-col items-center justify-between overflow-x-hidden px-4 py-6 font-sans transition-colors duration-200 ${darkMode ? 'dark text-[#f0f1f3]' : 'text-[#111827]'}`}
     >
-      <header className="z-20 flex w-full max-w-5xl items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 dark:hidden">
-            <img alt="" className="h-7 w-7" src="/tapstate-app-icon.svg" />
-            <img alt="Tapstate" className="h-7 w-auto" src="/tapstate-wordmark-light.svg" />
-          </div>
-          <img
-            alt="Tapstate"
-            className="hidden h-7 w-auto dark:block"
-            src="/tapstate-lockup-dark.svg"
-          />
-        </div>
+      {/* Sculpted Architectural Light Planes on the Platinum Canvas */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        {/* Top-Left Soft Specular Bloom */}
+        <div
+          className="absolute -top-[18%] -left-[8%] h-[680px] w-[680px] rounded-full opacity-70 blur-3xl dark:opacity-20"
+          style={{
+            background:
+              'radial-gradient(circle, rgba(255, 255, 255, 0.85) 0%, rgba(240, 246, 255, 0.35) 50%, transparent 75%)',
+          }}
+        />
+        {/* Subtle Architectural Arc in Bottom-Left (Echoing the reference artwork) */}
+        <div className="absolute -bottom-[28%] -left-[12%] hidden h-[640px] w-[640px] rounded-full border border-white/60 bg-gradient-to-tr from-sky-200/20 via-white/30 to-transparent backdrop-blur-[2px] lg:block dark:border-white/[0.04] dark:from-sky-950/15 dark:via-white/[0.01] dark:to-transparent" />
+      </div>
 
+      <header className="z-20 flex w-full max-w-5xl items-center justify-end">
         <div className="flex items-center gap-2">
           <span className="hidden text-xs text-neutral-500 sm:inline dark:text-neutral-400">
             {t('auth.headerNote')}
@@ -103,13 +109,24 @@ export function AuthPage({
         </div>
       </header>
 
-      <main className="z-10 my-auto flex w-full items-center justify-center py-8">
-        <div className="auth-card flowing-card-container material-fusion w-full max-w-[400px]">
-          <div aria-hidden="true" className="flowing-border-glow" />
+      <main className="relative z-10 flex w-full flex-1 items-center justify-center px-3 py-6 sm:px-10 sm:py-8 lg:px-12 xl:px-16">
+        <div className="flex w-full max-w-[1260px] flex-col items-center justify-center gap-10 xl:flex-row xl:gap-16 2xl:gap-20">
+          <div className="hidden w-full max-w-[690px] items-center justify-center xl:flex xl:max-w-[720px] xl:flex-1 xl:justify-start 2xl:max-w-[740px]">
+            <InteractiveCustomer360Showcase
+              darkMode={darkMode}
+              workspaceDomain={extractedWorkspaceDomain}
+              isAuthenticating={isSubmitting}
+            />
+          </div>
 
-          <section className="liquid-glass-card relative z-10 w-full overflow-hidden p-7 transition-all duration-200 sm:p-8">
-            <div aria-hidden="true" className="liquid-glass-meniscus" />
+          <div className="flex w-full shrink-0 flex-col items-center justify-center lg:w-[410px] xl:w-[430px] 2xl:w-[440px]">
+            <div className="auth-card flowing-card-container material-fusion my-auto w-full max-w-[440px]">
+              <div aria-hidden="true" className="flowing-border-aura" />
+              <div aria-hidden="true" className="flowing-border-glow" />
 
+              <section className="liquid-glass-card relative z-10 flex w-full flex-col justify-between px-7 py-8 transition-all duration-200 sm:px-9 sm:py-9">
+                <div aria-hidden="true" className="liquid-glass-meniscus" />
+                <div className="mx-auto w-full max-w-[360px]">
             {error && (
               <div
                 className="system-xs-regular text-text-destructive border-components-input-border-destructive bg-components-input-bg-destructive mb-4 flex items-start gap-2 rounded-lg border p-3"
@@ -229,8 +246,11 @@ export function AuthPage({
                 <ShieldCheck className="h-4 w-4" />
                 <span>{t('auth.securityNote')}</span>
               </div>
+
+                </div>
+              </section>
             </div>
-          </section>
+          </div>
         </div>
       </main>
     </div>

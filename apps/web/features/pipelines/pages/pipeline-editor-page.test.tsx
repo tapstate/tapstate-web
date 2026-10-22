@@ -4,6 +4,8 @@ import { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { PipelineDraft, StartCheckReport } from '@/service/pipelines/pipeline-client'
+
 import type { PipelineTableLoader } from '../components/node-config/pipeline-data-node-schema'
 import type {
   PipelineNodeChoice,
@@ -18,6 +20,7 @@ const {
   getPipelineMetrics,
   getPipelineStatus,
   getSourceSchema,
+  getStartChecks,
   runPipeline,
   savePipelineLayout,
   updatePipeline,
@@ -36,6 +39,7 @@ const {
   getPipelineMetrics: vi.fn(),
   getPipelineStatus: vi.fn(),
   getSourceSchema: vi.fn(),
+  getStartChecks: vi.fn(),
   runPipeline: vi.fn(),
   savePipelineLayout: vi.fn(),
   updatePipeline: vi.fn(),
@@ -75,6 +79,7 @@ vi.mock('@/service/pipelines/pipeline-client', () => ({
   getPipelineLogs,
   getPipelineMetrics,
   getPipelineStatus,
+  getStartChecks,
   runPipeline,
   savePipelineLayout,
   updatePipeline,
@@ -365,7 +370,145 @@ vi.mock('./wizard-builder', () => ({
   ),
 }))
 
+import fixture from '../start-checks/__fixtures__/client-fixture-v1.json'
 import { PipelineEditorPage, PipelineWorkspacePage } from './pipeline-editor-page'
+
+const answerable: StartCheckReport = fixture.answerable
+const leadFinding = 'target-not-empty/views/lead'
+const driftFinding = 'derived-schema-drift/join_orders'
+const definitionChange = {
+  finding: leadFinding,
+  action: 'clear',
+  kind: 'CHANGE_DEFINITION',
+  changes: [{ element: 'lead', field: 'on_full_load', from: 'append', to: 'clear' }],
+  contentHash: 'e'.repeat(64),
+}
+
+/** The stored draft once a start-check answer set on_full_load on its target node. */
+const draftAfterStartChange: PipelineDraft = {
+  pipelineId: 'orders_to_warehouse',
+  schemaVersion: 1,
+  revision: 4,
+  mode: 'dag',
+  name: 'orders_to_warehouse',
+  description: null,
+  graph: {
+    nodes: [
+      {
+        id: 'source:mysql:orders',
+        type: 'source',
+        sourceId: 'mysql',
+        table: 'orders',
+        config: { tables: ['orders'], connectorId: 'mysql' },
+        metadata: { label: 'orders', detail: 'mysql' },
+      },
+      {
+        id: 'transform:normalize',
+        type: 'map',
+        config: { from: 'orders', expr: 'original-expression' },
+        metadata: {
+          label: 'normalize',
+          detail: 'map',
+          editorKind: 'transform',
+          stepId: 'normalize',
+        },
+      },
+      {
+        id: 'target:warehouse:lead',
+        type: 'target',
+        sourceId: 'warehouse',
+        table: 'lead',
+        config: { connectorId: 'mongodb', writeMode: 'upsert', onFullLoad: 'clear' },
+        metadata: { label: 'lead', detail: 'warehouse' },
+      },
+    ],
+    edges: [
+      { id: 'orders-normalize', source: 'source:mysql:orders', target: 'transform:normalize' },
+      { id: 'normalize-lead', source: 'transform:normalize', target: 'target:warehouse:lead' },
+    ],
+    viewport: { x: 0, y: 0, zoom: 1 },
+  },
+  wizard: null,
+  baseArtifactHash: 'e'.repeat(64),
+  publishedDraftRevision: 4,
+  publishedArtifactHash: 'e'.repeat(64),
+  createdAt: '2026-10-02T00:00:00Z',
+  updatedAt: '2026-10-02T00:00:02Z',
+  updatedBy: 'admin',
+}
+
+/** The error a start stopped by its start checks rejects with, as the Pipeline client builds it. */
+function startRefusal(report: StartCheckReport) {
+  return Object.assign(new Error('Starting orders_to_warehouse needs an answer.'), {
+    status: 409,
+    code: 'lifecycle.start-needs-confirmation',
+    params: { pipeline: 'orders_to_warehouse', count: 2 },
+    startChecks: report,
+    decisionsApplied: [],
+  })
+}
+
+function startChecksDialog() {
+  return document.querySelector<HTMLElement>('[data-testid="start-checks-dialog"]')
+}
+
+function dialogButton(text: string) {
+  return [...(startChecksDialog()?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find(
+    (candidate) => candidate.textContent?.trim() === text,
+  )
+}
+
+function answerRadio(finding: string, action: string) {
+  return startChecksDialog()?.querySelector<HTMLElement>(
+    `[data-check-item="${finding}"] [data-check-choice="${action}"] [role="radio"]`,
+  )
+}
+
+function canvasNotice() {
+  return document.querySelector<HTMLElement>(
+    '.pipeline-canvas__alerts [data-testid="pipeline-start-notice"]',
+  )
+}
+
+async function editAndRun() {
+  await vi.waitFor(() =>
+    expect(document.querySelector('[data-testid="pipeline-canvas"]')).not.toBeNull(),
+  )
+  await act(async () =>
+    document.querySelector<HTMLElement>('[data-testid="pipeline-canvas"]')?.click(),
+  )
+  await vi.waitFor(() =>
+    expect(document.querySelector('[data-testid="change-node-config"]')).not.toBeNull(),
+  )
+  await act(async () =>
+    document.querySelector<HTMLElement>('[data-testid="change-node-config"]')?.click(),
+  )
+  await act(async () => elementWithText('button', 'Run')?.click())
+  await vi.waitFor(() => expect(startChecksDialog()).not.toBeNull())
+}
+
+/** Lets the reloads a start triggers land before the next edit, so they cannot reset it. */
+async function settleAfterStart() {
+  await act(async () => new Promise((resolve) => window.setTimeout(resolve, 100)))
+}
+
+async function editNodeConfiguration() {
+  await vi.waitFor(async () => {
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-testid="pipeline-canvas"]')?.click(),
+    )
+    await act(async () =>
+      document.querySelector<HTMLElement>('[data-testid="change-node-config"]')?.click(),
+    )
+    expect(elementWithText('button', 'Save')?.hasAttribute('disabled')).toBe(false)
+  })
+}
+
+async function answerStartChecks() {
+  await act(async () => answerRadio(leadFinding, 'clear')?.click())
+  await act(async () => answerRadio(driftFinding, 'accept')?.click())
+  await act(async () => dialogButton('Start')?.click())
+}
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
@@ -532,7 +675,9 @@ afterEach(async () => {
   container?.remove()
   root = undefined
   container = undefined
-  vi.clearAllMocks()
+  // Reset rather than clear: a one-shot response a test queued but did not use must not leak into
+  // the next test. beforeEach sets every default again.
+  vi.resetAllMocks()
 })
 
 describe('PipelineEditorPage', () => {
@@ -1282,5 +1427,129 @@ describe('PipelineEditorPage', () => {
       document.querySelector<HTMLButtonElement>('[data-testid="select-source-node"]')?.click()
     })
     expect(offered()).toEqual(['mysql_feynman', 'mongo_out', 'atlas_out', 'mongo_archive'])
+  })
+
+  it('asks start checks in the shared dialog before a DAG start and keeps its warnings', async () => {
+    const warning = answerable.findings.find(({ behavior }) => behavior === 'WARN')!
+    runPipeline.mockRejectedValueOnce(startRefusal(answerable)).mockResolvedValueOnce({
+      pipelineId: 'orders_to_warehouse',
+      startChecks: { ...answerable, outcome: 'READY', findings: [warning] },
+      decisionsApplied: [],
+      staleDecisions: [],
+    })
+    await renderPage()
+    await editAndRun()
+
+    expect(publishPipelineDraft).toHaveBeenCalledTimes(1)
+    expect(runPipeline).toHaveBeenCalledTimes(1)
+    expect(startChecksDialog()?.getAttribute('role')).toBe('alertdialog')
+    expect(dialogButton('Start')?.disabled).toBe(true)
+    await answerStartChecks()
+
+    await vi.waitFor(() => expect(runPipeline).toHaveBeenCalledTimes(2))
+    expect(runPipeline).toHaveBeenLastCalledWith('orders_to_warehouse', expect.any(Function), {
+      decisions: [
+        { finding: leadFinding, action: 'clear' },
+        { finding: driftFinding, action: 'accept' },
+      ],
+      ifMatch: `"${answerable.contentHash}"`,
+    })
+    await vi.waitFor(() => expect(startChecksDialog()).toBeNull())
+    await vi.waitFor(() => expect(canvasNotice()?.textContent).toContain(warning.message))
+    expect(canvasNotice()?.closest('[data-testid="pipeline-workflow-feedback"]')).toBeNull()
+
+    // Canvas feedback expires after a few seconds; the start notice stays until it is dismissed.
+    await settleAfterStart()
+    await editNodeConfiguration()
+    createPipelineDraft.mockRejectedValueOnce(new Error('Draft store unavailable.'))
+    updatePipelineDraft.mockRejectedValueOnce(new Error('Draft store unavailable.'))
+    vi.useFakeTimers()
+    try {
+      await act(async () => elementWithText('button', 'Save')?.click())
+      expect(
+        document.querySelector('[data-testid="pipeline-workflow-feedback"]')?.textContent,
+      ).toContain('Draft store unavailable.')
+      for (let step = 0; step < 4; step += 1) {
+        await act(async () => {
+          vi.advanceTimersByTime(7_500)
+        })
+      }
+      expect(document.querySelector('[data-testid="pipeline-workflow-feedback"]')).toBeNull()
+      expect(canvasNotice()?.textContent).toContain(warning.message)
+    } finally {
+      vi.useRealTimers()
+    }
+
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="Dismiss start notice for orders_to_warehouse"]',
+        )
+        ?.click(),
+    )
+    expect(canvasNotice()).toBeNull()
+  })
+
+  it('reloads the draft after a start answer rewrote the definition and saves on top of it', async () => {
+    listSources.mockResolvedValue([
+      { id: 'mysql_feynman', connector: 'mysql', tables: [{ name: 'Player', pattern: null }] },
+      { id: 'warehouse', connector: 'mongodb', tables: null },
+    ])
+    runPipeline.mockRejectedValueOnce(startRefusal(answerable)).mockResolvedValueOnce({
+      pipelineId: 'orders_to_warehouse',
+      startChecks: { ...answerable, outcome: 'READY', findings: [] },
+      decisionsApplied: [definitionChange],
+      staleDecisions: [],
+    })
+    await renderPage()
+    await editAndRun()
+
+    getPipelineDraft.mockResolvedValue({ draft: draftAfterStartChange, etag: '"4"' })
+    const draftReads = getPipelineDraft.mock.calls.length
+    await answerStartChecks()
+
+    await vi.waitFor(() => expect(getPipelineDraft.mock.calls.length).toBeGreaterThan(draftReads))
+    await vi.waitFor(() =>
+      expect(canvasNotice()?.textContent).toContain('lead: on_full_load append → clear'),
+    )
+
+    await settleAfterStart()
+    await editNodeConfiguration()
+    const updates = updatePipelineDraft.mock.calls.length
+    await act(async () => elementWithText('button', 'Save')?.click())
+
+    await vi.waitFor(() => expect(updatePipelineDraft.mock.calls.length).toBeGreaterThan(updates))
+    const [, mutation, etag] = updatePipelineDraft.mock.calls.at(-1)!
+    expect(etag).toBe('"4"')
+    expect(
+      mutation.graph.nodes.find((node: { id: string }) => node.id === 'target:warehouse:lead')
+        ?.config,
+    ).toMatchObject({ onFullLoad: 'clear' })
+  })
+
+  it('reloads the draft and keeps the reason when a start that rewrote the definition fails', async () => {
+    runPipeline.mockRejectedValueOnce(startRefusal(answerable)).mockRejectedValueOnce(
+      Object.assign(new Error('Cannot start a pipeline in state RUNNING.'), {
+        status: 409,
+        code: 'lifecycle.illegal-transition',
+        params: { from: 'RUNNING', verb: 'start' },
+        startChecks: null,
+        decisionsApplied: [definitionChange],
+      }),
+    )
+    await renderPage()
+    await editAndRun()
+
+    getPipelineDraft.mockResolvedValue({ draft: draftAfterStartChange, etag: '"4"' })
+    const draftReads = getPipelineDraft.mock.calls.length
+    await answerStartChecks()
+
+    await vi.waitFor(() => expect(getPipelineDraft.mock.calls.length).toBeGreaterThan(draftReads))
+    await vi.waitFor(() => expect(startChecksDialog()).toBeNull())
+    await vi.waitFor(() =>
+      expect(canvasNotice()?.textContent).toContain('orders_to_warehouse did not start'),
+    )
+    expect(canvasNotice()?.textContent).toContain('Cannot start a pipeline in state RUNNING.')
+    expect(canvasNotice()?.textContent).toContain('lead: on_full_load append → clear')
   })
 })

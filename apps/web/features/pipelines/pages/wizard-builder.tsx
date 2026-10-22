@@ -6,7 +6,6 @@ import {
   getPipelineDraft,
   previewPipelineDraft,
   publishPipelineDraft,
-  runPipeline,
   streamPipelinePreview,
   updatePipelineDraft,
   PipelineClientError,
@@ -53,6 +52,9 @@ import {
 import { getDeploymentProfile } from '../model/deployment-profile'
 import { targetSources } from '../model/pipeline-target-connectors'
 import { sourceScopedTableNames } from '../model/source-table-scope'
+import { PipelineStartNotices } from '../start-checks/pipeline-start-notice'
+import { StartChecksDialog } from '../start-checks/start-checks-dialog'
+import { useStartPipeline } from '../start-checks/use-start-pipeline'
 import { PipelineWorkflowHeader } from '../workflow-app/components/pipeline-workflow-header'
 
 export function WizardBuilder({
@@ -95,7 +97,15 @@ export function WizardBuilder({
   const sources = sourcesQuery.data || []
   const inputSources = useMemo(() => sources.filter(isDataSource), [sources])
   const deploymentProfile = getDeploymentProfile()
-  const { catalog, schemasError, schemasPending } = useQueries({
+  const inputSourceIndexes = useMemo(
+    () => new Map(inputSources.map((source, index) => [source.id, index])),
+    [inputSources],
+  )
+  const {
+    catalog: allCatalog,
+    schemasError,
+    schemasPending,
+  } = useQueries({
     queries: inputSources.map((s) => ({
       queryKey: ['wizard', 'source-schema', s.id],
       queryFn: () => getSourceSchema(s.id, apiFetch),
@@ -104,8 +114,9 @@ export function WizardBuilder({
     combine: (schemas) => ({
       schemasError: schemas.find((schema) => schema.error)?.error?.message,
       schemasPending: schemas.some((schema) => schema.isPending),
-      catalog: inputSources.map((s, i) => {
-        const details = schemas[i]?.data?.tables || []
+      catalog: sources.map((s) => {
+        const index = inputSourceIndexes.get(s.id)
+        const details = index === undefined ? [] : schemas[index]?.data?.tables || []
         const names = sourceScopedTableNames(
           s,
           details.map((table) => table.name),
@@ -135,6 +146,10 @@ export function WizardBuilder({
       }),
     }),
   })
+  const catalog = useMemo(
+    () => allCatalog.filter((source) => inputSourceIndexes.has(source.id)),
+    [allCatalog, inputSourceIndexes],
+  )
   const guidedDraft = isGuidedCustomer360Pipeline(pipelineId, draft.wizard)
   const sampleSourceIds = useMemo(
     () => new Set(inputSources.filter(isSampleSource).map((source) => source.id)),
@@ -183,7 +198,16 @@ export function WizardBuilder({
   const outputConfig = draft.wizard?.output as
     | { kind?: string; config?: { sourceId?: string; writeMode?: string; table?: string } }
     | undefined
-  const availableDestinationSources = targetSources(sources, connectors, deploymentProfile)
+  // Wizard output retains Atlas semantics in every Cloud distribution.
+  const availableDestinationSources = useMemo(
+    () =>
+      targetSources(sources, connectors, { profile: deploymentProfile, localDevelopment: false }),
+    [sources, connectors, deploymentProfile],
+  )
+  const destinationCatalog = useMemo(() => {
+    const destinationIds = new Set(availableDestinationSources.map((source) => source.id))
+    return allCatalog.filter((source) => destinationIds.has(source.id))
+  }, [allCatalog, availableDestinationSources])
   const destination =
     availableDestinationSources.find((source) => source.id === outputConfig?.config?.sourceId) ||
     availableDestinationSources[0]
@@ -353,6 +377,21 @@ export function WizardBuilder({
     },
     [persist],
   )
+  /**
+   * An answer that rewrote the definition also moved the stored draft. Take the server's draft as
+   * the saved state, so the next save neither conflicts nor writes the old setting back.
+   */
+  const reloadDraft = useCallback(async () => {
+    const reloaded = await getPipelineDraft(pipelineId, apiFetch)
+    currentDraft.current = reloaded.draft
+    currentEtag.current = reloaded.etag
+    savedFingerprint.current = JSON.stringify(reloaded.draft.wizard)
+    setWizard(reloaded.draft.wizard)
+    queryClient.setQueryData(['pipelines', pipelineId, 'draft'], { mode: 'wizard', ...reloaded })
+    queryClient.setQueryData(['pipelines', pipelineId, 'draft-status'], reloaded)
+    await queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId], exact: true })
+  }, [apiFetch, pipelineId, queryClient])
+  const starter = useStartPipeline({ apiFetch, onDefinitionChanged: reloadDraft })
   useEffect(() => {
     if (readOnly) {
       onRegisterBasicInfoSaver?.(null)
@@ -424,7 +463,7 @@ export function WizardBuilder({
         setStartPhase('starting')
         let alreadyRunning = false
         try {
-          await runPipeline(pipelineId, apiFetch)
+          await starter.startPipeline(pipelineId)
         } catch (cause) {
           // Do not auto-stop an active run: that can interrupt ingestion and requires a
           // separate state-retention decision. Explain that publish succeeded but restart did not.
@@ -637,6 +676,7 @@ export function WizardBuilder({
             startBusy={busy}
             actionError={error}
             catalog={catalog}
+            destinationCatalog={destinationCatalog}
             initial={readWizard(
               wizard,
               catalog,
@@ -743,6 +783,11 @@ export function WizardBuilder({
             livePreview={livePreview}
             livePreviewStatus={livePreviewStatus}
             livePreviewError={livePreviewError}
+            notices={
+              starter.notices.length > 0 ? (
+                <PipelineStartNotices notices={starter.notices} onDismiss={starter.dismissNotice} />
+              ) : undefined
+            }
             footer={
               <div className="mt-5 flex flex-wrap items-center justify-end gap-3 text-[11px]">
                 {error && (
@@ -764,6 +809,7 @@ export function WizardBuilder({
               </div>
             }
           />
+          <StartChecksDialog {...starter.dialog} />
         </div>
       </section>
     </div>

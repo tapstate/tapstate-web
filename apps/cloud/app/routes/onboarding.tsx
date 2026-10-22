@@ -6,9 +6,9 @@ import type { UserProfile } from '../types'
 import { useClusterEntry } from '../features/clusters/use-cluster-entry'
 import { OnboardingPage } from '../features/onboarding/onboarding-page'
 import {
-  createOnboardingWorkspace,
   findProvisioningWorkspace,
   loadOnboardingWorkspace,
+  startOnboardingSubscription,
   suggestedClusterName,
   type OnboardingWorkspace,
 } from '../features/onboarding/onboarding-service'
@@ -28,7 +28,7 @@ function OnboardingRoute() {
         completeOnboarding(user, organization, cluster)
         void enterCluster(cluster, organization.id)
       }}
-      onCreateWorkspace={createOnboardingWorkspace}
+      onCreateWorkspace={startOnboardingSubscription}
       currentOrganization={organization}
       initialWorkspace={initialWorkspace}
       initialProgress={initialProgress}
@@ -81,7 +81,7 @@ export const Route = createFileRoute('/onboarding')({
 
         try {
           initialWorkspace = deps.subscriptionId
-            ? await loadOnboardingWorkspace(organization, deps.subscriptionId)
+            ? await loadOnboardingWorkspace(organization.id, deps.subscriptionId)
             : await findProvisioningWorkspace(organization)
         } catch (error) {
           if (error instanceof CloudApiError && error.status === 401) throw error

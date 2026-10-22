@@ -1,6 +1,9 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["packages/dify-ui/src/**"],
+  "ignorePatterns": [
+    "packages/dify-ui/src/**",
+    "apps/web/features/pipelines/start-checks/__fixtures__/*.json"
+  ],
   "semi": false,
   "singleQuote": true,
   "sortImports": {

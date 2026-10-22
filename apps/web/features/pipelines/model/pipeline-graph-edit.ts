@@ -9,7 +9,6 @@ import type {
 import type { ConnectorSummary } from '@/service/source-client'
 
 import type { PipelineNodeChoice } from '../components/node-library/pipeline-node-library-types'
-import type { DeploymentProfile } from './deployment-profile'
 import type {
   PipelineNodeConfiguration,
   PipelineNodeConfigurationChange,
@@ -17,13 +16,18 @@ import type {
 
 import { normalizePipelineDag } from '../components/canvas/pipeline-graph'
 import {
+  isPipelineOnFullLoad,
   pipelineNodeConfigurations,
   sourceTableSelections,
   type PipelineSourceTableSelection,
   type PipelineTargetTableMapping,
 } from './pipeline-node-model'
 import { isPipelineDagEdgeValid } from './pipeline-node-rules'
-import { isTargetConnector, type SourceIdentity } from './pipeline-target-connectors'
+import {
+  isTargetConnector,
+  type SourceIdentity,
+  type TargetConnectorPolicy,
+} from './pipeline-target-connectors'
 
 export interface PipelineGraphDraft {
   pipeline: PipelineView
@@ -590,6 +594,10 @@ function mergeConfiguration(
         tableMappings?.[0]?.targetTable ?? stringValue(change.values.table, configuration.table),
       ...(Array.isArray(change.values.tableMappings) ? { tableMappings } : {}),
       writeMode: stringValue(change.values.writeMode, configuration.writeMode),
+      // Only a policy the person picked is written; a target that never chose one keeps saying nothing.
+      ...(isPipelineOnFullLoad(change.values.onFullLoad)
+        ? { onFullLoad: change.values.onFullLoad }
+        : {}),
     }
   }
   if (configuration.kind === 'transform') {
@@ -672,7 +680,7 @@ export function validatePipelineGraph(
   draft: PipelineGraphDraft,
   availableSources?: readonly (string | SourceIdentity)[],
   connectorCatalog: readonly ConnectorSummary[] = [],
-  deploymentProfile: DeploymentProfile = 'on-prem',
+  targetPolicy: TargetConnectorPolicy = { profile: 'on-prem', localDevelopment: false },
 ): PipelineGraphDiagnostic[] {
   const diagnostics: PipelineGraphDiagnostic[] = []
   const availableSourceIds = availableSources?.map((source) =>
@@ -797,11 +805,7 @@ export function validatePipelineGraph(
       config.kind === 'target' &&
       config.sourceId &&
       connectorBySourceId.has(config.sourceId) &&
-      !isTargetConnector(
-        connectorBySourceId.get(config.sourceId),
-        deploymentProfile,
-        connectorCatalog,
-      )
+      !isTargetConnector(connectorBySourceId.get(config.sourceId), connectorCatalog, targetPolicy)
     ) {
       diagnostics.push({
         code: 'unsupported-target-connector',
@@ -884,6 +888,8 @@ export function buildPipelineMutation(draft: PipelineGraphDraft): PipelineMutati
           draft.configurations,
         ),
         ...viewConfig.body,
+        ...(viewConfig.writeMode ? { writeMode: viewConfig.writeMode } : {}),
+        ...(viewConfig.onFullLoad ? { onFullLoad: viewConfig.onFullLoad } : {}),
       }
     : (draft.pipeline.view ?? null)
   const existingSync = Array.isArray(draft.pipeline.serve?.sync) ? draft.pipeline.serve.sync : []
@@ -926,6 +932,7 @@ export function buildPipelineMutation(draft: PipelineGraphDraft): PipelineMutati
         id: existingId,
         source: config.sourceId,
         writeMode: config.writeMode,
+        ...(config.onFullLoad ? { onFullLoad: config.onFullLoad } : {}),
         ...(rename === undefined ? { rename: undefined } : { rename }),
       }
     })

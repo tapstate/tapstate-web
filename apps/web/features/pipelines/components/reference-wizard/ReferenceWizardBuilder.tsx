@@ -39,12 +39,15 @@ import { reparentRelation } from './wizard-tree'
 
 export interface WizardBuilderProps {
   catalog: DataSourceMeta[]
+  destinationCatalog?: DataSourceMeta[]
   initial: WizardViewState
   onChange: (state: WizardViewState) => void
   destinationName: string
   deploymentProfile: DeploymentProfile
   footer: React.ReactNode
   actions?: React.ReactNode
+  /** Notices kept above the editor, outside its read-only fieldset so they can be dismissed. */
+  notices?: React.ReactNode
   compiledSpec: string
   livePreview: PipelinePreviewRun | null
   livePreviewStatus: 'idle' | 'loading' | 'stale' | 'complete' | 'error'
@@ -165,12 +168,14 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
 
 export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   catalog: AVAILABLE_DATA_SOURCES,
+  destinationCatalog: AVAILABLE_DESTINATIONS = AVAILABLE_DATA_SOURCES,
   initial,
   onChange,
   destinationName,
   deploymentProfile,
   footer,
   actions,
+  notices,
   compiledSpec,
   livePreview,
   livePreviewStatus,
@@ -223,7 +228,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   const [relations, setRelations] = React.useState<RelationNode[]>(initial.relations)
   const [pipelineTransforms, setPipelineTransforms] = React.useState(initial.transforms)
   const [selectedDocumentIndex, setSelectedDocumentIndex] = React.useState(0)
-  const targetDataSource = AVAILABLE_DATA_SOURCES.find((source) => source.id === targetSourceId)
+  const targetDataSource = AVAILABLE_DESTINATIONS.find((source) => source.id === targetSourceId)
   const availableWriteModes = targetDataSource?.writeModes?.length
     ? targetDataSource.writeModes
     : ['upsert']
@@ -1907,6 +1912,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       <div className="wizard-reference-workspace flex min-h-0 flex-1 overflow-hidden">
         {/* Left / Center Canvas */}
         <div className="wizard-reference-editor-column">
+          {notices ? <div className="wizard-reference-notices">{notices}</div> : null}
           <main
             id="wizard-canvas-main"
             className="wizard-reference-canvas flex min-w-0 flex-1 flex-col overflow-y-auto"
@@ -2627,7 +2633,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                               onValueChange={(value) => {
                                 if (value === null) return
                                 setTargetSourceId(value)
-                                const next = AVAILABLE_DATA_SOURCES.find(
+                                const next = AVAILABLE_DESTINATIONS.find(
                                   (source) => source.id === value,
                                 )
                                 if (
@@ -2647,7 +2653,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                                 />
                               </SelectTrigger>
                               <SelectContent>
-                                {AVAILABLE_DATA_SOURCES.filter((source) => {
+                                {AVAILABLE_DESTINATIONS.filter((source) => {
                                   if (source.sink !== true) return false
                                   return (
                                     deploymentProfile !== 'cloud' ||

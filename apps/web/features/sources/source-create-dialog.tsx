@@ -1,5 +1,6 @@
 import type { ISchema } from '@formily/json-schema'
 
+import { useQuery } from '@tanstack/react-query'
 import { Button } from '@langgenius/dify-ui/button'
 import { cn } from '@langgenius/dify-ui/cn'
 import {
@@ -25,7 +26,9 @@ import type {
   SourceView,
 } from '@/service/source-client'
 
+import { ClusterEgressAddressGuidance } from '@/components/cluster-egress-address-guidance'
 import { ConnectorIcon } from '@/components/connector-icon'
+import { loadCloudWorkspaceContext } from '@/service/cloud-workspace-client'
 import {
   createSource,
   getConnector,
@@ -40,6 +43,7 @@ import { ConnectionTestResultDialog } from './connection-test-result'
 import { ConnectorFormily } from './connector-formily'
 import {
   connectorSpecConnectionSchema,
+  connectorSpecConfigFields,
   connectorSpecInitialValues,
   normalizeConnectorConfigFields,
   normalizeConnectorConfigValues,
@@ -98,6 +102,7 @@ export function SourceCreateDialog({
   const { i18n, t } = useTranslation()
   const currentLocale = i18n.resolvedLanguage ?? i18n.language
   const apiFetch = useAuthStore((state) => state.apiFetch)
+  const isCloudDeployment = getDeploymentProfile() === 'cloud'
   const [connectors, setConnectors] = useState<ConnectorSummary[]>([])
   const [connector, setConnector] = useState<ConnectorDetail | null>(null)
   const [schema, setSchema] = useState<ISchema | null>(null)
@@ -105,6 +110,13 @@ export function SourceCreateDialog({
   const [connectorId, setConnectorId] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [step, setStep] = useState<CreateSourceStep>('select')
+  const cloudContext = useQuery({
+    queryKey: ['cloud-workspace-context'],
+    queryFn: () => loadCloudWorkspaceContext(apiFetch),
+    enabled: isCloudDeployment && open && step === 'configure',
+    staleTime: 0,
+    retry: 1,
+  })
   const [sourceMode, setSourceMode] = useState('')
   const [config, setConfig] = useState<SourceConfigState>({})
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -113,8 +125,11 @@ export function SourceCreateDialog({
   const [submitting, setSubmitting] = useState(false)
   const [requestError, setRequestError] = useState('')
   const [testing, setTesting] = useState(false)
+  const [pendingFileReads, setPendingFileReads] = useState(false)
   const [testReport, setTestReport] = useState<ConnectionTestReport | null>(null)
   const [testError, setTestError] = useState<unknown>(null)
+  const [egressAddressCopied, setEgressAddressCopied] = useState(false)
+  const [egressAddressCopyFailed, setEgressAddressCopyFailed] = useState(false)
   const connectorButtonRefs = useRef<Record<string, HTMLElement | null>>({})
   const initializedForOpen = useRef(false)
 
@@ -137,6 +152,9 @@ export function SourceCreateDialog({
     setRequestError('')
     setTestReport(null)
     setTestError(null)
+    setPendingFileReads(false)
+    setEgressAddressCopied(false)
+    setEgressAddressCopyFailed(false)
     if (connectors.length === 0) {
       setLoadingConnectors(true)
       listConnectors(apiFetch)
@@ -168,7 +186,10 @@ export function SourceCreateDialog({
           return
         }
         try {
-          const normalizedFields = normalizeConnectorConfigFields(detail.id, detail.config)
+          const normalizedFields = normalizeConnectorConfigFields(
+            detail.id,
+            connectorSpecConfigFields(detail.spec.text, detail.config, currentLocale),
+          )
           const nextSchema = connectorSpecConnectionSchema(
             detail.spec.text,
             currentLocale,
@@ -221,6 +242,7 @@ export function SourceCreateDialog({
   }
 
   async function submit() {
+    if (pendingFileReads) return
     setRequestError('')
     const draft = connectionDraft()
     if (!draft) return
@@ -246,6 +268,7 @@ export function SourceCreateDialog({
   }
 
   async function runConnectionTest() {
+    if (pendingFileReads) return
     setTestError(null)
     setTestReport(null)
     const draft = connectionDraft()
@@ -262,7 +285,7 @@ export function SourceCreateDialog({
   }
 
   function handleOpenChange(nextOpen: boolean) {
-    if ((submitting || testing) && !nextOpen) return
+    if ((submitting || testing || pendingFileReads) && !nextOpen) return
     onOpenChange(nextOpen)
   }
 
@@ -276,7 +299,7 @@ export function SourceCreateDialog({
   }
 
   function chooseAnotherConnector() {
-    if (submitting || testing) return
+    if (submitting || testing || pendingFileReads) return
     const previousConnectorId = connectorId
     setConnectorId('')
     setConnector(null)
@@ -303,6 +326,20 @@ export function SourceCreateDialog({
     : sourceConnectors
   const selectedConnector = connectors.find((item) => item.id === connectorId)
   const configuredConnectorName = connector?.name ?? selectedConnector?.name
+  const egressAddress = cloudContext.isError ? null : cloudContext.data?.ec2PublicIp?.trim() || null
+  const egressStatus = cloudContext.data?.egressAddressStatus ?? (egressAddress ? 'DYNAMIC' : null)
+
+  async function copyEgressAddress() {
+    if (!egressAddress) return
+    setEgressAddressCopied(false)
+    setEgressAddressCopyFailed(false)
+    try {
+      await navigator.clipboard.writeText(egressAddress)
+      setEgressAddressCopied(true)
+    } catch {
+      setEgressAddressCopyFailed(true)
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -320,7 +357,7 @@ export function SourceCreateDialog({
             <DialogHeader>
               <DialogTitle>{t('sources.create.chooseConnector')}</DialogTitle>
               <DialogCloseButton
-                disabled={submitting || testing}
+                disabled={submitting || testing || pendingFileReads}
                 aria-label={t('ask.actions.close')}
               />
             </DialogHeader>
@@ -402,7 +439,7 @@ export function SourceCreateDialog({
                   variant="ghost"
                   size="medium"
                   type="button"
-                  disabled={submitting || testing}
+                  disabled={submitting || testing || pendingFileReads}
                   aria-label={t('sources.create.chooseAnother')}
                   className="size-8 shrink-0 p-0"
                   onClick={chooseAnotherConnector}
@@ -424,7 +461,7 @@ export function SourceCreateDialog({
                 </DialogTitle>
               </div>
               <DialogCloseButton
-                disabled={submitting || testing}
+                disabled={submitting || testing || pendingFileReads}
                 aria-label={t('ask.actions.close')}
               />
             </DialogHeader>
@@ -434,6 +471,18 @@ export function SourceCreateDialog({
                 <div className="flex-1 overflow-y-auto">
                   <section className="mx-auto grid w-full max-w-3xl gap-6 p-6 lg:p-8">
                     {requestError && <RequestError message={requestError} />}
+
+                    {isCloudDeployment && (
+                      <ClusterEgressAddressGuidance
+                        isLoading={cloudContext.isLoading}
+                        isError={cloudContext.isError}
+                        address={egressAddress}
+                        status={egressStatus}
+                        copied={egressAddressCopied}
+                        copyFailed={egressAddressCopyFailed}
+                        onCopy={() => void copyEgressAddress()}
+                      />
+                    )}
 
                     {loadingConnector ? (
                       <div className="text-muted-foreground flex min-h-24 items-center justify-center gap-2 text-[13px]">
@@ -507,6 +556,7 @@ export function SourceCreateDialog({
                           initialValues={config}
                           errors={fieldErrors}
                           disabled={submitting || testing}
+                          onPendingFileReadsChange={setPendingFileReads}
                           onValuesChange={(values) => {
                             setConfig(values)
                             setTestReport(null)
@@ -523,7 +573,7 @@ export function SourceCreateDialog({
                     <Button
                       variant="secondary"
                       type="button"
-                      disabled={submitting || testing}
+                      disabled={submitting || testing || pendingFileReads}
                       size="large"
                       onClick={() => onOpenChange(false)}
                     >
@@ -532,7 +582,13 @@ export function SourceCreateDialog({
                     <Button
                       variant="secondary"
                       type="button"
-                      disabled={connector === null || schema === null || submitting || testing}
+                      disabled={
+                        connector === null ||
+                        schema === null ||
+                        submitting ||
+                        testing ||
+                        pendingFileReads
+                      }
                       size="large"
                       onClick={() => void runConnectionTest()}
                     >
@@ -541,7 +597,13 @@ export function SourceCreateDialog({
                     </Button>
                     <Button
                       type="button"
-                      disabled={connector === null || schema === null || submitting || testing}
+                      disabled={
+                        connector === null ||
+                        schema === null ||
+                        submitting ||
+                        testing ||
+                        pendingFileReads
+                      }
                       variant="primary"
                       size="large"
                       onClick={() => void submit()}

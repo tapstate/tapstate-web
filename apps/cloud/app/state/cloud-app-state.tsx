@@ -22,7 +22,7 @@ interface CloudAppState {
   setIdentity: (user: UserProfile, organizations: Organization[], clusters?: Cluster[]) => void
   completeOnboarding: (user: UserProfile, organization: Organization, cluster: Cluster) => void
   setActiveOrganization: (organization: Organization) => void
-  setClusters: (clusters: Cluster[]) => void
+  setClusters: (clusters: Cluster[] | ((current: Cluster[]) => Cluster[])) => void
   clearIdentity: () => void
 }
 
@@ -88,14 +88,23 @@ export function CloudAppStateProvider({ children }: { children: ReactNode }) {
     }))
   }, [])
 
-  const setClusters = useCallback((clusters: Cluster[]) => {
-    setIdentityState((current) => ({
-      ...current,
-      clusters,
-      activeCluster:
-        clusters.find((cluster) => cluster.id === current.activeCluster?.id) ?? clusters[0] ?? null,
-    }))
-  }, [])
+  const setClusters = useCallback(
+    (nextClusters: Cluster[] | ((current: Cluster[]) => Cluster[])) => {
+      setIdentityState((current) => {
+        const clusters =
+          typeof nextClusters === 'function' ? nextClusters(current.clusters) : nextClusters
+        return {
+          ...current,
+          clusters,
+          activeCluster:
+            clusters.find((cluster) => cluster.id === current.activeCluster?.id) ??
+            clusters[0] ??
+            null,
+        }
+      })
+    },
+    [],
+  )
 
   const clearIdentity = useCallback(() => {
     setIdentityState({
