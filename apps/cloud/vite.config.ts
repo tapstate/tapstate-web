@@ -37,7 +37,9 @@ export default defineConfig(({ mode }) => {
               if (typeof origin !== 'string' || typeof host !== 'string') return
 
               const protocol =
-                'encrypted' in request.socket && request.socket.encrypted === true ? 'https' : 'http'
+                'encrypted' in request.socket && request.socket.encrypted === true
+                  ? 'https'
+                  : 'http'
               const requestOrigin = `${protocol}://${host}`
               if (origin === requestOrigin) proxyReq.setHeader('origin', proxyOrigin)
             })

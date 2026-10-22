@@ -1,4 +1,3 @@
-import { SearchInput } from '@langgenius/dify-ui/search-input'
 import {
   Popover,
   PopoverClose,
@@ -7,6 +6,7 @@ import {
   PopoverPositioner,
   PopoverTitle,
 } from '@langgenius/dify-ui/popover'
+import { SearchInput } from '@langgenius/dify-ui/search-input'
 import { Tabs, TabsIndicator, TabsList, TabsPanel, TabsTab } from '@langgenius/dify-ui/tabs'
 import {
   ArrowDownToLine,

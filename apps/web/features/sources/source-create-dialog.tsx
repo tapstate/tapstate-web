@@ -1,6 +1,5 @@
 import type { ISchema } from '@formily/json-schema'
 
-import { useQuery } from '@tanstack/react-query'
 import { Button } from '@langgenius/dify-ui/button'
 import { cn } from '@langgenius/dify-ui/cn'
 import {
@@ -15,6 +14,7 @@ import { Input } from '@langgenius/dify-ui/input'
 import RadioCard from '@langgenius/dify-ui/radio-card'
 import { RadioGroup } from '@langgenius/dify-ui/radio-group'
 import { SearchInput } from '@langgenius/dify-ui/search-input'
+import { useQuery } from '@tanstack/react-query'
 import { AlertCircle, ArrowLeft, Check, Database, LoaderCircle } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'

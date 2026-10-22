@@ -240,90 +240,91 @@ export function ClustersPage() {
                     </span>
                   </td>
                   <td className="px-3 py-2 font-mono text-xs">AWS {cluster.region}</td>
-<td className="px-3 py-2">
-                  <div className="flex min-w-52 flex-col items-start gap-1.5">
-                    <div className="flex items-center gap-2">
-                      <code className="font-mono text-[11px] text-neutral-800 dark:text-neutral-200">
-                        {cluster.ec2PublicIp ?? 'Not available'}
-                      </code>
-                      {cluster.ec2PublicIp && (
-                        <button
-                          aria-label="Copy outbound IP"
-                          className="rounded p-1 text-neutral-500 hover:bg-black/[0.05] hover:text-neutral-900 dark:hover:bg-white/[0.08] dark:hover:text-white"
-                          onClick={() => void copyEgressAddress(cluster)}
-                          type="button"
-                        >
-                          {copiedEgressId === cluster.id ? (
-                            <Check className="h-3.5 w-3.5 text-emerald-600" />
-                          ) : (
-                            <Copy className="h-3.5 w-3.5" />
-                          )}
-                        </button>
-                      )}
-                    </div>
-                    {cluster.egressAddressStatus === 'STABLE' ? (
-                      <span className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
-                        Stable · use for source allowlists; re-enter Cluster to refresh Source setup
-                      </span>
-                    ) : cluster.egressAddressStatus === 'STABILIZING' ||
-                      cluster.egressAddressStatus === 'ATTACHING' ? (
-                      <span className="flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-400">
-                        <LoaderCircle className="h-3 w-3 animate-spin" />
-                        Making address stable…
-                      </span>
-                    ) : cluster.egressAddressStatus === 'FAILED' ? (
-                      <span className="text-[10px] text-red-600 dark:text-red-400">
-                        Address update failed · current IP may change
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-amber-700 dark:text-amber-400">
-                        Dynamic · may change if the instance is replaced
-                      </span>
-                    )}
-                    {cluster.egressAddressStatus !== 'STABLE' &&
-                      cluster.egressAddressStatus !== 'STABILIZING' &&
-                      cluster.egressAddressStatus !== 'ATTACHING' &&
-                      (cluster.state === 'READY' || cluster.state === 'DEGRADED') &&
-                      (confirmingEgressId === cluster.id ? (
-                        <div className="grid gap-1.5 rounded-md border border-amber-300 bg-amber-50 p-2 dark:border-amber-500/30 dark:bg-amber-500/10">
-                          <p className="max-w-64 text-[10px] leading-relaxed text-amber-900 dark:text-amber-100">
-                            The public IP and Cluster DNS will change. Update your source firewall
-                            allowlist after this finishes; the runtime will stay online.
-                          </p>
-                          <div className="flex gap-2">
-                            <button
-                              className="text-[10px] font-semibold text-amber-900 underline dark:text-amber-100"
-                              onClick={() => void stabilizeEgressAddress(cluster)}
-                              type="button"
-                            >
-                              Confirm update
-                            </button>
-                            <button
-                              className="text-[10px] text-neutral-600 underline dark:text-neutral-300"
-                              onClick={() => setConfirmingEgressId(null)}
-                              type="button"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
+                  <td className="px-3 py-2">
+                    <div className="flex min-w-52 flex-col items-start gap-1.5">
+                      <div className="flex items-center gap-2">
+                        <code className="font-mono text-[11px] text-neutral-800 dark:text-neutral-200">
+                          {cluster.ec2PublicIp ?? 'Not available'}
+                        </code>
+                        {cluster.ec2PublicIp && (
+                          <button
+                            aria-label="Copy outbound IP"
+                            className="rounded p-1 text-neutral-500 hover:bg-black/[0.05] hover:text-neutral-900 dark:hover:bg-white/[0.08] dark:hover:text-white"
+                            onClick={() => void copyEgressAddress(cluster)}
+                            type="button"
+                          >
+                            {copiedEgressId === cluster.id ? (
+                              <Check className="h-3.5 w-3.5 text-emerald-600" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                      {cluster.egressAddressStatus === 'STABLE' ? (
+                        <span className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                          Stable · use for source allowlists; re-enter Cluster to refresh Source
+                          setup
+                        </span>
+                      ) : cluster.egressAddressStatus === 'STABILIZING' ||
+                        cluster.egressAddressStatus === 'ATTACHING' ? (
+                        <span className="flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-400">
+                          <LoaderCircle className="h-3 w-3 animate-spin" />
+                          Making address stable…
+                        </span>
+                      ) : cluster.egressAddressStatus === 'FAILED' ? (
+                        <span className="text-[10px] text-red-600 dark:text-red-400">
+                          Address update failed · current IP may change
+                        </span>
                       ) : (
-                        <button
-                          className="text-[10px] font-medium text-blue-700 underline dark:text-blue-400"
-                          disabled={stabilizingEgressId !== null}
-                          onClick={() => {
-                            setEgressError(null)
-                            setConfirmingEgressId(cluster.id)
-                          }}
-                          type="button"
-                        >
-                          {cluster.egressAddressStatus === 'FAILED'
-                            ? 'Retry address setup'
-                            : 'Make IP stable'}
-                        </button>
-                      ))}
-                  </div>
-                </td>
+                        <span className="text-[10px] text-amber-700 dark:text-amber-400">
+                          Dynamic · may change if the instance is replaced
+                        </span>
+                      )}
+                      {cluster.egressAddressStatus !== 'STABLE' &&
+                        cluster.egressAddressStatus !== 'STABILIZING' &&
+                        cluster.egressAddressStatus !== 'ATTACHING' &&
+                        (cluster.state === 'READY' || cluster.state === 'DEGRADED') &&
+                        (confirmingEgressId === cluster.id ? (
+                          <div className="grid gap-1.5 rounded-md border border-amber-300 bg-amber-50 p-2 dark:border-amber-500/30 dark:bg-amber-500/10">
+                            <p className="max-w-64 text-[10px] leading-relaxed text-amber-900 dark:text-amber-100">
+                              The public IP and Cluster DNS will change. Update your source firewall
+                              allowlist after this finishes; the runtime will stay online.
+                            </p>
+                            <div className="flex gap-2">
+                              <button
+                                className="text-[10px] font-semibold text-amber-900 underline dark:text-amber-100"
+                                onClick={() => void stabilizeEgressAddress(cluster)}
+                                type="button"
+                              >
+                                Confirm update
+                              </button>
+                              <button
+                                className="text-[10px] text-neutral-600 underline dark:text-neutral-300"
+                                onClick={() => setConfirmingEgressId(null)}
+                                type="button"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            className="text-[10px] font-medium text-blue-700 underline dark:text-blue-400"
+                            disabled={stabilizingEgressId !== null}
+                            onClick={() => {
+                              setEgressError(null)
+                              setConfirmingEgressId(cluster.id)
+                            }}
+                            type="button"
+                          >
+                            {cluster.egressAddressStatus === 'FAILED'
+                              ? 'Retry address setup'
+                              : 'Make IP stable'}
+                          </button>
+                        ))}
+                    </div>
+                  </td>
                   <td className="px-3 py-2">
                     <Badge variant="dimm">{cluster.specKey ?? '—'}</Badge>
                   </td>
