@@ -626,7 +626,6 @@ export function OnboardingPage({
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>{t('onboarding.checkoutError')}</span>
               </div>
-              </div>
             )}
 
             {resumeError && (
@@ -730,11 +729,14 @@ export function OnboardingPage({
                 </FieldDescription>
               </Field>
 
-              <section aria-labelledby="onboarding-cluster-summary" className="grid gap-2 pt-1">
+              <section aria-labelledby="onboarding-plan-selection" className="grid gap-2 pt-1">
                 <div className="flex items-center justify-between">
-                  <label className="block text-[13px] font-medium text-[#374151] dark:text-neutral-200">
+                  <h2
+                    className="system-sm-medium text-text-secondary m-0"
+                    id="onboarding-plan-selection"
+                  >
                     {t('onboarding.planLabel')}
-                  </label>
+                  </h2>
                   {isLoadingSpecs && (
                     <span className="flex items-center gap-1 font-mono text-[11px] text-neutral-400">
                       <RefreshCw className="h-3 w-3 animate-spin" />
@@ -837,7 +839,7 @@ export function OnboardingPage({
                 <p className="text-[11px] leading-normal text-neutral-500 dark:text-neutral-400">
                   {t('onboarding.planHint')}
                 </p>
-              </div>
+              </section>
 
               {canManage ? (
                 <label className="flex cursor-pointer items-start gap-2.5 text-[12.5px] leading-relaxed text-neutral-700 dark:text-neutral-300">
@@ -859,15 +861,18 @@ export function OnboardingPage({
                 </p>
               )}
 
-              <div className="space-y-2 pt-1">
+              <section aria-labelledby="onboarding-cluster-summary" className="grid gap-2 pt-1">
                 <div className="flex items-center justify-between">
-                  <label className="block text-[13px] font-medium text-[#374151] dark:text-neutral-200">
+                  <h2
+                    className="system-sm-medium text-text-secondary m-0"
+                    id="onboarding-cluster-summary"
+                  >
                     {t(
                       currentOrganization
                         ? 'onboarding.newClusterLabel'
                         : 'onboarding.clusterLabel',
                     )}
-                  </label>
+                  </h2>
                   <span className="system-xs-regular text-text-tertiary">
                     {selectedSpec?.key ?? t('onboarding.regionDefault')}
                   </span>

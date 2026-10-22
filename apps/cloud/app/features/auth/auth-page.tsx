@@ -127,126 +127,128 @@ export function AuthPage({
               <section className="liquid-glass-card relative z-10 flex w-full flex-col justify-between px-7 py-8 transition-all duration-200 sm:px-9 sm:py-9">
                 <div aria-hidden="true" className="liquid-glass-meniscus" />
                 <div className="mx-auto w-full max-w-[360px]">
-            {error && (
-              <div
-                className="system-xs-regular text-text-destructive border-components-input-border-destructive bg-components-input-bg-destructive mb-4 flex items-start gap-2 rounded-lg border p-3"
-                role="alert"
-              >
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                <div className="leading-snug">{t(error)}</div>
-              </div>
-            )}
+                  {error && (
+                    <div
+                      className="system-xs-regular text-text-destructive border-components-input-border-destructive bg-components-input-bg-destructive mb-4 flex items-start gap-2 rounded-lg border p-3"
+                      role="alert"
+                    >
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                      <div className="leading-snug">{t(error)}</div>
+                    </div>
+                  )}
 
-            <div className={mode === 'register' ? 'space-y-8' : 'space-y-6'}>
-              <div className="space-y-1">
-                <h1 className="title-4xl-semi-bold text-text-primary">
-                  {t(mode === 'login' ? 'auth.loginTitle' : 'auth.registerTitle')}
-                </h1>
-                <p className="body-md-regular text-text-tertiary">
-                  {t(mode === 'login' ? 'auth.loginDescription' : 'auth.registerDescription')}
-                </p>
-              </div>
+                  <div className={mode === 'register' ? 'space-y-8' : 'space-y-6'}>
+                    <div className="space-y-1">
+                      <h1 className="title-4xl-semi-bold text-text-primary">
+                        {t(mode === 'login' ? 'auth.loginTitle' : 'auth.registerTitle')}
+                      </h1>
+                      <p className="body-md-regular text-text-tertiary">
+                        {t(mode === 'login' ? 'auth.loginDescription' : 'auth.registerDescription')}
+                      </p>
+                    </div>
 
-              {mode === 'login' && <AuthProviderButtons mode={mode} />}
+                    {mode === 'login' && <AuthProviderButtons mode={mode} />}
 
-              <form className="space-y-3.5" onSubmit={handleSubmit}>
-                {mode === 'register' && (
-                  <Field name="displayName">
-                    <FieldLabel>{t('auth.nameLabel')}</FieldLabel>
-                    <Input
-                      autoComplete="name"
-                      maxLength={100}
-                      onValueChange={setDisplayName}
-                      placeholder={t('auth.namePlaceholder')}
-                      required
-                      value={displayName}
-                    />
-                  </Field>
-                )}
-
-                <Field name="email">
-                  <FieldLabel>{t('auth.emailLabel')}</FieldLabel>
-                  <Input
-                    autoComplete="email"
-                    onValueChange={setEmail}
-                    placeholder={t('auth.emailPlaceholder')}
-                    required
-                    type="email"
-                    value={email}
-                  />
-                </Field>
-
-                <Field name="password">
-                  <FieldLabel>{t('auth.passwordLabel')}</FieldLabel>
-                  <InputGroup>
-                    <InputGroupInput
-                      autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                      minLength={mode === 'register' ? 8 : undefined}
-                      onValueChange={setPassword}
-                      placeholder={t(
-                        mode === 'login'
-                          ? 'auth.passwordPlaceholder'
-                          : 'auth.newPasswordPlaceholder',
+                    <form className="space-y-3.5" onSubmit={handleSubmit}>
+                      {mode === 'register' && (
+                        <Field name="displayName">
+                          <FieldLabel>{t('auth.nameLabel')}</FieldLabel>
+                          <Input
+                            autoComplete="name"
+                            maxLength={100}
+                            onValueChange={setDisplayName}
+                            placeholder={t('auth.namePlaceholder')}
+                            required
+                            value={displayName}
+                          />
+                        </Field>
                       )}
-                      required
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                    />
-                    <InputGroupAddon align="inline-end">
-                      <IconButton
-                        aria-label={t(showPassword ? 'auth.hidePassword' : 'auth.showPassword')}
-                        onClick={() => setShowPassword((visible) => !visible)}
-                        size="lg"
+
+                      <Field name="email">
+                        <FieldLabel>{t('auth.emailLabel')}</FieldLabel>
+                        <Input
+                          autoComplete="email"
+                          onValueChange={setEmail}
+                          placeholder={t('auth.emailPlaceholder')}
+                          required
+                          type="email"
+                          value={email}
+                        />
+                      </Field>
+
+                      <Field name="password">
+                        <FieldLabel>{t('auth.passwordLabel')}</FieldLabel>
+                        <InputGroup>
+                          <InputGroupInput
+                            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                            minLength={mode === 'register' ? 8 : undefined}
+                            onValueChange={setPassword}
+                            placeholder={t(
+                              mode === 'login'
+                                ? 'auth.passwordPlaceholder'
+                                : 'auth.newPasswordPlaceholder',
+                            )}
+                            required
+                            type={showPassword ? 'text' : 'password'}
+                            value={password}
+                          />
+                          <InputGroupAddon align="inline-end">
+                            <IconButton
+                              aria-label={t(
+                                showPassword ? 'auth.hidePassword' : 'auth.showPassword',
+                              )}
+                              onClick={() => setShowPassword((visible) => !visible)}
+                              size="lg"
+                              type="button"
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </IconButton>
+                          </InputGroupAddon>
+                        </InputGroup>
+                        {mode === 'register' && (
+                          <FieldDescription>{t('auth.passwordHint')}</FieldDescription>
+                        )}
+                      </Field>
+
+                      <Button
+                        aria-labelledby="auth-submit-label"
+                        className="mt-1 w-full"
+                        loading={isSubmitting}
+                        type="submit"
+                        variant="primary"
+                      >
+                        <span id="auth-submit-label">
+                          {t(
+                            isSubmitting
+                              ? 'auth.working'
+                              : mode === 'login'
+                                ? 'auth.loginAction'
+                                : 'auth.registerAction',
+                          )}
+                        </span>
+                      </Button>
+                    </form>
+
+                    <div className="body-sm-regular text-text-tertiary pt-2">
+                      {t(mode === 'login' ? 'auth.noAccount' : 'auth.haveAccount')}{' '}
+                      <button
+                        className="system-sm-medium text-components-button-secondary-accent-text focus-visible:outline-state-accent-solid ml-0.5 rounded-sm hover:underline focus-visible:outline-2"
+                        onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
                         type="button"
                       >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </IconButton>
-                    </InputGroupAddon>
-                  </InputGroup>
-                  {mode === 'register' && (
-                    <FieldDescription>{t('auth.passwordHint')}</FieldDescription>
-                  )}
-                </Field>
+                        {t(mode === 'login' ? 'auth.goRegister' : 'auth.goLogin')}
+                      </button>
+                    </div>
 
-                <Button
-                  aria-labelledby="auth-submit-label"
-                  className="mt-1 w-full"
-                  loading={isSubmitting}
-                  type="submit"
-                  variant="primary"
-                >
-                  <span id="auth-submit-label">
-                    {t(
-                      isSubmitting
-                        ? 'auth.working'
-                        : mode === 'login'
-                          ? 'auth.loginAction'
-                          : 'auth.registerAction',
-                    )}
-                  </span>
-                </Button>
-              </form>
-
-              <div className="body-sm-regular text-text-tertiary pt-2">
-                {t(mode === 'login' ? 'auth.noAccount' : 'auth.haveAccount')}{' '}
-                <button
-                  className="system-sm-medium text-components-button-secondary-accent-text focus-visible:outline-state-accent-solid ml-0.5 rounded-sm hover:underline focus-visible:outline-2"
-                  onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
-                  type="button"
-                >
-                  {t(mode === 'login' ? 'auth.goRegister' : 'auth.goLogin')}
-                </button>
-              </div>
-
-              <div className="system-xs-regular text-text-tertiary border-divider-subtle flex items-center justify-center gap-2 border-t pt-4">
-                <ShieldCheck className="h-4 w-4" />
-                <span>{t('auth.securityNote')}</span>
-              </div>
-
+                    <div className="system-xs-regular text-text-tertiary border-divider-subtle flex items-center justify-center gap-2 border-t pt-4">
+                      <ShieldCheck className="h-4 w-4" />
+                      <span>{t('auth.securityNote')}</span>
+                    </div>
+                  </div>
                 </div>
               </section>
             </div>
