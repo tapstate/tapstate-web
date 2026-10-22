@@ -105,6 +105,7 @@ export function AssistantProviderForm({ onBack }: { onBack: () => void }) {
             className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-200 focus:outline-none"
             type="password"
             autoComplete="off"
+            required={!query.data?.configured}
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             required
@@ -125,7 +126,7 @@ export function AssistantProviderForm({ onBack }: { onBack: () => void }) {
           </button>
           <button
             className="rounded-lg border border-gray-200 px-3 py-1.5 hover:bg-gray-50 disabled:opacity-50"
-            disabled={disabled || !apiKey}
+            disabled={disabled || (!apiKey && !query.data?.configured)}
             type="button"
             onClick={() => mutation.mutate('check')}
           >
