@@ -122,7 +122,6 @@ export function AssistantProviderForm({ onBack }: { onBack: () => void }) {
             required={!query.data?.configured}
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            required
             placeholder={query.data?.configured ? t('wizard.assistant.provider.rotate') : ''}
             disabled={disabled}
           />

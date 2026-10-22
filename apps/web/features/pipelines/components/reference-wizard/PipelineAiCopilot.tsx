@@ -13,6 +13,8 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 import type { PipelineJsonObject } from '@/service/pipelines/pipeline-client'
 
@@ -430,12 +432,25 @@ export function PipelineAiCopilot({
                       )}
                     </span>
                     <div
-                      className={`max-w-[92%] rounded-xl p-3 text-[12px] leading-relaxed break-words whitespace-pre-wrap ${message.role === 'user' ? 'rounded-tr-xs bg-blue-600 text-white' : 'rounded-tl-xs border border-gray-200/70 bg-gray-50 text-gray-800'}`}
+                      className={`max-w-[92%] rounded-xl p-3 text-[12px] leading-relaxed break-words ${message.role === 'user' ? 'rounded-tr-xs bg-blue-600 text-white' : 'rounded-tl-xs border border-gray-200/70 bg-gray-50 text-gray-800'}`}
                     >
-                      {message.parts
-                        .filter((part) => part.type === 'text')
-                        .map((part) => part.text)
-                        .join('')}
+                      {message.role === 'user' ? (
+                        <span className="whitespace-pre-wrap">
+                          {message.parts
+                            .filter((part) => part.type === 'text')
+                            .map((part) => part.text)
+                            .join('')}
+                        </span>
+                      ) : (
+                        <div className="pipeline-ai-message" aria-live="polite">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>
+                            {message.parts
+                              .filter((part) => part.type === 'text')
+                              .map((part) => part.text)
+                              .join('')}
+                          </ReactMarkdown>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
