@@ -123,15 +123,15 @@ function fieldControl(label: string) {
 }
 
 describe('ConnectorFormily', () => {
-  it('shares a generic shadcn-aligned provider with other Formily renderers', () => {
+  it('uses the shared Tapstate tokens for Formily controls', () => {
     expect(formilyAntdPrefixCls).toBe('tap')
     expect(formilyAntdTheme.token).toMatchObject({
-      borderRadius: 10,
-      colorBgContainer: 'var(--pipeline-surface-subtle)',
+      borderRadius: 8,
+      colorBgContainer: 'var(--ts-bg-surface)',
       colorBorder: 'transparent',
-      colorPrimary: 'var(--primary)',
-      colorText: 'var(--foreground)',
-      controlOutline: 'color-mix(in oklch, var(--ring) 20%, transparent)',
+      colorPrimary: 'var(--ts-brand-primary)',
+      colorText: 'var(--ts-text-primary)',
+      controlOutline: 'color-mix(in srgb, var(--ts-border-focus) 20%, transparent)',
     })
   })
 

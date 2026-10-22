@@ -83,9 +83,9 @@ describe('PipelineNodeToolbar', () => {
     )
     expect(deleteButton).not.toBeNull()
     expect(deleteButton?.textContent).toContain('⌫')
-    const shortcut = deleteButton?.querySelector('[data-slot="dropdown-menu-shortcut"]')
-    expect(shortcut?.tagName).toBe('KBD')
-    expect(shortcut?.className).toContain('rounded-sm')
+    const shortcut = deleteButton?.querySelector('span')
+    expect(shortcut?.textContent).toBe('⌫')
+    expect(shortcut?.className).toContain('text-xs')
     await act(async () => deleteButton?.click())
 
     expect(onRequestDelete).toHaveBeenCalledTimes(1)
