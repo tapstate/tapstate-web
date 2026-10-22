@@ -271,6 +271,39 @@ describe('ReferenceWizardBuilder preview panel', () => {
     ).toBe('/total_spent')
   })
 
+  it('switches between materialized logical rows and the projected target write result', () => {
+    renderBuilder({
+      initial: {
+        ...renderInitial,
+        transforms: [
+          {
+            id: 'expanded',
+            name: 'Expand items',
+            type: 'unwind',
+            isExpanded: true,
+            config: { unwind: { path: 'items', include_array_index: 'item_no' } },
+          },
+        ],
+      },
+      livePreview: {
+        ...preview,
+        documents: [{ _unwind_source_id: 'parent-1', item_no: 0, items: 'a' }],
+        logicalDocuments: [{ _id: 'parent-1', item_no: 0, items: 'a' }],
+      },
+    })
+    const panel = previewPanel()
+    expect(panel?.querySelector('[data-preview-path="/_unwind_source_id"]')).not.toBeNull()
+    expect(panel?.querySelector('[data-preview-path="/_id"]')).toBeNull()
+    const logical = Array.from(panel?.querySelectorAll('button') || []).find(
+      (button) => button.textContent === 'Logical operator result',
+    )
+    expect(logical).toBeDefined()
+    act(() => logical?.click())
+    expect(logical?.getAttribute('aria-pressed')).toBe('true')
+    expect(panel?.querySelector('[data-preview-path="/_id"]')).not.toBeNull()
+    expect(panel?.querySelector('[data-preview-path="/_unwind_source_id"]')).toBeNull()
+  })
+
   it('splits root focus when an unrelated relation interrupts document field order', () => {
     renderBuilder({
       livePreview: {

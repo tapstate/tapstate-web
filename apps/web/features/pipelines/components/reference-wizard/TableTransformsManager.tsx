@@ -17,9 +17,15 @@ import {
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 
+import type { PipelineTargetIdentity } from '@/service/pipelines/pipeline-client'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
 import { celFilterField } from '../filter-cel'
+
+export const DEFAULT_UNWIND_SOURCE_ID_FIELD = '_unwind_source_id'
 
 export type TransformType = 'filter' | 'map' | 'unwind' | 'js' | 'union'
 
@@ -61,6 +67,7 @@ export interface UnwindTransformConfig {
   include_array_index?: string
   preserve_null_and_empty_arrays?: boolean
   element_type?: string
+  source_id_field?: string
 }
 
 export interface JsTransformConfig {
@@ -87,6 +94,7 @@ export interface TransformStep {
 }
 
 export interface TableTransformsManagerProps {
+  identityPlans?: PipelineTargetIdentity[]
   tableName: string
   sourceName?: string
   columns: string[]
@@ -159,6 +167,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
   transforms = [],
   onChange,
   hideHeader = false,
+  identityPlans,
 }) => {
   const { t } = useTranslation()
   const [isAddingStep, setIsAddingStep] = React.useState(false)
@@ -502,6 +511,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                   {/* 3. UNWIND TYPE EDITOR */}
                   {step.type === 'unwind' && (
                     <UnwindEditor
+                      identityPlans={identityPlans}
                       config={
                         step.config.unwind || {
                           path: columns[0] || 'items',
@@ -969,13 +979,26 @@ const MapEditor: React.FC<MapEditorProps> = ({ config, columns, onChange }) => {
    3. Unwind Editor Component
    ========================================================================= */
 interface UnwindEditorProps {
+  identityPlans?: PipelineTargetIdentity[]
   config: UnwindTransformConfig
   columns: string[]
   onChange: (config: UnwindTransformConfig) => void
 }
 
-const UnwindEditor: React.FC<UnwindEditorProps> = ({ config, columns, onChange }) => {
+const UnwindEditor: React.FC<UnwindEditorProps> = ({
+  config,
+  columns,
+  onChange,
+  identityPlans,
+}) => {
   const { t } = useTranslation()
+  const collision = identityPlans?.some(
+    (plan) =>
+      plan.status === 'action-required' &&
+      plan.reason === 'field-collision' &&
+      plan.preservedField === (config.source_id_field ?? DEFAULT_UNWIND_SOURCE_ID_FIELD),
+  )
+  const sourceIdentityId = React.useId()
   return (
     <div className="space-y-3 rounded-xl border border-purple-200/70 bg-purple-50/30 p-3.5">
       <div className="flex items-center justify-between">
@@ -1092,6 +1115,48 @@ const UnwindEditor: React.FC<UnwindEditorProps> = ({ config, columns, onChange }
           </div>
         </label>
       </div>
+
+      <details className="border-border border-t pt-3">
+        <summary className="text-foreground cursor-pointer text-sm font-medium">
+          {t('pipelines.workspace.transform.wizard.identitySettings')}
+        </summary>
+        <div className="mt-3 space-y-2">
+          <label htmlFor={sourceIdentityId} className="text-foreground text-sm font-medium">
+            {t('pipelines.workspace.transform.wizard.sourceIdField')}
+          </label>
+          <div className="flex items-center gap-2">
+            <Input
+              id={sourceIdentityId}
+              value={config.source_id_field ?? DEFAULT_UNWIND_SOURCE_ID_FIELD}
+              onChange={(event) => onChange({ ...config, source_id_field: event.target.value })}
+              onBlur={() => {
+                if (config.source_id_field === '')
+                  onChange({ ...config, source_id_field: undefined })
+              }}
+              aria-invalid={collision || undefined}
+              aria-describedby={`${sourceIdentityId}-help`}
+              className="min-w-0 font-mono"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onChange({ ...config, source_id_field: undefined })}
+            >
+              {t('pipelines.workspace.transform.wizard.restoreSourceIdDefault')}
+            </Button>
+          </div>
+          {collision && (
+            <p className="text-destructive text-xs" role="alert">
+              {t('wizard.targetIdentity.reasons.field-collision', {
+                preserved: config.source_id_field ?? DEFAULT_UNWIND_SOURCE_ID_FIELD,
+              })}
+            </p>
+          )}
+          <p id={`${sourceIdentityId}-help`} className="text-muted-foreground text-xs">
+            {t('pipelines.workspace.transform.wizard.sourceIdFieldHelp')}
+          </p>
+        </div>
+      </details>
 
       {/* Risk and Preconditions Callouts */}
       <div className="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-[11px] text-amber-900">
@@ -1254,6 +1319,7 @@ export const formatTransformToDsl = (step: TransformStep, defaultFrom: string) =
       include_array_index: step.config.unwind?.include_array_index || undefined,
       preserve_null_and_empty_arrays: step.config.unwind?.preserve_null_and_empty_arrays ?? false,
       element_type: step.config.unwind?.element_type || 'json',
+      source_id_field: step.config.unwind?.source_id_field || undefined,
     }
   }
   if (step.type === 'js') {

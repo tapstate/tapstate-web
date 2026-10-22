@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { WizardViewState } from './ReferenceWizardBuilder'
 
 import {
+  readTransforms,
   readWizard,
   summarizeWizard,
   writeWizard,
@@ -10,6 +11,26 @@ import {
 } from './wizard-adapter'
 
 describe('Wizard post-assembly transforms', () => {
+  it('retains the configured source identity field and element type when reloading unwind', () => {
+    const restored = readTransforms([
+      {
+        id: 'tags',
+        type: 'unwind',
+        fields: {
+          path: 'TAGS',
+          include_array_index: 'TAG_NO',
+          source_id_field: 'original_id',
+          element_type: 'string',
+        },
+      },
+    ])
+    expect(restored[0].config.unwind).toMatchObject({
+      path: 'TAGS',
+      source_id_field: 'original_id',
+      element_type: 'string',
+    })
+  })
+
   it('identifies only discovered keyless inputs when the destination upserts', () => {
     const catalog = [
       {
@@ -107,6 +128,19 @@ describe('Wizard post-assembly transforms', () => {
             },
           },
         },
+        {
+          id: 'expand-tags',
+          name: 'Tags',
+          type: 'unwind',
+          config: {
+            unwind: {
+              path: 'tags',
+              include_array_index: 'tag_no',
+              source_id_field: 'original_id',
+              element_type: 'string',
+            },
+          },
+        },
       ],
       destinationTable: 'customer_views',
       destinationSourceId: 'atlas',
@@ -117,6 +151,16 @@ describe('Wizard post-assembly transforms', () => {
     expect(document.transforms).toEqual([
       { id: 'filter-active', type: 'filter', fields: { expr: "status == 'active'" } },
       { id: 'map-label', type: 'map', fields: { label: 'customer' } },
+      {
+        id: 'expand-tags',
+        type: 'unwind',
+        fields: {
+          path: 'tags',
+          include_array_index: 'tag_no',
+          source_id_field: 'original_id',
+          element_type: 'string',
+        },
+      },
     ])
     const restored = readWizard(document, [
       {
@@ -129,7 +173,9 @@ describe('Wizard post-assembly transforms', () => {
     expect(restored.transforms.map(({ id, type }) => ({ id, type }))).toEqual([
       { id: 'filter-active', type: 'filter' },
       { id: 'map-label', type: 'map' },
+      { id: 'expand-tags', type: 'unwind' },
     ])
+    expect(restored.transforms[2].config.unwind?.source_id_field).toBe('original_id')
     expect(restored.transforms[1].config.map?.fields[0]).toMatchObject({
       outputField: 'label',
       ruleType: 'literal',
