@@ -29,8 +29,8 @@ function appearance(variant: ButtonProps['variant'], tone: ButtonTone) {
 }
 
 function buttonSize(size: ButtonProps['size']) {
-  if (size === 'xs' || size === 'sm') return 'small' as const
-  if (size === 'lg') return 'large' as const
+  if (size === 'small' || size === 'xs' || size === 'sm') return 'small' as const
+  if (size === 'large' || size === 'lg') return 'large' as const
   return 'medium' as const
 }
 
