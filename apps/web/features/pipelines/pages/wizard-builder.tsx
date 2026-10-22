@@ -670,6 +670,17 @@ export function WizardBuilder({
                       status !== 'saved' ||
                       Boolean(pending.current) ||
                       JSON.stringify(wizard) !== savedFingerprint.current,
+                    sendBlocked: editorReadOnly,
+                    prepareRequest: async () => {
+                      while (pending.current) {
+                        try {
+                          await pending.current
+                        } catch {
+                          // Retry the latest wizard snapshot below after an earlier save fails.
+                        }
+                      }
+                      return (await persist()).revision
+                    },
                     undoBlocked: editorReadOnly || busy,
                     onApply: (candidate) => {
                       previewGeneration.current += 1

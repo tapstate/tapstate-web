@@ -133,35 +133,46 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', async (importOr
             Change wizard
           </button>
           {assistant && (
-            <button
-              data-testid="apply-assistant-proposal"
-              onClick={() =>
-                assistant.onApply({
-                  root: {
-                    source: 'mysql',
-                    table: 'AA_0716',
-                    primaryKey: 'ID',
-                    keys: ['ID'],
-                    rowCount: '—',
-                    columns: ['ID'],
-                  },
-                  relations: [],
-                  transforms: [
-                    {
-                      id: 'assistant_filter',
-                      name: 'Keep rows',
-                      type: 'filter',
-                      config: { filter: { expr: 'true' } },
+            <>
+              <button
+                data-testid="prepare-assistant-request"
+                onClick={async (event) => {
+                  const button = event.currentTarget
+                  button.dataset.revision = String(await assistant.prepareRequest?.())
+                }}
+              >
+                Prepare assistant request
+              </button>
+              <button
+                data-testid="apply-assistant-proposal"
+                onClick={() =>
+                  assistant.onApply({
+                    root: {
+                      source: 'mysql',
+                      table: 'AA_0716',
+                      primaryKey: 'ID',
+                      keys: ['ID'],
+                      rowCount: '—',
+                      columns: ['ID'],
                     },
-                  ],
-                  destinationSourceId: 'mysql',
-                  destinationTable: 'assistant_generated',
-                  destinationWriteMode: 'append',
-                })
-              }
-            >
-              Apply assistant proposal
-            </button>
+                    relations: [],
+                    transforms: [
+                      {
+                        id: 'assistant_filter',
+                        name: 'Keep rows',
+                        type: 'filter',
+                        config: { filter: { expr: 'true' } },
+                      },
+                    ],
+                    destinationSourceId: 'mysql',
+                    destinationTable: 'assistant_generated',
+                    destinationWriteMode: 'append',
+                  })
+                }
+              >
+                Apply assistant proposal
+              </button>
+            </>
           )}
           <button data-testid="inspect-plan" onClick={() => void onInspectPlan?.()}>
             Inspect Plan
@@ -260,6 +271,45 @@ afterEach(() => {
 })
 
 describe('WizardBuilder publish flow', () => {
+  it('flushes the latest editor draft and returns the saved revision before an assistant request', async () => {
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={initialDraft.pipelineId} draft={initialDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await vi.waitFor(() =>
+      expect(container?.querySelector('[data-testid="change-wizard"]')).not.toBeNull(),
+    )
+
+    await act(async () => {
+      container?.querySelector<HTMLButtonElement>('[data-testid="change-wizard"]')?.click()
+    })
+    const prepareButton = container?.querySelector<HTMLButtonElement>(
+      '[data-testid="prepare-assistant-request"]',
+    )
+    await act(async () => prepareButton?.click())
+
+    await vi.waitFor(() => expect(updatePipelineDraft).toHaveBeenCalledOnce())
+    expect(updatePipelineDraft).toHaveBeenCalledWith(
+      initialDraft.pipelineId,
+      expect.objectContaining({
+        wizard: expect.objectContaining({
+          transforms: [expect.objectContaining({ id: 'verify_filter' })],
+        }),
+      }),
+      '"1"',
+      expect.any(Function),
+    )
+    expect(prepareButton?.dataset.revision).toBe('2')
+  })
+
   it('does not run an automatic preview when an assistant proposal is applied', async () => {
     container = document.createElement('div')
     document.body.append(container)

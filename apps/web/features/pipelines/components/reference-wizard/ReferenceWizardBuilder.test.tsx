@@ -449,6 +449,70 @@ describe('ReferenceWizardBuilder assistant isolation', () => {
         ?.value,
     ).toContain('focused table')
   })
+  it('sends a blank-builder prompt from the Root Table card into the same review flow', async () => {
+    const promptText = 'Sync PostgreSQL orders to MySQL and keep customer totals up to date.'
+    const apiFetch = vi.fn().mockResolvedValue(
+      new Response(
+        [
+          { type: 'start', messageId: 'root-prompt' },
+          { type: 'text-start', id: 'root-reply' },
+          { type: 'text-delta', id: 'root-reply', delta: 'I will draft that pipeline.' },
+          { type: 'text-end', id: 'root-reply' },
+          { type: 'finish', finishReason: 'stop' },
+        ]
+          .map((event) => `data: ${JSON.stringify(event)}\n\n`)
+          .join('') + 'data: [DONE]\n\n',
+        {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'x-vercel-ai-ui-message-stream': 'v1',
+          },
+        },
+      ),
+    )
+    const onApply = vi.fn()
+    const prepareRequest = vi.fn().mockResolvedValue(2)
+    useAuthStore.setState({ apiFetch })
+    const host = renderBuilder({
+      initial: { ...renderInitial, root: null, relations: [] },
+      assistant: {
+        pipelineId: 'customers',
+        revision: 1,
+        blocked: true,
+        sendBlocked: false,
+        prepareRequest,
+        onApply,
+      },
+    })
+    const prompt = host.querySelector<HTMLTextAreaElement>(
+      'textarea[aria-label="Describe the pipeline you want to build"]',
+    )!
+    const setValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set
+    act(() => {
+      setValue?.call(prompt, promptText)
+      prompt.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect(host.textContent).toContain('Or choose a source and table manually')
+    await act(async () => {
+      Array.from(host.querySelectorAll('button'))
+        .find((button) => button.textContent?.includes('Draft with AI'))
+        ?.click()
+      await Promise.resolve()
+    })
+    await vi.waitFor(() => expect(apiFetch).toHaveBeenCalledOnce())
+    expect(prepareRequest).toHaveBeenCalledOnce()
+    expect(apiFetch).toHaveBeenCalledOnce()
+    expect(apiFetch.mock.calls[0][0]).toBe('/api/pipelines/customers/draft:assistant')
+    expect(JSON.parse(apiFetch.mock.calls[0][1].body)).toMatchObject({
+      revision: 2,
+      focus: { kind: 'root', nodeId: 'root' },
+      messages: [{ role: 'user', text: promptText }],
+    })
+    expect(host.querySelector('.wizard-reference-sidebar')?.classList.contains('hidden')).toBe(
+      false,
+    )
+    expect(onApply).not.toHaveBeenCalled()
+  })
   it('preserves an unconfirmed root selection when a previously generated proposal is reviewed', async () => {
     const onApply = vi.fn()
     const candidate = { ...renderInitial, destinationTable: 'suggested_destination' }

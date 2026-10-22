@@ -89,14 +89,14 @@ afterEach(async () => {
   vi.restoreAllMocks()
   vi.clearAllMocks()
 })
-function response() {
+function response(baseRevision = proposal.baseRevision) {
   return stream([
     { type: 'start', messageId: 'reply' },
     { type: 'text-start', id: 'text' },
     { type: 'text-delta', id: 'text', delta: 'Suggested relation' },
     { type: 'text-end', id: 'text' },
     { type: 'data-status', data: { state: 'validating' } },
-    { type: 'data-proposal', data: proposal },
+    { type: 'data-proposal', data: { ...proposal, baseRevision } },
     { type: 'finish', finishReason: 'stop' },
   ])
 }
@@ -199,13 +199,89 @@ describe('Pipeline Builder assistant', () => {
     expect(secondBody.messages).toHaveLength(2)
     expect(secondBody.messages.every((message: { text: string }) => message.text.trim())).toBe(true)
   })
-  it('blocks generation while an editor change is waiting for autosave', async () => {
+  it('flushes editor autosave before generating and still blocks apply until the draft is current', async () => {
+    const prepareRequest = vi.fn().mockResolvedValue(8)
+    const apiFetch = vi.fn().mockResolvedValue(response(8))
+    useAuthStore.setState({ apiFetch })
+    const pendingDraftContext = Object.assign({}, context, {
+      blocked: true,
+      sendBlocked: false,
+      prepareRequest,
+    })
+    await mount(pendingDraftContext)
+
+    expect(button('Infer parent').disabled).toBe(false)
+    await act(async () => button('Infer parent').click())
+    await vi.waitFor(() => expect(apiFetch).toHaveBeenCalledOnce())
+
+    expect(prepareRequest).toHaveBeenCalledOnce()
+    expect(JSON.parse(apiFetch.mock.calls[0][1].body)).toMatchObject({ revision: 8 })
+    await act(async () => render({ ...pendingDraftContext, revision: 8 }))
+    await act(async () => button('Review proposed').click())
+    expect(button('Validate and apply').disabled).toBe(true)
+  })
+  it('does not send against a stale draft when the save-before-send step fails', async () => {
+    const prepareRequest = vi.fn().mockRejectedValue(new Error('save-conflict'))
     const apiFetch = vi.fn()
     useAuthStore.setState({ apiFetch })
-    await mount({ ...context, blocked: true })
-    expect(button('Infer parent').disabled).toBe(true)
-    expect(container.textContent).toContain('finish saving')
+    await mount(
+      Object.assign({}, context, {
+        blocked: true,
+        sendBlocked: false,
+        prepareRequest,
+      }),
+    )
+
+    await act(async () => button('Infer parent').click())
+    await vi.waitFor(() => expect(prepareRequest).toHaveBeenCalledOnce())
+
     expect(apiFetch).not.toHaveBeenCalled()
+    expect(
+      container.querySelector<HTMLTextAreaElement>('[aria-label="Pipeline assistant prompt"]')
+        ?.value,
+    ).toContain('Analyze available table metadata')
+    expect(container.textContent).toContain('could not be saved')
+  })
+  it('unlocks after reset during autosave without letting the stale save unlock a newer request', async () => {
+    let resolveFirst!: (revision: number) => void
+    let resolveSecond!: (revision: number) => void
+    const firstSave = new Promise<number>((resolve) => {
+      resolveFirst = resolve
+    })
+    const secondSave = new Promise<number>((resolve) => {
+      resolveSecond = resolve
+    })
+    const prepareRequest = vi
+      .fn()
+      .mockImplementationOnce(() => firstSave)
+      .mockImplementationOnce(() => secondSave)
+    const apiFetch = vi.fn().mockResolvedValue(response(8))
+    useAuthStore.setState({ apiFetch })
+    await mount(Object.assign({}, context, { blocked: false, sendBlocked: false, prepareRequest }))
+
+    await generate()
+    await vi.waitFor(() => expect(prepareRequest).toHaveBeenCalledOnce())
+    await act(async () =>
+      container.querySelector<HTMLButtonElement>('[aria-label="Clear conversation"]')?.click(),
+    )
+    expect(button('Infer parent').disabled).toBe(false)
+
+    await generate()
+    await vi.waitFor(() => expect(prepareRequest).toHaveBeenCalledTimes(2))
+    expect(button('Infer parent').disabled).toBe(true)
+
+    await act(async () => {
+      resolveFirst(7)
+      await firstSave
+    })
+    expect(button('Infer parent').disabled).toBe(true)
+
+    await act(async () => {
+      resolveSecond(8)
+      await secondSave
+    })
+    await vi.waitFor(() => expect(apiFetch).toHaveBeenCalledOnce())
+    expect(JSON.parse(apiFetch.mock.calls[0][1].body)).toMatchObject({ revision: 8 })
   })
   it('refuses proposals after a draft revision change', async () => {
     useAuthStore.setState({ apiFetch: vi.fn().mockResolvedValue(response()) })

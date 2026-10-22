@@ -23,6 +23,7 @@ import type { PipelinePreviewRun } from '@/service/pipelines/pipeline-client'
 
 import './wizard-reference.css'
 import { ConnectorIcon } from '@/components/connector-icon'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -31,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 
 import type { DeploymentProfile } from '../../model/deployment-profile'
@@ -215,9 +217,14 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     window.addEventListener('keydown', toggle)
     return () => window.removeEventListener('keydown', toggle)
   }, [assistant])
-  const [assistantPrompt, setAssistantPrompt] = React.useState<{ id: number; text: string } | null>(
-    null,
-  )
+  const [assistantPrompt, setAssistantPrompt] = React.useState<{
+    id: number
+    text: string
+    submit?: boolean
+  } | null>(null)
+  const [rootPrompt, setRootPrompt] = React.useState('')
+  const rootPromptRequestId = React.useRef<number | null>(null)
+  const assistantPromptSequence = React.useRef(0)
   const [activeContext, setActiveContext] = React.useState('root')
   const [previewMode, setPreviewMode] = React.useState<'json' | 'table'>('json')
   const [planMode, setPlanMode] = React.useState<'dsl' | 'json' | null>(null)
@@ -309,9 +316,28 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
           ? t('wizard.assistant.documentFocus')
           : flattenRelations(relations).find((relation) => relation.id === focus)?.table
     setAssistantPrompt({
-      id: Date.now(),
+      id: ++assistantPromptSequence.current,
       text: `${t(`wizard.assistant.prompts.${intent}`)}${target ? `\n${t('wizard.assistant.focus')} ${target}` : ''}`,
     })
+  }
+  function submitRootPrompt(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    event.stopPropagation()
+    const text = rootPrompt.trim()
+    if (!text || readOnly || !assistant || assistantPrompt?.submit) return
+    const id = ++assistantPromptSequence.current
+    rootPromptRequestId.current = id
+    setActiveContext('root')
+    setAssistantOpen(true)
+    setRightPanelTab('copilot')
+    setAssistantPrompt({ id, text, submit: true })
+  }
+  function handleAssistantPromptRequest(id: number) {
+    setAssistantPrompt((current) => (current?.id === id ? null : current))
+    if (rootPromptRequestId.current === id) {
+      rootPromptRequestId.current = null
+      setRootPrompt('')
+    }
   }
   function applyAssistant(
     candidate: import('@/service/pipelines/pipeline-client').PipelineJsonObject,
@@ -2180,6 +2206,62 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                       className="wizard-reference-root-form mt-3.5 space-y-3 border-t border-gray-100 pt-3.5"
                       onClick={(e) => e.stopPropagation()}
                     >
+                      {assistant && !readOnly && !isRootConfigured && (
+                        <>
+                          <form onSubmit={submitRootPrompt} className="space-y-1.5">
+                            <label
+                              htmlFor="pipeline-root-assistant-prompt"
+                              className="text-foreground block text-[11px] font-medium"
+                            >
+                              {t('wizard.assistant.rootPromptLabel')}
+                            </label>
+                            <div className="flex items-end gap-2">
+                              <Textarea
+                                id="pipeline-root-assistant-prompt"
+                                aria-label={t('wizard.assistant.rootPromptLabel')}
+                                value={rootPrompt}
+                                onChange={(event) => setRootPrompt(event.target.value)}
+                                onKeyDown={(event) => {
+                                  if (
+                                    event.key === 'Enter' &&
+                                    !event.shiftKey &&
+                                    !event.nativeEvent.isComposing
+                                  ) {
+                                    event.preventDefault()
+                                    event.currentTarget.form?.requestSubmit()
+                                  }
+                                }}
+                                placeholder={t('wizard.assistant.rootPromptPlaceholder')}
+                                rows={2}
+                                maxLength={4000}
+                                className="max-h-24 min-h-14 resize-y px-2.5 py-1.5 text-xs shadow-none"
+                              />
+                              <Button
+                                type="submit"
+                                size="sm"
+                                disabled={
+                                  !rootPrompt.trim() || Boolean(assistantPrompt?.submit)
+                                }
+                                className="h-9 shrink-0 text-xs"
+                              >
+                                <Sparkles aria-hidden="true" />
+                                {t('wizard.assistant.rootPromptSubmit')}
+                              </Button>
+                            </div>
+                            {assistantPrompt?.submit && (
+                              <p role="status" className="text-muted-foreground text-[11px]">
+                                {t('wizard.assistant.queuedRootPrompt')}
+                              </p>
+                            )}
+                            <p className="text-muted-foreground text-[11px] leading-relaxed">
+                              {t('wizard.assistant.rootPromptHint')}
+                            </p>
+                          </form>
+                          <div className="border-border text-muted-foreground border-t pt-2 text-[11px]">
+                            {t('wizard.assistant.manualRootSetup')}
+                          </div>
+                        </>
+                      )}
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="mb-1 block text-[11px] font-medium text-gray-600">
@@ -2326,7 +2408,9 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                     </div>
                   )}
 
-                  <div className="mt-2">{assistantHelper('root', 'clean')}</div>
+                  {isRootConfigured && (
+                    <div className="mt-2">{assistantHelper('root', 'clean')}</div>
+                  )}
                   {/* Columns preview (when configured and not editing) */}
                   {rootConfig && !isRootEditing && (
                     <div className="mt-2.5 flex items-center justify-between border-t border-gray-100 pt-2 text-[11px] text-gray-400">
@@ -2966,6 +3050,9 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                 context={{
                   ...assistant,
                   blocked: assistant.blocked || unconfirmedRootEdit,
+                  sendBlocked: assistant.sendBlocked ?? assistant.blocked,
+                  prepareRequest: assistant.prepareRequest,
+                  onPromptRequestHandled: handleAssistantPromptRequest,
                   undoBlocked: readOnly || unconfirmedRootEdit || assistant.undoBlocked,
                   onApply: applyAssistant,
                   onUndoApply: undoAssistantApply,

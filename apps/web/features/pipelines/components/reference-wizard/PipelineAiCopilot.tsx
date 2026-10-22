@@ -31,6 +31,9 @@ export interface BuilderAssistantContext {
   pipelineId: string
   revision: number
   blocked: boolean
+  sendBlocked?: boolean
+  prepareRequest?: () => Promise<number>
+  onPromptRequestHandled?: (requestId: number) => void
   undoBlocked?: boolean
   onApply: (candidate: PipelineJsonObject) => void
   onUndoApply?: () => boolean
@@ -71,7 +74,7 @@ export function PipelineAiCopilot({
   context: BuilderAssistantContext
   focus: string
   focusLabel: string
-  promptRequest: { id: number; text: string } | null
+  promptRequest: { id: number; text: string; submit?: boolean } | null
   onClose: () => void
 }) {
   const { t } = useTranslation()
@@ -85,6 +88,9 @@ export function PipelineAiCopilot({
   const [diff, setDiff] = useState<unknown>(null)
   const [complete, setComplete] = useState(false)
   const [applying, setApplying] = useState(false)
+  const [preparing, setPreparing] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [prepareError, setPrepareError] = useState(false)
   const [applied, setApplied] = useState(false)
   const [undoError, setUndoError] = useState(false)
   const [reviewError, setReviewError] = useState('')
@@ -97,8 +103,12 @@ export function PipelineAiCopilot({
   const reviewedCandidate = useRef('')
   const streamCompleted = useRef(false)
   const applyingRef = useRef(false)
+  const sendingRef = useRef(false)
   const generation = useRef(0)
+  const requestRevision = useRef<number | null>(null)
   const end = useRef<HTMLDivElement>(null)
+  const handledPromptRequest = useRef<number | null>(null)
+  const sendRef = useRef<(text: string) => boolean>(() => false)
   const transport = useMemo(
     () =>
       new DefaultChatTransport<AssistantMessage>({
@@ -109,7 +119,7 @@ export function PipelineAiCopilot({
           }),
         prepareSendMessagesRequest: ({ messages }) => ({
           body: {
-            revision: latest.current.context.revision,
+            revision: requestRevision.current ?? latest.current.context.revision,
             focus: {
               kind:
                 latest.current.focus === 'root'
@@ -142,7 +152,7 @@ export function PipelineAiCopilot({
         const state = part.data.state ?? part.data.status
         if (
           typeof state === 'string' &&
-          ['connecting', 'streaming', 'validating', 'ready', 'error'].includes(state)
+          ['connecting', 'streaming', 'validating', 'ready', 'complete', 'error'].includes(state)
         )
           setProgress(state)
         if (typeof part.data.code === 'string') setStreamErrorCode(part.data.code)
@@ -160,7 +170,9 @@ export function PipelineAiCopilot({
       setComplete(!isAbort && !isDisconnect && !isError && streamCompleted.current),
   })
   const streaming = chat.status === 'streaming' || chat.status === 'submitted'
-  const blocked = context.blocked || streaming || applying
+  const contextSendBlocked = context.sendBlocked ?? context.blocked
+  const sendBlocked = contextSendBlocked || streaming || applying || preparing || sending
+  const blocked = context.blocked || streaming || applying || preparing || sending
   const stale = proposal !== null && proposal.baseRevision !== context.revision
   useEffect(() => {
     end.current?.scrollIntoView?.({ block: 'nearest' })
@@ -172,18 +184,24 @@ export function PipelineAiCopilot({
     },
     [chat.stop],
   )
-  useEffect(() => {
-    if (promptRequest) {
-      setInput(promptRequest.text)
-      setTab('chat')
-    }
-  }, [promptRequest])
-  function send(text: string) {
-    if (!text.trim() || blocked) return
-    generation.current += 1
+  function send(text: string): boolean {
+    const prompt = text.trim()
+    const currentContext = latest.current.context
+    if (
+      !prompt ||
+      (currentContext.sendBlocked ?? currentContext.blocked) ||
+      streaming ||
+      applying ||
+      sendingRef.current
+    )
+      return false
+    sendingRef.current = true
+    setSending(true)
+    const requestGeneration = ++generation.current
     streamCompleted.current = false
     setProposal(null)
     setComplete(false)
+    setPrepareError(false)
     setApplied(false)
     setUndoError(false)
     setReviewError('')
@@ -193,8 +211,60 @@ export function PipelineAiCopilot({
     setCanceled(false)
     setInput('')
     setTab('chat')
-    void chat.sendMessage({ text: text.trim() })
+    setPreparing(true)
+    void (async () => {
+      let revision: number
+      try {
+        revision = currentContext.prepareRequest
+          ? await currentContext.prepareRequest()
+          : currentContext.revision
+        if (!Number.isSafeInteger(revision) || revision < 0)
+          throw new Error('assistant-draft-revision-unavailable')
+      } catch {
+        if (requestGeneration === generation.current) {
+          setPrepareError(true)
+          setInput(prompt)
+          setPreparing(false)
+          sendingRef.current = false
+          setSending(false)
+        }
+        return false
+      }
+      if (requestGeneration !== generation.current) return
+      requestRevision.current = revision
+      setPreparing(false)
+      try {
+        await chat.sendMessage({ text: prompt })
+      } catch {
+        // useChat exposes request failures through chat.error for the existing error UI.
+      } finally {
+        if (requestGeneration === generation.current) {
+          sendingRef.current = false
+          setSending(false)
+        }
+      }
+    })()
+    return true
   }
+  useEffect(() => {
+    sendRef.current = send
+  })
+  useEffect(() => {
+    if (!promptRequest) return
+    setTab('chat')
+    if (!promptRequest.submit) {
+      if (handledPromptRequest.current !== promptRequest.id) {
+        setInput(promptRequest.text)
+        handledPromptRequest.current = promptRequest.id
+      }
+      return
+    }
+    if (handledPromptRequest.current === promptRequest.id || sendBlocked) return
+    if (sendRef.current(promptRequest.text)) {
+      handledPromptRequest.current = promptRequest.id
+      latest.current.context.onPromptRequestHandled?.(promptRequest.id)
+    }
+  }, [promptRequest, sendBlocked])
   async function apply() {
     if (!proposal || !complete || blocked || stale || applied || applyingRef.current) return
     applyingRef.current = true
@@ -293,8 +363,14 @@ export function PipelineAiCopilot({
               label: 'reset',
               action: () => {
                 generation.current += 1
+                sendingRef.current = false
+                setPreparing(false)
+                setSending(false)
                 void chat.stop()
                 chat.setMessages([])
+                if (promptRequest?.submit) {
+                  latest.current.context.onPromptRequestHandled?.(promptRequest.id)
+                }
                 setProposal(null)
                 setComplete(false)
                 setReviewError('')
@@ -498,7 +574,7 @@ export function PipelineAiCopilot({
                 <button
                   key={key}
                   type="button"
-                  disabled={blocked}
+                  disabled={sendBlocked}
                   onClick={() => send(t(`wizard.assistant.prompts.${key}`))}
                   className="flex w-full items-center justify-between gap-1.5 rounded-lg border border-gray-200/80 bg-white px-2.5 py-1.5 text-left text-[11px] text-gray-700 transition-colors hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50"
                 >
@@ -509,9 +585,25 @@ export function PipelineAiCopilot({
             </div>
           </div>
           <div className="shrink-0 border-t border-gray-200 p-3">
-            {context.blocked && (
+            {context.blocked && !contextSendBlocked && !preparing && (
+              <p role="status" className="mb-2 text-[11px] leading-relaxed text-amber-800">
+                {t('wizard.assistant.saveBeforeSend')}
+              </p>
+            )}
+            {context.blocked && contextSendBlocked && (
               <p role="status" className="mb-2 text-[11px] leading-relaxed text-amber-800">
                 {t('wizard.assistant.waitForSave')}
+              </p>
+            )}
+            {preparing && (
+              <p role="status" className="mb-2 flex items-center gap-2 text-[11px] text-gray-600">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                {t('wizard.assistant.savingDraft')}
+              </p>
+            )}
+            {prepareError && (
+              <p role="alert" className="mb-2 text-[11px] leading-relaxed text-red-700">
+                {t('wizard.assistant.saveBeforeSendFailed')}
               </p>
             )}
             <div className="rounded-xl border border-gray-300 bg-white p-2 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-100">
@@ -536,6 +628,9 @@ export function PipelineAiCopilot({
                     type="button"
                     onClick={() => {
                       generation.current += 1
+                      sendingRef.current = false
+                      setPreparing(false)
+                      setSending(false)
                       setComplete(false)
                       setCanceled(true)
                       void chat.stop()
@@ -548,7 +643,7 @@ export function PipelineAiCopilot({
                 ) : (
                   <button
                     type="button"
-                    disabled={!input.trim() || blocked}
+                    disabled={!input.trim() || sendBlocked}
                     onClick={() => send(input)}
                     className="flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1 text-[11px] font-semibold text-white hover:bg-blue-700 disabled:bg-gray-100 disabled:text-gray-400"
                   >
