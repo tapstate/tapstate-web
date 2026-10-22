@@ -30,6 +30,36 @@ export interface PipelineWorkflowHeaderProps {
   onRun: () => void
 }
 
+function ScrollToSelectedNodeButton({ selectedNodeId }: { selectedNodeId: string }) {
+  const { getNode, getViewport, setCenter } = useReactFlow()
+
+  function scrollToSelectedNode(event: MouseEvent<HTMLButtonElement>) {
+    const node = getNode(selectedNodeId)
+    const workspace = event.currentTarget.closest<HTMLElement>(
+      '[data-testid="pipeline-workflow-container"]',
+    )
+    if (!node || !workspace) return
+    const panel = workspace.querySelector<HTMLElement>('[data-workflow-right-panel]')
+    const zoom = getViewport().zoom
+    const panelWidth = panel?.getBoundingClientRect().width ?? 0
+    const centerX = node.position.x + (node.measured?.width ?? 240) / 2 + panelWidth / (2 * zoom)
+    const centerY = node.position.y + (node.measured?.height ?? 56) / 2
+    void setCenter(centerX, centerY, { zoom, duration: 180 })
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      size="small"
+      className="pointer-events-auto absolute left-1/2 -translate-x-1/2"
+      onClick={scrollToSelectedNode}
+    >
+      {useTranslation().t('pipelines.workspace.actions.scrollToSelectedNode')}
+    </Button>
+  )
+}
+
 /** Owns the workflow-level actions independently from the canvas and inspector. */
 export function PipelineWorkflowHeader({
   placement = 'floating',
@@ -55,22 +85,6 @@ export function PipelineWorkflowHeader({
   onRun,
 }: PipelineWorkflowHeaderProps) {
   const { t } = useTranslation()
-  const { getNode, getViewport, setCenter } = useReactFlow()
-
-  function scrollToSelectedNode(event: MouseEvent<HTMLButtonElement>) {
-    if (!selectedNodeId) return
-    const node = getNode(selectedNodeId)
-    const workspace = event.currentTarget.closest<HTMLElement>(
-      '[data-testid="pipeline-workflow-container"]',
-    )
-    if (!node || !workspace) return
-    const panel = workspace.querySelector<HTMLElement>('[data-workflow-right-panel]')
-    const zoom = getViewport().zoom
-    const panelWidth = panel?.getBoundingClientRect().width ?? 0
-    const centerX = node.position.x + (node.measured?.width ?? 240) / 2 + panelWidth / (2 * zoom)
-    const centerY = node.position.y + (node.measured?.height ?? 56) / 2
-    void setCenter(centerX, centerY, { zoom, duration: 180 })
-  }
   const toolbar = (
     <div
       className="pointer-events-auto ml-auto flex items-center gap-2"
@@ -222,17 +236,7 @@ export function PipelineWorkflowHeader({
               </>
             )}
           </div>
-          {selectedNodeId && (
-            <Button
-              type="button"
-              variant="secondary"
-              size="small"
-              className="pointer-events-auto absolute left-1/2 -translate-x-1/2"
-              onClick={scrollToSelectedNode}
-            >
-              {t('pipelines.workspace.actions.scrollToSelectedNode')}
-            </Button>
-          )}
+          {selectedNodeId && <ScrollToSelectedNodeButton selectedNodeId={selectedNodeId} />}
           {toolbar}
         </>
       )}
