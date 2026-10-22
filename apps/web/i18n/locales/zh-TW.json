@@ -145,6 +145,22 @@
     "tabComingSoonBody": "此標籤頁在遷移預覽中以空態表示。",
     "observationUnavailableTitle": "{{tab}} 執行觀測不可用",
     "observationUnavailableBody": "目前 Source 僅提供靜態 artifact 資料；觀測 API 可用後，這裡才會顯示執行時資訊。",
+    "egressAddress": {
+      "title": "Cluster 出口 IP",
+      "addressLabel": "Cluster IP 位址",
+      "loading": "正在查詢此 Cluster 連線資料來源時使用的 IP……",
+      "unavailable": "目前無法載入此 Cluster 的出口 IP。",
+      "changing": "穩定 IP 正在設定中。請等待完成後再更新防火牆規則。",
+      "stableHelp": "將此 IP 加入資料庫防火牆允許清單，讓此 Cluster 可以連線。若剛完成 IP 更新，請重新進入 Cluster 以重新整理此面板。",
+      "dynamicHelp": "這是目前的出口 IP。替換 Cluster 執行個體後可能改變；若要依賴允許清單，請先請組織管理員在 Cloud Console 設定穩定 IP。",
+      "currentHelp": "可將目前出口 IP 加入資料庫防火牆允許清單。穩定狀態請查看 Clusters 頁面。",
+      "failedHelp": "穩定 IP 設定失敗。目前的位址仍可能改變，請組織管理員在 Cloud Console 重試。",
+      "missing": "此 Cluster 尚未回報出口 IP。你仍可繼續設定資料來源。",
+      "copy": "複製 IP",
+      "copied": "已複製",
+      "copyFailed": "無法使用剪貼簿。請選取 IP 後手動複製。",
+      "continueSetup": "你仍可繼續設定並建立資料來源。"
+    },
     "actions": {
       "create": "建立資料來源",
       "refresh": "重新整理資料來源",
@@ -180,6 +196,15 @@
         "detail": "原因",
         "serverMessage": "伺服器訊息"
       }
+    },
+    "fileReader": {
+      "chooseFile": "選擇檔案",
+      "fileSelected": "檔案已就緒",
+      "filenameUnavailable": "檔名無法取得",
+      "noFileSelected": "尚未選擇檔案",
+      "replaceFile": "取代檔案",
+      "tooLarge": "請選擇小於 {{size}} KB 的檔案。",
+      "readFailed": "無法讀取此檔案，請嘗試其他檔案。"
     },
     "empty": {
       "title": "尚未建立資料來源",
@@ -535,6 +560,47 @@
       "confirmStopClearState": "停止並清除狀態",
       "dismissFeedback": "關閉生命週期錯誤"
     },
+    "startChecks": {
+      "title": "啟動 {{id}} 前的檢查",
+      "descriptionBlocked": "有問題阻止了這次啟動。處理後再重新啟動 Pipeline。",
+      "descriptionConfirm": "為每個問題選擇處理方式，然後啟動。",
+      "descriptionReady": "查看檢查結果，然後啟動。",
+      "changedWhileConfirming": "你確認期間 {{id}} 已被修改。檢查已重新執行，請在啟動前重新查看。",
+      "staleTitle": "以下答覆已不再適用，未被採用：",
+      "choiceLabel": "{{subject}} 的答覆",
+      "showPassed": "顯示通過的檢查（{{count}}）",
+      "hidePassed": "隱藏通過的檢查",
+      "cancel": "取消",
+      "close": "關閉",
+      "start": "啟動",
+      "starting": "正在啟動…",
+      "groups": {
+        "block": "阻止啟動",
+        "confirm": "需要你的答覆",
+        "warn": "警告",
+        "pass": "已通過"
+      },
+      "behavior": {
+        "BLOCK": "已阻止",
+        "CONFIRM": "待答覆",
+        "WARN": "警告",
+        "PASS": "通過"
+      },
+      "plan": {
+        "title": "各目標的載入方式",
+        "target": "目標",
+        "load": "載入",
+        "onFullLoad": "全量載入時"
+      },
+      "notice": {
+        "titleWarnings": "{{id}} 已啟動，但有警告",
+        "titleStarted": "{{id}} 已啟動",
+        "titleNotStarted": "{{id}} 未啟動",
+        "definitionChanged": "定義已修改",
+        "staleTitle": "因問題已不再提出而未採用的答覆",
+        "dismiss": "關閉 {{id}} 的啟動提示"
+      }
+    },
     "table": {
       "modified": "最後修改",
       "resourceName": "資源名稱",
@@ -759,6 +825,14 @@
         "noTableOptions": "沒有符合的現有資料表，你可以輸入新的名稱。",
         "noUpstreamTables": "尚未選擇上游資料表。",
         "writeMode": "寫入模式",
+        "onFullLoad": "全量載入時",
+        "onFullLoadPlaceholder": "保留現有資料（預設）",
+        "onFullLoadOptions": {
+          "append": "保留現有資料",
+          "clear": "先清空",
+          "fail": "非空時拒絕"
+        },
+        "writeModeDefault": "更新或插入（預設）",
         "sourceScope": "Source 資料表範圍",
         "openSourceScope": "全部資料表",
         "configuredSourceScope": "範圍內 {{count}} 項",
@@ -1883,15 +1957,10 @@
     "title": "State store",
     "intro": "Tapstate 保存檢視的地方。pipeline 建立的每個檢視都寫入預設 store。",
     "listLabel": "State store 清單",
-    "add": "新增 store",
-    "addLimit": "此版本只支援一個 store",
     "default": "預設",
-    "delete": "刪除",
     "fields": {
       "type": "類型",
       "location": "資料庫",
-      "checks": "檢查",
-      "usage": "用量",
       "access": "存取"
     },
     "managed": {
@@ -1913,9 +1982,7 @@
     "settings": "設定",
     "sectionsLabel": "設定分區",
     "sections": {
-      "stateStore": "State store",
-      "members": "成員",
-      "apiKeys": "API 金鑰"
+      "stateStore": "State store"
     }
   },
   "storage": {

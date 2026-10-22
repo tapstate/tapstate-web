@@ -6,28 +6,41 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   apiFetch,
+  createPipelineDraft,
   deletePipelineDraft,
   getPipelineDraft,
+  getStartChecks,
   listPipelines,
   listPipelineDrafts,
   listSources,
+  navigate,
   runPipeline,
   stopPipeline,
 } = vi.hoisted(() => ({
   apiFetch: vi.fn(),
+  createPipelineDraft: vi.fn(),
   deletePipelineDraft: vi.fn(),
   getPipelineDraft: vi.fn(),
+  getStartChecks: vi.fn(),
   listPipelines: vi.fn(),
   listPipelineDrafts: vi.fn(),
   listSources: vi.fn(),
+  navigate: vi.fn(),
   runPipeline: vi.fn(),
   stopPipeline: vi.fn(),
 }))
 
+vi.mock('@tanstack/react-router', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@tanstack/react-router')>()),
+  useNavigate: () => navigate,
+}))
+
 vi.mock('@/service/source-client', () => ({ listSources }))
 vi.mock('@/service/pipelines/pipeline-client', () => ({
+  createPipelineDraft,
   deletePipelineDraft,
   getPipelineDraft,
+  getStartChecks,
   listPipelineDrafts,
   listPipelines,
   runPipeline,
@@ -48,7 +61,42 @@ vi.mock('./wizard-builder', () => ({
   WizardBuilder: () => <div data-testid="wizard-builder">Wizard builder</div>,
 }))
 
+import type { StartCheckReport } from '@/service/pipelines/pipeline-client'
+
+import fixture from '../start-checks/__fixtures__/client-fixture-v1.json'
 import { PipelinesPage } from './pipelines-page'
+
+const answerable: StartCheckReport = fixture.answerable
+const leadFinding = 'target-not-empty/views/lead'
+const driftFinding = 'derived-schema-drift/join_orders'
+
+/** The error a start stopped by its start checks rejects with, as the Pipeline client builds it. */
+function startRefusal(report: StartCheckReport) {
+  return Object.assign(new Error('Starting new_import needs an answer to 2 questions.'), {
+    kind: 'server',
+    status: 409,
+    code: 'lifecycle.start-needs-confirmation',
+    params: { pipeline: 'new_import', count: 2 },
+    startChecks: report,
+    decisionsApplied: [],
+  })
+}
+
+function startChecksDialog() {
+  return document.querySelector<HTMLElement>('[data-testid="start-checks-dialog"]')
+}
+
+function dialogButton(text: string) {
+  return [...(startChecksDialog()?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find(
+    (candidate) => candidate.textContent?.trim() === text,
+  )
+}
+
+function answerRadio(finding: string, action: string) {
+  return startChecksDialog()?.querySelector<HTMLElement>(
+    `[data-check-item="${finding}"] [data-check-choice="${action}"] [role="radio"]`,
+  )
+}
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
@@ -130,6 +178,8 @@ beforeEach(() => {
   getPipelineDraft.mockResolvedValue({ etag: '"3"' })
   deletePipelineDraft.mockResolvedValue(undefined)
   apiFetch.mockResolvedValue({ ok: true })
+  createPipelineDraft.mockResolvedValue(undefined)
+  navigate.mockReset()
 })
 
 afterEach(async () => {
@@ -460,6 +510,96 @@ describe('PipelinesPage', () => {
     expect(document.querySelector('[data-testid="pipeline-creation-dialog"]')).toBeNull()
   })
 
+  it('offers only supported builders and creates a pipeline with either selected mode', async () => {
+    await renderPage()
+
+    const openCreation = async () => {
+      await act(async () => elementWithText('button', 'Create')?.click())
+      await vi.waitFor(() =>
+        expect(document.querySelector('[data-testid="pipeline-creation-dialog"]')).not.toBeNull(),
+      )
+      return document.querySelector<HTMLElement>('[data-testid="pipeline-creation-dialog"]')!
+    }
+    const setPipelineId = async (dialog: HTMLElement, value: string) => {
+      const input = dialog.querySelector<HTMLInputElement>(
+        'input[aria-describedby="pipeline-create-id-hint"]',
+      )
+      expect(input).not.toBeNull()
+      await act(async () => {
+        if (!input) return
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(
+          input,
+          value,
+        )
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+      })
+      return input
+    }
+    const submit = (dialog: HTMLElement) =>
+      dialog.querySelector<HTMLButtonElement>('.pipeline-create-dialog__submit')
+
+    const wizardDialog = await openCreation()
+    const modeButtons = [
+      ...wizardDialog.querySelectorAll<HTMLButtonElement>('button[aria-pressed]'),
+    ]
+    expect(modeButtons).toHaveLength(2)
+    expect(wizardDialog.textContent).not.toContain('DuckDB SQL')
+    expect(wizardDialog.textContent).not.toContain('Build with AI')
+
+    const dagOption = modeButtons.find((button) =>
+      button.textContent?.includes('Build with DAG Designer'),
+    )
+    const wizardOption = modeButtons.find((button) =>
+      button.textContent?.includes('Pipeline builder'),
+    )
+    expect(dagOption?.getAttribute('aria-pressed')).toBe('true')
+    await act(async () => wizardOption?.click())
+    expect(wizardOption?.getAttribute('aria-pressed')).toBe('true')
+
+    const invalidId = await setPipelineId(wizardDialog, 'invalid id')
+    expect(invalidId?.getAttribute('aria-invalid')).toBe('true')
+    expect(submit(wizardDialog)?.disabled).toBe(true)
+    expect(createPipelineDraft).not.toHaveBeenCalled()
+
+    await setPipelineId(wizardDialog, 'wizard_pipeline')
+    expect(submit(wizardDialog)?.disabled).toBe(false)
+    await act(async () => submit(wizardDialog)?.click())
+    await vi.waitFor(() => expect(createPipelineDraft).toHaveBeenCalledTimes(1))
+    expect(createPipelineDraft.mock.calls[0]?.[0]).toBe('wizard_pipeline')
+    expect(createPipelineDraft.mock.calls[0]?.[1]).toMatchObject({
+      mode: 'wizard',
+      graph: null,
+      wizard: { root: { id: 'root' } },
+    })
+    expect(navigate).toHaveBeenCalledWith({
+      to: '/pipelines/$pipelineId/edit',
+      params: { pipelineId: 'wizard_pipeline' },
+    })
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-testid="pipeline-creation-dialog"]')).toBeNull(),
+    )
+
+    const dagDialog = await openCreation()
+    const dagModeOption = [
+      ...dagDialog.querySelectorAll<HTMLButtonElement>('button[aria-pressed]'),
+    ].find((button) => button.textContent?.includes('Build with DAG Designer'))
+    expect(dagModeOption?.getAttribute('aria-pressed')).toBe('true')
+    await setPipelineId(dagDialog, 'dag_pipeline')
+    await act(async () => submit(dagDialog)?.click())
+
+    await vi.waitFor(() => expect(createPipelineDraft).toHaveBeenCalledTimes(2))
+    expect(createPipelineDraft.mock.calls[1]?.[0]).toBe('dag_pipeline')
+    expect(createPipelineDraft.mock.calls[1]?.[1]).toMatchObject({
+      mode: 'dag',
+      graph: { nodes: [], edges: [] },
+      wizard: null,
+    })
+    expect(navigate).toHaveBeenLastCalledWith({
+      to: '/pipelines/$pipelineId/edit',
+      params: { pipelineId: 'dag_pipeline' },
+    })
+  })
+
   it('omits the Explorer while keeping the Pipeline table as the editor entry point', async () => {
     await renderPage()
 
@@ -482,5 +622,164 @@ describe('PipelinesPage', () => {
     await vi.waitFor(() =>
       expect(container?.textContent).toContain('No pipelines have been stored in this workspace.'),
     )
+  })
+
+  it('asks start checks in the shared dialog and re-sends the answers with the report hash', async () => {
+    const warning = answerable.findings.find(({ behavior }) => behavior === 'WARN')!
+    runPipeline.mockRejectedValueOnce(startRefusal(answerable)).mockResolvedValueOnce({
+      pipelineId: 'new_import',
+      startChecks: { ...answerable, outcome: 'READY', findings: [warning] },
+      decisionsApplied: [
+        {
+          finding: leadFinding,
+          action: 'clear',
+          kind: 'CHANGE_DEFINITION',
+          changes: [{ element: 'lead', field: 'on_full_load', from: 'append', to: 'clear' }],
+          contentHash: 'e'.repeat(64),
+        },
+        { finding: driftFinding, action: 'accept', kind: 'RUN_OPERATION', changes: [] },
+      ],
+      staleDecisions: [],
+    })
+    await renderPage()
+    await vi.waitFor(() => expect(container?.textContent).toContain('new_import'))
+
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="Pipeline lifecycle actions for new_import"]',
+        )
+        ?.click(),
+    )
+    await act(async () => elementWithText('[role="menuitem"]', 'Start')?.click())
+
+    await vi.waitFor(() => expect(startChecksDialog()).not.toBeNull())
+    expect(startChecksDialog()?.getAttribute('role')).toBe('alertdialog')
+    expect(runPipeline).toHaveBeenCalledTimes(1)
+    expect(runPipeline).toHaveBeenLastCalledWith('new_import', apiFetch)
+    expect(startChecksDialog()?.textContent).toContain(answerable.findings[0]!.message)
+    expect(dialogButton('Start')?.disabled).toBe(true)
+
+    await act(async () => answerRadio(leadFinding, 'clear')?.click())
+    expect(
+      startChecksDialog()?.querySelector(
+        `[data-check-item="${leadFinding}"] [data-check-choice="clear"] [data-check-choice-preview]`,
+      )?.textContent,
+    ).toContain('lead: on_full_load append → clear')
+    expect(dialogButton('Start')?.disabled).toBe(true)
+    await act(async () => answerRadio(driftFinding, 'accept')?.click())
+    expect(dialogButton('Start')?.disabled).toBe(false)
+    await act(async () => dialogButton('Start')?.click())
+
+    await vi.waitFor(() => expect(runPipeline).toHaveBeenCalledTimes(2))
+    expect(runPipeline).toHaveBeenLastCalledWith('new_import', apiFetch, {
+      decisions: [
+        { finding: leadFinding, action: 'clear' },
+        { finding: driftFinding, action: 'accept' },
+      ],
+      ifMatch: `"${answerable.contentHash}"`,
+    })
+    await vi.waitFor(() => expect(startChecksDialog()).toBeNull())
+
+    const notice = document.querySelector<HTMLElement>('[data-testid="pipeline-start-notice"]')
+    expect(notice?.getAttribute('role')).toBe('status')
+    expect(notice?.textContent).toContain('new_import started with warnings')
+    expect(notice?.textContent).toContain(warning.message)
+    expect(notice?.textContent).toContain('lead: on_full_load append → clear')
+    expect(container?.querySelector('td [data-testid="pipeline-start-notice"]')).toBeNull()
+
+    await act(async () => new Promise((resolve) => window.setTimeout(resolve, 50)))
+    expect(document.querySelector('[data-testid="pipeline-start-notice"]')).not.toBeNull()
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>('[aria-label="Dismiss start notice for new_import"]')
+        ?.click(),
+    )
+    expect(document.querySelector('[data-testid="pipeline-start-notice"]')).toBeNull()
+  })
+
+  it('re-reads the start checks after a version conflict and lists the answers no longer asked', async () => {
+    const fresh: StartCheckReport = {
+      ...answerable,
+      contentHash: 'd'.repeat(64),
+      findings: answerable.findings.filter(({ key }) => key !== driftFinding),
+    }
+    runPipeline
+      .mockRejectedValueOnce(startRefusal(answerable))
+      .mockRejectedValueOnce(
+        Object.assign(new Error('Pipeline new_import changed.'), {
+          status: 412,
+          code: 'pipeline.version-conflict',
+          params: { id: 'new_import' },
+          startChecks: null,
+          decisionsApplied: [],
+        }),
+      )
+      .mockResolvedValueOnce({ pipelineId: 'new_import' })
+    getStartChecks.mockResolvedValueOnce(fresh)
+    await renderPage()
+    await vi.waitFor(() => expect(container?.textContent).toContain('new_import'))
+
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="Pipeline lifecycle actions for new_import"]',
+        )
+        ?.click(),
+    )
+    await act(async () => elementWithText('[role="menuitem"]', 'Start')?.click())
+    await vi.waitFor(() => expect(startChecksDialog()).not.toBeNull())
+    await act(async () => answerRadio(leadFinding, 'keep')?.click())
+    await act(async () => answerRadio(driftFinding, 'accept')?.click())
+    await act(async () => dialogButton('Start')?.click())
+
+    await vi.waitFor(() =>
+      expect(getStartChecks).toHaveBeenCalledWith('new_import', 'start', apiFetch),
+    )
+    await vi.waitFor(() =>
+      expect(
+        startChecksDialog()?.querySelector('[data-start-checks-changed]')?.textContent,
+      ).toContain('new_import changed while you were confirming.'),
+    )
+    expect(startChecksDialog()?.querySelector('[data-start-checks-stale]')?.textContent).toContain(
+      `${driftFinding} → accept`,
+    )
+    expect(startChecksDialog()?.querySelector(`[data-check-item="${driftFinding}"]`)).toBeNull()
+    expect(answerRadio(leadFinding, 'keep')?.getAttribute('aria-checked')).toBe('true')
+    expect(document.querySelector('[role="alert"].pipeline-mutation-feedback')).toBeNull()
+
+    await act(async () => dialogButton('Start')?.click())
+    await vi.waitFor(() => expect(runPipeline).toHaveBeenCalledTimes(3))
+    expect(runPipeline).toHaveBeenLastCalledWith('new_import', apiFetch, {
+      decisions: [{ finding: leadFinding, action: 'keep' }],
+      ifMatch: `"${fresh.contentHash}"`,
+    })
+    await vi.waitFor(() => expect(startChecksDialog()).toBeNull())
+  })
+
+  it('cancels a start from the start-check dialog without reporting a failure', async () => {
+    runPipeline.mockRejectedValueOnce(startRefusal(answerable))
+    await renderPage()
+    await vi.waitFor(() => expect(container?.textContent).toContain('new_import'))
+
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="Pipeline lifecycle actions for new_import"]',
+        )
+        ?.click(),
+    )
+    await act(async () => elementWithText('[role="menuitem"]', 'Start')?.click())
+    await vi.waitFor(() => expect(startChecksDialog()).not.toBeNull())
+    await act(async () => dialogButton('Cancel')?.click())
+
+    await vi.waitFor(() => expect(startChecksDialog()).toBeNull())
+    expect(runPipeline).toHaveBeenCalledTimes(1)
+    expect(document.querySelector('.pipeline-mutation-feedback')).toBeNull()
+    expect(
+      document.querySelector<HTMLButtonElement>(
+        '[aria-label="Pipeline lifecycle actions for new_import"]',
+      )?.disabled,
+    ).toBe(false)
   })
 })

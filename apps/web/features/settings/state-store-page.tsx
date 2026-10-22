@@ -20,6 +20,7 @@ export function StateStorePage() {
   const sourcesQuery = useQuery({ queryKey: ['sources'], queryFn: () => listSources(apiFetch) })
   const profile = getDeploymentProfile()
   const managed = stateStoreSource(sourcesQuery.data ?? [], profile)
+  const database = managed ? stateStoreDatabase(managed) : null
 
   return (
     <section className="settings-page">
@@ -36,19 +37,6 @@ export function StateStorePage() {
           >
             {t('stateStorePage.sections.stateStore')}
           </span>
-          {/* Listed so the page reads as the approved design does; not in this release. */}
-          <span
-            className="settings-sections__item settings-sections__item--disabled"
-            aria-disabled="true"
-          >
-            {t('stateStorePage.sections.members')}
-          </span>
-          <span
-            className="settings-sections__item settings-sections__item--disabled"
-            aria-disabled="true"
-          >
-            {t('stateStorePage.sections.apiKeys')}
-          </span>
         </nav>
         <div className="settings-page__body">
           {snapshot && <StorageHealthPanel snapshot={snapshot} />}
@@ -61,14 +49,6 @@ export function StateStorePage() {
             <h2 className="text-foreground text-[15px] font-semibold">
               {t('stateStorePage.title')}
             </h2>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-[12px]">
-                {t('stateStorePage.addLimit')}
-              </span>
-              <Button type="button" variant="outline" size="sm" disabled>
-                {t('stateStorePage.add')}
-              </Button>
-            </div>
           </div>
           <p className="text-muted-foreground text-[13px]">{t('stateStorePage.intro')}</p>
           {sourcesQuery.isLoading ? (
@@ -112,18 +92,12 @@ export function StateStorePage() {
                       )}
                     </dd>
                   </div>
-                  <div>
-                    <dt>{t('stateStorePage.fields.location')}</dt>
-                    <dd>{stateStoreDatabase(managed) ?? t('overview.notReported')}</dd>
-                  </div>
-                  <div>
-                    <dt>{t('stateStorePage.fields.checks')}</dt>
-                    <dd>{t('overview.notReported')}</dd>
-                  </div>
-                  <div>
-                    <dt>{t('stateStorePage.fields.usage')}</dt>
-                    <dd>{t('overview.notReported')}</dd>
-                  </div>
+                  {database !== null && (
+                    <div>
+                      <dt>{t('stateStorePage.fields.location')}</dt>
+                      <dd>{database}</dd>
+                    </div>
+                  )}
                   <div>
                     <dt>{t('stateStorePage.fields.access')}</dt>
                     <dd>
@@ -135,20 +109,6 @@ export function StateStorePage() {
                     </dd>
                   </div>
                 </dl>
-                <div className="settings-store__actions">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled
-                    title={t('stateStorePage.managed.deleteReason')}
-                  >
-                    {t('stateStorePage.delete')}
-                  </Button>
-                  <span className="text-muted-foreground text-[12px]">
-                    {t('stateStorePage.managed.deleteReason')}
-                  </span>
-                </div>
               </li>
             </ul>
           )}

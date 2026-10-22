@@ -4,9 +4,16 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { PipelineClientError, type PipelineDraft } from '@/service/pipelines/pipeline-client'
+import {
+  PipelineClientError,
+  type PipelineDraft,
+  type StartCheckReport,
+} from '@/service/pipelines/pipeline-client'
+
+import type { WizardBuilderProps } from '../components/reference-wizard/ReferenceWizardBuilder'
 
 const {
+  getDeploymentProfile,
   getPipelineDraft,
   previewPipelineDraft,
   streamPipelinePreview,
@@ -17,9 +24,10 @@ const {
   listConnectors,
   listSources,
   apiFetch,
-  useRealReferenceWizard,
+  wizardRendering,
 } = vi.hoisted(() => ({
-  useRealReferenceWizard: { value: false },
+  wizardRendering: { real: false },
+  getDeploymentProfile: vi.fn(),
   getPipelineDraft: vi.fn(),
   previewPipelineDraft: vi.fn(),
   streamPipelinePreview: vi.fn(),
@@ -59,6 +67,8 @@ vi.mock('@/service/source-client', async (importOriginal) => ({
   listSources,
 }))
 
+vi.mock('../model/deployment-profile', () => ({ getDeploymentProfile }))
+
 vi.mock('@/stores/auth-store', () => ({
   useAuthStore: <T,>(selector: (state: { apiFetch: typeof fetch }) => T) => selector({ apiFetch }),
 }))
@@ -67,16 +77,16 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', async (importOr
   const actual =
     await importOriginal<typeof import('../components/reference-wizard/ReferenceWizardBuilder')>()
   return {
-    ReferenceWizardBuilder: (
-      props: import('../components/reference-wizard/ReferenceWizardBuilder').WizardBuilderProps,
-    ) => {
-      if (useRealReferenceWizard.value) return <actual.ReferenceWizardBuilder {...props} />
+    ReferenceWizardBuilder: (props: WizardBuilderProps) => {
+      if (wizardRendering.real) return <actual.ReferenceWizardBuilder {...props} />
       const {
         initial,
         onChange,
         footer,
         actions,
+        notices,
         readOnly,
+        destinationName,
         livePreview,
         livePreviewStatus,
         onInspectPlan,
@@ -85,10 +95,13 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', async (importOr
         <section
           className="wizard-reference-editor-column"
           data-read-only={readOnly ? 'true' : 'false'}
+          data-destination-name={destinationName}
+          data-destination-source={initial.destinationSourceId}
           data-root-table={initial.root?.table ?? ''}
           data-live-preview-status={livePreviewStatus}
           data-live-preview-run={livePreview?.runId || ''}
         >
+          {notices}
           <button
             data-testid="change-wizard"
             disabled={readOnly}
@@ -130,7 +143,39 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', async (importOr
   }
 })
 
+import fixture from '../start-checks/__fixtures__/client-fixture-v1.json'
 import { WizardBuilder } from './wizard-builder'
+
+const answerable: StartCheckReport = fixture.answerable
+const leadFinding = 'target-not-empty/views/lead'
+const driftFinding = 'derived-schema-drift/join_orders'
+
+/** The error a start stopped by its start checks rejects with, as the Pipeline client builds it. */
+function startRefusal(report: StartCheckReport) {
+  return Object.assign(new Error('Starting wizard-ui-test needs an answer.'), {
+    status: 409,
+    code: 'lifecycle.start-needs-confirmation',
+    params: { pipeline: 'wizard-ui-test', count: 2 },
+    startChecks: report,
+    decisionsApplied: [],
+  })
+}
+
+function startChecksDialog() {
+  return document.querySelector<HTMLElement>('[data-testid="start-checks-dialog"]')
+}
+
+function dialogButton(text: string) {
+  return [...(startChecksDialog()?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find(
+    (candidate) => candidate.textContent?.trim() === text,
+  )
+}
+
+function answerRadio(finding: string, action: string) {
+  return startChecksDialog()?.querySelector<HTMLElement>(
+    `[data-check-item="${finding}"] [data-check-choice="${action}"] [role="radio"]`,
+  )
+}
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
@@ -163,8 +208,10 @@ const initialDraft: PipelineDraft = {
 }
 
 beforeEach(() => {
+  wizardRendering.real = false
+  getDeploymentProfile.mockReturnValue('on-prem')
   vi.clearAllMocks()
-  useRealReferenceWizard.value = false
+  wizardRendering.real = false
   listSources.mockResolvedValue([{ id: 'mysql', connector: 'mysql' }])
   listConnectors.mockResolvedValue([
     {
@@ -209,6 +256,7 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root?.unmount())
   container?.remove()
+  vi.unstubAllEnvs()
   root = undefined
   container = undefined
 })
@@ -217,7 +265,7 @@ describe('WizardBuilder publish flow', () => {
   it.each([false, true])(
     'blocks every recovery-required Wizard launch (guided=%s)',
     async (guided) => {
-      useRealReferenceWizard.value = true
+      wizardRendering.real = true
       const draft: PipelineDraft = {
         ...initialDraft,
         wizard: {
@@ -287,6 +335,114 @@ describe('WizardBuilder publish flow', () => {
       expect(runPipeline).not.toHaveBeenCalled()
     },
   )
+  it('offers the marked Atlas destination through the real picker without treating it as an input', async () => {
+    wizardRendering.real = true
+    getDeploymentProfile.mockReturnValue('cloud')
+    vi.stubEnv('VITE_LOCAL_DEVELOPMENT', 'true')
+    listSources.mockResolvedValue([
+      { id: 'mysql', connector: 'mysql' },
+      { id: 'mongo_out', connector: 'mongodb' },
+      { id: 'atlas_out', connector: 'mongodb-atlas', metadata: { labels: { store: 'true' } } },
+    ])
+    listConnectors.mockResolvedValue([
+      { id: 'mysql', name: 'MySQL', sink: false },
+      { id: 'mongodb', name: 'MongoDB', sink: true, writeModes: ['upsert'] },
+      { id: 'mongodb-atlas', name: 'MongoDB Atlas', sink: true, writeModes: ['upsert'] },
+    ])
+    const draft = {
+      ...initialDraft,
+      wizard: {
+        ...initialDraft.wizard!,
+        output: {
+          kind: 'atlas',
+          config: { sourceId: 'atlas_out', table: 'orders', writeMode: 'upsert' },
+        },
+      },
+    }
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () =>
+      root?.render(
+        <QueryClientProvider client={client}>
+          <WizardBuilder pipelineId={draft.pipelineId} draft={draft} etag='"1"' />
+        </QueryClientProvider>,
+      ),
+    )
+    await vi.waitFor(() =>
+      expect(
+        container?.querySelector('[aria-labelledby="wizard-destination-source-label"]'),
+      ).not.toBeNull(),
+    )
+    const trigger = container.querySelector<HTMLButtonElement>(
+      '[aria-labelledby="wizard-destination-source-label"]',
+    )
+    await act(async () => trigger?.click())
+    await vi.waitFor(() => expect(document.body.querySelector('[role="listbox"]')).not.toBeNull())
+    const options = Array.from(document.body.querySelectorAll('[role="option"]')).map(
+      (item) => item.textContent,
+    )
+    expect(options.some((text) => text?.includes('atlas_out'))).toBe(true)
+    expect(options.some((text) => text?.includes('mongo_out'))).toBe(false)
+    expect(getSourceSchema).not.toHaveBeenCalledWith('atlas_out', expect.anything())
+  })
+
+  it('keeps Cloud wizard output aligned with its Atlas picker in a local build', async () => {
+    vi.stubEnv('VITE_LOCAL_DEVELOPMENT', 'true')
+    let resolveSchemas!: (value: { tables: [] }) => void
+    getSourceSchema.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSchemas = resolve
+      }),
+    )
+    getDeploymentProfile.mockReturnValue('cloud')
+    listSources.mockResolvedValue([
+      { id: 'mongo_out', connector: 'mongodb' },
+      { id: 'atlas_out', connector: 'mongodb-atlas', metadata: { labels: { store: 'true' } } },
+      { id: 'mysql', connector: 'mysql' },
+    ])
+    listConnectors.mockResolvedValue([
+      { id: 'mongodb', name: 'MongoDB', sink: true, writeModes: ['upsert'] },
+      { id: 'mongodb-atlas', name: 'MongoDB Atlas', sink: true, writeModes: ['upsert'] },
+      { id: 'mysql', name: 'MySQL', sink: false },
+    ])
+    const cloudDraft = {
+      ...initialDraft,
+      wizard: {
+        ...initialDraft.wizard!,
+        output: {
+          kind: 'atlas',
+          config: { sourceId: 'missing', table: 'orders', writeMode: 'upsert' },
+        },
+      },
+    }
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={cloudDraft.pipelineId} draft={cloudDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(queryClient.getQueryState(['wizard', 'sources'])?.status).toBe('success')
+        expect(queryClient.getQueryState(['wizard', 'connectors'])?.status).toBe('success')
+      })
+    })
+    expect(container?.textContent).toContain('Loading sources')
+    await act(async () => resolveSchemas({ tables: [] }))
+    await vi.waitFor(() => {
+      expect(
+        container?.querySelector('[data-destination-name]')?.getAttribute('data-destination-name'),
+      ).toBe('MongoDB Atlas (atlas_out)')
+      expect(container?.querySelector('[data-destination-source="atlas_out"]')).not.toBeNull()
+    })
+  })
 
   it('compiles an unfinished destination only for inspection without saving the temporary name', async () => {
     const draft: PipelineDraft = {
@@ -714,7 +870,9 @@ describe('WizardBuilder publish flow', () => {
     await act(async () => {
       container?.querySelector<HTMLButtonElement>('[data-testid="change-wizard"]')?.click()
     })
-    await vi.waitFor(() => expect(streamPipelinePreview).toHaveBeenCalledTimes(2))
+    await act(async () => {
+      await vi.waitFor(() => expect(streamPipelinePreview).toHaveBeenCalledTimes(2))
+    })
 
     expect(firstSignal?.aborted).toBe(true)
     expect(previewPipelineDraft).toHaveBeenCalledWith(
@@ -980,5 +1138,114 @@ describe('WizardBuilder publish flow', () => {
     expect(container?.textContent).toContain(
       'The draft is saved and published, but this Pipeline is already running.',
     )
+  })
+
+  it('asks start checks in the shared dialog and saves on the draft the answer rewrote', async () => {
+    const warning = answerable.findings.find(({ behavior }) => behavior === 'WARN')!
+    const publishedDraft = {
+      ...initialDraft,
+      revision: 2,
+      publishedDraftRevision: 2,
+      publishedArtifactHash: 'a'.repeat(64),
+    }
+    const rewrittenDraft: PipelineDraft = {
+      ...publishedDraft,
+      revision: 3,
+      publishedDraftRevision: 3,
+      publishedArtifactHash: 'e'.repeat(64),
+      wizard: {
+        ...initialDraft.wizard,
+        output: {
+          kind: 'source',
+          config: {
+            sourceId: 'mysql',
+            table: 'codex_wizard_component_test',
+            writeMode: 'append',
+            onFullLoad: 'clear',
+          },
+        },
+      },
+    }
+    getPipelineDraft
+      .mockResolvedValueOnce({ draft: publishedDraft, etag: '"2"' })
+      .mockResolvedValueOnce({ draft: rewrittenDraft, etag: '"3"' })
+    runPipeline.mockRejectedValueOnce(startRefusal(answerable)).mockResolvedValueOnce({
+      pipelineId: initialDraft.pipelineId,
+      startChecks: { ...answerable, outcome: 'READY', findings: [warning] },
+      decisionsApplied: [
+        {
+          finding: leadFinding,
+          action: 'clear',
+          kind: 'CHANGE_DEFINITION',
+          changes: [{ element: 'lead', field: 'on_full_load', from: 'append', to: 'clear' }],
+          contentHash: 'e'.repeat(64),
+        },
+      ],
+      staleDecisions: [],
+    })
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={initialDraft.pipelineId} draft={initialDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await act(async () => new Promise((resolve) => window.setTimeout(resolve, 50)))
+    await act(async () => {
+      Array.from(
+        container?.querySelectorAll<HTMLButtonElement>('[data-workflow-header] button') || [],
+      )
+        .find((button) => button.textContent?.includes('Save & start'))
+        ?.click()
+    })
+
+    await vi.waitFor(() => expect(startChecksDialog()).not.toBeNull())
+    expect(startChecksDialog()?.getAttribute('role')).toBe('alertdialog')
+    expect(publishPipelineDraft).toHaveBeenCalledTimes(1)
+    expect(runPipeline).toHaveBeenCalledTimes(1)
+    expect(container?.querySelector('[data-read-only="true"]')).not.toBeNull()
+    expect(dialogButton('Start')?.disabled).toBe(true)
+    await act(async () => answerRadio(leadFinding, 'clear')?.click())
+    await act(async () => answerRadio(driftFinding, 'accept')?.click())
+    await act(async () => dialogButton('Start')?.click())
+
+    await vi.waitFor(() => expect(runPipeline).toHaveBeenCalledTimes(2))
+    expect(runPipeline).toHaveBeenLastCalledWith(initialDraft.pipelineId, expect.any(Function), {
+      decisions: [
+        { finding: leadFinding, action: 'clear' },
+        { finding: driftFinding, action: 'accept' },
+      ],
+      ifMatch: `"${answerable.contentHash}"`,
+    })
+    await vi.waitFor(() => expect(getPipelineDraft).toHaveBeenCalledTimes(2))
+    await vi.waitFor(() => expect(startChecksDialog()).toBeNull())
+    const notice = container?.querySelector('[data-testid="pipeline-start-notice"]')
+    expect(notice?.textContent).toContain(warning.message)
+    expect(notice?.textContent).toContain('lead: on_full_load append → clear')
+    await vi.waitFor(() =>
+      expect(container?.querySelector('[data-read-only="false"]')).not.toBeNull(),
+    )
+
+    await act(async () => {
+      container?.querySelector<HTMLButtonElement>('[data-testid="change-wizard"]')?.click()
+    })
+    await act(async () => new Promise((resolve) => window.setTimeout(resolve, 650)))
+    expect(updatePipelineDraft).toHaveBeenLastCalledWith(
+      initialDraft.pipelineId,
+      expect.objectContaining({
+        wizard: expect.objectContaining({
+          output: expect.objectContaining({
+            config: expect.objectContaining({ onFullLoad: 'clear' }),
+          }),
+        }),
+      }),
+      '"3"',
+      expect.any(Function),
+    )
+    expect(container?.querySelector('[data-testid="pipeline-start-notice"]')).not.toBeNull()
   })
 })

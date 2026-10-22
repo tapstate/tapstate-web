@@ -12,7 +12,11 @@ import { useAuthStore } from '@/stores/auth-store'
 import type { PipelineCreationMode } from './pipeline-creation-mode'
 
 import { getDeploymentProfile } from '../../model/deployment-profile'
-import { pipelineCreationModes } from './pipeline-creation-mode'
+import {
+  availablePipelineCreationModes,
+  normalizePipelineCreationMode,
+  pipelineCreationModes,
+} from './pipeline-creation-mode'
 import { PipelineCreationOption } from './pipeline-creation-option'
 import { PipelineCreationPreview as Preview } from './pipeline-creation-preview'
 
@@ -34,7 +38,9 @@ export function PipelineCreationDialog({
   const { t } = useTranslation()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const queryClient = useQueryClient()
-  const [mode, setMode] = useState<PipelineCreationMode>(defaultMode)
+  const [mode, setMode] = useState<PipelineCreationMode>(() =>
+    normalizePipelineCreationMode(defaultMode),
+  )
   const [pipelineId, setPipelineId] = useState('')
   const [description, setDescription] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
@@ -198,7 +204,7 @@ export function PipelineCreationDialog({
                     </div>
                     <div className="flex flex-col gap-4">
                       <div className="grid grid-cols-2 gap-2 max-sm:grid-cols-1">
-                        {pipelineCreationModes.map((candidate) => (
+                        {availablePipelineCreationModes.map((candidate) => (
                           <PipelineCreationOption
                             key={candidate.value}
                             definition={candidate}
