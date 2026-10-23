@@ -596,6 +596,8 @@
         "titleWarnings": "{{id}} started with warnings",
         "titleStarted": "{{id}} started",
         "titleNotStarted": "{{id}} did not start",
+        "warningDescription": "Start check warning: {{messages}}",
+        "warningFallback": "A start check returned a warning.",
         "definitionChanged": "Definition changed",
         "staleTitle": "Answers not used because the question is no longer asked",
         "dismiss": "Dismiss start notice for {{id}}"
