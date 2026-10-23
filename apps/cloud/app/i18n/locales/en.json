@@ -503,6 +503,12 @@
       "recipients": "At least one recipient is required.",
       "quietHours": "Set both quiet-hour fields in HH:mm format."
     },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {{page}}",
+      "pageOf": "Page {{page}} of {{pages}}"
+    },
     "detailTitle": "Event detail",
     "detail": {
       "id": "Event ID"

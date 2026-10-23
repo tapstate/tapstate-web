@@ -281,6 +281,13 @@ export interface NotificationDelivery {
   sentAt?: string | null
 }
 
+export interface NotificationDeliveryPage {
+  items: NotificationDelivery[]
+  page: number
+  size: number
+  total: number
+}
+
 export interface RegisterInput {
   email: string
   password: string
@@ -568,9 +575,9 @@ export const cloudApi = {
       `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/alert-policies/${encodeURIComponent(policyId)}`,
       deleteRequest,
     ),
-  deliveries: async (orgId: string) =>
-    asList<NotificationDelivery>(
-      await request<unknown>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/deliveries`),
+  deliveries: (orgId: string, page = 0, size = 20) =>
+    request<NotificationDeliveryPage>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/deliveries?page=${page}&size=${size}`,
     ),
   resolveCluster: async (clusterId: string, orgId: string) => {
     const query = new URLSearchParams({ orgId })
