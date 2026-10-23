@@ -137,7 +137,7 @@ export function ConnectionTestResult({ report, error }: ConnectionTestResultProp
         </p>
       </section>
       {report.checks.length > 0 && (
-        <ul className="divide-divider-subtle bg-components-input-bg-normal divide-y rounded-lg px-4 py-2">
+        <ul className="divide-divider-subtle bg-components-input-bg-normal divide-y rounded-lg px-3 py-2">
           {report.checks.map((check) => (
             <CheckResultRow key={`${check.name}:${check.status}`} check={check} />
           ))}
@@ -165,7 +165,7 @@ export function ConnectionTestResultDialog({
           <DialogTitle>{t('sources.test.title')}</DialogTitle>
           <DialogDescription>{t('sources.test.description')}</DialogDescription>
         </DialogHeader>
-        <DialogBody className="grid gap-4 px-6 py-5 sm:px-8">
+        <DialogBody className="grid gap-4 px-6 py-5">
           <ConnectionTestResult report={report} error={error} />
         </DialogBody>
       </DialogContent>
