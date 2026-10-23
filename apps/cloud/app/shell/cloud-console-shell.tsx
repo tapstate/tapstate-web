@@ -117,7 +117,7 @@ export function CloudConsoleShell({
 
   return (
     <div
-      className={`app-shell flex h-screen gap-2 overflow-hidden p-2 font-sans transition-colors duration-200 select-none ${darkMode ? 'dark text-[#f0f1f3]' : 'text-[#202124]'}`}
+      className={`app-shell flex h-screen gap-2 overflow-hidden p-2 font-sans transition-colors duration-200 ${darkMode ? 'dark text-[#f0f1f3]' : 'text-[#202124]'}`}
     >
       <aside className="flex h-full w-[240px] shrink-0 flex-col px-2 py-3 text-neutral-800 dark:text-neutral-200">
         <div className="relative mb-3 px-1">
