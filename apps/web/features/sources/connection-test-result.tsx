@@ -65,7 +65,7 @@ export function ConnectionTestResult({ report, error }: ConnectionTestResultProp
       : t('sources.test.errors.unknown')
 
     return (
-      <section className="bg-components-input-bg-normal grid gap-3 rounded-lg p-4" role="alert">
+      <section className="bg-background-section-burn grid gap-3 rounded-lg p-4" role="alert">
         <div className="flex items-start gap-3">
           <AlertCircle
             className="text-text-destructive mt-0.5 size-4 shrink-0"
@@ -137,7 +137,7 @@ export function ConnectionTestResult({ report, error }: ConnectionTestResultProp
         </p>
       </section>
       {report.checks.length > 0 && (
-        <ul className="divide-divider-subtle bg-components-input-bg-normal divide-y rounded-lg px-3 py-2">
+        <ul className="divide-divider-subtle bg-background-section-burn divide-y rounded-lg px-3 py-2">
           {report.checks.map((check) => (
             <CheckResultRow key={`${check.name}:${check.status}`} check={check} />
           ))}
@@ -159,7 +159,7 @@ export function ConnectionTestResultDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         closeLabel={t('ask.actions.close')}
-        className="max-h-[calc(100dvh-2rem)] overflow-hidden sm:max-w-[640px]"
+        className="max-h-[calc(100dvh-2rem)] overflow-hidden"
       >
         <DialogHeader>
           <DialogTitle>{t('sources.test.title')}</DialogTitle>

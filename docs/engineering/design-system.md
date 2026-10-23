@@ -31,6 +31,38 @@ The CSS entry imports `src/themes/theme.css`, `light.css`, `dark.css`, `styles/u
 
 The full public export list and exact prop types live in `packages/dify-ui/package.json` and each `src/<component>/index.tsx`. Do not document guessed props in app code. `cn`, `merge-props`, `use-render` and ref helpers have public subpaths for package composition.
 
+## Complete scene routing
+
+Read DESIGN.md's **Source fidelity is a delivery requirement**, **Surface and token decision table**, and **Scene contracts** before composing a new surface. This catalog routes every current public export to its contract; it does not replace the actual implementation or component README. Review this table against `package.json` whenever exports change.
+
+| Scene / responsibility                                              | Public subpaths                                                                                               | Contract owner                                                                                  |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Action and shortcut                                                 | `button`, `icon-button`, `toggle`, `kbd`                                                                      | DESIGN.md: Buttons, icon buttons and action groups; each component source                       |
+| Form boundary and label/error association                           | `form`, `field`, `fieldset`                                                                                   | `docs/forms.md`, `docs/accessible-names-and-descriptions.md`                                    |
+| Plain, grouped, multiline and numeric entry                         | `input`, `input-group`, `textarea`, `number-field`                                                            | `src/internal/form-control.ts`; DESIGN.md: Forms and schema-driven controls                     |
+| Boolean, exclusive and range choice                                 | `checkbox`, `checkbox-group`, `radio-group`, `radio-card`, `switch`, `slider`, `segmented-control`            | `docs/selection.md`; component and application RadioCard source                                 |
+| Closed/searchable/free-form collection values                       | `select`, `combobox`, `autocomplete`                                                                          | `docs/selection.md`; typed collections, selected labels and popup lifecycle                     |
+| Search and applied filter                                           | `search-input`, `chip`                                                                                        | Ported application source; DESIGN.md: Menus, filters and contextual help                        |
+| Civil date, time and timestamp entry                                | `date-picker`, `time-picker`, `date-time-picker`                                                              | `src/date-time/README.md`; preserve commit/localization semantics                               |
+| Focused and confirming modal work                                   | `dialog`, `alert-dialog`                                                                                      | `docs/overlays.md`; DESIGN.md: Dialogs, drawers and nested surfaces                             |
+| Contextual side work                                                | `drawer`                                                                                                      | `docs/overlays.md`; matching application drawer composition                                     |
+| Command surface                                                     | `dropdown-menu`, `context-menu`                                                                               | `src/internal/menu.ts`, component source and READMEs                                            |
+| Nearby interactive explanation / supplementary label / link preview | `popover`, `infotip`, `tooltip`, `preview-card`                                                               | `docs/overlays.md`; preserve distinct interaction intent                                        |
+| Location, panel selection and paging                                | `breadcrumb`, `tabs`, `pagination`                                                                            | Component source; DESIGN.md: Lists, detail pages and navigation                                 |
+| Hierarchy, expansion, scrolling and separation                      | `file-tree`, `collapsible`, `scroll-area`, `separator`                                                        | Component source; preserve keyboard, scroll and expanded state                                  |
+| Identity, metadata and state                                        | `avatar`, `badge`, `status-dot`                                                                               | Source variants; Badge is neutral metadata, StatusDot carries operational status                |
+| Transient/persistent feedback and measured work                     | `toast`, `alert`, `spinner`, `progress`, `meter`                                                              | Source component semantics; DESIGN.md: Empty, loading, error, notification and progress         |
+| Initial load, first use and filtered empty                          | `skeleton`, `loading-placeholder`, `first-empty-action-card`, `filter-empty-state`                            | Matching application composition; retain source SVG/illustration and hierarchy                  |
+| Theme, direction and composition infrastructure                     | `styles.css`, `direction-provider`, `cn`, `merge-props`, `use-render`, `use-merged-refs`, `use-ref-with-init` | Styling/overlay/accessibility guides and helper implementations; no independent visual defaults |
+
+### Content surfaces versus control surfaces
+
+Use `bg-background-section-burn` for Source connection-test results and recessed result/trace/grouped content. The source references and exact pinned light/dark values are in DESIGN.md's surface table. Keep `components-input-bg-normal` and its hover/active/disabled siblings on actual input-family controls. Some source pages deliberately use an input surface for text output; record that specific page mapping instead of treating it as the rule for every result panel.
+
+Dialog header/body/footer side padding is 24px from `dialog/index.tsx`. A DialogContent alone does not pad arbitrary children: use DialogBody. Inner result-well padding is a separate measurement; Source check results use 12px from the text-result composition. Do not merge outer and inner spacing into a guessed 32px page default.
+
+IconButton's `md` is 24px and `lg` is 32px; Button's `medium` is 32px. These are different size APIs. The glyph and the hit area are also different measurements. Copy the source call site's icon dimensions instead of applying a blanket SVG rule.
+
 `StatusDot` source defaults are rounded squares. Product status markers retain the existing circular silhouette by passing `className="rounded-full"` at the call site; choose `small` or `medium` to preserve the existing surface's size, and keep the source status color.
 
 ## Verified dimensions and states

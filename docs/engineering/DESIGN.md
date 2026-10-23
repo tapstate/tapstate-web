@@ -8,6 +8,8 @@ The system-level interaction inventory and per-flow review protocol live in [ui-
 
 Source baseline: Dify `3552815c89415716dfd9cac80fd7c73aac3b051e`, 2026-10-17. The component implementation comes from `packages/dify-ui` in this repository. Page rules below were read from the upstream knowledge list header, dataset list/card, document header, and the package's styling/overlay/form guides. When a rule and a remembered screenshot disagree, inspect that pinned source and record the decision before inventing a new variant.
 
+Application-scene research added on 2026-10-23 was read from the user's local Dify checkout at `65e1fbcc2b4fd43f0bb78b58922eb543983df78e`. This supplies the result/trace, datasource authorization, workflow-log, empty-state and API-test examples in the scene contracts below. It does not silently upgrade the vendored component revision. Use the vendored implementation for exact component anatomy; record any later application recipe separately with its actual revision. When prose or an upstream guide contradicts the copied runtime source, inspect and resolve the difference before implementation; do not present the prose as proof of the runtime behavior.
+
 ## Visual philosophy
 
 1. **Work first.** The title, primary action, filters, content, and state form a visible hierarchy. Decoration does not compete with the user's task. Dify's knowledge list uses a compact sticky title row, a second toolbar row, then a content grid; its document view uses title/description, then filters/actions, then the list.
@@ -16,6 +18,135 @@ Source baseline: Dify `3552815c89415716dfd9cac80fd7c73aac3b051e`, 2026-10-17. Th
 4. **One action weight.** Each view has one obvious primary action. Secondary and ghost actions are quieter. Destructive intent uses the component's `tone`; do not create a new red button style. Place low-frequency item actions in a menu.
 5. **State is part of the composition.** Grid loading skeletons preserve final card geometry; the document table's initial load uses a centered source Spinner. Choose from the analogous source page instead of imposing one loading treatment everywhere. First-use empty states and filtered-empty states have different messages and actions. Errors show recovery. Disabled, invalid, selected, hover, active, and keyboard-focus states come from component APIs and Base UI data attributes; color alone never carries status.
 6. **Content ownership.** App code owns labels, translated text, permissions, data and navigation. The vendored component owns geometry, focus, dismissal, layers, field behavior and variants. Keep styling changes in token/theme mapping or the vendored source, with upstream provenance, rather than scattered `className` corrections.
+
+## Source fidelity is a delivery requirement
+
+For every new UI and every visual correction, read this document and the relevant source family before editing. A semantic-looking token or a successful build does not establish a source match. The pinned component source, the analogous application page, and explicit user decisions determine the result, in that order of responsibility: components own their parts; application references own composition; user decisions own intentional product differences.
+
+Record a source mapping in the PR or page audit for each changed composition:
+
+| Surface / part                        | Source revision and file                              | Source component / classes   | Tapstate component / classes           | Difference and reason                                                                                    | Rendered evidence                             |
+| ------------------------------------- | ----------------------------------------------------- | ---------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Example: connection-test result group | Pinned theme; upstream `workflow/run/result-text.tsx` | `bg-background-section-burn` | `ConnectionTestResult` uses that token | Structured check rows are Tapstate data; this is an adaptation, not a copied Dify connection-test screen | Desktop / narrow, success / warning / failure |
+
+Reject a change with an unaccounted-for background, padding, radius, shadow, icon size, typography role, focus treatment or overlay part. Do not add responsive overrides such as `sm:px-8` because they feel roomier. Inspect an analogous responsive source; otherwise keep the component default and identify the missing reference. Do not call a composition an exact copy when its layout or interaction was adapted. Never use a generic aesthetic skill to override the source system.
+
+Before calling a correction complete, inspect the rendered result. Specifically check padding on the actual content element, computed display/alignment of rows, right-side status/actions, long text, scrolling, and generated utility styles. Typecheck and lint are necessary code checks, not visual evidence. Preserve a real screenshot or browser observation in the page audit; record unavailable states as unverified.
+
+## Surface and token decision table
+
+Choose a surface by its purpose, not by sampling a grey from a screenshot. Values below identify the pinned theme and must not become literal app colors. Use the same semantic token in dark mode; alpha surfaces must be inspected on their actual parent.
+
+| Purpose                                             | Source token / composition                                                             | Required distinction                                                                                   |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Normal content sheet                                | `bg-background-default`                                                                | Primary reading surface, separate from the branded shell                                               |
+| Quiet section                                       | `bg-background-section`                                                                | Subtle grouping; not a disabled input                                                                  |
+| Recessed content, result, trace or grouped metadata | `bg-background-section-burn`                                                           | Light `#f2f4f7`; dark `rgb(24 24 27 / 0.6)`. Prefer for the Source connection-test check/error regions |
+| Input / number / select / search                    | `components-input-*` and the selected primitive                                        | These are control-state surfaces, not a substitute for general content sections                        |
+| Floating menu / popup                               | `components-panel-*`, `internal/menu.ts`, `internal/overlay.ts`                        | Keep source border, blur, shadow, placement and lifecycle together                                     |
+| Hover / press / selection                           | `state-base-*`, `state-accent-*` or the owning component's selected token              | Do not turn a static section background into an interaction state                                      |
+| Informational / success / warning / destructive     | Component variants and `text-*`, `state-*`, `StatusDot`                                | Status is also text or an icon. Success is not the product's primary accent                            |
+| Dividers / outline                                  | `divider-subtle`, `divider-regular`, component border tokens                           | Controls, row rules and floating panels do not share one invented border color                         |
+| Text                                                | `text-primary`, `text-secondary`, `text-tertiary`, placeholder/disabled/semantic roles | Keep labels, supporting content, placeholders and disabled values distinct                             |
+| Code and graph                                      | Source syntax / `workflow-*` tokens                                                    | Their specialized palette does not become the ordinary page palette                                    |
+
+Evidence: vendored `src/themes/{light,dark,theme}.css`, `src/internal/{form-control,menu,overlay}.ts`; upstream `web/app/components/workflow/run/{result-text,workflow-tool-tracing}.tsx`, `rag-pipeline/components/panel/test-run/result/index.tsx`, `header/account-setting/data-source-page-new/card.tsx`, `plugins/plugin-auth/plugin-auth.tsx`.
+
+`background-section-burn` is a common content surface, not a blanket replacement for all backgrounds inside dialogs. For example, upstream `tools/edit-custom-collection-modal/test-api.tsx` deliberately uses `components-input-bg-normal` for its textual API output. The Source check list follows the result/trace grouping references above and the user's explicit section-burn direction. Retain this distinction when adding other result types.
+
+## Scene contracts
+
+These contracts cover the current public component catalog and the application compositions used by Web and Cloud. A new scene must map to one of them or add a source-backed contract here before delivery. Coverage here describes implementation rules; it does not declare every existing screen visually audited.
+
+### Dialogs, drawers and nested surfaces
+
+- Compose centered work as `DialogContent` → `DialogHeader` → `DialogBody` → optional `DialogFooter`. Content itself does not supply body padding. Put a form across these parts with `contents` when required; retain the flex/min-height chain. The default body owns scrolling between the fixed header/footer. Never place ordinary body content directly under the popup and assume header padding applies to it.
+- The pinned header is `px-6 pt-6 pb-3`; body is `px-6 py-3`; footer is `px-6 pt-5 pb-6`. Horizontal inset is 24px. The default close control is 32px at `top-5 inset-e-5`. Source results retain the default 480px dialog width. A wider composition requires explicit source-backed width as well as a viewport clamp; changing only `max-width` does not change the source `w-120` width or justify different interior insets.
+- Modal surface, backdrop, radius, shadow, transition and nested stack transform belong to `src/internal/overlay.ts` and `src/dialog/index.tsx`. A dialog is not a generic card with a backdrop. Avoid duplicate close affordances when one top close is sufficient; decision dialogs still need clear cancel/confirm actions.
+- Use `AlertDialog` for explicit confirmation, with object name, consequence, pending and failure states. Preserve its outside-dismiss/Escape contract rather than guessing that all modal types dismiss identically.
+- Drawers use the exported root, portal, backdrop, viewport, popup and content. Side placement, swipe direction, viewport clearance, width and scroll regions come from the analogous source page. The tool test drawer is 600px with 8px viewport insets; that is its recipe, not the width for every side panel.
+- A nested picker/menu/dialog uses its primitive's portal and focus lifecycle. No local z-index escalation, manually portalled clone, full-screen click blocker or force-mounted invisible popup.
+
+Sources: vendored `src/{dialog,alert-dialog,drawer}/index.tsx`, `docs/overlays.md`; upstream `tools/edit-custom-collection-modal/test-api.tsx` and `app/create-app-modal/index.tsx`.
+
+### Results, diagnostics and operational state
+
+- Separate the overall outcome from individual checks. Use a concise semantic success/failure icon and text; each check has a left title/detail region and a nonshrinking status at the right of its title row. Long messages wrap in the text region. Status must not be pushed below a detail simply because the name grows.
+- Source test result/error content uses `bg-background-section-burn`. Its check well uses `px-3 py-2` (12px horizontal, 8px vertical), within the dialog body's 24px side inset. The 12px well inset follows the test-output composition; structured check rows and their right-side statuses are the documented Tapstate adaptation.
+- Present the user-facing failure and recovery first. Keep diagnostic codes/details in a reachable disclosure; preserve all existing error information and do not reinterpret a failed request as an empty success.
+- A result section can be inline in an editor or live in a contextual drawer; keep the source page's trigger/result relationship. List-triggered Tapstate connection results currently use a focused dialog. Do not silently change this behavior and describe it as source parity.
+- Logs use the source workflow-log table/filter/empty-state recipes. Monitoring uses actual operational data; zero is zero and unavailable is unavailable. Do not start polling a screen with no backend condition that can produce updates; refresh behavior is a product contract, independent of visual styling.
+
+Sources: upstream `workflow/run/{result-text,status-container,workflow-tool-tracing}.tsx`, `rag-pipeline/components/panel/test-run/result/index.tsx`, `tools/edit-custom-collection-modal/test-api.tsx`, `app/workflow-log/list.tsx`, `app/log/empty-element.tsx`; vendored `src/{status-dot,collapsible,spinner,progress,meter}`. The Source result-row alignment and polling constraints are explicit Tapstate requirements.
+
+### Forms and schema-driven controls
+
+- Text, password, numeric, multiline, prefixes/suffixes and embedded actions use `input`, `number-field`, `textarea` and `input-group`. The wrapper owns one surface/ring; the inner native input is transparent and flexible. Do not nest a styled input inside a second styled input shell.
+- A normal Input uses `rounded-lg px-3 py-1.75 system-sm-regular`; its transparent normal border, hover border, active background and 2px accent focus ring come from `internal/form-control.ts`. Preserve the same focus appearance in Formily. Do not add an Ant focus halo, permanent outline, fixed-height inner input with duplicate vertical padding, or a second password border.
+- Formily owns schema, draft, validation and submission. Adapters bind public control props, preserve native labels/descriptions/errors, and normalize only the domain values. Remaining Ant-backed components need a documented component-specific token/anatomy mapping, including their popup portals; a global `.ant-*` override is not a complete migration.
+- Select closed choices with `select`, searchable persistent values with `combobox`, free text with suggestions with `autocomplete`. Pass the source value-to-label collection. A selected source shows one connector mark, one label and optional secondary metadata on one aligned row; no duplicated icon or raw serialized value.
+- Read mode and similar mutually exclusive modes use `segmented-control`. Its track is `rounded-[10px] p-0.5 gap-px`; items are `h-7 rounded-lg px-2 py-1` with source active/hover/disabled states. Tabs choose panels instead. Do not substitute a handcrafted group of unrelated buttons.
+- Checkbox/radio groups use fieldset/legend and real group semantics. A single Switch represents a boolean. Sliders keep labels, keyboard values and units. Date/time pickers use their source civil-date/time value model, localized label/format and commit/cancel behavior.
+- Search uses `search-input` or the exact input-group pattern of the selected source page. Clear behavior, Escape, IME and accessible names are part of the control. Search alignment/width follows the enclosing composition; the connector chooser's centered 400px maximum is an explicit Tapstate requirement, not a global search width.
+
+Sources: vendored `docs/{forms,selection,styling}.md`, `src/internal/form-control.ts`, `src/{field,fieldset,form,input,input-group,textarea,number-field,select,combobox,autocomplete,checkbox,checkbox-group,radio-group,switch,slider,segmented-control,date-time,search-input}`; upstream `base/search-input`.
+
+### Buttons, icon buttons and action groups
+
+- Use the public Button variant/tone/size. A `secondary` action is a normal independent Button unless the analogous source explicitly groups commands. Save is secondary and Save & start is primary in the Pipeline Builder; its footer is not the DAG editor's split/grouped toolbar.
+- Button sizes are small/medium/large = 24/32/36px. IconButton sizes are a different API: xs/sm/md/lg/xl = 16/20/24/32/36px. Glyph size comes from the source call site; do not infer it from the hit area or globally force every SVG to 24px.
+- Use one accessible IconButton for more actions. Keep its glyph size stable before/after hover and when its menu opens. The menu items use the source 32px item geometry; an icon must not inherit a page-level large SVG rule.
+- Loading/disabled/pending preserve button geometry and block duplicate submission. Tooltip names and keyboard focus remain available; a tooltip does not replace `aria-label`.
+- Keep one primary action for a decision area. Resource names can carry link emphasis; secondary source/pipeline navigation uses quiet text plus meaningful connector identity. Avoid making every table column a blue primary link.
+
+Sources: vendored `src/{button,icon-button,toggle,kbd}/index.tsx`, `src/internal/{focus,menu}.ts`; upstream workflow operator/header components. Builder action priority, quiet secondary navigation and stable more-action icons are explicit Tapstate requirements.
+
+### Menus, filters and contextual help
+
+- Commands use DropdownMenu/ContextMenu; field values use Select/Combobox. Preserve menu labels, groups, separators, destructive item semantics, submenus and typeahead. Source menu rows are `mx-1 h-8 gap-1 rounded-lg px-2`; popup padding and scroll padding are both `py-1`/`scroll-py-1`.
+- Filter chips use the source `chip` selected/empty/clear composition. A selected filter has the source secondary-button surface and clear glyph; it is not a plain select with an added x. Reset uses the real unfiltered value. Date filters retain their source picker, selected interval and clearing semantics.
+- Popover is reachable interactive content. Tooltip is supplementary naming for an existing action. Infotip is a deliberate information trigger; PreviewCard enhances a real link without owning essential data. Preserve touch, keyboard, outside-dismiss and focus return.
+- Popup width/height derive from anchor/available-space variables, with viewport collision handling. Do not hardcode an unclamped width or detach it from the trigger during scrolling.
+
+Sources: vendored `src/{dropdown-menu,context-menu,chip,popover,tooltip,infotip,preview-card,select,combobox,autocomplete}`, `src/internal/{menu,placement,overlay}.ts`, `docs/{selection,overlays}.md`.
+
+### Lists, detail pages and navigation
+
+- Use the resource's real comparison task to choose table, card grid or list/detail panes. Dify has both bare document tables and section-burn workflow-log headers; do not flatten these different recipes into one universal table style.
+- Match row/cell density to the source table, with normal comparison rows rather than forcing `h-8` onto every business row. Keep row hover, active selection and focus distinct. A connector mark is the actual registered image, with no invented border/frame; preserve source-specific frames only where the chosen recipe uses them.
+- Identity, status, metadata and actions have different text weights. Long identity/secondary text truncates or wraps deliberately without displacing the action. Numeric columns use stable formatting; preserve real zero values. Paginate when the full-list task requires it, with range/loading/error behavior.
+- Breadcrumbs identify location; Tabs choose detail panels and keep the source indicator/focus behavior; side navigation chooses routes. Never use SegmentedControl as a visual replacement for any of these without matching semantics.
+- Collection/file hierarchies use `file-tree`; expanding is separate from selecting and opening. Avatar, Badge and Kbd carry identity, neutral metadata and shortcuts respectively. StatusDot is operational state, not a fabricated colored Badge variant.
+- Detail pages lead with identity/status/actions, then the main operational question, then secondary metadata. Keep the existing shell and data model. Settings use field groups and source save/validation boundaries; authentication, provider configuration, permissions and billing use the corresponding source form/card/modal rather than a generic dashboard recipe.
+
+Sources: upstream `datasets/list`, `datasets/documents/components`, `app/workflow-log/list.tsx`, `app/log/list.tsx`, `app-sidebar`, `header/account-setting/data-source-page-new/card.tsx`, `billing/plan/index.tsx`; vendored `src/{breadcrumb,tabs,pagination,file-tree,avatar,badge,kbd,separator}`.
+
+### Empty, loading, error, notification and progress
+
+- First-use empty, filtered empty, loading, unavailable and error are separate states. Port the relevant source composition, including its illustration/SVG, copy hierarchy and action; do not drop a source asset and retain only the words. Logs empty content uses section-burn; a FilterEmptyState keeps its own source fade/geometry.
+- Spinner represents active work; Skeleton/LoadingPlaceholder preserve the analogous source page's layout. Progress and Meter preserve true values/ranges and accessible labels. Do not use a spinner forever for an unavailable backend.
+- Toast uses one application owner and one notification per completed action. Keep mutation feedback out of replayed effects and do not emit the same success from both dialog and parent. Persistent errors stay next to the task with recovery; source Alert is its specific informational composition, not a universal result background.
+- Toast completion does not replace cache invalidation/real data refresh. An optimistic state must have a defined failure path and may not show success before the action succeeds.
+
+Sources: vendored `src/{toast,alert,filter-empty-state,first-empty-action-card,skeleton,loading-placeholder,spinner,progress,meter}`; upstream `app/log/empty-element.tsx`, `datasets/list/first-empty-state`, `datasets/documents/components/list.tsx`.
+
+### Editors, previews, upload and visualization
+
+- Canvas controls, selector and node panel follow the graph recipe below. Code/JSON/result previews preserve syntax semantics, wrap/scroll choices, copy feedback, source surface and font role. Copy requires a real successful clipboard result.
+- File selection shows accepted types, progress, cancel/retry, validation and selected-file removal using the matching source uploader pattern. A file preview is not an ordinary text input; the native input remains accessible and server validation stays authoritative.
+- A chart uses truthful data/ranges, source text and surrounding controls. The visual series or graph layout may be Tapstate-specific; surrounding menus, filters, empty/error states and overlays still follow this contract. Distinguish an unavailable metric from zero.
+- ScrollArea owns its viewport/scrollbar geometry. Collapsible owns expanded state, disclosure semantics and transition. DirectionProvider handles source logical direction; layout additions must not hardcode physical placement where the source uses logical properties.
+
+Sources: upstream `workflow/run/{result-panel,result-text,output-panel}.tsx`, `base/file-uploader`, `workflow/{operator,block-selector,nodes/_base}`; vendored `src/{scroll-area,collapsible,direction-provider}`, plus the relevant component source for every surrounding control.
+
+### Responsive layout, theme, localization and accessibility
+
+- Match source behavior at desktop and narrow viewports. Keep controls within viewport, constrain popups, give long content a real scroll owner, and preserve reachable primary/close actions. Do not shrink labels/icons independently to disguise overflow.
+- Inspect light and dark on the actual parent surface. A token name can have alpha values in dark mode; copying its light hex loses the relationship. Keep the source gradient/blur/shadow where that source composition uses it; generic design-skill bans do not override source fidelity.
+- Use `system-*` roles with their associated line-height/weight. Preserve registered connector marks and source SVGs. Check English, Simplified Chinese and Traditional Chinese, long names, numbers, empty values and CJK line wrapping. Never infer padding or glyph dimensions from a resized screenshot.
+- All controls need real names and label relationships. Check keyboard entry, selection, Escape, focus return, form submit, invalid/disabled/read-only and reduced-motion behavior as applicable. `accessible-names-and-descriptions.md` and component READMEs own the detailed contract.
+
+Sources: vendored `docs/{styling,forms,selection,overlays,accessible-names-and-descriptions}.md`, `src/styles`, `src/themes`, component READMEs and the analogous application page's responsive classes.
 
 ## Page recipes
 
