@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { ConnectorConfigField } from '@/service/source-client'
 
-import { formilyAntdPrefixCls, formilyAntdTheme } from '@/components/formily/formily-antd-provider'
+import { formilyAntdPrefixCls, formilyDifyTheme } from '@/components/formily/formily-antd-provider'
 
 import { ConnectorFormily } from './connector-formily'
 import {
@@ -125,17 +125,17 @@ function fieldControl(label: string) {
 describe('ConnectorFormily', () => {
   it('uses the shared Tapstate tokens for Formily controls', () => {
     expect(formilyAntdPrefixCls).toBe('tap')
-    expect(formilyAntdTheme.token).toMatchObject({
+    expect(formilyDifyTheme.token).toMatchObject({
       borderRadius: 8,
-      colorBgContainer: 'var(--ts-bg-surface)',
+      colorBgContainer: 'var(--color-components-input-bg-normal)',
       colorBorder: 'transparent',
-      colorPrimary: 'var(--ts-brand-primary)',
-      colorText: 'var(--ts-text-primary)',
-      controlOutline: 'color-mix(in srgb, var(--ts-border-focus) 20%, transparent)',
+      colorPrimary: 'var(--color-text-accent)',
+      colorText: 'var(--color-text-primary)',
+      controlOutline: 'color-mix(in srgb, var(--color-state-accent-solid) 20%, transparent)',
     })
   })
 
-  it('renders Formily radio groups as shadcn-style segmented button groups', async () => {
+  it('renders Formily radio groups with the vendored Dify segmented control', async () => {
     const changes: Array<Record<string, unknown>> = []
     container = document.createElement('div')
     document.body.append(container)
@@ -168,17 +168,15 @@ describe('ConnectorFormily', () => {
       )
     })
 
-    const group = container.querySelector<HTMLElement>('[role="group"][aria-label="Strategy"]')
-    expect(group?.dataset.slot).toBe('button-group')
-    expect(group?.classList).toContain('bg-muted')
-    expect(group?.classList).toContain('border-border')
+    const group = container.querySelector<HTMLElement>('[role="radiogroup"][aria-label="Strategy"]')
+    expect(group?.className).toContain('components-segmented-control-bg-normal')
 
-    const buttons = [...(group?.querySelectorAll<HTMLButtonElement>('button') ?? [])]
-    expect(buttons.map((button) => button.textContent)).toEqual(['Balanced', 'Fast'])
-    expect(buttons[0]?.getAttribute('aria-pressed')).toBe('true')
-    expect(buttons[1]?.getAttribute('aria-pressed')).toBe('false')
+    const options = [...(group?.querySelectorAll<HTMLButtonElement>('[role="radio"]') ?? [])]
+    expect(options.map((option) => option.textContent)).toEqual(['Balanced', 'Fast'])
+    expect(options[0]?.getAttribute('aria-checked')).toBe('true')
+    expect(options[1]?.getAttribute('aria-checked')).toBe('false')
 
-    await act(async () => buttons[1]?.click())
+    await act(async () => options[1]?.click())
 
     expect(changes.at(-1)).toMatchObject({ strategy: 'fast' })
   })

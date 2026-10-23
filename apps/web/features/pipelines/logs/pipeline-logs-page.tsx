@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils'
 
 import { PipelineRefreshControls } from '../components/pipeline-refresh-controls'
 import { PipelineLogDetailPanel } from './pipeline-log-detail-panel'
+import { PipelineLogsEmptyState } from './pipeline-logs-empty-state'
 import styles from './pipeline-logs-page.module.css'
 import { usePipelineLogsQuery } from './pipeline-logs-queries'
 
@@ -309,49 +310,19 @@ export function PipelineLogsPage({ pipelineId }: { pipelineId: string }) {
               </div>
             </section>
           ) : !hasLines ? (
-            <section className="pipeline-logs__state">
-              <div className="pipeline-logs__state-card">
-                <h2 className="pipeline-logs__state-title">
-                  {t('pipelines.workspace.runtime.logs.emptyTitle')}
-                  {/* Mirrors Dify's workflow-log empty-state mark in app/log/empty-element.tsx. */}
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="text-text-secondary relative -top-3 -left-1.5 inline"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M5 6.5V5M8.93934 7.56066L10 6.5M10.0103 11.5H11.5103"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </h2>
-                <p className="pipeline-logs__state-description">
-                  {t('pipelines.workspace.runtime.logs.emptyBody')}
-                </p>
-              </div>
-            </section>
+            <PipelineLogsEmptyState
+              title={t('pipelines.workspace.runtime.logs.emptyTitle')}
+              description={t('pipelines.workspace.runtime.logs.emptyBody')}
+            />
           ) : visibleLines.length === 0 ? (
-            <section className="pipeline-logs__state">
-              <div className="pipeline-logs__state-card">
-                <h2 className="pipeline-logs__state-title">
-                  {t('pipelines.workspace.runtime.logs.filteredEmptyTitle')}
-                </h2>
-                <p className="pipeline-logs__state-description">
-                  {t(
-                    hasFilters
-                      ? 'pipelines.workspace.runtime.logs.filteredEmptyBody'
-                      : 'pipelines.workspace.runtime.logs.emptyBody',
-                  )}
-                </p>
-              </div>
-            </section>
+            <PipelineLogsEmptyState
+              title={t('pipelines.workspace.runtime.logs.filteredEmptyTitle')}
+              description={t(
+                hasFilters
+                  ? 'pipelines.workspace.runtime.logs.filteredEmptyBody'
+                  : 'pipelines.workspace.runtime.logs.emptyBody',
+              )}
+            />
           ) : (
             <div className="pipeline-logs__content">
               <div className="pipeline-logs__table">

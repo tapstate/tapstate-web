@@ -770,6 +770,143 @@
     color: var(--destructive);
   }
 
+  .source-connector-form .tap-formily-item {
+    min-width: 0;
+    margin: 0 0 16px;
+  }
+
+  .source-connector-form .tap-formily-item-layout-vertical .tap-formily-item-label {
+    display: flex;
+    min-height: 20px;
+    height: auto;
+    align-items: center;
+    padding: 0;
+  }
+
+  .source-connector-form .tap-formily-item-label-content {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 20px;
+  }
+
+  .source-connector-form .tap-formily-item-label-content label {
+    color: inherit;
+    font: inherit;
+    text-transform: capitalize;
+  }
+
+  .source-connector-form .tap-formily-item-control {
+    min-width: 0;
+    margin-top: 4px;
+  }
+
+  .source-connector-form
+    :where(.tap-input, .tap-input-affix-wrapper, .tap-input-number, .tap-select-selector) {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 32px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: var(--color-components-input-bg-normal);
+    color: var(--color-components-input-text-filled);
+    box-shadow: none;
+    font-family: inherit;
+    font-size: 13px;
+  }
+
+  .source-connector-form .tap-formily-item-control input.tap-input {
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 5px 11px !important;
+    line-height: 20px !important;
+  }
+
+  .source-connector-form .tap-formily-item-control .tap-input-affix-wrapper {
+    display: flex;
+    height: 32px !important;
+    align-items: center !important;
+    padding: 0 11px !important;
+    line-height: 20px !important;
+  }
+
+  .source-connector-form .tap-formily-item-control .tap-input-affix-wrapper input.tap-input {
+    height: 20px !important;
+    min-height: 20px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    line-height: 20px !important;
+  }
+
+  .source-connector-form .tap-formily-item-control .tap-input-number {
+    display: inline-flex;
+    height: 32px !important;
+    align-items: center !important;
+    padding: 0 28px 0 11px !important;
+  }
+
+  .source-connector-form .tap-formily-item-control .tap-input-number-input {
+    height: 20px !important;
+    min-height: 20px !important;
+    padding: 0 !important;
+    line-height: 20px !important;
+  }
+
+  .source-connector-form .tap-formily-item-control .tap-select-selector {
+    display: flex;
+    height: 32px !important;
+    align-items: center !important;
+    padding: 4px 28px 4px 11px !important;
+    line-height: 20px !important;
+  }
+
+  .source-connector-form .tap-formily-item-control input.tap-input::placeholder {
+    color: var(--color-components-input-text-placeholder);
+  }
+
+  .source-connector-form .tap-input:hover,
+  .source-connector-form .tap-input-affix-wrapper:hover,
+  .source-connector-form .tap-input-number:hover,
+  .source-connector-form .tap-select:hover .tap-select-selector {
+    border-color: var(--color-components-input-border-hover);
+    background: var(--color-components-input-bg-hover);
+  }
+
+  .source-connector-form .tap-input:focus,
+  .source-connector-form .tap-input-affix-wrapper:focus-within,
+  .source-connector-form .tap-input-number:focus-within,
+  .source-connector-form .tap-select-focused .tap-select-selector {
+    border-color: transparent;
+    box-shadow: 0 0 0 2px var(--color-state-accent-solid);
+  }
+
+  .source-connector-form .tap-input:focus,
+  .source-connector-form .tap-input-affix-wrapper:focus-within,
+  .source-connector-form .tap-input-number:focus-within {
+    border-color: transparent;
+    background: var(--color-components-input-bg-active);
+    box-shadow: 0 0 0 2px var(--color-state-accent-solid);
+  }
+
+  .source-connector-form .tap-select-focused .tap-select-selector {
+    background: var(--color-state-base-hover-alt);
+  }
+
+  .source-connector-form .tap-input::placeholder {
+    color: var(--color-components-input-text-placeholder);
+  }
+
+  .source-connector-form .tap-formily-item-help,
+  .source-connector-form .tap-formily-item-explain {
+    margin-top: 4px;
+    color: var(--color-text-destructive);
+    font-size: 12px;
+    line-height: 18px;
+  }
+
   @media (max-width: 760px) {
     .ask-panel {
       right: 12px;

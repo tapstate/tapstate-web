@@ -7,8 +7,13 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig(({ mode }) => {
   const localEnv = loadEnv(mode, process.cwd(), 'CLOUD_')
+  const legacyEnv = loadEnv(mode, process.cwd(), 'VITE_')
   const proxyTarget =
-    process.env.CLOUD_PROXY_TARGET || localEnv.CLOUD_PROXY_TARGET || 'http://localhost:8080'
+    process.env.CLOUD_PROXY_TARGET ||
+    localEnv.CLOUD_PROXY_TARGET ||
+    process.env.VITE_PROXY_TARGET ||
+    legacyEnv.VITE_PROXY_TARGET ||
+    'http://localhost:8080'
   const proxyOrigin = new URL(proxyTarget).origin
 
   return {

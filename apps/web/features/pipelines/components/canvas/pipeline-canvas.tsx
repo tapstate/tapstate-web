@@ -1,4 +1,5 @@
 import '@xyflow/react/dist/style.css'
+import { TooltipProvider } from '@langgenius/dify-ui/tooltip'
 import { useOptionalToast } from '@tapstate-web/ui'
 import {
   addEdge,
@@ -13,6 +14,7 @@ import {
   type NodeChange,
   type EdgeTypes,
   type NodeTypes,
+  type Viewport,
   useReactFlow,
   useEdgesState,
   useNodesState,
@@ -44,7 +46,7 @@ import {
 } from '../../model/pipeline-node-rules'
 import { PipelineNodeSelector } from '../node-library/pipeline-node-selector'
 import { PipelineCanvasNote } from './pipeline-canvas-note'
-import { readCanvasNotes } from './pipeline-canvas-notes'
+import { applyCanvasNotePositions, readCanvasNotes } from './pipeline-canvas-notes'
 import { PipelineCanvasOperator } from './pipeline-canvas-operator'
 import { PipelineCanvasToolbar } from './pipeline-canvas-toolbar'
 import { PipelineConnectionLine } from './pipeline-connection-line'
@@ -179,6 +181,15 @@ export function PipelineCanvasContent({
     setViewport: panViewport,
   } = useReactFlow()
 
+  const persistViewport = useCallback(
+    (nextViewport: Viewport) => {
+      if (readOnly) return
+      setViewport(nextViewport)
+      onLayoutChange(toLayout(nodesRef.current, nextViewport))
+    },
+    [onLayoutChange, readOnly, setViewport],
+  )
+
   const keepSelectedNodeVisible = useCallback(
     (nodeId: string) => {
       requestAnimationFrame(() => {
@@ -265,8 +276,10 @@ export function PipelineCanvasContent({
     nodesRef.current = nextNodes
     setNodes(nextNodes)
     onLayoutChange(toLayout(nextNodes, viewport))
-    void fitCanvasView({ padding: 0.3, maxZoom: 1, duration: 180 })
-  }, [fitCanvasView, onLayoutChange, setNodes, viewport])
+    void fitCanvasView({ padding: 0.3, maxZoom: 1, duration: 180 }).then(() => {
+      persistViewport(getViewport())
+    })
+  }, [fitCanvasView, getViewport, onLayoutChange, persistViewport, setNodes, viewport])
 
   useEffect(() => {
     if (notesPipelineIdRef.current !== pipelineId) {
@@ -563,133 +576,139 @@ export function PipelineCanvasContent({
   }
 
   return (
-    <>
-      <PipelineCanvasToolbar
-        interactionMode={interactionMode}
-        onInteractionModeChange={setInteractionMode}
-        onRequestNodeSelector={openNodeSelector}
-        onRequestNote={() => setPlacingNote((current) => !current)}
-        notePlacementActive={placingNote}
-        onOrganize={organizeNodes}
-        disabled={readOnly}
-      />
-      <PipelineNodeSelector
-        open={nodeInsertion !== null}
-        insertion={nodeInsertion}
-        sources={sources}
-        connectors={connectors}
-        sourceState={sourceState}
-        loadTables={loadTables}
-        onChoose={(choice) => {
-          if (!nodeInsertion) return
-          onAddNode(choice, nodeInsertion)
-          setNodeInsertion(null)
-        }}
-        onChooseMany={(choices) => {
-          if (!nodeInsertion) return
-          if (onAddNodes) onAddNodes(choices, nodeInsertion)
-          else choices.forEach((choice) => onAddNode(choice, nodeInsertion))
-          setNodeInsertion(null)
-        }}
-        onOpenChange={(open) => {
-          if (!open) setNodeInsertion(null)
-        }}
-        disabled={readOnly}
-      />
-      <PipelineCanvasOperator
-        canUndo={canUndo}
-        canRedo={canRedo}
-        historyPastCount={historyPastCount}
-        historyFutureCount={historyFutureCount}
-        onUndo={onUndo}
-        onRedo={onRedo}
-        onJumpHistory={onJumpHistory}
-        readOnly={readOnly}
-      />
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        connectionLineComponent={PipelineConnectionLine}
-        connectionLineType={ConnectionLineType.Bezier}
-        defaultViewport={graph.viewport ?? undefined}
-        fitView={fitView}
-        fitViewOptions={{ padding: 0.36, maxZoom: 0.92 }}
-        minZoom={0.25}
-        maxZoom={2}
-        onInit={() => setFitView(false)}
-        panOnDrag={interactionMode === 'hand'}
-        selectionOnDrag={interactionMode === 'pointer'}
-        nodesDraggable={!readOnly}
-        nodesConnectable={!readOnly}
-        onNodesChange={handleNodesChange}
-        onEdgesChange={handleEdgesChange}
-        onConnect={handleConnect}
-        isValidConnection={isValidConnection}
-        onNodeClick={(_, node) => {
-          if (node.type === 'note') return
-          onSelectionChange({
-            id: node.id,
-            label: node.data.label,
-            detail: node.data.detail,
-            description: node.data.description,
-            nodeType: node.data.nodeType,
-            connector: node.data.connector,
-            configuration: node.data.configuration,
-          })
-          keepSelectedNodeVisible(node.id)
-        }}
-        onPaneClick={(event) => {
-          if (placingNote) {
-            addNote({ x: event.clientX, y: event.clientY })
-            setPlacingNote(false)
-            return
-          }
-          preserveSelectionOnPaneClickRef.current = true
-          queueMicrotask(() => {
-            preserveSelectionOnPaneClickRef.current = false
-          })
-        }}
-        onMoveEnd={(event, nextViewport) => {
-          if (readOnly) return
-          setViewport(nextViewport)
-          if (!event) return
-          onLayoutChange(toLayout(nodesRef.current, nextViewport))
-        }}
-        onNodeDragStop={(_, node) => {
-          if (readOnly) return
-          if (node.type === 'note') {
-            updateNotes(
-              notes.map((note) =>
-                note.id === node.id ? { ...note, position: node.position } : note,
-              ),
+    <TooltipProvider delay={300} closeDelay={200}>
+      <>
+        <PipelineCanvasToolbar
+          interactionMode={interactionMode}
+          onInteractionModeChange={setInteractionMode}
+          onRequestNodeSelector={openNodeSelector}
+          onRequestNote={() => setPlacingNote((current) => !current)}
+          notePlacementActive={placingNote}
+          onOrganize={organizeNodes}
+          disabled={readOnly}
+        />
+        <PipelineNodeSelector
+          open={nodeInsertion !== null}
+          insertion={nodeInsertion}
+          sources={sources}
+          connectors={connectors}
+          sourceState={sourceState}
+          loadTables={loadTables}
+          onChoose={(choice) => {
+            if (!nodeInsertion) return
+            onAddNode(choice, nodeInsertion)
+            setNodeInsertion(null)
+          }}
+          onChooseMany={(choices) => {
+            if (!nodeInsertion) return
+            if (onAddNodes) onAddNodes(choices, nodeInsertion)
+            else choices.forEach((choice) => onAddNode(choice, nodeInsertion))
+            setNodeInsertion(null)
+          }}
+          onOpenChange={(open) => {
+            if (!open) setNodeInsertion(null)
+          }}
+          disabled={readOnly}
+        />
+        <PipelineCanvasOperator
+          canUndo={canUndo}
+          canRedo={canRedo}
+          historyPastCount={historyPastCount}
+          historyFutureCount={historyFutureCount}
+          onUndo={onUndo}
+          onRedo={onRedo}
+          onJumpHistory={onJumpHistory}
+          onViewportChange={persistViewport}
+          readOnly={readOnly}
+        />
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          connectionLineComponent={PipelineConnectionLine}
+          connectionLineType={ConnectionLineType.Bezier}
+          defaultViewport={graph.viewport ?? undefined}
+          fitView={fitView}
+          fitViewOptions={{ padding: 0.36, maxZoom: 0.92 }}
+          minZoom={0.25}
+          maxZoom={2}
+          onInit={() => setFitView(false)}
+          panOnDrag={interactionMode === 'hand'}
+          selectionOnDrag={interactionMode === 'pointer'}
+          nodesDraggable={!readOnly}
+          nodesConnectable={!readOnly}
+          onNodesChange={handleNodesChange}
+          onEdgesChange={handleEdgesChange}
+          onConnect={handleConnect}
+          isValidConnection={isValidConnection}
+          onNodeClick={(_, node) => {
+            if (node.type === 'note') return
+            onSelectionChange({
+              id: node.id,
+              label: node.data.label,
+              detail: node.data.detail,
+              description: node.data.description,
+              nodeType: node.data.nodeType,
+              connector: node.data.connector,
+              configuration: node.data.configuration,
+            })
+            keepSelectedNodeVisible(node.id)
+          }}
+          onPaneClick={(event) => {
+            if (placingNote) {
+              addNote({ x: event.clientX, y: event.clientY })
+              setPlacingNote(false)
+              return
+            }
+            preserveSelectionOnPaneClickRef.current = true
+            queueMicrotask(() => {
+              preserveSelectionOnPaneClickRef.current = false
+            })
+          }}
+          onMoveEnd={(event, nextViewport) => {
+            if (readOnly) return
+            setViewport(nextViewport)
+            if (!event) return
+            onLayoutChange(toLayout(nodesRef.current, nextViewport))
+          }}
+          onNodeDragStop={(_, node, draggedNodes) => {
+            if (readOnly) return
+            if (node.type === 'note') {
+              updateNotes(
+                applyCanvasNotePositions(
+                  notes,
+                  draggedNodes
+                    .filter((draggedNode) => draggedNode.type === 'note')
+                    .map(({ id, position }) => ({ id, position })),
+                ),
+              )
+              return
+            }
+            const nextNodes = nodesRef.current.map((current) =>
+              current.id === node.id ? { ...current, position: node.position } : current,
             )
-            return
-          }
-          const nextNodes = nodesRef.current.map((current) =>
-            current.id === node.id ? { ...current, position: node.position } : current,
-          )
-          nodesRef.current = nextNodes
-          setNodes(nextNodes)
-          onLayoutChange(toLayout(nextNodes, viewport ?? graph.viewport))
-        }}
-        onPaneContextMenu={(event) => {
-          if (readOnly) return
-          event.preventDefault()
-          openNodeSelector({
-            position: screenToFlowPosition({ x: event.clientX, y: event.clientY }),
-            screenPosition: { x: event.clientX, y: event.clientY },
-            connectFrom: null,
-            connectTo: null,
-          })
-        }}
-        className={`pipeline-canvas${placingNote ? ' pipeline-canvas--placing-note' : ''}`}
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background color="var(--pipeline-grid-dot)" gap={14} size={2} />
-      </ReactFlow>
-    </>
+            nodesRef.current = nextNodes
+            setNodes(nextNodes)
+            onLayoutChange(toLayout(nextNodes, viewport ?? graph.viewport))
+          }}
+          onPaneContextMenu={(event) => {
+            if (readOnly) return
+            event.preventDefault()
+            openNodeSelector({
+              position: screenToFlowPosition({ x: event.clientX, y: event.clientY }),
+              screenPosition: { x: event.clientX, y: event.clientY },
+              connectFrom: null,
+              connectTo: null,
+            })
+          }}
+          className={`pipeline-canvas${placingNote ? ' pipeline-canvas--placing-note' : ''}`}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background color="var(--pipeline-grid-dot)" gap={14} size={2} />
+        </ReactFlow>
+      </>
+    </TooltipProvider>
   )
 }
 

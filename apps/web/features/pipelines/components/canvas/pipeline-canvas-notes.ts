@@ -4,6 +4,18 @@ export interface CanvasNoteRecord {
   position: { x: number; y: number }
 }
 
+export function applyCanvasNotePositions(
+  notes: readonly CanvasNoteRecord[],
+  movedNotes: readonly Pick<CanvasNoteRecord, 'id' | 'position'>[],
+): CanvasNoteRecord[] {
+  const positionsById = new Map(movedNotes.map(({ id, position }) => [id, position]))
+
+  return notes.map((note) => {
+    const position = positionsById.get(note.id)
+    return position ? { ...note, position } : note
+  })
+}
+
 export function readCanvasNotes(pipelineId: string): CanvasNoteRecord[] {
   try {
     const raw = localStorage.getItem(`tapstate:pipeline-notes:${pipelineId}`)

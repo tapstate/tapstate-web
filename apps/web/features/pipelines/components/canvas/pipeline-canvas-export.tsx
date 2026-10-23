@@ -13,6 +13,8 @@ import { toJpeg, toPng, toSvg } from 'html-to-image'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { PipelineCanvasTooltip } from './pipeline-canvas-tooltip'
+
 type ImageFormat = 'png' | 'jpeg' | 'svg'
 
 const imageMethods = { png: toPng, jpeg: toJpeg, svg: toSvg }
@@ -66,19 +68,20 @@ export function PipelineCanvasExport({ disabled = false }: { disabled?: boolean 
 
   return (
     <DropdownMenu disabled={disabled || exporting}>
-      <DropdownMenuTrigger
-        render={
-          <IconButton
-            type="button"
-            size="lg"
-            className="pipeline-canvas__tool-button data-pressed:bg-state-base-hover data-pressed:text-text-secondary"
-            aria-label={t('pipelines.workspace.actions.exportImage')}
-            title={t('pipelines.workspace.actions.exportImage')}
-          >
-            <span className="i-ri-export-line size-4" aria-hidden="true" />
-          </IconButton>
-        }
-      />
+      <PipelineCanvasTooltip label={t('pipelines.workspace.actions.exportImage')}>
+        <DropdownMenuTrigger
+          render={
+            <IconButton
+              type="button"
+              size="lg"
+              className="pipeline-canvas__tool-button data-pressed:bg-state-base-hover data-pressed:text-text-secondary"
+              aria-label={t('pipelines.workspace.actions.exportImage')}
+            >
+              <span className="i-ri-export-line size-4" aria-hidden="true" />
+            </IconButton>
+          }
+        />
+      </PipelineCanvasTooltip>
       <DropdownMenuContent placement="right-end" className="min-w-45">
         <DropdownMenuGroup>
           <DropdownMenuGroupLabel>

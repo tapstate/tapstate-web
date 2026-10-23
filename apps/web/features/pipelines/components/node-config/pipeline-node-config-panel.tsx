@@ -1,6 +1,7 @@
 import type { Field } from '@formily/core'
 
 import { connect, mapProps } from '@formily/react'
+import { Button } from '@langgenius/dify-ui/button'
 import { Checkbox } from '@langgenius/dify-ui/checkbox'
 import {
   DropdownMenu,
@@ -20,7 +21,6 @@ import type { PipelineDagNode, PipelineJsonObject } from '@/service/pipelines/pi
 import type { SourceView } from '@/service/source-client'
 
 import { FormilyAntdProvider } from '@/components/formily/formily-antd-provider'
-import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 
 import type {
@@ -577,9 +577,9 @@ export function PipelineSourceTablePicker({
             </div>
             <Button
               type="button"
-              size="sm"
+              size="medium"
               variant="ghost"
-              className="h-8 shrink-0 px-2 text-xs"
+              className="shrink-0"
               data-pipeline-source-table-picker-add-pattern
               disabled={!pattern.trim()}
               onClick={addPattern}

@@ -49,6 +49,7 @@ import {
   normalizeConnectorConfigValues,
 } from './connector-spec-formily-schema'
 import { buildSourceConfig, createInitialConfig, type SourceConfigState } from './source-form'
+import { SourceReadModeControl } from './source-read-mode-control'
 
 interface SourceCreateDialogProps {
   open: boolean
@@ -367,7 +368,7 @@ export function SourceCreateDialog({
                 className="flex min-h-0 flex-1 flex-col gap-4"
                 aria-label={t('sources.create.chooseConnector')}
               >
-                <div className="w-full max-w-[400px]">
+                <div className="mx-auto w-full max-w-[400px]">
                   <SearchInput
                     value={searchTerm}
                     placeholder={t('sources.create.searchConnectors')}
@@ -399,13 +400,14 @@ export function SourceCreateDialog({
                       <RadioCard
                         key={item.id}
                         value={item.id}
+                        showRadio={false}
                         icon={
                           <ConnectorIcon
                             connectorId={item.id}
                             name={item.name}
                             iconPath={item.icon}
                             size={24}
-                            className="border-divider-regular bg-text-primary-on-surface size-6 rounded-md border-[0.5px]"
+                            className="bg-text-primary-on-surface size-6 rounded-md"
                           />
                         }
                         iconBgClassName="bg-components-panel-on-panel-item-bg"
@@ -515,37 +517,17 @@ export function SourceCreateDialog({
                             <span className="source-field__label">
                               {t('sources.create.modeLabel')}
                             </span>
-                            <div
-                              className="border-border bg-muted inline-flex w-fit max-w-full gap-1 overflow-x-auto rounded-lg border p-1"
-                              role="group"
-                              aria-label={t('sources.create.modeLabel')}
-                            >
-                              {connector.modes.map((mode) => {
-                                const selected = sourceMode === mode
-                                return (
-                                  <Button
-                                    key={mode}
-                                    type="button"
-                                    variant={selected ? 'secondary' : 'ghost'}
-                                    size="small"
-                                    aria-pressed={selected}
-                                    disabled={submitting || testing}
-                                    className={`h-11 shrink-0 rounded-md px-5 text-[13px] font-medium sm:h-8 sm:px-3 ${
-                                      selected
-                                        ? 'bg-background text-foreground shadow-sm'
-                                        : 'text-muted-foreground hover:text-foreground'
-                                    }`}
-                                    onClick={() => {
-                                      setSourceMode(mode)
-                                      setTestReport(null)
-                                      setTestError(null)
-                                    }}
-                                  >
-                                    {mode}
-                                  </Button>
-                                )
-                              })}
-                            </div>
+                            <SourceReadModeControl
+                              ariaLabel={t('sources.create.modeLabel')}
+                              modes={connector.modes}
+                              value={sourceMode}
+                              disabled={submitting || testing}
+                              onChange={(nextMode) => {
+                                setSourceMode(nextMode)
+                                setTestReport(null)
+                                setTestError(null)
+                              }}
+                            />
                           </div>
                         )}
 

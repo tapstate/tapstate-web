@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next'
 import type { PipelineNodeInsertionContext } from '../node-library/pipeline-node-library-types'
 
 import { PipelineCanvasExport } from './pipeline-canvas-export'
+import { PipelineCanvasTooltip } from './pipeline-canvas-tooltip'
 
 type CanvasInteractionMode = 'pointer' | 'hand'
 
@@ -59,76 +60,81 @@ export function PipelineCanvasToolbar({
         role="toolbar"
         aria-label={t('pipelines.workspace.actions.canvasTools')}
       >
-        <IconButton
-          type="button"
-          size="lg"
-          className="pipeline-canvas__tool-button data-block-selector-open:bg-state-accent-active data-block-selector-open:text-text-accent"
-          aria-label={t('pipelines.workspace.navigation.addNode')}
-          title={t('pipelines.workspace.navigation.addNode')}
-          onClick={openNodeSelector}
-          disabled={disabled}
-        >
-          <span className="i-ri-add-circle-fill size-4" aria-hidden="true" />
-        </IconButton>
-        <IconButton
-          type="button"
-          size="lg"
-          className={`pipeline-canvas__tool-button ml-px ${ariaPressedToolStateClassName}`}
-          aria-label={t('pipelines.workspace.actions.addNote')}
-          aria-pressed={notePlacementActive}
-          title={t('pipelines.workspace.actions.addNote')}
-          onClick={onRequestNote}
-          disabled={disabled}
-        >
-          <span className="i-ri-sticky-note-add-line size-4" aria-hidden="true" />
-        </IconButton>
+        <PipelineCanvasTooltip label={t('pipelines.workspace.navigation.addNode')}>
+          <IconButton
+            type="button"
+            size="lg"
+            className="pipeline-canvas__tool-button data-block-selector-open:bg-state-accent-active data-block-selector-open:text-text-accent"
+            aria-label={t('pipelines.workspace.navigation.addNode')}
+            onClick={openNodeSelector}
+            disabled={disabled}
+          >
+            <span className="i-ri-add-circle-fill size-4" aria-hidden="true" />
+          </IconButton>
+        </PipelineCanvasTooltip>
+        <PipelineCanvasTooltip label={t('pipelines.workspace.actions.addNote')}>
+          <IconButton
+            type="button"
+            size="lg"
+            className={`pipeline-canvas__tool-button ml-px ${ariaPressedToolStateClassName}`}
+            aria-label={t('pipelines.workspace.actions.addNote')}
+            aria-pressed={notePlacementActive}
+            onClick={onRequestNote}
+            disabled={disabled}
+          >
+            <span className="i-ri-sticky-note-add-line size-4" aria-hidden="true" />
+          </IconButton>
+        </PipelineCanvasTooltip>
         <Separator decorative className="pipeline-canvas__tool-divider" />
-        <Toggle
-          pressed={interactionMode === 'pointer'}
-          onPressedChange={() => onInteractionModeChange('pointer')}
-          disabled={disabled}
-          className={`pipeline-canvas__mode-toggle ${pressedToolStateClassName}`}
-          render={
-            <IconButton
-              size="lg"
-              className="pipeline-canvas__tool-button mr-px"
-              aria-label={t('pipelines.workspace.actions.pointerMode')}
-              title={t('pipelines.workspace.actions.pointerMode')}
-              disabled={disabled}
-            >
-              <span className="i-ri-cursor-line size-4" aria-hidden="true" />
-            </IconButton>
-          }
-        />
-        <Toggle
-          pressed={interactionMode === 'hand'}
-          onPressedChange={() => onInteractionModeChange('hand')}
-          disabled={disabled}
-          className={`pipeline-canvas__mode-toggle ${pressedToolStateClassName}`}
-          render={
-            <IconButton
-              size="lg"
-              className="pipeline-canvas__tool-button"
-              aria-label={t('pipelines.workspace.actions.handMode')}
-              title={t('pipelines.workspace.actions.handMode')}
-              disabled={disabled}
-            >
-              <span className="i-ri-hand size-4" aria-hidden="true" />
-            </IconButton>
-          }
-        />
+        <PipelineCanvasTooltip label={t('pipelines.workspace.actions.pointerMode')}>
+          <Toggle
+            pressed={interactionMode === 'pointer'}
+            onPressedChange={() => onInteractionModeChange('pointer')}
+            disabled={disabled}
+            className={`pipeline-canvas__mode-toggle ${pressedToolStateClassName}`}
+            render={
+              <IconButton
+                size="lg"
+                className="pipeline-canvas__tool-button mr-px"
+                aria-label={t('pipelines.workspace.actions.pointerMode')}
+                disabled={disabled}
+              >
+                <span className="i-ri-cursor-line size-4" aria-hidden="true" />
+              </IconButton>
+            }
+          />
+        </PipelineCanvasTooltip>
+        <PipelineCanvasTooltip label={t('pipelines.workspace.actions.handMode')}>
+          <Toggle
+            pressed={interactionMode === 'hand'}
+            onPressedChange={() => onInteractionModeChange('hand')}
+            disabled={disabled}
+            className={`pipeline-canvas__mode-toggle ${pressedToolStateClassName}`}
+            render={
+              <IconButton
+                size="lg"
+                className="pipeline-canvas__tool-button"
+                aria-label={t('pipelines.workspace.actions.handMode')}
+                disabled={disabled}
+              >
+                <span className="i-ri-hand size-4" aria-hidden="true" />
+              </IconButton>
+            }
+          />
+        </PipelineCanvasTooltip>
         <Separator decorative className="pipeline-canvas__tool-divider" />
-        <IconButton
-          type="button"
-          size="lg"
-          className="pipeline-canvas__tool-button"
-          aria-label={t('pipelines.workspace.actions.organizeNodes')}
-          title={t('pipelines.workspace.actions.organizeNodes')}
-          onClick={onOrganize}
-          disabled={disabled}
-        >
-          <span className="i-ri-function-add-line size-4" aria-hidden="true" />
-        </IconButton>
+        <PipelineCanvasTooltip label={t('pipelines.workspace.actions.organizeNodes')}>
+          <IconButton
+            type="button"
+            size="lg"
+            className="pipeline-canvas__tool-button"
+            aria-label={t('pipelines.workspace.actions.organizeNodes')}
+            onClick={onOrganize}
+            disabled={disabled}
+          >
+            <span className="i-ri-function-add-line size-4" aria-hidden="true" />
+          </IconButton>
+        </PipelineCanvasTooltip>
         <PipelineCanvasExport disabled={disabled} />
       </div>
     </div>

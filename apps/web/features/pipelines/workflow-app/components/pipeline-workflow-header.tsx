@@ -3,7 +3,6 @@ import type { MouseEvent, ReactNode } from 'react'
 import { Button } from '@langgenius/dify-ui/button'
 import { Link } from '@tanstack/react-router'
 import { useReactFlow } from '@xyflow/react'
-import { ChartNoAxesCombined, History, Save } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 export interface PipelineWorkflowHeaderProps {
@@ -119,7 +118,7 @@ export function PipelineWorkflowHeader({
               aria-label={t('pipelines.workspace.navigation.logs')}
               title={t('pipelines.workspace.navigation.logs')}
             >
-              <History className="size-4" aria-hidden="true" />
+              <span className="i-ri-history-line size-4" aria-hidden="true" />
             </Link>
           </>
         )}
@@ -133,7 +132,7 @@ export function PipelineWorkflowHeader({
             aria-label={t('pipelines.workspace.navigation.monitoring')}
             title={t('pipelines.workspace.navigation.monitoring')}
           >
-            <ChartNoAxesCombined className="size-4" aria-hidden="true" />
+            <span className="i-ri-line-chart-line size-4" aria-hidden="true" />
           </Link>
         </div>
       )}
@@ -145,7 +144,46 @@ export function PipelineWorkflowHeader({
           disabled={!(canSave ?? isDirty) || isSaving || isBusy}
           onClick={onSave}
         >
-          <Save className="size-3.5" aria-hidden="true" />
+          <span className="i-ri-save-3-line size-4" aria-hidden="true" />
+          {isSaving
+            ? (savePendingLabel ?? t('pipelines.workspace.actions.saving'))
+            : (saveLabel ?? t('pipelines.workspace.actions.save'))}
+        </Button>
+      )}
+    </div>
+  )
+  const builderActions = (
+    <div
+      className="pointer-events-auto ml-auto flex items-center gap-2"
+      role="toolbar"
+      aria-label={t('pipelines.workspace.actions.toolbar')}
+    >
+      {stopAction ??
+        (!isReadOnly && (
+          <Button
+            id={runButtonId}
+            type="button"
+            variant="primary"
+            size="medium"
+            disabled={isRunning || isSaving || isBusy}
+            aria-busy={isRunning}
+            onClick={onRun}
+          >
+            <span className="i-ri-play-large-line size-4" aria-hidden="true" />
+            {isRunning
+              ? (runPendingLabel ?? t('pipelines.workspace.actions.running'))
+              : (runLabel ?? t('pipelines.workspace.actions.run'))}
+          </Button>
+        ))}
+      {!isReadOnly && (
+        <Button
+          type="button"
+          variant="secondary"
+          size="medium"
+          disabled={!(canSave ?? isDirty) || isSaving || isBusy}
+          onClick={onSave}
+        >
+          <span className="i-ri-save-3-line size-4" aria-hidden="true" />
           {isSaving
             ? (savePendingLabel ?? t('pipelines.workspace.actions.saving'))
             : (saveLabel ?? t('pipelines.workspace.actions.save'))}
@@ -199,7 +237,7 @@ export function PipelineWorkflowHeader({
           </svg>
           <div className="pipeline-workflow-action-dock">
             {dockStatus}
-            {toolbar}
+            {builderActions}
           </div>
         </>
       ) : (
