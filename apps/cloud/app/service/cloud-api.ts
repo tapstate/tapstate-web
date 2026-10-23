@@ -541,6 +541,10 @@ export const cloudApi = {
     request<PlatformEvent>(
       `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/events/${encodeURIComponent(eventId)}`,
     ),
+  eventTypes: (orgId: string, q?: string) => {
+    const suffix = q ? `?q=${encodeURIComponent(q)}` : ''
+    return request<string[]>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/events/types${suffix}`)
+  },
   alerts: async (orgId: string) =>
     asList<AlertRecord>(
       await request<unknown>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/alerts`),

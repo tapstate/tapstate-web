@@ -445,7 +445,7 @@
       "eventTypes": "Event types (comma separated)",
       "eventTypesHint": "Use * for all events, or a prefix such as pipeline.*",
       "minSeverity": "Minimum severity",
-      "recipients": "Recipients (comma separated member emails)",
+      "recipients": "Recipients (comma separated emails, internal or external)",
       "cooldown": "Cooldown (seconds)",
       "quietStart": "Quiet hours start (HH:mm)",
       "quietEnd": "Quiet hours end (HH:mm)",

@@ -445,7 +445,7 @@
       "eventTypes": "事件类型（逗号分隔）",
       "eventTypesHint": "使用 * 匹配全部事件，或使用 pipeline.* 这样的前缀",
       "minSeverity": "最低严重级",
-      "recipients": "接收人（逗号分隔的组织成员邮箱）",
+      "recipients": "接收人（逗号分隔的邮箱，可包含组织外地址）",
       "cooldown": "冷却时间（秒）",
       "quietStart": "静默开始（HH:mm）",
       "quietEnd": "静默结束（HH:mm）",

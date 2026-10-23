@@ -76,6 +76,7 @@ describe('AlertPolicyPage', () => {
     document.body.append(host)
     root = createRoot(host)
     vi.spyOn(cloudApi, 'alertPolicies').mockResolvedValue([])
+    vi.spyOn(cloudApi, 'eventTypes').mockResolvedValue([])
     vi.spyOn(cloudApi, 'createAlertPolicy').mockResolvedValue({
       id: 'policy-1',
       name: 'Night alerts',
@@ -140,6 +141,33 @@ describe('AlertPolicyPage', () => {
         channel: 'EMAIL',
       }),
     )
+  })
+
+  it('loads selectable event types while typing and applies one', async () => {
+    vi.mocked(cloudApi.eventTypes).mockResolvedValue([
+      'cluster.task.failed',
+      'cluster.task.interrupted',
+    ])
+    await renderPage()
+
+    const eventTypes = host.querySelector('#policy-event-types') as HTMLInputElement
+    await act(async () => {
+      eventTypes.focus()
+      setInput(eventTypes, 'cluster.task.')
+      await new Promise((resolve) => setTimeout(resolve, 300))
+    })
+
+    const suggestion = Array.from(host.querySelectorAll('button')).find(
+      (candidate) => candidate.textContent === 'cluster.task.failed',
+    )
+    expect(suggestion).not.toBeUndefined()
+
+    await act(async () => {
+      suggestion?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(cloudApi.eventTypes).toHaveBeenCalledWith('org-1', 'cluster.task.')
+    expect(eventTypes.value).toContain('cluster.task.failed')
   })
 
   it('clears existing quiet hours when both fields are emptied', async () => {
