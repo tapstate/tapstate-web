@@ -119,13 +119,13 @@ describe('StateStorePage', () => {
     expect(container.textContent).not.toContain('internal:27017')
     expect(
       [...container.querySelectorAll('.settings-sections__item')].map((item) => item.textContent),
-    ).toEqual(['State store'])
+    ).toEqual(['State store', 'About'])
     expect([...container.querySelectorAll('dt')].map((label) => label.textContent)).toEqual([
       'Type',
       'Database',
       'Access',
     ])
-    expect(container.querySelectorAll('button')).toHaveLength(0)
+    expect(container.querySelectorAll('.settings-sections__item')).toHaveLength(2)
     expect(container.textContent).not.toContain('Members')
     expect(container.textContent).not.toContain('API keys')
     expect(container.textContent).not.toContain('Add store')
@@ -165,7 +165,7 @@ describe('StateStorePage', () => {
     expect(container.querySelector('li')?.textContent).toContain('tapstate_cloud')
     expect(container.textContent).not.toContain('Tapstate state store')
     expect(container.textContent).not.toContain('unmarked')
-    expect(container.querySelectorAll('button')).toHaveLength(0)
+    expect(container.querySelectorAll('.settings-sections__item')).toHaveLength(2)
     expect(container.textContent).not.toContain('Members')
     expect(container.textContent).not.toContain('API keys')
     expect(container.textContent).not.toContain('Add store')
