@@ -188,6 +188,7 @@ export function WizardBuilder({
   const pending = useRef<Promise<void> | null>(null)
   const previewAbort = useRef<AbortController | null>(null)
   const previewGeneration = useRef(0)
+  const skipAssistantApplyPreview = useRef<typeof wizard | null>(null)
   const reusableSampleId = useRef<string | null>(null)
   const savedFingerprint = useRef(JSON.stringify(draft.wizard))
   const currentWizard = useRef(wizard)
@@ -531,6 +532,10 @@ export function WizardBuilder({
   }
 
   useEffect(() => {
+    if (skipAssistantApplyPreview.current === wizard) {
+      skipAssistantApplyPreview.current = null
+      return
+    }
     const root = wizard?.root as { sourceId?: unknown; table?: unknown } | undefined
     const output = wizard?.output as
       | { config?: { sourceId?: unknown; table?: unknown } }
@@ -672,6 +677,46 @@ export function WizardBuilder({
           )}
           <ReferenceWizardBuilder
             key={builderRevision}
+            assistant={
+              guidedPreset
+                ? undefined
+                : {
+                    pipelineId,
+                    revision: currentDraft.current.revision,
+                    blocked:
+                      editorReadOnly ||
+                      busy ||
+                      status !== 'saved' ||
+                      Boolean(pending.current) ||
+                      JSON.stringify(wizard) !== savedFingerprint.current,
+                    sendBlocked: editorReadOnly,
+                    prepareRequest: async () => {
+                      while (pending.current) {
+                        try {
+                          await pending.current
+                        } catch {
+                          // Retry the latest wizard snapshot below after an earlier save fails.
+                        }
+                      }
+                      return (await persist()).revision
+                    },
+                    undoBlocked: editorReadOnly || busy,
+                    onApply: (candidate) => {
+                      previewGeneration.current += 1
+                      previewAbort.current?.abort()
+                      setLivePreviewStatus((current) => (current === 'idle' ? 'idle' : 'stale'))
+                      setPreview(null)
+                      const appliedWizard = writeWizard(
+                        candidate as unknown as WizardViewState,
+                        currentWizard.current,
+                        destination?.id || '',
+                        deploymentProfile,
+                      )
+                      skipAssistantApplyPreview.current = appliedWizard
+                      setWizard(appliedWizard)
+                    },
+                  }
+            }
             showWorkbenchHeader={!guidedPreset}
             onInspectPlan={inspectDsl}
             onStart={() => void savePipeline(true)}

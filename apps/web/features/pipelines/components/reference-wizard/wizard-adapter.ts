@@ -1,7 +1,12 @@
 import type { PipelineJsonObject } from '@/service/pipelines/pipeline-client'
 
 import type { DeploymentProfile } from '../../model/deployment-profile'
-import type { DataSourceMeta, RelationNode, WizardViewState } from './ReferenceWizardBuilder'
+import type {
+  DataSourceMeta,
+  RelationNode,
+  TableMeta,
+  WizardViewState,
+} from './ReferenceWizardBuilder'
 import type { TransformStep } from './TableTransformsManager'
 
 const object = (v: unknown): Record<string, unknown> =>
@@ -9,6 +14,22 @@ const object = (v: unknown): Record<string, unknown> =>
 const text = (v: unknown): string => (typeof v === 'string' ? v : '')
 const array = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
 const strings = (v: unknown): string[] => array(v).filter((x): x is string => typeof x === 'string')
+
+export function relationTableKeys(table: TableMeta | undefined): string[] {
+  if (table?.keys?.length) return [...table.keys]
+  return table?.primaryKey ? [table.primaryKey] : []
+}
+
+export function relationKeysForTableChange(
+  type: RelationNode['type'],
+  table: TableMeta | undefined,
+) {
+  const primaryKey = table?.keys || []
+  return {
+    primaryKey,
+    arrayKey: type === 'sub_array' ? relationTableKeys(table) : [],
+  }
+}
 
 export function summarizeWizard(value: PipelineJsonObject | null) {
   const wizard = object(value)
@@ -175,8 +196,29 @@ export function wizardPublicationIssue(value: PipelineJsonObject | null): string
     ...array(wizard.transforms),
   ].map(object)
   for (const t of transforms) {
-    if (t.type !== 'filter' && t.type !== 'map' && t.type !== 'js' && t.type !== 'unwind')
+    if (
+      t.type !== 'filter' &&
+      t.type !== 'map' &&
+      t.type !== 'js' &&
+      t.type !== 'unwind' &&
+      t.type !== 'union'
+    )
       return `The current server cannot publish Wizard ${text(t.type)} transforms yet. Your configuration is saved as a draft.`
+    if (t.type === 'union') {
+      const fields = object(t.fields)
+      const inputs = array(fields.from)
+      if (
+        inputs.length === 0 ||
+        inputs.some(
+          (input) =>
+            typeof input !== 'string' ||
+            input.indexOf('.') < 1 ||
+            input.indexOf('.') === input.length - 1,
+        )
+      )
+        return 'Select at least one additional table for Union.'
+      if (new Set(inputs).size !== inputs.length) return 'Choose each additional Union input once.'
+    }
     if (t.type === 'js' && !text(object(t.fields).script).trim())
       return 'Enter a JavaScript script before publishing.'
     if (t.type === 'filter' && !text(object(t.fields).expr).trim())
@@ -231,6 +273,7 @@ export function readWizard(
       source: text(r.sourceId),
       table: text(r.table),
       primaryKey: strings(relation.key),
+      arrayKey: strings(relation.arrayKey),
       type:
         relation.shape === 'flat'
           ? 'flatten'
@@ -303,7 +346,7 @@ export function writeWizard(
           shape: r.type === 'flatten' ? 'flat' : r.type === 'sub_array' ? 'array' : 'object',
           path: r.type === 'flatten' ? null : r.targetField,
           key: r.primaryKey || [],
-          arrayKey: r.type === 'sub_array' ? r.primaryKey || [] : [],
+          arrayKey: r.type === 'sub_array' ? r.arrayKey || [] : [],
           on: (r.conditions || [{ childKey: r.key, parentKey: r.parentKey }]).map((c) => ({
             childField: c.childKey,
             parentField: c.parentKey,

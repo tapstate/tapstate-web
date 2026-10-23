@@ -67,12 +67,12 @@ IconButton's `md` is 24px and `lg` is 32px; Button's `medium` is 32px. These are
 
 ## Verified dimensions and states
 
-| Component      | Source-backed dimensions                                                             | State owner                                                                                                      |
-| -------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| Button         | 24/32/36 px heights; 6/8/10 px radius                                                | `button/index.tsx`: variant, tone, size, loading, disabled, focus-visible                                        |
-| Select trigger | 24/32/36 px heights; 6/8/10 px radius                                                | `select/index.tsx`: placeholder, open, hover, disabled, selected; when values differ from labels, supply `items` |
-| Input          | 8 px radius and component input background/text tokens                               | `input/index.tsx`: hover, focus, invalid, disabled                                                               |
-| Dialog         | 480 px default width; max viewport minus 32 px; 24 px side padding                   | `dialog/index.tsx`: portal, focus containment, body scrolling, header/footer                                     |
+| Component      | Source-backed dimensions                                                                              | State owner                                                                                                      |
+| -------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Button         | 24/32/36 px heights; 6/8/10 px radius                                                                 | `button/index.tsx`: variant, tone, size, loading, disabled, focus-visible                                        |
+| Select trigger | 24/32/36 px heights; 6/8/10 px radius                                                                 | `select/index.tsx`: placeholder, open, hover, disabled, selected; when values differ from labels, supply `items` |
+| Input          | 8 px radius and component input background/text tokens                                                | `input/index.tsx`: hover, focus, invalid, disabled                                                               |
+| Dialog         | 480 px default width; max viewport minus 32 px; 24 px side padding                                    | `dialog/index.tsx`: portal, focus containment, body scrolling, header/footer                                     |
 | Resource card  | 0.5 px border, 12 px radius, tokenized hover and small shadow in the upstream knowledge-resource grid | Upstream `web/app/components/datasets/list/dataset-card/index.tsx`; page pattern, not package primitive          |
 
 Use the vendored `docs/styling.md`, `forms.md`, `selection.md`, `overlays.md`, `accessible-names-and-descriptions.md`, and component README files as detailed behavior contracts. State styling should use Base UI data attributes and CSS variables. The call site must not mirror primitive state in React merely to style it.

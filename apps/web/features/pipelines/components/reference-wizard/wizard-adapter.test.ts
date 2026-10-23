@@ -7,6 +7,7 @@ import {
   readWizard,
   summarizeWizard,
   writeWizard,
+  wizardPublicationIssue,
   wizardUpsertKeylessInput,
 } from './wizard-adapter'
 
@@ -129,6 +130,12 @@ describe('Wizard post-assembly transforms', () => {
           },
         },
         {
+          id: 'union-orders',
+          name: 'Combine archived orders',
+          type: 'union',
+          config: { union: { from: ['warehouse.archive_orders'] } },
+        },
+        {
           id: 'expand-tags',
           name: 'Tags',
           type: 'unwind',
@@ -152,6 +159,11 @@ describe('Wizard post-assembly transforms', () => {
       { id: 'filter-active', type: 'filter', fields: { expr: "status == 'active'" } },
       { id: 'map-label', type: 'map', fields: { label: 'customer' } },
       {
+        id: 'union-orders',
+        type: 'union',
+        fields: { from: ['warehouse.archive_orders'] },
+      },
+      {
         id: 'expand-tags',
         type: 'unwind',
         fields: {
@@ -173,14 +185,37 @@ describe('Wizard post-assembly transforms', () => {
     expect(restored.transforms.map(({ id, type }) => ({ id, type }))).toEqual([
       { id: 'filter-active', type: 'filter' },
       { id: 'map-label', type: 'map' },
+      { id: 'union-orders', type: 'union' },
       { id: 'expand-tags', type: 'unwind' },
     ])
-    expect(restored.transforms[2].config.unwind?.source_id_field).toBe('original_id')
+    expect(restored.transforms[3].config.unwind?.source_id_field).toBe('original_id')
     expect(restored.transforms[1].config.map?.fields[0]).toMatchObject({
       outputField: 'label',
       ruleType: 'literal',
       value: '"customer"',
     })
+    expect(restored.transforms[2].config.union?.from).toEqual(['warehouse.archive_orders'])
+  })
+
+  it('allows a Wizard union only when it names an additional input', () => {
+    const wizard = {
+      root: { sourceId: 'crm', table: 'orders' },
+      output: { config: { sourceId: 'warehouse', table: 'orders_out' } },
+    }
+    expect(
+      wizardPublicationIssue({
+        ...wizard,
+        transforms: [
+          { id: 'union-orders', type: 'union', fields: { from: ['warehouse.archive_orders'] } },
+        ],
+      }),
+    ).toBeNull()
+    expect(
+      wizardPublicationIssue({
+        ...wizard,
+        transforms: [{ id: 'union-orders', type: 'union', fields: { from: [] } }],
+      }),
+    ).toBe('Select at least one additional table for Union.')
   })
 
   it('keeps the existing Atlas representation for a cloud deployment', () => {
@@ -201,5 +236,43 @@ describe('Wizard post-assembly transforms', () => {
         writeMode: 'append',
       },
     })
+  })
+})
+
+describe('Wizard relation identity mapping', () => {
+  it.each([
+    { key: ['order_id'], arrayKey: ['line_number'] },
+    { key: [], arrayKey: ['external_id'] },
+    { key: ['order_id'], arrayKey: [] },
+  ])('round-trips separate relation keys: %j', ({ key, arrayKey }) => {
+    const document = {
+      root: { sourceId: 'mysql', table: 'customers', key: ['id'] },
+      related: [
+        {
+          id: 'orders',
+          parentId: 'root',
+          sourceId: 'mysql',
+          table: 'orders',
+          relation: {
+            shape: 'array',
+            path: 'orders',
+            key,
+            arrayKey,
+            on: [{ childField: 'customer_id', parentField: 'id' }],
+          },
+        },
+      ],
+      transforms: [],
+      output: { config: { sourceId: 'atlas', table: 'customers', writeMode: 'upsert' } },
+    }
+    const view = readWizard(document, [])
+    expect(view.relations[0].primaryKey).toEqual(key)
+    expect(view.relations[0].arrayKey).toEqual(arrayKey)
+    expect(
+      (writeWizard(view, document, 'atlas').related as { relation: unknown }[])[0].relation,
+    ).toMatchObject({ key, arrayKey })
+    expect(
+      (writeWizard(view, null, 'atlas').related as { relation: unknown }[])[0].relation,
+    ).toMatchObject({ key, arrayKey })
   })
 })

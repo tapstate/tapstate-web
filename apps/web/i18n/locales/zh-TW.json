@@ -55,158 +55,9 @@
     "expand": "展開",
     "more": "更多操作",
     "remove": "移除",
-    "save": "儲存",
     "skipToContent": "跳至畫布",
-    "separator": "/"
-  },
-  "uiKit": {
-    "title": "UI 元件預覽",
-    "subtitle": "共用控制項、狀態與浮層的互動參考。",
-    "language": "語言",
-    "darkMode": "深色主題",
-    "sections": {
-      "buttons": "按鈕",
-      "fields": "欄位與輸入",
-      "selection": "選取控制項",
-      "feedback": "回饋",
-      "surfaces": "表面與表格",
-      "overlays": "選單與浮層"
-    },
-    "buttons": {
-      "loading": "正在儲存",
-      "disabled": "目前無法使用",
-      "iconLabel": "新增項目",
-      "sizeSmall": "小",
-      "sizeMedium": "中",
-      "sizeLarge": "大",
-      "variantPrimary": "主要按鈕",
-      "variantSecondary": "次要按鈕",
-      "variantTertiary": "文字按鈕",
-      "variantGhost": "幽靈按鈕",
-      "variantDestructive": "危險操作"
-    },
-    "tones": {
-      "neutral": "中性",
-      "brand": "品牌",
-      "success": "成功",
-      "warning": "警告",
-      "danger": "危險",
-      "info": "資訊"
-    },
-    "schema": {
-      "title": "Schema 欄位",
-      "description": "使用同一組控制項呈現 schema 標籤、驗證、載入與提交錯誤。",
-      "workspace": "工作區名稱",
-      "workspaceDescription": "此欄位連結到記憶體中的表單狀態。",
-      "workspacePlaceholder": "輸入工作區名稱",
-      "requiredError": "請輸入工作區名稱。",
-      "region": "預設區域",
-      "regionPlaceholder": "選取區域",
-      "validate": "檢查必填欄位",
-      "loadRegions": "載入區域",
-      "submitFailureAction": "模擬提交失敗",
-      "submitFailure": "工作區目錄無法儲存此變更。"
-    },
-    "fields": {
-      "email": "電子郵件",
-      "emailPlaceholder": "name{'@'}company.com",
-      "description": "用於接收帳戶通知。",
-      "invalid": "工作區名稱",
-      "invalidValue": "!",
-      "invalidError": "請使用字母、數字與連字號。",
-      "password": "密碼",
-      "passwordPlaceholder": "輸入密碼",
-      "notes": "備註",
-      "notesPlaceholder": "補充團隊需要的上下文",
-      "disabled": "唯讀欄位",
-      "disabledValue": "此處無法變更此值。",
-      "search": "搜尋",
-      "searchPlaceholder": "搜尋記錄"
-    },
-    "selection": {
-      "checkbox": "包含已封存項目",
-      "switch": "啟用即時重新整理",
-      "radio": "預設區域",
-      "radioDescription": "選擇此工作區執行的區域。",
-      "northAmerica": "北美",
-      "asiaPacific": "亞太",
-      "cardOne": "正式環境工作區",
-      "cardTwo": "預備環境工作區",
-      "selected": "已選取",
-      "notSelected": "未選取",
-      "selectOption": "選取區域",
-      "regionOne": "美國東部",
-      "regionTwo": "西歐"
-    },
-    "feedback": {
-      "badgeDefault": "預設徽標",
-      "badgeDimmed": "淡化徽標",
-      "badgeCornerMark": "角標",
-      "alertTitle": "變更已儲存",
-      "alertDescription": "目前畫面已反映最新的工作區狀態。",
-      "toastInfo": "同步已開始",
-      "toastSuccess": "連線驗證成功",
-      "toastWarning": "部分記錄需要檢查",
-      "toastDanger": "同步失敗",
-      "infoAction": "資訊通知",
-      "successAction": "成功通知",
-      "warningAction": "警告通知",
-      "errorAction": "錯誤通知",
-      "actionToast": "含操作的通知",
-      "toastDescription": "此通知會自動關閉。",
-      "toastAction": "復原",
-      "toastActionDone": "已復原此操作。",
-      "toastPersistent": "持續顯示的通知",
-      "toastUpdate": "顯示持續通知",
-      "toastUpdateAction": "更新通知",
-      "toastUpdated": "通知已更新",
-      "promise": "執行成功操作",
-      "promiseError": "執行失敗操作",
-      "promisePending": "處理中…",
-      "promiseSuccess": "操作已完成",
-      "promiseFailure": "操作失敗"
-    },
-    "surfaces": {
-      "panelTitle": "工作區詳細資料",
-      "panelDescription": "有框線的表面用於組合相關設定。",
-      "emptyTitle": "沒有符合的記錄",
-      "emptyDescription": "調整篩選條件或建立新記錄。",
-      "skeleton": "正在載入預覽",
-      "tableTitle": "最近活動",
-      "name": "名稱",
-      "status": "狀態",
-      "updated": "更新時間",
-      "recordOne": "客戶資料",
-      "recordTwo": "訂單串流",
-      "ready": "就緒",
-      "inProgress": "進行中",
-      "timeOne": "剛才",
-      "timeTwo": "2 分鐘前"
-    },
-    "overlays": {
-      "menuTrigger": "開啟選單",
-      "menuItem": "重新命名工作區",
-      "menuDanger": "刪除工作區",
-      "popoverTrigger": "開啟彈出面板",
-      "popoverTitle": "快速設定",
-      "popoverDescription": "彈出面板將相關操作放在觸發器附近。",
-      "tooltipTrigger": "懸停或聚焦以查看說明",
-      "tooltipText": "工具提示提供簡短的補充說明。",
-      "dialogTrigger": "開啟對話框",
-      "dialogTitle": "編輯工作區",
-      "dialogDescription": "儲存前請檢查資訊。",
-      "dialogBody": "內容較長時，只有對話框主體區域會捲動。",
-      "alertDialogTrigger": "開啟確認視窗",
-      "alertDialogTitle": "移除此工作區？",
-      "alertDialogDescription": "此操作無法復原。",
-      "drawerTrigger": "開啟抽屜",
-      "drawerTitle": "工作區活動",
-      "drawerDescription": "側邊表面用於查看詳細資料與後續操作。",
-      "drawerBody": "內容較長時，抽屜主體會獨立捲動。",
-      "cancel": "取消",
-      "confirm": "確認",
-      "close": "關閉"
-    }
+    "separator": "/",
+    "save": "儲存"
   },
   "auth": {
     "signedOut": {
@@ -284,6 +135,7 @@
     "title": "資料來源",
     "subtitle": "瀏覽已連接系統、資料表、Schema 和資料預覽。",
     "allSources": "全部資料來源",
+    "allSourcesDescription": "管理已連接的資料庫、數倉和串流平台。",
     "connectionError": "該資料來源已在目錄中，但最近一次連線檢查失敗。",
     "generatedEndpoint": "產生的 API 端點",
     "noTablesTitle": "沒有發現資料表",
@@ -369,8 +221,8 @@
     },
     "search": {
       "label": "搜尋資料來源",
-      "clear": "清除資料來源搜尋",
-      "placeholder": "搜尋資料來源..."
+      "placeholder": "搜尋資料來源...",
+      "clear": "清除資料來源搜尋"
     },
     "filters": {
       "connectionStatus": {
@@ -408,7 +260,6 @@
       "stepConfigure": "第 2 步，共 2 步",
       "chooseConnector": "選擇連接器",
       "searchConnectors": "搜尋連接器",
-      "clearSearch": "清除連接器搜尋",
       "noMatchingConnectors": "沒有符合搜尋條件的連接器。",
       "chooseAnother": "重新選擇連接器",
       "continue": "繼續",
@@ -445,7 +296,8 @@
         "unknown": "無法建立資料來源，請重試。",
         "specUnavailable": "此連接器沒有提供可用的表單規格。",
         "specInvalid": "此連接器提供的表單規格無效。"
-      }
+      },
+      "clearSearch": "清除連接器搜尋"
     },
     "detail": {
       "back": "返回資料來源",
@@ -593,8 +445,6 @@
     "samples": {
       "tag": "範例",
       "remove": "移除範例資料來源",
-      "removeConfirmTitle": "移除範例資料來源？",
-      "removeConfirmBody": "範例資料來源將被刪除。仍被 pipeline 使用的資料來源無法移除。",
       "removing": "正在移除…",
       "removed_one": "已移除 {{count}} 個範例資料來源。",
       "removed_other": "已移除 {{count}} 個範例資料來源。",
@@ -602,12 +452,13 @@
       "error": "範例資料來源移除失敗。請重試。",
       "dismiss": "關閉",
       "added_one": "已新增 {{count}} 個範例資料來源。",
-      "added_other": "已新增 {{count}} 個範例資料來源。"
+      "added_other": "已新增 {{count}} 個範例資料來源。",
+      "removeConfirmTitle": "移除範例資料來源？",
+      "removeConfirmBody": "範例資料來源將被刪除。仍被 pipeline 使用的資料來源無法移除。"
     }
   },
   "pipelines": {
     "title": "流水線",
-    "create": "建立 Pipeline",
     "subtitle": "查看流水線資源、產生視圖和服務 API。",
     "allPipelines": "全部流水線",
     "explorer": "資源樹",
@@ -828,8 +679,6 @@
         "retry": "重試",
         "toolbar": "Pipeline 操作",
         "canvasTools": "畫布工具",
-        "addNote": "新增便籤",
-        "organizeNodes": "整理節點",
         "nodeToolbar": {
           "label": "{{node}} 操作",
           "more": "{{node}} 更多操作",
@@ -839,6 +688,18 @@
         "handMode": "拖動畫布",
         "fitCanvas": "適應 Pipeline",
         "focusCanvas": "聚焦 Pipeline",
+        "save": "儲存",
+        "saving": "儲存中…",
+        "run": "執行",
+        "running": "執行中…",
+        "saveFailed": "Pipeline 變更儲存失敗。",
+        "saveErrorTitle": "儲存失敗",
+        "dismissSaveError": "關閉儲存錯誤",
+        "runFailed": "Pipeline 啟動失敗。",
+        "draftSaveUnavailable": "請先新增並連接至少一個 Source，再儲存這個新 Pipeline。",
+        "draftRunUnavailable": "請先儲存這個新 Pipeline，再執行它。",
+        "addNote": "新增便籤",
+        "organizeNodes": "整理節點",
         "zoomIn": "放大",
         "zoomOut": "縮小",
         "canvasHistory": "畫布歷史記錄",
@@ -861,19 +722,9 @@
         "notesStorageUnavailable": "無法儲存便籤",
         "notesStorageUnavailableDescription": "離開此頁面前，便籤仍會保留在目前畫布中。",
         "scrollToSelectedNode": "定位到所選節點",
-        "save": "儲存",
-        "saving": "儲存中…",
         "autoSaved": "自動儲存於",
         "published": "已發佈",
-        "unpublished": "未發佈",
-        "run": "執行",
-        "running": "執行中…",
-        "saveFailed": "Pipeline 變更儲存失敗。",
-        "saveErrorTitle": "儲存失敗",
-        "dismissSaveError": "關閉儲存錯誤",
-        "runFailed": "Pipeline 啟動失敗。",
-        "draftSaveUnavailable": "請先新增並連接至少一個 Source，再儲存這個新 Pipeline。",
-        "draftRunUnavailable": "請先儲存這個新 Pipeline，再執行它。"
+        "unpublished": "未發佈"
       },
       "diagnostics": {
         "title": "儲存前請修正以下問題",
@@ -890,6 +741,7 @@
         "label": "Pipeline 工作區導覽",
         "workspace": "Pipeline",
         "orchestrate": "編排",
+        "api": "API 存取",
         "logs": "日誌",
         "monitoring": "監控",
         "addNode": "新增節點",
@@ -910,12 +762,7 @@
       },
       "nodeSelector": {
         "title": "新增節點",
-        "sourceTab": "Source",
-        "transformTab": "Transform",
-        "destinationTab": "Destination",
-        "addNode": "新增節點",
         "searchPlaceholder": "搜尋節點",
-        "clearSearch": "清除搜尋",
         "close": "關閉節點選擇器",
         "insertOnEdge": "在此連線中插入節點",
         "sources": "Source",
@@ -941,13 +788,19 @@
         "nest": "巢狀",
         "js": "JavaScript",
         "view": "檢視",
-        "target": "目標"
+        "target": "目標",
+        "sourceTab": "Source",
+        "transformTab": "Transform",
+        "destinationTab": "Destination",
+        "addNode": "新增節點",
+        "clearSearch": "清除搜尋"
       },
       "tabs": {
         "label": "Pipeline 工作區面板",
         "runtime": "執行狀態",
         "metrics": "指標",
-        "logs": "日誌"
+        "logs": "日誌",
+        "api": "API 存取"
       },
       "nodeLibrary": {
         "label": "Pipeline 節點庫",
@@ -987,13 +840,6 @@
         "noDetail": "沒有額外詳情"
       },
       "config": {
-        "nodeTitle": "節點標題",
-        "moreActions": "更多節點操作",
-        "deleteNode": "刪除節點",
-        "nextStep": "下一步",
-        "jumpToNode": "跳轉到節點",
-        "addNextStep": "新增管線中的下一步",
-        "selectNextStep": "選擇下一步",
         "source": "Source",
         "table": "資料表",
         "tableSelectionMode": "資料表選擇模式",
@@ -1035,7 +881,14 @@
         "descriptionPlaceholder": "新增描述",
         "close": "關閉設定",
         "resizePanel": "調整設定面板寬度",
-        "viewReadOnly": "View 由 Pipeline 定義衍生，目前無法在此編輯。"
+        "viewReadOnly": "View 由 Pipeline 定義衍生，目前無法在此編輯。",
+        "nodeTitle": "節點標題",
+        "moreActions": "更多節點操作",
+        "deleteNode": "刪除節點",
+        "nextStep": "下一步",
+        "jumpToNode": "跳轉到節點",
+        "addNextStep": "新增管線中的下一步",
+        "selectNextStep": "選擇下一步"
       },
       "transform": {
         "field": "欄位",
@@ -1246,6 +1099,10 @@
           "removeUnionInput": "移除輸入資料流",
           "addUpstreamInput": "新增上游資料流",
           "selectAnotherInput": "選擇其他可用資料流",
+          "unionCurrentInput": "目前 Pipeline 輸出",
+          "unionAdditionalInputs": "其他輸入資料表",
+          "unionNoAdditionalInputs": "目前沒有可用於此 Union 的其他來源資料表。",
+          "unionInputRequired": "至少選擇一個其他輸入資料表才能發佈此 Union。",
           "unionWizardUnavailable": "Union 需要明確的多路資料流參照，目前建構器尚未收集這些資訊。移除此步驟後即可儲存並啟動。",
           "identitySettings": "來源識別值處理",
           "sourceIdField": "來源識別值保留欄位名稱",
@@ -1275,23 +1132,7 @@
           "resume": "恢復更新",
           "resumeAria": "恢復日誌自動重新整理",
           "search": "搜尋目前日誌尾端",
-          "searchPlaceholder": "搜尋",
           "allLevels": "全部等級",
-          "allFilterLevels": "全部",
-          "timeRange": "時間範圍",
-          "clearLevelFilter": "清除日誌等級篩選",
-          "clearTimeRange": "清除時間範圍篩選",
-          "periods": {
-            "today": "今天",
-            "last7Days": "最近 7 天",
-            "last4Weeks": "最近 4 週",
-            "last3Months": "最近 3 個月",
-            "last12Months": "最近 12 個月",
-            "monthToDate": "本月至今",
-            "quarterToDate": "本季至今",
-            "yearToDate": "本年至今",
-            "allTime": "所有時間"
-          },
           "timestamp": "時間",
           "sortOldestFirst": "依最早時間排序日誌",
           "sortNewestFirst": "依最新時間排序日誌",
@@ -1306,7 +1147,23 @@
           "filteredEmptyTitle": "沒有符合的日誌",
           "filteredEmptyBody": "請調整篩選條件以查看已傳回的日誌尾端。",
           "errorTitle": "無法載入日誌",
-          "errorBody": "請檢查控制平面後重試。"
+          "errorBody": "請檢查控制平面後重試。",
+          "searchPlaceholder": "搜尋",
+          "allFilterLevels": "全部",
+          "timeRange": "時間範圍",
+          "clearLevelFilter": "清除日誌等級篩選",
+          "clearTimeRange": "清除時間範圍篩選",
+          "periods": {
+            "today": "今天",
+            "last7Days": "最近 7 天",
+            "last4Weeks": "最近 4 週",
+            "last3Months": "最近 3 個月",
+            "last12Months": "最近 12 個月",
+            "monthToDate": "本月至今",
+            "quarterToDate": "本季至今",
+            "yearToDate": "本年至今",
+            "allTime": "所有時間"
+          }
         },
         "unavailableTitle": "觀測資料無法使用",
         "unavailableBody": "此 Pipeline 尚未發布執行時觀測資料。",
@@ -1397,8 +1254,16 @@
           "FAILED": "失敗",
           "UNAVAILABLE": "無法使用"
         }
+      },
+      "apiAccess": {
+        "emptyTitle": "此 Pipeline 沒有 API 介面",
+        "emptyBody": "需要新增 Serve 步驟後才能發布 API。",
+        "pendingTitle": "尚未設定 API 發布",
+        "pendingBody": "已偵測到 Serve 輸出，但此 Pipeline 尚未公開已發布端點。",
+        "serveDetail": "Serve 輸出"
       }
-    }
+    },
+    "create": "建立 Pipeline"
   },
   "explorations": {
     "title": "探索",
@@ -1814,6 +1679,113 @@
         }
       }
     },
+    "assistant": {
+      "title": "Pipeline AI Copilot",
+      "subtitle": "建立及調整管線",
+      "open": "AI 助理",
+      "configure": "設定 AI 服務",
+      "reset": "清除對話",
+      "close": "收起 AI 助理",
+      "focus": "目前焦點：",
+      "rootPromptLabel": "描述你要建立的 Pipeline",
+      "rootPromptPlaceholder": "例如：將 PostgreSQL 訂單同步到 MySQL，並持續更新客戶彙總資訊…",
+      "rootPromptSubmit": "用 AI 起草",
+      "rootPromptHint": "Copilot 會先產生建議供你檢閱，套用後才會變更 Pipeline。",
+      "queuedRootPrompt": "目前回覆完成後會自動傳送這則請求。",
+      "manualRootSetup": "或手動選擇資料來源和資料表",
+      "diff": "檢視 Diff",
+      "back": "返回對話",
+      "loading": "載入中",
+      "welcome": "描述你需要的資料表、關聯或轉換規則。我會提出管線設定建議，供你檢閱後套用。",
+      "you": "你",
+      "name": "AI 助理",
+      "generating": "正在驗證中繼資料並產生建議…",
+      "connecting": "正在連線 AI 服務…",
+      "review": "檢閱建議的管線變更",
+      "diffTitle": "建議變更",
+      "noProposal": "尚無完整建議，請描述需要的變更。",
+      "editProposal": "編輯建議設定（JSON）",
+      "reviewHint": "檢閱或編輯建議設定。套用前會與已儲存草稿進行伺服器驗證，再更新編輯器。",
+      "apply": "驗證並套用",
+      "applied": "已套用至編輯器",
+      "undoApply": "復原套用",
+      "undoStale": "草稿在套用後已有變更，無法安全復原。",
+      "reject": "拒絕",
+      "requestFailed": "AI 請求失敗，請檢查服務設定後重試。已傳回的部分內容未修改管線。",
+      "applyFailed": "無法驗證建議，請檢查設定 JSON 或重試。",
+      "invalid": "建議設定未通過伺服器驗證，請編輯後重試。",
+      "normalized": "伺服器已標準化設定，請檢閱更新後的建議再套用。",
+      "stale": "此建議使用舊草稿，請為目前已儲存草稿重新產生。",
+      "suggestions": "快捷意圖建議",
+      "waitForSave": "草稿為唯讀或正在執行其他草稿操作，暫時無法傳送。",
+      "saveBeforeSend": "Copilot 會先儲存最新草稿再產生建議；套用建議仍需等待儲存完成。",
+      "savingDraft": "正在儲存最新草稿…",
+      "saveBeforeSendFailed": "最新草稿儲存失敗，因此請求未傳送。請先處理儲存錯誤，再重試。",
+      "prompt": "管線 AI 提示詞",
+      "placeholder": "描述資料表、關聯條件或清理規則…",
+      "newline": "Shift + Enter 換行",
+      "send": "傳送",
+      "stop": "停止",
+      "unconfigured": "未設定",
+      "documentFocus": "Step 3 · 文件層轉換",
+      "helpers": {
+        "clean": "AI 清理 / 預先篩選",
+        "relations": "AI 關聯子表",
+        "metrics": "AI 產生 CEL 衍生指標"
+      },
+      "intents": {
+        "assemble": "使用可用資料表組裝管線",
+        "relations": "推導父子表關聯",
+        "clean": "產生篩選及清理規則",
+        "metrics": "產生文件層 CEL 指標",
+        "diagnose": "診斷管線設定"
+      },
+      "prompts": {
+        "assemble": "使用可用資料來源和資料表組裝此管線，建議主表、巢狀關聯和轉換規則供我檢閱。",
+        "relations": "分析可用資料表中繼資料，使用支援的關聯鍵建議父子表關聯。資料不足時請提出問題。",
+        "clean": "為目前焦點資料表建議篩選及欄位清理規則，僅使用支援的轉換和可用欄位。",
+        "metrics": "為文件轉換階段使用可用欄位，建議支援的 CEL 表達式以計算衍生業務指標。",
+        "diagnose": "檢查管線設定問題、不支援的關聯及轉換錯誤，解釋問題並提出修正建議供我檢閱。"
+      },
+      "provider": {
+        "title": "AI 服務設定",
+        "description": "使用相容 OpenAI 的 API 產生管線建議。填寫 AI 服務提供的位址和模型。",
+        "endpoint": "API 基礎位址",
+        "model": "模型 ID",
+        "key": "API 金鑰",
+        "configured": "已設定 AI 服務",
+        "rotate": "輸入新金鑰以取代已儲存金鑰",
+        "secretHint": "金鑰由伺服器安全儲存，不寫入瀏覽器儲存，也不會傳回此面板。",
+        "save": "儲存設定",
+        "check": "測試連線",
+        "delete": "移除設定",
+        "saveSuccess": "設定已儲存。",
+        "checkSuccess": "連線已驗證。",
+        "deleteSuccess": "設定已移除。",
+        "failed": "操作失敗，請檢查位址、模型及憑證後重試。",
+        "loadFailed": "無法載入設定，請關閉後重新開啟面板重試。"
+      },
+      "editedReview": "編輯後的建議已驗證，請檢閱更新後的 Diff，再套用。",
+      "progress": {
+        "connecting": "正在連線 AI 服務…",
+        "streaming": "AI 正在回覆…",
+        "validating": "正在驗證建議管線…",
+        "ready": "檢閱建議的管線變更",
+        "complete": "回覆完成",
+        "error": "AI 請求失敗，請檢查服務設定後重試。已傳回的部分內容未修改管線。"
+      },
+      "canceled": "已停止產生，部分輸出未修改管線。",
+      "errors": {
+        "notConfigured": "請先在此面板設定 AI 服務，再產生建議。",
+        "providerAuth": "AI 服務拒絕憑證，請在設定中輸入有效金鑰後重試。",
+        "providerUnavailable": "AI 服務暫時無法使用，請檢查位址及模型，或稍後重試。",
+        "schema": "模型回應不符合 Builder 結構，請調整需求並重新產生。",
+        "domain": "建議未通過管線領域驗證，請檢查設定並重新產生。",
+        "stale": "此建議使用舊草稿，請為目前已儲存草稿重新產生。",
+        "overloaded": "AI 助理忙碌中，請稍後重試。",
+        "requestFailed": "AI 請求失敗，請檢查服務設定後重試。已傳回的部分內容未修改管線。"
+      }
+    },
     "targetIdentity": {
       "title": "目標識別值檢查",
       "pending": "選擇目標後檢查識別值限制，目前尚未完成判斷。",
@@ -1852,9 +1824,9 @@
     "detailTabs": "View 詳情",
     "search": {
       "label": "搜尋 Views",
-      "clear": "清除 View 搜尋",
       "placeholder": "搜尋 Views...",
-      "empty": "沒有符合的 View。"
+      "empty": "沒有符合的 View。",
+      "clear": "清除 View 搜尋"
     },
     "empty": {
       "title": "尚無物化 View",
@@ -1902,7 +1874,7 @@
       "unavailable": "此伺服器尚未提供該 View 的 Pipeline 血緣。",
       "noSources": "沒有上游資料表資訊。"
     },
-    "createView": "建立檢視",
+    "newView": "新增檢視",
     "intro": "你的即時營運狀態：Tapstate 持續保持最新的每一個檢視。",
     "kind": {
       "view": "檢視",
@@ -2001,7 +1973,8 @@
       }
     },
     "footnote": "狀態綜合了 pipeline 的狀態與檢視落後於來源的程度。檢視是建立出的文件；副本是一張表的鏡像。",
-    "browseCollections": "瀏覽集合"
+    "browseCollections": "瀏覽集合",
+    "createView": "建立檢視"
   },
   "notFound": {
     "back": "返回工作區",
@@ -2218,6 +2191,155 @@
     "sectionsLabel": "設定分區",
     "sections": {
       "stateStore": "State store"
+    }
+  },
+  "uiKit": {
+    "title": "UI 元件預覽",
+    "subtitle": "共用控制項、狀態與浮層的互動參考。",
+    "language": "語言",
+    "darkMode": "深色主題",
+    "sections": {
+      "buttons": "按鈕",
+      "fields": "欄位與輸入",
+      "selection": "選取控制項",
+      "feedback": "回饋",
+      "surfaces": "表面與表格",
+      "overlays": "選單與浮層"
+    },
+    "buttons": {
+      "loading": "正在儲存",
+      "disabled": "目前無法使用",
+      "iconLabel": "新增項目",
+      "sizeSmall": "小",
+      "sizeMedium": "中",
+      "sizeLarge": "大",
+      "variantPrimary": "主要按鈕",
+      "variantSecondary": "次要按鈕",
+      "variantTertiary": "文字按鈕",
+      "variantGhost": "幽靈按鈕",
+      "variantDestructive": "危險操作"
+    },
+    "tones": {
+      "neutral": "中性",
+      "brand": "品牌",
+      "success": "成功",
+      "warning": "警告",
+      "danger": "危險",
+      "info": "資訊"
+    },
+    "schema": {
+      "title": "Schema 欄位",
+      "description": "使用同一組控制項呈現 schema 標籤、驗證、載入與提交錯誤。",
+      "workspace": "工作區名稱",
+      "workspaceDescription": "此欄位連結到記憶體中的表單狀態。",
+      "workspacePlaceholder": "輸入工作區名稱",
+      "requiredError": "請輸入工作區名稱。",
+      "region": "預設區域",
+      "regionPlaceholder": "選取區域",
+      "validate": "檢查必填欄位",
+      "loadRegions": "載入區域",
+      "submitFailureAction": "模擬提交失敗",
+      "submitFailure": "工作區目錄無法儲存此變更。"
+    },
+    "fields": {
+      "email": "電子郵件",
+      "emailPlaceholder": "name{'@'}company.com",
+      "description": "用於接收帳戶通知。",
+      "invalid": "工作區名稱",
+      "invalidValue": "!",
+      "invalidError": "請使用字母、數字與連字號。",
+      "password": "密碼",
+      "passwordPlaceholder": "輸入密碼",
+      "notes": "備註",
+      "notesPlaceholder": "補充團隊需要的上下文",
+      "disabled": "唯讀欄位",
+      "disabledValue": "此處無法變更此值。",
+      "search": "搜尋",
+      "searchPlaceholder": "搜尋記錄"
+    },
+    "selection": {
+      "checkbox": "包含已封存項目",
+      "switch": "啟用即時重新整理",
+      "radio": "預設區域",
+      "radioDescription": "選擇此工作區執行的區域。",
+      "northAmerica": "北美",
+      "asiaPacific": "亞太",
+      "cardOne": "正式環境工作區",
+      "cardTwo": "預備環境工作區",
+      "selected": "已選取",
+      "notSelected": "未選取",
+      "selectOption": "選取區域",
+      "regionOne": "美國東部",
+      "regionTwo": "西歐"
+    },
+    "feedback": {
+      "badgeDefault": "預設徽標",
+      "badgeDimmed": "淡化徽標",
+      "badgeCornerMark": "角標",
+      "alertTitle": "變更已儲存",
+      "alertDescription": "目前畫面已反映最新的工作區狀態。",
+      "toastInfo": "同步已開始",
+      "toastSuccess": "連線驗證成功",
+      "toastWarning": "部分記錄需要檢查",
+      "toastDanger": "同步失敗",
+      "infoAction": "資訊通知",
+      "successAction": "成功通知",
+      "warningAction": "警告通知",
+      "errorAction": "錯誤通知",
+      "actionToast": "含操作的通知",
+      "toastDescription": "此通知會自動關閉。",
+      "toastAction": "復原",
+      "toastActionDone": "已復原此操作。",
+      "toastPersistent": "持續顯示的通知",
+      "toastUpdate": "顯示持續通知",
+      "toastUpdateAction": "更新通知",
+      "toastUpdated": "通知已更新",
+      "promise": "執行成功操作",
+      "promiseError": "執行失敗操作",
+      "promisePending": "處理中…",
+      "promiseSuccess": "操作已完成",
+      "promiseFailure": "操作失敗"
+    },
+    "surfaces": {
+      "panelTitle": "工作區詳細資料",
+      "panelDescription": "有框線的表面用於組合相關設定。",
+      "emptyTitle": "沒有符合的記錄",
+      "emptyDescription": "調整篩選條件或建立新記錄。",
+      "skeleton": "正在載入預覽",
+      "tableTitle": "最近活動",
+      "name": "名稱",
+      "status": "狀態",
+      "updated": "更新時間",
+      "recordOne": "客戶資料",
+      "recordTwo": "訂單串流",
+      "ready": "就緒",
+      "inProgress": "進行中",
+      "timeOne": "剛才",
+      "timeTwo": "2 分鐘前"
+    },
+    "overlays": {
+      "menuTrigger": "開啟選單",
+      "menuItem": "重新命名工作區",
+      "menuDanger": "刪除工作區",
+      "popoverTrigger": "開啟彈出面板",
+      "popoverTitle": "快速設定",
+      "popoverDescription": "彈出面板將相關操作放在觸發器附近。",
+      "tooltipTrigger": "懸停或聚焦以查看說明",
+      "tooltipText": "工具提示提供簡短的補充說明。",
+      "dialogTrigger": "開啟對話框",
+      "dialogTitle": "編輯工作區",
+      "dialogDescription": "儲存前請檢查資訊。",
+      "dialogBody": "內容較長時，只有對話框主體區域會捲動。",
+      "alertDialogTrigger": "開啟確認視窗",
+      "alertDialogTitle": "移除此工作區？",
+      "alertDialogDescription": "此操作無法復原。",
+      "drawerTrigger": "開啟抽屜",
+      "drawerTitle": "工作區活動",
+      "drawerDescription": "側邊表面用於查看詳細資料與後續操作。",
+      "drawerBody": "內容較長時，抽屜主體會獨立捲動。",
+      "cancel": "取消",
+      "confirm": "確認",
+      "close": "關閉"
     }
   }
 }

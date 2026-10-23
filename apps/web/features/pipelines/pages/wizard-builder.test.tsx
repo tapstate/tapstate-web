@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   PipelineClientError,
   type PipelineDraft,
+  type PipelinePreviewRun,
   type StartCheckReport,
 } from '@/service/pipelines/pipeline-client'
 
@@ -82,6 +83,7 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', async (importOr
       const {
         initial,
         onChange,
+        assistant,
         footer,
         actions,
         notices,
@@ -97,6 +99,7 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', async (importOr
           data-read-only={readOnly ? 'true' : 'false'}
           data-destination-name={destinationName}
           data-destination-source={initial.destinationSourceId}
+          data-destination-table={initial.destinationTable ?? ''}
           data-root-table={initial.root?.table ?? ''}
           data-live-preview-status={livePreviewStatus}
           data-live-preview-run={livePreview?.runId || ''}
@@ -132,6 +135,48 @@ vi.mock('../components/reference-wizard/ReferenceWizardBuilder', async (importOr
           >
             Change wizard
           </button>
+          {assistant && (
+            <>
+              <button
+                data-testid="prepare-assistant-request"
+                onClick={async (event) => {
+                  const button = event.currentTarget
+                  button.dataset.revision = String(await assistant.prepareRequest?.())
+                }}
+              >
+                Prepare assistant request
+              </button>
+              <button
+                data-testid="apply-assistant-proposal"
+                onClick={() =>
+                  assistant.onApply({
+                    root: {
+                      source: 'mysql',
+                      table: 'AA_0716',
+                      primaryKey: 'ID',
+                      keys: ['ID'],
+                      rowCount: '—',
+                      columns: ['ID'],
+                    },
+                    relations: [],
+                    transforms: [
+                      {
+                        id: 'assistant_filter',
+                        name: 'Keep rows',
+                        type: 'filter',
+                        config: { filter: { expr: 'true' } },
+                      },
+                    ],
+                    destinationSourceId: 'mysql',
+                    destinationTable: 'assistant_generated',
+                    destinationWriteMode: 'append',
+                  })
+                }
+              >
+                Apply assistant proposal
+              </button>
+            </>
+          )}
           <button data-testid="inspect-plan" onClick={() => void onInspectPlan?.()}>
             Inspect Plan
           </button>
@@ -261,6 +306,82 @@ afterEach(() => {
 })
 
 describe('WizardBuilder publish flow', () => {
+  it('flushes the latest editor draft and returns the saved revision before an assistant request', async () => {
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={initialDraft.pipelineId} draft={initialDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await vi.waitFor(() =>
+      expect(container?.querySelector('[data-testid="change-wizard"]')).not.toBeNull(),
+    )
+
+    await act(async () => {
+      container?.querySelector<HTMLButtonElement>('[data-testid="change-wizard"]')?.click()
+    })
+    const prepareButton = container?.querySelector<HTMLButtonElement>(
+      '[data-testid="prepare-assistant-request"]',
+    )
+    await act(async () => prepareButton?.click())
+
+    await vi.waitFor(() => expect(updatePipelineDraft).toHaveBeenCalledOnce())
+    expect(updatePipelineDraft).toHaveBeenCalledWith(
+      initialDraft.pipelineId,
+      expect.objectContaining({
+        wizard: expect.objectContaining({
+          transforms: [expect.objectContaining({ id: 'verify_filter' })],
+        }),
+      }),
+      '"1"',
+      expect.any(Function),
+    )
+    expect(prepareButton?.dataset.revision).toBe('2')
+  })
+
+  it('does not run an automatic preview when an assistant proposal is applied', async () => {
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={initialDraft.pipelineId} draft={initialDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await vi.waitFor(() =>
+      expect(container?.querySelector('.wizard-reference-editor-column')).not.toBeNull(),
+    )
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 350)))
+    const previewCallsBeforeApply = streamPipelinePreview.mock.calls.length
+    const compileCallsBeforeApply = previewPipelineDraft.mock.calls.length
+    expect(container?.querySelector('[data-testid="apply-assistant-proposal"]')).not.toBeNull()
+
+    await act(async () => {
+      container
+        ?.querySelector<HTMLButtonElement>('[data-testid="apply-assistant-proposal"]')
+        ?.click()
+    })
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 400)))
+
+    expect(
+      container
+        ?.querySelector('.wizard-reference-editor-column')
+        ?.getAttribute('data-destination-table'),
+    ).toBe('assistant_generated')
+    expect(previewPipelineDraft).toHaveBeenCalledTimes(compileCallsBeforeApply)
+    expect(streamPipelinePreview).toHaveBeenCalledTimes(previewCallsBeforeApply)
+  })
+
   it('offers the marked Atlas destination through the real picker without treating it as an input', async () => {
     wizardRendering.real = true
     getDeploymentProfile.mockReturnValue('cloud')
@@ -754,6 +875,10 @@ describe('WizardBuilder publish flow', () => {
 
   it('aborts a stale preview when the unsaved candidate changes', async () => {
     let firstSignal: AbortSignal | undefined
+    let finishSecondPreview!: (value: PipelinePreviewRun) => void
+    const secondPreview = new Promise<PipelinePreviewRun>((resolve) => {
+      finishSecondPreview = resolve
+    })
     streamPipelinePreview
       .mockImplementationOnce(
         (request: { signal?: AbortSignal }) =>
@@ -764,19 +889,7 @@ describe('WizardBuilder publish flow', () => {
             })
           }),
       )
-      .mockResolvedValueOnce({
-        runId: 'preview-run-2',
-        candidateHash: 'candidate-2',
-        format: 'logical-json',
-        executionSpec: {},
-        contexts: [],
-        sample: { rootRows: 1, inputRows: 1 },
-        documents: [{ id: 'customer-1' }],
-        trace: [],
-        sampleId: 'sample-2',
-        rowCount: 1,
-        failure: null,
-      })
+      .mockReturnValueOnce(secondPreview)
 
     container = document.createElement('div')
     document.body.append(container)
@@ -796,8 +909,22 @@ describe('WizardBuilder publish flow', () => {
     await act(async () => {
       container?.querySelector<HTMLButtonElement>('[data-testid="change-wizard"]')?.click()
     })
+    await vi.waitFor(() => expect(streamPipelinePreview).toHaveBeenCalledTimes(2))
     await act(async () => {
-      await vi.waitFor(() => expect(streamPipelinePreview).toHaveBeenCalledTimes(2))
+      finishSecondPreview({
+        runId: 'preview-run-2',
+        candidateHash: 'candidate-2',
+        format: 'logical-json',
+        executionSpec: {},
+        contexts: [],
+        sample: { rootRows: 1, inputRows: 1 },
+        documents: [{ id: 'customer-1' }],
+        trace: [],
+        sampleId: 'sample-2',
+        rowCount: 1,
+        failure: null,
+      })
+      await secondPreview
     })
 
     expect(firstSignal?.aborted).toBe(true)

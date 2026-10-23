@@ -5,7 +5,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { PipelinePreviewRun } from '@/service/pipelines/pipeline-client'
 
+import { useAuthStore } from '@/stores/auth-store'
+
 import { ReferenceWizardBuilder, type WizardBuilderProps } from './ReferenceWizardBuilder'
+import { relationKeysForTableChange } from './wizard-adapter'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
@@ -494,5 +497,334 @@ describe('ReferenceWizardBuilder preview panel', () => {
     })
     expect(writeText).toHaveBeenCalledWith('{"pipelineId":"customers"}')
     expect(panel?.textContent).toContain('Copied ✓')
+  })
+})
+
+describe('ReferenceWizardBuilder assistant isolation', () => {
+  it('defaults to the Builder Copilot tab and helpers do not mutate the editor', () => {
+    const onChange = vi.fn()
+    const host = renderBuilder({
+      showWorkbenchHeader: true,
+      onChange,
+      assistant: { pipelineId: 'customers', revision: 1, blocked: false, onApply: vi.fn() },
+    })
+    expect(host.querySelector('.wizard-reference-assistant')).not.toBeNull()
+    expect(previewPanel()?.classList.contains('hidden')).toBe(true)
+    expect(previewPanel()?.classList.contains('flex')).toBe(false)
+    const helper = [...host.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('AI cleaning'),
+    )!
+    act(() => helper.click())
+    expect(onChange).not.toHaveBeenCalled()
+    expect(
+      host.querySelector<HTMLTextAreaElement>('textarea[aria-label="Pipeline assistant prompt"]')
+        ?.value,
+    ).toContain('focused table')
+  })
+  it('sends a blank-builder prompt from the Root Table card into the same review flow', async () => {
+    const promptText = 'Sync PostgreSQL orders to MySQL and keep customer totals up to date.'
+    const apiFetch = vi.fn().mockResolvedValue(
+      new Response(
+        [
+          { type: 'start', messageId: 'root-prompt' },
+          { type: 'text-start', id: 'root-reply' },
+          { type: 'text-delta', id: 'root-reply', delta: 'I will draft that pipeline.' },
+          { type: 'text-end', id: 'root-reply' },
+          { type: 'finish', finishReason: 'stop' },
+        ]
+          .map((event) => `data: ${JSON.stringify(event)}\n\n`)
+          .join('') + 'data: [DONE]\n\n',
+        {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'x-vercel-ai-ui-message-stream': 'v1',
+          },
+        },
+      ),
+    )
+    const onApply = vi.fn()
+    const prepareRequest = vi.fn().mockResolvedValue(2)
+    useAuthStore.setState({ apiFetch })
+    const host = renderBuilder({
+      initial: { ...renderInitial, root: null, relations: [] },
+      assistant: {
+        pipelineId: 'customers',
+        revision: 1,
+        blocked: true,
+        sendBlocked: false,
+        prepareRequest,
+        onApply,
+      },
+    })
+    const prompt = host.querySelector<HTMLTextAreaElement>(
+      'textarea[aria-label="Describe the pipeline you want to build"]',
+    )!
+    const setValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set
+    act(() => {
+      setValue?.call(prompt, promptText)
+      prompt.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect(host.textContent).toContain('Or choose a source and table manually')
+    await act(async () => {
+      Array.from(host.querySelectorAll('button'))
+        .find((button) => button.textContent?.includes('Draft with AI'))
+        ?.click()
+      await Promise.resolve()
+    })
+    await vi.waitFor(() => expect(apiFetch).toHaveBeenCalledOnce())
+    expect(prepareRequest).toHaveBeenCalledOnce()
+    expect(apiFetch).toHaveBeenCalledOnce()
+    expect(apiFetch.mock.calls[0][0]).toBe('/api/pipelines/customers/draft:assistant')
+    expect(JSON.parse(apiFetch.mock.calls[0][1].body)).toMatchObject({
+      revision: 2,
+      focus: { kind: 'root', nodeId: 'root' },
+      messages: [{ role: 'user', text: promptText }],
+    })
+    expect(host.querySelector('.wizard-reference-sidebar')?.classList.contains('hidden')).toBe(
+      false,
+    )
+    expect(onApply).not.toHaveBeenCalled()
+  })
+  it('preserves an unconfirmed root selection when a previously generated proposal is reviewed', async () => {
+    const onApply = vi.fn()
+    const candidate = { ...renderInitial, destinationTable: 'suggested_destination' }
+    const events = [
+      { type: 'start', messageId: 'root-edit-proposal' },
+      {
+        type: 'data-proposal',
+        data: {
+          baseRevision: 1,
+          candidateWizard: candidate,
+          validation: { valid: true },
+          diff: { changes: [] },
+        },
+      },
+      { type: 'finish', finishReason: 'stop' },
+    ]
+    useAuthStore.setState({
+      apiFetch: vi.fn().mockResolvedValue(
+        new Response(
+          events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n',
+          {
+            headers: {
+              'Content-Type': 'text/event-stream',
+              'x-vercel-ai-ui-message-stream': 'v1',
+            },
+          },
+        ),
+      ),
+    })
+    const host = renderBuilder({
+      showWorkbenchHeader: true,
+      assistant: { pipelineId: 'customers', revision: 1, blocked: false, onApply },
+    })
+    const button = (text: string) =>
+      [...host.querySelectorAll('button')].find((item) => item.textContent?.includes(text))!
+    await act(async () => button('Infer parent').click())
+    expect(host.textContent).toContain('Review proposed pipeline changes')
+    await act(async () => button('Switch Table').click())
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>('button[aria-label="Table"]')!.click(),
+    )
+    const tableOption = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find(
+      (item) => item.textContent?.includes('crm_orders'),
+    )!
+    await act(async () => tableOption.click())
+    expect(host.querySelector('button[aria-label="Table"]')?.textContent).toContain('crm_orders')
+    await act(async () => button('Review proposed').click())
+    expect(button('Validate and apply').disabled).toBe(true)
+    await act(async () => button('Validate and apply').click())
+    expect(onApply).not.toHaveBeenCalled()
+    expect(host.querySelector('button[aria-label="Table"]')?.textContent).toContain('crm_orders')
+    expect(host.textContent).toContain('Save Changes')
+  })
+  it('adds the discovered table key as the independent array identity for a new array relation', async () => {
+    const onChange = vi.fn()
+    const host = renderBuilder({ onChange })
+    const button = (text: string) =>
+      [...host.querySelectorAll('button')].find((item) => item.textContent?.includes(text))!
+    await act(async () => button('Add Related Table').click())
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>('button[aria-label="Child Table"]')!.click(),
+    )
+    const tableOption = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find(
+      (item) => item.textContent?.includes('crm_orders'),
+    )!
+    await act(async () => tableOption.click())
+    await act(async () => button('Embed Relation').click())
+    const latest = onChange.mock.calls.at(-1)?.[0]
+    expect(latest.relations.at(-1)).toMatchObject({
+      primaryKey: ['order_id'],
+      arrayKey: ['order_id'],
+    })
+  })
+  it('initializes array identity when an existing relation changes to array shape', async () => {
+    const onChange = vi.fn()
+    const host = renderBuilder({
+      onChange,
+      initial: { ...renderInitial, relations: [{ ...relation, type: 'sub_doc', arrayKey: [] }] },
+    })
+    const card = host.querySelector<HTMLElement>('.wizard-reference-relation-radius')!
+    await act(async () =>
+      card
+        .querySelector<HTMLButtonElement>('button[title="Embed as array of documents []"]')!
+        .click(),
+    )
+    const latest = onChange.mock.calls.at(-1)?.[0]
+    expect(latest.relations[0]).toMatchObject({ type: 'sub_array', arrayKey: ['order_id'] })
+  })
+  it('recomputes array identity from the active table after shape and table changes', () => {
+    const customers = {
+      name: 'crm_customers',
+      primaryKey: 'customer_id',
+      keys: ['customer_id'],
+      rowCount: '1',
+      columns: ['customer_id', 'company_name'],
+    }
+    expect(relationKeysForTableChange('sub_doc', customers)).toEqual({
+      primaryKey: ['customer_id'],
+      arrayKey: [],
+    })
+    expect(relationKeysForTableChange('sub_array', customers)).toEqual({
+      primaryKey: ['customer_id'],
+      arrayKey: ['customer_id'],
+    })
+  })
+  it('undoes the applied assistant transaction while the Builder remains unchanged', async () => {
+    const onApply = vi.fn()
+    const candidate = { ...renderInitial, destinationTable: 'suggested_destination' }
+    const events = [
+      { type: 'start', messageId: 'undo-proposal' },
+      {
+        type: 'data-proposal',
+        data: {
+          baseRevision: 1,
+          candidateWizard: candidate,
+          validation: { valid: true },
+          diff: { changes: [] },
+        },
+      },
+      { type: 'finish', finishReason: 'stop' },
+    ]
+    const apiFetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n',
+          {
+            headers: { 'Content-Type': 'text/event-stream', 'x-vercel-ai-ui-message-stream': 'v1' },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ valid: true, candidateWizard: candidate, diff: { changes: [] } }),
+        ),
+      )
+    useAuthStore.setState({ apiFetch })
+    const host = renderBuilder({
+      showWorkbenchHeader: true,
+      assistant: { pipelineId: 'customers', revision: 1, blocked: false, onApply },
+    })
+    const button = (text: string) =>
+      [...host.querySelectorAll('button')].find((item) => item.textContent?.includes(text))!
+    await act(async () => button('Infer parent').click())
+    await act(async () => button('Review proposed').click())
+    await act(async () => button('Validate and apply').click())
+    expect(onApply).toHaveBeenCalledExactlyOnceWith(candidate)
+    await act(async () => button('Switch Table').click())
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>('button[aria-label="Table"]')!.click(),
+    )
+    const tableOption = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find(
+      (item) => item.textContent?.includes('crm_orders'),
+    )!
+    await act(async () => tableOption.click())
+    expect(button('Undo apply').disabled).toBe(true)
+    expect(host.querySelector('button[aria-label="Table"]')?.textContent).toContain('crm_orders')
+    expect(onApply).toHaveBeenCalledExactlyOnceWith(candidate)
+  })
+  it('undoes the applied assistant transaction when no editor selection is pending', async () => {
+    const onApply = vi.fn()
+    const candidate = { ...renderInitial, destinationTable: 'suggested_destination' }
+    const events = [
+      { type: 'start', messageId: 'undo-proposal' },
+      {
+        type: 'data-proposal',
+        data: {
+          baseRevision: 1,
+          candidateWizard: candidate,
+          validation: { valid: true },
+          diff: { changes: [] },
+        },
+      },
+      { type: 'finish', finishReason: 'stop' },
+    ]
+    const apiFetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join('') + 'data: [DONE]\n\n',
+          {
+            headers: { 'Content-Type': 'text/event-stream', 'x-vercel-ai-ui-message-stream': 'v1' },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ valid: true, candidateWizard: candidate, diff: { changes: [] } }),
+        ),
+      )
+    useAuthStore.setState({ apiFetch })
+    const host = renderBuilder({
+      showWorkbenchHeader: true,
+      assistant: { pipelineId: 'customers', revision: 1, blocked: false, onApply },
+    })
+    const button = (text: string) =>
+      [...host.querySelectorAll('button')].find((item) => item.textContent?.includes(text))!
+    await act(async () => button('Infer parent').click())
+    await act(async () => button('Review proposed').click())
+    await act(async () => button('Validate and apply').click())
+    expect(onApply).toHaveBeenCalledExactlyOnceWith(candidate)
+    await act(async () => button('Undo apply').click())
+    expect(onApply).toHaveBeenNthCalledWith(2, renderInitial)
+    expect(host.textContent).not.toContain('Review proposed pipeline changes')
+  })
+  it('switches the single sidebar between Copilot and preview without losing preview mode or documents', () => {
+    const host = renderBuilder({
+      showWorkbenchHeader: true,
+      assistant: { pipelineId: 'customers', revision: 1, blocked: false, onApply: vi.fn() },
+    })
+    const sidebar = host.querySelector('.wizard-reference-sidebar')!
+    expect(sidebar.tagName).toBe('ASIDE')
+    expect(
+      host.querySelector('[data-testid="wizard-workbench-header"]')?.textContent,
+    ).not.toContain('AI assistant')
+    const tabs = [...sidebar.querySelectorAll<HTMLButtonElement>('[role="tab"]')]
+    expect(tabs[0].getAttribute('aria-selected')).toBe('true')
+    const preview = previewPanel()!
+    act(() => tabs[1].click())
+    expect(preview.classList.contains('hidden')).toBe(false)
+    act(() =>
+      [...preview.querySelectorAll('button')]
+        .find((button) => button.textContent === 'Table View')!
+        .click(),
+    )
+    expect(preview.querySelector('table')?.textContent).toContain('Northwind')
+    const table = preview.querySelector('table')
+    act(() => tabs[0].click())
+    expect(preview.classList.contains('hidden')).toBe(true)
+    act(() => tabs[1].click())
+    expect(preview.querySelector('table')).toBe(table)
+    expect(preview.querySelector('table')?.textContent).toContain('Northwind')
+    act(() =>
+      sidebar
+        .querySelector<HTMLButtonElement>(':scope > div > button[aria-label="Close AI assistant"]')!
+        .click(),
+    )
+    expect(sidebar.classList.contains('hidden')).toBe(true)
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', metaKey: true })))
+    expect(sidebar.classList.contains('hidden')).toBe(false)
+    expect(preview.querySelector('table')).toBe(table)
   })
 })

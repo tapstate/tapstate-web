@@ -29,13 +29,13 @@ export const DEFAULT_UNWIND_SOURCE_ID_FIELD = '_unwind_source_id'
 
 export type TransformType = 'filter' | 'map' | 'unwind' | 'js' | 'union'
 
+export interface UnionInputOption {
+  reference: string
+  label: string
+}
+
 const DEFAULT_JS_SCRIPT = 'function process(record, ctx) {\n  return record;\n}'
-const WIZARD_ADDABLE_TRANSFORM_TYPES: Exclude<TransformType, 'union'>[] = [
-  'filter',
-  'map',
-  'unwind',
-  'js',
-]
+const WIZARD_ADDABLE_TRANSFORM_TYPES: TransformType[] = ['filter', 'map', 'unwind', 'js', 'union']
 
 export interface FilterCondition {
   field: string
@@ -113,6 +113,7 @@ export interface TableTransformsManagerProps {
   transforms: TransformStep[]
   onChange: (transforms: TransformStep[]) => void
   hideHeader?: boolean
+  availableUnionInputs?: UnionInputOption[]
 }
 
 const TRANSFORM_TYPE_META: Record<
@@ -175,17 +176,20 @@ const TRANSFORM_TYPE_META: Record<
 }
 
 export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
+  tableName,
+  sourceName,
   columns = [],
   transforms = [],
   onChange,
   hideHeader = false,
+  availableUnionInputs = [],
   identityPlans,
   inheritedSourceIdField = DEFAULT_UNWIND_SOURCE_ID_FIELD,
 }) => {
   const { t } = useTranslation()
   const [isAddingStep, setIsAddingStep] = React.useState(false)
 
-  const handleCreateStep = (type: Exclude<TransformType, 'union'>) => {
+  const handleCreateStep = (type: TransformType) => {
     const newStepId = crypto.randomUUID()
     const initialConfig: TransformStep['config'] =
       type === 'filter'
@@ -194,7 +198,9 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
           ? { map: { passthroughUnlisted: true, fields: [] } }
           : type === 'unwind'
             ? { unwind: { path: '' } }
-            : { js: { script: DEFAULT_JS_SCRIPT } }
+            : type === 'union'
+              ? { union: { from: [] } }
+              : { js: { script: DEFAULT_JS_SCRIPT } }
 
     const newStep: TransformStep = {
       id: newStepId,
@@ -299,8 +305,10 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-            {WIZARD_ADDABLE_TRANSFORM_TYPES.map((type) => {
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-5">
+            {WIZARD_ADDABLE_TRANSFORM_TYPES.filter(
+              (type) => type !== 'union' || availableUnionInputs.length > 0,
+            ).map((type) => {
               const meta = TRANSFORM_TYPE_META[type]
               const IconComp = meta.icon
               return (
@@ -448,14 +456,80 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                 </div>
               </div>
 
-              {step.type === 'union' && (
-                <p
-                  role="alert"
-                  className="border-b border-rose-200 bg-rose-50 px-3.5 py-2 text-[12px] text-rose-800"
-                >
-                  {t('pipelines.workspace.transform.wizard.unionWizardUnavailable')}
-                </p>
-              )}
+              {step.type === 'union' &&
+                (() => {
+                  const configuredInputs = step.config.union?.from || []
+                  const options = [...availableUnionInputs]
+                  for (const reference of configuredInputs) {
+                    if (!options.some((option) => option.reference === reference)) {
+                      options.push({ reference, label: reference })
+                    }
+                  }
+                  return (
+                    <div className="space-y-3 border-b border-rose-200 bg-rose-50/70 px-3.5 py-3">
+                      <p className="text-[11px] leading-relaxed text-rose-900">
+                        {t('pipelines.workspace.transform.unionDescription')}
+                      </p>
+                      <div className="space-y-2 rounded-lg border border-rose-200 bg-white p-3">
+                        <div className="flex items-center justify-between gap-3 text-[11px]">
+                          <span className="font-medium text-gray-600">
+                            {t('pipelines.workspace.transform.wizard.unionCurrentInput')}
+                          </span>
+                          <span className="font-mono text-gray-900">
+                            {sourceName ? `${sourceName}.${tableName}` : tableName}
+                          </span>
+                        </div>
+                        <div className="border-t border-gray-100 pt-2">
+                          <p className="mb-2 text-[11px] font-medium text-gray-600">
+                            {t('pipelines.workspace.transform.wizard.unionAdditionalInputs')}
+                          </p>
+                          {options.length > 0 ? (
+                            <div className="max-h-44 space-y-1 overflow-y-auto">
+                              {options.map((option) => (
+                                <label
+                                  key={option.reference}
+                                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-[11px] text-gray-700 hover:bg-rose-50"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    value={option.reference}
+                                    checked={configuredInputs.includes(option.reference)}
+                                    onChange={(event) => {
+                                      const checked = event.currentTarget.checked
+                                      updateStep(idx, (previous) => {
+                                        const current = previous.config.union?.from || []
+                                        const from = checked
+                                          ? [...current, option.reference]
+                                          : current.filter(
+                                              (reference) => reference !== option.reference,
+                                            )
+                                        return {
+                                          ...previous,
+                                          config: { ...previous.config, union: { from } },
+                                        }
+                                      })
+                                    }}
+                                    className="size-3.5 accent-rose-600"
+                                  />
+                                  <span className="font-mono">{option.label}</span>
+                                </label>
+                              ))}
+                            </div>
+                          ) : (
+                            <p role="alert" className="text-[11px] text-amber-800">
+                              {t('pipelines.workspace.transform.wizard.unionNoAdditionalInputs')}
+                            </p>
+                          )}
+                          {options.length > 0 && configuredInputs.length === 0 && (
+                            <p role="alert" className="mt-2 text-[11px] text-amber-800">
+                              {t('pipelines.workspace.transform.wizard.unionInputRequired')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
 
               {/* Step Expanded Editor Body */}
               {step.isExpanded && (
