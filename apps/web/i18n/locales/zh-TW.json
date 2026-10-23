@@ -558,6 +558,9 @@
       "cancel": "取消",
       "confirmStopKeepState": "停止並保留狀態",
       "confirmStopClearState": "停止並清除狀態",
+      "clearState": "清除所有狀態",
+      "confirmClearTitle": "清除 {{id}} 的狀態？",
+      "confirmClearBody": "清除已儲存的進度和算子狀態。任務保持停止；下次啟動將使用目前選表重新全量。既有目標資料依設定的全量處理策略處理。",
       "dismissFeedback": "關閉生命週期錯誤"
     },
     "startChecks": {

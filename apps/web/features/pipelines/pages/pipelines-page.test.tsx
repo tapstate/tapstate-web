@@ -430,6 +430,41 @@ describe('PipelinesPage', () => {
     )
   })
 
+  it.each(['STOPPED', 'COMPLETED'] as const)(
+    'keeps Start and offers an explicit clearing confirmation for a %s Pipeline',
+    async (state) => {
+      listPipelines.mockResolvedValue([
+        {
+          id: 'retained_import',
+          name: 'retained_import',
+          contentHash: 'f'.repeat(64),
+          hasArtifact: true,
+          status: { state },
+        },
+      ])
+      await renderPage()
+      await vi.waitFor(() => expect(container?.textContent).toContain('retained_import'))
+      const trigger = document.querySelector<HTMLButtonElement>(
+        '[aria-label="Pipeline lifecycle actions for retained_import"]',
+      )
+      await act(async () => trigger?.click())
+      expect(elementWithText('[role="menuitem"]', 'Start')).toBeDefined()
+      expect(elementWithText('[role="menuitem"]', 'Clear all state')).toBeDefined()
+      await act(async () => elementWithText('[role="menuitem"]', 'Clear all state')?.click())
+      await vi.waitFor(() =>
+        expect(document.body.textContent).toContain('Clear state for retained_import?'),
+      )
+      expect(stopPipeline).not.toHaveBeenCalled()
+      expect(runPipeline).not.toHaveBeenCalled()
+      expect(elementWithText('button', 'Stop and keep state')).toBeUndefined()
+      await act(async () => elementWithText('button', 'Clear all state')?.click())
+      await vi.waitFor(() =>
+        expect(stopPipeline).toHaveBeenCalledWith('retained_import', true, expect.anything()),
+      )
+      expect(runPipeline).not.toHaveBeenCalled()
+    },
+  )
+
   it('sends an explicit clear-state choice and closes confirmation before showing a failure', async () => {
     stopPipeline.mockRejectedValueOnce(
       Object.assign(

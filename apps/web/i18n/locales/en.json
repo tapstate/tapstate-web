@@ -552,6 +552,9 @@
       "cancel": "Cancel",
       "confirmStopKeepState": "Stop and keep state",
       "confirmStopClearState": "Stop and clear state",
+      "clearState": "Clear all state",
+      "confirmClearTitle": "Clear state for {{id}}?",
+      "confirmClearBody": "Clear saved progress and operator state. The pipeline stays stopped; its next start performs a full load using the current table selection. Existing destination data follows the configured full-load policy.",
       "dismissFeedback": "Dismiss lifecycle error"
     },
     "startChecks": {
