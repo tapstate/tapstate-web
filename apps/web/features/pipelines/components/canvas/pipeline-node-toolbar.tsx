@@ -58,7 +58,7 @@ export function PipelineNodeToolbar({
               <IconButton
                 type="button"
                 size="md"
-                className="data-popup-open:bg-state-base-hover rounded-md"
+                className="hover:bg-pipeline-actionbar-bg-accent data-popup-open:bg-state-base-hover h-5! w-5! rounded-md border-0 p-0 hover:text-[var(--pipeline-text)] focus-visible:ring-[var(--pipeline-selection)]"
                 aria-label={t('pipelines.workspace.actions.nodeToolbar.more', { node: nodeLabel })}
                 data-toolbar-action="more"
               >
