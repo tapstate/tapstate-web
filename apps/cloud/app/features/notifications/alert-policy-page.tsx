@@ -38,6 +38,11 @@ function parseList(value: string): string[] {
     .filter(Boolean)
 }
 
+function lastSegment(value: string): string {
+  const index = value.lastIndexOf(',')
+  return (index >= 0 ? value.slice(index + 1) : value).trim()
+}
+
 function toInput(form: FormState): AlertPolicyInput {
   return {
     name: form.name.trim(),
@@ -78,7 +83,10 @@ export function AlertPolicyPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [validation, setValidation] = useState<string | null>(null)
+  const [typeOptions, setTypeOptions] = useState<string[]>([])
+  const [isTypeListOpen, setIsTypeListOpen] = useState(false)
   const loadSequence = useRef(0)
+  const typeRequest = useRef(0)
 
   const load = useCallback(async () => {
     const sequence = ++loadSequence.current
@@ -111,6 +119,8 @@ export function AlertPolicyPage() {
     setForm(emptyForm)
     setValidation(null)
     setError(null)
+    setTypeOptions([])
+    setIsTypeListOpen(false)
   }, [organizationId])
 
   useEffect(() => {
@@ -119,6 +129,23 @@ export function AlertPolicyPage() {
       loadSequence.current += 1
     }
   }, [load])
+
+  useEffect(() => {
+    if (!organizationId || !isTypeListOpen) return
+    const sequence = ++typeRequest.current
+    const prefix = lastSegment(form.eventTypes)
+    const timer = window.setTimeout(() => {
+      void cloudApi
+        .eventTypes(organizationId, prefix || undefined)
+        .then((types) => {
+          if (sequence === typeRequest.current) setTypeOptions(types)
+        })
+        .catch(() => {
+          if (sequence === typeRequest.current) setTypeOptions([])
+        })
+    }, 200)
+    return () => window.clearTimeout(timer)
+  }, [form.eventTypes, isTypeListOpen, organizationId])
 
   const startCreate = () => {
     setEditingId(null)
@@ -183,6 +210,18 @@ export function AlertPolicyPage() {
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }))
   }
+
+  const selectType = (type: string) => {
+    const index = form.eventTypes.lastIndexOf(',')
+    const prefix = index >= 0 ? `${form.eventTypes.slice(0, index + 1)} ` : ''
+    update('eventTypes', `${prefix}${type}, `)
+    setIsTypeListOpen(false)
+  }
+
+  const selectedTypes = new Set(parseList(form.eventTypes))
+  const typeSuggestions = isTypeListOpen
+    ? typeOptions.filter((type) => !selectedTypes.has(type)).slice(0, 8)
+    : []
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-y-auto">
@@ -285,17 +324,41 @@ export function AlertPolicyPage() {
             />
           </label>
 
-          <label className="block text-[11px] text-neutral-500">
-            {t('events.policyForm.eventTypes')}
-            <input
-              className="mt-1 h-8 w-full rounded-lg border border-black/[0.1] bg-transparent px-2 font-mono text-xs text-neutral-900 outline-none dark:border-white/[0.12] dark:text-white"
-              onChange={(event) => update('eventTypes', event.target.value)}
-              value={form.eventTypes}
-            />
+          <div className="block text-[11px] text-neutral-500">
+            <label htmlFor="policy-event-types">{t('events.policyForm.eventTypes')}</label>
+            <div className="relative">
+              <input
+                className="mt-1 h-8 w-full rounded-lg border border-black/[0.1] bg-transparent px-2 font-mono text-xs text-neutral-900 outline-none dark:border-white/[0.12] dark:text-white"
+                id="policy-event-types"
+                onChange={(event) => update('eventTypes', event.target.value)}
+                onFocus={() => setIsTypeListOpen(true)}
+                onBlur={() => window.setTimeout(() => setIsTypeListOpen(false), 120)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') setIsTypeListOpen(false)
+                }}
+                value={form.eventTypes}
+              />
+              {typeSuggestions.length > 0 && (
+                <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-black/[0.08] bg-white py-1 shadow-lg dark:border-white/[0.12] dark:bg-neutral-900">
+                  {typeSuggestions.map((type) => (
+                    <li key={type}>
+                      <button
+                        className="block w-full px-2 py-1.5 text-left font-mono text-[11px] text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-white/[0.06]"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => selectType(type)}
+                        type="button"
+                      >
+                        {type}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <span className="mt-1 block text-[10px] text-neutral-400">
               {t('events.policyForm.eventTypesHint')}
             </span>
-          </label>
+          </div>
 
           <label className="block text-[11px] text-neutral-500">
             {t('events.policyForm.minSeverity')}
