@@ -1,5 +1,5 @@
 import { BellRing, Plus, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { AlertPolicy, AlertPolicyInput, EventSeverity } from '../../service/cloud-api'
@@ -47,8 +47,8 @@ function toInput(form: FormState): AlertPolicyInput {
     recipients: parseList(form.recipients),
     channel: 'EMAIL',
     cooldownSeconds: Number.parseInt(form.cooldownSeconds, 10) || 0,
-    quietHoursStart: form.quietHoursStart.trim() || null,
-    quietHoursEnd: form.quietHoursEnd.trim() || null,
+    quietHoursStart: form.quietHoursStart.trim(),
+    quietHoursEnd: form.quietHoursEnd.trim(),
     timezone: form.timezone.trim() || 'UTC',
   }
 }
@@ -78,26 +78,46 @@ export function AlertPolicyPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [validation, setValidation] = useState<string | null>(null)
+  const loadSequence = useRef(0)
 
   const load = useCallback(async () => {
-    if (!organizationId) return
+    const sequence = ++loadSequence.current
+    if (!organizationId) {
+      setPolicies([])
+      setIsLoading(false)
+      return
+    }
     setIsLoading(true)
     setError(null)
     try {
-      setPolicies(await cloudApi.alertPolicies(organizationId))
+      const nextPolicies = await cloudApi.alertPolicies(organizationId)
+      if (sequence === loadSequence.current) setPolicies(nextPolicies)
     } catch (loadError) {
-      setError(
-        loadError instanceof CloudApiError && loadError.status === 403
-          ? t('events.adminOnly')
-          : t('events.loadError'),
-      )
+      if (sequence === loadSequence.current) {
+        setError(
+          loadError instanceof CloudApiError && loadError.status === 403
+            ? t('events.adminOnly')
+            : t('events.loadError'),
+        )
+      }
     } finally {
-      setIsLoading(false)
+      if (sequence === loadSequence.current) setIsLoading(false)
     }
   }, [organizationId, t])
 
   useEffect(() => {
+    setPolicies([])
+    setEditingId(null)
+    setForm(emptyForm)
+    setValidation(null)
+    setError(null)
+  }, [organizationId])
+
+  useEffect(() => {
     void load()
+    return () => {
+      loadSequence.current += 1
+    }
   }, [load])
 
   const startCreate = () => {

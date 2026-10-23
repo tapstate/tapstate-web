@@ -1,5 +1,5 @@
 import { Bell, RefreshCw } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { EventSeverity, PlatformEvent } from '../../service/cloud-api'
@@ -29,9 +29,15 @@ export function EventCenterPage() {
   const [selected, setSelected] = useState<PlatformEvent | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
+  const loadSequence = useRef(0)
 
   const load = useCallback(async () => {
-    if (!organizationId) return
+    const sequence = ++loadSequence.current
+    if (!organizationId) {
+      setEvents([])
+      setIsLoading(false)
+      return
+    }
     setIsLoading(true)
     setHasError(false)
     try {
@@ -40,19 +46,28 @@ export function EventCenterPage() {
         severity: severity || undefined,
         limit: 50,
       })
+      if (sequence !== loadSequence.current) return
       setEvents(page.items)
       setSelected((current) =>
         current && page.items.some((item) => item.id === current.id) ? current : null,
       )
     } catch {
-      setHasError(true)
+      if (sequence === loadSequence.current) setHasError(true)
     } finally {
-      setIsLoading(false)
+      if (sequence === loadSequence.current) setIsLoading(false)
     }
   }, [organizationId, severity, type])
 
   useEffect(() => {
+    setEvents([])
+    setSelected(null)
+  }, [organizationId])
+
+  useEffect(() => {
     void load()
+    return () => {
+      loadSequence.current += 1
+    }
   }, [load])
 
   return (
@@ -139,7 +154,13 @@ export function EventCenterPage() {
                       </span>
                     </td>
                     <td className="truncate px-3 py-2 text-neutral-700 dark:text-neutral-200">
-                      {event.subject}
+                      <button
+                        className="w-full truncate text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-500"
+                        onClick={() => setSelected(event)}
+                        type="button"
+                      >
+                        {event.subject}
+                      </button>
                     </td>
                     <td className="truncate px-3 py-2 text-neutral-500">{event.actor ?? '—'}</td>
                   </tr>
