@@ -242,7 +242,7 @@ function PipelineTable({
                   aria-label={t('pipelines.actions.editPipeline', { id: pipeline.id })}
                 >
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                    <GitMerge className="h-3.5 w-3.5 text-blue-500" aria-hidden="true" />
+                    <GitMerge className="text-text-accent size-4" aria-hidden="true" />
                   </span>
                   <span
                     className="min-w-0 text-[13px] font-medium break-words text-gray-900"
