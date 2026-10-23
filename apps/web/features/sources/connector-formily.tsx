@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next'
 
 import type { ConnectorConfigField, JsonValue } from '@/service/source-client'
 
-import { FormilyAntdProvider } from '@/components/formily/formily-antd-provider'
+import { FormilyAntdProvider, formilyDifyTheme } from '@/components/formily/formily-antd-provider'
 import { FormilySegmentedRadioGroup } from '@/components/formily/formily-segmented-radio'
 import { Button } from '@/components/ui/button'
 
@@ -430,10 +430,12 @@ export function ConnectorFormily({
   )
 
   return (
-    <FormilyAntdProvider>
-      <AntdFormily.FormLayout layout="vertical">
-        <FormilySchema key={formKey} form={form} schema={schema} components={components} />
-      </AntdFormily.FormLayout>
-    </FormilyAntdProvider>
+    <div className="source-connector-form">
+      <FormilyAntdProvider theme={formilyDifyTheme}>
+        <AntdFormily.FormLayout layout="vertical">
+          <FormilySchema key={formKey} form={form} schema={schema} components={components} />
+        </AntdFormily.FormLayout>
+      </FormilyAntdProvider>
+    </div>
   )
 }

@@ -607,6 +607,7 @@
   },
   "pipelines": {
     "title": "流水线",
+    "create": "创建 Pipeline",
     "subtitle": "查看流水线资源、生成视图和服务 API。",
     "allPipelines": "全部流水线",
     "explorer": "资源树",
@@ -1866,7 +1867,7 @@
       "unavailable": "此服务器暂未提供该 View 的 Pipeline 血缘。",
       "noSources": "没有上游数据表信息。"
     },
-    "newView": "新建视图",
+    "createView": "创建视图",
     "intro": "你的实时运营状态：Tapstate 持续保持最新的每一个视图。",
     "kind": {
       "view": "视图",

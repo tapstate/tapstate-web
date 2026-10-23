@@ -5,6 +5,7 @@ import { MiniMap, type Viewport } from '@xyflow/react'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { PipelineCanvasTooltip } from './pipeline-canvas-tooltip'
 import { PipelineCanvasViewportToolbar } from './pipeline-canvas-viewport-toolbar'
 
 /** Keeps the minimap and viewport controls in their own canvas layer. */
@@ -78,38 +79,45 @@ export function PipelineCanvasOperator({
           role="toolbar"
           aria-label={t('pipelines.workspace.actions.canvasHistory')}
         >
-          <IconButton
-            size="lg"
-            aria-label={t('pipelines.workspace.actions.undo')}
-            title={t('pipelines.workspace.actions.undo')}
-            disabled={readOnly || !canUndo}
-            onClick={onUndo}
-          >
-            <span className="i-ri-arrow-go-back-line size-4" aria-hidden="true" />
-          </IconButton>
-          <IconButton
-            size="lg"
-            aria-label={t('pipelines.workspace.actions.redo')}
-            title={t('pipelines.workspace.actions.redo')}
-            disabled={readOnly || !canRedo}
-            onClick={onRedo}
-          >
-            <span className="i-ri-arrow-go-forward-fill size-4" aria-hidden="true" />
-          </IconButton>
+          <PipelineCanvasTooltip label={t('pipelines.workspace.actions.undo')}>
+            <IconButton
+              size="lg"
+              className="rounded-md"
+              aria-label={t('pipelines.workspace.actions.undo')}
+              disabled={readOnly || !canUndo}
+              focusableWhenDisabled
+              onClick={onUndo}
+            >
+              <span className="i-ri-arrow-go-back-line size-4" aria-hidden="true" />
+            </IconButton>
+          </PipelineCanvasTooltip>
+          <PipelineCanvasTooltip label={t('pipelines.workspace.actions.redo')}>
+            <IconButton
+              size="lg"
+              className="rounded-md"
+              aria-label={t('pipelines.workspace.actions.redo')}
+              disabled={readOnly || !canRedo}
+              focusableWhenDisabled
+              onClick={onRedo}
+            >
+              <span className="i-ri-arrow-go-forward-fill size-4" aria-hidden="true" />
+            </IconButton>
+          </PipelineCanvasTooltip>
           <Separator orientation="vertical" className="mx-0.5 h-3.5" />
           <Popover>
-            <PopoverTrigger
-              render={
-                <IconButton
-                  size="lg"
-                  aria-label={t('pipelines.workspace.actions.history')}
-                  title={t('pipelines.workspace.actions.history')}
-                  className="rounded-md"
-                >
-                  <span className="i-ri-history-line size-4" aria-hidden="true" />
-                </IconButton>
-              }
-            />
+            <PipelineCanvasTooltip label={t('pipelines.workspace.actions.history')}>
+              <PopoverTrigger
+                render={
+                  <IconButton
+                    size="lg"
+                    aria-label={t('pipelines.workspace.actions.history')}
+                    className="data-popup-open:bg-state-accent-active data-popup-open:text-text-accent rounded-md"
+                  >
+                    <span className="i-ri-history-line size-4" aria-hidden="true" />
+                  </IconButton>
+                }
+              />
+            </PipelineCanvasTooltip>
             <PopoverContent placement="top-start" className="max-h-[50vh] w-64 overflow-y-auto p-2">
               <div className="px-2 py-1 text-sm font-medium text-[var(--color-text-secondary)]">
                 {t('pipelines.workspace.actions.history')}
@@ -151,11 +159,15 @@ export function PipelineCanvasOperator({
         </div>
         <div className="pipeline-canvas__operator-viewport">
           <MiniMap
-            className="pipeline-canvas__minimap pipeline-canvas__minimap--operator max-md:!hidden"
+            className="pipeline-canvas__minimap--operator max-md:!hidden absolute! bottom-10! z-9 m-0! h-18.25! w-25.75! rounded-lg! border-[0.5px]! border-divider-subtle! bg-background-default-subtle! shadow-md! shadow-shadow-shadow-5!"
             style={{ width: 102, height: 72 }}
-            maskColor="var(--pipeline-minimap-mask)"
-            nodeColor="var(--pipeline-minimap-node)"
-            nodeStrokeWidth={2}
+            maskColor="var(--color-workflow-minimap-bg)"
+            nodeClassName={(node) =>
+              node.selected
+                ? 'bg-workflow-minimap-block border-components-option-card-option-selected-border'
+                : 'bg-workflow-minimap-block'
+            }
+            nodeStrokeWidth={3}
             pannable
             zoomable
           />

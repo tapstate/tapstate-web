@@ -9,6 +9,15 @@
 - [ ] Tapstate branding, navigation, app shell and main surface were compared with the base branch.
 - [ ] Existing-page audit row in `docs/engineering/ui-page-audit.md` is updated if a page was changed.
 - [ ] System interactions follow `docs/engineering/ui-interaction-audit.md`; record trigger, keyboard path, dismissal, result and focus return for every changed overlay or notification.
+- [ ] Each changed composition includes the source-mapping table required by DESIGN.md: source revision/file, original component/classes, local component/classes, every deviation and rendered evidence. No guessed spacing, surface, icon size or responsive override.
+- [ ] Content backgrounds were distinguished from input/control backgrounds; dialog body padding and right-aligned row statuses/actions were checked in the rendered page. A build/typecheck is not recorded as visual acceptance.
+
+### UI source mapping
+
+For UI changes, fill this table; for non-UI changes, state not applicable.
+
+| Surface / part | Source revision and file | Source component / classes | Local component / classes | Difference and reason | Rendered evidence |
+| -------------- | ------------------------ | -------------------------- | ------------------------- | --------------------- | ----------------- |
 
 ## Verification
 

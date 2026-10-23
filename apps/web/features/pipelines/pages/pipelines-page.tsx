@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { GitMerge, Plus, Search } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { ApiFetcher } from '@/service/source-client'
 
+import { ResourceListHeader } from '@/components/resource-list-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { listPipelines, type PipelineCatalogItem } from '@/service/pipelines/pipeline-client'
@@ -27,10 +29,15 @@ import { useStartPipeline, type PipelineStartOutcome } from '../start-checks/use
 
 export function PipelinesPage() {
   const { i18n, t } = useTranslation()
+  const navigate = useNavigate()
+  const { create } = useSearch({ from: '/_authenticated/pipelines' })
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const [search, setSearch] = useState('')
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [isCreationDialogOpen, setIsCreationDialogOpen] = useState(false)
+  useEffect(() => {
+    if (create) setIsCreationDialogOpen(true)
+  }, [create])
   const [lifecycleFeedback, setLifecycleFeedback] = useState<{
     pipelineId: string
     action: PipelineLifecycleAction
@@ -59,19 +66,12 @@ export function PipelinesPage() {
   }, [i18n.language, pipelines, search])
   return (
     <section className="flex h-full w-full flex-col overflow-hidden bg-white">
-      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-gray-100/70 px-4 md:px-6">
-        <h1 className="min-w-0 truncate text-[15px] font-semibold text-gray-900">
-          {t('pipelines.title')}
-        </h1>
-        <Button
-          type="button"
-          className="shrink-0 px-3 text-[13px] font-medium shadow-sm"
-          onClick={() => setIsCreationDialogOpen(true)}
-        >
+      <ResourceListHeader title={t('pipelines.title')}>
+        <Button type="button" onClick={() => setIsCreationDialogOpen(true)}>
           <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-          {t('common.create')}
+          {t('pipelines.create')}
         </Button>
-      </header>
+      </ResourceListHeader>
 
       <div className="flex min-h-0 flex-1 bg-white">
         <main className="flex min-w-0 flex-1 flex-col bg-white">
@@ -171,7 +171,13 @@ export function PipelinesPage() {
       )}
       <StartChecksDialog {...starter.dialog} />
       {isCreationDialogOpen && (
-        <PipelineCreationDialog open onClose={() => setIsCreationDialogOpen(false)} />
+        <PipelineCreationDialog
+          open
+          onClose={() => {
+            setIsCreationDialogOpen(false)
+            if (create) void navigate({ to: '/pipelines', search: {}, replace: true })
+          }}
+        />
       )}
     </section>
   )
@@ -236,7 +242,7 @@ function PipelineTable({
                   aria-label={t('pipelines.actions.editPipeline', { id: pipeline.id })}
                 >
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                    <GitMerge className="h-3.5 w-3.5 text-blue-500" aria-hidden="true" />
+                    <GitMerge className="text-text-accent size-4" aria-hidden="true" />
                   </span>
                   <span
                     className="min-w-0 text-[13px] font-medium break-words text-gray-900"

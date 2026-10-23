@@ -61,11 +61,6 @@
   font-size: 14px;
   font-weight: 500;
 }
-.page :global(.pipeline-monitoring__state-badge) {
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-}
 .page :global(.pipeline-monitoring__grid) {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
@@ -162,19 +157,6 @@
   padding: 3px;
   border-radius: 8px;
   background: var(--color-background-section-burn);
-}
-.page :global(.pipeline-monitoring__range) button {
-  color: var(--color-text-tertiary);
-}
-.page :global(.pipeline-monitoring__range) button:not(:focus-visible) {
-  box-shadow: none;
-}
-.page :global(.pipeline-monitoring__range) button[aria-pressed='true'] {
-  background: var(--color-background-default);
-  color: var(--color-text-primary);
-}
-.page :global(.pipeline-monitoring__range) button[aria-pressed='true']:not(:focus-visible) {
-  box-shadow: 0 1px 2px var(--color-components-panel-border);
 }
 .page :global(.pipeline-monitoring__trend-grid) {
   gap: 16px;
@@ -310,8 +292,10 @@
   font-size: 13px;
   line-height: 20px;
 }
-.page button:active:not(:disabled) {
-  opacity: 0.8;
+.emptyState {
+  position: relative;
+  isolation: isolate;
+  min-height: 280px;
 }
 
 @media (max-width: 1000px) {

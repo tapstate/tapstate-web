@@ -21,4 +21,6 @@ The shared Field, InputGroup and Textarea now render `field/index.tsx`, `input-g
 
 ## Screen review protocol
 
+Before implementation, apply DESIGN.md's scene contract and record its source-mapping table. For each overlay, distinguish popup/header/body/footer from inner section/control surfaces; ordinary dialog content belongs in DialogBody. For each row, inspect the actual rendered title/detail/status/action alignment with long content. For connection-test results, use the section-burn content token and preserve the 24px outer / 12px result-well horizontal insets. Never record source inspection, typecheck or lint as evidence that the visual result was seen.
+
 For each new or changed screen, record the actual interaction path: trigger → open → keyboard navigation → confirm/cancel or Escape/outside click → resulting data state → focus return. Inspect nested overlays, disabled/pending states, long text, mobile viewport, light/dark where supported, and en/zh-CN/zh-TW labels. Capture screenshots at 1280×800 and 375×812 and link the evidence from the page audit. Mark a family/screen complete only after its rendered behavior and source import are both verified; typecheck and UI Kit alone do not close a business-page row.

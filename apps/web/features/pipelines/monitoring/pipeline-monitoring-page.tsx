@@ -1,4 +1,6 @@
+import FilterEmptyState from '@langgenius/dify-ui/filter-empty-state'
 import { Spinner } from '@langgenius/dify-ui/spinner'
+import { StatusDot, type StatusDotStatus } from '@langgenius/dify-ui/status-dot'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
@@ -14,8 +16,19 @@ function isObservationUnavailable(error: unknown) {
   return error instanceof PipelineClientError && error.status === 404
 }
 
-function stateTone(state: PipelineCatalogState) {
-  return state.toLowerCase()
+const stateDotStatus: Record<PipelineCatalogState, StatusDotStatus> = {
+  DRAFT: 'disabled',
+  NEW: 'normal',
+  STARTING: 'normal',
+  RUNNING: 'success',
+  PAUSING: 'warning',
+  PAUSED: 'warning',
+  RESUMING: 'normal',
+  STOPPING: 'warning',
+  STOPPED: 'disabled',
+  COMPLETED: 'success',
+  FAILED: 'error',
+  UNAVAILABLE: 'disabled',
 }
 
 export function PipelineMonitoringPage({
@@ -49,13 +62,20 @@ export function PipelineMonitoringPage({
 
   if (!hasArtifact) {
     return (
-      <section className={`${styles.page} pipeline-monitoring__state mt-6`} aria-live="polite">
-        <h2 className="pipeline-monitoring__state-title">
-          {t('pipelines.workspace.runtime.monitoring.draftTitle')}
-        </h2>
-        <p className="pipeline-monitoring__state-description">
-          {t('pipelines.workspace.runtime.monitoring.draftBody')}
-        </p>
+      <section className={`${styles.page} ${styles.emptyState} mt-6`} role="status">
+        <FilterEmptyState
+          className="[&_p]:max-w-full [&>div:last-child>div]:max-w-full"
+          title={
+            <span className="block max-w-100 text-center whitespace-normal">
+              <span className="system-sm-semibold text-text-secondary block">
+                {t('pipelines.workspace.runtime.monitoring.draftTitle')}
+              </span>
+              <span className="mt-2 block">
+                {t('pipelines.workspace.runtime.monitoring.draftBody')}
+              </span>
+            </span>
+          }
+        />
       </section>
     )
   }
@@ -142,11 +162,12 @@ export function PipelineMonitoringPage({
           <span className="pipeline-monitoring__summary-pipeline">{pipelineId}</span>
         </div>
         {status.data && (
-          <span
-            className="pipeline-monitoring__state-badge"
-            data-state={stateTone(status.data.state)}
-          >
-            <span className="pipeline-monitoring__state-dot" aria-hidden="true" />
+          <span className="system-xs-medium text-text-secondary inline-flex shrink-0 items-center gap-1.5">
+            <StatusDot
+              className="rounded-full"
+              size="small"
+              status={stateDotStatus[status.data.state]}
+            />
             {t(`pipelines.workspace.runtime.states.${status.data.state}`)}
           </span>
         )}

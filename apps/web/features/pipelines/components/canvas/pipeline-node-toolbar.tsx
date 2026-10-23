@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@langgenius/dify-ui/dropdown-menu'
-import { MoreHorizontal, Trash2 } from 'lucide-react'
+import { IconButton } from '@langgenius/dify-ui/icon-button'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -55,21 +55,21 @@ export function PipelineNodeToolbar({
         <DropdownMenu open={open} onOpenChange={setOpen}>
           <DropdownMenuTrigger
             render={
-              <button
+              <IconButton
                 type="button"
-                className="hover:bg-pipeline-actionbar-bg-accent data-popup-open:bg-pipeline-actionbar-bg-accent flex size-6 h-5! w-5! cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-inherit transition-colors hover:text-[var(--pipeline-text)] focus-visible:ring-1 focus-visible:ring-[var(--pipeline-selection)] focus-visible:outline-hidden"
+                size="md"
+                className="rounded-md data-popup-open:bg-state-base-hover"
                 aria-label={t('pipelines.workspace.actions.nodeToolbar.more', { node: nodeLabel })}
-                title={t('pipelines.workspace.actions.nodeToolbar.more', { node: nodeLabel })}
                 data-toolbar-action="more"
               >
-                <MoreHorizontal className="size-4" aria-hidden="true" />
-              </button>
+                <span className="i-ri-more-fill size-4" aria-hidden="true" />
+              </IconButton>
             }
           />
           <DropdownMenuContent
             placement="bottom-end"
             sideOffset={4}
-            className="w-auto min-w-40 whitespace-nowrap"
+            className="w-auto min-w-40 whitespace-nowrap border-[0.5px] border-components-panel-border bg-components-panel-bg-blur py-1 shadow-lg backdrop-blur-[5px]"
           >
             <DropdownMenuItem
               variant="destructive"
@@ -80,7 +80,7 @@ export function PipelineNodeToolbar({
                 onRequestDelete?.()
               }}
             >
-              <Trash2 className="size-4" aria-hidden="true" />
+              <span className="i-ri-delete-bin-line size-4" aria-hidden="true" />
               {t('pipelines.workspace.actions.nodeToolbar.delete', { node: nodeLabel })}
               <span className="ml-auto pl-4 text-xs text-[var(--pipeline-text-subtle)]">⌫</span>
             </DropdownMenuItem>

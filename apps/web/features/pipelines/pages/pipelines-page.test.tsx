@@ -552,6 +552,10 @@ describe('PipelinesPage', () => {
     const wizardOption = modeButtons.find((button) =>
       button.textContent?.includes('Pipeline builder'),
     )
+    expect(wizardOption?.getAttribute('aria-pressed')).toBe('true')
+    await act(async () => dagOption?.click())
+    expect(wizardOption?.getAttribute('aria-pressed')).toBe('true')
+    await act(async () => dagOption?.click())
     expect(dagOption?.getAttribute('aria-pressed')).toBe('true')
     await act(async () => wizardOption?.click())
     expect(wizardOption?.getAttribute('aria-pressed')).toBe('true')
@@ -583,6 +587,8 @@ describe('PipelinesPage', () => {
     const dagModeOption = [
       ...dagDialog.querySelectorAll<HTMLButtonElement>('button[aria-pressed]'),
     ].find((button) => button.textContent?.includes('Build with DAG Designer'))
+    await act(async () => dagModeOption?.click())
+    await act(async () => dagModeOption?.click())
     expect(dagModeOption?.getAttribute('aria-pressed')).toBe('true')
     await setPipelineId(dagDialog, 'dag_pipeline')
     await act(async () => submit(dagDialog)?.click())

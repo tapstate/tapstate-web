@@ -67,10 +67,81 @@ export const formilyAntdTheme: ThemeConfig = {
   },
 }
 
+export const formilyDifyTheme: ThemeConfig = {
+  token: {
+    ...formilyAntdTheme.token,
+    controlOutline: 'var(--color-state-accent-solid)',
+    controlOutlineWidth: 2,
+    colorBgContainer: 'var(--color-components-input-bg-normal)',
+    colorBgContainerDisabled: 'var(--color-components-input-bg-disabled)',
+    colorBgElevated: 'var(--color-background-default)',
+    colorBgLayout: 'var(--color-background-default)',
+    colorBgTextActive: 'var(--color-state-base-active)',
+    colorBgTextHover: 'var(--color-state-base-hover)',
+    colorBorderSecondary: 'var(--color-divider-subtle)',
+    colorError: 'var(--color-text-destructive)',
+    colorErrorBorder: 'var(--color-components-input-border-destructive)',
+    colorErrorBorderHover: 'var(--color-text-destructive)',
+    colorErrorOutline: 'color-mix(in srgb, var(--color-text-destructive) 20%, transparent)',
+    colorErrorText: 'var(--color-text-destructive)',
+    colorFillAlter: 'var(--color-components-input-bg-normal)',
+    colorFillContent: 'var(--color-components-input-bg-normal)',
+    colorFillContentHover: 'var(--color-components-input-bg-hover)',
+    colorPrimary: 'var(--color-text-accent)',
+    colorPrimaryActive: 'var(--color-text-accent)',
+    colorPrimaryBg:
+      'color-mix(in srgb, var(--color-text-accent) 10%, var(--color-background-default))',
+    colorPrimaryBgHover:
+      'color-mix(in srgb, var(--color-text-accent) 10%, var(--color-background-default))',
+    colorPrimaryBorder: 'var(--color-text-accent)',
+    colorPrimaryBorderHover: 'var(--color-text-accent)',
+    colorPrimaryHover: 'var(--color-text-accent)',
+    colorPrimaryText: 'var(--color-text-accent)',
+    colorPrimaryTextActive: 'var(--color-text-accent)',
+    colorPrimaryTextHover: 'var(--color-text-accent)',
+    colorSplit: 'var(--color-divider-subtle)',
+    colorText: 'var(--color-text-primary)',
+    colorTextLightSolid: 'var(--color-text-primary-on-surface)',
+    colorTextPlaceholder: 'var(--color-components-input-text-placeholder)',
+    colorTextSecondary: 'var(--color-text-secondary)',
+    colorTextTertiary: 'var(--color-text-tertiary)',
+    colorWhite: 'var(--color-background-default)',
+    controlItemBgActive:
+      'color-mix(in srgb, var(--color-text-accent) 10%, var(--color-background-default))',
+    controlItemBgActiveHover:
+      'color-mix(in srgb, var(--color-text-accent) 10%, var(--color-background-default))',
+    controlItemBgHover: 'var(--color-state-base-hover)',
+  },
+  components: {
+    Input: {
+      activeBorderColor: 'transparent',
+      activeShadow: '0 0 0 2px var(--color-state-accent-solid)',
+      hoverBorderColor: 'var(--color-components-input-border-hover)',
+    },
+    InputNumber: {
+      activeBorderColor: 'transparent',
+      activeShadow: '0 0 0 2px var(--color-state-accent-solid)',
+      hoverBorderColor: 'var(--color-components-input-border-hover)',
+    },
+    Select: {
+      activeBorderColor: 'transparent',
+      activeOutlineColor: 'transparent',
+      hoverBorderColor: 'var(--color-components-input-border-hover)',
+      optionActiveBg: 'var(--color-state-base-hover)',
+      optionSelectedBg:
+        'color-mix(in srgb, var(--color-text-accent) 10%, var(--color-background-default))',
+      optionSelectedColor: 'var(--color-text-primary)',
+    },
+  },
+}
+
 /** Keeps schema layout on Formily while mapping its compatibility styles to shared UI tokens. */
-export function FormilyAntdProvider({ children }: PropsWithChildren) {
+export function FormilyAntdProvider({
+  children,
+  theme = formilyAntdTheme,
+}: PropsWithChildren<{ theme?: ThemeConfig }>) {
   return (
-    <ConfigProvider prefixCls={formilyAntdPrefixCls} theme={formilyAntdTheme}>
+    <ConfigProvider prefixCls={formilyAntdPrefixCls} theme={theme}>
       {children}
     </ConfigProvider>
   )

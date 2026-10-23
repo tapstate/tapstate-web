@@ -57,6 +57,7 @@ import type {
 } from '@/service/source-client'
 
 import { ConnectorIcon } from '@/components/connector-icon'
+import { ResourceListHeader } from '@/components/resource-list-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { RouteTabs } from '@/components/ui/route-tabs'
@@ -182,6 +183,7 @@ export function SourcesPage({
   const [deletingSource, setDeletingSource] = useState<Source | null>(null)
   const successMessage = useSourceFeedbackStore((state) => state.successMessage)
   const setSuccessMessage = useSourceFeedbackStore((state) => state.setSuccessMessage)
+  const takeSuccessMessage = useSourceFeedbackStore((state) => state.takeSuccessMessage)
   const [removingSamples, setRemovingSamples] = useState(false)
   const [sampleRemoveConfirmOpen, setSampleRemoveConfirmOpen] = useState(false)
   const [sampleDialogOpen, setSampleDialogOpen] = useState(false)
@@ -457,11 +459,9 @@ export function SourcesPage({
   }
 
   useEffect(() => {
-    if (!successMessage) return
-    toast?.show({ tone: 'success', title: successMessage, duration: 4000 })
-    const timeoutId = window.setTimeout(() => setSuccessMessage(''), 4000)
-    return () => window.clearTimeout(timeoutId)
-  }, [successMessage, setSuccessMessage, toast])
+    if (!successMessage || !toast || !takeSuccessMessage(successMessage)) return
+    toast.show({ tone: 'success', title: successMessage, duration: 4000 })
+  }, [successMessage, takeSuccessMessage, toast])
 
   useEffect(() => {
     if (!selectedSource || !(sourceSchemaQuery.error instanceof SourceClientError)) return
@@ -482,49 +482,36 @@ export function SourcesPage({
 
   return (
     <section className="flex h-full w-full flex-col overflow-hidden bg-white">
-      <header className="border-divider-subtle z-10 flex shrink-0 flex-col gap-3 border-b bg-white px-4 py-4 md:px-8 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
-        <div className="min-w-0">
-          <h1 className="text-text-primary truncate text-[18px]/[21.6px] font-semibold">
-            {t('sources.title')}
-          </h1>
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {samplesAvailable && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setSampleDialogOpen(true)}
-            >
-              {t('overview.addSources.sample.action')}
-            </Button>
-          )}
-          {(sourcesQuery.data ?? []).some(isSampleSource) && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={removingSamples}
-              onClick={() => {
-                setSampleRemoveError('')
-                setSampleRemoveConfirmOpen(true)
-              }}
-            >
-              {removingSamples ? t('sources.samples.removing') : t('sources.samples.remove')}
-            </Button>
-          )}
-          {selectedSource && (
-            <Button type="button" variant="ghost" onClick={() => selectSource(null)}>
-              <ArrowLeft className="size-4" aria-hidden="true" />
-              {t('sources.allSources')}
-            </Button>
-          )}
-          <Button type="button" onClick={() => setCreateOpen(true)}>
-            <Plus className="size-4" aria-hidden="true" />
-            {t('sources.actions.create')}
+      <ResourceListHeader title={t('sources.title')}>
+        {samplesAvailable && (
+          <Button type="button" variant="ghost" onClick={() => setSampleDialogOpen(true)}>
+            {t('overview.addSources.sample.action')}
           </Button>
-        </div>
-      </header>
+        )}
+        {(sourcesQuery.data ?? []).some(isSampleSource) && (
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={removingSamples}
+            onClick={() => {
+              setSampleRemoveError('')
+              setSampleRemoveConfirmOpen(true)
+            }}
+          >
+            {removingSamples ? t('sources.samples.removing') : t('sources.samples.remove')}
+          </Button>
+        )}
+        {selectedSource && (
+          <Button type="button" variant="ghost" onClick={() => selectSource(null)}>
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            {t('sources.allSources')}
+          </Button>
+        )}
+        <Button type="button" onClick={() => setCreateOpen(true)}>
+          <Plus className="size-3.5" aria-hidden="true" />
+          {t('sources.actions.create')}
+        </Button>
+      </ResourceListHeader>
       {sampleRemoveError && (
         <div
           className="text-destructive flex items-start justify-between gap-3 border-b border-gray-100/70 px-4 py-2 text-[13px] md:px-6"

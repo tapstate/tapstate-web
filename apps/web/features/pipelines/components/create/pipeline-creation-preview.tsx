@@ -1,7 +1,9 @@
-import { ArrowDown, Braces, Database, GitBranch, Plus, Table2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import type { PipelineCreationModeDefinition } from './pipeline-creation-mode'
+
+import builderPreviewImage from '../../assets/pipeline-builder-preview.png'
+import dagPreviewImage from '../../assets/pipeline-dag-preview.png'
 
 interface PipelineCreationPreviewProps {
   definition: PipelineCreationModeDefinition
@@ -37,7 +39,7 @@ export function PipelineCreationPreview({ definition }: PipelineCreationPreviewP
           {definition.value === 'wizard' ? (
             <WizardPreview />
           ) : (
-            <DagPreview definition={definition} />
+            <DagPreview />
           )}
         </div>
         <div
@@ -49,15 +51,8 @@ export function PipelineCreationPreview({ definition }: PipelineCreationPreviewP
   )
 }
 
-function DagPreview({ definition }: { definition: PipelineCreationModeDefinition }) {
+function DagPreview() {
   const { t } = useTranslation()
-  const middleLabel = t(
-    definition.value === 'sql'
-      ? 'pipelines.createEntry.sqlTransform'
-      : definition.value === 'ai'
-        ? 'pipelines.createEntry.aiDraft'
-        : 'pipelines.createEntry.dagStep',
-  )
 
   return (
     <div
@@ -65,25 +60,13 @@ function DagPreview({ definition }: { definition: PipelineCreationModeDefinition
       role="img"
       aria-label={t('pipelines.createEntry.dagPreviewLabel')}
     >
-      <div className="pipeline-create-preview__canvas-toolbar">
-        <span>
-          <GitBranch aria-hidden="true" /> {t('pipelines.createEntry.dagCanvas')}
-        </span>
-        <span className="pipeline-create-preview__toolbar-chip">
-          {t('pipelines.createEntry.dagPreviewStatus')}
-        </span>
-      </div>
-      <div className="pipeline-create-preview__graph-row">
-        <PreviewNode label={t('pipelines.createEntry.dagSource')} tone="source" />
-        <PreviewEdge />
-        <PreviewNode label={middleLabel} tone="transform" />
-        <PreviewEdge />
-        <PreviewNode label={t('pipelines.createEntry.dagTarget')} tone="target" />
-      </div>
-      <div className="pipeline-create-preview__caption">
-        <span className="pipeline-create-preview__caption-dot" aria-hidden="true" />
-        {t('pipelines.createEntry.dagHint')}
-      </div>
+      <img
+        className="pipeline-create-preview__image"
+        src={dagPreviewImage}
+        width={664}
+        height={448}
+        alt=""
+      />
     </div>
   )
 }
@@ -96,70 +79,13 @@ function WizardPreview() {
       role="img"
       aria-label={t('pipelines.createEntry.wizardPreviewLabel')}
     >
-      <div className="pipeline-create-preview__wizard-step pipeline-create-preview__wizard-step--active">
-        <span className="pipeline-create-preview__step-index">1</span>
-        <div>
-          <strong>
-            <Database aria-hidden="true" />
-            {t('pipelines.createEntry.wizardSource')}
-          </strong>
-          <span>{t('pipelines.createEntry.wizardSourceHint')}</span>
-        </div>
-        <Table2 aria-hidden="true" />
-      </div>
-      <div className="pipeline-create-preview__wizard-connector">
-        <ArrowDown aria-hidden="true" />
-        <span aria-hidden="true">
-          <Plus aria-hidden="true" />
-        </span>
-      </div>
-      <div className="pipeline-create-preview__wizard-step">
-        <span className="pipeline-create-preview__step-index">2</span>
-        <div>
-          <strong>
-            <Braces aria-hidden="true" />
-            {t('pipelines.createEntry.wizardTransform')}
-          </strong>
-          <span>{t('pipelines.createEntry.wizardTransformHint')}</span>
-        </div>
-      </div>
-      <div className="pipeline-create-preview__wizard-connector">
-        <ArrowDown aria-hidden="true" />
-        <span aria-hidden="true">
-          <Plus aria-hidden="true" />
-        </span>
-      </div>
-      <div className="pipeline-create-preview__wizard-step">
-        <span className="pipeline-create-preview__step-index">3</span>
-        <div>
-          <strong>
-            <Table2 aria-hidden="true" />
-            {t('pipelines.createEntry.wizardOutput')}
-          </strong>
-          <span>{t('pipelines.createEntry.wizardOutputHint')}</span>
-        </div>
-      </div>
-      <div className="pipeline-create-preview__caption">
-        <span className="pipeline-create-preview__caption-dot" aria-hidden="true" />
-        {t('pipelines.createEntry.wizardHint')}
-      </div>
+      <img
+        className="pipeline-create-preview__image"
+        src={builderPreviewImage}
+        width={664}
+        height={448}
+        alt=""
+      />
     </div>
-  )
-}
-
-function PreviewNode({ label, tone }: { label: string; tone: 'source' | 'transform' | 'target' }) {
-  return (
-    <div className={`pipeline-create-preview__node pipeline-create-preview__node--${tone}`}>
-      <span className="pipeline-create-preview__node-dot" aria-hidden="true" />
-      <span>{label}</span>
-    </div>
-  )
-}
-
-function PreviewEdge() {
-  return (
-    <span className="pipeline-create-preview__edge" aria-hidden="true">
-      <span className="pipeline-create-preview__edge-dot" />
-    </span>
   )
 }

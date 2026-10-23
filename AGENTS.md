@@ -35,6 +35,8 @@
 
 其中 `DESIGN.md` 是页面和审查契约；组件源码、尺寸、状态和 token 以 vendored `packages/dify-ui` 为准。Tapstate 的 Logo、导航、外层 shell 与产品文案仍由应用定义。每个新增或重大改动页面要按矩阵审查。
 
+任何新增或调整的 UI 都必须先匹配 `DESIGN.md` 的 Scene contracts，并在 PR 或页面审计里填写源码映射表：实际 revision/文件、原组件和 class/token、本地对应项、差异原因、渲染证据。不能凭感觉指定背景、padding、圆角、图标大小或响应式覆盖；弹窗内容区域与输入控件必须按 Surface and token decision table 区分。没有源码依据或没有看到实际渲染结果，不能宣称“源码对齐”或视觉验收完成。
+
 组件优先使用 vendored API 和语义 token；上游组件中有源码确认的精确数值（如 10px 圆角）可以保留。新增裸色值、任意几何或调用点浮层层级需有来源依据和审查记录。
 
 ## Frontend Rules
@@ -50,7 +52,7 @@
 - 样式入口必须分层：`main.css` 只汇总 import，Tailwind 放 `tailwind.css`，应用语义样式放 `app.css`。
 - Tailwind v4 显式使用 `@layer theme, base, components, utilities;`；自定义默认样式放 `@layer base`，应用语义 class 放 `@layer components`，确保 utilities 能覆盖默认样式。
 - UI 风格按 `DESIGN.md` 的页面配方与 `design-system.md` 的真实源码收敛；尺寸和圆角逐组件以 vendored 实现为准。
-- 图标优先用 lucide-react，不手写一次性复杂 SVG。
+- 源码对齐场景优先保留对应的源图标、尺寸和 SVG 资产；源图标不可用时再用 lucide-react 等现有图标集并记录差异，不手写一次性复杂 SVG。
 - UI 组件应考虑 loading、empty、error、success；表单还要考虑 disabled、validation、submitting。
 - 页面应该是企业产品工作台气质：信息密度清晰、布局稳定、操作路径短，不做营销式 hero。
 - 固定格式区域要有稳定尺寸约束，例如表格、工具栏、侧栏、状态卡、画布容器。

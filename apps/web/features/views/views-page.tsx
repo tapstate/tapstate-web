@@ -1,18 +1,19 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { ArrowRight, Database, GitMerge, HardDrive, Layers } from 'lucide-react'
+import { ArrowRight, Database, GitMerge, HardDrive, Layers, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import type { ViewSummary } from '@/service/view-client'
 
+import { ResourceListHeader } from '@/components/resource-list-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { listSources } from '@/service/source-client'
+import { listConnectors, listSources } from '@/service/source-client'
 import { stateStoreSource } from '@/service/state-store-source'
 import { useAuthStore } from '@/stores/auth-store'
 import { getDeploymentProfile } from '@/utils/deployment-profile'
 
-import { StoredIn, useDurationText, ViewStatus } from './components/view-status'
+import { StoredInSourceLink, useDurationText, ViewStatus } from './components/view-status'
 import { sortViews, summarizeViews } from './views-model'
 import { useViewsQuery } from './views-query'
 
@@ -28,17 +29,14 @@ export function ViewsPage() {
 
   return (
     <section className="views-page">
-      <header className="views-page__header">
-        <h1 className="text-foreground text-[15px] font-semibold">{t('views.title')}</h1>
-        <div className="flex items-center gap-2">
-          <Button asChild nativeButton={false} size="sm" variant="outline">
-            <Link to="/views/collections">{t('views.browseCollections')}</Link>
-          </Button>
-          <Button asChild nativeButton={false} size="sm" variant="outline">
-            <Link to="/pipelines">{t('views.newView')}</Link>
-          </Button>
-        </div>
-      </header>
+      <ResourceListHeader title={t('views.title')}>
+        <Button asChild nativeButton={false}>
+          <Link to="/pipelines" search={{ create: true }}>
+            <Plus className="size-3.5" aria-hidden="true" />
+            {t('views.createView')}
+          </Link>
+        </Button>
+      </ResourceListHeader>
       <div className="views-page__body">
         <p className="text-muted-foreground text-[13px]">{t('views.intro')}</p>
         {viewsQuery.isError ? (
@@ -66,6 +64,12 @@ export function ViewsPage() {
 
 function ViewsList({ views }: { views: ViewSummary[] }) {
   const { t } = useTranslation()
+  const apiFetch = useAuthStore((state) => state.apiFetch)
+  const sourcesQuery = useQuery({ queryKey: ['sources'], queryFn: () => listSources(apiFetch) })
+  const connectorsQuery = useQuery({
+    queryKey: ['connectors'],
+    queryFn: () => listConnectors(apiFetch),
+  })
   const duration = useDurationText()
   const summary = summarizeViews(views)
   const now = Date.now()
@@ -98,44 +102,47 @@ function ViewsList({ views }: { views: ViewSummary[] }) {
             </tr>
           </thead>
           <tbody>
-            {sortViews(views).map((view) => (
-              <tr
-                key={view.id}
-                className="border-divider-subtle hover:bg-background-default-hover h-8 border-b"
-              >
-                <td>
-                  <Link to="/views/$viewId" params={{ viewId: view.id }} className="views-link">
-                    {view.location.collection}
-                  </Link>
-                </td>
-                <td>
-                  <Badge variant="dimm" uppercase={false}>
-                    {t(`views.kind.${view.kind}`)}
-                  </Badge>
-                </td>
-                <td>
-                  <StoredIn location={view.location} />
-                </td>
-                <td>
-                  <ViewStatus status={view.status} />
-                </td>
-                <td>{view.documents === null ? '—' : view.documents.toLocaleString()}</td>
-                <td>
-                  {view.lastAppliedAt === null
-                    ? '—'
-                    : t('views.ago', { age: duration((now - view.lastAppliedAt) / 1000) })}
-                </td>
-                <td>
-                  <Link
-                    to="/pipelines/$pipelineId/edit"
-                    params={{ pipelineId: view.pipelineId }}
-                    className="views-link"
-                  >
-                    {view.pipelineId}
-                  </Link>
-                </td>
-              </tr>
-            ))}
+            {sortViews(views).map((view) => {
+              const source = sourcesQuery.data?.find((item) => item.id === view.location.storeId)
+              const connector = source
+                ? connectorsQuery.data?.find((item) => item.id === source.connector)
+                : undefined
+
+              return (
+                <tr
+                  key={view.id}
+                  className="border-divider-subtle hover:bg-background-default-hover border-b"
+                >
+                  <td>
+                    <Link to="/views/$viewId" params={{ viewId: view.id }} className="views-link">
+                      {view.location.collection}
+                    </Link>
+                  </td>
+                  <td>
+                    <Badge variant="dimm" uppercase={false}>
+                      {t(`views.kind.${view.kind}`)}
+                    </Badge>
+                  </td>
+                  <td>
+                    <StoredInSourceLink
+                      location={view.location}
+                      source={source}
+                      connector={connector}
+                    />
+                  </td>
+                  <td>
+                    <ViewStatus status={view.status} />
+                  </td>
+                  <td>{view.documents === null ? '—' : view.documents.toLocaleString()}</td>
+                  <td>
+                    {view.lastAppliedAt === null
+                      ? '—'
+                      : t('views.ago', { age: duration((now - view.lastAppliedAt) / 1000) })}
+                  </td>
+                  <td>{view.pipelineId}</td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
