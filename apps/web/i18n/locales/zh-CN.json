@@ -554,7 +554,7 @@
       "confirmStopClearState": "停止并清除状态",
       "clearState": "清空所有状态",
       "confirmClearTitle": "清空 {{id}} 的状态？",
-      "confirmClearBody": "清空已保存的进度和算子状态。任务保持停止；下次启动将使用当前选表重新全量。已有目标数据按配置的全量处理策略处理。",
+      "confirmClearBody": "清空已保存的进度和算子状态，任务保持停止。请重新以全量模式启动，以应用当前选表。已有目标数据按配置的全量处理策略处理。",
       "dismissFeedback": "关闭生命周期错误"
     },
     "startChecks": {
