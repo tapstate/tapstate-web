@@ -503,6 +503,12 @@
       "recipients": "至少需要一位收件人。",
       "quietHours": "靜默開始與結束需同時填寫，格式為 HH:mm。"
     },
+    "pagination": {
+      "previous": "上一頁",
+      "next": "下一頁",
+      "page": "第 {{page}} 頁",
+      "pageOf": "第 {{page}} / {{pages}} 頁"
+    },
     "detailTitle": "事件詳情",
     "detail": {
       "id": "事件 ID"

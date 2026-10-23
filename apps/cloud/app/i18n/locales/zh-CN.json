@@ -503,6 +503,12 @@
       "recipients": "至少需要一个接收人。",
       "quietHours": "静默开始与结束需同时填写，格式为 HH:mm。"
     },
+    "pagination": {
+      "previous": "上一页",
+      "next": "下一页",
+      "page": "第 {{page}} 页",
+      "pageOf": "第 {{page}} / {{pages}} 页"
+    },
     "detailTitle": "事件详情",
     "detail": {
       "id": "事件 ID"

@@ -19,6 +19,8 @@ function formatTime(value?: string | null) {
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString()
 }
 
+const PAGE_SIZE = 20
+
 export function EventCenterPage() {
   const { t } = useTranslation()
   const { activeOrganization } = useCloudAppState()
@@ -29,12 +31,16 @@ export function EventCenterPage() {
   const [selected, setSelected] = useState<PlatformEvent | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
+  const [pageIndex, setPageIndex] = useState(0)
+  const [cursors, setCursors] = useState<(string | null)[]>([null])
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
   const loadSequence = useRef(0)
 
   const load = useCallback(async () => {
     const sequence = ++loadSequence.current
     if (!organizationId) {
       setEvents([])
+      setNextCursor(null)
       setIsLoading(false)
       return
     }
@@ -44,10 +50,12 @@ export function EventCenterPage() {
       const page = await cloudApi.events(organizationId, {
         type: type || undefined,
         severity: severity || undefined,
-        limit: 50,
+        limit: PAGE_SIZE,
+        cursor: cursors[pageIndex] ?? undefined,
       })
       if (sequence !== loadSequence.current) return
       setEvents(page.items)
+      setNextCursor(page.nextCursor ?? null)
       setSelected((current) =>
         current && page.items.some((item) => item.id === current.id) ? current : null,
       )
@@ -56,7 +64,7 @@ export function EventCenterPage() {
     } finally {
       if (sequence === loadSequence.current) setIsLoading(false)
     }
-  }, [organizationId, severity, type])
+  }, [cursors, organizationId, pageIndex, severity, type])
 
   useEffect(() => {
     setEvents([])
@@ -64,11 +72,26 @@ export function EventCenterPage() {
   }, [organizationId])
 
   useEffect(() => {
+    setCursors((current) => (current.length === 1 && current[0] === null ? current : [null]))
+    setPageIndex((current) => (current === 0 ? current : 0))
+  }, [organizationId, severity, type])
+
+  useEffect(() => {
     void load()
     return () => {
       loadSequence.current += 1
     }
   }, [load])
+
+  const goNext = () => {
+    if (!nextCursor) return
+    setCursors((current) => [...current.slice(0, pageIndex + 1), nextCursor])
+    setPageIndex((current) => current + 1)
+  }
+
+  const goPrevious = () => {
+    if (pageIndex > 0) setPageIndex((current) => current - 1)
+  }
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-y-auto">
@@ -167,6 +190,28 @@ export function EventCenterPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {!isLoading && !hasError && (events.length > 0 || pageIndex > 0) && (
+          <div className="mt-3 flex items-center justify-end gap-3 text-[11px] text-neutral-500">
+            <button
+              className="rounded-lg border border-black/[0.08] px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/[0.1]"
+              disabled={pageIndex === 0}
+              onClick={goPrevious}
+              type="button"
+            >
+              {t('events.pagination.previous')}
+            </button>
+            <span>{t('events.pagination.page', { page: pageIndex + 1 })}</span>
+            <button
+              className="rounded-lg border border-black/[0.08] px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/[0.1]"
+              disabled={!nextCursor}
+              onClick={goNext}
+              type="button"
+            >
+              {t('events.pagination.next')}
+            </button>
           </div>
         )}
 
