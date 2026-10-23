@@ -56,7 +56,8 @@
     "more": "More actions",
     "remove": "Remove",
     "skipToContent": "Skip to canvas",
-    "separator": "/"
+    "separator": "/",
+    "save": "Save"
   },
   "auth": {
     "signedOut": {
@@ -208,7 +209,8 @@
     },
     "empty": {
       "title": "No sources yet",
-      "body": "Add a connector-backed source to make live data available to Tapstate."
+      "body": "Add a connector-backed source to make live data available to Tapstate.",
+      "sampleDescription": "Explore with a sample source before connecting your own data."
     },
     "columns": {
       "comment": "Comment",
@@ -219,7 +221,8 @@
     },
     "search": {
       "label": "Search sources",
-      "placeholder": "Search sources..."
+      "placeholder": "Search sources...",
+      "clear": "Clear source search"
     },
     "filters": {
       "connectionStatus": {
@@ -293,7 +296,8 @@
         "unknown": "The source could not be created. Try again.",
         "specUnavailable": "This connector does not provide a stored form specification.",
         "specInvalid": "This connector provides an invalid form specification."
-      }
+      },
+      "clearSearch": "Clear connector search"
     },
     "detail": {
       "back": "Back to sources",
@@ -448,7 +452,9 @@
       "error": "The sample sources could not be removed. Try again.",
       "dismiss": "Dismiss",
       "added_one": "Added {{count}} sample source.",
-      "added_other": "Added {{count}} sample sources."
+      "added_other": "Added {{count}} sample sources.",
+      "removeConfirmTitle": "Remove sample sources?",
+      "removeConfirmBody": "The sample sources will be deleted. Sources still used by pipelines cannot be removed."
     }
   },
   "pipelines": {
@@ -691,7 +697,34 @@
         "dismissSaveError": "Dismiss save error",
         "runFailed": "Pipeline could not be started.",
         "draftSaveUnavailable": "Add and connect at least one Source before saving this new Pipeline.",
-        "draftRunUnavailable": "Save this new Pipeline before running it."
+        "draftRunUnavailable": "Save this new Pipeline before running it.",
+        "addNote": "Add note",
+        "organizeNodes": "Organize nodes",
+        "zoomIn": "Zoom in",
+        "zoomOut": "Zoom out",
+        "canvasHistory": "Canvas history",
+        "undo": "Undo",
+        "redo": "Redo",
+        "history": "History",
+        "noChangesYet": "No changes yet",
+        "stepForward": "Step forward {{count}}",
+        "currentState": "Current state",
+        "stepBackward": "Step backward {{count}}",
+        "canvasViewport": "Canvas viewport",
+        "canvasZoom": "Canvas zoom",
+        "exportImage": "Export image",
+        "currentView": "Current view",
+        "wholePipeline": "Whole Pipeline",
+        "exportFormat": "Export {{format}}",
+        "deleteNote": "Delete note",
+        "noteText": "Note text",
+        "notePlaceholder": "Add a note...",
+        "notesStorageUnavailable": "Notes could not be saved",
+        "notesStorageUnavailableDescription": "Your notes will stay available until you leave this page.",
+        "scrollToSelectedNode": "Scroll to selected node",
+        "autoSaved": "Auto-Saved",
+        "published": "Published",
+        "unpublished": "Unpublished"
       },
       "diagnostics": {
         "title": "Fix these issues before saving",
@@ -755,7 +788,12 @@
         "nest": "Nest",
         "js": "JavaScript",
         "view": "View",
-        "target": "Target"
+        "target": "Target",
+        "sourceTab": "Source",
+        "transformTab": "Transform",
+        "destinationTab": "Destination",
+        "addNode": "Add node",
+        "clearSearch": "Clear search"
       },
       "tabs": {
         "label": "Pipeline workspace panels",
@@ -843,7 +881,14 @@
         "descriptionPlaceholder": "Add a description",
         "close": "Close configuration",
         "resizePanel": "Resize configuration panel",
-        "viewReadOnly": "Views are derived from the Pipeline definition and cannot be edited here."
+        "viewReadOnly": "Views are derived from the Pipeline definition and cannot be edited here.",
+        "nodeTitle": "Node title",
+        "moreActions": "More node actions",
+        "deleteNode": "Delete node",
+        "nextStep": "Next step",
+        "jumpToNode": "Jump to node",
+        "addNextStep": "Add the next step in this pipeline",
+        "selectNextStep": "Select next step"
       },
       "transform": {
         "field": "Field",
@@ -1057,7 +1102,12 @@
           "unionCurrentInput": "Current pipeline output",
           "unionAdditionalInputs": "Additional input tables",
           "unionNoAdditionalInputs": "No additional source tables are available for this Union.",
-          "unionInputRequired": "Select at least one additional table to publish this Union."
+          "unionInputRequired": "Select at least one additional table to publish this Union.",
+          "unionWizardUnavailable": "Union needs explicit multi-stream references, which this builder does not collect. Remove this step to save and start.",
+          "identitySettings": "Source identity",
+          "sourceIdField": "Source identity field name",
+          "restoreSourceIdDefault": "Restore default",
+          "sourceIdFieldHelp": "Used only when expanded rows conflict with the target identity constraint. The original value and type are preserved; each target is checked separately. An omitted setting inherits the previous unwind’s name, shown here. Restore default explicitly selects _unwind_source_id."
         }
       },
       "runtime": {
@@ -1097,7 +1147,23 @@
           "filteredEmptyTitle": "No matching log lines",
           "filteredEmptyBody": "Adjust the filters to inspect the returned log tail.",
           "errorTitle": "We couldn't load logs",
-          "errorBody": "Check the control plane and try again."
+          "errorBody": "Check the control plane and try again.",
+          "searchPlaceholder": "Search",
+          "allFilterLevels": "All",
+          "timeRange": "Time range",
+          "clearLevelFilter": "Clear log level filter",
+          "clearTimeRange": "Clear time range filter",
+          "periods": {
+            "today": "Today",
+            "last7Days": "Last 7 Days",
+            "last4Weeks": "Last 4 Weeks",
+            "last3Months": "Last 3 Months",
+            "last12Months": "Last 12 Months",
+            "monthToDate": "Month to Date",
+            "quarterToDate": "Quarter to Date",
+            "yearToDate": "Year to Date",
+            "allTime": "All Time"
+          }
         },
         "unavailableTitle": "Observation unavailable",
         "unavailableBody": "This Pipeline has not published runtime observation yet.",
@@ -1196,7 +1262,8 @@
         "pendingBody": "Serve outputs are present, but this Pipeline does not expose a published endpoint yet.",
         "serveDetail": "Serve output"
       }
-    }
+    },
+    "create": "Create pipeline"
   },
   "explorations": {
     "title": "Explorations",
@@ -1382,7 +1449,10 @@
       "embeddedArray": "Array · {{count}} items",
       "embeddedDocument": "Embedded document",
       "transformAnnotation": "Changed fields: {{fields}}",
-      "unknownTransformOrigin": "Field origin is unknown for JS step(s): {{steps}}"
+      "unknownTransformOrigin": "Field origin is unknown for JS step(s): {{steps}}",
+      "projection": "Preview stage",
+      "targetProjection": "Target write result",
+      "logicalProjection": "Logical operator result"
     },
     "relations": {
       "addRelatedTable": "Add related table",
@@ -1715,6 +1785,34 @@
         "overloaded": "The assistant is busy. Wait a moment and retry.",
         "requestFailed": "The assistant request failed. Check the provider configuration and try again. Partial output has not changed the pipeline."
       }
+    },
+    "targetIdentity": {
+      "title": "Target identity check",
+      "pending": "Select a target and wait for its identity constraints to be checked.",
+      "failed": "The identity check could not complete. Starting requires a successful check.",
+      "automatic": "The original {{source}} is preserved as {{preserved}}.",
+      "generated": "{{fields}}: generated by the target when written.",
+      "unchanged": "The target accepts the expanded key. Existing field names are retained.",
+      "writeKey": "Updates and deletes match: {{key}}.",
+      "refused": "Resolve the target identity constraints before starting.",
+      "status": {
+        "not-required": "No change needed",
+        "automatic": "Handled automatically",
+        "action-required": "Action required"
+      },
+      "reasons": {
+        "field-collision": "The source already contains {{preserved}}. Choose another source identity field name.",
+        "identity-generation-unavailable": "The target requires {{field}} to be unique but cannot safely generate a new value. Adjust the target identity mapping.",
+        "target-columns-missing": "The target is missing {{preserved}} or another matching-key column. Update the target schema before starting.",
+        "logical-key-index-missing": "The target needs a unique index on the complete logical matching key.",
+        "nullable-key-not-unique": "The target cannot guarantee replay-safe matching for nullable key fields.",
+        "other-unique-constraint": "Another target unique constraint conflicts with the expanded rows. Adjust the target schema or mapping.",
+        "multiple-identity-fields": "This target has multiple identity fields requiring an explicit mapping.",
+        "invalid-field-name": "Choose a nonblank top-level source identity field name.",
+        "target-key-conflict": "Streams writing to this target require incompatible automatic matching keys. Use one matching key or separate targets.",
+        "ambiguous-source-id-field": "Several expansions reaching this target use different source identity field names. Choose one name for this target.",
+        "key-representation-unsupported": "The target key type cannot be verified to preserve source identifiers without loss. Use compatible key columns or an explicit mapping."
+      }
     }
   },
   "views": {
@@ -1727,7 +1825,8 @@
     "search": {
       "label": "Search views",
       "placeholder": "Search views...",
-      "empty": "No views match this search."
+      "empty": "No views match this search.",
+      "clear": "Clear view search"
     },
     "empty": {
       "title": "No materialized views yet",
@@ -1874,7 +1973,8 @@
       }
     },
     "footnote": "Status combines the pipeline's state with how far the view is behind its sources. A View is a built document; a Replica is a mirrored copy of one table.",
-    "browseCollections": "Browse collections"
+    "browseCollections": "Browse collections",
+    "createView": "Create view"
   },
   "notFound": {
     "back": "Back to workspace",
@@ -2091,6 +2191,155 @@
     "sectionsLabel": "Settings sections",
     "sections": {
       "stateStore": "State store"
+    }
+  },
+  "uiKit": {
+    "title": "UI Kit",
+    "subtitle": "Interactive reference for shared controls, states, and overlays.",
+    "language": "Language",
+    "darkMode": "Dark theme",
+    "sections": {
+      "buttons": "Buttons",
+      "fields": "Fields and inputs",
+      "selection": "Selection controls",
+      "feedback": "Feedback",
+      "surfaces": "Surfaces and tables",
+      "overlays": "Menus and overlays"
+    },
+    "buttons": {
+      "loading": "Saving",
+      "disabled": "Unavailable action",
+      "iconLabel": "Add item",
+      "sizeSmall": "Small",
+      "sizeMedium": "Medium",
+      "sizeLarge": "Large",
+      "variantPrimary": "Primary",
+      "variantSecondary": "Secondary",
+      "variantTertiary": "Tertiary",
+      "variantGhost": "Ghost",
+      "variantDestructive": "Destructive"
+    },
+    "tones": {
+      "neutral": "Neutral",
+      "brand": "Brand",
+      "success": "Success",
+      "warning": "Warning",
+      "danger": "Danger",
+      "info": "Information"
+    },
+    "schema": {
+      "title": "Schema fields",
+      "description": "The same controls render schema labels, validation, loading, and submit errors.",
+      "workspace": "Workspace name",
+      "workspaceDescription": "This field is connected to the in-memory form state.",
+      "workspacePlaceholder": "Enter a workspace name",
+      "requiredError": "Enter a workspace name.",
+      "region": "Default region",
+      "regionPlaceholder": "Choose a region",
+      "validate": "Check required fields",
+      "loadRegions": "Load regions",
+      "submitFailureAction": "Simulate submit failure",
+      "submitFailure": "The workspace directory couldn't save this change."
+    },
+    "fields": {
+      "email": "Email address",
+      "emailPlaceholder": "name{'@'}company.com",
+      "description": "Used for account notifications.",
+      "invalid": "Workspace name",
+      "invalidValue": "!",
+      "invalidError": "Use letters, numbers, and hyphens.",
+      "password": "Password",
+      "passwordPlaceholder": "Enter a password",
+      "notes": "Notes",
+      "notesPlaceholder": "Add context for your team",
+      "disabled": "Read-only field",
+      "disabledValue": "This value cannot be changed here.",
+      "search": "Search",
+      "searchPlaceholder": "Search records"
+    },
+    "selection": {
+      "checkbox": "Include archived items",
+      "switch": "Enable live refresh",
+      "radio": "Default region",
+      "radioDescription": "Choose where this workspace runs.",
+      "northAmerica": "North America",
+      "asiaPacific": "Asia Pacific",
+      "cardOne": "Production workspace",
+      "cardTwo": "Staging workspace",
+      "selected": "Selected",
+      "notSelected": "Not selected",
+      "selectOption": "Choose a region",
+      "regionOne": "US East",
+      "regionTwo": "Europe West"
+    },
+    "feedback": {
+      "badgeDefault": "Default badge",
+      "badgeDimmed": "Dimmed badge",
+      "badgeCornerMark": "Corner mark",
+      "alertTitle": "Changes saved",
+      "alertDescription": "The current view reflects the latest workspace state.",
+      "toastInfo": "Sync started",
+      "toastSuccess": "Connection verified",
+      "toastWarning": "Some records need review",
+      "toastDanger": "Sync failed",
+      "infoAction": "Info toast",
+      "successAction": "Success",
+      "warningAction": "Warning",
+      "errorAction": "Error",
+      "actionToast": "Action toast",
+      "toastDescription": "This notification closes automatically.",
+      "toastAction": "Undo",
+      "toastActionDone": "The action was undone.",
+      "toastPersistent": "Persistent notification",
+      "toastUpdate": "Show persistent notification",
+      "toastUpdateAction": "Update notification",
+      "toastUpdated": "Notification updated",
+      "promise": "Run successful operation",
+      "promiseError": "Run failed operation",
+      "promisePending": "Working…",
+      "promiseSuccess": "Operation completed",
+      "promiseFailure": "Operation failed"
+    },
+    "surfaces": {
+      "panelTitle": "Workspace details",
+      "panelDescription": "A bordered surface groups related settings.",
+      "emptyTitle": "No matching records",
+      "emptyDescription": "Change the filters or create a new record.",
+      "skeleton": "Loading preview",
+      "tableTitle": "Recent activity",
+      "name": "Name",
+      "status": "Status",
+      "updated": "Updated",
+      "recordOne": "Customer profile",
+      "recordTwo": "Orders stream",
+      "ready": "Ready",
+      "inProgress": "In progress",
+      "timeOne": "Just now",
+      "timeTwo": "2 minutes ago"
+    },
+    "overlays": {
+      "menuTrigger": "Open menu",
+      "menuItem": "Rename workspace",
+      "menuDanger": "Delete workspace",
+      "popoverTrigger": "Open popover",
+      "popoverTitle": "Quick settings",
+      "popoverDescription": "This popover keeps related actions close to their trigger.",
+      "tooltipTrigger": "Focus or hover for help",
+      "tooltipText": "Tooltips provide short, supplemental guidance.",
+      "dialogTrigger": "Open dialog",
+      "dialogTitle": "Edit workspace",
+      "dialogDescription": "Review the information before saving.",
+      "dialogBody": "Long content stays scrollable inside the dialog body.",
+      "alertDialogTrigger": "Open confirmation",
+      "alertDialogTitle": "Remove this workspace?",
+      "alertDialogDescription": "This action cannot be undone.",
+      "drawerTrigger": "Open drawer",
+      "drawerTitle": "Workspace activity",
+      "drawerDescription": "A side surface for focused details and follow-up actions.",
+      "drawerBody": "The drawer body scrolls independently when content is long.",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "close": "Close"
     }
   }
 }

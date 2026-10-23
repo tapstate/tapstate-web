@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as PipelineEditorRouteImport } from './routes/_pipeline-editor'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SignedOutRouteImport } from './routes/signed-out'
+import { Route as UiKitRouteImport } from './routes/ui-kit'
 import { Route as AuthenticatedDestinationsRouteImport } from './routes/_authenticated.destinations'
 import { Route as AuthenticatedExplorationsRouteImport } from './routes/_authenticated.explorations'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated.overview'
@@ -30,7 +31,6 @@ import { Route as AuthenticatedSourcesSourceIdIndexRouteImport } from './routes/
 import { Route as AuthenticatedSourcesSourceIdTableNameRouteImport } from './routes/_authenticated.sources.$sourceId.$tableName'
 import { Route as PipelineEditorPipelinesPipelineIdEditRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit'
 import { Route as PipelineEditorPipelinesPipelineIdEditIndexRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit.index'
-import { Route as PipelineEditorPipelinesPipelineIdEditApiRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit.api'
 import { Route as PipelineEditorPipelinesPipelineIdEditLogsRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit.logs'
 import { Route as PipelineEditorPipelinesPipelineIdEditMonitoringRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit.monitoring'
 
@@ -57,6 +57,11 @@ const SignedOutRoute = SignedOutRouteImport.update({
   path: '/signed-out',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UiKitRoute = UiKitRouteImport.update({
+  id: '/ui-kit',
+  path: '/ui-kit',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/ui-kit.lazy').then((d) => d.Route))
 const AuthenticatedDestinationsRoute =
   AuthenticatedDestinationsRouteImport.update({
     id: '/destinations',
@@ -157,12 +162,6 @@ const PipelineEditorPipelinesPipelineIdEditIndexRoute =
     path: '/',
     getParentRoute: () => PipelineEditorPipelinesPipelineIdEditRoute,
   } as any)
-const PipelineEditorPipelinesPipelineIdEditApiRoute =
-  PipelineEditorPipelinesPipelineIdEditApiRouteImport.update({
-    id: '/api',
-    path: '/api',
-    getParentRoute: () => PipelineEditorPipelinesPipelineIdEditRoute,
-  } as any)
 const PipelineEditorPipelinesPipelineIdEditLogsRoute =
   PipelineEditorPipelinesPipelineIdEditLogsRouteImport.update({
     id: '/logs',
@@ -180,6 +179,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signed-out': typeof SignedOutRoute
+  '/ui-kit': typeof UiKitRoute
   '/destinations': typeof AuthenticatedDestinationsRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/overview': typeof AuthenticatedOverviewRoute
@@ -195,7 +195,6 @@ export interface FileRoutesByFullPath {
   '/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
   '/pipelines/$pipelineId/edit': typeof PipelineEditorPipelinesPipelineIdEditRouteWithChildren
   '/sources/$sourceId/': typeof AuthenticatedSourcesSourceIdIndexRoute
-  '/pipelines/$pipelineId/edit/api': typeof PipelineEditorPipelinesPipelineIdEditApiRoute
   '/pipelines/$pipelineId/edit/logs': typeof PipelineEditorPipelinesPipelineIdEditLogsRoute
   '/pipelines/$pipelineId/edit/monitoring': typeof PipelineEditorPipelinesPipelineIdEditMonitoringRoute
   '/pipelines/$pipelineId/edit/': typeof PipelineEditorPipelinesPipelineIdEditIndexRoute
@@ -204,6 +203,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signed-out': typeof SignedOutRoute
+  '/ui-kit': typeof UiKitRoute
   '/destinations': typeof AuthenticatedDestinationsRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/overview': typeof AuthenticatedOverviewRoute
@@ -215,7 +215,6 @@ export interface FileRoutesByTo {
   '/views': typeof AuthenticatedViewsIndexRoute
   '/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
   '/sources/$sourceId': typeof AuthenticatedSourcesSourceIdIndexRoute
-  '/pipelines/$pipelineId/edit/api': typeof PipelineEditorPipelinesPipelineIdEditApiRoute
   '/pipelines/$pipelineId/edit/logs': typeof PipelineEditorPipelinesPipelineIdEditLogsRoute
   '/pipelines/$pipelineId/edit/monitoring': typeof PipelineEditorPipelinesPipelineIdEditMonitoringRoute
   '/pipelines/$pipelineId/edit': typeof PipelineEditorPipelinesPipelineIdEditIndexRoute
@@ -227,6 +226,7 @@ export interface FileRoutesById {
   '/_pipeline-editor': typeof PipelineEditorRouteWithChildren
   '/login': typeof LoginRoute
   '/signed-out': typeof SignedOutRoute
+  '/ui-kit': typeof UiKitRoute
   '/_authenticated/destinations': typeof AuthenticatedDestinationsRoute
   '/_authenticated/explorations': typeof AuthenticatedExplorationsRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
@@ -242,7 +242,6 @@ export interface FileRoutesById {
   '/_authenticated/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
   '/_pipeline-editor/pipelines/$pipelineId/edit': typeof PipelineEditorPipelinesPipelineIdEditRouteWithChildren
   '/_authenticated/sources/$sourceId/': typeof AuthenticatedSourcesSourceIdIndexRoute
-  '/_pipeline-editor/pipelines/$pipelineId/edit/api': typeof PipelineEditorPipelinesPipelineIdEditApiRoute
   '/_pipeline-editor/pipelines/$pipelineId/edit/logs': typeof PipelineEditorPipelinesPipelineIdEditLogsRoute
   '/_pipeline-editor/pipelines/$pipelineId/edit/monitoring': typeof PipelineEditorPipelinesPipelineIdEditMonitoringRoute
   '/_pipeline-editor/pipelines/$pipelineId/edit/': typeof PipelineEditorPipelinesPipelineIdEditIndexRoute
@@ -253,6 +252,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/signed-out'
+    | '/ui-kit'
     | '/destinations'
     | '/explorations'
     | '/overview'
@@ -268,7 +268,6 @@ export interface FileRouteTypes {
     | '/sources/$sourceId/$tableName'
     | '/pipelines/$pipelineId/edit'
     | '/sources/$sourceId/'
-    | '/pipelines/$pipelineId/edit/api'
     | '/pipelines/$pipelineId/edit/logs'
     | '/pipelines/$pipelineId/edit/monitoring'
     | '/pipelines/$pipelineId/edit/'
@@ -277,6 +276,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/signed-out'
+    | '/ui-kit'
     | '/destinations'
     | '/explorations'
     | '/overview'
@@ -288,7 +288,6 @@ export interface FileRouteTypes {
     | '/views'
     | '/sources/$sourceId/$tableName'
     | '/sources/$sourceId'
-    | '/pipelines/$pipelineId/edit/api'
     | '/pipelines/$pipelineId/edit/logs'
     | '/pipelines/$pipelineId/edit/monitoring'
     | '/pipelines/$pipelineId/edit'
@@ -299,6 +298,7 @@ export interface FileRouteTypes {
     | '/_pipeline-editor'
     | '/login'
     | '/signed-out'
+    | '/ui-kit'
     | '/_authenticated/destinations'
     | '/_authenticated/explorations'
     | '/_authenticated/overview'
@@ -314,7 +314,6 @@ export interface FileRouteTypes {
     | '/_authenticated/sources/$sourceId/$tableName'
     | '/_pipeline-editor/pipelines/$pipelineId/edit'
     | '/_authenticated/sources/$sourceId/'
-    | '/_pipeline-editor/pipelines/$pipelineId/edit/api'
     | '/_pipeline-editor/pipelines/$pipelineId/edit/logs'
     | '/_pipeline-editor/pipelines/$pipelineId/edit/monitoring'
     | '/_pipeline-editor/pipelines/$pipelineId/edit/'
@@ -326,6 +325,7 @@ export interface RootRouteChildren {
   PipelineEditorRoute: typeof PipelineEditorRouteWithChildren
   LoginRoute: typeof LoginRoute
   SignedOutRoute: typeof SignedOutRoute
+  UiKitRoute: typeof UiKitRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -363,6 +363,13 @@ declare module '@tanstack/react-router' {
       path: '/signed-out'
       fullPath: '/signed-out'
       preLoaderRoute: typeof SignedOutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ui-kit': {
+      id: '/ui-kit'
+      path: '/ui-kit'
+      fullPath: '/ui-kit'
+      preLoaderRoute: typeof UiKitRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/destinations': {
@@ -477,13 +484,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PipelineEditorPipelinesPipelineIdEditIndexRouteImport
       parentRoute: typeof PipelineEditorPipelinesPipelineIdEditRoute
     }
-    '/_pipeline-editor/pipelines/$pipelineId/edit/api': {
-      id: '/_pipeline-editor/pipelines/$pipelineId/edit/api'
-      path: '/api'
-      fullPath: '/pipelines/$pipelineId/edit/api'
-      preLoaderRoute: typeof PipelineEditorPipelinesPipelineIdEditApiRouteImport
-      parentRoute: typeof PipelineEditorPipelinesPipelineIdEditRoute
-    }
     '/_pipeline-editor/pipelines/$pipelineId/edit/logs': {
       id: '/_pipeline-editor/pipelines/$pipelineId/edit/logs'
       path: '/logs'
@@ -573,7 +573,6 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 )
 
 interface PipelineEditorPipelinesPipelineIdEditRouteChildren {
-  PipelineEditorPipelinesPipelineIdEditApiRoute: typeof PipelineEditorPipelinesPipelineIdEditApiRoute
   PipelineEditorPipelinesPipelineIdEditLogsRoute: typeof PipelineEditorPipelinesPipelineIdEditLogsRoute
   PipelineEditorPipelinesPipelineIdEditMonitoringRoute: typeof PipelineEditorPipelinesPipelineIdEditMonitoringRoute
   PipelineEditorPipelinesPipelineIdEditIndexRoute: typeof PipelineEditorPipelinesPipelineIdEditIndexRoute
@@ -581,8 +580,6 @@ interface PipelineEditorPipelinesPipelineIdEditRouteChildren {
 
 const PipelineEditorPipelinesPipelineIdEditRouteChildren: PipelineEditorPipelinesPipelineIdEditRouteChildren =
   {
-    PipelineEditorPipelinesPipelineIdEditApiRoute:
-      PipelineEditorPipelinesPipelineIdEditApiRoute,
     PipelineEditorPipelinesPipelineIdEditLogsRoute:
       PipelineEditorPipelinesPipelineIdEditLogsRoute,
     PipelineEditorPipelinesPipelineIdEditMonitoringRoute:
@@ -615,6 +612,7 @@ const rootRouteChildren: RootRouteChildren = {
   PipelineEditorRoute: PipelineEditorRouteWithChildren,
   LoginRoute: LoginRoute,
   SignedOutRoute: SignedOutRoute,
+  UiKitRoute: UiKitRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

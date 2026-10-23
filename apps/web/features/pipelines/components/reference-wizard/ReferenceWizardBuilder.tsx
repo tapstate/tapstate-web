@@ -21,9 +21,10 @@ import { useTranslation } from 'react-i18next'
 
 import type { PipelinePreviewRun } from '@/service/pipelines/pipeline-client'
 
-import './wizard-reference.css'
 import { ConnectorIcon } from '@/components/connector-icon'
 import { Button } from '@/components/ui/button'
+
+import './wizard-reference.css'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -37,8 +38,13 @@ import { cn } from '@/lib/utils'
 
 import type { DeploymentProfile } from '../../model/deployment-profile'
 
+import { UnwindTargetIdentitySummary } from '../unwind-target-identity-summary'
 import { PipelineAiCopilot, type BuilderAssistantContext } from './PipelineAiCopilot'
-import { TableTransformsManager, type TransformStep } from './TableTransformsManager'
+import {
+  TableTransformsManager,
+  effectiveUnwindSourceIdField,
+  type TransformStep,
+} from './TableTransformsManager'
 import {
   readWizard,
   relationKeysForTableChange,
@@ -229,6 +235,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   const rootPromptRequestId = React.useRef<number | null>(null)
   const assistantPromptSequence = React.useRef(0)
   const [activeContext, setActiveContext] = React.useState('root')
+  const [previewProjection, setPreviewProjection] = React.useState<'target' | 'logical'>('target')
   const [previewMode, setPreviewMode] = React.useState<'json' | 'table'>('json')
   const [planMode, setPlanMode] = React.useState<'dsl' | 'json' | null>(null)
   const [dsl, setDsl] = React.useState<string | null>(null)
@@ -266,6 +273,16 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   const [relations, setRelations] = React.useState<RelationNode[]>(initial.relations)
   const [pipelineTransforms, setPipelineTransforms] = React.useState(initial.transforms)
   const [selectedDocumentIndex, setSelectedDocumentIndex] = React.useState(0)
+  const hasUnwind = () =>
+    [
+      ...(rootConfig?.transforms || []),
+      ...pipelineTransforms,
+      ...flattenRelations(relations).flatMap((relation) => relation.transforms || []),
+    ].some((step) => step.type === 'unwind' && step.enabled !== false)
+  const identityPlans =
+    livePreviewStatus === 'complete' || livePreviewStatus === 'error'
+      ? livePreview?.identityPlans
+      : undefined
   const targetDataSource = AVAILABLE_DESTINATIONS.find((source) => source.id === targetSourceId)
   const availableWriteModes = targetDataSource?.writeModes?.length
     ? targetDataSource.writeModes
@@ -867,7 +884,9 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   }, [activeContext, relationChain, rootConfig?.table, t])
 
   const compiledPlanJson = compiledSpec
-  const documents = livePreview?.documents || []
+  const logicalPreview =
+    previewProjection === 'logical' && livePreview?.logicalDocuments !== undefined
+  const documents = (logicalPreview ? livePreview.logicalDocuments : livePreview?.documents) || []
   const selectedIndex = Math.min(selectedDocumentIndex, Math.max(0, documents.length - 1))
   const selectedDocument = documents[selectedIndex] || null
   const rootFields = new Set(rootConfig?.columns || [])
@@ -1572,7 +1591,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                 >
                   <SelectTrigger
                     aria-label="Source Connection"
-                    className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                    className="wizard-reference-select-trigger w-full text-[12px]"
                   >
                     <SelectValue placeholder="Select a source" />
                   </SelectTrigger>
@@ -1615,7 +1634,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                 >
                   <SelectTrigger
                     aria-label="Table"
-                    className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 font-mono text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                    className="wizard-reference-select-trigger w-full font-mono text-[12px]"
                   >
                     <SelectValue placeholder="Select a source table" />
                   </SelectTrigger>
@@ -1821,6 +1840,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
         {rel.isPreProcessOpen && (
           <div className="mt-3 border-t border-gray-100 pt-3" onClick={(e) => e.stopPropagation()}>
             <TableTransformsManager
+              identityPlans={identityPlans}
               tableName={rel.table}
               sourceName={rel.source}
               columns={getColumnsForTable(rel.source, rel.table)}
@@ -1952,7 +1972,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                         >
                           <SelectTrigger
                             aria-label="Source"
-                            className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                            className="wizard-reference-select-trigger w-full text-[12px]"
                           >
                             <SelectValue placeholder="Select a source" />
                           </SelectTrigger>
@@ -1989,7 +2009,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                         >
                           <SelectTrigger
                             aria-label="Child Table"
-                            className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 font-mono text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                            className="wizard-reference-select-trigger w-full font-mono text-[12px]"
                           >
                             <SelectValue placeholder="Select a source table" />
                           </SelectTrigger>
@@ -2267,7 +2287,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                                 id="pipeline-root-assistant-prompt"
                                 aria-label={t('wizard.assistant.rootPromptLabel')}
                                 value={rootPrompt}
-                                onChange={(event) => setRootPrompt(event.target.value)}
+                                onValueChange={(value) => setRootPrompt(value)}
                                 onKeyDown={(event) => {
                                   if (
                                     event.key === 'Enter' &&
@@ -2323,31 +2343,34 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                           >
                             <SelectTrigger
                               aria-label="Data Source"
-                              className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                              className="wizard-reference-select-trigger w-full text-[12px]"
                             >
-                              {AVAILABLE_DATA_SOURCES.find(
-                                (ds) => ds.name === scratchSelectedSource,
-                              ) && (
-                                <ConnectorIcon
-                                  connectorId={
-                                    AVAILABLE_DATA_SOURCES.find(
-                                      (ds) => ds.name === scratchSelectedSource,
-                                    )?.connector || scratchSelectedSource
-                                  }
-                                  name={
-                                    AVAILABLE_DATA_SOURCES.find(
-                                      (ds) => ds.name === scratchSelectedSource,
-                                    )?.connectorName || scratchSelectedSource
-                                  }
-                                  iconPath={
-                                    AVAILABLE_DATA_SOURCES.find(
-                                      (ds) => ds.name === scratchSelectedSource,
-                                    )?.iconPath
-                                  }
-                                  size={24}
-                                />
-                              )}
-                              <SelectValue placeholder="Select a source" />
+                              <SelectValue placeholder="Select a source">
+                                {(value) => {
+                                  const selectedSource = AVAILABLE_DATA_SOURCES.find(
+                                    (source) => source.name === value,
+                                  )
+                                  if (!selectedSource) return null
+                                  return (
+                                    <span className="flex min-w-0 items-center gap-2">
+                                      <ConnectorIcon
+                                        connectorId={
+                                          selectedSource.connector || selectedSource.badge
+                                        }
+                                        name={selectedSource.connectorName || selectedSource.badge}
+                                        iconPath={selectedSource.iconPath}
+                                        size={20}
+                                      />
+                                      <span className="min-w-0 flex-1 truncate">
+                                        {selectedSource.name}
+                                      </span>
+                                      <span className="text-text-tertiary shrink-0 text-xs">
+                                        {selectedSource.connectorName || selectedSource.badge}
+                                      </span>
+                                    </span>
+                                  )
+                                }}
+                              </SelectValue>
                             </SelectTrigger>
                             <SelectContent className="wizard-reference-select-content rounded-lg">
                               {AVAILABLE_DATA_SOURCES.map((ds) => (
@@ -2386,7 +2409,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                           >
                             <SelectTrigger
                               aria-label="Table"
-                              className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 font-mono text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                              className="wizard-reference-select-trigger w-full font-mono text-[12px]"
                             >
                               <SelectValue placeholder="Select a source table" />
                             </SelectTrigger>
@@ -2489,6 +2512,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                       onClick={(e) => e.stopPropagation()}
                     >
                       <TableTransformsManager
+                        identityPlans={identityPlans}
                         tableName={rootConfig.table}
                         sourceName={rootConfig.source}
                         columns={rootConfig.columns}
@@ -2658,7 +2682,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                                 >
                                   <SelectTrigger
                                     aria-label="Child Data Source"
-                                    className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                                    className="wizard-reference-select-trigger w-full text-[12px]"
                                   >
                                     <SelectValue placeholder="Select a source" />
                                   </SelectTrigger>
@@ -2696,7 +2720,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                                 >
                                   <SelectTrigger
                                     aria-label="Child Table"
-                                    className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 font-mono text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                                    className="wizard-reference-select-trigger w-full font-mono text-[12px]"
                                   >
                                     <SelectValue placeholder="Select a source table" />
                                   </SelectTrigger>
@@ -2832,6 +2856,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   <div className="mt-3.5" onClick={(event) => event.stopPropagation()}>
                     <div className="mb-3">{assistantHelper('doc_process', 'metrics')}</div>
                     <TableTransformsManager
+                      identityPlans={identityPlans}
                       tableName={rootConfig?.table || 'root'}
                       sourceName={rootConfig?.source || 'Pipeline'}
                       columns={Array.from(
@@ -2846,6 +2871,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                         rootConfig
                           ? unionInputsFor(rootConfig.source, rootConfig.table, pipelineUnionInputs)
                           : []
+                      }
+                      inheritedSourceIdField={
+                        relations.length === 0
+                          ? effectiveUnwindSourceIdField(rootConfig?.transforms)
+                          : undefined
                       }
                       transforms={pipelineTransforms}
                       onChange={setPipelineTransforms}
@@ -3247,6 +3277,37 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
               </span>
             </div>
 
+            {livePreview?.logicalDocuments && hasUnwind() && (
+              <div
+                className="border-border flex gap-2 border-b px-3 py-2"
+                role="group"
+                aria-label={t('wizard.previewPanel.projection')}
+              >
+                {(['target', 'logical'] as const).map((projection) => (
+                  <button
+                    key={projection}
+                    type="button"
+                    aria-pressed={previewProjection === projection}
+                    onClick={() => setPreviewProjection(projection)}
+                    className={cn(
+                      'focus-visible:outline-ring rounded-md border px-2 py-1 text-xs focus-visible:outline-2',
+                      previewProjection === projection
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted-foreground',
+                    )}
+                  >
+                    {t(`wizard.previewPanel.${projection}Projection`)}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <UnwindTargetIdentitySummary
+              enabled={hasUnwind()}
+              plans={identityPlans}
+              status={livePreviewStatus}
+            />
+
             {livePreviewStatus === 'error' && (
               <p
                 className="border-border text-destructive border-b px-3 py-2 text-xs"
@@ -3419,9 +3480,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
             <div className="border-border bg-muted/30 text-muted-foreground flex items-center justify-between gap-3 border-t px-3 py-2 text-[11px]">
               <span className="truncate">
                 {t(
-                  livePreview?.format === 'mongo-extended-json'
-                    ? 'wizard.previewPanel.mongoExtendedJsonTarget'
-                    : 'wizard.previewPanel.logicalJsonTarget',
+                  logicalPreview
+                    ? 'wizard.previewPanel.logicalProjection'
+                    : livePreview?.format === 'mongo-extended-json'
+                      ? 'wizard.previewPanel.mongoExtendedJsonTarget'
+                      : 'wizard.previewPanel.logicalJsonTarget',
                   { destination: destinationName },
                 )}
               </span>

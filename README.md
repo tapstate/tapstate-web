@@ -21,7 +21,8 @@ tapstate-web/
 │   ├── product/
 │   │   └── information-architecture.md    顶层 IA / 菜单设计
 │   └── engineering/
-│   │   ├── design-system.md               shadcn 对齐的设计系统规范
+│   │   ├── DESIGN.md                      UI 视觉与组件规范
+│   │   ├── design-system.md               共享 token 与组件契约
 │   │   └── tech-stack.md                  技术栈登记 + 未决雷达
 ├── AGENTS.md                          Codex / agent 项目规则
 ├── CLAUDE.md                          Claude Code 项目入口
@@ -38,7 +39,7 @@ tapstate-web/
 │       ├── stores/                        Zustand stores
 │       ├── styles/                        main.css / tailwind.css / app.css
 │       └── utils/
-├── packages/                          共享包预留（ui / shared / design-tokens）
+├── packages/                          vendored 组件源与迁移兼容包
 ├── .vscode/                           i18n Ally 配置（Cursor 预览国际化）
 ├── tsconfig.base.json                 strict + noImplicitAny
 └── pnpm-workspace.yaml
@@ -79,7 +80,7 @@ pnpm lint         # oxlint diagnostics + repo-wide format check
 - Codex 读取 `AGENTS.md`。
 - Claude Code 读取 `CLAUDE.md`，并通过 `@AGENTS.md` 导入同一套规则。
 - 项目处于早期阶段，默认直接按范围实现；较大改动在聊天、issue 或 PR 中记录范围、风险与验证结果。
-- UI 改动必须遵循 `UI_DESIGN_GUIDELINES.md` 和 `docs/engineering/design-system.md`。
+- UI 改动必须遵循 `UI_DESIGN_GUIDELINES.md`、`docs/engineering/DESIGN.md` 和 `docs/engineering/design-system.md`。
 
 ## 国际化（i18n）
 
@@ -106,10 +107,9 @@ pnpm lint         # oxlint diagnostics + repo-wide format check
 
 ### 样式基线
 
-- shadcn 对齐的整体设计规范见 `docs/engineering/design-system.md`；新增 UI 先按 token、组件状态、Radix 可访问语义和工作台密度规则执行。
-- 表单控件、按钮和 Select trigger 默认圆角按 shadcn `rounded-lg` / `var(--radius)` / `10px` 落地。
-- `apps/web/styles/main.css` 只做入口汇总；Tailwind、应用语义样式拆到独立文件。
-- Tailwind CSS 优先用于布局和局部样式表达，项目显式使用 `@layer theme, base, components, utilities;`。
-- shadcn 组件是代码资产，不是黑盒依赖；需要沉淀时放进 `apps/web/components/ui/`，先保持 API、状态和 a11y 行为稳定。
-- Select / Dropdown / Menu 使用 `apps/web/components/ui/*` 的 shadcn-compatible primitives，不在业务页使用原生 `<select>` 或手写 floating dropdown。
-- `text-[13px]` 这类 utility 应该能覆盖 `@layer base` 默认字号；如果没有生效，先检查是否被未分层 CSS 或更具体选择器覆盖。
+- 产品内 UI 规范见 `docs/engineering/DESIGN.md`，共享变量和组件 API 见 `docs/engineering/design-system.md`。
+- Web 和 Cloud 的目标组件源是 vendored `@langgenius/dify-ui`；`@tapstate-web/ui` 暂作迁移兼容层。Base UI 承担底层交互。
+- `apps/web/styles/main.css` 和 `apps/cloud/app/styles/main.css` 汇总各自样式入口；组件样式和内容 token 以 `packages/dify-ui` 为准。
+- Tailwind CSS v4 使用 CSS-first token，并显式声明 `@layer theme, base, components, utilities;`。
+- `.app-shell`、`.app-shell__main`、Cloud `.main-surface` 及其主题行为由各应用维护，UI 组件不得重设外层布局和表面。
+- Select / Dropdown / Menu 使用共享 primitive，不在业务页使用原生 `<select>` 或手写 floating dropdown。

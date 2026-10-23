@@ -1,3 +1,4 @@
+import { cn } from '@langgenius/dify-ui/cn'
 import { useTranslation } from 'react-i18next'
 
 import type { PipelineCreationModeDefinition } from './pipeline-creation-mode'
@@ -15,22 +16,37 @@ export function PipelineCreationOption({
 }: PipelineCreationOptionProps) {
   const { t } = useTranslation()
   const Icon = definition.icon
+  const iconBackground =
+    definition.value === 'wizard'
+      ? 'bg-components-icon-bg-indigo-solid'
+      : 'bg-components-icon-bg-blue-light-solid'
 
   return (
     <button
       type="button"
-      className={`pipeline-create-option pipeline-create-option--${definition.tone}`}
-      data-selected={selected ? 'true' : 'false'}
+      className={cn(
+        'border-components-option-card-option-border bg-components-panel-on-panel-item-bg focus-visible:ring-state-accent-solid relative box-content h-21 w-47.75 cursor-pointer rounded-xl border-[0.5px] p-3 text-left shadow-xs outline-hidden hover:shadow-md focus-visible:ring-2',
+        selected &&
+          'outline-components-option-card-option-selected-border shadow-md outline-[1.5px] outline-solid',
+      )}
       aria-pressed={selected}
       onClick={onSelect}
     >
-      <span className="pipeline-create-option__icon" aria-hidden="true">
-        <Icon />
+      <span
+        className={cn('flex size-6 items-center justify-center rounded-md', iconBackground)}
+        aria-hidden="true"
+      >
+        <Icon className="text-components-avatar-shape-fill-stop-100 size-4" />
       </span>
-      <span className="pipeline-create-option__body">
-        <span className="pipeline-create-option__title">{t(definition.labelKey)}</span>
-        <span className="pipeline-create-option__description">{t(definition.descriptionKey)}</span>
-      </span>
+      <div className="system-sm-semibold text-text-secondary mt-2 mb-0.5">
+        {t(definition.labelKey)}
+      </div>
+      <div
+        className="system-xs-regular text-text-tertiary line-clamp-2"
+        title={t(definition.descriptionKey)}
+      >
+        {t(definition.descriptionKey)}
+      </div>
     </button>
   )
 }

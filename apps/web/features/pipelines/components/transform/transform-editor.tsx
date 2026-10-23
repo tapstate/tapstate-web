@@ -50,7 +50,7 @@ function UnknownTransformEditor({
     <TransformEditorShell from={config.from} icon={Code2} title={title}>
       <Textarea
         value={raw}
-        onChange={(event) => updateRaw(event.target.value)}
+        onValueChange={updateRaw}
         rows={9}
         className="pipeline-transform__code-editor"
         aria-invalid={invalid}

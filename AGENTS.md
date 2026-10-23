@@ -11,7 +11,7 @@
 1. `README.md`：仓库结构、启动与基础命令。
 2. `docs/README.md`：产品与工程文档地图。
 3. `UI_DESIGN_GUIDELINES.md`：只有生成、修改、迁移、审查或验收 UI 时读取。
-4. `docs/engineering/DESIGN.md`：生成、修改、迁移、审查或验收 UI 前必须读取；它用于校准视觉方向、排版层级、空间节奏和构图参考，不直接覆盖 Tapstate 当前的语义 token、工作台布局或产品决策。
+4. `docs/engineering/DESIGN.md`：生成、修改、迁移、审查或验收 UI 前必须读取；它定义页面构图、组件来源、状态与审查矩阵。Tapstate 的品牌和外层 shell 仍由应用所有。
 5. `docs/product/information-architecture.md`：需求触及 IA、一级导航、路由分组或产品对象边界时读取。
 6. `docs/engineering/tech-stack.md`：需求触及依赖、构建、i18n、测试策略或工程约束时读取。
 7. `docs/engineering/design-system.md`：需求触及视觉、组件、样式或前端架构时读取。
@@ -25,7 +25,7 @@
 - 项目仍在早期探索阶段，优先采用简单、可回滚、容易调整的实现。
 - 小改动直接完成；较大的改动在聊天、issue 或 PR 中说明范围、风险和验证方式，不在仓库内强制创建额外的过程文档。
 - 先确认现有目录、依赖和数据流，再做最小范围修改。
-- 生成新 UI 前，先搜索仓库中最接近的现有实现并优先复用其组件、布局、交互和样式；只有确认无法复用时才新写一套，并说明原因。
+- 生成新 UI 前，先查 `packages/dify-ui` 的公开组件及其契约，再查上游应用页面模式和仓库中相近的 Tapstate 实现；任何新视觉变体都需记录源码依据和原因。
 - 按业务域和职责组织代码；只有当文件数量或依赖关系产生真实认知负担时再继续拆目录。
 - 不做无关重构、依赖升级或全仓格式化；发现后续坏味道时记录在 PR 或交付说明中。
 
@@ -33,24 +33,26 @@
 
 生成或修改 UI 前必须遵循根目录 `UI_DESIGN_GUIDELINES.md`、`docs/engineering/DESIGN.md`、`docs/engineering/design-system.md`，以及所在目录下就近的 `components/ui/AGENTS.md`（组件契约）；涉及浮层组件时额外遵循 `docs/engineering/overlay-conventions.md`。主动检查并修正 Anti-Slop、布局、排版、颜色、交互和表单问题。
 
-其中 `DESIGN.md` 是视觉参考和审美校准，不是外部品牌 token 的直接拷贝源。应借鉴其中的构图、层级、排版、留白和组件关系，并映射到 Tapstate 的 semantic token、企业工作台密度和实际业务场景；除非需求明确指定，不得直接复制其中的 Linear 品牌色、深色画布、字体或营销页组件数值。
+其中 `DESIGN.md` 是页面和审查契约；组件源码、尺寸、状态和 token 以 vendored `packages/dify-ui` 为准。Tapstate 的 Logo、导航、外层 shell 与产品文案仍由应用定义。每个新增或重大改动页面要按矩阵审查。
 
-**禁止在组件里写裸值颜色 / 圆角 / 间距**（如 `text-gray-600`、`rounded-[10px]`、`p-[13px]`）；一律使用 `design-system.md` 和 `components/ui/AGENTS.md` 中约定的语义 token。这是"内外边距、边框不一致"这类低级视觉问题的首要预防手段，优先级高于其他 UI 细节打磨。
+任何新增或调整的 UI 都必须先匹配 `DESIGN.md` 的 Scene contracts，并在 PR 或页面审计里填写源码映射表：实际 revision/文件、原组件和 class/token、本地对应项、差异原因、渲染证据。不能凭感觉指定背景、padding、圆角、图标大小或响应式覆盖；弹窗内容区域与输入控件必须按 Surface and token decision table 区分。没有源码依据或没有看到实际渲染结果，不能宣称“源码对齐”或视觉验收完成。
+
+组件优先使用 vendored API 和语义 token；上游组件中有源码确认的精确数值（如 10px 圆角）可以保留。新增裸色值、任意几何或调用点浮层层级需有来源依据和审查记录。
 
 ## Frontend Rules
 
 - 使用 React 19，页面路由使用 TanStack Router File Routes，路由源码放在 `apps/web/app/routes/`，由 `@tanstack/router-plugin` 生成 `apps/web/app/routeTree.gen.ts`；开发、预览和打包都使用 Vite。
 - 遵循 strict TypeScript；避免 `any`，除非有明确技术原因。
-- shadcn/ui 风格组件和 Radix primitives 是默认 UI 基座；不要为了单个页面引入新的重型 UI 依赖。
-- Select / Dropdown / Menu 必须优先使用 `apps/web/components/ui/*` 的 shadcn-compatible primitives；不要在业务页使用原生 `<select>` 或手写 floating dropdown。所有浮层类组件的 z-index 由组件内部统一管理，业务调用方禁止传入 `className="z-*"`、内联 `zIndex` 或任何形式的层级覆盖，详见 `docs/engineering/overlay-conventions.md`。
-- Dialog / Popover / Dropdown 等浮层一律使用受控的 `open` / `onOpenChange` 模式挂载和卸载，不使用 `{isOpen && <X />}` 这种条件渲染方式，避免关闭动效被打断。
+- `packages/dify-ui` 是默认 UI 组件源；Base UI 是其底层交互。`packages/ui` 和旧 `components/ui` 是迁移兼容层，不新增独立的视觉实现。
+- Select / Dropdown / Menu 优先使用 vendored 公开子路径，不手写 floating dropdown。浮层的 portal、focus、dismiss 和层级按 vendored overlay 契约处理，调用方不覆盖 z-index。
+- 受控 `open` / `onOpenChange` 和条件挂载按具体 vendored 组件的 presence 契约选择，不能用一条泛化规则代替组件行为。
 - 动效使用 Motion，保持克制，优先用于浮层进入/退出、状态切换和局部过渡。
 - 服务端状态使用 TanStack Query；客户端 UI/session 状态使用 Zustand。
 - 国际化使用 i18next + react-i18next。用户可见文案必须走 i18next；新增 key 必须同步 `en`、`zh-CN`、`zh-TW`。
 - 样式入口必须分层：`main.css` 只汇总 import，Tailwind 放 `tailwind.css`，应用语义样式放 `app.css`。
 - Tailwind v4 显式使用 `@layer theme, base, components, utilities;`；自定义默认样式放 `@layer base`，应用语义 class 放 `@layer components`，确保 utilities 能覆盖默认样式。
-- UI 风格按 `docs/engineering/design-system.md` 的 shadcn / Linear 产品工作台规范收敛：语义 token 优先、状态完整、信息密度清晰；`--radius` 为 `0.625rem`，表单控件、按钮、Select trigger 默认使用 `rounded-lg` / `var(--radius)` / 10px。
-- 图标优先用 lucide-react，不手写一次性复杂 SVG。
+- UI 风格按 `DESIGN.md` 的页面配方与 `design-system.md` 的真实源码收敛；尺寸和圆角逐组件以 vendored 实现为准。
+- 源码对齐场景优先保留对应的源图标、尺寸和 SVG 资产；源图标不可用时再用 lucide-react 等现有图标集并记录差异，不手写一次性复杂 SVG。
 - UI 组件应考虑 loading、empty、error、success；表单还要考虑 disabled、validation、submitting。
 - 页面应该是企业产品工作台气质：信息密度清晰、布局稳定、操作路径短，不做营销式 hero。
 - 固定格式区域要有稳定尺寸约束，例如表格、工具栏、侧栏、状态卡、画布容器。

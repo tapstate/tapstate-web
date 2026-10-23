@@ -1,3 +1,4 @@
+import { Button as DifyButton } from '@langgenius/dify-ui/button'
 import { useQueryClient } from '@tanstack/react-query'
 import { Copy, LoaderCircle, MoreHorizontal, Pencil, Play, Square, Trash2 } from 'lucide-react'
 import { useState } from 'react'
@@ -175,9 +176,9 @@ export function PipelineLifecycleMenu({
             disabled={pending}
           >
             {pending ? (
-              <LoaderCircle className="animate-spin" aria-hidden="true" />
+              <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
             ) : (
-              <MoreHorizontal aria-hidden="true" />
+              <MoreHorizontal className="size-3.5" aria-hidden="true" />
             )}
           </Button>
         </DropdownMenuTrigger>
@@ -189,16 +190,16 @@ export function PipelineLifecycleMenu({
                 variant={resolvedAction === 'stop' ? 'destructive' : 'default'}
                 onClick={() => requestAction(resolvedAction)}
               >
-                <ActionIcon aria-hidden="true" />
+                <ActionIcon className="size-4 shrink-0" aria-hidden="true" />
                 {actionLabel}
               </DropdownMenuItem>
             ) : null}
             <DropdownMenuItem onClick={() => window.location.assign(editHref)}>
-              <Pencil aria-hidden="true" />
+              <Pencil className="size-4 shrink-0" aria-hidden="true" />
               {editLabel}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={copyPipelineId}>
-              <Copy aria-hidden="true" />
+              <Copy className="size-4 shrink-0" aria-hidden="true" />
               {t('pipelines.actions.copyPipeline')}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -209,7 +210,7 @@ export function PipelineLifecycleMenu({
                 setDeleteDialogOpen(true)
               }}
             >
-              <Trash2 aria-hidden="true" />
+              <Trash2 className="size-4 shrink-0" aria-hidden="true" />
               {t('pipelines.actions.deletePipeline')}
             </DropdownMenuItem>
           </DropdownMenuGroup>
@@ -221,23 +222,23 @@ export function PipelineLifecycleMenu({
   return (
     <>
       {presentation === 'stop-button' ? (
-        <Button
+        <DifyButton
           type="button"
-          variant="outline"
-          size="sm"
+          variant="ghost"
+          tone="destructive"
+          size="medium"
           disabled={pending}
           aria-busy={pending}
           aria-label={t('pipelines.lifecycle.stopPipeline', { id: pipelineId })}
-          className="text-destructive hover:bg-destructive/10 hover:text-destructive gap-2"
           onClick={() => requestAction('stop')}
         >
           {pending ? (
-            <LoaderCircle className="animate-spin" aria-hidden="true" />
+            <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
           ) : (
-            <Square aria-hidden="true" />
+            <Square className="size-3.5" fill="currentColor" aria-hidden="true" />
           )}
           {pending ? t('pipelines.lifecycle.stopping') : t('pipelines.lifecycle.stop')}
-        </Button>
+        </DifyButton>
       ) : (
         <div className="pipeline-list__lifecycle-menu">
           <div className="pipeline-list__actions-default pointer-events-auto flex items-center justify-end opacity-100 transition-opacity duration-200 group-focus-within:pointer-events-none group-focus-within:opacity-0 group-hover:pointer-events-none group-hover:opacity-0">

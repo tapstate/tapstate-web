@@ -1,570 +1,236 @@
----
-version: alpha
-name: Linear-design-analysis
-description: 'A near-black product-focused marketing canvas built around #010102 (the deepest dark surface of any tool in this collection), light gray text (#f7f8f8), and the signature Linear lavender-blue (#5e6ad2) used as the single chromatic accent. The system reads as software-craft documentation: dense, technical, and quietly luxurious. Display type is set in the Linear custom sans (SF Pro Display fallback) at 500–700 with measured negative tracking. Cards live as charcoal panels (#0f1011) with hairline borders. The accent lavender appears on the brand mark, focus rings, and a few intentional CTAs — never decoratively. Page rhythm leans on product UI screenshots framed in dark panels rather than atmospheric color.'
-
-colors:
-  primary: '#5e6ad2'
-  on-primary: '#ffffff'
-  primary-hover: '#828fff'
-  primary-focus: '#5e69d1'
-  ink: '#f7f8f8'
-  ink-muted: '#d0d6e0'
-  ink-subtle: '#8a8f98'
-  ink-tertiary: '#62666d'
-  canvas: '#010102'
-  surface-1: '#0f1011'
-  surface-2: '#141516'
-  surface-3: '#18191a'
-  surface-4: '#191a1b'
-  hairline: '#23252a'
-  hairline-strong: '#34343a'
-  hairline-tertiary: '#3e3e44'
-  inverse-canvas: '#ffffff'
-  inverse-surface-1: '#f5f6f6'
-  inverse-surface-2: '#f6f7f7'
-  inverse-ink: '#000000'
-  brand-secure: '#7a7fad'
-  semantic-success: '#27a644'
-  semantic-overlay: '#000000'
-
-typography:
-  display-xl:
-    fontFamily: Linear Display
-    fontSize: 80px
-    fontWeight: 600
-    lineHeight: 1.05
-    letterSpacing: -3.0px
-  display-lg:
-    fontFamily: Linear Display
-    fontSize: 56px
-    fontWeight: 600
-    lineHeight: 1.10
-    letterSpacing: -1.8px
-  display-md:
-    fontFamily: Linear Display
-    fontSize: 40px
-    fontWeight: 600
-    lineHeight: 1.15
-    letterSpacing: -1.0px
-  headline:
-    fontFamily: Linear Display
-    fontSize: 28px
-    fontWeight: 600
-    lineHeight: 1.20
-    letterSpacing: -0.6px
-  card-title:
-    fontFamily: Linear Display
-    fontSize: 22px
-    fontWeight: 500
-    lineHeight: 1.25
-    letterSpacing: -0.4px
-  subhead:
-    fontFamily: Linear Display
-    fontSize: 20px
-    fontWeight: 400
-    lineHeight: 1.40
-    letterSpacing: -0.2px
-  body-lg:
-    fontFamily: Linear Text
-    fontSize: 18px
-    fontWeight: 400
-    lineHeight: 1.50
-    letterSpacing: -0.1px
-  body:
-    fontFamily: Linear Text
-    fontSize: 16px
-    fontWeight: 400
-    lineHeight: 1.50
-    letterSpacing: -0.05px
-  body-sm:
-    fontFamily: Linear Text
-    fontSize: 14px
-    fontWeight: 400
-    lineHeight: 1.50
-    letterSpacing: 0
-  caption:
-    fontFamily: Linear Text
-    fontSize: 12px
-    fontWeight: 400
-    lineHeight: 1.40
-    letterSpacing: 0
-  button:
-    fontFamily: Linear Text
-    fontSize: 14px
-    fontWeight: 500
-    lineHeight: 1.20
-    letterSpacing: 0
-  eyebrow:
-    fontFamily: Linear Text
-    fontSize: 13px
-    fontWeight: 500
-    lineHeight: 1.30
-    letterSpacing: 0.4px
-  mono:
-    fontFamily: Linear Mono
-    fontSize: 13px
-    fontWeight: 400
-    lineHeight: 1.50
-    letterSpacing: 0
-
-rounded:
-  xs: 4px
-  sm: 6px
-  md: 8px
-  lg: 12px
-  xl: 16px
-  xxl: 24px
-  pill: 9999px
-  full: 9999px
-
-spacing:
-  xxs: 4px
-  xs: 8px
-  sm: 12px
-  md: 16px
-  lg: 24px
-  xl: 32px
-  xxl: 48px
-  section: 96px
-
-components:
-  button-primary:
-    backgroundColor: '{colors.primary}'
-    textColor: '{colors.on-primary}'
-    typography: '{typography.button}'
-    rounded: '{rounded.md}'
-    padding: 8px 14px
-  button-primary-pressed:
-    backgroundColor: '{colors.primary-focus}'
-    textColor: '{colors.on-primary}'
-    typography: '{typography.button}'
-    rounded: '{rounded.md}'
-  button-primary-hover:
-    backgroundColor: '{colors.primary-hover}'
-    textColor: '{colors.on-primary}'
-    typography: '{typography.button}'
-    rounded: '{rounded.md}'
-  button-secondary:
-    backgroundColor: '{colors.surface-1}'
-    textColor: '{colors.ink}'
-    typography: '{typography.button}'
-    rounded: '{rounded.md}'
-    padding: 8px 14px
-  button-tertiary:
-    backgroundColor: '{colors.canvas}'
-    textColor: '{colors.ink}'
-    typography: '{typography.button}'
-    rounded: '{rounded.md}'
-    padding: 8px 14px
-  button-inverse:
-    backgroundColor: '{colors.inverse-canvas}'
-    textColor: '{colors.inverse-ink}'
-    typography: '{typography.button}'
-    rounded: '{rounded.md}'
-    padding: 8px 14px
-  pricing-card:
-    backgroundColor: '{colors.surface-1}'
-    textColor: '{colors.ink}'
-    typography: '{typography.body}'
-    rounded: '{rounded.lg}'
-    padding: 24px
-  pricing-card-featured:
-    backgroundColor: '{colors.surface-2}'
-    textColor: '{colors.ink}'
-    typography: '{typography.body}'
-    rounded: '{rounded.lg}'
-    padding: 24px
-  feature-card:
-    backgroundColor: '{colors.surface-1}'
-    textColor: '{colors.ink}'
-    typography: '{typography.body}'
-    rounded: '{rounded.lg}'
-    padding: 24px
-  product-screenshot-card:
-    backgroundColor: '{colors.surface-1}'
-    textColor: '{colors.ink}'
-    typography: '{typography.body}'
-    rounded: '{rounded.xl}'
-    padding: 24px
-  testimonial-card:
-    backgroundColor: '{colors.surface-1}'
-    textColor: '{colors.ink}'
-    typography: '{typography.body-lg}'
-    rounded: '{rounded.lg}'
-    padding: 32px
-  customer-logo-tile:
-    backgroundColor: '{colors.canvas}'
-    textColor: '{colors.ink-subtle}'
-    typography: '{typography.caption}'
-    rounded: '{rounded.xs}'
-    padding: 16px
-  text-input:
-    backgroundColor: '{colors.surface-1}'
-    textColor: '{colors.ink}'
-    typography: '{typography.body}'
-    rounded: '{rounded.md}'
-    padding: 8px 12px
-  text-input-focused:
-    backgroundColor: '{colors.surface-1}'
-    textColor: '{colors.ink}'
-    typography: '{typography.body}'
-    rounded: '{rounded.md}'
-    padding: 8px 12px
-  pricing-tab-default:
-    backgroundColor: '{colors.canvas}'
-    textColor: '{colors.ink-subtle}'
-    typography: '{typography.button}'
-    rounded: '{rounded.pill}'
-    padding: 6px 14px
-  pricing-tab-selected:
-    backgroundColor: '{colors.surface-2}'
-    textColor: '{colors.ink}'
-    typography: '{typography.button}'
-    rounded: '{rounded.pill}'
-    padding: 6px 14px
-  cta-banner:
-    backgroundColor: '{colors.surface-1}'
-    textColor: '{colors.ink}'
-    typography: '{typography.headline}'
-    rounded: '{rounded.lg}'
-    padding: 48px
-  changelog-row:
-    backgroundColor: '{colors.canvas}'
-    textColor: '{colors.ink}'
-    typography: '{typography.body}'
-    rounded: '{rounded.xs}'
-    padding: 24px 0
-  status-badge:
-    backgroundColor: '{colors.surface-2}'
-    textColor: '{colors.ink-muted}'
-    typography: '{typography.caption}'
-    rounded: '{rounded.pill}'
-    padding: 2px 8px
-  top-nav:
-    backgroundColor: '{colors.canvas}'
-    textColor: '{colors.ink}'
-    typography: '{typography.body-sm}'
-    rounded: '{rounded.xs}'
-    height: 56px
-  footer:
-    backgroundColor: '{colors.canvas}'
-    textColor: '{colors.ink-subtle}'
-    typography: '{typography.caption}'
-    rounded: '{rounded.xs}'
-    padding: 64px 32px
----
-
-## Overview
-
-Linear's marketing canvas is the deepest dark surface in this collection — `{colors.canvas}` is #010102, essentially pure black with a faint blue tint. On top sits a four-step surface ladder (`{colors.surface-1}` through `{colors.surface-4}`) for cards, panels, and lifted tiles, with hairline borders running from `{colors.hairline}` (#23252a) up through `{colors.hairline-strong}` and `{colors.hairline-tertiary}`. Light gray text (`{colors.ink}` #f7f8f8) carries the body and headlines.
-
-The single chromatic accent is **Linear lavender-blue** `{colors.primary}` (#5e6ad2) — used on the brand mark, focus rings, and the primary CTA button. A lighter hover state (`{colors.primary-hover}` #828fff) and a focus-tinted variant (`{colors.primary-focus}` #5e69d1) extend the same hue. Linear avoids saturated greens, oranges, reds, etc. on the marketing canvas — the only semantic color is `{colors.semantic-success}` (#27a644) for status pills and the rare success indicator.
-
-Display type runs Linear's custom sans (with `SF Pro Display` fallback) at weight 500–700 with negative letter-spacing scaling from -3.0px at 80px down to 0 at body. The body family is Linear's text cut, and a Linear Mono is reserved for code snippets in product screenshots.
-
-The page rhythm is **dense product screenshots** — Linear's marketing leads with high-fidelity captures of the product UI (issue list, project view, dashboard) framed in `{colors.surface-1}` panels with `{rounded.xl}` 16px corners. The chrome is intentionally minimal so the app screenshots can do the heavy lifting.
-
-**Key Characteristics:**
-
-- **Dark-canvas marketing system** — `{colors.canvas}` (#010102) is the deepest dark in this collection.
-- **Lavender-blue brand accent** (`{colors.primary}` #5e6ad2) — used scarcely on brand mark, focus, and the primary CTA.
-- Four-step surface ladder (canvas → surface-1 → surface-2 → surface-3 → surface-4) carries hierarchy without shadow.
-- Display tracking pulls aggressively negative (-3.0px at 80px); body holds at -0.05px.
-- Cards use `{rounded.lg}` 12px corners with 1px hairline borders — never pill, rarely 16px.
-- **Product UI screenshots** dominate the page. The marketing chrome is a dark frame for the app.
-- No second chromatic color. No atmospheric gradients. No spotlight cards.
-
-## Colors
-
-> Source pages: linear.app (home), /intake, /pricing, /contact/sales, /build.
-
-### Brand & Accent
-
-- **Lavender-Blue** ({colors.primary}): The signature Linear accent — primary CTA, brand mark, link emphasis.
-- **Lavender Hover** ({colors.primary-hover}): Lighter lavender (#828fff) — hovered state of the primary CTA.
-- **Lavender Focus** ({colors.primary-focus}): Focus-ring tint (#5e69d1) — focused inputs, focused buttons.
-- **Brand Secure** ({colors.brand-secure}): Muted lavender-gray (#7a7fad) — used in "Linear Security" surfaces.
-
-### Surface
-
-- **Canvas** ({colors.canvas}): Default page background — #010102, near-pure black with a faint blue tint.
-- **Surface 1** ({colors.surface-1}): One step above canvas — feature cards, pricing cards, product screenshot panels.
-- **Surface 2** ({colors.surface-2}): Two steps above — featured pricing card, hovered cards.
-- **Surface 3** ({colors.surface-3}): Three steps above — line-tertiary backgrounds, sub-nav.
-- **Surface 4** ({colors.surface-4}): Four steps above — bg-level-3, deepest lifted surface.
-- **Hairline** ({colors.hairline}): 1px borders on cards and dividers.
-- **Hairline Strong** ({colors.hairline-strong}): Stronger 1px borders — input focus rings.
-- **Hairline Tertiary** ({colors.hairline-tertiary}): Tertiary borders for nested surfaces.
-- **Inverse Canvas** ({colors.inverse-canvas}): Pure white — surface of the inverse pill CTA on a small set of section openers.
-- **Inverse Surface 1** ({colors.inverse-surface-1}): One step above inverse canvas.
-- **Inverse Surface 2** ({colors.inverse-surface-2}): Two steps above inverse canvas.
-
-### Text
-
-- **Ink** ({colors.ink}): All headlines and emphasized body type — light gray #f7f8f8.
-- **Ink Muted** ({colors.ink-muted}): Secondary type at #d0d6e0 — meta info on hero panels.
-- **Ink Subtle** ({colors.ink-subtle}): Tertiary type at #8a8f98 — deselected pricing tabs, footer columns.
-- **Ink Tertiary** ({colors.ink-tertiary}): Quaternary at #62666d — disabled, footnotes.
-
-### Semantic
-
-- **Success Green** ({colors.semantic-success}): Status pills, success indicators. The only semantic color on marketing.
-- **Overlay** ({colors.semantic-overlay}): Pure black overlay scrim for modals.
-
-## Typography
-
-### Font Family
-
-- **Linear Display** — Linear's custom display sans; fallback `SF Pro Display, -apple-system, system-ui, Segoe UI, Roboto`. Carries display-xl through subhead.
-- **Linear Text** — Linear's custom text sans (a slightly different cut tuned for body sizes); same fallback stack. Carries body sizes, button labels, captions.
-- **Linear Mono** — Linear's custom mono; fallback `ui-monospace, SF Mono, Menlo`. Used for code snippets in product screenshots and for status / ID tokens.
-
-The marketing surface treats Display and Text as one continuous voice; the family change is silent.
-
-### Hierarchy
-
-| Token                     | Size | Weight | Line Height | Letter Spacing | Use                                         |
-| ------------------------- | ---- | ------ | ----------- | -------------- | ------------------------------------------- |
-| `{typography.display-xl}` | 80px | 600    | 1.05        | -3.0px         | Largest hero headline                       |
-| `{typography.display-lg}` | 56px | 600    | 1.10        | -1.8px         | Section opener headlines                    |
-| `{typography.display-md}` | 40px | 600    | 1.15        | -1.0px         | Sub-section headlines                       |
-| `{typography.headline}`   | 28px | 600    | 1.20        | -0.6px         | Pricing tier titles, CTA banner heading     |
-| `{typography.card-title}` | 22px | 500    | 1.25        | -0.4px         | Feature card title                          |
-| `{typography.subhead}`    | 20px | 400    | 1.40        | -0.2px         | Lead body, intro paragraphs                 |
-| `{typography.body-lg}`    | 18px | 400    | 1.50        | -0.1px         | Hero subhead, lead paragraphs               |
-| `{typography.body}`       | 16px | 400    | 1.50        | -0.05px        | Default body                                |
-| `{typography.body-sm}`    | 14px | 400    | 1.50        | 0              | Card body, footer columns                   |
-| `{typography.caption}`    | 12px | 400    | 1.40        | 0              | Captions, meta, status                      |
-| `{typography.button}`     | 14px | 500    | 1.20        | 0              | All button labels                           |
-| `{typography.eyebrow}`    | 13px | 500    | 1.30        | 0.4px          | Section eyebrow (slight positive tracking)  |
-| `{typography.mono}`       | 13px | 400    | 1.50        | 0              | Linear Mono for code in product screenshots |
-
-### Principles
-
-- **Aggressive negative tracking on display** (-3.0px at 80px ≈ 4% of size).
-- **Single voice from display to body.** Display-xl at 600 → body at 400 — same family, narrower weights.
-- **Eyebrow uses positive tracking** (+0.4px) — contrast against the negative-tracked display marks the eyebrow as taxonomy.
-- **Mono only in code contexts.** Linear Mono lives inside product screenshots — not on marketing chrome.
-
-### Note on Font Substitutes
-
-Linear's custom typeface isn't publicly distributed; the documented fallback `SF Pro Display, -apple-system, system-ui` is the recommended substitute on macOS. For cross-platform implementation, **Inter** at weight 500 / 600 / 700 is the closest free substitute. **Geist Sans** is also viable. For mono, **JetBrains Mono** or **Geist Mono** at weight 400 closely approximates Linear Mono.
-
-## Layout
-
-### Spacing System
-
-- **Base unit**: 4px.
-- **Tokens (front matter)**: `{spacing.xxs}` 4px · `{spacing.xs}` 8px · `{spacing.sm}` 12px · `{spacing.md}` 16px · `{spacing.lg}` 24px · `{spacing.xl}` 32px · `{spacing.xxl}` 48px · `{spacing.section}` 96px.
-- Card interior padding: `{spacing.lg}` 24px on feature/pricing cards; `{spacing.xl}` 32px on testimonial cards; `{spacing.xxl}` 48px on CTA banners.
-- Pill button padding: 8px vertical · 14px horizontal — Linear's compact button spec.
-- Form input padding: 8px vertical · 12px horizontal.
-
-### Grid & Container
-
-- Max content width sits around 1280px.
-- Card grids are 3-up at desktop, 2-up at tablet, 1-up at mobile.
-- Pricing tier grid is 3-up; comparison strip below shows checkmarks per tier.
-- Product screenshot panels span full content width — they're the protagonist.
-
-### Whitespace Philosophy
-
-The dark canvas IS the whitespace. Sections separate by lift onto surface-1 panels, not by gaps in white. Within a panel, generous `{spacing.lg}` 24px gaps between content blocks; `{spacing.section}` 96px between sections.
-
-## Elevation & Depth
-
-| Level              | Treatment                                                          | Use                                      |
-| ------------------ | ------------------------------------------------------------------ | ---------------------------------------- |
-| 0 (flat)           | No shadow, no border                                               | Default for body type, hero text, footer |
-| 1 (charcoal lift)  | `{colors.surface-1}` background on canvas, 1px `{colors.hairline}` | Default cards, product panels            |
-| 2 (surface-2 lift) | `{colors.surface-2}` background, 1px `{colors.hairline-strong}`    | Featured pricing card, hovered cards     |
-| 3 (surface-3 lift) | `{colors.surface-3}` background                                    | Sub-nav, dropdown menus                  |
-| 4 (focus ring)     | 2px `{colors.primary-focus}` outline at 50% opacity                | Focused input, focused button            |
-
-Linear's depth is carried by surface ladder + hairline borders. The brand resists drop shadows on dark almost entirely.
-
-### Decorative Depth
-
-- **Product UI screenshots** dominate as decorative depth.
-- **No atmospheric gradients, no spotlight cards.**
-- **Subtle white edge highlight** on the top edge of lifted panels — gives the dark surface a faint "pixel rendered" feel.
-
-## Shapes
-
-### Border Radius Scale
-
-| Token            | Value  | Use                                             |
-| ---------------- | ------ | ----------------------------------------------- |
-| `{rounded.xs}`   | 4px    | Small chips, status badges                      |
-| `{rounded.sm}`   | 6px    | Inline tags                                     |
-| `{rounded.md}`   | 8px    | All buttons, form inputs                        |
-| `{rounded.lg}`   | 12px   | Pricing cards, feature cards, testimonial cards |
-| `{rounded.xl}`   | 16px   | Product screenshot panels                       |
-| `{rounded.xxl}`  | 24px   | Oversized CTA banners (rare)                    |
-| `{rounded.pill}` | 9999px | Pricing tab toggles, status pills               |
-| `{rounded.full}` | 9999px | Avatar circles                                  |
-
-### Photography & Illustration Geometry
-
-- Product UI screenshots dominate; they sit in `{rounded.xl}` 16px tiles with `{spacing.lg}` 24px outer padding.
-- Customer logo tiles render at small sizes (~24px logo height) on `{colors.canvas}` with no border.
-- Avatar circles in testimonial cards use `{rounded.full}` at 32–40px sizes.
-
-## Components
-
-### Buttons
-
-**`button-primary`** — Lavender CTA. The default primary CTA across all pages.
-
-- Background `{colors.primary}`, text `{colors.on-primary}`, type `{typography.button}`, padding 8px 14px, rounded `{rounded.md}`.
-- Pressed state lives in `button-primary-pressed` (background shifts to `{colors.primary-focus}`).
-- Hover state lives in `button-primary-hover` (background shifts to `{colors.primary-hover}` lighter lavender).
-
-**`button-secondary`** — Charcoal button. Used for secondary CTAs ("Sign in", "Read changelog").
-
-- Background `{colors.surface-1}`, text `{colors.ink}`, type `{typography.button}`, padding 8px 14px, rounded `{rounded.md}`. 1px `{colors.hairline}` border.
-
-**`button-tertiary`** — Plain text button.
-
-- Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.button}`, rounded `{rounded.md}`, padding 8px 14px.
-
-**`button-inverse`** — White-on-dark inverse CTA.
-
-- Background `{colors.inverse-canvas}`, text `{colors.inverse-ink}`, type `{typography.button}`, rounded `{rounded.md}`, padding 8px 14px.
-
-### Pricing Tabs
-
-**`pricing-tab-default`** + **`pricing-tab-selected`** — Pill-toggle on `/pricing`.
-
-- Default: `{colors.canvas}` background, `{colors.ink-subtle}` text, rounded `{rounded.pill}`, padding 6px 14px.
-- Selected: `{colors.surface-2}` background, `{colors.ink}` text — selected = surface lift.
-
-### Cards & Containers
-
-**`pricing-card`** — Each tier on `/pricing`.
-
-- Background `{colors.surface-1}`, text `{colors.ink}`, type `{typography.body}`, rounded `{rounded.lg}`, padding 24px. 1px `{colors.hairline}` border.
-
-**`pricing-card-featured`** — Recommended tier — surface lift to surface-2.
-
-- Background `{colors.surface-2}`, otherwise identical structure.
-
-**`feature-card`** — Generic feature highlight tile.
-
-- Background `{colors.surface-1}`, text `{colors.ink}`, type `{typography.body}`, rounded `{rounded.lg}`, padding 24px.
-
-**`product-screenshot-card`** — The dominant card type — frames a high-fidelity Linear app UI screenshot.
-
-- Background `{colors.surface-1}`, text `{colors.ink}`, type `{typography.body}`, rounded `{rounded.xl}`, padding 24px.
-
-**`testimonial-card`** — Customer quote with avatar + name + role.
-
-- Background `{colors.surface-1}`, text `{colors.ink}`, type `{typography.body-lg}`, rounded `{rounded.lg}`, padding 32px.
-
-**`customer-logo-tile`** — Small tile in the customer marquee.
-
-- Background `{colors.canvas}`, text `{colors.ink-subtle}`, type `{typography.caption}`, rounded `{rounded.xs}`, padding 16px.
-
-**`cta-banner`** — Closing CTA panel near page bottom.
-
-- Background `{colors.surface-1}`, text `{colors.ink}`, type `{typography.headline}`, rounded `{rounded.lg}`, padding 48px.
-
-### Inputs & Forms
-
-**`text-input`** + **`text-input-focused`** — Form fields on `/contact/sales` and signup overlays.
-
-- Background `{colors.surface-1}`, text `{colors.ink}`, type `{typography.body}`, rounded `{rounded.md}`, padding 8px 12px.
-- Focused state retains the same surface; the focus ring is a 2px `{colors.primary-focus}` outline at 50% opacity.
-
-### Status & Build Page
-
-**`changelog-row`** — Each row in `/build` (changelog page) listing version, date, and changes.
-
-- Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.body}`, rounded `{rounded.xs}`, padding 24px 0. 1px `{colors.hairline}` bottom rule.
-
-**`status-badge`** — Small status pill.
-
-- Background `{colors.surface-2}`, text `{colors.ink-muted}`, type `{typography.caption}`, rounded `{rounded.pill}`, padding 2px 8px.
-
-### Navigation
-
-**`top-nav`** — Sticky dark bar with the Linear wordmark left, primary nav links centered, and a `button-secondary` ("Sign in") + `button-primary` ("Get started") pair right.
-
-- Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.body-sm}`, height 56px.
-
-### Footer
-
-**`footer`** — Dense link grid on `{colors.canvas}` with the Linear wordmark left.
-
-- Background `{colors.canvas}`, text `{colors.ink-subtle}`, type `{typography.caption}`, padding 64px 32px.
-
-## Do's and Don'ts
-
-### Do
-
-- Reserve `{colors.canvas}` (#010102) as the system's anchor surface — the faint blue tint is intentional.
-- Use `{colors.primary}` lavender ONLY for: brand mark, primary CTA, focus ring, link emphasis.
-- Use the four-step surface ladder for hierarchy. Avoid skipping levels.
-- Pair display weight 600 with body weight 400 — Linear resists 700+ display weights.
-- Apply negative letter-spacing aggressively on display.
-- Use product UI screenshots as the protagonist of every section.
-- Compose CTAs as `{rounded.md}` 8px corners.
-
-### Don't
-
-- Don't ship a light-mode marketing page.
-- Don't use lavender as a section background or card fill.
-- Don't introduce a second chromatic accent (orange, pink, green for marketing).
-- Don't add atmospheric gradients or spotlight cards.
-- Don't pill-round CTAs.
-- Don't use `#000000` true black as the canvas.
-- Don't combine multiple bright accents in product screenshot mockups.
-
-## Responsive Behavior
-
-### Breakpoints
-
-| Name       | Width  | Key Changes                                         |
-| ---------- | ------ | --------------------------------------------------- |
-| Desktop-XL | 1440px | Default desktop layout                              |
-| Desktop    | 1280px | Card grid 3-up maintained                           |
-| Tablet     | 1024px | Card grid 3-up → 2-up                               |
-| Mobile-Lg  | 768px  | Pricing comparison becomes accordion; nav hamburger |
-| Mobile     | 480px  | Single-column; display-xl scales 80px → ~36px       |
-
-### Touch Targets
-
-- CTAs hold ≥40px tap height across viewports.
-- Pricing tab pills hold ≥36px tap height; touch viewports grow to ≥44px.
-- Form inputs hold ≥44px tap target on touch.
-
-### Collapsing Strategy
-
-- **Top nav**: links collapse to hamburger below 768px.
-- **Card grids**: 3-up → 2-up at 1024px → 1-up below 768px.
-- **Pricing comparison**: per-tier accordion below 768px.
-- **Display type**: `{typography.display-xl}` 80px scales toward `{typography.display-md}` 40px on mobile.
-
-### Image Behavior
-
-- Product UI screenshots maintain aspect ratio and never crop.
-- Customer logos in the marquee may collapse from 6-up to 3-up below 768px.
-
-## Iteration Guide
-
-1. Focus on ONE component at a time and reference it by its `components:` token name.
-2. When introducing a section, decide first which surface lift it lives on.
-3. Default body to `{typography.body}` at weight 400.
-4. Run `npx @google/design.md lint DESIGN.md` after edits.
-5. Add new variants as separate component entries.
-6. Treat lavender as scarce: brand mark, primary CTA, focus, link emphasis.
-7. Lead every section with a product UI screenshot.
-
-## Known Gaps
-
-- The four-step surface ladder values are extracted directly from Linear's `--color-bg-level-3`, `--color-line-tint`, etc. CSS variables; they are Linear's canonical surface spec.
-- Form-field error and validation styling is not visible on the inspected pages.
-- Light mode is not documented because the marketing site does not ship a light theme.
-- Linear's actual product UI uses a richer color-tag palette (red, orange, yellow, green, blue, purple) for issue priorities and project labels — those colors live in the in-product surfaces shown in mockups.
-- The custom display, text, and mono families are proprietary; an open-source substitute is acceptable.
+# Tapstate UI DESIGN
+
+## Authority and scope
+
+This is the review contract for all new and existing content inside Tapstate Web and Cloud. The outer `app-shell` and main surface, navigation, product marks, and product-specific graph canvas remain Tapstate-owned. Every ordinary control and overlay inside those boundaries follows the vendored component package and its semantic tokens. The exact component APIs and token source are indexed in [design-system.md](design-system.md).
+
+The system-level interaction inventory and per-flow review protocol live in [ui-interaction-audit.md](ui-interaction-audit.md). Use it whenever a page opens an overlay, displays feedback, accepts a value, or changes data.
+
+Component source baseline: revision `3552815c89415716dfd9cac80fd7c73aac3b051e`, 2026-10-17; package attribution and license are recorded in [`packages/dify-ui/UPSTREAM.md`](../../packages/dify-ui/UPSTREAM.md). Page rules below were read from the upstream knowledge list header, resource list/card, document header, and the package's styling/overlay/form guides. When a rule and a remembered screenshot disagree, inspect that pinned source and record the decision before inventing a new variant.
+
+Application-scene research added on 2026-10-23 was read from the user's local upstream checkout at revision `65e1fbcc2b4fd43f0bb78b58922eb543983df78e`. This supplies the result/trace, datasource authorization, workflow-log, empty-state and API-test examples in the scene contracts below. It does not silently upgrade the vendored component revision. Use the vendored implementation for exact component anatomy; record any later application recipe separately with its actual revision. When prose or an upstream guide contradicts the copied runtime source, inspect and resolve the difference before implementation; do not present the prose as proof of the runtime behavior.
+
+## Visual philosophy
+
+1. **Work first.** The title, primary action, filters, content, and state form a visible hierarchy. Decoration does not compete with the user's task. The knowledge-resource list uses a compact sticky title row, a second toolbar row, then a content grid; the document view uses title/description, then filters/actions, then the list.
+2. **Dense but legible.** Controls default to 32 px. Small actions use 24 px; prominent actions use 36 px. UI copy is generally 12–14 px; the knowledge list title is 18 px. Row spacing and one-pixel dividers carry hierarchy before extra containers.
+3. **Semantic surfaces.** Body, panel, card, input, and overlay each have their own semantic background/border tokens. A resource card is justified when the whole item is selectable and carries multiple pieces of metadata and actions. Ordinary text groups do not become cards. The upstream knowledge-resource card uses a 0.5 px border, 12 px radius, restrained shadow, and a hover change; the list uses a 296 px minimum card width and 12 px gap. These are examples to follow for resource grids, not universal page measurements.
+4. **One action weight.** Each view has one obvious primary action. Secondary and ghost actions are quieter. Destructive intent uses the component's `tone`; do not create a new red button style. Place low-frequency item actions in a menu.
+5. **State is part of the composition.** Grid loading skeletons preserve final card geometry; the document table's initial load uses a centered source Spinner. Choose from the analogous source page instead of imposing one loading treatment everywhere. First-use empty states and filtered-empty states have different messages and actions. Errors show recovery. Disabled, invalid, selected, hover, active, and keyboard-focus states come from component APIs and Base UI data attributes; color alone never carries status.
+6. **Content ownership.** App code owns labels, translated text, permissions, data and navigation. The vendored component owns geometry, focus, dismissal, layers, field behavior and variants. Keep styling changes in token/theme mapping or the vendored source, with upstream provenance, rather than scattered `className` corrections.
+
+## Source fidelity is a delivery requirement
+
+For every new UI and every visual correction, read this document and the relevant source family before editing. A semantic-looking token or a successful build does not establish a source match. The pinned component source, the analogous application page, and explicit user decisions determine the result, in that order of responsibility: components own their parts; application references own composition; user decisions own intentional product differences.
+
+Record a source mapping in the PR or page audit for each changed composition:
+
+| Surface / part                        | Source revision and file                              | Source component / classes   | Tapstate component / classes           | Difference and reason                                                                                        | Rendered evidence                             |
+| ------------------------------------- | ----------------------------------------------------- | ---------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| Example: connection-test result group | Pinned theme; upstream `workflow/run/result-text.tsx` | `bg-background-section-burn` | `ConnectionTestResult` uses that token | Structured check rows are Tapstate data; this is an adaptation, not a copied upstream connection-test screen | Desktop / narrow, success / warning / failure |
+
+Reject a change with an unaccounted-for background, padding, radius, shadow, icon size, typography role, focus treatment or overlay part. Do not add responsive overrides such as `sm:px-8` because they feel roomier. Inspect an analogous responsive source; otherwise keep the component default and identify the missing reference. Do not call a composition an exact copy when its layout or interaction was adapted. Never use a generic aesthetic skill to override the source system.
+
+Before calling a correction complete, inspect the rendered result. Specifically check padding on the actual content element, computed display/alignment of rows, right-side status/actions, long text, scrolling, and generated utility styles. Typecheck and lint are necessary code checks, not visual evidence. Preserve a real screenshot or browser observation in the page audit; record unavailable states as unverified.
+
+## Surface and token decision table
+
+Choose a surface by its purpose, not by sampling a grey from a screenshot. Values below identify the pinned theme and must not become literal app colors. Use the same semantic token in dark mode; alpha surfaces must be inspected on their actual parent.
+
+| Purpose                                             | Source token / composition                                                             | Required distinction                                                                                   |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Normal content sheet                                | `bg-background-default`                                                                | Primary reading surface, separate from the branded shell                                               |
+| Quiet section                                       | `bg-background-section`                                                                | Subtle grouping; not a disabled input                                                                  |
+| Recessed content, result, trace or grouped metadata | `bg-background-section-burn`                                                           | Light `#f2f4f7`; dark `rgb(24 24 27 / 0.6)`. Prefer for the Source connection-test check/error regions |
+| Input / number / select / search                    | `components-input-*` and the selected primitive                                        | These are control-state surfaces, not a substitute for general content sections                        |
+| Floating menu / popup                               | `components-panel-*`, `internal/menu.ts`, `internal/overlay.ts`                        | Keep source border, blur, shadow, placement and lifecycle together                                     |
+| Hover / press / selection                           | `state-base-*`, `state-accent-*` or the owning component's selected token              | Do not turn a static section background into an interaction state                                      |
+| Informational / success / warning / destructive     | Component variants and `text-*`, `state-*`, `StatusDot`                                | Status is also text or an icon. Success is not the product's primary accent                            |
+| Dividers / outline                                  | `divider-subtle`, `divider-regular`, component border tokens                           | Controls, row rules and floating panels do not share one invented border color                         |
+| Text                                                | `text-primary`, `text-secondary`, `text-tertiary`, placeholder/disabled/semantic roles | Keep labels, supporting content, placeholders and disabled values distinct                             |
+| Code and graph                                      | Source syntax / `workflow-*` tokens                                                    | Their specialized palette does not become the ordinary page palette                                    |
+
+Evidence: vendored `src/themes/{light,dark,theme}.css`, `src/internal/{form-control,menu,overlay}.ts`; upstream `web/app/components/workflow/run/{result-text,workflow-tool-tracing}.tsx`, `rag-pipeline/components/panel/test-run/result/index.tsx`, `header/account-setting/data-source-page-new/card.tsx`, `plugins/plugin-auth/plugin-auth.tsx`.
+
+`background-section-burn` is a common content surface, not a blanket replacement for all backgrounds inside dialogs. For example, upstream `tools/edit-custom-collection-modal/test-api.tsx` deliberately uses `components-input-bg-normal` for its textual API output. The Source check list follows the result/trace grouping references above and the user's explicit section-burn direction. Retain this distinction when adding other result types.
+
+## Scene contracts
+
+These contracts cover the current public component catalog and the application compositions used by Web and Cloud. A new scene must map to one of them or add a source-backed contract here before delivery. Coverage here describes implementation rules; it does not declare every existing screen visually audited.
+
+### Dialogs, drawers and nested surfaces
+
+- Compose centered work as `DialogContent` → `DialogHeader` → `DialogBody` → optional `DialogFooter`. Content itself does not supply body padding. Put a form across these parts with `contents` when required; retain the flex/min-height chain. The default body owns scrolling between the fixed header/footer. Never place ordinary body content directly under the popup and assume header padding applies to it.
+- The pinned header is `px-6 pt-6 pb-3`; body is `px-6 py-3`; footer is `px-6 pt-5 pb-6`. Horizontal inset is 24px. The default close control is 32px at `top-5 inset-e-5`. Source results retain the default 480px dialog width. A wider composition requires explicit source-backed width as well as a viewport clamp; changing only `max-width` does not change the source `w-120` width or justify different interior insets.
+- Modal surface, backdrop, radius, shadow, transition and nested stack transform belong to `src/internal/overlay.ts` and `src/dialog/index.tsx`. A dialog is not a generic card with a backdrop. Avoid duplicate close affordances when one top close is sufficient; decision dialogs still need clear cancel/confirm actions.
+- Use `AlertDialog` for explicit confirmation, with object name, consequence, pending and failure states. Preserve its outside-dismiss/Escape contract rather than guessing that all modal types dismiss identically.
+- Drawers use the exported root, portal, backdrop, viewport, popup and content. Side placement, swipe direction, viewport clearance, width and scroll regions come from the analogous source page. The tool test drawer is 600px with 8px viewport insets; that is its recipe, not the width for every side panel.
+- A nested picker/menu/dialog uses its primitive's portal and focus lifecycle. No local z-index escalation, manually portalled clone, full-screen click blocker or force-mounted invisible popup.
+
+Sources: vendored `src/{dialog,alert-dialog,drawer}/index.tsx`, `docs/overlays.md`; upstream `tools/edit-custom-collection-modal/test-api.tsx` and `app/create-app-modal/index.tsx`.
+
+### Results, diagnostics and operational state
+
+- Separate the overall outcome from individual checks. Use a concise semantic success/failure icon and text; each check has a left title/detail region and a nonshrinking status at the right of its title row. Long messages wrap in the text region. Status must not be pushed below a detail simply because the name grows.
+- Source test result/error content uses `bg-background-section-burn`. Its check well uses `px-3 py-2` (12px horizontal, 8px vertical), within the dialog body's 24px side inset. The 12px well inset follows the test-output composition; structured check rows and their right-side statuses are the documented Tapstate adaptation.
+- Present the user-facing failure and recovery first. Keep diagnostic codes/details in a reachable disclosure; preserve all existing error information and do not reinterpret a failed request as an empty success.
+- A result section can be inline in an editor or live in a contextual drawer; keep the source page's trigger/result relationship. List-triggered Tapstate connection results currently use a focused dialog. Do not silently change this behavior and describe it as source parity.
+- Logs use the source workflow-log table/filter/empty-state recipes. Monitoring uses actual operational data; zero is zero and unavailable is unavailable. Do not start polling a screen with no backend condition that can produce updates; refresh behavior is a product contract, independent of visual styling.
+
+Sources: upstream `workflow/run/{result-text,status-container,workflow-tool-tracing}.tsx`, `rag-pipeline/components/panel/test-run/result/index.tsx`, `tools/edit-custom-collection-modal/test-api.tsx`, `app/workflow-log/list.tsx`, `app/log/empty-element.tsx`; vendored `src/{status-dot,collapsible,spinner,progress,meter}`. The Source result-row alignment and polling constraints are explicit Tapstate requirements.
+
+### Forms and schema-driven controls
+
+- Text, password, numeric, multiline, prefixes/suffixes and embedded actions use `input`, `number-field`, `textarea` and `input-group`. The wrapper owns one surface/ring; the inner native input is transparent and flexible. Do not nest a styled input inside a second styled input shell.
+- A normal Input uses `rounded-lg px-3 py-1.75 system-sm-regular`; its transparent normal border, hover border, active background and 2px accent focus ring come from `internal/form-control.ts`. Preserve the same focus appearance in Formily. Do not add an Ant focus halo, permanent outline, fixed-height inner input with duplicate vertical padding, or a second password border.
+- Formily owns schema, draft, validation and submission. Adapters bind public control props, preserve native labels/descriptions/errors, and normalize only the domain values. Remaining Ant-backed components need a documented component-specific token/anatomy mapping, including their popup portals; a global `.ant-*` override is not a complete migration.
+- Select closed choices with `select`, searchable persistent values with `combobox`, free text with suggestions with `autocomplete`. Pass the source value-to-label collection. A selected source shows one connector mark, one label and optional secondary metadata on one aligned row; no duplicated icon or raw serialized value.
+- Read mode and similar mutually exclusive modes use `segmented-control`. Its track is `rounded-[10px] p-0.5 gap-px`; items are `h-7 rounded-lg px-2 py-1` with source active/hover/disabled states. Tabs choose panels instead. Do not substitute a handcrafted group of unrelated buttons.
+- Checkbox/radio groups use fieldset/legend and real group semantics. A single Switch represents a boolean. Sliders keep labels, keyboard values and units. Date/time pickers use their source civil-date/time value model, localized label/format and commit/cancel behavior.
+- Search uses `search-input` or the exact input-group pattern of the selected source page. Clear behavior, Escape, IME and accessible names are part of the control. Search alignment/width follows the enclosing composition; the connector chooser's centered 400px maximum is an explicit Tapstate requirement, not a global search width.
+
+Sources: vendored `docs/{forms,selection,styling}.md`, `src/internal/form-control.ts`, `src/{field,fieldset,form,input,input-group,textarea,number-field,select,combobox,autocomplete,checkbox,checkbox-group,radio-group,switch,slider,segmented-control,date-time,search-input}`; upstream `base/search-input`.
+
+### Buttons, icon buttons and action groups
+
+- Use the public Button variant/tone/size. A `secondary` action is a normal independent Button unless the analogous source explicitly groups commands. Save is secondary and Save & start is primary in the Pipeline Builder; its footer is not the DAG editor's split/grouped toolbar.
+- Button sizes are small/medium/large = 24/32/36px. IconButton sizes are a different API: xs/sm/md/lg/xl = 16/20/24/32/36px. Glyph size comes from the source call site; do not infer it from the hit area or globally force every SVG to 24px.
+- Use one accessible IconButton for more actions. Keep its glyph size stable before/after hover and when its menu opens. The menu items use the source 32px item geometry; an icon must not inherit a page-level large SVG rule.
+- Loading/disabled/pending preserve button geometry and block duplicate submission. Tooltip names and keyboard focus remain available; a tooltip does not replace `aria-label`.
+- Keep one primary action for a decision area. Resource names can carry link emphasis; secondary source/pipeline navigation uses quiet text plus meaningful connector identity. Avoid making every table column a blue primary link.
+
+Sources: vendored `src/{button,icon-button,toggle,kbd}/index.tsx`, `src/internal/{focus,menu}.ts`; upstream workflow operator/header components. Builder action priority, quiet secondary navigation and stable more-action icons are explicit Tapstate requirements.
+
+### Menus, filters and contextual help
+
+- Commands use DropdownMenu/ContextMenu; field values use Select/Combobox. Preserve menu labels, groups, separators, destructive item semantics, submenus and typeahead. Source menu rows are `mx-1 h-8 gap-1 rounded-lg px-2`; popup padding and scroll padding are both `py-1`/`scroll-py-1`.
+- Filter chips use the source `chip` selected/empty/clear composition. A selected filter has the source secondary-button surface and clear glyph; it is not a plain select with an added x. Reset uses the real unfiltered value. Date filters retain their source picker, selected interval and clearing semantics.
+- Popover is reachable interactive content. Tooltip is supplementary naming for an existing action. Infotip is a deliberate information trigger; PreviewCard enhances a real link without owning essential data. Preserve touch, keyboard, outside-dismiss and focus return.
+- Popup width/height derive from anchor/available-space variables, with viewport collision handling. Do not hardcode an unclamped width or detach it from the trigger during scrolling.
+
+Sources: vendored `src/{dropdown-menu,context-menu,chip,popover,tooltip,infotip,preview-card,select,combobox,autocomplete}`, `src/internal/{menu,placement,overlay}.ts`, `docs/{selection,overlays}.md`.
+
+### Lists, detail pages and navigation
+
+- Use the resource's real comparison task to choose table, card grid or list/detail panes. The upstream app has both bare document tables and section-burn workflow-log headers; do not flatten these different recipes into one universal table style.
+- Match row/cell density to the source table, with normal comparison rows rather than forcing `h-8` onto every business row. Keep row hover, active selection and focus distinct. A connector mark is the actual registered image, with no invented border/frame; preserve source-specific frames only where the chosen recipe uses them.
+- Identity, status, metadata and actions have different text weights. Long identity/secondary text truncates or wraps deliberately without displacing the action. Numeric columns use stable formatting; preserve real zero values. Paginate when the full-list task requires it, with range/loading/error behavior.
+- Breadcrumbs identify location; Tabs choose detail panels and keep the source indicator/focus behavior; side navigation chooses routes. Never use SegmentedControl as a visual replacement for any of these without matching semantics.
+- Collection/file hierarchies use `file-tree`; expanding is separate from selecting and opening. Avatar, Badge and Kbd carry identity, neutral metadata and shortcuts respectively. StatusDot is operational state, not a fabricated colored Badge variant.
+- Detail pages lead with identity/status/actions, then the main operational question, then secondary metadata. Keep the existing shell and data model. Settings use field groups and source save/validation boundaries; authentication, provider configuration, permissions and billing use the corresponding source form/card/modal rather than a generic dashboard recipe.
+
+Sources: upstream `datasets/list`, `datasets/documents/components`, `app/workflow-log/list.tsx`, `app/log/list.tsx`, `app-sidebar`, `header/account-setting/data-source-page-new/card.tsx`, `billing/plan/index.tsx`; vendored `src/{breadcrumb,tabs,pagination,file-tree,avatar,badge,kbd,separator}`.
+
+### Empty, loading, error, notification and progress
+
+- First-use empty, filtered empty, loading, unavailable and error are separate states. Port the relevant source composition, including its illustration/SVG, copy hierarchy and action; do not drop a source asset and retain only the words. Logs empty content uses section-burn; a FilterEmptyState keeps its own source fade/geometry.
+- Spinner represents active work; Skeleton/LoadingPlaceholder preserve the analogous source page's layout. Progress and Meter preserve true values/ranges and accessible labels. Do not use a spinner forever for an unavailable backend.
+- Toast uses one application owner and one notification per completed action. Keep mutation feedback out of replayed effects and do not emit the same success from both dialog and parent. Persistent errors stay next to the task with recovery; source Alert is its specific informational composition, not a universal result background.
+- Toast completion does not replace cache invalidation/real data refresh. An optimistic state must have a defined failure path and may not show success before the action succeeds.
+
+Sources: vendored `src/{toast,alert,filter-empty-state,first-empty-action-card,skeleton,loading-placeholder,spinner,progress,meter}`; upstream `app/log/empty-element.tsx`, `datasets/list/first-empty-state`, `datasets/documents/components/list.tsx`.
+
+### Editors, previews, upload and visualization
+
+- Canvas controls, selector and node panel follow the graph recipe below. Code/JSON/result previews preserve syntax semantics, wrap/scroll choices, copy feedback, source surface and font role. Copy requires a real successful clipboard result.
+- File selection shows accepted types, progress, cancel/retry, validation and selected-file removal using the matching source uploader pattern. A file preview is not an ordinary text input; the native input remains accessible and server validation stays authoritative.
+- A chart uses truthful data/ranges, source text and surrounding controls. The visual series or graph layout may be Tapstate-specific; surrounding menus, filters, empty/error states and overlays still follow this contract. Distinguish an unavailable metric from zero.
+- ScrollArea owns its viewport/scrollbar geometry. Collapsible owns expanded state, disclosure semantics and transition. DirectionProvider handles source logical direction; layout additions must not hardcode physical placement where the source uses logical properties.
+
+Sources: upstream `workflow/run/{result-panel,result-text,output-panel}.tsx`, `base/file-uploader`, `workflow/{operator,block-selector,nodes/_base}`; vendored `src/{scroll-area,collapsible,direction-provider}`, plus the relevant component source for every surrounding control.
+
+### Responsive layout, theme, localization and accessibility
+
+- Match source behavior at desktop and narrow viewports. Keep controls within viewport, constrain popups, give long content a real scroll owner, and preserve reachable primary/close actions. Do not shrink labels/icons independently to disguise overflow.
+- Inspect light and dark on the actual parent surface. A token name can have alpha values in dark mode; copying its light hex loses the relationship. Keep the source gradient/blur/shadow where that source composition uses it; generic design-skill bans do not override source fidelity.
+- Use `system-*` roles with their associated line-height/weight. Preserve registered connector marks and source SVGs. Check English, Simplified Chinese and Traditional Chinese, long names, numbers, empty values and CJK line wrapping. Never infer padding or glyph dimensions from a resized screenshot.
+- All controls need real names and label relationships. Check keyboard entry, selection, Escape, focus return, form submit, invalid/disabled/read-only and reduced-motion behavior as applicable. `accessible-names-and-descriptions.md` and component READMEs own the detailed contract.
+
+Sources: vendored `docs/{styling,forms,selection,overlays,accessible-names-and-descriptions}.md`, `src/styles`, `src/themes`, component READMEs and the analogous application page's responsive classes.
+
+## Page recipes
+
+### Resource list
+
+Use title and a compact secondary-action row, then filters/search and the single creation action, then grid or table. Keep the header visible when the content scrolls if the task needs filters in view. Do not duplicate the same resources in a navigation rail and a table, and do not show a filter that has only one effective value. Use a resource card only when the resource itself is the navigation target and summary metadata/actions share that surface. The card's navigation entry is a real link, with its own focus ring; item actions sit outside that link in an operations menu. Use a table when users compare rows by columns. The document table is a bare semantic `<table>` with no generic component export. Use its source header/row classes and cell spacing: an uppercase 32 px header, subtle row dividers, semantic text colors and hover background; it does not wrap every row in a shadowed card. Status pairs the source `StatusDot` with text and keeps the marker circular via the app-level `rounded-full` override; preserve each surface's existing dot size and the source status colors. Keep filtered-empty and first-use empty states distinct. For filtered results, use the source `FilterEmptyState` composition: muted placeholder grid, gradient fade, icon and centered explanation. For first use, use the source action-card composition with a creation action. A card grid uses shape-matched skeletons; a table can use the source `LoadingPlaceholder` as in the source document-list pattern. Use an accessible status announcement when asynchronous filtering settles.
+
+Evidence: upstream `web/app/components/datasets/list/header.tsx`, `datasets.tsx`, `dataset-card/index.tsx`, `dataset-card-skeleton.tsx`, `first-empty-state/index.tsx`, `list/index.tsx`, `web/app/components/datasets/documents/components/{documents-header,list}.tsx`, and `document-list/components/document-table-row.tsx`.
+
+### Form and creation flow
+
+Group fields by decision. Use `Field`, `FieldLabel`, `FieldDescription`, `FieldError` and the matching control. Label/description/error must be programmatically associated. Required and invalid states are semantic states; disabled takes visual precedence. Use stable footer actions, with cancel/secondary before the single primary submit. Keep validation and data ownership in Formily where a schema already exists; its visible parts must match the same component anatomy.
+
+When choosing among a small number of rich options, use the source application `RadioCard` inside the source `RadioGroup`: the icon, title, description, selection indicator, and selected border/background are one interaction. Do not replace it with an independently styled pressed button or card.
+
+Evidence: vendored `docs/forms.md`, `src/field`, `src/input`, `src/select`, `src/form`.
+
+### Detail and monitoring
+
+Put title/status/actions first, then the primary data region. Use compact headings, metadata, dividers and whitespace; panels only for a distinct interaction boundary. The document page title and supporting description sit above a separate toolbar. Operational status is text/icon plus semantic color. Charts/canvas keep product-owned visualization colors, while their filters, menus and dialogs use the shared components.
+
+Evidence: upstream `web/app/components/datasets/documents/components/documents-header.tsx`.
+
+### Pipeline graph editor
+
+Keep the Tapstate pipeline identity and routing in the left rail. Its identity row follows the source `app-info-header`: icon at 32 px, name and action menu on the first line, compact status on the second line. The name operation uses a 24 px `IconButton` and `DropdownMenu`; editing belongs in the menu. Keep the graph canvas as the main region, with floating actions in the upper right, a vertical control bar on the left, viewport controls at the lower right, and a selected-node configuration panel on the right. These regions must be reviewed together at the same viewport size as the reference.
+
+The left control bar uses the vendored 32 px `IconButton`, `Toggle`, and `Separator`. Match the source order and states for Add Node, Add Note, Pointer, Hand, Organize, and export when that operation is available. The selector should use the vendored `Popover` and `Tabs` anatomy: 400 px panel, 12 px radius, 0.5 px panel border, section-burn tab rail, active panel indicator, search, divider, and 32 px option rows. Tapstate's selector tabs are Source, Transform, and Destination; disabled options and keyboard focus follow the primitive states. The node card uses a 240 px body, 16 px outer radius, 15 px inner radius, 24 px icon, 13 px uppercase semibold title, `workflow-block-bg`, selected option-card border, and the package's small/large shadow states.
+
+The export control follows the source `operator/export-image.tsx` menu: a 32 px icon button beneath Organize, then Current view and Whole pipeline groups with PNG, JPEG, and SVG choices. Capture the React Flow viewport using `html-to-image`; the whole-pipeline variant derives its bounds from the graph nodes and adds 50 px padding. Resolve the export background from the rendered canvas token, including dark mode.
+
+The node selector search uses the vendored `InputGroup`, `InputGroupInput`, and `InputGroupAddon` composition from the upstream `SearchInput` pattern: a 32 px input, semantic input surface, trailing search glyph, and a clear action when populated. Preserve a separate search value for Source, Transform, and Destination while switching tabs; reset all three when opening a new selector session. The selector shell uses the source panel border, panel background, section-burn tab rail, and `shadow-lg` token.
+
+Node choice icons follow the source workflow `BlockIcon` anatomy: a 20 px rounded-md container, `shadow-xs`, a 14 px white glyph, and a semantic solid background. Canvas node icons use its 24 px rounded-lg, `shadow-md`, and 16 px glyph variant. Map and JavaScript use blue, Filter/Join/Union/Nest use cyan, View uses violet, and Target uses warning orange. Connector-backed Source and Target nodes show their connector image in the same icon slot. Keep this mapping shared between the selector and canvas; use the vendored `util-colors-*` tokens rather than literal colors.
+
+Canvas node headers follow the source `_base/node.tsx`: a 240 px body, `px-3 pt-3 pb-2`, a 24 px icon with 8 px space before the title, and `system-sm-semibold-uppercase` title text. Input and output handles follow the source `_base/components/node-handle.tsx`: 16 px hit area, a transparent 4 px extension, the `workflow-link-line-handle` marker, source accent for the add control, and the semantic tooltip panel and system text roles. The available icon plugin contains the Remix collection, so use its matching add glyph where the source custom icon is unavailable.
+
+The right panel follows the source workflow panel shell: 509 px default width with a 400 px minimum, 16 px radius, 0.5 px panel border, large shadow, resize handle, icon and title row, description, tabs, divider, then a scrollable configuration body. Its controls use package input, field, text, divider, and focus tokens. Node-specific fields retain Tapstate's Source, Transform, and Destination semantics; they do not inherit the upstream workflow data model. The top action groups use source action-bar and secondary-button surfaces, with execution/history together and contextual actions together. The labels and effects of Save, Run, and lifecycle actions must describe Tapstate's actual backend behavior.
+
+In the Source table picker, use the vendored `Checkbox` for multi-selection: its 16 px root, checked fill, 12 px glyph, border, shadow, hover, focus, and disabled states come from the source package. Pair it with 14 px `text-text-secondary` labels in 32 px rows and a subtle hover background. Avoid native browser checkboxes and placeholder glyphs that add a second gap before ordinary table names.
+
+The NEXT STEP preview follows the source `next-step` component family: a 36 px origin tile, 24 px connector line using divider-solid tokens, 10 px section-burn container, 36 px downstream item rows, 20 px node icons, and a 36 px dashed dropzone action. The top contextual action group uses the source 32 px secondary-button shell with 32 px square actions and no inner group padding. Both areas inherit the same light and dark semantic tokens as the rest of the workflow editor.
+
+The editor uses the upstream system sans stack (`-apple-system`, `BlinkMacSystemFont`, `Segoe UI`, `Roboto`, `Helvetica Neue`, `Noto Sans`, `Arial`, `sans-serif`) across the rail, canvas controls, selector, and node panel. Scope this stack to the pipeline workspace so other Tapstate surfaces keep their own typography. The workflow's Run/history group uses the source secondary-button surface, 32 px group height, and 28 px inner controls. In the node panel, NEXT STEP lists existing downstream nodes and opens the 328 px selector. Selecting a step there appends a connection from the selected node; it must keep any existing downstream connection. Inserting on an edge is a separate operation and replaces that edge.
+
+Evidence: upstream `web/app/components/app-sidebar/app-info/app-info-header.tsx`, `web/app/components/workflow/{operator/control.tsx,operator/add-block.tsx,block-selector/index.tsx,block-selector/tabs.tsx,nodes/_base/node.tsx,nodes/_base/components/workflow-panel/index.tsx,header/header-in-normal.tsx}`, vendored `src/{icon-button,toggle,tabs}` and `src/themes/{light,dark}.css`. A source match is only a starting point: verify the rendered rail, toolbar, selector in all three tabs, ordinary and selected nodes, each node configuration kind, and the action groups at equal desktop viewport sizes before claiming visual fidelity.
+
+### Overlay and notification
+
+Choose `Dialog` for focused modal work, `AlertDialog` for decisions requiring explicit confirmation, `Drawer` for contextual side work, `DropdownMenu` for actions, `Select`/`Combobox` for values, `Popover` for reachable interactive explanations, `Tooltip` only for supplementary labels, and `Toast` for transient feedback. Use the app-level `@langgenius/dify-ui/badge` for neutral metadata labels; it has `default`/`dimm`, not success/warning/danger tones. Show operational state with source `StatusDot` plus text. Use the app-level `@langgenius/dify-ui/alert` for the blue gradient informational Alert; it comes from `web/app/components/base/alert.tsx`, accepts message, close label and hide callback, and is distinct from `AlertDialog`. Do not use the older flat `.ui-alert` styling for new screens. Let the component own its portal and focus lifecycle. Do not add call-site z-index or a second portal. An isolated application root lets body portals layer by DOM order. Toast does not replace the authoritative data refresh after mutation.
+
+Evidence: vendored `docs/overlays.md`, `src/toast`, `src/dialog`, `src/alert-dialog`.
+
+## Tokens and geometry
+
+The exact palette is the vendored `src/themes/light.css`, `dark.css`, and `theme.css`. Application content uses `text-*`, `background-*`, `components-*`, `state-*`, `divider-*`, and shadow utilities exported by the package. The Tapstate product accent may be changed through a documented theme override; leave component token relationships intact. Do not translate these tokens to a smaller invented `ui-*` palette. Use the upstream `system-*` text roles and component variants. In the graph, use `workflow-link-line-normal`, `workflow-link-line-active`, and `workflow-link-line-handle` for connections, and `workflow-minimap-block` and `workflow-minimap-bg` for the minimap. These tokens must resolve through the vendored theme in both light and dark modes; avoid raw color substitutes.
+
+Verified source measurements: Button small/medium/large heights 24/32/36 px with radii 6/8/10 px; Select uses the same heights/radii. Standard centered Dialog surface is 480 px wide, bounded by 32 px viewport clearance, with 24 px horizontal interior padding. Use those source values as the canonical measurements for their components. For other components inspect their source rather than extrapolating a global radius or spacing rule.
+
+## New-page review gate
+
+Every new page and substantial visual change must attach a review matrix with the following evidence. A reviewer rejects a page when any row is missing or contradicts source behavior:
+
+| Check       | Required evidence                                                                                                                                    |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Composition | Screenshot or browser inspection at desktop and narrow viewport; title/action/filter/content hierarchy and justified grid/table/card choice          |
+| Components  | Import inventory showing vendored component subpaths or a documented Tapstate adapter; no new homegrown form/control/overlay styling                 |
+| Tokens      | Changed classes use vendored semantic tokens; no new raw palette, arbitrary shadow, radius or call-site overlay z-index without source-backed reason |
+| States      | Loading, first-use empty, filtered empty, error, disabled, invalid and selected states exercised where applicable                                    |
+| Interaction | Keyboard focus, Escape, dismiss/return focus, nested overlay, accessible names and form label/error association inspected                            |
+| Content     | English, simplified and traditional Chinese fit the component; long names and mobile width do not clip critical actions                              |
+| Shell       | Before/after comparison confirms branded shell, main surface and navigation remain owned by Tapstate                                                 |
+| Provenance  | Any component change names the vendored source file/revision and records why a local deviation is required                                           |
+
+Review one representative screen from each changed feature, plus each novel composition; a component-only review cannot prove a page follows the visual system. The development UI Kit must render the **vendored** variants/states, not an independently styled lookalike.
+
+## Existing-page audit order
+
+The current page inventory and review status live in [ui-page-audit.md](ui-page-audit.md). Update that record as each page is inspected; do not silently treat a typecheck or token migration as a completed page review.
+
+1. Inventory every `apps/web/features` and `apps/cloud/app/features` screen and mark the component source used by its controls/overlays.
+2. Audit resource lists and forms first (highest reuse), then dialogs/notifications, then detail and specialist screens. Record screenshots and state coverage against the matrix above.
+3. Replace independent `@tapstate-web/ui` styling with direct vendored imports or very thin Tapstate adapters. Keep Formily's schema/data behavior and adapt its visible controls to the vendored field anatomy.
+4. Compare each migrated screen with the appropriate upstream page recipe and the existing Tapstate shell. Record deviations in the review, not as an undocumented one-off class.
+5. Treat an unaudited screen as pending, even if it builds and its colors resemble the token palette.
+
+The current migration is **in progress**. Vendoring and a green typecheck of the subpackage do not imply that existing pages or the old UI Kit have passed this review gate.

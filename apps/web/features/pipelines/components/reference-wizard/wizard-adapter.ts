@@ -94,6 +94,8 @@ export function readTransforms(value: unknown): TransformStep[] {
                         path: text(fields.path),
                         element_key: text(fields.element_key),
                         include_array_index: text(fields.include_array_index),
+                        element_type: text(fields.element_type) || undefined,
+                        source_id_field: text(fields.source_id_field) || undefined,
                         preserve_null_and_empty_arrays:
                           fields.preserve_null_and_empty_arrays === true,
                       },

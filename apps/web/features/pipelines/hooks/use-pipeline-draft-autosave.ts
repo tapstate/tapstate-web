@@ -37,7 +37,8 @@ export function usePipelineDraftAutosave({
   onSaved,
   onError,
 }: PipelineDraftAutosaveOptions) {
-  const mutationRef = useRef(mutation)
+  const mutationRef = useRef<PipelineDraftMutation | null>(null)
+  const hasBaselineRef = useRef(false)
   const etagRef = useRef(initialEtag)
   const generationRef = useRef(0)
   const savedGenerationRef = useRef(0)
@@ -55,12 +56,21 @@ export function usePipelineDraftAutosave({
   onErrorRef.current = onError
 
   useEffect(() => {
+    if (!enabled) return
     if (mutation === mutationRef.current) return
     mutationRef.current = mutation
+    if (!mutation) {
+      hasBaselineRef.current = false
+      return
+    }
+    if (!hasBaselineRef.current) {
+      hasBaselineRef.current = true
+      if (initialEtag !== null) return
+    }
     generationRef.current += 1
-    pendingRef.current = Boolean(mutation)
-    setHasPendingChanges(Boolean(mutation))
-  }, [mutation])
+    pendingRef.current = true
+    setHasPendingChanges(true)
+  }, [enabled, initialEtag, mutation])
 
   useEffect(() => {
     etagRef.current = initialEtag
@@ -116,12 +126,12 @@ export function usePipelineDraftAutosave({
   )
 
   useEffect(() => {
-    if (!enabled || !mutation) return
+    if (!enabled || !mutation || !hasPendingChanges) return
     const timer = window.setTimeout(() => {
       void saveLatest().catch(() => undefined)
     }, AUTOSAVE_DELAY_MS)
     return () => window.clearTimeout(timer)
-  }, [enabled, mutation, saveLatest])
+  }, [enabled, hasPendingChanges, mutation, saveLatest])
 
   const flushOnPageClose = useCallback(() => {
     void saveLatest(true).catch(() => undefined)
@@ -130,6 +140,7 @@ export function usePipelineDraftAutosave({
   const saveMutation = useCallback(
     (nextMutation: PipelineDraftMutation) => {
       mutationRef.current = nextMutation
+      hasBaselineRef.current = true
       generationRef.current += 1
       pendingRef.current = true
       setHasPendingChanges(true)

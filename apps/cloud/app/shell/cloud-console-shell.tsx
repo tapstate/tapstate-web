@@ -2,12 +2,14 @@ import type { ReactNode } from 'react'
 
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
+  BellRing,
   Building2,
   Check,
   ChevronDown,
   ChevronRight,
   CreditCard,
   Home,
+  Inbox,
   LogOut,
   Moon,
   Search,
@@ -32,6 +34,9 @@ const navigation = [
   { label: 'Overview', path: '/', icon: Home, exact: true },
   { label: 'Organizations', path: '/organizations', icon: Building2, exact: false },
   { label: 'Clusters', path: '/clusters', icon: Server, exact: false },
+  { label: 'Events', path: '/events', icon: BellRing, exact: false },
+  { label: 'Alert policies', path: '/alert-policies', icon: BellRing, exact: false },
+  { label: 'Deliveries', path: '/deliveries', icon: Inbox, exact: false },
   { label: 'Billing', path: '/billing', icon: CreditCard, exact: false },
 ] as const
 
@@ -53,7 +58,15 @@ export function CloudConsoleShell({
   const navigate = useNavigate()
   const currentPath = useRouterState({
     select: (state) =>
-      state.location.pathname as '/' | '/organizations' | '/clusters' | '/billing' | '/settings',
+      state.location.pathname as
+        | '/'
+        | '/organizations'
+        | '/clusters'
+        | '/events'
+        | '/alert-policies'
+        | '/deliveries'
+        | '/billing'
+        | '/settings',
   })
   const {
     activeOrganization,
@@ -75,6 +88,12 @@ export function CloudConsoleShell({
     .slice(0, 3)
   const displayName = user.displayName?.trim() || user.email.split('@')[0]
   const initials = displayName.slice(0, 1).toUpperCase()
+  const canManageAlertPolicies =
+    !currentOrganization?.ownerEmail ||
+    currentOrganization.ownerEmail.toLowerCase() === user.email.toLowerCase()
+  const visibleNavigation = navigation.filter(
+    (item) => item.path !== '/alert-policies' || canManageAlertPolicies,
+  )
 
   const selectOrganization = (nextOrganization: Organization) => {
     setActiveOrganization(nextOrganization)
@@ -98,7 +117,7 @@ export function CloudConsoleShell({
 
   return (
     <div
-      className={`app-shell flex h-screen gap-2 overflow-hidden p-2 font-sans transition-colors duration-200 select-none ${darkMode ? 'dark text-[#f0f1f3]' : 'text-[#202124]'}`}
+      className={`app-shell flex h-screen gap-2 overflow-hidden p-2 font-sans transition-colors duration-200 ${darkMode ? 'dark text-[#f0f1f3]' : 'text-[#202124]'}`}
     >
       <aside className="flex h-full w-[240px] shrink-0 flex-col px-2 py-3 text-neutral-800 dark:text-neutral-200">
         <div className="relative mb-3 px-1">
@@ -166,7 +185,7 @@ export function CloudConsoleShell({
         </div>
 
         <div className="flex-1 space-y-1 overflow-y-auto px-1">
-          {navigation.map(({ exact, icon: Icon, label, path }) => (
+          {visibleNavigation.map(({ exact, icon: Icon, label, path }) => (
             <Link
               activeOptions={{ exact }}
               activeProps={{

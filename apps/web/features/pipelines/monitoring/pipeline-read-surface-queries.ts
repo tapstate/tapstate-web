@@ -30,6 +30,8 @@ export function usePipelineReadSurfaceQueries(
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     staleTime: 30_000,
     retry: false,
+    refetchInterval: false,
+    refetchOnReconnect: false,
     refetchOnWindowFocus: false,
   })
 
@@ -38,6 +40,8 @@ export function usePipelineReadSurfaceQueries(
     queryFn: () => getPipelineExplain(pipelineId, apiFetch),
     staleTime: 30_000,
     retry: false,
+    refetchInterval: false,
+    refetchOnReconnect: false,
     refetchOnWindowFocus: false,
   })
 

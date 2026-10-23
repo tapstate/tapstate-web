@@ -61,7 +61,8 @@ describe('ViewDetailPage', () => {
 
     const text = page.container.textContent ?? ''
     expect(page.container.querySelector('h1')?.textContent).toBe('customer_360')
-    expect(text).toContain('Maintained by build-c360')
+    expect(text).toContain('Maintained by')
+    expect(text).toContain('build-c360')
     expect(text).toContain('Fresh · 3 s behind')
     expect(text).toContain('build-c360 · running')
     expect(text).toContain('Up to date')

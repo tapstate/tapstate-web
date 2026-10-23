@@ -46,6 +46,7 @@ export function CloudAppStateProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
+    document.documentElement.dataset.theme = darkMode ? 'dark' : 'light'
   }, [darkMode])
 
   const setIdentity = useCallback(

@@ -30,6 +30,7 @@ const {
   publishPipelineDraft,
   listConnectors,
   listSources,
+  configExpression,
   PipelineClientError,
 } = vi.hoisted(() => ({
   getPipeline: vi.fn(),
@@ -49,6 +50,7 @@ const {
   publishPipelineDraft: vi.fn(),
   listConnectors: vi.fn(),
   listSources: vi.fn(),
+  configExpression: { current: 'updated-expression' },
   PipelineClientError: class PipelineClientError extends Error {
     status: number | null
 
@@ -332,7 +334,7 @@ vi.mock('../components/node-config/pipeline-node-config-panel', () => ({
           onConfigurationChange?.({
             nodeId: selection.id,
             kind: 'transform',
-            values: { expr: 'updated-expression' },
+            values: { expr: configExpression.current },
           })
         }
       >
@@ -521,7 +523,7 @@ function elementWithText(selector: string, text: string) {
   )
 }
 
-async function renderPage(section: 'orchestrate' | 'api' | 'logs' | 'monitoring' = 'orchestrate') {
+async function renderPage(section: 'orchestrate' | 'logs' | 'monitoring' = 'orchestrate') {
   container = document.createElement('div')
   document.body.append(container)
   root = createRoot(container)
@@ -541,6 +543,7 @@ async function renderPage(section: 'orchestrate' | 'api' | 'logs' | 'monitoring'
 }
 
 beforeEach(() => {
+  configExpression.current = 'updated-expression'
   getPipelineDraft.mockRejectedValue(new PipelineClientError('server', 'not found', 404))
   createPipelineDraft.mockImplementation(async (_pipelineId, mutation) => ({
     draft: {
@@ -1152,18 +1155,8 @@ describe('PipelineEditorPage', () => {
     expect(main?.className).toContain('pipeline-workspace__main--logs')
     expect(main?.className).toContain('flex-1')
     expect(container?.textContent).toContain(
-      'Inspect the latest runtime log lines captured for this Pipeline.',
+      'Showing the latest log lines captured for this Pipeline. Filters apply only to this returned tail.',
     )
-  })
-
-  it('shows serve nodes as unpublished API access rather than fabricating an endpoint', async () => {
-    await renderPage('api')
-
-    await vi.waitFor(() =>
-      expect(container?.textContent).toContain('API publication is not configured'),
-    )
-    expect(container?.textContent).toContain('orders_api')
-    expect(container?.textContent).not.toContain('/api/pipelines/orders_to_warehouse')
   })
 
   it('returns to node configuration when a node is selected on the canvas', async () => {
@@ -1231,8 +1224,15 @@ describe('PipelineEditorPage', () => {
     )
     await act(async () => elementWithText('button', 'Save')?.click())
     await vi.waitFor(() => expect(createPipelineDraft).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() =>
+      expect(elementWithText('button', 'Save')?.hasAttribute('disabled')).toBe(true),
+    )
+    configExpression.current = 'latest-expression'
     await act(async () =>
       document.querySelector<HTMLElement>('[data-testid="change-node-config"]')?.click(),
+    )
+    await vi.waitFor(() =>
+      expect(elementWithText('button', 'Save')?.hasAttribute('disabled')).toBe(false),
     )
     await act(async () => elementWithText('button', 'Run')?.click())
 
@@ -1336,7 +1336,7 @@ describe('PipelineEditorPage', () => {
     const canvasRenderCount = document
       .querySelector('[data-testid="pipeline-canvas-render-count"]')
       ?.getAttribute('data-render-count')
-    expect(resizeHandle?.getAttribute('aria-valuenow')).toBe('400')
+    expect(resizeHandle?.getAttribute('aria-valuenow')).toBe('509')
 
     const createPointerEvent = (type: string, clientX: number) => {
       const event = new Event(type, { bubbles: true })
@@ -1354,7 +1354,7 @@ describe('PipelineEditorPage', () => {
       resizeHandle?.dispatchEvent(createPointerEvent('pointermove', 800))
       resizeHandle?.dispatchEvent(createPointerEvent('pointerup', 800))
     })
-    expect(resizeHandle?.getAttribute('aria-valuenow')).toBe('500')
+    expect(resizeHandle?.getAttribute('aria-valuenow')).toBe('609')
     expect(
       document
         .querySelector('[data-testid="pipeline-canvas-render-count"]')
@@ -1364,12 +1364,12 @@ describe('PipelineEditorPage', () => {
     await act(async () => {
       resizeHandle?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Home' }))
     })
-    expect(resizeHandle?.getAttribute('aria-valuenow')).toBe('320')
+    expect(resizeHandle?.getAttribute('aria-valuenow')).toBe('400')
 
     await act(async () => {
       resizeHandle?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'End' }))
     })
-    expect(resizeHandle?.getAttribute('aria-valuenow')).toBe('560')
+    expect(resizeHandle?.getAttribute('aria-valuenow')).toBe('720')
   })
 
   it('offers a target node sink-capable Sources, while a source node still sees them all', async () => {

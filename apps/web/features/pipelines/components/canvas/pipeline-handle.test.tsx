@@ -102,8 +102,8 @@ describe('PipelineHandle', () => {
     expect(handle?.textContent).toContain('Drag')
 
     const tooltip = handle?.querySelector('[data-pipeline-handle-tooltip="true"]')
-    expect(tooltip?.className).toContain('border-pipeline-panel-border')
-    expect(tooltip?.className).toContain('bg-pipeline-tooltip-bg')
+    expect(tooltip?.className).toContain('border-components-panel-border')
+    expect(tooltip?.className).toContain('bg-components-tooltip-bg')
     expect(tooltip?.className).toContain('border-[0.5px]')
 
     const addButton = handle?.querySelector<HTMLButtonElement>('[data-handle-add="true"]')

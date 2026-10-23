@@ -147,6 +147,45 @@ function previewPanel() {
   return container?.querySelector<HTMLElement>('.wizard-reference-preview')
 }
 
+describe('unwind identity across wizard sections', () => {
+  it.each([false, true])('matches inherited execution with relations=%s', (withRelations) => {
+    const panel = renderBuilder({
+      initial: {
+        ...renderInitial,
+        root: {
+          ...renderInitial.root!,
+          transforms: [
+            {
+              id: 'root_unwind',
+              name: 'Unwind',
+              type: 'unwind',
+              config: {
+                unwind: {
+                  path: 'items',
+                  include_array_index: 'position',
+                  source_id_field: 'parent_id',
+                },
+              },
+            },
+          ],
+        },
+        relations: withRelations ? [relation] : [],
+        transforms: [
+          {
+            id: 'pipeline_unwind',
+            name: 'Unwind',
+            type: 'unwind',
+            isExpanded: true,
+            config: { unwind: { path: 'nested', include_array_index: 'nested_position' } },
+          },
+        ],
+      },
+    })
+    const inputs = Array.from(panel.querySelectorAll<HTMLInputElement>('details input'))
+    expect(inputs.at(-1)?.value).toBe(withRelations ? '_unwind_source_id' : 'parent_id')
+  })
+})
+
 describe('ReferenceWizardBuilder destination picker', () => {
   it.each(['cloud', 'on-prem'] as const)(
     'enforces the %s destination policy in the real picker',
@@ -272,6 +311,39 @@ describe('ReferenceWizardBuilder preview panel', () => {
     expect(
       panel?.querySelector('[data-preview-focused="true"]')?.getAttribute('data-preview-paths'),
     ).toBe('/total_spent')
+  })
+
+  it('switches between materialized logical rows and the projected target write result', () => {
+    renderBuilder({
+      initial: {
+        ...renderInitial,
+        transforms: [
+          {
+            id: 'expanded',
+            name: 'Expand items',
+            type: 'unwind',
+            isExpanded: true,
+            config: { unwind: { path: 'items', include_array_index: 'item_no' } },
+          },
+        ],
+      },
+      livePreview: {
+        ...preview,
+        documents: [{ _unwind_source_id: 'parent-1', item_no: 0, items: 'a' }],
+        logicalDocuments: [{ _id: 'parent-1', item_no: 0, items: 'a' }],
+      },
+    })
+    const panel = previewPanel()
+    expect(panel?.querySelector('[data-preview-path="/_unwind_source_id"]')).not.toBeNull()
+    expect(panel?.querySelector('[data-preview-path="/_id"]')).toBeNull()
+    const logical = Array.from(panel?.querySelectorAll('button') || []).find(
+      (button) => button.textContent === 'Logical operator result',
+    )
+    expect(logical).toBeDefined()
+    act(() => logical?.click())
+    expect(logical?.getAttribute('aria-pressed')).toBe('true')
+    expect(panel?.querySelector('[data-preview-path="/_id"]')).not.toBeNull()
+    expect(panel?.querySelector('[data-preview-path="/_unwind_source_id"]')).toBeNull()
   })
 
   it('splits root focus when an unrelated relation interrupts document field order', () => {

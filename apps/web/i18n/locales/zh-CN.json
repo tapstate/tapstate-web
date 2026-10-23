@@ -56,7 +56,8 @@
     "more": "更多操作",
     "remove": "移除",
     "skipToContent": "跳转到画布",
-    "separator": "/"
+    "separator": "/",
+    "save": "保存"
   },
   "auth": {
     "signedOut": {
@@ -208,7 +209,8 @@
     },
     "empty": {
       "title": "还没有数据源",
-      "body": "添加一个由连接器驱动的数据源，让 Tapstate 可以使用实时数据。"
+      "body": "添加一个由连接器驱动的数据源，让 Tapstate 可以使用实时数据。",
+      "sampleDescription": "先通过样例数据源探索，再连接自己的数据。"
     },
     "columns": {
       "comment": "备注",
@@ -219,7 +221,8 @@
     },
     "search": {
       "label": "搜索数据源",
-      "placeholder": "搜索数据源..."
+      "placeholder": "搜索数据源...",
+      "clear": "清除数据源搜索"
     },
     "filters": {
       "connectionStatus": {
@@ -293,7 +296,8 @@
         "unknown": "无法创建数据源，请重试。",
         "specUnavailable": "此连接器没有提供可用的表单规格。",
         "specInvalid": "此连接器提供的表单规格无效。"
-      }
+      },
+      "clearSearch": "清除连接器搜索"
     },
     "detail": {
       "back": "返回数据源",
@@ -448,7 +452,9 @@
       "error": "样例数据源移除失败。请重试。",
       "dismiss": "关闭",
       "added_one": "已添加 {{count}} 个样例数据源。",
-      "added_other": "已添加 {{count}} 个样例数据源。"
+      "added_other": "已添加 {{count}} 个样例数据源。",
+      "removeConfirmTitle": "移除样例数据源？",
+      "removeConfirmBody": "样例数据源将被删除。仍被 pipeline 使用的数据源无法移除。"
     }
   },
   "pipelines": {
@@ -691,7 +697,34 @@
         "dismissSaveError": "关闭保存错误",
         "runFailed": "Pipeline 启动失败。",
         "draftSaveUnavailable": "请先添加并连接至少一个 Source，再保存这个新 Pipeline。",
-        "draftRunUnavailable": "请先保存这个新 Pipeline，再运行它。"
+        "draftRunUnavailable": "请先保存这个新 Pipeline，再运行它。",
+        "addNote": "添加便签",
+        "organizeNodes": "整理节点",
+        "zoomIn": "放大",
+        "zoomOut": "缩小",
+        "canvasHistory": "画布历史记录",
+        "undo": "撤销",
+        "redo": "重做",
+        "history": "历史记录",
+        "noChangesYet": "暂无更改",
+        "stepForward": "前进 {{count}} 步",
+        "currentState": "当前状态",
+        "stepBackward": "后退 {{count}} 步",
+        "canvasViewport": "画布视口",
+        "canvasZoom": "画布缩放",
+        "exportImage": "导出图像",
+        "currentView": "当前视图",
+        "wholePipeline": "整个 Pipeline",
+        "exportFormat": "导出 {{format}}",
+        "deleteNote": "删除便签",
+        "noteText": "便签内容",
+        "notePlaceholder": "添加便签…",
+        "notesStorageUnavailable": "无法保存便签",
+        "notesStorageUnavailableDescription": "离开此页面前，便签仍会保留在当前画布中。",
+        "scrollToSelectedNode": "定位到所选节点",
+        "autoSaved": "自动保存于",
+        "published": "已发布",
+        "unpublished": "未发布"
       },
       "diagnostics": {
         "title": "保存前请修复以下问题",
@@ -755,7 +788,12 @@
         "nest": "嵌套",
         "js": "JavaScript",
         "view": "视图",
-        "target": "目标"
+        "target": "目标",
+        "sourceTab": "Source",
+        "transformTab": "Transform",
+        "destinationTab": "Destination",
+        "addNode": "添加节点",
+        "clearSearch": "清除搜索"
       },
       "tabs": {
         "label": "Pipeline 工作区面板",
@@ -843,7 +881,14 @@
         "descriptionPlaceholder": "添加描述",
         "close": "关闭配置",
         "resizePanel": "调整配置面板宽度",
-        "viewReadOnly": "View 由 Pipeline 定义派生，暂不能在此编辑。"
+        "viewReadOnly": "View 由 Pipeline 定义派生，暂不能在此编辑。",
+        "nodeTitle": "节点标题",
+        "moreActions": "更多节点操作",
+        "deleteNode": "删除节点",
+        "nextStep": "下一步",
+        "jumpToNode": "跳转到节点",
+        "addNextStep": "添加管线中的下一步",
+        "selectNextStep": "选择下一步"
       },
       "transform": {
         "field": "字段",
@@ -1057,7 +1102,12 @@
           "unionCurrentInput": "当前流水线输出",
           "unionAdditionalInputs": "其他输入表",
           "unionNoAdditionalInputs": "当前没有可用于此 Union 的其他源表。",
-          "unionInputRequired": "至少选择一个其他输入表后才能发布此 Union。"
+          "unionInputRequired": "至少选择一个其他输入表后才能发布此 Union。",
+          "unionWizardUnavailable": "Union 需要明确的多路数据流引用，当前构建器尚未收集这些信息。移除此步骤后即可保存并启动。",
+          "identitySettings": "源标识处理",
+          "sourceIdField": "源标识保留字段名",
+          "restoreSourceIdDefault": "恢复默认",
+          "sourceIdFieldHelp": "仅在展开结果与目标标识约束冲突时使用。原值和类型会被保留；系统按每个目标分别检查。 未设置时继承前一个展开算子的字段名，并显示在此处；恢复默认会明确选择 _unwind_source_id。"
         }
       },
       "runtime": {
@@ -1097,7 +1147,23 @@
           "filteredEmptyTitle": "没有匹配的日志",
           "filteredEmptyBody": "请调整筛选条件以查看已返回的日志尾部。",
           "errorTitle": "无法加载日志",
-          "errorBody": "请检查控制平面后重试。"
+          "errorBody": "请检查控制平面后重试。",
+          "searchPlaceholder": "搜索",
+          "allFilterLevels": "全部",
+          "timeRange": "时间范围",
+          "clearLevelFilter": "清除日志级别筛选",
+          "clearTimeRange": "清除时间范围筛选",
+          "periods": {
+            "today": "今天",
+            "last7Days": "最近 7 天",
+            "last4Weeks": "最近 4 周",
+            "last3Months": "最近 3 个月",
+            "last12Months": "最近 12 个月",
+            "monthToDate": "本月至今",
+            "quarterToDate": "本季度至今",
+            "yearToDate": "本年至今",
+            "allTime": "所有时间"
+          }
         },
         "unavailableTitle": "观测数据不可用",
         "unavailableBody": "此 Pipeline 还没有发布运行时观测数据。",
@@ -1196,7 +1262,8 @@
         "pendingBody": "已检测到 Serve 输出，但此 Pipeline 还没有公开已发布端点。",
         "serveDetail": "Serve 输出"
       }
-    }
+    },
+    "create": "创建 Pipeline"
   },
   "explorations": {
     "title": "探索",
@@ -1382,7 +1449,10 @@
       "embeddedArray": "数组 · {{count}} 项",
       "embeddedDocument": "嵌套文档",
       "transformAnnotation": "变更字段：{{fields}}",
-      "unknownTransformOrigin": "JS 步骤的字段来源无法静态确认：{{steps}}"
+      "unknownTransformOrigin": "JS 步骤的字段来源无法静态确认：{{steps}}",
+      "projection": "预览阶段",
+      "targetProjection": "目标写入结果",
+      "logicalProjection": "算子逻辑结果"
     },
     "relations": {
       "addRelatedTable": "添加关联表",
@@ -1715,6 +1785,34 @@
         "overloaded": "AI 助理繁忙，请稍后重试。",
         "requestFailed": "AI 请求失败。请检查服务配置后重试。已返回的部分内容未修改流水线。"
       }
+    },
+    "targetIdentity": {
+      "title": "目标标识检查",
+      "pending": "选择目标后检查标识约束，当前尚未完成判断。",
+      "failed": "标识检查未完成，启动前需要检查通过。",
+      "automatic": "原 {{source}} 将保留为 {{preserved}}。",
+      "generated": "{{fields}}：写入时由目标生成。",
+      "unchanged": "目标支持展开后的组合键，保留原字段名。",
+      "writeKey": "更新和删除按 {{key}} 匹配。",
+      "refused": "请先处理目标标识约束，再启动任务。",
+      "status": {
+        "not-required": "无需处理",
+        "automatic": "将自动处理",
+        "action-required": "需要处理"
+      },
+      "reasons": {
+        "field-collision": "源数据已包含 {{preserved}}，请修改源标识保留字段名。",
+        "identity-generation-unavailable": "目标要求 {{field}} 唯一，但无法安全生成新值，请调整目标标识映射。",
+        "target-columns-missing": "目标缺少 {{preserved}} 或其他匹配键字段，请先调整目标结构。",
+        "logical-key-index-missing": "目标需要覆盖完整逻辑匹配键的唯一索引。",
+        "nullable-key-not-unique": "目标无法保证含空值的匹配键在重放时不产生重复记录。",
+        "other-unique-constraint": "目标的其他唯一约束与展开结果冲突，请调整目标结构或字段映射。",
+        "multiple-identity-fields": "目标涉及多个身份字段，需要显式配置映射。",
+        "invalid-field-name": "请填写非空的顶层源标识保留字段名。",
+        "target-key-conflict": "写入此目标的多个数据流需要不兼容的自动匹配键。请统一匹配键，或使用不同目标。",
+        "ambiguous-source-id-field": "到达此目标的展开配置使用了不同的源标识字段名，请为此目标统一名称。",
+        "key-representation-unsupported": "无法确认目标键类型能无损保留源标识。请使用兼容的键字段类型或显式配置映射。"
+      }
     }
   },
   "views": {
@@ -1727,7 +1825,8 @@
     "search": {
       "label": "搜索 Views",
       "placeholder": "搜索 Views...",
-      "empty": "没有匹配的 View。"
+      "empty": "没有匹配的 View。",
+      "clear": "清除 View 搜索"
     },
     "empty": {
       "title": "还没有物化 View",
@@ -1874,7 +1973,8 @@
       }
     },
     "footnote": "状态综合了 pipeline 的状态与视图落后于源的程度。视图是构建出的文档；副本是一张表的镜像。",
-    "browseCollections": "浏览集合"
+    "browseCollections": "浏览集合",
+    "createView": "创建视图"
   },
   "notFound": {
     "back": "返回工作区",
@@ -2091,6 +2191,155 @@
     "sectionsLabel": "设置分区",
     "sections": {
       "stateStore": "State store"
+    }
+  },
+  "uiKit": {
+    "title": "UI 组件预览",
+    "subtitle": "共享控件、状态和浮层的交互参考。",
+    "language": "语言",
+    "darkMode": "深色主题",
+    "sections": {
+      "buttons": "按钮",
+      "fields": "字段与输入",
+      "selection": "选择控件",
+      "feedback": "反馈",
+      "surfaces": "表面与表格",
+      "overlays": "菜单与浮层"
+    },
+    "buttons": {
+      "loading": "正在保存",
+      "disabled": "当前不可用",
+      "iconLabel": "添加项目",
+      "sizeSmall": "小",
+      "sizeMedium": "中",
+      "sizeLarge": "大",
+      "variantPrimary": "主按钮",
+      "variantSecondary": "次按钮",
+      "variantTertiary": "文本按钮",
+      "variantGhost": "幽灵按钮",
+      "variantDestructive": "危险操作"
+    },
+    "tones": {
+      "neutral": "中性",
+      "brand": "品牌",
+      "success": "成功",
+      "warning": "警告",
+      "danger": "危险",
+      "info": "信息"
+    },
+    "schema": {
+      "title": "Schema 字段",
+      "description": "使用同一组控件呈现 schema 标签、校验、加载和提交错误。",
+      "workspace": "工作区名称",
+      "workspaceDescription": "此字段连接到内存中的表单状态。",
+      "workspacePlaceholder": "输入工作区名称",
+      "requiredError": "请输入工作区名称。",
+      "region": "默认区域",
+      "regionPlaceholder": "选择区域",
+      "validate": "检查必填字段",
+      "loadRegions": "加载区域",
+      "submitFailureAction": "模拟提交失败",
+      "submitFailure": "工作区目录无法保存此更改。"
+    },
+    "fields": {
+      "email": "电子邮箱",
+      "emailPlaceholder": "name{'@'}company.com",
+      "description": "用于接收账户通知。",
+      "invalid": "工作区名称",
+      "invalidValue": "!",
+      "invalidError": "请使用字母、数字和连字符。",
+      "password": "密码",
+      "passwordPlaceholder": "输入密码",
+      "notes": "备注",
+      "notesPlaceholder": "补充团队需要的上下文",
+      "disabled": "只读字段",
+      "disabledValue": "此处无法更改该值。",
+      "search": "搜索",
+      "searchPlaceholder": "搜索记录"
+    },
+    "selection": {
+      "checkbox": "包含已归档项目",
+      "switch": "启用实时刷新",
+      "radio": "默认区域",
+      "radioDescription": "选择此工作区运行的区域。",
+      "northAmerica": "北美",
+      "asiaPacific": "亚太",
+      "cardOne": "生产工作区",
+      "cardTwo": "预发布工作区",
+      "selected": "已选择",
+      "notSelected": "未选择",
+      "selectOption": "选择区域",
+      "regionOne": "美国东部",
+      "regionTwo": "西欧"
+    },
+    "feedback": {
+      "badgeDefault": "默认徽标",
+      "badgeDimmed": "淡化徽标",
+      "badgeCornerMark": "角标",
+      "alertTitle": "更改已保存",
+      "alertDescription": "当前视图已反映最新的工作区状态。",
+      "toastInfo": "同步已开始",
+      "toastSuccess": "连接验证成功",
+      "toastWarning": "部分记录需要检查",
+      "toastDanger": "同步失败",
+      "infoAction": "信息通知",
+      "successAction": "成功通知",
+      "warningAction": "警告通知",
+      "errorAction": "错误通知",
+      "actionToast": "带操作的通知",
+      "toastDescription": "此通知会自动关闭。",
+      "toastAction": "撤销",
+      "toastActionDone": "已撤销此操作。",
+      "toastPersistent": "持续显示的通知",
+      "toastUpdate": "显示持续通知",
+      "toastUpdateAction": "更新通知",
+      "toastUpdated": "通知已更新",
+      "promise": "运行成功操作",
+      "promiseError": "运行失败操作",
+      "promisePending": "处理中…",
+      "promiseSuccess": "操作已完成",
+      "promiseFailure": "操作失败"
+    },
+    "surfaces": {
+      "panelTitle": "工作区详情",
+      "panelDescription": "带边框的表面用于组合相关设置。",
+      "emptyTitle": "没有匹配的记录",
+      "emptyDescription": "调整筛选条件或创建新记录。",
+      "skeleton": "正在加载预览",
+      "tableTitle": "最近活动",
+      "name": "名称",
+      "status": "状态",
+      "updated": "更新时间",
+      "recordOne": "客户资料",
+      "recordTwo": "订单流",
+      "ready": "就绪",
+      "inProgress": "进行中",
+      "timeOne": "刚刚",
+      "timeTwo": "2 分钟前"
+    },
+    "overlays": {
+      "menuTrigger": "打开菜单",
+      "menuItem": "重命名工作区",
+      "menuDanger": "删除工作区",
+      "popoverTrigger": "打开弹出面板",
+      "popoverTitle": "快捷设置",
+      "popoverDescription": "弹出面板将相关操作放在触发器附近。",
+      "tooltipTrigger": "悬停或聚焦以查看帮助",
+      "tooltipText": "工具提示提供简短的补充说明。",
+      "dialogTrigger": "打开对话框",
+      "dialogTitle": "编辑工作区",
+      "dialogDescription": "保存前请检查信息。",
+      "dialogBody": "内容较长时，仅对话框主体区域滚动。",
+      "alertDialogTrigger": "打开确认框",
+      "alertDialogTitle": "移除此工作区？",
+      "alertDialogDescription": "此操作无法撤销。",
+      "drawerTrigger": "打开抽屉",
+      "drawerTitle": "工作区活动",
+      "drawerDescription": "侧边表面用于查看详情和后续操作。",
+      "drawerBody": "内容较长时，抽屉主体会独立滚动。",
+      "cancel": "取消",
+      "confirm": "确认",
+      "close": "关闭"
     }
   }
 }

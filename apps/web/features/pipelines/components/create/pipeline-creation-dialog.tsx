@@ -1,11 +1,22 @@
+import { Button } from '@langgenius/dify-ui/button'
+import {
+  Dialog,
+  DialogBackdrop,
+  DialogPopup,
+  DialogPortal,
+  DialogTitle,
+} from '@langgenius/dify-ui/dialog'
+import { Field, FieldDescription } from '@langgenius/dify-ui/field'
+import { Fieldset, FieldsetLegend } from '@langgenius/dify-ui/fieldset'
+import { Input } from '@langgenius/dify-ui/input'
+import { Kbd, KbdGroup } from '@langgenius/dify-ui/kbd'
+import { Separator } from '@langgenius/dify-ui/separator'
+import { Textarea } from '@langgenius/dify-ui/textarea'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { createPipelineDraft } from '@/service/pipelines/pipeline-client'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -32,10 +43,12 @@ export interface PipelineCreationDialogProps {
 export function PipelineCreationDialog({
   open,
   onClose,
-  defaultMode = 'dag',
+  defaultMode = 'wizard',
 }: PipelineCreationDialogProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const descriptionInputId = useId()
+  const idHint = 'pipeline-create-id-hint'
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const queryClient = useQueryClient()
   const [mode, setMode] = useState<PipelineCreationMode>(() =>
@@ -162,159 +175,147 @@ export function PipelineCreationDialog({
         if (!nextOpen) handleClose()
       }}
     >
-      <DialogContent
-        showCloseButton={false}
-        overlayClassName="pipeline-create-dialog-overlay"
-        className="top-0 left-0 h-screen max-h-none w-screen max-w-none translate-0 overflow-hidden rounded-none border-none bg-transparent p-4 shadow-none sm:max-w-none"
-        style={{ top: 0, left: 0, transform: 'none' }}
-      >
-        <DialogTitle className="sr-only">{t('pipelines.createEntry.title')}</DialogTitle>
-        <section
-          className="pipeline-create-page pipeline-create-dialog"
-          data-testid="pipeline-creation-dialog"
-        >
-          <div className="pipeline-create-dialog__surface">
-            <button
-              type="button"
-              className="pipeline-create-dialog__close"
-              aria-label={t('pipelines.createEntry.close')}
-              onClick={handleClose}
-            >
-              <X className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
+      <DialogPortal>
+        <DialogBackdrop className="bg-background-overlay-backdrop backdrop-blur-[6px]" />
+        <DialogPopup className="fixed top-0 left-0 z-50 h-screen w-screen overflow-hidden overscroll-contain p-4">
+          <section
+            className="pipeline-create-page pipeline-create-dialog"
+            data-testid="pipeline-creation-dialog"
+          >
+            <div className="pipeline-create-dialog__surface">
+              <DialogTitle className="sr-only">{t('pipelines.createEntry.title')}</DialogTitle>
+              <button
+                type="button"
+                className="bg-components-button-tertiary-bg hover:bg-components-button-tertiary-bg-hover focus-visible:ring-components-input-border-active absolute top-3 right-3 z-50 flex size-9 cursor-pointer items-center justify-center rounded-[10px] focus-visible:ring-1 focus-visible:outline-hidden"
+                aria-label={t('pipelines.createEntry.close')}
+                onClick={handleClose}
+              >
+                <span className="i-ri-close-large-line size-3.5" aria-hidden="true" />
+              </button>
 
-            <div className="flex h-full justify-center overflow-x-hidden overflow-y-auto">
-              <div className="flex flex-1 shrink-0 justify-end">
-                <main className="w-full max-w-185 shrink-0 px-10 pb-10 max-sm:px-4 max-sm:pb-6">
-                  <div className="h-6 w-full 2xl:h-34.75" aria-hidden="true" />
-                  <div className="pt-1 pb-6">
-                    <h1 className="text-2xl font-semibold tracking-tight text-[var(--pipeline-create-text)]">
-                      {t('pipelines.createEntry.title')}
-                    </h1>
-                  </div>
-
-                  <section aria-labelledby="pipeline-create-mode-title">
-                    <div className="mb-2 leading-6">
-                      <h2
-                        id="pipeline-create-mode-title"
-                        className="text-[13px] font-semibold text-[var(--pipeline-create-text)]"
-                      >
-                        {t('pipelines.createEntry.chooseMode')}
-                      </h2>
+              <div className="flex h-full justify-center overflow-x-hidden overflow-y-auto">
+                <div className="flex flex-1 shrink-0 justify-end">
+                  <main className="w-full max-w-185 shrink-0 px-10 pb-10 max-sm:px-4 max-sm:pb-6">
+                    <div className="h-6 w-full 2xl:h-34.75" aria-hidden="true" />
+                    <div className="pt-1 pb-6">
+                      <h1 className="title-2xl-semi-bold text-text-primary">
+                        {t('pipelines.createEntry.title')}
+                      </h1>
                     </div>
-                    <div className="flex flex-col gap-4">
-                      <div className="grid grid-cols-2 gap-2 max-sm:grid-cols-1">
-                        {availablePipelineCreationModes.map((candidate) => (
-                          <PipelineCreationOption
-                            key={candidate.value}
-                            definition={candidate}
-                            selected={candidate.value === mode}
-                            onSelect={() => {
-                              setMode(candidate.value)
-                              setNotice(null)
-                            }}
-                          />
-                        ))}
-                      </div>
 
-                      <div>
-                        <div className="mb-2 flex items-center leading-6">
-                          <h2
-                            id="pipeline-create-identity-title"
-                            className="text-[13px] font-semibold text-[var(--pipeline-create-text)]"
-                          >
-                            {t('pipelines.createEntry.identityTitle')}
-                          </h2>
-                        </div>
-
-                        <div className="flex flex-col gap-3">
-                          <label className="flex flex-col gap-1 text-[13px] leading-5 font-semibold text-[var(--pipeline-create-text)]">
-                            <span>{t('pipelines.createEntry.idLabel')}</span>
-                            <input
-                              value={pipelineId}
-                              onChange={(event) => setPipelineId(event.target.value)}
-                              placeholder={t('pipelines.createEntry.idPlaceholder')}
-                              maxLength={64}
-                              spellCheck={false}
-                              autoComplete="off"
-                              aria-invalid={hasInvalidId}
-                              aria-describedby="pipeline-create-id-hint"
-                              className="h-9 w-full rounded-lg border border-[var(--pipeline-create-input-border)] bg-[var(--pipeline-create-input-bg)] px-3 text-[13px] font-medium text-[var(--pipeline-create-text)] outline-hidden transition-[border-color,box-shadow] placeholder:text-[var(--pipeline-create-muted)]/60 focus:border-[var(--pipeline-create-input-border-active)] focus:ring-3 focus:ring-[#0033ff]/10"
-                            />
-                            <span
-                              id="pipeline-create-id-hint"
-                              className="text-xs leading-[1.45] font-normal text-[var(--pipeline-create-muted)]"
-                            >
-                              {hasInvalidId
-                                ? t('pipelines.createEntry.idInvalid')
-                                : t('pipelines.createEntry.idHint')}
-                            </span>
-                          </label>
-                          <label className="flex flex-col gap-1 text-[13px] leading-5 font-semibold text-[var(--pipeline-create-text)]">
-                            <span>
-                              {t('pipelines.createEntry.descriptionLabel')}{' '}
-                              <em>{t('pipelines.createEntry.descriptionOptional')}</em>
-                            </span>
-                            <textarea
-                              value={description}
-                              onChange={(event) => setDescription(event.target.value)}
-                              placeholder={t('pipelines.createEntry.descriptionPlaceholder')}
-                              rows={3}
-                              className="min-h-18 resize-none rounded-lg border border-[var(--pipeline-create-input-border)] bg-[var(--pipeline-create-input-bg)] px-3 py-2.5 text-[13px] font-medium text-[var(--pipeline-create-text)] outline-hidden transition-[border-color,box-shadow] placeholder:text-[var(--pipeline-create-muted)]/60 focus:border-[var(--pipeline-create-input-border-active)] focus:ring-3 focus:ring-[#0033ff]/10"
-                            />
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-
-                  <div className="flex items-center justify-between pt-5 pb-10">
-                    <div />
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        className="pipeline-create-dialog__cancel"
-                        onClick={handleClose}
-                      >
-                        {t('pipelines.createEntry.cancel')}
-                      </button>
-                      <Button
-                        type="button"
-                        disabled={!isValidId || isCreating}
-                        onClick={() => void handleCreate()}
-                        className="pipeline-create-dialog__submit"
-                      >
-                        <span>
-                          {isCreating
-                            ? t('pipelines.workspace.actions.saving')
-                            : t('common.create')}
-                        </span>
-                        <span
-                          aria-label={CREATE_PIPELINE_HOTKEY}
-                          className="pipeline-create-dialog__shortcut"
+                    <section aria-labelledby="pipeline-create-mode-title">
+                      <div className="mb-2 leading-6">
+                        <h2
+                          id="pipeline-create-mode-title"
+                          className="system-sm-semibold text-text-secondary"
                         >
-                          <kbd>⌘</kbd>
-                          <kbd>↵</kbd>
-                        </span>
-                      </Button>
-                    </div>
-                  </div>
-                  {notice && (
-                    <p
-                      className="mt-3 rounded-lg border border-[var(--pipeline-create-border)] bg-[var(--pipeline-create-surface-subtle)] px-3 py-2 text-xs leading-[1.45] text-[var(--pipeline-create-muted)]"
-                      role="status"
-                    >
-                      {notice}
-                    </p>
-                  )}
-                </main>
-              </div>
+                          {t('pipelines.createEntry.chooseMode')}
+                        </h2>
+                      </div>
+                      <div className="flex w-165 flex-col gap-4 max-sm:w-full">
+                        <div className="flex flex-row gap-2 max-sm:flex-col">
+                          {availablePipelineCreationModes.map((candidate) => (
+                            <PipelineCreationOption
+                              key={candidate.value}
+                              definition={candidate}
+                              selected={candidate.value === mode}
+                              onSelect={() => {
+                                setMode(candidate.value)
+                                setNotice(null)
+                              }}
+                            />
+                          ))}
+                        </div>
 
-              <Preview definition={selectedMode} />
+                        <Separator />
+
+                        <div>
+                          <Fieldset className="mb-4">
+                            <FieldsetLegend className="system-sm-semibold text-text-secondary flex h-6 items-center py-0">
+                              {t('pipelines.createEntry.identityTitle')}
+                            </FieldsetLegend>
+                            <Field name="pipelineId">
+                              <Input
+                                aria-label={t('pipelines.createEntry.idLabel')}
+                                value={pipelineId}
+                                onChange={(event) => setPipelineId(event.target.value)}
+                                placeholder={t('pipelines.createEntry.idPlaceholder')}
+                                maxLength={64}
+                                spellCheck={false}
+                                autoComplete="off"
+                                aria-invalid={hasInvalidId}
+                                aria-describedby={idHint}
+                              />
+                              <FieldDescription id={idHint}>
+                                {hasInvalidId
+                                  ? t('pipelines.createEntry.idInvalid')
+                                  : t('pipelines.createEntry.idHint')}
+                              </FieldDescription>
+                            </Field>
+                          </Fieldset>
+                          <div>
+                            <div className="mb-1 flex h-6 items-center">
+                              <label
+                                htmlFor={descriptionInputId}
+                                className="system-sm-semibold text-text-secondary"
+                              >
+                                {t('pipelines.createEntry.descriptionLabel')}{' '}
+                              </label>
+                              <span className="body-xs-regular text-text-tertiary ml-1">
+                                ({t('pipelines.createEntry.descriptionOptional')})
+                              </span>
+                            </div>
+                            <Textarea
+                              id={descriptionInputId}
+                              value={description}
+                              onValueChange={(value) => setDescription(value)}
+                              placeholder={t('pipelines.createEntry.descriptionPlaceholder')}
+                              className="min-h-24 resize-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    <div className="flex items-center justify-between pt-5 pb-10">
+                      <div />
+                      <div className="flex gap-2">
+                        <Button type="button" variant="secondary" onClick={handleClose}>
+                          {t('pipelines.createEntry.cancel')}
+                        </Button>
+                        <Button
+                          type="button"
+                          disabled={!isValidId || isCreating}
+                          loading={isCreating}
+                          variant="primary"
+                          onClick={() => void handleCreate()}
+                          className="pipeline-create-dialog__submit"
+                        >
+                          {t('common.create')}
+                          <KbdGroup aria-label={CREATE_PIPELINE_HOTKEY}>
+                            <Kbd color="white">⌘</Kbd>
+                            <Kbd color="white">↵</Kbd>
+                          </KbdGroup>
+                        </Button>
+                      </div>
+                    </div>
+                    {notice && (
+                      <p
+                        className="mt-3 rounded-lg border border-[var(--pipeline-create-border)] bg-[var(--pipeline-create-surface-subtle)] px-3 py-2 text-xs leading-[1.45] text-[var(--pipeline-create-muted)]"
+                        role="status"
+                      >
+                        {notice}
+                      </p>
+                    )}
+                  </main>
+                </div>
+
+                <Preview definition={selectedMode} />
+              </div>
             </div>
-          </div>
-        </section>
-      </DialogContent>
+          </section>
+        </DialogPopup>
+      </DialogPortal>
     </Dialog>
   )
 }

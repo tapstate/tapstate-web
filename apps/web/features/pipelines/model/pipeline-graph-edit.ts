@@ -403,6 +403,7 @@ export function addPipelineNodes(
   connectFrom?: string,
   connectTo?: string,
   insertEdge?: PipelineNodeInsertEdge,
+  insertionMode: 'insert' | 'append' = 'insert',
 ) {
   const normalizedChoices = combineSourceChoices(choices)
   let nextDraft = draft
@@ -411,15 +412,43 @@ export function addPipelineNodes(
 
   normalizedChoices.forEach((choice, index) => {
     const nextPosition = position
-    const result = addPipelineNode(
-      nextDraft,
-      choice,
-      nextPosition,
-      connectFrom,
-      connectTo,
-      index === 0 ? insertEdge : undefined,
-    )
+    const result =
+      insertionMode === 'append'
+        ? addPipelineNode(nextDraft, choice, nextPosition)
+        : addPipelineNode(
+            nextDraft,
+            choice,
+            nextPosition,
+            connectFrom,
+            connectTo,
+            index === 0 ? insertEdge : undefined,
+          )
     nextDraft = result.draft
+    if (insertionMode === 'append' && connectFrom) {
+      const sourceNode = nextDraft.dag.nodes.find((node) => node.id === connectFrom)
+      const targetNode = nextDraft.dag.nodes.find((node) => node.id === result.nodeId)
+      if (
+        sourceNode &&
+        targetNode &&
+        isPipelineDagEdgeValid(sourceNode, targetNode, nextDraft.dag.edges)
+      ) {
+        nextDraft = {
+          ...nextDraft,
+          dag: {
+            ...nextDraft.dag,
+            edges: [
+              ...nextDraft.dag.edges,
+              {
+                id: `edge:${connectFrom}:${result.nodeId}`,
+                source: connectFrom,
+                target: result.nodeId,
+                label: null,
+              },
+            ],
+          },
+        }
+      }
+    }
     nodeIds.push(result.nodeId)
     if (nextPosition) positions[result.nodeId] = nextPosition
   })
@@ -503,9 +532,13 @@ export function updatePipelineNodeConfiguration(
   const configurations = new Map(draft.configurations).set(change.nodeId, next)
   const node = draft.dag.nodes.find((candidate) => candidate.id === change.nodeId)
   if (!node) return { ...draft, configurations }
+  const defaultLabel =
+    current.kind === 'source' ? 'Source' : current.kind === 'target' ? 'New target' : node.label
+  const previousGeneratedLabel = labelForConfiguration(current, defaultLabel)
+  const hasCustomLabel = node.label !== previousGeneratedLabel
   const nextNode = {
     ...node,
-    label: labelForConfiguration(next, node.label),
+    label: hasCustomLabel ? node.label : labelForConfiguration(next, defaultLabel),
     detail: detailForConfiguration(next, node.detail),
   }
   return {

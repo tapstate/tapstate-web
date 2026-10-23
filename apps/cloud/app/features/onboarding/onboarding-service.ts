@@ -58,16 +58,16 @@ async function findExistingWorkspace(
 }
 
 export function suggestedClusterName(organization: Organization, clusters: Cluster[]) {
-  const base = `${organization.slug}-stream`.slice(0, 100)
+  const base = organization.slug.slice(0, 100)
   const names = new Set(clusters.map((cluster) => cluster.name.toLowerCase()))
   if (!names.has(base.toLowerCase())) return base
 
   for (let suffix = 2; suffix < 1000; suffix += 1) {
-    const candidate = `${organization.slug}-stream-${suffix}`.slice(0, 100)
+    const candidate = `${organization.slug}-${suffix}`.slice(0, 100)
     if (!names.has(candidate.toLowerCase())) return candidate
   }
 
-  return `${organization.slug.slice(0, 88)}-stream-${Date.now().toString(36)}`
+  return `${organization.slug.slice(0, 88)}-${Date.now().toString(36)}`
 }
 
 export async function loadOnboardingWorkspace(
