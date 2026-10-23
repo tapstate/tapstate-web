@@ -13,8 +13,11 @@ import { Route as ConsoleRouteImport } from './routes/_console'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as ConsoleIndexRouteImport } from './routes/_console.index'
+import { Route as ConsoleAlertPoliciesRouteImport } from './routes/_console.alert-policies'
 import { Route as ConsoleBillingRouteImport } from './routes/_console.billing'
 import { Route as ConsoleClustersRouteImport } from './routes/_console.clusters'
+import { Route as ConsoleDeliveriesRouteImport } from './routes/_console.deliveries'
+import { Route as ConsoleEventsRouteImport } from './routes/_console.events'
 import { Route as ConsoleOrganizationsRouteImport } from './routes/_console.organizations'
 import { Route as ConsoleSettingsRouteImport } from './routes/_console.settings'
 import { Route as ConsoleCheckoutCancelRouteImport } from './routes/_console.checkout.cancel'
@@ -39,6 +42,11 @@ const ConsoleIndexRoute = ConsoleIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ConsoleRoute,
 } as any)
+const ConsoleAlertPoliciesRoute = ConsoleAlertPoliciesRouteImport.update({
+  id: '/alert-policies',
+  path: '/alert-policies',
+  getParentRoute: () => ConsoleRoute,
+} as any)
 const ConsoleBillingRoute = ConsoleBillingRouteImport.update({
   id: '/billing',
   path: '/billing',
@@ -47,6 +55,16 @@ const ConsoleBillingRoute = ConsoleBillingRouteImport.update({
 const ConsoleClustersRoute = ConsoleClustersRouteImport.update({
   id: '/clusters',
   path: '/clusters',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsoleDeliveriesRoute = ConsoleDeliveriesRouteImport.update({
+  id: '/deliveries',
+  path: '/deliveries',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsoleEventsRoute = ConsoleEventsRouteImport.update({
+  id: '/events',
+  path: '/events',
   getParentRoute: () => ConsoleRoute,
 } as any)
 const ConsoleOrganizationsRoute = ConsoleOrganizationsRouteImport.update({
@@ -74,8 +92,11 @@ export interface FileRoutesByFullPath {
   '/': typeof ConsoleIndexRoute
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/alert-policies': typeof ConsoleAlertPoliciesRoute
   '/billing': typeof ConsoleBillingRoute
   '/clusters': typeof ConsoleClustersRoute
+  '/deliveries': typeof ConsoleDeliveriesRoute
+  '/events': typeof ConsoleEventsRoute
   '/organizations': typeof ConsoleOrganizationsRoute
   '/settings': typeof ConsoleSettingsRoute
   '/checkout/cancel': typeof ConsoleCheckoutCancelRoute
@@ -84,8 +105,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/alert-policies': typeof ConsoleAlertPoliciesRoute
   '/billing': typeof ConsoleBillingRoute
   '/clusters': typeof ConsoleClustersRoute
+  '/deliveries': typeof ConsoleDeliveriesRoute
+  '/events': typeof ConsoleEventsRoute
   '/organizations': typeof ConsoleOrganizationsRoute
   '/settings': typeof ConsoleSettingsRoute
   '/': typeof ConsoleIndexRoute
@@ -97,8 +121,11 @@ export interface FileRoutesById {
   '/_console': typeof ConsoleRouteWithChildren
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/_console/alert-policies': typeof ConsoleAlertPoliciesRoute
   '/_console/billing': typeof ConsoleBillingRoute
   '/_console/clusters': typeof ConsoleClustersRoute
+  '/_console/deliveries': typeof ConsoleDeliveriesRoute
+  '/_console/events': typeof ConsoleEventsRoute
   '/_console/organizations': typeof ConsoleOrganizationsRoute
   '/_console/settings': typeof ConsoleSettingsRoute
   '/_console/': typeof ConsoleIndexRoute
@@ -111,8 +138,11 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/onboarding'
+    | '/alert-policies'
     | '/billing'
     | '/clusters'
+    | '/deliveries'
+    | '/events'
     | '/organizations'
     | '/settings'
     | '/checkout/cancel'
@@ -121,8 +151,11 @@ export interface FileRouteTypes {
   to:
     | '/auth'
     | '/onboarding'
+    | '/alert-policies'
     | '/billing'
     | '/clusters'
+    | '/deliveries'
+    | '/events'
     | '/organizations'
     | '/settings'
     | '/'
@@ -133,8 +166,11 @@ export interface FileRouteTypes {
     | '/_console'
     | '/auth'
     | '/onboarding'
+    | '/_console/alert-policies'
     | '/_console/billing'
     | '/_console/clusters'
+    | '/_console/deliveries'
+    | '/_console/events'
     | '/_console/organizations'
     | '/_console/settings'
     | '/_console/'
@@ -178,6 +214,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleIndexRouteImport
       parentRoute: typeof ConsoleRoute
     }
+    '/_console/alert-policies': {
+      id: '/_console/alert-policies'
+      path: '/alert-policies'
+      fullPath: '/alert-policies'
+      preLoaderRoute: typeof ConsoleAlertPoliciesRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
     '/_console/billing': {
       id: '/_console/billing'
       path: '/billing'
@@ -190,6 +233,20 @@ declare module '@tanstack/react-router' {
       path: '/clusters'
       fullPath: '/clusters'
       preLoaderRoute: typeof ConsoleClustersRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/deliveries': {
+      id: '/_console/deliveries'
+      path: '/deliveries'
+      fullPath: '/deliveries'
+      preLoaderRoute: typeof ConsoleDeliveriesRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/events': {
+      id: '/_console/events'
+      path: '/events'
+      fullPath: '/events'
+      preLoaderRoute: typeof ConsoleEventsRouteImport
       parentRoute: typeof ConsoleRoute
     }
     '/_console/organizations': {
@@ -224,8 +281,11 @@ declare module '@tanstack/react-router' {
 }
 
 interface ConsoleRouteChildren {
+  ConsoleAlertPoliciesRoute: typeof ConsoleAlertPoliciesRoute
   ConsoleBillingRoute: typeof ConsoleBillingRoute
   ConsoleClustersRoute: typeof ConsoleClustersRoute
+  ConsoleDeliveriesRoute: typeof ConsoleDeliveriesRoute
+  ConsoleEventsRoute: typeof ConsoleEventsRoute
   ConsoleOrganizationsRoute: typeof ConsoleOrganizationsRoute
   ConsoleSettingsRoute: typeof ConsoleSettingsRoute
   ConsoleIndexRoute: typeof ConsoleIndexRoute
@@ -234,8 +294,11 @@ interface ConsoleRouteChildren {
 }
 
 const ConsoleRouteChildren: ConsoleRouteChildren = {
+  ConsoleAlertPoliciesRoute: ConsoleAlertPoliciesRoute,
   ConsoleBillingRoute: ConsoleBillingRoute,
   ConsoleClustersRoute: ConsoleClustersRoute,
+  ConsoleDeliveriesRoute: ConsoleDeliveriesRoute,
+  ConsoleEventsRoute: ConsoleEventsRoute,
   ConsoleOrganizationsRoute: ConsoleOrganizationsRoute,
   ConsoleSettingsRoute: ConsoleSettingsRoute,
   ConsoleIndexRoute: ConsoleIndexRoute,

@@ -387,6 +387,88 @@
       "back": "返回方案"
     }
   },
+  "events": {
+    "title": "事件與告警",
+    "subtitle": "{{organization}} 的關鍵事件與告警投遞。",
+    "organizationFallback": "你的組織",
+    "tabPolicies": "告警策略",
+    "tabDeliveries": "投遞歷史",
+    "policySubtitle": "{{organization}} 的郵件告警規則。",
+    "deliverySubtitle": "{{organization}} 的通知投遞記錄。",
+    "loading": "載入中…",
+    "loadError": "無法載入此檢視。",
+    "retry": "重新整理",
+    "empty": "尚無內容。",
+    "filterType": "事件類型",
+    "filterTypePlaceholder": "全部事件類型",
+    "filterSeverity": "嚴重級",
+    "allSeverities": "全部嚴重級",
+    "severity": {
+      "INFO": "資訊",
+      "WARNING": "警告",
+      "CRITICAL": "嚴重"
+    },
+    "columns": {
+      "time": "時間",
+      "type": "類型",
+      "severity": "嚴重級",
+      "subject": "主旨",
+      "actor": "操作者",
+      "source": "來源",
+      "recipient": "收件人",
+      "status": "狀態",
+      "attempts": "嘗試次數",
+      "lastError": "最後錯誤",
+      "recipients": "收件人",
+      "cooldown": "冷卻",
+      "quietHours": "靜默時段",
+      "enabled": "啟用"
+    },
+    "status": {
+      "PENDING": "待傳送",
+      "SENDING": "傳送中",
+      "SENT": "已傳送",
+      "FAILED": "失敗",
+      "DEAD": "已終止",
+      "SUPPRESSED": "已抑制"
+    },
+    "actions": {
+      "create": "新增策略",
+      "save": "儲存",
+      "edit": "編輯",
+      "delete": "刪除",
+      "close": "關閉"
+    },
+    "policyForm": {
+      "name": "名稱",
+      "namePlaceholder": "關鍵 Pipeline 告警",
+      "eventTypes": "事件類型（逗號分隔）",
+      "eventTypesHint": "使用 * 比對全部事件，或使用 pipeline.* 這樣的前綴",
+      "minSeverity": "最低嚴重級",
+      "recipients": "收件人（逗號分隔的組織成員電子郵件）",
+      "cooldown": "冷卻時間（秒）",
+      "quietStart": "靜默開始（HH:mm）",
+      "quietEnd": "靜默結束（HH:mm）",
+      "timezone": "時區",
+      "enabled": "啟用"
+    },
+    "validation": {
+      "name": "名稱不能為空。",
+      "recipients": "至少需要一位收件人。",
+      "quietHours": "靜默開始與結束需同時填寫，格式為 HH:mm。"
+    },
+    "detailTitle": "事件詳情",
+    "detail": {
+      "id": "事件 ID"
+    },
+    "payload": "承載資料",
+    "noPayload": "未記錄承載資料。",
+    "adminOnly": "只有組織管理員可以管理告警策略。",
+    "deleteConfirm": "刪除此告警策略？",
+    "errors": {
+      "generic": "請求無法完成。"
+    }
+  },
   "sections": {
     "overview": { "title": "總覽", "description": "查看 Cloud 組織和代管叢集摘要。" },
     "clusters": {

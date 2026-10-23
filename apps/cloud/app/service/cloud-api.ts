@@ -192,6 +192,95 @@ export interface DeploymentProgress {
   }>
 }
 
+export type EventSeverity = 'INFO' | 'WARNING' | 'CRITICAL'
+
+export interface PlatformEvent {
+  id: string
+  orgId?: string | null
+  source: string
+  type: string
+  severity: EventSeverity
+  subject: string
+  actor?: string | null
+  occurredAt: string
+  dedupeKey: string
+  schemaVersion: number
+  payload?: Record<string, unknown> | null
+  createdAt?: string
+}
+
+export interface EventPage {
+  items: PlatformEvent[]
+  nextCursor?: string | null
+}
+
+export interface EventFilters {
+  type?: string
+  severity?: EventSeverity | ''
+  from?: string
+  to?: string
+  limit?: number
+  cursor?: string
+}
+
+export interface AlertPolicy {
+  id: string
+  name: string
+  enabled: boolean
+  eventTypes: string[]
+  minSeverity: EventSeverity
+  recipients: string[]
+  channel: string
+  cooldownSeconds: number
+  quietHoursStart?: string | null
+  quietHoursEnd?: string | null
+  timezone: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface AlertPolicyInput {
+  name: string
+  enabled: boolean
+  eventTypes: string[]
+  minSeverity: EventSeverity
+  recipients: string[]
+  channel: 'EMAIL'
+  cooldownSeconds: number
+  quietHoursStart?: string | null
+  quietHoursEnd?: string | null
+  timezone: string
+}
+
+export interface AlertRecord {
+  id: string
+  orgId?: string | null
+  policyId?: string | null
+  policyName?: string | null
+  eventId?: string | null
+  eventType: string
+  severity: EventSeverity
+  subject: string
+  actor?: string | null
+  status: 'PENDING' | 'SUPPRESSED'
+  createdAt?: string
+}
+
+export interface NotificationDelivery {
+  id: string
+  orgId?: string | null
+  alertId?: string | null
+  channel: string
+  recipient: string
+  subject: string
+  status: 'PENDING' | 'SENDING' | 'SENT' | 'FAILED' | 'DEAD'
+  attempts: number
+  lastError?: string | null
+  nextAttemptAt?: string | null
+  createdAt?: string
+  sentAt?: string | null
+}
+
 export interface RegisterInput {
   email: string
   password: string
@@ -293,6 +382,11 @@ function jsonBody(body: unknown): Pick<RequestInit, 'body' | 'method'> {
 }
 
 const post: Pick<RequestInit, 'method'> = { method: 'POST' }
+const putJson = (body: unknown): Pick<RequestInit, 'method' | 'body'> => ({
+  method: 'PUT',
+  body: JSON.stringify(body),
+})
+const deleteRequest: Pick<RequestInit, 'method'> = { method: 'DELETE' }
 const apiPrefix = '/v1/api'
 
 export const cloudApi = {
@@ -431,6 +525,48 @@ export const cloudApi = {
     request<Subscription>(
       `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions/${encodeURIComponent(subscriptionId)}/cancel-at-period-end`,
       post,
+    ),
+  events: (orgId: string, filters: EventFilters = {}) => {
+    const query = new URLSearchParams()
+    if (filters.type) query.set('type', filters.type)
+    if (filters.severity) query.set('severity', filters.severity)
+    if (filters.from) query.set('from', filters.from)
+    if (filters.to) query.set('to', filters.to)
+    if (filters.limit) query.set('limit', String(filters.limit))
+    if (filters.cursor) query.set('cursor', filters.cursor)
+    const suffix = query.toString() ? `?${query.toString()}` : ''
+    return request<EventPage>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/events${suffix}`)
+  },
+  event: (orgId: string, eventId: string) =>
+    request<PlatformEvent>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/events/${encodeURIComponent(eventId)}`,
+    ),
+  alerts: async (orgId: string) =>
+    asList<AlertRecord>(
+      await request<unknown>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/alerts`),
+    ),
+  alertPolicies: async (orgId: string) =>
+    asList<AlertPolicy>(
+      await request<unknown>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/alert-policies`),
+    ),
+  createAlertPolicy: (orgId: string, input: AlertPolicyInput) =>
+    request<AlertPolicy>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/alert-policies`,
+      jsonBody(input),
+    ),
+  updateAlertPolicy: (orgId: string, policyId: string, input: AlertPolicyInput) =>
+    request<AlertPolicy>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/alert-policies/${encodeURIComponent(policyId)}`,
+      putJson(input),
+    ),
+  deleteAlertPolicy: (orgId: string, policyId: string) =>
+    request<unknown>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/alert-policies/${encodeURIComponent(policyId)}`,
+      deleteRequest,
+    ),
+  deliveries: async (orgId: string) =>
+    asList<NotificationDelivery>(
+      await request<unknown>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/deliveries`),
     ),
   resolveCluster: async (clusterId: string, orgId: string) => {
     const query = new URLSearchParams({ orgId })
