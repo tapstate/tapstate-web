@@ -14,16 +14,21 @@ export function PipelineNode({ data, selected }: NodeProps<CanvasNode>) {
   const { description } = data
   const showInput = data.showInput
   const showOutput = data.showOutput && data.nodeType !== 'target'
+  const configuredSource =
+    data.configuration?.kind === 'source' || data.configuration?.kind === 'target'
+      ? data.configuration.sourceId
+      : null
+  const nodeDetail = configuredSource || data.detail
 
   return (
     <div
       className={cn(
-        'relative flex rounded-2xl border text-[var(--pipeline-text)]',
-        isSelected ? 'border-pipeline-node-selected-border' : 'border-transparent',
+        'text-text-primary relative flex rounded-2xl border',
+        isSelected ? 'border-components-option-card-option-selected-border' : 'border-transparent',
       )}
       data-node-selected={isSelected ? 'true' : 'false'}
     >
-      <div className="group relative w-60 rounded-[15px] border border-transparent bg-[var(--pipeline-surface)] pb-1 shadow-[var(--pipeline-shadow-node)] transition-shadow duration-150 hover:shadow-[var(--pipeline-shadow-node-hover)]">
+      <div className="group bg-workflow-block-bg relative w-60 rounded-[15px] border border-transparent pb-1 shadow-xs hover:shadow-lg">
         {showInput && (
           <PipelineHandle
             direction="input"
@@ -45,12 +50,27 @@ export function PipelineNode({ data, selected }: NodeProps<CanvasNode>) {
           visible={Boolean(isSelected)}
           onRequestDelete={data.onRequestDelete}
         />
-        <div className="flex min-h-11 min-w-0 items-center gap-2 rounded-t-2xl px-3 pt-3 pb-2">
-          <PipelineNodeIcon data={data} />
-          <span className="min-w-0 truncate text-[13px] leading-4 font-semibold text-[var(--pipeline-text)]">
-            {data.label}
-          </span>
+        <div className="flex items-center rounded-t-2xl px-3 pt-3 pb-2">
+          <div className="mr-1 flex min-w-0 grow items-center">
+            <span className="mr-2 shrink-0">
+              <PipelineNodeIcon data={data} />
+            </span>
+            <span
+              className="system-sm-semibold-uppercase text-text-primary min-w-0 grow truncate"
+              title={data.label}
+            >
+              {data.label}
+            </span>
+          </div>
         </div>
+        {nodeDetail && data.nodeType !== 'source' && data.nodeType !== 'target' && (
+          <div
+            className="mx-3 mb-2 truncate rounded-md bg-[var(--pipeline-surface-subtle)] px-2 py-1 text-xs font-medium text-[var(--pipeline-text-muted)]"
+            title={nodeDetail}
+          >
+            {nodeDetail}
+          </div>
+        )}
         {description.trim() && (
           <p className="px-3 pt-1 pb-2 text-xs leading-[18px] wrap-break-word whitespace-pre-line text-[var(--pipeline-text-muted)]">
             {description}

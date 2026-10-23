@@ -11,6 +11,52 @@
     "signedOut": "Signed out",
     "toggleTheme": "Toggle theme"
   },
+  "common": {
+    "close": "Close",
+    "searchClusters": "Search clusters",
+    "searchOrganizations": "Search organizations"
+  },
+  "organizationList": {
+    "current": "Current organization:",
+    "currentBadge": "Current",
+    "count_one": "{{count}} organization",
+    "count_other": "{{count}} organizations",
+    "clearSearch": "Clear organization search",
+    "name": "Organization",
+    "slug": "Slug",
+    "status": "Status",
+    "owner": "Owner",
+    "active": "Active",
+    "suspended": "Suspended",
+    "noOrganizations": "No organizations are available for this account.",
+    "noMatches": "No organizations match your search."
+  },
+  "clusterList": {
+    "description": "Manage Tapstate clusters across AWS regions.",
+    "provision": "Provision Cluster",
+    "provisionDescription": "Create your first Cloud cluster.",
+    "total": "Total:",
+    "count_one": "{{count}} cluster",
+    "count_other": "{{count}} clusters",
+    "clearSearch": "Clear cluster search",
+    "name": "Cluster name",
+    "status": "Status",
+    "region": "Region",
+    "plan": "Plan",
+    "created": "Created",
+    "noClusters": "No clusters yet.",
+    "noMatches": "No clusters match your search.",
+    "states": {
+      "PROVISIONING_PENDING": "Provisioning pending",
+      "PROVISIONING": "Provisioning",
+      "READY": "Ready",
+      "PROVISIONING_FAILED": "Provisioning failed",
+      "DEGRADED": "Degraded",
+      "DRAINING": "Draining",
+      "DRAINED": "Drained",
+      "TERMINATED": "Terminated"
+    }
+  },
   "access": {
     "eyebrow": "SECURE CLOUD CLUSTER",
     "title": "Sign in to continue",

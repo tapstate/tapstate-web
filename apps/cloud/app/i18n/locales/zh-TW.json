@@ -11,6 +11,52 @@
     "signedOut": "未登入",
     "toggleTheme": "切換主題"
   },
+  "common": {
+    "close": "關閉",
+    "searchClusters": "搜尋叢集",
+    "searchOrganizations": "搜尋組織"
+  },
+  "organizationList": {
+    "current": "目前組織：",
+    "currentBadge": "目前",
+    "count_one": "{{count}} 個組織",
+    "count_other": "{{count}} 個組織",
+    "clearSearch": "清除組織搜尋",
+    "name": "組織",
+    "slug": "識別名稱",
+    "status": "狀態",
+    "owner": "擁有者",
+    "active": "運作中",
+    "suspended": "已暫停",
+    "noOrganizations": "此帳戶目前沒有可用的組織。",
+    "noMatches": "沒有符合搜尋條件的組織。"
+  },
+  "clusterList": {
+    "description": "管理不同 AWS 區域中的 Tapstate 叢集。",
+    "provision": "建立叢集",
+    "provisionDescription": "建立第一個 Cloud 叢集。",
+    "total": "總計：",
+    "count_one": "{{count}} 個叢集",
+    "count_other": "{{count}} 個叢集",
+    "clearSearch": "清除叢集搜尋",
+    "name": "叢集名稱",
+    "status": "狀態",
+    "region": "區域",
+    "plan": "方案",
+    "created": "建立時間",
+    "noClusters": "尚無叢集。",
+    "noMatches": "沒有符合搜尋條件的叢集。",
+    "states": {
+      "PROVISIONING_PENDING": "等待建立",
+      "PROVISIONING": "建立中",
+      "READY": "就緒",
+      "PROVISIONING_FAILED": "建立失敗",
+      "DEGRADED": "效能下降",
+      "DRAINING": "排空中",
+      "DRAINED": "已排空",
+      "TERMINATED": "已終止"
+    }
+  },
   "access": {
     "eyebrow": "安全雲端叢集",
     "title": "請先登入",

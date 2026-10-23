@@ -1,3 +1,5 @@
+import { Avatar, AvatarFallback } from '@langgenius/dify-ui/avatar'
+import { IconButton } from '@langgenius/dify-ui/icon-button'
 import { useNavigate } from '@tanstack/react-router'
 import { Bell, Languages, LogOut, Sparkles } from 'lucide-react'
 import { useState } from 'react'
@@ -16,6 +18,9 @@ import { SUPPORTED_LOCALES } from '@/i18n'
 import { useAuthStore } from '@/stores/auth-store'
 import { useUiStore } from '@/stores/ui-store'
 import { cloudConsoleUrl, replaceWithCloudConsole } from '@/utils/cloud-console'
+
+const footerIconButtonClassName =
+  'size-7 rounded-full border border-components-card-border bg-components-card-bg p-0 text-text-tertiary shadow-xs transition-colors hover:bg-components-card-bg-alt hover:text-saas-dify-blue-inverted data-popup-open:bg-components-card-bg-alt data-popup-open:text-saas-dify-blue-inverted'
 
 export function AppHeader() {
   const navigate = useNavigate()
@@ -63,15 +68,14 @@ export function AppHeader() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
+            <IconButton
               type="button"
-              variant="ghost"
-              size="icon-sm"
-              className="app-sidebar__icon-button"
+              size="lg"
+              className={footerIconButtonClassName}
               aria-label={t('app.language')}
             >
-              <Languages className="h-4 w-4" aria-hidden="true" />
-            </Button>
+              <Languages className="size-4 shrink-0" aria-hidden="true" />
+            </IconButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-36">
             {SUPPORTED_LOCALES.map((locale) => (
@@ -79,7 +83,7 @@ export function AppHeader() {
                 key={locale}
                 className="justify-between"
                 disabled={i18n.language === locale}
-                onSelect={() => switchLocale(locale)}
+                onClick={() => switchLocale(locale)}
               >
                 {t(`app.languageOptions.${locale}`)}
                 {i18n.language === locale && (
@@ -90,33 +94,31 @@ export function AppHeader() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button
+        <IconButton
           type="button"
-          variant="ghost"
-          size="icon-sm"
-          className="app-sidebar__icon-button"
+          size="lg"
+          className={footerIconButtonClassName}
           aria-label={t('app.notifications')}
         >
-          <Bell className="h-4 w-4" aria-hidden="true" />
-        </Button>
+          <Bell className="size-4 shrink-0" aria-hidden="true" />
+        </IconButton>
 
-        <Button
+        <IconButton
           type="button"
-          variant="ghost"
-          size="icon-sm"
-          className="app-sidebar__icon-button"
+          size="lg"
+          className={footerIconButtonClassName}
           aria-label={t('app.logout')}
           aria-busy={isLoggingOut}
           disabled={isLoggingOut}
           title={t('app.logout')}
           onClick={() => void logout()}
         >
-          <LogOut className="h-4 w-4" aria-hidden="true" />
-        </Button>
+          <LogOut className="size-4 shrink-0" aria-hidden="true" />
+        </IconButton>
 
-        <div className="app-sidebar__avatar" aria-label={t('app.user.avatar')}>
-          {t('app.user.initial')}
-        </div>
+        <Avatar size="md" className="size-7" aria-label={t('app.user.avatar')}>
+          <AvatarFallback>{t('app.user.initial')}</AvatarFallback>
+        </Avatar>
       </div>
       {logoutError && (
         <p className="px-2 text-xs text-red-600 dark:text-red-400" role="alert">

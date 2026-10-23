@@ -1,3 +1,4 @@
+import { Button } from '@langgenius/dify-ui/button'
 import { useTranslation } from 'react-i18next'
 
 interface AuthProviderButtonsProps {
@@ -8,43 +9,38 @@ interface AuthProviderButtonsProps {
 
 export function AuthProviderButtons({ mode, disabled = false, onStart }: AuthProviderButtonsProps) {
   const { t } = useTranslation()
-  const buttonClassName =
-    'flex h-10 w-full items-center justify-center gap-2.5 rounded-lg border border-black/[0.08] bg-white px-4 text-[13px] font-medium text-[#374151] shadow-2xs transition-all hover:border-black/20 hover:bg-neutral-50 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-black/[0.08] disabled:hover:bg-white disabled:active:scale-100 dark:border-white/[0.1] dark:bg-[#202124] dark:text-neutral-200 dark:hover:border-white/20 dark:hover:bg-[#26282b] dark:disabled:hover:border-white/[0.1] dark:disabled:hover:bg-[#202124]'
 
   return (
     <>
-      <div className="space-y-2">
-        <button
-          className={buttonClassName}
+      <div className="space-y-3 pt-1">
+        <Button
+          className="w-full"
           disabled={disabled}
           onClick={() => onStart('google')}
+          size="large"
           type="button"
+          variant="secondary"
         >
           <GoogleMark />
           <span>{t(mode === 'login' ? 'auth.continueWithGoogle' : 'auth.signUpWithGoogle')}</span>
-        </button>
-        <button
-          className={buttonClassName}
+        </Button>
+        <Button
+          className="w-full"
           disabled={disabled}
           onClick={() => onStart('github')}
+          size="large"
           type="button"
+          variant="secondary"
         >
           <GitHubMark />
           <span>{t(mode === 'login' ? 'auth.continueWithGitHub' : 'auth.signUpWithGitHub')}</span>
-        </button>
+        </Button>
       </div>
 
-      <div
-        aria-label={t('auth.or')}
-        className="relative flex items-center justify-center py-0.5"
-        role="separator"
-      >
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-black/[0.06] dark:border-white/[0.08]" />
-        </div>
-        <span className="relative bg-white px-3 text-[11px] font-medium tracking-wider text-neutral-400 uppercase dark:bg-[#1c1d20]">
-          {t('auth.or')}
-        </span>
+      <div className="flex items-center py-0.5" role="separator" aria-label={t('auth.or')}>
+        <div className="from-background-gradient-mask-transparent to-divider-regular h-px flex-1 bg-linear-to-r" />
+        <span className="system-xs-medium-uppercase text-text-tertiary px-3">{t('auth.or')}</span>
+        <div className="from-background-gradient-mask-transparent to-divider-regular h-px flex-1 bg-linear-to-l" />
       </div>
     </>
   )
@@ -75,7 +71,11 @@ function GoogleMark() {
 
 function GitHubMark() {
   return (
-    <svg aria-hidden="true" className="h-4 w-4 shrink-0 fill-current" viewBox="0 0 24 24">
+    <svg
+      aria-hidden="true"
+      className="text-text-primary h-4 w-4 shrink-0 fill-current"
+      viewBox="0 0 24 24"
+    >
       <path
         clipRule="evenodd"
         d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"

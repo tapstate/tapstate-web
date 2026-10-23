@@ -1385,7 +1385,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                 >
                   <SelectTrigger
                     aria-label="Source Connection"
-                    className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                    className="wizard-reference-select-trigger w-full text-[12px]"
                   >
                     <SelectValue placeholder="Select a source" />
                   </SelectTrigger>
@@ -1428,7 +1428,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                 >
                   <SelectTrigger
                     aria-label="Table"
-                    className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 font-mono text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                    className="wizard-reference-select-trigger w-full font-mono text-[12px]"
                   >
                     <SelectValue placeholder="Select a source table" />
                   </SelectTrigger>
@@ -1765,7 +1765,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                         >
                           <SelectTrigger
                             aria-label="Source"
-                            className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                            className="wizard-reference-select-trigger w-full text-[12px]"
                           >
                             <SelectValue placeholder="Select a source" />
                           </SelectTrigger>
@@ -1802,7 +1802,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                         >
                           <SelectTrigger
                             aria-label="Child Table"
-                            className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 font-mono text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                            className="wizard-reference-select-trigger w-full font-mono text-[12px]"
                           >
                             <SelectValue placeholder="Select a source table" />
                           </SelectTrigger>
@@ -2082,31 +2082,34 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                           >
                             <SelectTrigger
                               aria-label="Data Source"
-                              className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                              className="wizard-reference-select-trigger w-full text-[12px]"
                             >
-                              {AVAILABLE_DATA_SOURCES.find(
-                                (ds) => ds.name === scratchSelectedSource,
-                              ) && (
-                                <ConnectorIcon
-                                  connectorId={
-                                    AVAILABLE_DATA_SOURCES.find(
-                                      (ds) => ds.name === scratchSelectedSource,
-                                    )?.connector || scratchSelectedSource
-                                  }
-                                  name={
-                                    AVAILABLE_DATA_SOURCES.find(
-                                      (ds) => ds.name === scratchSelectedSource,
-                                    )?.connectorName || scratchSelectedSource
-                                  }
-                                  iconPath={
-                                    AVAILABLE_DATA_SOURCES.find(
-                                      (ds) => ds.name === scratchSelectedSource,
-                                    )?.iconPath
-                                  }
-                                  size={24}
-                                />
-                              )}
-                              <SelectValue placeholder="Select a source" />
+                              <SelectValue placeholder="Select a source">
+                                {(value) => {
+                                  const selectedSource = AVAILABLE_DATA_SOURCES.find(
+                                    (source) => source.name === value,
+                                  )
+                                  if (!selectedSource) return null
+                                  return (
+                                    <span className="flex min-w-0 items-center gap-2">
+                                      <ConnectorIcon
+                                        connectorId={
+                                          selectedSource.connector || selectedSource.badge
+                                        }
+                                        name={selectedSource.connectorName || selectedSource.badge}
+                                        iconPath={selectedSource.iconPath}
+                                        size={20}
+                                      />
+                                      <span className="min-w-0 flex-1 truncate">
+                                        {selectedSource.name}
+                                      </span>
+                                      <span className="text-text-tertiary shrink-0 text-xs">
+                                        {selectedSource.connectorName || selectedSource.badge}
+                                      </span>
+                                    </span>
+                                  )
+                                }}
+                              </SelectValue>
                             </SelectTrigger>
                             <SelectContent className="wizard-reference-select-content rounded-lg">
                               {AVAILABLE_DATA_SOURCES.map((ds) => (
@@ -2145,7 +2148,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                           >
                             <SelectTrigger
                               aria-label="Table"
-                              className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 font-mono text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                              className="wizard-reference-select-trigger w-full font-mono text-[12px]"
                             >
                               <SelectValue placeholder="Select a source table" />
                             </SelectTrigger>
@@ -2412,7 +2415,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                               >
                                 <SelectTrigger
                                   aria-label="Child Data Source"
-                                  className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                                  className="wizard-reference-select-trigger w-full text-[12px]"
                                 >
                                   <SelectValue placeholder="Select a source" />
                                 </SelectTrigger>
@@ -2450,7 +2453,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                               >
                                 <SelectTrigger
                                   aria-label="Child Table"
-                                  className="wizard-reference-select-trigger h-auto min-h-0 w-full rounded-lg border-gray-300 bg-white px-2.5 py-1.5 font-mono text-[12px] text-gray-800 shadow-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/15"
+                                  className="wizard-reference-select-trigger w-full font-mono text-[12px]"
                                 >
                                   <SelectValue placeholder="Select a source table" />
                                 </SelectTrigger>

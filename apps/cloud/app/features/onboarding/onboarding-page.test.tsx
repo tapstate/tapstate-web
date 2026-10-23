@@ -135,7 +135,8 @@ function buttonWithText(text: string) {
 }
 
 function changeOrganizationName(value: string) {
-  const input = host?.querySelector<HTMLInputElement>('#onboarding-organization')
+  const input = host?.querySelector<HTMLInputElement>('input[autocomplete="organization"]')
+  expect(input).not.toBeNull()
   const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
   valueSetter?.call(input, value)
   input?.dispatchEvent(new Event('input', { bubbles: true }))

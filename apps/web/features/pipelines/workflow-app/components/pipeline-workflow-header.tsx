@@ -1,6 +1,8 @@
-import type { ReactNode } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
 
-import { Play, Save } from 'lucide-react'
+import { Button } from '@langgenius/dify-ui/button'
+import { Link } from '@tanstack/react-router'
+import { useReactFlow } from '@xyflow/react'
 import { useTranslation } from 'react-i18next'
 
 export interface PipelineWorkflowHeaderProps {
@@ -18,9 +20,43 @@ export interface PipelineWorkflowHeaderProps {
   runButtonId?: string
   runButtonActiveGuide?: boolean
   dockStatus?: ReactNode
+  draftUpdatedAt?: string | null
+  hasPublishedArtifact?: boolean
+  pipelineId?: string
+  selectedNodeId?: string | null
   stopAction?: ReactNode
   onSave: () => void
   onRun: () => void
+}
+
+function ScrollToSelectedNodeButton({ selectedNodeId }: { selectedNodeId: string }) {
+  const { getNode, getViewport, setCenter } = useReactFlow()
+
+  function scrollToSelectedNode(event: MouseEvent<HTMLButtonElement>) {
+    const node = getNode(selectedNodeId)
+    const workspace = event.currentTarget.closest<HTMLElement>(
+      '[data-testid="pipeline-workflow-container"]',
+    )
+    if (!node || !workspace) return
+    const panel = workspace.querySelector<HTMLElement>('[data-workflow-right-panel]')
+    const zoom = getViewport().zoom
+    const panelWidth = panel?.getBoundingClientRect().width ?? 0
+    const centerX = node.position.x + (node.measured?.width ?? 240) / 2 + panelWidth / (2 * zoom)
+    const centerY = node.position.y + (node.measured?.height ?? 56) / 2
+    void setCenter(centerX, centerY, { zoom, duration: 180 })
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      size="small"
+      className="pointer-events-auto absolute left-1/2 -translate-x-1/2"
+      onClick={scrollToSelectedNode}
+    >
+      {useTranslation().t('pipelines.workspace.actions.scrollToSelectedNode')}
+    </Button>
+  )
 }
 
 /** Owns the workflow-level actions independently from the canvas and inspector. */
@@ -39,6 +75,10 @@ export function PipelineWorkflowHeader({
   runButtonId,
   runButtonActiveGuide,
   dockStatus,
+  draftUpdatedAt,
+  hasPublishedArtifact = false,
+  pipelineId,
+  selectedNodeId,
   stopAction,
   onSave,
   onRun,
@@ -50,38 +90,105 @@ export function PipelineWorkflowHeader({
       role="toolbar"
       aria-label={t('pipelines.workspace.actions.toolbar')}
     >
-      {!isReadOnly && (
-        <div className="border-pipeline-actionbar-border bg-pipeline-actionbar-bg flex h-8 items-center rounded-lg border-[0.5px] px-0.5 shadow-xs backdrop-blur-[10px]">
-          <button
-            id={runButtonId}
-            data-guide-active={runButtonActiveGuide || undefined}
-            type="button"
-            className="hover:bg-pipeline-actionbar-bg-accent inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-[var(--pipeline-text-muted)] transition-colors focus-visible:ring-2 focus-visible:ring-[var(--pipeline-selection-ring)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={!(canSave ?? isDirty) || isSaving || isBusy}
-            onClick={onSave}
+      <div className="border-components-button-secondary-border bg-components-button-secondary-bg flex h-8 items-center rounded-lg border-[0.5px] px-0.5 shadow-xs">
+        {stopAction ??
+          (!isReadOnly && (
+            <button
+              id={runButtonId}
+              data-guide-active={runButtonActiveGuide || undefined}
+              type="button"
+              className="text-components-button-secondary-accent-text hover:bg-state-accent-hover flex h-7 cursor-pointer items-center rounded-md px-2.5 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isRunning || isSaving || isBusy}
+              aria-busy={isRunning}
+              onClick={onRun}
+            >
+              <span className="i-ri-play-large-line mr-1 size-4" aria-hidden="true" />
+              {isRunning
+                ? (runPendingLabel ?? t('pipelines.workspace.actions.running'))
+                : (runLabel ?? t('pipelines.workspace.actions.run'))}
+            </button>
+          ))}
+        {pipelineId && (
+          <>
+            <span className="bg-divider-regular mx-0.5 h-3.5 w-px" aria-hidden="true" />
+            <Link
+              to="/pipelines/$pipelineId/edit/logs"
+              params={{ pipelineId }}
+              className="text-components-button-ghost-text hover:bg-state-accent-hover hover:text-components-button-secondary-accent-text flex size-7 items-center justify-center rounded-md"
+              aria-label={t('pipelines.workspace.navigation.logs')}
+              title={t('pipelines.workspace.navigation.logs')}
+            >
+              <span className="i-ri-history-line size-4" aria-hidden="true" />
+            </Link>
+          </>
+        )}
+      </div>
+      {pipelineId && (
+        <div className="border-components-button-secondary-border bg-components-button-secondary-bg flex h-8 items-center rounded-lg border-[0.5px] shadow-xs backdrop-blur-[10px]">
+          <Link
+            to="/pipelines/$pipelineId/edit/monitoring"
+            params={{ pipelineId }}
+            className="hover:bg-state-base-hover text-text-tertiary hover:text-text-secondary flex size-8 items-center justify-center rounded-md"
+            aria-label={t('pipelines.workspace.navigation.monitoring')}
+            title={t('pipelines.workspace.navigation.monitoring')}
           >
-            <Save className="size-3.5" aria-hidden="true" />
-            {isSaving
-              ? (savePendingLabel ?? t('pipelines.workspace.actions.saving'))
-              : (saveLabel ?? t('pipelines.workspace.actions.save'))}
-          </button>
+            <span className="i-ri-line-chart-line size-4" aria-hidden="true" />
+          </Link>
         </div>
       )}
+      {!isReadOnly && (
+        <Button
+          type="button"
+          variant="primary"
+          size="medium"
+          disabled={!(canSave ?? isDirty) || isSaving || isBusy}
+          onClick={onSave}
+        >
+          <span className="i-ri-save-3-line size-4" aria-hidden="true" />
+          {isSaving
+            ? (savePendingLabel ?? t('pipelines.workspace.actions.saving'))
+            : (saveLabel ?? t('pipelines.workspace.actions.save'))}
+        </Button>
+      )}
+    </div>
+  )
+  const builderActions = (
+    <div
+      className="pointer-events-auto ml-auto flex items-center gap-2"
+      role="toolbar"
+      aria-label={t('pipelines.workspace.actions.toolbar')}
+    >
       {stopAction ??
         (!isReadOnly && (
-          <button
+          <Button
+            id={runButtonId}
             type="button"
-            className="bg-pipeline-actionbar-primary hover:bg-pipeline-actionbar-primary-hover inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium text-white shadow-xs transition-colors focus-visible:ring-2 focus-visible:ring-[var(--pipeline-selection-ring)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            variant="primary"
+            size="medium"
             disabled={isRunning || isSaving || isBusy}
             aria-busy={isRunning}
             onClick={onRun}
           >
-            <Play className="size-3.5" aria-hidden="true" />
+            <span className="i-ri-play-large-line size-4" aria-hidden="true" />
             {isRunning
               ? (runPendingLabel ?? t('pipelines.workspace.actions.running'))
               : (runLabel ?? t('pipelines.workspace.actions.run'))}
-          </button>
+          </Button>
         ))}
+      {!isReadOnly && (
+        <Button
+          type="button"
+          variant="secondary"
+          size="medium"
+          disabled={!(canSave ?? isDirty) || isSaving || isBusy}
+          onClick={onSave}
+        >
+          <span className="i-ri-save-3-line size-4" aria-hidden="true" />
+          {isSaving
+            ? (savePendingLabel ?? t('pipelines.workspace.actions.saving'))
+            : (saveLabel ?? t('pipelines.workspace.actions.save'))}
+        </Button>
+      )}
     </div>
   )
 
@@ -130,11 +237,46 @@ export function PipelineWorkflowHeader({
           </svg>
           <div className="pipeline-workflow-action-dock">
             {dockStatus}
-            {toolbar}
+            {builderActions}
           </div>
         </>
       ) : (
-        toolbar
+        <>
+          <div
+            role="status"
+            className="system-xs-regular text-text-tertiary pointer-events-none ml-1 flex h-4.5 min-w-75 items-center whitespace-nowrap"
+          >
+            {isSaving || isDirty ? (
+              <span>{isSaving ? t('wizard.autosaving') : t('wizard.unsavedChanges')}</span>
+            ) : (
+              <>
+                <span className="flex items-center gap-1">
+                  <span>{t('pipelines.workspace.actions.autoSaved')}</span>
+                  {draftUpdatedAt && !Number.isNaN(Date.parse(draftUpdatedAt)) && (
+                    <time dateTime={draftUpdatedAt}>
+                      {new Date(draftUpdatedAt).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false,
+                      })}
+                    </time>
+                  )}
+                </span>
+                <span aria-hidden="true" className="mx-1">
+                  ·
+                </span>
+                <span>
+                  {hasPublishedArtifact
+                    ? t('pipelines.workspace.actions.published')
+                    : t('pipelines.workspace.actions.unpublished')}
+                </span>
+              </>
+            )}
+          </div>
+          {selectedNodeId && <ScrollToSelectedNodeButton selectedNodeId={selectedNodeId} />}
+          {toolbar}
+        </>
       )}
     </div>
   )

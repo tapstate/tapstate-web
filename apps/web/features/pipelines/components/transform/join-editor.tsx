@@ -145,7 +145,7 @@ export function JoinEditor({ config, onChange }: TransformEditorProps) {
         value={sql}
         rows={7}
         placeholder={t('pipelines.workspace.transform.sql')}
-        onChange={(event) => updateSql(event.target.value)}
+        onValueChange={updateSql}
       />
     </TransformEditorShell>
   )

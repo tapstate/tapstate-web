@@ -1,3 +1,11 @@
+import { Button } from '@langgenius/dify-ui/button'
+import { Field, FieldDescription, FieldError, FieldLabel } from '@langgenius/dify-ui/field'
+import { Fieldset, FieldsetLegend } from '@langgenius/dify-ui/fieldset'
+import { IconButton } from '@langgenius/dify-ui/icon-button'
+import { Input } from '@langgenius/dify-ui/input'
+import RadioCard from '@langgenius/dify-ui/radio-card'
+import { RadioGroup } from '@langgenius/dify-ui/radio-group'
+import { SkeletonRectangle } from '@langgenius/dify-ui/skeleton'
 import { useNavigate } from '@tanstack/react-router'
 import { AlertCircle, Check, CreditCard, MapPin, Moon, RefreshCw, Sun } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
@@ -583,15 +591,14 @@ export function OnboardingPage({
           <span className="hidden max-w-56 truncate text-xs text-neutral-500 sm:block dark:text-neutral-400">
             {accountName}
           </span>
-          <button
+          <IconButton
             aria-label={t('app.toggleTheme')}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-black/[0.04] hover:text-neutral-900 dark:hover:bg-white/[0.05] dark:hover:text-white"
             onClick={() => setDarkMode(!darkMode)}
+            size="md"
             title={t('app.toggleTheme')}
-            type="button"
           >
             {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </button>
+          </IconButton>
         </div>
       </header>
 
@@ -613,7 +620,7 @@ export function OnboardingPage({
 
             {hasSubmitError && (
               <div
-                className="flex items-start gap-2 rounded-xl border border-red-200/80 bg-red-50 p-3 text-xs text-red-600 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400"
+                className="system-xs-regular text-text-destructive border-components-input-border-destructive bg-components-input-bg-destructive mb-4 flex items-start gap-2 rounded-lg border p-3"
                 role="alert"
               >
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -622,10 +629,7 @@ export function OnboardingPage({
             )}
 
             {resumeError && (
-              <div
-                className="rounded-xl border border-amber-200/80 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300"
-                role="status"
-              >
+              <div className="body-xs-regular text-text-warning-secondary" role="status">
                 {t('onboarding.resumeError')}
               </div>
             )}
@@ -633,161 +637,106 @@ export function OnboardingPage({
             <form className="space-y-6" onSubmit={handleSubmit}>
               {currentOrganization ? (
                 <>
-                  <div className="space-y-2">
-                    <span className="block text-[13px] font-medium text-[#374151] dark:text-neutral-200">
-                      {t('onboarding.organizationLabel')}
-                    </span>
-                    <div className="flex h-10 items-center rounded-lg border border-black/[0.08] bg-neutral-50 px-3.5 text-[14px] font-medium text-[#111827] dark:border-white/[0.1] dark:bg-[#1a1b1e] dark:text-white">
-                      {currentOrganization.name}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label
-                      className="block text-[13px] font-medium text-[#374151] dark:text-neutral-200"
-                      htmlFor="onboarding-cluster-name"
-                    >
-                      {t('onboarding.newClusterLabel')}
-                    </label>
-                    <input
+                  <Field name="organization">
+                    <FieldLabel>{t('onboarding.organizationLabel')}</FieldLabel>
+                    <Input disabled value={currentOrganization.name} />
+                  </Field>
+                  <Field name="clusterName" invalid={Boolean(clusterNameInput && !clusterName)}>
+                    <FieldLabel>{t('onboarding.newClusterLabel')}</FieldLabel>
+                    <Input
                       autoComplete="off"
-                      className="h-10 w-full rounded-lg border border-black/[0.12] bg-white px-3.5 text-[14px] text-[#111827] shadow-2xs transition-all placeholder:text-neutral-400 focus:border-[#111827] focus:ring-1 focus:ring-[#111827] focus:outline-none dark:border-white/[0.14] dark:bg-[#1a1b1e] dark:text-white dark:focus:border-white dark:focus:ring-white"
-                      id="onboarding-cluster-name"
                       maxLength={100}
-                      onChange={(event) => setClusterNameInput(event.target.value)}
+                      onValueChange={setClusterNameInput}
                       placeholder={t('onboarding.clusterNamePlaceholder')}
                       required
                       value={clusterNameInput}
                     />
-                    {clusterNameInput && !clusterName && (
-                      <p className="text-[11px] text-red-500">{t('onboarding.clusterNameHint')}</p>
-                    )}
-                  </div>
+                    <FieldError>{t('onboarding.clusterNameHint')}</FieldError>
+                  </Field>
                 </>
               ) : (
-                <div className="space-y-2">
-                  <label
-                    className="block text-[13px] font-medium text-[#374151] dark:text-neutral-200"
-                    htmlFor="onboarding-organization"
-                  >
-                    {t('onboarding.organizationLabel')}
-                  </label>
-                  <input
+                <Field
+                  name="organizationName"
+                  invalid={Boolean(organizationName && !organizationSlug)}
+                >
+                  <FieldLabel>{t('onboarding.organizationLabel')}</FieldLabel>
+                  <Input
                     autoComplete="organization"
-                    className="h-10 w-full rounded-lg border border-black/[0.12] bg-white px-3.5 text-[14px] text-[#111827] shadow-2xs transition-all placeholder:text-neutral-400 focus:border-[#111827] focus:ring-1 focus:ring-[#111827] focus:outline-none dark:border-white/[0.14] dark:bg-[#1a1b1e] dark:text-white dark:focus:border-white dark:focus:ring-white"
-                    id="onboarding-organization"
                     maxLength={100}
-                    onChange={(event) => setOrganizationName(event.target.value)}
+                    onValueChange={setOrganizationName}
                     placeholder={t('onboarding.organizationPlaceholder')}
                     required
                     value={organizationName}
                   />
-                  {organizationName && !organizationSlug && (
-                    <p className="text-[11px] text-red-500">{t('onboarding.slugHint')}</p>
-                  )}
-                </div>
+                  <FieldError>{t('onboarding.slugHint')}</FieldError>
+                </Field>
               )}
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-[13px] font-medium text-[#374151] dark:text-neutral-200">
-                    {t('onboarding.regionLabel')}
-                  </label>
-                  {isLoadingRegions && (
-                    <span className="flex items-center gap-1 font-mono text-[11px] text-neutral-400">
-                      <RefreshCw className="h-3 w-3 animate-spin" />
-                      <span>{t('onboarding.loadingRegions')}</span>
-                    </span>
-                  )}
-                </div>
-
-                <div className="overflow-hidden rounded-xl border border-black/[0.12] bg-white shadow-2xs dark:border-white/[0.14] dark:bg-[#1a1b1e]">
-                  <div className="flex border-b border-black/[0.08] bg-neutral-50/70 dark:border-white/[0.08] dark:bg-white/[0.02]">
-                    <div className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-[12px] font-semibold text-[#111827] dark:text-white">
-                      <MapPin className="h-4 w-4 shrink-0" />
-                      <span>{t('onboarding.openRegions')}</span>
-                    </div>
-                  </div>
-
-                  <div
-                    aria-label={t('onboarding.regionLabel')}
-                    className="divide-y divide-black/[0.06] dark:divide-white/[0.06]"
-                    role="radiogroup"
-                  >
-                    {isLoadingRegions ? (
-                      <div className="animate-pulse space-y-2.5 p-4" aria-hidden="true">
-                        <div className="flex items-center justify-between">
-                          <div className="h-4 w-48 rounded bg-neutral-200 dark:bg-neutral-800" />
-                          <div className="h-4 w-4 rounded-full bg-neutral-200 dark:bg-neutral-800" />
-                        </div>
-                        <div className="h-3 w-28 rounded bg-neutral-100 dark:bg-neutral-800/60" />
-                      </div>
-                    ) : hasLoadError ? (
-                      <div
-                        className="flex items-center justify-between p-4 text-xs text-red-600 dark:text-red-400"
-                        role="alert"
-                      >
-                        <span>{t('onboarding.regionError')}</span>
-                        <button
-                          className="ml-2 font-medium underline hover:text-red-800 dark:hover:text-red-300"
-                          onClick={() => void loadRegions()}
-                          type="button"
-                        >
-                          {t('onboarding.retry')}
-                        </button>
-                      </div>
-                    ) : regions.length === 0 ? (
-                      <div className="p-4 text-xs text-neutral-500 dark:text-neutral-400">
-                        {t('onboarding.noRegions')}
-                      </div>
-                    ) : (
-                      regions.map((region) => {
-                        const isSelected = selectedRegionCode === region.code
-                        return (
-                          <button
-                            aria-checked={isSelected}
-                            className={`flex w-full items-center justify-between p-3.5 text-left transition-colors ${isSelected ? 'bg-neutral-100/70 dark:bg-white/[0.05]' : 'hover:bg-neutral-50 dark:hover:bg-white/[0.02]'}`}
-                            key={region.code}
-                            onClick={() => setSelectedRegionCode(region.code)}
-                            role="radio"
-                            type="button"
-                          >
-                            <span className="space-y-0.5">
-                              <span className="flex items-center gap-2">
-                                <span className="text-[13px] font-semibold text-[#111827] dark:text-white">
-                                  {region.name}
-                                </span>
-                                <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                                  {t('onboarding.available')}
-                                </span>
-                              </span>
-                              <span className="block text-[11px] text-neutral-500 dark:text-neutral-400">
-                                {region.code}
-                              </span>
-                            </span>
-                            <span
-                              className={`flex h-4 w-4 items-center justify-center rounded-full transition-all ${isSelected ? 'bg-[#111827] text-white dark:bg-white dark:text-[#111827]' : 'border border-neutral-300 dark:border-neutral-600'}`}
-                              aria-hidden="true"
-                            >
-                              {isSelected && <Check className="h-2.5 w-2.5 stroke-[3]" />}
-                            </span>
-                          </button>
-                        )
-                      })
+              <Field aria-busy={isLoadingRegions} className="grid gap-2" name="region">
+                <Fieldset className="grid gap-2">
+                  <FieldsetLegend className="mb-0 flex items-center justify-between py-0">
+                    <span>{t('onboarding.regionLabel')}</span>
+                    {isLoadingRegions && (
+                      <span className="system-xs-regular text-text-tertiary flex items-center gap-1">
+                        <RefreshCw className="h-3 w-3 animate-spin" />
+                        <span>{t('onboarding.loadingRegions')}</span>
+                      </span>
                     )}
-                  </div>
-                </div>
+                  </FieldsetLegend>
 
-                <div className="flex items-start gap-1.5 pt-1 text-[11.5px] leading-normal text-neutral-500 dark:text-neutral-400">
-                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-400" />
+                  {isLoadingRegions ? (
+                    <div
+                      className="border-components-panel-border bg-components-panel-bg space-y-2 rounded-xl border-[0.5px] p-3"
+                      aria-hidden="true"
+                    >
+                      <SkeletonRectangle className="h-4 w-48" />
+                      <SkeletonRectangle className="h-3 w-28" />
+                    </div>
+                  ) : hasLoadError ? (
+                    <div className="flex items-center justify-between gap-3" role="alert">
+                      <span className="body-xs-regular text-text-destructive">
+                        {t('onboarding.regionError')}
+                      </span>
+                      <Button onClick={() => void loadRegions()} size="small" variant="tertiary">
+                        {t('onboarding.retry')}
+                      </Button>
+                    </div>
+                  ) : regions.length === 0 ? (
+                    <FieldDescription>{t('onboarding.noRegions')}</FieldDescription>
+                  ) : (
+                    <RadioGroup<string>
+                      aria-label={t('onboarding.regionLabel')}
+                      className="grid gap-2"
+                      onValueChange={setSelectedRegionCode}
+                      value={selectedRegionCode}
+                    >
+                      {regions.map((region) => (
+                        <RadioCard
+                          description={region.code}
+                          icon={<MapPin aria-hidden="true" className="text-text-accent size-4" />}
+                          key={region.code}
+                          title={region.name}
+                          value={region.code}
+                        />
+                      ))}
+                    </RadioGroup>
+                  )}
+                </Fieldset>
+
+                <FieldDescription className="flex items-start gap-1.5">
+                  <AlertCircle className="text-text-tertiary mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <span>{t('onboarding.regionReadonly')}</span>
-                </div>
-              </div>
+                </FieldDescription>
+              </Field>
 
-              <div className="space-y-2 pt-1">
+              <section aria-labelledby="onboarding-plan-selection" className="grid gap-2 pt-1">
                 <div className="flex items-center justify-between">
-                  <label className="block text-[13px] font-medium text-[#374151] dark:text-neutral-200">
+                  <h2
+                    className="system-sm-medium text-text-secondary m-0"
+                    id="onboarding-plan-selection"
+                  >
                     {t('onboarding.planLabel')}
-                  </label>
+                  </h2>
                   {isLoadingSpecs && (
                     <span className="flex items-center gap-1 font-mono text-[11px] text-neutral-400">
                       <RefreshCw className="h-3 w-3 animate-spin" />
@@ -890,7 +839,7 @@ export function OnboardingPage({
                 <p className="text-[11px] leading-normal text-neutral-500 dark:text-neutral-400">
                   {t('onboarding.planHint')}
                 </p>
-              </div>
+              </section>
 
               {canManage ? (
                 <label className="flex cursor-pointer items-start gap-2.5 text-[12.5px] leading-relaxed text-neutral-700 dark:text-neutral-300">
@@ -912,37 +861,41 @@ export function OnboardingPage({
                 </p>
               )}
 
-              <div className="space-y-2 pt-1">
+              <section aria-labelledby="onboarding-cluster-summary" className="grid gap-2 pt-1">
                 <div className="flex items-center justify-between">
-                  <label className="block text-[13px] font-medium text-[#374151] dark:text-neutral-200">
+                  <h2
+                    className="system-sm-medium text-text-secondary m-0"
+                    id="onboarding-cluster-summary"
+                  >
                     {t(
                       currentOrganization
                         ? 'onboarding.newClusterLabel'
                         : 'onboarding.clusterLabel',
                     )}
-                  </label>
-                  <span className="font-mono text-[11px] text-neutral-500 dark:text-neutral-400">
+                  </h2>
+                  <span className="system-xs-regular text-text-tertiary">
                     {selectedSpec?.key ?? t('onboarding.regionDefault')}
                   </span>
                 </div>
 
-                <div className="space-y-2.5 rounded-xl border border-black/[0.08] bg-white p-3.5 shadow-2xs dark:border-white/[0.1] dark:bg-[#1a1b1e]">
+                <div className="border-components-panel-border bg-components-panel-bg shadow-shadow-shadow-3 space-y-2.5 rounded-xl border-[0.5px] p-3.5 shadow-xs">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-[13px] font-semibold text-[#111827] dark:text-white">
+                    <span className="system-sm-semibold text-text-primary">
                       {clusterName || t('onboarding.clusterPreviewEmpty')}
                     </span>
-                    <span className="font-mono text-[11px] text-neutral-400">
+                    <span className="system-xs-regular text-text-tertiary">
                       {selectedRegion?.code}
                     </span>
                   </div>
-                  <p className="m-0 text-[11.5px] text-neutral-500 dark:text-neutral-400">
+                  <p className="body-xs-regular text-text-tertiary m-0">
                     {t('onboarding.clusterPendingNote')}
                   </p>
                 </div>
-              </div>
+              </section>
 
-              <button
-                className="mt-4 flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#111827] text-[13.5px] font-medium text-white shadow-xs transition-all hover:bg-[#1f2937] active:scale-[0.99] disabled:opacity-50 dark:bg-white dark:text-[#111827] dark:hover:bg-neutral-100"
+              <Button
+                aria-labelledby="onboarding-submit-label"
+                className="mt-4 w-full"
                 disabled={
                   isLoadingRegions ||
                   isLoadingSpecs ||
@@ -956,20 +909,20 @@ export function OnboardingPage({
                   !canManage ||
                   isSubmitting
                 }
+                loading={isSubmitting}
+                size="large"
                 type="submit"
+                variant="primary"
               >
                 {isSubmitting ? (
-                  <>
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                    <span>{t('onboarding.startingCheckout')}</span>
-                  </>
+                  <span id="onboarding-submit-label">{t('onboarding.startingCheckout')}</span>
                 ) : (
-                  <>
-                    <span>{t('onboarding.continueToPayment')}</span>
-                    <CreditCard className="h-4 w-4" />
-                  </>
+                  <span id="onboarding-submit-label" className="inline-flex items-center gap-2">
+                    {t('onboarding.continueToPayment')}
+                    <CreditCard className="size-4" />
+                  </span>
                 )}
-              </button>
+              </Button>
             </form>
 
             <div className="flex items-center justify-between border-t border-black/[0.05] pt-4 text-[11px] text-neutral-400 dark:border-white/[0.06]">

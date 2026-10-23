@@ -2,6 +2,8 @@ import type { Edge, Node } from '@xyflow/react'
 
 import type { PipelineNodeConfiguration } from '../../model/pipeline-node-model'
 
+export type { CanvasNoteRecord } from './pipeline-canvas-notes'
+
 export type PipelineHandleDirection = 'input' | 'output'
 
 export interface PipelineScreenPosition {
@@ -17,6 +19,10 @@ export interface PipelineCanvasSelection {
   nodeType: string
   connector: PipelineNodeConnector | null
   configuration: PipelineNodeConfiguration | null
+}
+
+export interface PipelineCanvasNotesChangeOptions {
+  recordHistory?: boolean
 }
 
 export interface PipelineNodeConnector {
@@ -44,6 +50,10 @@ export interface CanvasNodeData extends Record<string, unknown> {
     screenPosition?: PipelineScreenPosition,
   ) => void
   onRequestDelete?: () => void
+  noteText?: string
+  noteReadOnly?: boolean
+  onNoteChange?: (id: string, text: string) => void
+  onNoteDelete?: (id: string) => void
 }
 
 export type CanvasNode = Node<CanvasNodeData>

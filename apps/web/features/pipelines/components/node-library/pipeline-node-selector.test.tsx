@@ -87,11 +87,12 @@ describe('PipelineNodeSelector', () => {
     expect(document.querySelector('[data-node-selector-table]')).toBeNull()
   })
 
-  it('shows only the configured table count for a Source', async () => {
+  it('shows the Source name without exposing its configured tables', async () => {
     await renderSelector()
 
     const source = document.querySelector('[data-node-selector-source="mysql_feynman"]')
-    expect(source?.textContent).toContain('3')
+    expect(source?.textContent?.trim()).toBe('mysql_feynman')
+    expect(source?.textContent).not.toContain('Player')
     expect(document.querySelector('[data-node-selector-tables]')).toBeNull()
   })
 
@@ -102,7 +103,8 @@ describe('PipelineNodeSelector', () => {
       sourceState: 'error',
     })
 
-    expect(container?.textContent).toContain('Unable to load data sources')
+    expect(document.body.textContent).toContain('Unable to load data sources')
+    await act(async () => document.getElementById('pipeline-node-selector-tab-transform')?.click())
     await act(async () =>
       document.querySelector<HTMLElement>('[data-node-choice="transform:filter"]')?.click(),
     )
@@ -117,7 +119,8 @@ describe('PipelineNodeSelector', () => {
       sourceState: 'loading',
     })
 
-    expect(container?.textContent).toContain('Loading data sources')
+    expect(document.body.textContent).toContain('Loading data sources')
+    await act(async () => document.getElementById('pipeline-node-selector-tab-transform')?.click())
     await act(async () =>
       document.querySelector<HTMLElement>('[data-node-choice="transform:join"]')?.click(),
     )
@@ -128,6 +131,9 @@ describe('PipelineNodeSelector', () => {
   it('creates an unconfigured Target only from the explicit Target entry', async () => {
     const { onChoose } = await renderSelector()
 
+    await act(async () =>
+      document.getElementById('pipeline-node-selector-tab-destination')?.click(),
+    )
     await act(async () =>
       document.querySelector<HTMLElement>('[data-node-choice="target"]')?.click(),
     )
@@ -157,21 +163,31 @@ describe('PipelineNodeSelector', () => {
     })
 
     expect(document.querySelector('[data-node-selector-source]')).toBeNull()
+    await act(async () =>
+      document.getElementById('pipeline-node-selector-tab-destination')?.click(),
+    )
     expect(document.querySelector('[data-node-choice="target"]')).not.toBeNull()
   })
 
   it('closes on Escape and resets the search term on the next open', async () => {
     const { onOpenChange } = await renderSelector()
-    const search = document.querySelector<HTMLInputElement>('[data-node-selector-search]')
+    const search = document.querySelector<HTMLInputElement>('[role="dialog"] input')
     const value = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+    expect(search).not.toBeNull()
 
     await act(async () => {
       value?.call(search, 'player')
       search?.dispatchEvent(new Event('input', { bubbles: true }))
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+      search?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
     })
 
-    expect(onOpenChange).toHaveBeenCalledWith(false)
+    expect(search?.value).toBe('')
+    expect(onOpenChange).not.toHaveBeenCalled()
+    await act(async () => {
+      search?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    })
+    expect(onOpenChange.mock.calls.at(-1)?.[0]).toBe(false)
+    expect(onOpenChange.mock.calls.at(-1)?.[1]).toMatchObject({ reason: 'escape-key' })
 
     await act(async () =>
       root?.render(
@@ -200,6 +216,6 @@ describe('PipelineNodeSelector', () => {
       ),
     )
 
-    expect(document.querySelector<HTMLInputElement>('[data-node-selector-search]')?.value).toBe('')
+    expect(document.querySelector<HTMLInputElement>('[role="dialog"] input')?.value).toBe('')
   })
 })

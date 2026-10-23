@@ -1,13 +1,9 @@
-import {
-  AlertCircle,
-  ArrowRight,
-  Eye,
-  EyeOff,
-  Moon,
-  RefreshCw,
-  ShieldCheck,
-  Sun,
-} from 'lucide-react'
+import { Button } from '@langgenius/dify-ui/button'
+import { Field as DifyField, FieldDescription, FieldLabel } from '@langgenius/dify-ui/field'
+import { IconButton } from '@langgenius/dify-ui/icon-button'
+import { Input } from '@langgenius/dify-ui/input'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@langgenius/dify-ui/input-group'
+import { AlertCircle, Eye, EyeOff, Moon, RefreshCw, ShieldCheck, Sun } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -51,9 +47,6 @@ interface AuthPageProps {
   ) => Promise<void>
 }
 
-const inputClassName =
-  'h-10 w-full rounded-lg border border-black/[0.1] bg-white px-3.5 text-[13px] text-[#111827] placeholder:text-neutral-400 transition-all focus:border-[#111827] focus:outline-none focus:ring-1 focus:ring-[#111827] dark:border-white/[0.12] dark:bg-[#202124] dark:text-white dark:focus:border-white dark:focus:ring-white'
-
 const codeToMessage: Record<string, string> = {
   'auth.email-already-registered': 'auth.errors.emailExists',
   'auth.invitation-required': 'auth.errors.invitationRequired',
@@ -94,7 +87,6 @@ function oauthErrorMessage(outcome: string) {
   if (outcome.startsWith('auth.')) return codeToMessage[outcome] ?? 'auth.errors.generic'
   return null
 }
-
 export function AuthPage({
   darkMode,
   setDarkMode,
@@ -380,7 +372,7 @@ export function AuthPage({
         <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-[#111827] dark:text-white">
           {t(mode === 'login' ? 'auth.loginTitle' : 'auth.registerTitle')}
         </h1>
-        <p className="text-sm text-[var(--muted-foreground)]">
+        <p className="body-sm-regular text-text-tertiary">
           {t(
             mode === 'login'
               ? 'auth.loginDescription'
@@ -407,7 +399,7 @@ export function AuthPage({
         >
           <span>{t('auth.registrationPolicyUnavailable')}</span>
           <button
-            className="shrink-0 font-medium underline-offset-4 hover:underline"
+            className="system-xs-medium text-components-button-secondary-accent-text shrink-0 underline-offset-4 hover:underline"
             onClick={onRetryRegistrationPolicy}
             type="button"
           >
@@ -417,10 +409,10 @@ export function AuthPage({
       )}
 
       {activeInvitationToken && (
-        <div className="mt-4 flex items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--app-background)] px-3 py-2 text-xs text-[var(--muted-foreground)]">
+        <div className="border-divider-subtle bg-components-card-bg body-xs-regular text-text-tertiary mt-4 flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
           <span>{t('auth.invitationNotice')}</span>
           <button
-            className="shrink-0 font-medium text-[var(--foreground)] hover:underline"
+            className="system-xs-medium text-components-button-secondary-accent-text shrink-0 hover:underline"
             onClick={() => {
               setActiveInvitationToken(null)
               setMode('login')
@@ -438,42 +430,36 @@ export function AuthPage({
       {(accessType === 'trial' ||
         (mode === 'register' && !activeInvitationToken && !trialCodeRequired)) && (
         <div className="mt-4">
-          <Field label={t('auth.organizationNameLabel')} htmlFor="auth-organization-name">
-            <input
+          <AuthField label={t('auth.organizationNameLabel')} name="auth-organization-name">
+            <Input
               autoComplete="organization"
-              className={inputClassName}
               id="auth-organization-name"
               maxLength={100}
-              onChange={(event) => setOrganizationName(event.target.value)}
+              onValueChange={setOrganizationName}
               required
               value={organizationName}
             />
-          </Field>
+          </AuthField>
         </div>
       )}
 
       {!activeInvitationToken &&
         (mode === 'login' || registrationPolicyStatus !== 'ready' || trialCodeRequired) && (
           <form className="mt-4 space-y-2" onSubmit={applyInvitationLink}>
-            <label className="block text-sm font-medium" htmlFor="auth-invitation-link">
-              {t('auth.invitationLinkLabel')}
-            </label>
-            <div className="flex gap-2">
-              <input
-                autoComplete="off"
-                className={inputClassName}
-                id="auth-invitation-link"
-                onChange={(event) => setInvitationLink(event.target.value)}
-                placeholder={t('auth.invitationLinkPlaceholder')}
-                value={invitationLink}
-              />
-              <button
-                className="shrink-0 rounded-md bg-[var(--foreground)] px-4 text-sm font-medium text-[var(--surface)]"
-                type="submit"
-              >
-                {t('auth.useInvitation')}
-              </button>
-            </div>
+            <AuthField label={t('auth.invitationLinkLabel')} name="auth-invitation-link">
+              <div className="flex gap-2">
+                <Input
+                  autoComplete="off"
+                  id="auth-invitation-link"
+                  onValueChange={setInvitationLink}
+                  placeholder={t('auth.invitationLinkPlaceholder')}
+                  value={invitationLink}
+                />
+                <Button size="medium" type="submit" variant="secondary">
+                  {t('auth.useInvitation')}
+                </Button>
+              </div>
+            </AuthField>
           </form>
         )}
       {mode === 'register' &&
@@ -499,43 +485,41 @@ export function AuthPage({
           onStart={(provider) => void handleOAuth(provider)}
         />
         {isStartingOAuth && (
-          <p aria-live="polite" className="text-center text-xs text-[var(--muted-foreground)]">
+          <p aria-live="polite" className="body-xs-regular text-text-tertiary text-center">
             {t('auth.working')}
           </p>
         )}
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           {mode === 'register' && (
-            <Field label={t('auth.nameLabel')} htmlFor="auth-name">
-              <input
+            <AuthField label={t('auth.nameLabel')} name="auth-name">
+              <Input
                 autoComplete="name"
-                className={inputClassName}
                 id="auth-name"
                 maxLength={100}
-                onChange={(event) => setDisplayName(event.target.value)}
+                onValueChange={setDisplayName}
                 placeholder={t('auth.namePlaceholder')}
                 value={displayName}
               />
-            </Field>
+            </AuthField>
           )}
 
-          <Field label={t('auth.emailLabel')} htmlFor="auth-email">
-            <input
+          <AuthField label={t('auth.emailLabel')} name="auth-email">
+            <Input
               autoComplete="email"
-              className={inputClassName}
               id="auth-email"
-              onChange={(event) => updateEmail(event.target.value)}
+              onValueChange={updateEmail}
               placeholder={t('auth.emailPlaceholder')}
               required
               type="email"
               value={email}
             />
-          </Field>
+          </AuthField>
 
           {mode === 'register' && (
             <div className="space-y-2">
-              <button
-                className="h-10 w-full rounded-md border border-[var(--border)] px-3 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--app-background)] disabled:cursor-not-allowed disabled:opacity-60"
+              <Button
+                className="w-full"
                 disabled={
                   !email.trim() ||
                   isSendingCode ||
@@ -546,7 +530,9 @@ export function AuthPage({
                   Boolean(activeInvitationToken && !accessType)
                 }
                 onClick={handleRequestCode}
+                size="large"
                 type="button"
+                variant="secondary"
               >
                 {isSendingCode
                   ? t('auth.sendingCode')
@@ -555,37 +541,35 @@ export function AuthPage({
                     : verificationSent
                       ? t('auth.resendCode')
                       : t('auth.sendCode')}
-              </button>
+              </Button>
               {verificationSent && (
-                <Field label={t('auth.codeLabel')} htmlFor="auth-code">
-                  <input
+                <AuthField label={t('auth.codeLabel')} name="auth-code">
+                  <Input
                     autoComplete="one-time-code"
-                    className={inputClassName}
                     id="auth-code"
                     inputMode="numeric"
                     maxLength={6}
-                    onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, ''))}
+                    onValueChange={(value) => setVerificationCode(value.replace(/\D/g, ''))}
                     pattern="[0-9]{6}"
                     required
                     value={verificationCode}
                   />
-                  <p className="text-xs text-[var(--muted-foreground)]">
+                  <FieldDescription>
                     {t('auth.codeSentTo', { email: email.trim() })}
-                  </p>
-                </Field>
+                  </FieldDescription>
+                </AuthField>
               )}
             </div>
           )}
 
           {(mode === 'login' || verificationSent) && (
-            <Field label={t('auth.passwordLabel')} htmlFor="auth-password">
-              <div className="relative">
-                <input
+            <AuthField label={t('auth.passwordLabel')} name="auth-password">
+              <InputGroup>
+                <InputGroupInput
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                  className={`${inputClassName} pr-10`}
                   id="auth-password"
                   minLength={mode === 'register' ? 8 : undefined}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onValueChange={setPassword}
                   placeholder={t(
                     mode === 'login' ? 'auth.passwordPlaceholder' : 'auth.newPasswordPlaceholder',
                   )}
@@ -593,53 +577,52 @@ export function AuthPage({
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                 />
-                <button
-                  aria-label={t(showPassword ? 'auth.hidePassword' : 'auth.showPassword')}
-                  className="absolute inset-y-0 right-3 text-[var(--muted-foreground)]"
-                  onClick={() => setShowPassword((visible) => !visible)}
-                  type="button"
-                >
-                  {showPassword ? (
-                    <EyeOff aria-hidden="true" className="h-4 w-4" />
-                  ) : (
-                    <Eye aria-hidden="true" className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-            </Field>
+                <InputGroupAddon align="inline-end">
+                  <IconButton
+                    aria-label={t(showPassword ? 'auth.hidePassword' : 'auth.showPassword')}
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    size="lg"
+                    type="button"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </IconButton>
+                </InputGroupAddon>
+              </InputGroup>
+            </AuthField>
           )}
 
           {(mode === 'login' || verificationSent) && (
-            <button
-              className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--foreground)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            <Button
+              aria-labelledby="auth-submit-label"
+              className="w-full"
               disabled={
-                isSubmitting ||
                 isSendingCode ||
                 registrationPolicyBlocked ||
                 Boolean(activeInvitationToken && !accessType)
               }
+              loading={isSubmitting}
+              size="large"
               type="submit"
+              variant="primary"
             >
-              {isSubmitting ? (
-                <>
-                  <RefreshCw aria-hidden="true" className="h-4 w-4 animate-spin" />
-                  <span>{t('auth.working')}</span>
-                </>
-              ) : (
-                <>
-                  <span>{t(mode === 'login' ? 'auth.loginAction' : 'auth.registerAction')}</span>
-                  <ArrowRight aria-hidden="true" className="h-4 w-4" />
-                </>
-              )}
-            </button>
+              <span id="auth-submit-label">
+                {t(
+                  isSubmitting
+                    ? 'auth.working'
+                    : mode === 'login'
+                      ? 'auth.loginAction'
+                      : 'auth.registerAction',
+                )}
+              </span>
+            </Button>
           )}
         </form>
 
         <div className="space-y-1 text-center">
-          <p className="text-sm text-[var(--muted-foreground)]">
+          <p className="body-sm-regular text-text-tertiary">
             {t(mode === 'login' ? 'auth.noAccount' : 'auth.haveInviteAccount')}{' '}
             <button
-              className="font-medium text-[var(--foreground)] underline-offset-4 hover:underline"
+              className="system-sm-medium text-components-button-secondary-accent-text underline-offset-4 hover:underline"
               onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
               type="button"
             >
@@ -647,7 +630,7 @@ export function AuthPage({
             </button>
           </p>
           {mode === 'login' && !activeInvitationToken && (
-            <p className="text-xs leading-relaxed text-[var(--muted-foreground)]">
+            <p className="body-xs-regular text-text-tertiary">
               {registrationPolicyStatus === 'ready' &&
                 trialCodeRequired &&
                 t('auth.invitationRequiredForRegistration')}
@@ -655,7 +638,7 @@ export function AuthPage({
           )}
         </div>
 
-        <div className="flex items-center justify-center gap-2 border-t border-[var(--border)] pt-4 text-xs text-[var(--muted-foreground)]">
+        <div className="border-divider-subtle body-xs-regular text-text-tertiary flex items-center justify-center gap-2 border-t pt-4">
           <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0" />
           <span>{t('auth.securityNote')}</span>
         </div>
@@ -698,15 +681,14 @@ function AuthShell({
           <span className="hidden text-xs text-neutral-500 sm:inline dark:text-neutral-400">
             {t('auth.headerNote')}
           </span>
-          <button
+          <IconButton
             aria-label={t('app.toggleTheme')}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-black/[0.04] hover:text-neutral-900 dark:hover:bg-white/[0.05] dark:hover:text-white"
             onClick={() => setDarkMode(!darkMode)}
             title={t('app.toggleTheme')}
-            type="button"
+            size="lg"
           >
             {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </button>
+          </IconButton>
         </div>
       </header>
 
@@ -726,7 +708,7 @@ function AuthShell({
               <div aria-hidden="true" className="flowing-border-glow" />
               <section className="liquid-glass-card relative z-10 flex w-full flex-col justify-between px-7 py-8 transition-all duration-200 sm:px-9 sm:py-9">
                 <div aria-hidden="true" className="liquid-glass-meniscus" />
-                <div className="mx-auto w-full max-w-[360px]">{children}</div>
+                {children}
               </section>
             </div>
           </div>
@@ -736,24 +718,19 @@ function AuthShell({
   )
 }
 
-function Field({
+function AuthField({
   children,
-  htmlFor,
+  name,
   label,
 }: {
   children: ReactNode
-  htmlFor: string
+  name: string
   label: string
 }) {
   return (
-    <div className="space-y-1.5">
-      <label
-        className="block text-[12px] font-medium text-[#374151] dark:text-neutral-300"
-        htmlFor={htmlFor}
-      >
-        {label}
-      </label>
+    <DifyField name={name}>
+      <FieldLabel>{label}</FieldLabel>
       {children}
-    </div>
+    </DifyField>
   )
 }

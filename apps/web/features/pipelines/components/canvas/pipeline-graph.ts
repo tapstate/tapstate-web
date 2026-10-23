@@ -55,13 +55,15 @@ export function flowToPipelineDag(
   edges: readonly FlowEdge[],
 ): PipelineDag {
   return {
-    nodes: nodes.map((node) => ({
-      id: node.id,
-      type: node.data.nodeType as PipelineDag['nodes'][number]['type'],
-      label: node.data.label,
-      detail: node.data.detail,
-      description: node.data.description || null,
-    })),
+    nodes: nodes
+      .filter((node) => node.type !== 'note')
+      .map((node) => ({
+        id: node.id,
+        type: node.data.nodeType as PipelineDag['nodes'][number]['type'],
+        label: node.data.label,
+        detail: node.data.detail,
+        description: node.data.description || null,
+      })),
     edges: edges.map((edge) => ({
       id: edge.id,
       source: edge.source,
