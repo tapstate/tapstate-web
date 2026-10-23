@@ -814,8 +814,10 @@ describe('WizardBuilder publish flow', () => {
       rootLimit: 1,
       signal: expect.any(AbortSignal),
     })
-    expect(container?.querySelector('[data-live-preview-status="complete"]')).not.toBeNull()
-    expect(container?.querySelector('[data-live-preview-run="preview-run-2"]')).not.toBeNull()
+    await vi.waitFor(() => {
+      expect(container?.querySelector('[data-live-preview-status="complete"]')).not.toBeNull()
+      expect(container?.querySelector('[data-live-preview-run="preview-run-2"]')).not.toBeNull()
+    })
   })
 
   it('keeps a completed preview stable across status-driven rerenders', async () => {
