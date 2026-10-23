@@ -1054,7 +1054,10 @@
           "removeUnionInput": "Remove input stream",
           "addUpstreamInput": "Add upstream stream",
           "selectAnotherInput": "Select another available stream",
-          "unionWizardUnavailable": "Union needs explicit multi-stream references, which this builder does not collect. Remove this step to save and start."
+          "unionCurrentInput": "Current pipeline output",
+          "unionAdditionalInputs": "Additional input tables",
+          "unionNoAdditionalInputs": "No additional source tables are available for this Union.",
+          "unionInputRequired": "Select at least one additional table to publish this Union."
         }
       },
       "runtime": {

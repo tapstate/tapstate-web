@@ -194,8 +194,29 @@ export function wizardPublicationIssue(value: PipelineJsonObject | null): string
     ...array(wizard.transforms),
   ].map(object)
   for (const t of transforms) {
-    if (t.type !== 'filter' && t.type !== 'map' && t.type !== 'js' && t.type !== 'unwind')
+    if (
+      t.type !== 'filter' &&
+      t.type !== 'map' &&
+      t.type !== 'js' &&
+      t.type !== 'unwind' &&
+      t.type !== 'union'
+    )
       return `The current server cannot publish Wizard ${text(t.type)} transforms yet. Your configuration is saved as a draft.`
+    if (t.type === 'union') {
+      const fields = object(t.fields)
+      const inputs = array(fields.from)
+      if (
+        inputs.length === 0 ||
+        inputs.some(
+          (input) =>
+            typeof input !== 'string' ||
+            input.indexOf('.') < 1 ||
+            input.indexOf('.') === input.length - 1,
+        )
+      )
+        return 'Select at least one additional table for Union.'
+      if (new Set(inputs).size !== inputs.length) return 'Choose each additional Union input once.'
+    }
     if (t.type === 'js' && !text(object(t.fields).script).trim())
       return 'Enter a JavaScript script before publishing.'
     if (t.type === 'filter' && !text(object(t.fields).expr).trim())

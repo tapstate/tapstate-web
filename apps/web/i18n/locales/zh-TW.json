@@ -1054,7 +1054,10 @@
           "removeUnionInput": "移除輸入資料流",
           "addUpstreamInput": "新增上游資料流",
           "selectAnotherInput": "選擇其他可用資料流",
-          "unionWizardUnavailable": "Union 需要明確的多路資料流參照，目前建構器尚未收集這些資訊。移除此步驟後即可儲存並啟動。"
+          "unionCurrentInput": "目前 Pipeline 輸出",
+          "unionAdditionalInputs": "其他輸入資料表",
+          "unionNoAdditionalInputs": "目前沒有可用於此 Union 的其他來源資料表。",
+          "unionInputRequired": "至少選擇一個其他輸入資料表才能發佈此 Union。"
         }
       },
       "runtime": {

@@ -441,6 +441,48 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
 
   const flattenRelations = (nodes: RelationNode[]): RelationNode[] =>
     nodes.flatMap((r) => [r, ...flattenRelations(r.children || [])])
+  const availableUnionInputs = React.useMemo(() => {
+    const selectedSources = new Set([
+      ...(rootConfig ? [rootConfig.source] : []),
+      ...flattenRelations(relations).map((relation) => relation.source),
+    ])
+    return AVAILABLE_DATA_SOURCES.filter(
+      (source) => !source.sink && selectedSources.has(source.id),
+    ).flatMap((source) =>
+      source.tables.map((table) => ({
+        reference: `${source.id}.${table.name}`,
+        label: `${source.name} · ${table.name}`,
+      })),
+    )
+  }, [AVAILABLE_DATA_SOURCES, rootConfig, relations])
+  const unionInputsFor = (
+    sourceNameOrId: string,
+    tableName: string,
+    additionalExcluded: string[] = [],
+  ) => {
+    const sourceId =
+      AVAILABLE_DATA_SOURCES.find(
+        (source) => source.id === sourceNameOrId || source.name === sourceNameOrId,
+      )?.id || sourceNameOrId
+    const excluded = new Set([`${sourceId}.${tableName}`, ...additionalExcluded])
+    return availableUnionInputs.filter((input) => !excluded.has(input.reference))
+  }
+  const pipelineUnionInputs = React.useMemo(() => {
+    const sourceTable = (sourceNameOrId: string, tableName: string) => {
+      const sourceId =
+        AVAILABLE_DATA_SOURCES.find(
+          (source) => source.id === sourceNameOrId || source.name === sourceNameOrId,
+        )?.id || sourceNameOrId
+      return `${sourceId}.${tableName}`
+    }
+    return [
+      ...(rootConfig ? [sourceTable(rootConfig.source, rootConfig.table)] : []),
+      ...flattenRelations(relations).map((relation) =>
+        sourceTable(relation.source, relation.table),
+      ),
+    ]
+  }, [AVAILABLE_DATA_SOURCES, rootConfig, relations])
+
   const tableToken = (r: RelationNode) => r.table + ' · ' + r.id
   const getColumnsForTable = (sourceName?: string, tableName?: string): string[] => {
     const entity = flattenRelations(relations).find((r) => tableToken(r) === tableName)
@@ -1783,6 +1825,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
               sourceName={rel.source}
               columns={getColumnsForTable(rel.source, rel.table)}
               transforms={rel.transforms || []}
+              availableUnionInputs={unionInputsFor(rel.source, rel.table)}
               onChange={(nextTransforms) =>
                 updateRelation(rel.id, (r) => ({ ...r, transforms: nextTransforms }))
               }
@@ -2450,6 +2493,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                         sourceName={rootConfig.source}
                         columns={rootConfig.columns}
                         transforms={rootConfig.transforms || []}
+                        availableUnionInputs={unionInputsFor(rootConfig.source, rootConfig.table)}
                         onChange={(nextTransforms) =>
                           setRootConfig((prev) =>
                             prev ? { ...prev, transforms: nextTransforms } : null,
@@ -2798,6 +2842,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                           ),
                         ]),
                       )}
+                      availableUnionInputs={
+                        rootConfig
+                          ? unionInputsFor(rootConfig.source, rootConfig.table, pipelineUnionInputs)
+                          : []
+                      }
                       transforms={pipelineTransforms}
                       onChange={setPipelineTransforms}
                       hideHeader={true}

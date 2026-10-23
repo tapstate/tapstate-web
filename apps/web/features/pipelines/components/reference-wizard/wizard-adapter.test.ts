@@ -6,6 +6,7 @@ import {
   readWizard,
   summarizeWizard,
   writeWizard,
+  wizardPublicationIssue,
   wizardUpsertKeylessInput,
 } from './wizard-adapter'
 
@@ -107,6 +108,12 @@ describe('Wizard post-assembly transforms', () => {
             },
           },
         },
+        {
+          id: 'union-orders',
+          name: 'Combine archived orders',
+          type: 'union',
+          config: { union: { from: ['warehouse.archive_orders'] } },
+        },
       ],
       destinationTable: 'customer_views',
       destinationSourceId: 'atlas',
@@ -117,6 +124,11 @@ describe('Wizard post-assembly transforms', () => {
     expect(document.transforms).toEqual([
       { id: 'filter-active', type: 'filter', fields: { expr: "status == 'active'" } },
       { id: 'map-label', type: 'map', fields: { label: 'customer' } },
+      {
+        id: 'union-orders',
+        type: 'union',
+        fields: { from: ['warehouse.archive_orders'] },
+      },
     ])
     const restored = readWizard(document, [
       {
@@ -129,12 +141,35 @@ describe('Wizard post-assembly transforms', () => {
     expect(restored.transforms.map(({ id, type }) => ({ id, type }))).toEqual([
       { id: 'filter-active', type: 'filter' },
       { id: 'map-label', type: 'map' },
+      { id: 'union-orders', type: 'union' },
     ])
     expect(restored.transforms[1].config.map?.fields[0]).toMatchObject({
       outputField: 'label',
       ruleType: 'literal',
       value: '"customer"',
     })
+    expect(restored.transforms[2].config.union?.from).toEqual(['warehouse.archive_orders'])
+  })
+
+  it('allows a Wizard union only when it names an additional input', () => {
+    const wizard = {
+      root: { sourceId: 'crm', table: 'orders' },
+      output: { config: { sourceId: 'warehouse', table: 'orders_out' } },
+    }
+    expect(
+      wizardPublicationIssue({
+        ...wizard,
+        transforms: [
+          { id: 'union-orders', type: 'union', fields: { from: ['warehouse.archive_orders'] } },
+        ],
+      }),
+    ).toBeNull()
+    expect(
+      wizardPublicationIssue({
+        ...wizard,
+        transforms: [{ id: 'union-orders', type: 'union', fields: { from: [] } }],
+      }),
+    ).toBe('Select at least one additional table for Union.')
   })
 
   it('keeps the existing Atlas representation for a cloud deployment', () => {
