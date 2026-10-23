@@ -83,7 +83,7 @@ describe('PipelineNodeToolbar', () => {
     )
     expect(deleteButton).not.toBeNull()
     expect(deleteButton?.textContent).toContain('⌫')
-    const shortcut = deleteButton?.querySelector('span')
+    const shortcut = deleteButton?.querySelector('.ml-auto')
     expect(shortcut?.textContent).toBe('⌫')
     expect(shortcut?.className).toContain('text-xs')
     await act(async () => deleteButton?.click())

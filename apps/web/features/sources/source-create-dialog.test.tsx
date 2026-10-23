@@ -417,7 +417,7 @@ describe('SourceCreateDialog', () => {
       hasClasses(dialogContent()?.querySelector('aside'), 'hidden', 'w-[360px]', 'xl:w-[420px]'),
     ).toBe(true)
 
-    const modeGroup = document.body.querySelector('[role="group"][aria-label="Read mode"]')
+    const modeGroup = document.body.querySelector('[role="radiogroup"][aria-label="Read mode"]')
     expect(hasClasses(modeGroup, 'inline-flex', 'bg-components-segmented-control-bg-normal')).toBe(
       true,
     )
@@ -425,7 +425,7 @@ describe('SourceCreateDialog', () => {
       (button) => button.textContent === 'cdc',
     )
     await act(async () => cdcMode?.click())
-    expect(cdcMode?.getAttribute('aria-pressed')).toBe('true')
+    expect(cdcMode?.getAttribute('aria-checked')).toBe('true')
 
     await act(async () => backButton()?.click())
     await vi.waitFor(() => {

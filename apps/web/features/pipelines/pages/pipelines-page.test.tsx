@@ -555,11 +555,11 @@ describe('PipelinesPage', () => {
     )
     expect(wizardOption?.getAttribute('aria-pressed')).toBe('true')
     await act(async () => dagOption?.click())
-    expect(wizardOption?.getAttribute('aria-pressed')).toBe('true')
-    await act(async () => dagOption?.click())
+    expect(wizardOption?.getAttribute('aria-pressed')).toBe('false')
     expect(dagOption?.getAttribute('aria-pressed')).toBe('true')
     await act(async () => wizardOption?.click())
     expect(wizardOption?.getAttribute('aria-pressed')).toBe('true')
+    expect(dagOption?.getAttribute('aria-pressed')).toBe('false')
 
     const invalidId = await setPipelineId(wizardDialog, 'invalid id')
     expect(invalidId?.getAttribute('aria-invalid')).toBe('true')
