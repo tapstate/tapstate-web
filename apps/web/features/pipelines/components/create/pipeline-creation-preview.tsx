@@ -36,11 +36,7 @@ export function PipelineCreationPreview({ definition }: PipelineCreationPreviewP
           aria-hidden="true"
         />
         <div className="pipeline-create-preview__stage-shell">
-          {definition.value === 'wizard' ? (
-            <WizardPreview />
-          ) : (
-            <DagPreview />
-          )}
+          {definition.value === 'wizard' ? <WizardPreview /> : <DagPreview />}
         </div>
         <div
           className="pipeline-create-preview__rule border-b-divider-subtle absolute inset-x-0 border-b"

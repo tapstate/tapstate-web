@@ -58,7 +58,7 @@ export function PipelineNodeToolbar({
               <IconButton
                 type="button"
                 size="md"
-                className="rounded-md data-popup-open:bg-state-base-hover"
+                className="data-popup-open:bg-state-base-hover rounded-md"
                 aria-label={t('pipelines.workspace.actions.nodeToolbar.more', { node: nodeLabel })}
                 data-toolbar-action="more"
               >
@@ -69,7 +69,7 @@ export function PipelineNodeToolbar({
           <DropdownMenuContent
             placement="bottom-end"
             sideOffset={4}
-            className="w-auto min-w-40 whitespace-nowrap border-[0.5px] border-components-panel-border bg-components-panel-bg-blur py-1 shadow-lg backdrop-blur-[5px]"
+            className="border-components-panel-border bg-components-panel-bg-blur w-auto min-w-40 border-[0.5px] py-1 whitespace-nowrap shadow-lg backdrop-blur-[5px]"
           >
             <DropdownMenuItem
               variant="destructive"

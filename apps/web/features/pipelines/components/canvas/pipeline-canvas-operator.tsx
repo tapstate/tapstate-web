@@ -159,7 +159,7 @@ export function PipelineCanvasOperator({
         </div>
         <div className="pipeline-canvas__operator-viewport">
           <MiniMap
-            className="pipeline-canvas__minimap--operator max-md:!hidden absolute! bottom-10! z-9 m-0! h-18.25! w-25.75! rounded-lg! border-[0.5px]! border-divider-subtle! bg-background-default-subtle! shadow-md! shadow-shadow-shadow-5!"
+            className="pipeline-canvas__minimap--operator border-divider-subtle! bg-background-default-subtle! shadow-shadow-shadow-5! absolute! bottom-10! z-9 m-0! h-18.25! w-25.75! rounded-lg! border-[0.5px]! shadow-md! max-md:!hidden"
             style={{ width: 102, height: 72 }}
             maskColor="var(--color-workflow-minimap-bg)"
             nodeClassName={(node) =>
