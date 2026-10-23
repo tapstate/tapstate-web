@@ -1,16 +1,107 @@
 import Badge from '@langgenius/dify-ui/badge'
+import { Button } from '@langgenius/dify-ui/button'
 import FilterEmptyState from '@langgenius/dify-ui/filter-empty-state'
+import { Input } from '@langgenius/dify-ui/input'
 import { SearchInput } from '@langgenius/dify-ui/search-input'
 import { StatusDot } from '@langgenius/dify-ui/status-dot'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { CloudApiError, cloudApi, type OrganizationInvitation } from '../../service/cloud-api'
 import { useCloudAppState } from '../../state/cloud-app-state'
 
 export function OrganizationsPage() {
   const { t } = useTranslation()
-  const { activeOrganization, organizations } = useCloudAppState()
+  const { activeOrganization, organizations, user } = useCloudAppState()
   const [searchQuery, setSearchQuery] = useState('')
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteLink, setInviteLink] = useState<string | null>(null)
+  const [invitations, setInvitations] = useState<OrganizationInvitation[]>([])
+  const [isLoadingInvitations, setIsLoadingInvitations] = useState(false)
+  const [isCreatingInvitation, setIsCreatingInvitation] = useState(false)
+  const [busyInvitationId, setBusyInvitationId] = useState<string | null>(null)
+  const [invitationError, setInvitationError] = useState<string | null>(null)
+  const [copiedInvite, setCopiedInvite] = useState(false)
+  const canManageInvitations = Boolean(
+    activeOrganization?.ownerEmail &&
+    user?.email.toLowerCase() === activeOrganization.ownerEmail.toLowerCase(),
+  )
+
+  useEffect(() => {
+    if (!activeOrganization || !canManageInvitations) {
+      setInvitations([])
+      return
+    }
+    let cancelled = false
+    setIsLoadingInvitations(true)
+    cloudApi
+      .invitations(activeOrganization.id)
+      .then((items) => {
+        if (!cancelled) setInvitations(items)
+      })
+      .catch(() => {
+        if (!cancelled) setInvitationError('organizations.inviteLoadError')
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingInvitations(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [activeOrganization, canManageInvitations])
+
+  const createInvitation = async () => {
+    if (!activeOrganization) return
+    setInvitationError(null)
+    setCopiedInvite(false)
+    setIsCreatingInvitation(true)
+    try {
+      const created = await cloudApi.createInvitation(
+        activeOrganization.id,
+        inviteEmail || undefined,
+      )
+      const url = new URL('/auth', window.location.origin)
+      url.searchParams.set('invite', created.token)
+      setInviteLink(url.toString())
+      setInviteEmail('')
+      setInvitations(await cloudApi.invitations(activeOrganization.id))
+    } catch (error) {
+      setInvitationError(
+        error instanceof CloudApiError && error.status === 403
+          ? 'organizations.ownerOnly'
+          : 'organizations.inviteCreateError',
+      )
+    } finally {
+      setIsCreatingInvitation(false)
+    }
+  }
+
+  const revokeInvitation = async (invitationId: string) => {
+    if (!activeOrganization) return
+    setInvitationError(null)
+    setBusyInvitationId(invitationId)
+    try {
+      const updated = await cloudApi.revokeInvitation(activeOrganization.id, invitationId)
+      setInvitations((current) =>
+        current.map((invitation) => (invitation.id === invitationId ? updated : invitation)),
+      )
+    } catch {
+      setInvitationError('organizations.inviteRevokeError')
+    } finally {
+      setBusyInvitationId(null)
+    }
+  }
+
+  const copyInviteLink = async () => {
+    if (!inviteLink) return
+    try {
+      await navigator.clipboard.writeText(inviteLink)
+      setCopiedInvite(true)
+    } catch {
+      setInvitationError('organizations.copyError')
+    }
+  }
+
   const filteredOrganizations = useMemo(
     () =>
       organizations.filter((organization) =>
@@ -34,7 +125,140 @@ export function OrganizationsPage() {
         </div>
       </header>
 
-      <div className="border-divider-subtle flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-6 py-2.5">
+      {canManageInvitations && activeOrganization && (
+        <section
+          aria-labelledby="organization-invitations-title"
+          className="border-divider-subtle shrink-0 space-y-4 border-b p-6"
+        >
+          <div>
+            <h2
+              className="title-md-semi-bold text-text-primary"
+              id="organization-invitations-title"
+            >
+              {t('organizations.invitationsTitle')}
+            </h2>
+            <p className="body-xs-regular text-text-tertiary mt-1">
+              {t('organizations.invitationsDescription')}
+            </p>
+          </div>
+
+          <form
+            className="flex flex-col gap-2 sm:flex-row"
+            onSubmit={(event) => {
+              event.preventDefault()
+              void createInvitation()
+            }}
+          >
+            <Input
+              autoComplete="email"
+              className="min-w-0 flex-1"
+              onValueChange={setInviteEmail}
+              placeholder={t('organizations.inviteEmailPlaceholder')}
+              type="email"
+              value={inviteEmail}
+            />
+            <Button disabled={isCreatingInvitation} size="medium" type="submit" variant="primary">
+              {t(
+                isCreatingInvitation
+                  ? 'organizations.creatingInvite'
+                  : 'organizations.createInvite',
+              )}
+            </Button>
+          </form>
+
+          {inviteLink && (
+            <div className="border-divider-subtle bg-components-card-bg space-y-2 rounded-lg border p-3">
+              <p className="body-xs-regular text-text-tertiary">
+                {t('organizations.inviteCreatedNotice')}
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  aria-label={t('organizations.inviteLink')}
+                  className="min-w-0 flex-1 font-mono"
+                  readOnly
+                  value={inviteLink}
+                />
+                <Button
+                  onClick={() => void copyInviteLink()}
+                  size="medium"
+                  type="button"
+                  variant="secondary"
+                >
+                  {t(copiedInvite ? 'organizations.copied' : 'organizations.copyInvite')}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {invitationError && (
+            <p className="body-xs-regular text-text-destructive" role="alert">
+              {t(invitationError)}
+            </p>
+          )}
+
+          <div className="border-divider-subtle overflow-x-auto rounded-lg border">
+            <table className="w-full min-w-140 border-collapse text-sm">
+              <thead className="border-divider-subtle text-text-tertiary border-b text-xs font-medium uppercase">
+                <tr className="[&>th]:px-3 [&>th]:py-2 [&>th]:text-left [&>th]:font-[weight:inherit]">
+                  <th>{t('organizations.invitedEmail')}</th>
+                  <th>{t('organizations.inviteExpires')}</th>
+                  <th>{t('organizations.inviteStatus')}</th>
+                  <th>{t('organizations.inviteActions')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invitations.map((invitation) => (
+                  <tr
+                    className="border-divider-subtle text-text-secondary border-b last:border-0"
+                    key={invitation.id}
+                  >
+                    <td className="text-text-primary px-3 py-2.5">
+                      {invitation.invitedEmail ?? t('organizations.anyEmail')}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {new Date(invitation.expiresAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {t(`organizations.status.${invitation.status}`)}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {invitation.status === 'active' && (
+                        <Button
+                          className="px-0"
+                          disabled={busyInvitationId === invitation.id}
+                          onClick={() => void revokeInvitation(invitation.id)}
+                          size="small"
+                          type="button"
+                          variant="ghost"
+                        >
+                          {t(
+                            busyInvitationId === invitation.id
+                              ? 'organizations.revokingInvite'
+                              : 'organizations.revokeInvite',
+                          )}
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {invitations.length === 0 && (
+                  <tr>
+                    <td className="text-text-tertiary px-3 py-4" colSpan={4}>
+                      {t(
+                        isLoadingInvitations
+                          ? 'organizations.loadingInvites'
+                          : 'organizations.noInvites',
+                      )}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      <div className="border-divider-subtle bg-background-default-subtle flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-6 py-2.5">
         <p className="system-xs-regular text-text-tertiary">
           {t('organizationList.current')}{' '}
           <span className="system-xs-medium text-text-secondary">
@@ -43,12 +267,12 @@ export function OrganizationsPage() {
           <span> · {t('organizationList.count', { count: organizations.length })}</span>
         </p>
         <SearchInput
-          className="w-50 max-w-full"
-          value={searchQuery}
-          onValueChange={setSearchQuery}
           aria-label={t('common.searchOrganizations')}
+          className="w-50 max-w-full"
           clearLabel={t('organizationList.clearSearch')}
+          onValueChange={setSearchQuery}
           placeholder={t('common.searchOrganizations')}
+          value={searchQuery}
         />
       </div>
 
@@ -103,8 +327,8 @@ export function OrganizationsPage() {
                     <span className="inline-flex items-center gap-1.5">
                       <StatusDot
                         className="rounded-full"
-                        status={organization.status === 'SUSPENDED' ? 'error' : 'success'}
                         size="small"
+                        status={organization.status === 'SUSPENDED' ? 'error' : 'success'}
                       />
                       <span>
                         {t(

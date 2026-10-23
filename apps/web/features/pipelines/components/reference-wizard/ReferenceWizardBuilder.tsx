@@ -20,8 +20,9 @@ import { useTranslation } from 'react-i18next'
 
 import type { PipelinePreviewRun } from '@/service/pipelines/pipeline-client'
 
-import './wizard-reference.css'
 import { ConnectorIcon } from '@/components/connector-icon'
+
+import './wizard-reference.css'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -34,7 +35,12 @@ import { cn } from '@/lib/utils'
 
 import type { DeploymentProfile } from '../../model/deployment-profile'
 
-import { TableTransformsManager, type TransformStep } from './TableTransformsManager'
+import { UnwindTargetIdentitySummary } from '../unwind-target-identity-summary'
+import {
+  TableTransformsManager,
+  effectiveUnwindSourceIdField,
+  type TransformStep,
+} from './TableTransformsManager'
 import { reparentRelation } from './wizard-tree'
 
 export interface WizardBuilderProps {
@@ -193,6 +199,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
 }) => {
   const { t } = useTranslation()
   const [activeContext, setActiveContext] = React.useState('root')
+  const [previewProjection, setPreviewProjection] = React.useState<'target' | 'logical'>('target')
   const [previewMode, setPreviewMode] = React.useState<'json' | 'table'>('json')
   const [planMode, setPlanMode] = React.useState<'dsl' | 'json' | null>(null)
   const [dsl, setDsl] = React.useState<string | null>(null)
@@ -228,6 +235,16 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   const [relations, setRelations] = React.useState<RelationNode[]>(initial.relations)
   const [pipelineTransforms, setPipelineTransforms] = React.useState(initial.transforms)
   const [selectedDocumentIndex, setSelectedDocumentIndex] = React.useState(0)
+  const hasUnwind = () =>
+    [
+      ...(rootConfig?.transforms || []),
+      ...pipelineTransforms,
+      ...flattenRelations(relations).flatMap((relation) => relation.transforms || []),
+    ].some((step) => step.type === 'unwind' && step.enabled !== false)
+  const identityPlans =
+    livePreviewStatus === 'complete' || livePreviewStatus === 'error'
+      ? livePreview?.identityPlans
+      : undefined
   const targetDataSource = AVAILABLE_DESTINATIONS.find((source) => source.id === targetSourceId)
   const availableWriteModes = targetDataSource?.writeModes?.length
     ? targetDataSource.writeModes
@@ -662,7 +679,9 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   }, [activeContext, relationChain, rootConfig?.table, t])
 
   const compiledPlanJson = compiledSpec
-  const documents = livePreview?.documents || []
+  const logicalPreview =
+    previewProjection === 'logical' && livePreview?.logicalDocuments !== undefined
+  const documents = (logicalPreview ? livePreview.logicalDocuments : livePreview?.documents) || []
   const selectedIndex = Math.min(selectedDocumentIndex, Math.max(0, documents.length - 1))
   const selectedDocument = documents[selectedIndex] || null
   const rootFields = new Set(rootConfig?.columns || [])
@@ -1615,6 +1634,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
         {rel.isPreProcessOpen && (
           <div className="mt-3 border-t border-gray-100 pt-3" onClick={(e) => e.stopPropagation()}>
             <TableTransformsManager
+              identityPlans={identityPlans}
               tableName={rel.table}
               sourceName={rel.source}
               columns={getColumnsForTable(rel.source, rel.table)}
@@ -2228,6 +2248,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                       onClick={(e) => e.stopPropagation()}
                     >
                       <TableTransformsManager
+                        identityPlans={identityPlans}
                         tableName={rootConfig.table}
                         sourceName={rootConfig.source}
                         columns={rootConfig.columns}
@@ -2566,6 +2587,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   </div>
                   <div className="mt-3.5" onClick={(event) => event.stopPropagation()}>
                     <TableTransformsManager
+                      identityPlans={identityPlans}
                       tableName={rootConfig?.table || 'root'}
                       sourceName={rootConfig?.source || 'Pipeline'}
                       columns={Array.from(
@@ -2576,6 +2598,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                           ),
                         ]),
                       )}
+                      inheritedSourceIdField={
+                        relations.length === 0
+                          ? effectiveUnwindSourceIdField(rootConfig?.transforms)
+                          : undefined
+                      }
                       transforms={pipelineTransforms}
                       onChange={setPipelineTransforms}
                       hideHeader={true}
@@ -2859,6 +2886,37 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
             </span>
           </div>
 
+          {livePreview?.logicalDocuments && hasUnwind() && (
+            <div
+              className="border-border flex gap-2 border-b px-3 py-2"
+              role="group"
+              aria-label={t('wizard.previewPanel.projection')}
+            >
+              {(['target', 'logical'] as const).map((projection) => (
+                <button
+                  key={projection}
+                  type="button"
+                  aria-pressed={previewProjection === projection}
+                  onClick={() => setPreviewProjection(projection)}
+                  className={cn(
+                    'focus-visible:outline-ring rounded-md border px-2 py-1 text-xs focus-visible:outline-2',
+                    previewProjection === projection
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border text-muted-foreground',
+                  )}
+                >
+                  {t(`wizard.previewPanel.${projection}Projection`)}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <UnwindTargetIdentitySummary
+            enabled={hasUnwind()}
+            plans={identityPlans}
+            status={livePreviewStatus}
+          />
+
           {livePreviewStatus === 'error' && (
             <p
               className="border-border text-destructive border-b px-3 py-2 text-xs"
@@ -3031,9 +3089,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
           <div className="border-border bg-muted/30 text-muted-foreground flex items-center justify-between gap-3 border-t px-3 py-2 text-[11px]">
             <span className="truncate">
               {t(
-                livePreview?.format === 'mongo-extended-json'
-                  ? 'wizard.previewPanel.mongoExtendedJsonTarget'
-                  : 'wizard.previewPanel.logicalJsonTarget',
+                logicalPreview
+                  ? 'wizard.previewPanel.logicalProjection'
+                  : livePreview?.format === 'mongo-extended-json'
+                    ? 'wizard.previewPanel.mongoExtendedJsonTarget'
+                    : 'wizard.previewPanel.logicalJsonTarget',
                 { destination: destinationName },
               )}
             </span>

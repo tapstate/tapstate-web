@@ -2,12 +2,14 @@ import type { ReactNode } from 'react'
 
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
+  BellRing,
   Building2,
   Check,
   ChevronDown,
   ChevronRight,
   CreditCard,
   Home,
+  Inbox,
   LogOut,
   Moon,
   Search,
@@ -32,6 +34,9 @@ const navigation = [
   { label: 'Overview', path: '/', icon: Home, exact: true },
   { label: 'Organizations', path: '/organizations', icon: Building2, exact: false },
   { label: 'Clusters', path: '/clusters', icon: Server, exact: false },
+  { label: 'Events', path: '/events', icon: BellRing, exact: false },
+  { label: 'Alert policies', path: '/alert-policies', icon: BellRing, exact: false },
+  { label: 'Deliveries', path: '/deliveries', icon: Inbox, exact: false },
   { label: 'Billing', path: '/billing', icon: CreditCard, exact: false },
 ] as const
 
@@ -53,7 +58,15 @@ export function CloudConsoleShell({
   const navigate = useNavigate()
   const currentPath = useRouterState({
     select: (state) =>
-      state.location.pathname as '/' | '/organizations' | '/clusters' | '/billing' | '/settings',
+      state.location.pathname as
+        | '/'
+        | '/organizations'
+        | '/clusters'
+        | '/events'
+        | '/alert-policies'
+        | '/deliveries'
+        | '/billing'
+        | '/settings',
   })
   const {
     activeOrganization,
@@ -75,6 +88,12 @@ export function CloudConsoleShell({
     .slice(0, 3)
   const displayName = user.displayName?.trim() || user.email.split('@')[0]
   const initials = displayName.slice(0, 1).toUpperCase()
+  const canManageAlertPolicies =
+    !currentOrganization?.ownerEmail ||
+    currentOrganization.ownerEmail.toLowerCase() === user.email.toLowerCase()
+  const visibleNavigation = navigation.filter(
+    (item) => item.path !== '/alert-policies' || canManageAlertPolicies,
+  )
 
   const selectOrganization = (nextOrganization: Organization) => {
     setActiveOrganization(nextOrganization)
@@ -166,7 +185,7 @@ export function CloudConsoleShell({
         </div>
 
         <div className="flex-1 space-y-1 overflow-y-auto px-1">
-          {navigation.map(({ exact, icon: Icon, label, path }) => (
+          {visibleNavigation.map(({ exact, icon: Icon, label, path }) => (
             <Link
               activeOptions={{ exact }}
               activeProps={{
