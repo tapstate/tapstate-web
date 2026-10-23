@@ -501,6 +501,11 @@ describe('PipelinesPage', () => {
       expect(document.querySelector('[data-testid="pipeline-creation-dialog"]')).not.toBeNull()
     })
     expect(document.body.textContent).toContain('Create a pipeline')
+    expect(document.activeElement).toBe(
+      document.querySelector(
+        '[data-testid="pipeline-creation-dialog"] input[aria-label="Pipeline ID"]',
+      ),
+    )
     expect(window.location.pathname).toBe(initialPath)
 
     const closeButton = document.querySelector<HTMLButtonElement>(

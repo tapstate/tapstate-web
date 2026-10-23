@@ -236,6 +236,7 @@ export function PipelineCreationDialog({
                             </FieldsetLegend>
                             <Field name="pipelineId">
                               <Input
+                                autoFocus
                                 aria-label={t('pipelines.createEntry.idLabel')}
                                 value={pipelineId}
                                 onChange={(event) => setPipelineId(event.target.value)}
