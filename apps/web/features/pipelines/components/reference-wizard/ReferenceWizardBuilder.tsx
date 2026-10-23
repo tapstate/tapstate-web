@@ -40,6 +40,8 @@ import type { DeploymentProfile } from '../../model/deployment-profile'
 
 import { UnwindTargetIdentitySummary } from '../unwind-target-identity-summary'
 import { PipelineAiCopilot, type BuilderAssistantContext } from './PipelineAiCopilot'
+import { matchRelationFields, type RelationFieldTable } from './relation-field-matching'
+import { FieldAutocomplete, SearchablePicker } from './searchable-picker'
 import {
   TableTransformsManager,
   effectiveUnwindSourceIdField,
@@ -290,6 +292,64 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   const selectedWriteMode = availableWriteModes.includes(targetWriteMode)
     ? targetWriteMode
     : availableWriteModes[0]
+  const destinationSources = React.useMemo(
+    () =>
+      AVAILABLE_DESTINATIONS.filter(
+        (source) =>
+          source.sink === true &&
+          (deploymentProfile !== 'cloud' || source.connector === 'mongodb-atlas'),
+      ),
+    [AVAILABLE_DESTINATIONS, deploymentProfile],
+  )
+  const sourcePickerOptions = React.useMemo(
+    () =>
+      AVAILABLE_DATA_SOURCES.map((source) => ({
+        value: source.name,
+        label: source.name,
+        detail: source.connectorName || source.badge,
+        icon: (
+          <ConnectorIcon
+            connectorId={source.connector || source.badge}
+            name={source.connectorName || source.badge}
+            iconPath={source.iconPath}
+            size={18}
+          />
+        ),
+      })),
+    [AVAILABLE_DATA_SOURCES],
+  )
+  const destinationPickerOptions = React.useMemo(
+    () =>
+      destinationSources.map((source) => ({
+        value: source.id,
+        label: source.name,
+        detail: source.connectorName || source.badge,
+        icon: (
+          <ConnectorIcon
+            connectorId={source.connector || source.badge}
+            name={source.connectorName || source.badge}
+            iconPath={source.iconPath}
+            size={18}
+          />
+        ),
+      })),
+    [destinationSources],
+  )
+  const tablePickerOptionsBySource = React.useMemo(
+    () =>
+      new Map(
+        AVAILABLE_DATA_SOURCES.map((source) => [
+          source.name,
+          source.tables.map((table) => ({
+            value: table.name,
+            label: table.name,
+            icon: <Table2 className="text-text-tertiary size-4" aria-hidden="true" />,
+            detail: table.primaryKey ? `PK: ${table.primaryKey}` : undefined,
+          })),
+        ]),
+      ),
+    [AVAILABLE_DATA_SOURCES],
+  )
   const onChangeRef = React.useRef(onChange)
   onChangeRef.current = onChange
   const viewState = React.useMemo(
@@ -524,6 +584,50 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       otherTables: [] as string[],
     }
   }
+  const tablePickerOptionsForSource = (sourceNameOrId: string) => {
+    const source = AVAILABLE_DATA_SOURCES.find(
+      (candidate) => candidate.name === sourceNameOrId || candidate.id === sourceNameOrId,
+    )
+    return tablePickerOptionsBySource.get(source?.name ?? sourceNameOrId) ?? []
+  }
+  const findTableMeta = (sourceNameOrId: string, tableName: string) => {
+    const source = AVAILABLE_DATA_SOURCES.find(
+      (candidate) => candidate.name === sourceNameOrId || candidate.id === sourceNameOrId,
+    )
+    return source?.tables.find((table) => table.name === tableName)
+  }
+  const relationFieldTable = (sourceNameOrId: string, tableName: string): RelationFieldTable => {
+    if (rootConfig?.table === tableName) {
+      return {
+        name: rootConfig.table,
+        columns: rootConfig.columns,
+        primaryKey: rootConfig.primaryKey,
+        keys: rootConfig.keys,
+        defaultKey: rootConfig.primaryKey,
+      }
+    }
+
+    const relation = flattenRelations(relations).find(
+      (candidate) => tableToken(candidate) === tableName || candidate.table === tableName,
+    )
+    if (relation) {
+      return (
+        findTableMeta(relation.source, relation.table) ?? {
+          name: relation.table,
+          columns: getColumnsForTable(relation.source, relation.table),
+          primaryKey: relation.primaryKey?.[0] ?? relation.key,
+          keys: relation.primaryKey,
+        }
+      )
+    }
+
+    return (
+      findTableMeta(sourceNameOrId, tableName) ?? {
+        name: tableName,
+        columns: getColumnsForTable(sourceNameOrId, tableName),
+      }
+    )
+  }
 
   const getConditions = React.useCallback(
     (rel: RelationNode): JoinCondition[] => {
@@ -553,12 +657,25 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       let after = updater(before)
       if (before.source !== after.source || before.table !== after.table) {
         const meta = getTablesForSource(after.source).find((t) => t.name === after.table)
+        const parentTable =
+          getConditions(before)[0]?.parentTable || before.parentTable || rootConfig?.table || ''
+        const match = meta ? matchRelationFields(meta, relationFieldTable('', parentTable)) : null
+        const fallbackChildKey =
+          (meta?.columns.includes(after.key) ? after.key : '') ||
+          meta?.defaultKey ||
+          meta?.primaryKey ||
+          ''
         after = {
           ...after,
           ...relationKeysForTableChange(after.type, meta),
-          conditions: getConditions(before).map((c) => ({
-            ...c,
-            childKey: meta?.columns.includes(c.childKey) ? c.childKey : '',
+          key: match?.childField ?? fallbackChildKey,
+          parentKey: match?.parentField ?? after.parentKey,
+          conditions: getConditions(before).map((condition) => ({
+            ...condition,
+            childKey:
+              match?.childField ??
+              (meta?.columns.includes(condition.childKey) ? condition.childKey : fallbackChildKey),
+            parentKey: match?.parentField ?? condition.parentKey,
           })),
         }
       }
@@ -642,12 +759,23 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     const conds = [...getConditions(rel)]
     if (field === 'parentTable') {
       const cols = getColumnsForTable(undefined, value)
+      const childTable = findTableMeta(rel.source, rel.table)
+      const match = childTable
+        ? matchRelationFields(childTable, relationFieldTable('', value))
+        : null
       const currentParentKey = conds[index].parentKey
-      const newParentKey = cols.includes(currentParentKey) ? currentParentKey : cols[0] || 'id'
-      const nextConditions = conds.map((c) => ({
-        ...c,
+      const newParentKey =
+        match?.parentField ?? (cols.includes(currentParentKey) ? currentParentKey : cols[0] || '')
+      const nextConditions = conds.map((condition, conditionIndex) => ({
+        ...condition,
         parentTable: value,
-        parentKey: cols.includes(c.parentKey) ? c.parentKey : newParentKey,
+        ...(conditionIndex === index && match ? { childKey: match.childField } : {}),
+        parentKey:
+          conditionIndex === index
+            ? newParentKey
+            : cols.includes(condition.parentKey)
+              ? condition.parentKey
+              : newParentKey,
       }))
       setRelations((prev) =>
         reparentRelation(prev, rel.id, value, rootConfig?.table || '', (r) => ({
@@ -731,11 +859,14 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     setIsAddingRelation(true)
   }
 
-  const handleNewRelTableSelect = (tableName: string) => {
+  const handleNewRelTableSelect = (tableName: string, sourceName = newRelSource) => {
     setNewRelTable(tableName)
-    const tbl = getTablesForSource(newRelSource).find((t) => t.name === tableName)
+    const tbl = getTablesForSource(sourceName).find((t) => t.name === tableName)
     if (tbl) {
       const parentColumns = rootConfig?.columns || []
+      const match = rootConfig
+        ? matchRelationFields(tbl, relationFieldTable('', rootConfig.table))
+        : null
       const preferredParentKey = tbl.defaultParentKey
       const defaultParentKey =
         (preferredParentKey && parentColumns.includes(preferredParentKey)
@@ -744,8 +875,8 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
         rootConfig?.keys?.find((key) => parentColumns.includes(key)) ||
         parentColumns[0] ||
         ''
-      setNewRelKey(tbl.primaryKey || tbl.columns[0] || '')
-      setNewRelParentKey(defaultParentKey)
+      setNewRelKey((match?.childField ?? tbl.defaultKey ?? tbl.primaryKey) || tbl.columns[0] || '')
+      setNewRelParentKey(match?.parentField ?? defaultParentKey)
       setNewRelTargetField(tbl.name.split('.').pop() || 'items')
     }
   }
@@ -801,12 +932,27 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     setNewChildParentKey(parentRel.primaryKey?.[0] || '')
   }
 
-  const handleNewChildTableSelect = (tableName: string) => {
+  const handleNewChildTableSelect = (
+    tableName: string,
+    sourceName = newChildSource,
+    parentRelationId = activeAddChildForRelId,
+  ) => {
     setNewChildTable(tableName)
-    const tbl = getTablesForSource(newChildSource).find((t) => t.name === tableName)
+    const tbl = getTablesForSource(sourceName).find((t) => t.name === tableName)
     if (tbl) {
-      setNewChildKey(tbl.primaryKey || tbl.columns[0] || '')
-      setNewChildParentKey('id')
+      const parentRelation = flattenRelations(relations).find(
+        (relation) => relation.id === parentRelationId,
+      )
+      const parentMeta = parentRelation
+        ? relationFieldTable(parentRelation.source, parentRelation.table)
+        : undefined
+      const match = parentMeta ? matchRelationFields(tbl, parentMeta) : null
+      setNewChildKey(
+        (match?.childField ?? tbl.defaultKey ?? tbl.primaryKey) || tbl.columns[0] || '',
+      )
+      setNewChildParentKey(
+        match?.parentField ?? parentRelation?.primaryKey?.[0] ?? parentRelation?.key ?? '',
+      )
       setNewChildTargetField(tbl.name.split('.').pop() || 'items')
     }
   }
@@ -1574,10 +1720,15 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                 <label className="mb-0.5 block text-[10px] font-medium text-gray-600">
                   Source Connection
                 </label>
-                <Select
-                  value={rel.source || undefined}
+                <SearchablePicker
+                  ariaLabel={t('wizard.relations.source')}
+                  emptyLabel={t('wizard.search.noResults')}
+                  openLabel={t('wizard.search.openOptions')}
+                  options={sourcePickerOptions}
+                  placeholder={t('wizard.search.sources')}
+                  value={rel.source || ''}
                   onValueChange={(newSrc) => {
-                    if (newSrc === null) return
+                    if (!newSrc) return
                     const tables = getTablesForSource(newSrc)
                     const firstTbl = tables[0]
                     updateRelation(rel.id, (r) => ({
@@ -1588,40 +1739,21 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                       targetField: firstTbl?.name.split('.').pop() || 'items',
                     }))
                   }}
-                >
-                  <SelectTrigger
-                    aria-label="Source Connection"
-                    className="wizard-reference-select-trigger w-full text-[12px]"
-                  >
-                    <SelectValue placeholder="Select a source" />
-                  </SelectTrigger>
-                  <SelectContent className="wizard-reference-select-content rounded-lg">
-                    {AVAILABLE_DATA_SOURCES.map((ds) => (
-                      <SelectItem
-                        key={ds.id}
-                        value={ds.name}
-                        className="rounded-md px-1.5 py-1 text-[12px]"
-                      >
-                        <span className="flex min-w-0 items-center gap-2">
-                          <ConnectorIcon
-                            connectorId={ds.connector || ds.badge}
-                            name={ds.connectorName || ds.badge}
-                            iconPath={ds.iconPath}
-                            size={18}
-                          />
-                          <span className="truncate">{ds.name}</span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  renderSelectedLeading={(option) => option?.icon}
+                />
               </div>
               <div>
                 <label className="mb-0.5 block text-[10px] font-medium text-gray-600">Table</label>
-                <Select
-                  value={rel.table || undefined}
+                <SearchablePicker
+                  ariaLabel={t('wizard.relations.table')}
+                  emptyLabel={t('wizard.search.noResults')}
+                  inputClassName="font-mono"
+                  openLabel={t('wizard.search.openOptions')}
+                  options={tablePickerOptionsForSource(rel.source)}
+                  placeholder={t('wizard.search.tables')}
+                  value={rel.table || ''}
                   onValueChange={(newTbl) => {
-                    if (newTbl === null) return
+                    if (!newTbl) return
                     const tblMeta = getTablesForSource(rel.source).find((t) => t.name === newTbl)
                     updateRelation(rel.id, (r) => ({
                       ...r,
@@ -1631,28 +1763,8 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                       targetField: tblMeta?.name.split('.').pop() || 'items',
                     }))
                   }}
-                >
-                  <SelectTrigger
-                    aria-label="Table"
-                    className="wizard-reference-select-trigger w-full font-mono text-[12px]"
-                  >
-                    <SelectValue placeholder="Select a source table" />
-                  </SelectTrigger>
-                  <SelectContent className="wizard-reference-select-content rounded-lg">
-                    {getTablesForSource(rel.source).map((t) => (
-                      <SelectItem
-                        key={t.name}
-                        value={t.name}
-                        className="rounded-md px-1.5 py-1 font-mono text-[12px]"
-                      >
-                        <span className="flex items-center gap-2">
-                          <Table2 className="size-4 text-gray-500" />
-                          {t.name}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  renderSelectedLeading={(option) => option?.icon}
+                />
               </div>
             </div>
 
@@ -1729,73 +1841,45 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                 </span>
               )}
 
-              {/* Child Key Box */}
-              <div className="flex items-center rounded-lg border border-gray-200/90 bg-gray-50 px-2.5 py-1 font-mono text-gray-800 transition-colors hover:bg-gray-100/70">
-                <span className="mr-1 text-[11px] font-semibold text-gray-500">
-                  {rel.table.split('.').pop()}.
-                </span>
-                <select
-                  value={cond.childKey}
-                  onChange={(e) => handleConditionChange(rel, cIdx, 'childKey', e.target.value)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="cursor-pointer bg-transparent text-[12px] font-medium text-gray-900 focus:outline-none"
-                >
-                  <option value="" disabled>
-                    Select…
-                  </option>
-                  {getColumnsForTable(rel.source, rel.table).map((col) => (
-                    <option key={col} value={col}>
-                      {col}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <FieldAutocomplete
+                ariaLabel={t('wizard.relations.childField')}
+                className="min-w-0 flex-1"
+                emptyLabel={t('wizard.search.noResults')}
+                inputClassName="font-mono"
+                openLabel={t('wizard.search.openOptions')}
+                options={getColumnsForTable(rel.source, rel.table)}
+                placeholder={t('wizard.search.fields')}
+                value={cond.childKey}
+                onValueChange={(field) => handleConditionChange(rel, cIdx, 'childKey', field)}
+              />
 
               <span className="font-mono text-[13px] font-bold text-gray-400">=</span>
 
-              {/* Parent Table & Key Box (Metabase Style) */}
-              <div className="flex items-center gap-1 rounded-lg border border-gray-200/90 bg-gray-50 px-2.5 py-1 font-mono text-gray-800 transition-colors hover:bg-gray-100/70">
-                <select
-                  value={cond.parentTable || rel.parentTable}
-                  onChange={(e) => handleConditionChange(rel, cIdx, 'parentTable', e.target.value)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="mr-0.5 max-w-[150px] cursor-pointer truncate border-r border-gray-200 bg-transparent pr-1.5 text-[12px] font-semibold text-blue-700 focus:outline-none"
-                  title="Select table to join with"
-                >
-                  <option value="" disabled>
-                    Select…
-                  </option>
-                  <optgroup label="Pipeline Tables">
-                    {getAvailableJoinTables(rel.id).pipelineTables.map((tbl) => (
-                      <option key={tbl} value={tbl}>
-                        {tbl.split('.').pop()} {tbl === rootConfig?.table ? '(Root)' : ''}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="All Sources">
-                    {getAvailableJoinTables(rel.id).otherTables.map((tbl) => (
-                      <option key={tbl} value={tbl}>
-                        {tbl}
-                      </option>
-                    ))}
-                  </optgroup>
-                </select>
-                <select
-                  value={cond.parentKey}
-                  onChange={(e) => handleConditionChange(rel, cIdx, 'parentKey', e.target.value)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="cursor-pointer bg-transparent text-[12px] font-medium text-gray-900 focus:outline-none"
-                >
-                  <option value="" disabled>
-                    Select…
-                  </option>
-                  {getColumnsForTable(undefined, cond.parentTable || rel.parentTable).map((col) => (
-                    <option key={col} value={col}>
-                      {col}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <SearchablePicker
+                ariaLabel={t('wizard.relations.parentTable')}
+                className="min-w-0 flex-1"
+                emptyLabel={t('wizard.search.noResults')}
+                openLabel={t('wizard.search.openOptions')}
+                options={getAvailableJoinTables(rel.id).pipelineTables.map((table) => ({
+                  value: table,
+                  label: table,
+                  detail: table === rootConfig?.table ? t('wizard.relations.rootTable') : undefined,
+                }))}
+                placeholder={t('wizard.search.tables')}
+                value={cond.parentTable || rel.parentTable}
+                onValueChange={(table) => handleConditionChange(rel, cIdx, 'parentTable', table)}
+              />
+              <FieldAutocomplete
+                ariaLabel={t('wizard.relations.parentField')}
+                className="min-w-0 flex-1"
+                emptyLabel={t('wizard.search.noResults')}
+                inputClassName="font-mono"
+                openLabel={t('wizard.search.openOptions')}
+                options={getColumnsForTable(undefined, cond.parentTable || rel.parentTable)}
+                placeholder={t('wizard.search.fields')}
+                value={cond.parentKey}
+                onValueChange={(field) => handleConditionChange(rel, cIdx, 'parentKey', field)}
+              />
 
               {getConditions(rel).length > 1 && (
                 <button
@@ -1961,73 +2045,40 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                         <label className="mb-1 block text-[11px] font-medium text-gray-600">
                           Source
                         </label>
-                        <Select
-                          value={newChildSource || undefined}
+                        <SearchablePicker
+                          ariaLabel={t('wizard.relations.source')}
+                          emptyLabel={t('wizard.search.noResults')}
+                          openLabel={t('wizard.search.openOptions')}
+                          options={sourcePickerOptions}
+                          placeholder={t('wizard.search.sources')}
+                          value={newChildSource}
                           onValueChange={(value) => {
-                            if (value === null) return
+                            if (!value) return
                             setNewChildSource(value)
                             const tables = getTablesForSource(value)
-                            setNewChildTable(tables[0]?.name || '')
+                            if (tables[0]) handleNewChildTableSelect(tables[0].name, value, rel.id)
+                            else setNewChildTable('')
                           }}
-                        >
-                          <SelectTrigger
-                            aria-label="Source"
-                            className="wizard-reference-select-trigger w-full text-[12px]"
-                          >
-                            <SelectValue placeholder="Select a source" />
-                          </SelectTrigger>
-                          <SelectContent className="wizard-reference-select-content rounded-lg">
-                            {AVAILABLE_DATA_SOURCES.map((ds) => (
-                              <SelectItem
-                                key={ds.id}
-                                value={ds.name}
-                                className="rounded-md px-1.5 py-1 text-[12px]"
-                              >
-                                <span className="flex min-w-0 items-center gap-2">
-                                  <ConnectorIcon
-                                    connectorId={ds.connector || ds.badge}
-                                    name={ds.connectorName || ds.badge}
-                                    iconPath={ds.iconPath}
-                                    size={18}
-                                  />
-                                  <span className="truncate">{ds.name}</span>
-                                </span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          renderSelectedLeading={(option) => option?.icon}
+                        />
                       </div>
                       <div>
                         <label className="mb-1 block text-[11px] font-medium text-gray-600">
                           Child Table
                         </label>
-                        <Select
-                          value={newChildTable || undefined}
-                          onValueChange={(value) => {
-                            if (value !== null) handleNewChildTableSelect(value)
-                          }}
-                        >
-                          <SelectTrigger
-                            aria-label="Child Table"
-                            className="wizard-reference-select-trigger w-full font-mono text-[12px]"
-                          >
-                            <SelectValue placeholder="Select a source table" />
-                          </SelectTrigger>
-                          <SelectContent className="wizard-reference-select-content rounded-lg">
-                            {getTablesForSource(newChildSource).map((t) => (
-                              <SelectItem
-                                key={t.name}
-                                value={t.name}
-                                className="rounded-md px-1.5 py-1 font-mono text-[12px]"
-                              >
-                                <span className="flex items-center gap-2">
-                                  <Table2 className="size-4 text-gray-500" />
-                                  {t.name}
-                                </span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <SearchablePicker
+                          ariaLabel={t('wizard.relations.table')}
+                          emptyLabel={t('wizard.search.noResults')}
+                          inputClassName="font-mono"
+                          openLabel={t('wizard.search.openOptions')}
+                          options={tablePickerOptionsForSource(newChildSource)}
+                          placeholder={t('wizard.search.tables')}
+                          value={newChildTable}
+                          onValueChange={(value) =>
+                            value && handleNewChildTableSelect(value, newChildSource, rel.id)
+                          }
+                          renderSelectedLeading={(option) => option?.icon}
+                        />
                       </div>
                     </div>
 
@@ -2036,23 +2087,39 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                       <label className="mb-1 block text-[11px] font-medium text-gray-600">
                         Join Condition
                       </label>
-                      <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2 text-[12px]">
+                      <div className="flex min-w-0 items-center gap-2 text-[12px]">
                         <span className="font-mono font-medium text-gray-600">
                           {newChildTable.split('.').pop()}.
                         </span>
-                        <input
+                        <FieldAutocomplete
+                          ariaLabel={t('wizard.relations.childField')}
+                          className="min-w-0 flex-1"
+                          emptyLabel={t('wizard.search.noResults')}
+                          inputClassName="font-mono"
+                          openLabel={t('wizard.search.openOptions')}
+                          options={
+                            getTablesForSource(newChildSource).find(
+                              (table) => table.name === newChildTable,
+                            )?.columns ?? []
+                          }
+                          placeholder={t('wizard.search.fields')}
                           value={newChildKey}
-                          onChange={(e) => setNewChildKey(e.target.value)}
-                          className="w-28 rounded-lg border border-gray-300 bg-white px-2 py-1 font-mono text-[12px]"
+                          onValueChange={setNewChildKey}
                         />
                         <span className="font-bold text-gray-400">=</span>
                         <span className="font-mono font-medium text-gray-600">
                           {rel.table.split('.').pop()}.
                         </span>
-                        <input
+                        <FieldAutocomplete
+                          ariaLabel={t('wizard.relations.parentField')}
+                          className="min-w-0 flex-1"
+                          emptyLabel={t('wizard.search.noResults')}
+                          inputClassName="font-mono"
+                          openLabel={t('wizard.search.openOptions')}
+                          options={getColumnsForTable(rel.source, rel.table)}
+                          placeholder={t('wizard.search.fields')}
                           value={newChildParentKey}
-                          onChange={(e) => setNewChildParentKey(e.target.value)}
-                          className="w-24 rounded-lg border border-gray-300 bg-white px-2 py-1 font-mono text-[12px]"
+                          onValueChange={setNewChildParentKey}
                         />
                       </div>
                     </div>
@@ -2330,105 +2397,40 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="mb-1 block text-[11px] font-medium text-gray-600">
-                            Data Source
+                            {t('wizard.sourceTitle')}
                           </label>
-                          <Select
-                            value={scratchSelectedSource || undefined}
+                          <SearchablePicker
+                            ariaLabel={t('wizard.sourceTitle')}
+                            emptyLabel={t('wizard.search.noResults')}
+                            openLabel={t('wizard.search.openOptions')}
+                            options={sourcePickerOptions}
+                            placeholder={t('wizard.search.sources')}
+                            value={scratchSelectedSource}
                             onValueChange={(value) => {
-                              if (value === null) return
+                              if (!value) return
                               setScratchSelectedSource(value)
                               const src = AVAILABLE_DATA_SOURCES.find((s) => s.name === value)
                               setScratchSelectedTable(src?.tables[0]?.name || '')
                             }}
-                          >
-                            <SelectTrigger
-                              aria-label="Data Source"
-                              className="wizard-reference-select-trigger w-full text-[12px]"
-                            >
-                              <SelectValue placeholder="Select a source">
-                                {(value) => {
-                                  const selectedSource = AVAILABLE_DATA_SOURCES.find(
-                                    (source) => source.name === value,
-                                  )
-                                  if (!selectedSource) return null
-                                  return (
-                                    <span className="flex min-w-0 items-center gap-2">
-                                      <ConnectorIcon
-                                        connectorId={
-                                          selectedSource.connector || selectedSource.badge
-                                        }
-                                        name={selectedSource.connectorName || selectedSource.badge}
-                                        iconPath={selectedSource.iconPath}
-                                        size={20}
-                                      />
-                                      <span className="min-w-0 flex-1 truncate">
-                                        {selectedSource.name}
-                                      </span>
-                                      <span className="text-text-tertiary shrink-0 text-xs">
-                                        {selectedSource.connectorName || selectedSource.badge}
-                                      </span>
-                                    </span>
-                                  )
-                                }}
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent className="wizard-reference-select-content rounded-lg">
-                              {AVAILABLE_DATA_SOURCES.map((ds) => (
-                                <SelectItem
-                                  key={ds.id}
-                                  value={ds.name}
-                                  className="rounded-md px-1.5 py-1 text-[12px]"
-                                >
-                                  <span className="flex min-w-0 items-center gap-3">
-                                    <ConnectorIcon
-                                      connectorId={ds.connector || ds.badge}
-                                      name={ds.connectorName || ds.badge}
-                                      iconPath={ds.iconPath}
-                                      size={20}
-                                    />
-                                    <span className="truncate">{ds.name}</span>
-                                    <span className="ml-auto shrink-0 text-[11px] text-gray-500">
-                                      {ds.connectorName || ds.badge}
-                                    </span>
-                                  </span>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            renderSelectedLeading={(option) => option?.icon}
+                          />
                         </div>
 
                         <div>
                           <label className="mb-1 block text-[11px] font-medium text-gray-600">
                             Table
                           </label>
-                          <Select
-                            value={scratchSelectedTable || undefined}
-                            onValueChange={(value) => {
-                              if (value !== null) setScratchSelectedTable(value)
-                            }}
-                          >
-                            <SelectTrigger
-                              aria-label="Table"
-                              className="wizard-reference-select-trigger w-full font-mono text-[12px]"
-                            >
-                              <SelectValue placeholder="Select a source table" />
-                            </SelectTrigger>
-                            <SelectContent className="wizard-reference-select-content rounded-lg">
-                              {scratchAvailableTables.map((tbl) => (
-                                <SelectItem
-                                  key={tbl.name}
-                                  value={tbl.name}
-                                  className="rounded-md px-1.5 py-1 font-mono text-[12px]"
-                                >
-                                  <span className="flex items-center gap-2">
-                                    <Table2 className="size-4 text-gray-500" />
-                                    {tbl.name}
-                                    {tbl.primaryKey ? ` (PK: ${tbl.primaryKey})` : ''}
-                                  </span>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <SearchablePicker
+                            ariaLabel={t('wizard.rootTableLabel')}
+                            emptyLabel={t('wizard.search.noResults')}
+                            inputClassName="font-mono"
+                            openLabel={t('wizard.search.openOptions')}
+                            options={tablePickerOptionsForSource(scratchSelectedSource)}
+                            placeholder={t('wizard.search.tables')}
+                            value={scratchSelectedTable}
+                            onValueChange={setScratchSelectedTable}
+                            renderSelectedLeading={(option) => option?.icon}
+                          />
                         </div>
                       </div>
 
@@ -2670,75 +2672,42 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                                 <label className="mb-1 block text-[11px] font-medium text-gray-600">
                                   Child Data Source
                                 </label>
-                                <Select
-                                  value={newRelSource || undefined}
+                                <SearchablePicker
+                                  ariaLabel={t('wizard.relations.source')}
+                                  emptyLabel={t('wizard.search.noResults')}
+                                  openLabel={t('wizard.search.openOptions')}
+                                  options={sourcePickerOptions}
+                                  placeholder={t('wizard.search.sources')}
+                                  value={newRelSource}
                                   onValueChange={(value) => {
-                                    if (value === null) return
+                                    if (!value) return
                                     setNewRelSource(value)
                                     const tables = getTablesForSource(value)
-                                    if (tables.length > 0) handleNewRelTableSelect(tables[0].name)
+                                    if (tables.length > 0)
+                                      handleNewRelTableSelect(tables[0].name, value)
                                     else setNewRelTable('')
                                   }}
-                                >
-                                  <SelectTrigger
-                                    aria-label="Child Data Source"
-                                    className="wizard-reference-select-trigger w-full text-[12px]"
-                                  >
-                                    <SelectValue placeholder="Select a source" />
-                                  </SelectTrigger>
-                                  <SelectContent className="wizard-reference-select-content rounded-lg">
-                                    {AVAILABLE_DATA_SOURCES.map((ds) => (
-                                      <SelectItem
-                                        key={ds.id}
-                                        value={ds.name}
-                                        className="rounded-md px-1.5 py-1 text-[12px]"
-                                      >
-                                        <span className="flex min-w-0 items-center gap-2">
-                                          <ConnectorIcon
-                                            connectorId={ds.connector || ds.badge}
-                                            name={ds.connectorName || ds.badge}
-                                            iconPath={ds.iconPath}
-                                            size={18}
-                                          />
-                                          <span className="truncate">{ds.name}</span>
-                                        </span>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                  renderSelectedLeading={(option) => option?.icon}
+                                />
                               </div>
 
                               <div>
                                 <label className="mb-1 block text-[11px] font-medium text-gray-600">
                                   Child Table
                                 </label>
-                                <Select
-                                  value={newRelTable || undefined}
-                                  onValueChange={(value) => {
-                                    if (value !== null) handleNewRelTableSelect(value)
-                                  }}
-                                >
-                                  <SelectTrigger
-                                    aria-label="Child Table"
-                                    className="wizard-reference-select-trigger w-full font-mono text-[12px]"
-                                  >
-                                    <SelectValue placeholder="Select a source table" />
-                                  </SelectTrigger>
-                                  <SelectContent className="wizard-reference-select-content rounded-lg">
-                                    {getTablesForSource(newRelSource).map((t) => (
-                                      <SelectItem
-                                        key={t.name}
-                                        value={t.name}
-                                        className="rounded-md px-1.5 py-1 font-mono text-[12px]"
-                                      >
-                                        <span className="flex items-center gap-2">
-                                          <Table2 className="size-4 text-gray-500" />
-                                          {t.name}
-                                        </span>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                <SearchablePicker
+                                  ariaLabel={t('wizard.relations.table')}
+                                  emptyLabel={t('wizard.search.noResults')}
+                                  inputClassName="font-mono"
+                                  openLabel={t('wizard.search.openOptions')}
+                                  options={tablePickerOptionsForSource(newRelSource)}
+                                  placeholder={t('wizard.search.tables')}
+                                  value={newRelTable}
+                                  onValueChange={(value) =>
+                                    value && handleNewRelTableSelect(value, newRelSource)
+                                  }
+                                  renderSelectedLeading={(option) => option?.icon}
+                                />
                               </div>
                             </div>
 
@@ -2747,25 +2716,39 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                               <label className="mb-1 block text-[11px] font-medium text-gray-600">
                                 Join Condition
                               </label>
-                              <div className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 p-2 text-[11px]">
+                              <div className="flex min-w-0 items-center gap-1.5 text-[11px]">
                                 <span className="font-mono text-gray-600">
                                   {newRelTable.split('.').pop()}.
                                 </span>
-                                <input
+                                <FieldAutocomplete
+                                  ariaLabel={t('wizard.relations.childField')}
+                                  className="min-w-0 flex-1"
+                                  emptyLabel={t('wizard.search.noResults')}
+                                  inputClassName="font-mono"
+                                  openLabel={t('wizard.search.openOptions')}
+                                  options={
+                                    getTablesForSource(newRelSource).find(
+                                      (table) => table.name === newRelTable,
+                                    )?.columns ?? []
+                                  }
+                                  placeholder={t('wizard.search.fields')}
                                   value={newRelKey}
-                                  onChange={(e) => setNewRelKey(e.target.value)}
-                                  className="w-28 rounded-lg border border-gray-300 bg-white px-1.5 py-1 font-mono text-gray-900"
-                                  placeholder="foreign_key"
+                                  onValueChange={setNewRelKey}
                                 />
                                 <span className="font-bold text-gray-400">=</span>
                                 <span className="font-mono text-gray-600">
                                   {rootConfig?.table || 'root'}.
                                 </span>
-                                <input
+                                <FieldAutocomplete
+                                  ariaLabel={t('wizard.relations.parentField')}
+                                  className="min-w-0 flex-1"
+                                  emptyLabel={t('wizard.search.noResults')}
+                                  inputClassName="font-mono"
+                                  openLabel={t('wizard.search.openOptions')}
+                                  options={rootConfig?.columns ?? []}
+                                  placeholder={t('wizard.search.fields')}
                                   value={newRelParentKey}
-                                  onChange={(e) => setNewRelParentKey(e.target.value)}
-                                  className="w-20 rounded-lg border border-gray-300 bg-white px-1.5 py-1 font-mono text-gray-900"
-                                  placeholder="primary_key"
+                                  onValueChange={setNewRelParentKey}
                                 />
                               </div>
                             </div>
@@ -2932,10 +2915,20 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                                   : 'wizard.destinationTargetSource',
                               )}
                             </span>
-                            <Select
+                            <SearchablePicker
+                              ariaLabel={t(
+                                deploymentProfile === 'cloud'
+                                  ? 'wizard.destinationAtlasSource'
+                                  : 'wizard.destinationTargetSource',
+                              )}
+                              ariaLabelledBy="wizard-destination-source-label"
+                              emptyLabel={t('wizard.search.noResults')}
+                              openLabel={t('wizard.search.openOptions')}
+                              options={destinationPickerOptions}
+                              placeholder={t('wizard.search.sources')}
                               value={targetSourceId}
                               onValueChange={(value) => {
-                                if (value === null) return
+                                if (!value) return
                                 setTargetSourceId(value)
                                 const next = AVAILABLE_DESTINATIONS.find(
                                   (source) => source.id === value,
@@ -2947,40 +2940,8 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                                   setTargetWriteMode(next.writeModes[0])
                                 }
                               }}
-                            >
-                              <SelectTrigger
-                                aria-labelledby="wizard-destination-source-label"
-                                className="w-full text-[13px] font-normal"
-                              >
-                                <SelectValue
-                                  placeholder={t('wizard.destinationSourcePlaceholder')}
-                                />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {AVAILABLE_DESTINATIONS.filter((source) => {
-                                  if (source.sink !== true) return false
-                                  return (
-                                    deploymentProfile !== 'cloud' ||
-                                    source.connector === 'mongodb-atlas'
-                                  )
-                                }).map((source) => (
-                                  <SelectItem key={source.id} value={source.id}>
-                                    <span className="flex items-center gap-2">
-                                      <ConnectorIcon
-                                        connectorId={source.connector || ''}
-                                        name={source.connectorName || source.badge}
-                                        iconPath={source.iconPath}
-                                        size={18}
-                                      />
-                                      <span>{source.name}</span>
-                                      <span className="text-muted-foreground">
-                                        {source.connectorName}
-                                      </span>
-                                    </span>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              renderSelectedLeading={(option) => option?.icon}
+                            />
                           </div>
                           <div className="grid min-w-0 gap-2">
                             <span

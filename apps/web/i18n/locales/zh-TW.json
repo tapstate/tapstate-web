@@ -1363,6 +1363,13 @@
   },
   "wizard": {
     "eyebrow": "Pipeline 建立器",
+    "search": {
+      "sources": "搜尋資料來源",
+      "tables": "搜尋資料表",
+      "fields": "搜尋欄位",
+      "noResults": "沒有相符的選項。",
+      "openOptions": "開啟選項"
+    },
     "draft": "草稿",
     "dslMode": "DSL 引導模式",
     "backToPipelines": "返回 Pipelines",

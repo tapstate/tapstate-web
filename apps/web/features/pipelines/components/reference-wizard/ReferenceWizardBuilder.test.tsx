@@ -147,6 +147,229 @@ function previewPanel() {
   return container?.querySelector<HTMLElement>('.wizard-reference-preview')
 }
 
+async function setInputValue(input: HTMLInputElement, value: string) {
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+    setter?.call(input, value)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+}
+
+function getPickerOptions() {
+  return Array.from(document.body.querySelectorAll<HTMLElement>('[role="option"]'))
+}
+
+async function openPicker(input: HTMLInputElement | null) {
+  const trigger = input?.parentElement?.querySelector<HTMLButtonElement>(
+    'button[aria-label="Open options"]',
+  )
+  await act(async () => trigger?.click())
+}
+
+describe('ReferenceWizardBuilder searchable pickers', () => {
+  it('searches sources and tables in the root table picker', async () => {
+    const host = renderBuilder({
+      catalog: [
+        {
+          id: 'crm',
+          name: 'crm',
+          badge: 'CRM',
+          connector: 'mysql',
+          tables: [
+            {
+              name: 'crm_customers',
+              primaryKey: 'customer_id',
+              keys: ['customer_id'],
+              discovered: true,
+              rowCount: '1',
+              columns: ['customer_id', 'company_name'],
+            },
+            {
+              name: 'crm_orders',
+              primaryKey: 'order_id',
+              keys: ['order_id'],
+              discovered: true,
+              rowCount: '2',
+              columns: ['order_id', 'customer_id'],
+            },
+          ],
+        },
+        {
+          id: 'archive',
+          name: 'archive',
+          badge: 'Archive',
+          connector: 'postgres',
+          tables: [
+            {
+              name: 'archive_events',
+              primaryKey: 'event_id',
+              discovered: true,
+              rowCount: '4',
+              columns: ['event_id', 'event_name'],
+            },
+          ],
+        },
+      ],
+    })
+    const button = (text: string) =>
+      [...host.querySelectorAll('button')].find((item) => item.textContent?.includes(text))!
+
+    await act(async () => button('Switch Table').click())
+    await openPicker(host.querySelector<HTMLInputElement>('input[placeholder="Search sources"]'))
+    await vi.waitFor(() =>
+      expect(document.body.querySelector('input[placeholder="Search sources"]')).not.toBeNull(),
+    )
+    await setInputValue(
+      document.body.querySelector<HTMLInputElement>('input[placeholder="Search sources"]')!,
+      'archive',
+    )
+    await vi.waitFor(() =>
+      expect(getPickerOptions().some((option) => option.textContent?.includes('archive'))).toBe(
+        true,
+      ),
+    )
+    await act(async () => getPickerOptions()[0]?.click())
+
+    await openPicker(host.querySelector<HTMLInputElement>('input[placeholder="Search tables"]'))
+    await vi.waitFor(() =>
+      expect(document.body.querySelector('input[placeholder="Search tables"]')).not.toBeNull(),
+    )
+    await setInputValue(
+      document.body.querySelector<HTMLInputElement>('input[placeholder="Search tables"]')!,
+      'events',
+    )
+    await vi.waitFor(() => expect(getPickerOptions()).toHaveLength(1))
+    expect(getPickerOptions()[0]?.textContent).toContain('archive_events')
+  })
+
+  it('searches relationship fields and automatically matches a unique shared field', async () => {
+    const host = renderBuilder()
+    const button = (text: string) =>
+      [...host.querySelectorAll('button')].find((item) => item.textContent?.includes(text))!
+
+    await act(async () => button('Add Related Table').click())
+    const childTable = [
+      ...host.querySelectorAll<HTMLInputElement>('input[placeholder="Search tables"]'),
+    ].at(-1)!
+    await openPicker(childTable)
+    await vi.waitFor(() => expect(childTable).not.toBeNull())
+    await setInputValue(childTable, 'orders')
+    await vi.waitFor(() => expect(getPickerOptions()).toHaveLength(1))
+    expect(getPickerOptions()[0]?.textContent).toContain('crm_orders')
+    await act(async () => getPickerOptions()[0]?.click())
+
+    const childField = [
+      ...host.querySelectorAll<HTMLInputElement>('input[aria-label="Related table field"]'),
+    ].at(-1)
+    const parentField = [
+      ...host.querySelectorAll<HTMLInputElement>('input[aria-label="Existing Pipeline field"]'),
+    ].at(-1)
+    expect(childField?.value).toBe('customer_id')
+    expect(parentField?.value).toBe('customer_id')
+
+    await openPicker(childField ?? null)
+    await vi.waitFor(() =>
+      expect(document.body.querySelector('input[placeholder="Search fields"]')).not.toBeNull(),
+    )
+    await setInputValue(childField!, 'order')
+    await vi.waitFor(() =>
+      expect(getPickerOptions().map((option) => option.textContent)).toEqual(['order_id']),
+    )
+    await setInputValue(childField!, 'custom_join')
+    expect(childField?.value).toBe('custom_join')
+  })
+
+  it('searches fields and parent tables when editing an existing relation', async () => {
+    const host = renderBuilder()
+    const childField = host.querySelector<HTMLInputElement>(
+      'input[aria-label="Related table field"]',
+    )
+
+    await openPicker(childField ?? null)
+    await vi.waitFor(() =>
+      expect(document.body.querySelector('input[placeholder="Search fields"]')).not.toBeNull(),
+    )
+    await setInputValue(childField!, 'customer')
+    await vi.waitFor(() =>
+      expect(getPickerOptions().map((option) => option.textContent)).toEqual(['customer_id']),
+    )
+    await act(async () => getPickerOptions()[0]?.click())
+
+    await openPicker(host.querySelector<HTMLInputElement>('input[aria-label="Parent table"]'))
+    await vi.waitFor(() =>
+      expect(document.body.querySelector('input[placeholder="Search tables"]')).not.toBeNull(),
+    )
+    await setInputValue(
+      document.body.querySelector<HTMLInputElement>('input[placeholder="Search tables"]')!,
+      'customers',
+    )
+    await vi.waitFor(() => expect(getPickerOptions()).toHaveLength(1))
+    expect(getPickerOptions()[0]?.textContent).toContain('crm_customers')
+  })
+
+  it('automatically matches a nested relation to its parent table after table selection', async () => {
+    const host = renderBuilder({
+      catalog: [
+        {
+          id: 'crm',
+          name: 'crm',
+          badge: 'CRM',
+          connector: 'mysql',
+          tables: [
+            {
+              name: 'crm_customers',
+              primaryKey: 'customer_id',
+              keys: ['customer_id'],
+              discovered: true,
+              rowCount: '1',
+              columns: ['customer_id', 'company_name'],
+            },
+            {
+              name: 'crm_orders',
+              primaryKey: 'order_id',
+              keys: ['order_id'],
+              discovered: true,
+              rowCount: '2',
+              columns: ['order_id', 'customer_id'],
+            },
+            {
+              name: 'crm_order_lines',
+              primaryKey: 'line_id',
+              keys: ['line_id'],
+              discovered: true,
+              rowCount: '3',
+              columns: ['line_id', 'order_id'],
+            },
+          ],
+        },
+      ],
+    })
+    const nestedAdd = [...host.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('Add Sub-relation to crm_orders'),
+    )
+
+    await act(async () => nestedAdd?.click())
+    const nestedTable = [
+      ...host.querySelectorAll<HTMLInputElement>('input[placeholder="Search tables"]'),
+    ].at(-1)!
+    await openPicker(nestedTable)
+    await vi.waitFor(() => expect(getPickerOptions().length).toBeGreaterThan(0))
+    const tableOption = getPickerOptions().find((option) =>
+      option.textContent?.includes('crm_order_lines'),
+    )
+    await act(async () => tableOption?.click())
+
+    const childField = [
+      ...host.querySelectorAll<HTMLInputElement>('input[aria-label="Related table field"]'),
+    ].at(-1)
+    const parentField = [
+      ...host.querySelectorAll<HTMLInputElement>('input[aria-label="Existing Pipeline field"]'),
+    ].at(-1)
+    expect(childField?.value).toBe('order_id')
+    expect(parentField?.value).toBe('order_id')
+  })
+})
+
 describe('unwind identity across wizard sections', () => {
   it.each([false, true])('matches inherited execution with relations=%s', (withRelations) => {
     const panel = renderBuilder({
@@ -220,11 +443,11 @@ describe('ReferenceWizardBuilder destination picker', () => {
         ],
         initial: { ...renderInitial, destinationSourceId: 'atlas_out' },
       })
-      const trigger = host.querySelector<HTMLButtonElement>(
-        '[aria-labelledby="wizard-destination-source-label"]',
+      const trigger = host.querySelector<HTMLInputElement>(
+        'input[aria-labelledby="wizard-destination-source-label"]',
       )
       expect(trigger).not.toBeNull()
-      await act(async () => trigger?.click())
+      await openPicker(trigger)
       await vi.waitFor(() =>
         expect(document.body.querySelectorAll('[role="option"]').length).toBeGreaterThan(0),
       )
@@ -623,19 +846,19 @@ describe('ReferenceWizardBuilder assistant isolation', () => {
     await act(async () => button('Infer parent').click())
     expect(host.textContent).toContain('Review proposed pipeline changes')
     await act(async () => button('Switch Table').click())
-    await act(async () =>
-      host.querySelector<HTMLButtonElement>('button[aria-label="Table"]')!.click(),
-    )
+    const rootTable = host.querySelector<HTMLInputElement>('input[aria-label="Root table"]')!
+    await openPicker(rootTable)
+    await vi.waitFor(() => expect(getPickerOptions().length).toBeGreaterThan(0))
     const tableOption = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find(
       (item) => item.textContent?.includes('crm_orders'),
     )!
     await act(async () => tableOption.click())
-    expect(host.querySelector('button[aria-label="Table"]')?.textContent).toContain('crm_orders')
+    expect(rootTable.value).toContain('crm_orders')
     await act(async () => button('Review proposed').click())
     expect(button('Validate and apply').disabled).toBe(true)
     await act(async () => button('Validate and apply').click())
     expect(onApply).not.toHaveBeenCalled()
-    expect(host.querySelector('button[aria-label="Table"]')?.textContent).toContain('crm_orders')
+    expect(rootTable.value).toContain('crm_orders')
     expect(host.textContent).toContain('Save Changes')
   })
   it('adds the discovered table key as the independent array identity for a new array relation', async () => {
@@ -644,9 +867,11 @@ describe('ReferenceWizardBuilder assistant isolation', () => {
     const button = (text: string) =>
       [...host.querySelectorAll('button')].find((item) => item.textContent?.includes(text))!
     await act(async () => button('Add Related Table').click())
-    await act(async () =>
-      host.querySelector<HTMLButtonElement>('button[aria-label="Child Table"]')!.click(),
+    await openPicker(
+      [...host.querySelectorAll<HTMLInputElement>('input[placeholder="Search tables"]')].at(-1) ??
+        null,
     )
+    await vi.waitFor(() => expect(getPickerOptions().length).toBeGreaterThan(0))
     const tableOption = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find(
       (item) => item.textContent?.includes('crm_orders'),
     )!
@@ -733,15 +958,14 @@ describe('ReferenceWizardBuilder assistant isolation', () => {
     await act(async () => button('Validate and apply').click())
     expect(onApply).toHaveBeenCalledExactlyOnceWith(candidate)
     await act(async () => button('Switch Table').click())
-    await act(async () =>
-      host.querySelector<HTMLButtonElement>('button[aria-label="Table"]')!.click(),
-    )
+    const rootTable = host.querySelector<HTMLInputElement>('input[aria-label="Root table"]')!
+    await openPicker(rootTable)
     const tableOption = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find(
       (item) => item.textContent?.includes('crm_orders'),
     )!
     await act(async () => tableOption.click())
     expect(button('Undo apply').disabled).toBe(true)
-    expect(host.querySelector('button[aria-label="Table"]')?.textContent).toContain('crm_orders')
+    expect(rootTable.value).toContain('crm_orders')
     expect(onApply).toHaveBeenCalledExactlyOnceWith(candidate)
   })
   it('undoes the applied assistant transaction when no editor selection is pending', async () => {
