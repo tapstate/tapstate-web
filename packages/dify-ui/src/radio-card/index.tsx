@@ -10,6 +10,7 @@ type BaseProps = {
   iconBgClassName?: string
   title: ReactNode
   description: string
+  showRadio?: boolean
   chosenConfig?: ReactNode
   chosenConfigWrapClassName?: string
 }
@@ -74,6 +75,7 @@ function RadioCard<Value = string>(props: Props<Value>) {
     iconBgClassName = 'bg-[#F5F3FF]',
     title,
     description,
+    showRadio = true,
     chosenConfig,
     chosenConfigWrapClassName,
     className,
@@ -91,7 +93,7 @@ function RadioCard<Value = string>(props: Props<Value>) {
       >
         {icon}
       </div>
-      <div className="min-w-0 grow pr-8">
+      <div className={cn('min-w-0 grow', showRadio && 'pr-8')}>
         <div className="mb-1 system-sm-semibold text-text-secondary">{title}</div>
         <div className="system-xs-regular text-text-tertiary">{description}</div>
       </div>
@@ -118,7 +120,7 @@ function RadioCard<Value = string>(props: Props<Value>) {
         className="flex w-full cursor-pointer gap-x-2 border-none bg-transparent p-0 text-left outline-hidden focus-visible:ring-1 focus-visible:ring-components-input-border-active"
       >
         {content}
-        <RadioControl className="absolute top-3 right-3" aria-hidden="true" />
+        {showRadio && <RadioControl className="absolute top-3 right-3" aria-hidden="true" />}
       </RadioItem>
       {config}
     </div>
