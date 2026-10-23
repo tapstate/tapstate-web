@@ -88,6 +88,12 @@ export function CloudConsoleShell({
     .slice(0, 3)
   const displayName = user.displayName?.trim() || user.email.split('@')[0]
   const initials = displayName.slice(0, 1).toUpperCase()
+  const canManageAlertPolicies =
+    !currentOrganization?.ownerEmail ||
+    currentOrganization.ownerEmail.toLowerCase() === user.email.toLowerCase()
+  const visibleNavigation = navigation.filter(
+    (item) => item.path !== '/alert-policies' || canManageAlertPolicies,
+  )
 
   const selectOrganization = (nextOrganization: Organization) => {
     setActiveOrganization(nextOrganization)
@@ -179,7 +185,7 @@ export function CloudConsoleShell({
         </div>
 
         <div className="flex-1 space-y-1 overflow-y-auto px-1">
-          {navigation.map(({ exact, icon: Icon, label, path }) => (
+          {visibleNavigation.map(({ exact, icon: Icon, label, path }) => (
             <Link
               activeOptions={{ exact }}
               activeProps={{
