@@ -90,7 +90,7 @@ describe('PipelineCanvasViewportToolbar', () => {
       document.querySelector<HTMLButtonElement>('[aria-label="Canvas zoom"]')?.click()
     })
     await act(async () => {
-      menuItem('Fit canvas')?.click()
+      menuItem('Fit Pipeline')?.click()
       await Promise.resolve()
     })
     expect(onViewportChange).toHaveBeenLastCalledWith({ x: 10, y: 20, zoom: 0.8 })
