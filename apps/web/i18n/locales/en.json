@@ -1866,7 +1866,7 @@
       "unavailable": "Pipeline lineage is not available for this view on this server.",
       "noSources": "No upstream source tables were reported."
     },
-    "newView": "New view",
+    "newView": "Create a view",
     "intro": "Your live operational state: every view Tapstate keeps current.",
     "kind": {
       "view": "View",

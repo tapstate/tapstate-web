@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { GitMerge, Plus, Search } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { ApiFetcher } from '@/service/source-client'
@@ -27,10 +28,15 @@ import { useStartPipeline, type PipelineStartOutcome } from '../start-checks/use
 
 export function PipelinesPage() {
   const { i18n, t } = useTranslation()
+  const navigate = useNavigate()
+  const { create } = useSearch({ from: '/_authenticated/pipelines' })
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const [search, setSearch] = useState('')
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [isCreationDialogOpen, setIsCreationDialogOpen] = useState(false)
+  useEffect(() => {
+    if (create) setIsCreationDialogOpen(true)
+  }, [create])
   const [lifecycleFeedback, setLifecycleFeedback] = useState<{
     pipelineId: string
     action: PipelineLifecycleAction
@@ -171,7 +177,13 @@ export function PipelinesPage() {
       )}
       <StartChecksDialog {...starter.dialog} />
       {isCreationDialogOpen && (
-        <PipelineCreationDialog open onClose={() => setIsCreationDialogOpen(false)} />
+        <PipelineCreationDialog
+          open
+          onClose={() => {
+            setIsCreationDialogOpen(false)
+            if (create) void navigate({ to: '/pipelines', search: {}, replace: true })
+          }}
+        />
       )}
     </section>
   )

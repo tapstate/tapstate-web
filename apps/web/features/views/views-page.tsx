@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { ArrowRight, Database, GitMerge, HardDrive, Layers } from 'lucide-react'
+import { ArrowRight, Database, GitMerge, HardDrive, Layers, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import type { ViewSummary } from '@/service/view-client'
@@ -30,14 +30,12 @@ export function ViewsPage() {
     <section className="views-page">
       <header className="views-page__header">
         <h1 className="text-foreground text-[15px] font-semibold">{t('views.title')}</h1>
-        <div className="flex items-center gap-2">
-          <Button asChild nativeButton={false} size="sm" variant="outline">
-            <Link to="/views/collections">{t('views.browseCollections')}</Link>
-          </Button>
-          <Button asChild nativeButton={false} size="sm" variant="outline">
-            <Link to="/pipelines">{t('views.newView')}</Link>
-          </Button>
-        </div>
+        <Button asChild nativeButton={false} size="sm">
+          <Link to="/pipelines" search={{ create: true }}>
+            <Plus className="size-3.5" aria-hidden="true" />
+            {t('views.newView')}
+          </Link>
+        </Button>
       </header>
       <div className="views-page__body">
         <p className="text-muted-foreground text-[13px]">{t('views.intro')}</p>
