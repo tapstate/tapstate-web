@@ -596,6 +596,8 @@
         "titleWarnings": "{{id}} 已启动，但有警告",
         "titleStarted": "{{id}} 已启动",
         "titleNotStarted": "{{id}} 未启动",
+        "warningDescription": "启动检查警告：{{messages}}",
+        "warningFallback": "一项启动检查返回了警告。",
         "definitionChanged": "定义已修改",
         "staleTitle": "因问题已不再提出而未采用的答复",
         "dismiss": "关闭 {{id}} 的启动提示"

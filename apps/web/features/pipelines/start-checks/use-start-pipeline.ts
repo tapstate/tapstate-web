@@ -1,4 +1,6 @@
+import { useOptionalToast } from '@tapstate-web/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import type { ApiFetcher } from '@/service/source-client'
 
@@ -105,10 +107,12 @@ type Settlement = { outcome: PipelineStartOutcome } | { error: unknown }
 /**
  * Starts Pipelines through their start checks: the one flow every start entry point shares. A start
  * the checks stop opens the start-check dialog and resolves once the person answers or cancels; a
- * start that goes ahead leaves its warnings and any definition change in a notice until dismissed.
+ * successful start reports warnings through the app toast and keeps definition changes in a notice.
  * Any other error rejects, for the caller to report as before.
  */
 export function useStartPipeline({ apiFetch, onDefinitionChanged }: StartPipelineOptions) {
+  const { t } = useTranslation()
+  const toast = useOptionalToast()
   const [open, setOpen] = useState(false)
   const [session, setSession] = useState<StartChecksSession | null>(null)
   const [notices, setNotices] = useState<PipelineStartNotice[]>([])
@@ -225,17 +229,36 @@ export function useStartPipeline({ apiFetch, onDefinitionChanged }: StartPipelin
         decisionsApplied: listOf(raw?.decisionsApplied),
         staleDecisions: listOf(raw?.staleDecisions),
       }
+      const warnings = warningFindings(result.startChecks)
+      const warningsInToast = warnings.length > 0 && toast !== null
+      if (warningsInToast) {
+        const messages = warnings
+          .map(({ message }) => message.trim())
+          .filter(Boolean)
+          .join(' ')
+
+        toast.show({
+          tone: 'warning',
+          title: t('pipelines.startChecks.notice.titleStarted', { id: pipelineId }),
+          description: t('pipelines.startChecks.notice.warningDescription', {
+            messages: messages || t('pipelines.startChecks.notice.warningFallback'),
+          }),
+          duration: 6000,
+        })
+      }
       pushNotice({
         pipelineId,
         started: true,
-        warnings: warningFindings(result.startChecks),
+        // The app toast owns transient successful-start warnings; retain the panel fallback when
+        // a host has no app-level toast provider.
+        warnings: warningsInToast ? [] : warnings,
         changes: appliedChanges(result.decisionsApplied),
         staleDecisions: result.staleDecisions,
       })
       if (definitionRewritten(result.decisionsApplied)) await definitionChanged(pipelineId)
       return { status: 'started', result }
     },
-    [definitionChanged, pushNotice],
+    [definitionChanged, pushNotice, t, toast],
   )
 
   const startPipeline = useCallback(

@@ -602,6 +602,8 @@
         "titleWarnings": "{{id}} 已啟動，但有警告",
         "titleStarted": "{{id}} 已啟動",
         "titleNotStarted": "{{id}} 未啟動",
+        "warningDescription": "啟動檢查警告：{{messages}}",
+        "warningFallback": "一項啟動檢查回報了警告。",
         "definitionChanged": "定義已修改",
         "staleTitle": "因問題已不再提出而未採用的答覆",
         "dismiss": "關閉 {{id}} 的啟動提示"
