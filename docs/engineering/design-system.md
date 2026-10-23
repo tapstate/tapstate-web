@@ -4,10 +4,10 @@ This file identifies the implementation that Tapstate page authors and reviewers
 
 ## Ownership
 
-- `packages/dify-ui` contains the Dify-authored component source and semantic CSS theme from revision `3552815c89415716dfd9cac80fd7c73aac3b051e`. Its public `@langgenius/dify-ui/<component>` subpaths are the preferred import boundary. It is a private workspace package, not a published npm dependency.
-- `@base-ui/react` owns headless keyboard, selection, focus and popup behavior underneath many components. Importing Base UI directly and restyling it does **not** reproduce the Dify component system.
+- `packages/dify-ui` contains the upstream-authored component source and semantic CSS theme from revision `3552815c89415716dfd9cac80fd7c73aac3b051e`. Its public `@langgenius/dify-ui/<component>` subpaths are the preferred import boundary. It is a private workspace package, not a published npm dependency.
+- `@base-ui/react` owns headless keyboard, selection, focus and popup behavior underneath many components. Importing Base UI directly and restyling it does **not** reproduce the vendored component contract.
 - `apps/web` and `apps/cloud` own product text, data and branded shells. `packages/ui` currently contains independently styled Tapstate controls from an earlier attempt; migration away from those visual implementations remains open. Compatibility adapters may map old props to vendored components but may not redraw them.
-- Dify's `web/app/components/base` holds some application-level patterns such as Badge, Alert, SearchInput and skeletons that are not exported by upstream `packages/dify-ui`. Review their dependency and CSS footprint before porting a pattern; do not invent a substitute and call it an upstream component.
+- The upstream application's `web/app/components/base` holds application-level patterns such as Badge, Alert, SearchInput and skeletons that are not exported by upstream `packages/dify-ui`. Review their dependency and CSS footprint before porting a pattern; do not invent a substitute and call it an upstream component.
 - `search-input` is now an example of that port: its behavior and structure come from upstream `web/app/components/base/search-input`, with labels supplied by Tapstate i18n. The exact adaptation is recorded in `packages/dify-ui/UPSTREAM.md`.
 
 ## Import and style contract
@@ -73,15 +73,15 @@ IconButton's `md` is 24px and `lg` is 32px; Button's `medium` is 32px. These are
 | Select trigger | 24/32/36 px heights; 6/8/10 px radius                                                | `select/index.tsx`: placeholder, open, hover, disabled, selected; when values differ from labels, supply `items` |
 | Input          | 8 px radius and component input background/text tokens                               | `input/index.tsx`: hover, focus, invalid, disabled                                                               |
 | Dialog         | 480 px default width; max viewport minus 32 px; 24 px side padding                   | `dialog/index.tsx`: portal, focus containment, body scrolling, header/footer                                     |
-| Resource card  | 0.5 px border, 12 px radius, tokenized hover and small shadow in Dify knowledge grid | Upstream `web/app/components/datasets/list/dataset-card/index.tsx`; page pattern, not package primitive          |
+| Resource card  | 0.5 px border, 12 px radius, tokenized hover and small shadow in the upstream knowledge-resource grid | Upstream `web/app/components/datasets/list/dataset-card/index.tsx`; page pattern, not package primitive          |
 
 Use the vendored `docs/styling.md`, `forms.md`, `selection.md`, `overlays.md`, `accessible-names-and-descriptions.md`, and component README files as detailed behavior contracts. State styling should use Base UI data attributes and CSS variables. The call site must not mirror primitive state in React merely to style it.
 
 ## Migration and deviation review
 
-For each app screen, record: current control/overlay imports, direct vendored replacement, state matrix, desktop/mobile screenshot, light/dark result, and shell comparison. A direct import is preferred. An adapter is allowed for Tapstate data, i18n, router or Formily binding; it cannot own independent geometry, color, shadows, focus or overlay layering. If the package lacks a Dify application-level pattern, cite the upstream `web/app/components/base` source and list every dependency before deciding whether to port it. Any necessary Tapstate-specific visual deviation goes into a named theme override or a documented local component contract, with source and reason.
+For each app screen, record: current control/overlay imports, direct vendored replacement, state matrix, desktop/mobile screenshot, light/dark result, and shell comparison. A direct import is preferred. An adapter is allowed for Tapstate data, i18n, router or Formily binding; it cannot own independent geometry, color, shadows, focus or overlay layering. If the package lacks an upstream application-level pattern, cite the upstream `web/app/components/base` source and list every dependency before deciding whether to port it. Any necessary Tapstate-specific visual deviation goes into a named theme override or a documented local component contract, with source and reason.
 
-Current status: **source package vendored; app migration and visual audit pending**. Button, Input, Checkbox, Switch, Select and Toast have source-backed compatibility adapters; many other shared controls and all page reviews remain pending. Earlier `@tapstate-web/ui` token tables and UI Kit examples are legacy work and are not evidence of Dify fidelity.
+Current status: **source package vendored; app migration and visual audit pending**. Button, Input, Checkbox, Switch, Select and Toast have source-backed compatibility adapters; many other shared controls and all page reviews remain pending. Earlier `@tapstate-web/ui` token tables and UI Kit examples are legacy work and are not evidence of source fidelity.
 
 ## Provenance correction: shared content controls
 
