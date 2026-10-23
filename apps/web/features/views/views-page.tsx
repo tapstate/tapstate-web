@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 
 import type { ViewSummary } from '@/service/view-client'
 
+import { ResourceListHeader } from '@/components/resource-list-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { listConnectors, listSources } from '@/service/source-client'
@@ -28,15 +29,14 @@ export function ViewsPage() {
 
   return (
     <section className="views-page">
-      <header className="views-page__header">
-        <h1 className="text-foreground text-[15px] font-semibold">{t('views.title')}</h1>
-        <Button asChild nativeButton={false} size="sm">
+      <ResourceListHeader title={t('views.title')}>
+        <Button asChild nativeButton={false}>
           <Link to="/pipelines" search={{ create: true }}>
             <Plus className="size-3.5" aria-hidden="true" />
-            {t('views.newView')}
+            {t('views.createView')}
           </Link>
         </Button>
-      </header>
+      </ResourceListHeader>
       <div className="views-page__body">
         <p className="text-muted-foreground text-[13px]">{t('views.intro')}</p>
         {viewsQuery.isError ? (

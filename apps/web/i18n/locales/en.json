@@ -40,7 +40,7 @@
     "governance": "Governance",
     "services": "Data Services",
     "admin": "Admin",
-    "sources": "Data Sources",
+    "sources": "Sources",
     "pipelines": "Pipelines",
     "explorations": "Explorations"
   },
@@ -281,7 +281,7 @@
     }
   },
   "sources": {
-    "title": "Data Sources",
+    "title": "Sources",
     "subtitle": "Browse connected systems, tables, schema, and preview data.",
     "allSources": "All Sources",
     "connectionError": "This source is reachable in the catalog, but the latest connection check failed.",
@@ -607,6 +607,7 @@
   },
   "pipelines": {
     "title": "Pipelines",
+    "create": "Create pipeline",
     "subtitle": "Inspect pipeline resources, generated views, and serving APIs.",
     "allPipelines": "All Pipelines",
     "explorer": "Explorer",
@@ -1866,7 +1867,7 @@
       "unavailable": "Pipeline lineage is not available for this view on this server.",
       "noSources": "No upstream source tables were reported."
     },
-    "newView": "Create a view",
+    "createView": "Create view",
     "intro": "Your live operational state: every view Tapstate keeps current.",
     "kind": {
       "view": "View",
@@ -2075,7 +2076,7 @@
       "none": "No sources yet.",
       "more_one": "and {{count}} more",
       "more_other": "and {{count}} more",
-      "open": "Data Sources →",
+      "open": "Sources →",
       "add": "Add data sources",
       "connected": "Connected",
       "connect": "Connect to {{name}}",
@@ -2144,7 +2145,7 @@
       "tag": "Sample",
       "sample": {
         "title": "Use the sample bank sources",
-        "description": "{{names}}, prepared for change capture. They are tagged Sample and can be removed from Data Sources.",
+        "description": "{{names}}, prepared for change capture. They are tagged Sample and can be removed from Sources.",
         "and": " and ",
         "action": "Add sample sources",
         "adding": "Adding…",

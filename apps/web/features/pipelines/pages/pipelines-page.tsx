@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 
 import type { ApiFetcher } from '@/service/source-client'
 
+import { ResourceListHeader } from '@/components/resource-list-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { listPipelines, type PipelineCatalogItem } from '@/service/pipelines/pipeline-client'
@@ -65,19 +66,12 @@ export function PipelinesPage() {
   }, [i18n.language, pipelines, search])
   return (
     <section className="flex h-full w-full flex-col overflow-hidden bg-white">
-      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-gray-100/70 px-4 md:px-6">
-        <h1 className="min-w-0 truncate text-[15px] font-semibold text-gray-900">
-          {t('pipelines.title')}
-        </h1>
-        <Button
-          type="button"
-          className="shrink-0 px-3 text-[13px] font-medium shadow-sm"
-          onClick={() => setIsCreationDialogOpen(true)}
-        >
+      <ResourceListHeader title={t('pipelines.title')}>
+        <Button type="button" onClick={() => setIsCreationDialogOpen(true)}>
           <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-          {t('common.create')}
+          {t('pipelines.create')}
         </Button>
-      </header>
+      </ResourceListHeader>
 
       <div className="flex min-h-0 flex-1 bg-white">
         <main className="flex min-w-0 flex-1 flex-col bg-white">
