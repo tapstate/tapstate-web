@@ -1054,7 +1054,11 @@
           "removeUnionInput": "移除输入流",
           "addUpstreamInput": "添加上游流",
           "selectAnotherInput": "选择其他可用流",
-          "unionWizardUnavailable": "Union 需要明确的多路数据流引用，当前构建器尚未收集这些信息。移除此步骤后即可保存并启动。"
+          "unionWizardUnavailable": "Union 需要明确的多路数据流引用，当前构建器尚未收集这些信息。移除此步骤后即可保存并启动。",
+          "identitySettings": "源标识处理",
+          "sourceIdField": "源标识保留字段名",
+          "restoreSourceIdDefault": "恢复默认",
+          "sourceIdFieldHelp": "仅在展开结果与目标标识约束冲突时使用。原值和类型会被保留；系统按每个目标分别检查。 未设置时继承前一个展开算子的字段名，并显示在此处；恢复默认会明确选择 _unwind_source_id。"
         }
       },
       "runtime": {
@@ -1379,7 +1383,10 @@
       "embeddedArray": "数组 · {{count}} 项",
       "embeddedDocument": "嵌套文档",
       "transformAnnotation": "变更字段：{{fields}}",
-      "unknownTransformOrigin": "JS 步骤的字段来源无法静态确认：{{steps}}"
+      "unknownTransformOrigin": "JS 步骤的字段来源无法静态确认：{{steps}}",
+      "projection": "预览阶段",
+      "targetProjection": "目标写入结果",
+      "logicalProjection": "算子逻辑结果"
     },
     "relations": {
       "addRelatedTable": "添加关联表",
@@ -1604,6 +1611,34 @@
           "calloutDetail": "保存草稿 · 校验 · 启动 Pipeline",
           "calloutNext": "立即启动 Pipeline"
         }
+      }
+    },
+    "targetIdentity": {
+      "title": "目标标识检查",
+      "pending": "选择目标后检查标识约束，当前尚未完成判断。",
+      "failed": "标识检查未完成，启动前需要检查通过。",
+      "automatic": "原 {{source}} 将保留为 {{preserved}}。",
+      "generated": "{{fields}}：写入时由目标生成。",
+      "unchanged": "目标支持展开后的组合键，保留原字段名。",
+      "writeKey": "更新和删除按 {{key}} 匹配。",
+      "refused": "请先处理目标标识约束，再启动任务。",
+      "status": {
+        "not-required": "无需处理",
+        "automatic": "将自动处理",
+        "action-required": "需要处理"
+      },
+      "reasons": {
+        "field-collision": "源数据已包含 {{preserved}}，请修改源标识保留字段名。",
+        "identity-generation-unavailable": "目标要求 {{field}} 唯一，但无法安全生成新值，请调整目标标识映射。",
+        "target-columns-missing": "目标缺少 {{preserved}} 或其他匹配键字段，请先调整目标结构。",
+        "logical-key-index-missing": "目标需要覆盖完整逻辑匹配键的唯一索引。",
+        "nullable-key-not-unique": "目标无法保证含空值的匹配键在重放时不产生重复记录。",
+        "other-unique-constraint": "目标的其他唯一约束与展开结果冲突，请调整目标结构或字段映射。",
+        "multiple-identity-fields": "目标涉及多个身份字段，需要显式配置映射。",
+        "invalid-field-name": "请填写非空的顶层源标识保留字段名。",
+        "target-key-conflict": "写入此目标的多个数据流需要不兼容的自动匹配键。请统一匹配键，或使用不同目标。",
+        "ambiguous-source-id-field": "到达此目标的展开配置使用了不同的源标识字段名，请为此目标统一名称。",
+        "key-representation-unsupported": "无法确认目标键类型能无损保留源标识。请使用兼容的键字段类型或显式配置映射。"
       }
     }
   },

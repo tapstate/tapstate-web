@@ -577,6 +577,7 @@ export function WizardBuilder({
             apiFetch,
           )
           if (controller.signal.aborted || generation !== previewGeneration.current) return
+          setLivePreview(result)
           if (result.failure) {
             setLivePreviewError(result.failure.reason || result.failure.code)
             setLivePreviewStatus('error')
@@ -587,6 +588,7 @@ export function WizardBuilder({
           setLivePreviewStatus('complete')
         } catch (cause) {
           if (controller.signal.aborted || generation !== previewGeneration.current) return
+          setLivePreview(null)
           setLivePreviewError(cause instanceof Error ? cause.message : 'preview-failed')
           setLivePreviewStatus('error')
         }

@@ -178,7 +178,22 @@ export interface PipelinePreviewEvent {
   payload: Record<string, unknown>
 }
 
+export interface PipelineTargetIdentity {
+  element: string
+  connection: string
+  table: string
+  stream: string
+  status: 'not-required' | 'automatic' | 'action-required'
+  reason: string
+  sourceField: string | null
+  preservedField: string | null
+  writeKey: string[]
+  generatedFields: string[]
+}
+
 export interface PipelinePreviewRun {
+  logicalDocuments?: Record<string, unknown>[]
+  identityPlans?: PipelineTargetIdentity[]
   runId: string
   candidateHash: string
   format: 'logical-json' | 'mongo-extended-json' | null
@@ -1274,6 +1289,8 @@ export async function streamPipelinePreview(
   let contexts: Record<string, unknown>[] = []
   let sample: Record<string, unknown> | null = null
   let documents: Record<string, unknown>[] = []
+  let logicalDocuments: Record<string, unknown>[] | undefined
+  let identityPlans: PipelineTargetIdentity[] | undefined
   let format: PipelinePreviewRun['format'] = null
   let trace: Record<string, unknown>[] = []
   let sampleId: string | null = null
@@ -1370,6 +1387,34 @@ export async function streamPipelinePreview(
         compileCompleted = true
         executionSpec = payload.executionSpec
         contexts = payload.contexts
+        break
+      case 'identity.completed':
+        if (
+          !compileCompleted ||
+          identityPlans !== undefined ||
+          sampleCompleted ||
+          !Array.isArray(payload.targets) ||
+          !payload.targets.every(
+            (target) =>
+              isRecord(target) &&
+              typeof target.element === 'string' &&
+              typeof target.connection === 'string' &&
+              typeof target.table === 'string' &&
+              typeof target.stream === 'string' &&
+              typeof target.reason === 'string' &&
+              ['not-required', 'automatic', 'action-required'].includes(String(target.status)) &&
+              (target.sourceField === null || typeof target.sourceField === 'string') &&
+              (target.preservedField === null || typeof target.preservedField === 'string') &&
+              isStringArray(target.writeKey) &&
+              isStringArray(target.generatedFields),
+          )
+        ) {
+          throw new PipelineClientError(
+            'protocol',
+            'Tapstate returned invalid target identity assessment.',
+          )
+        }
+        identityPlans = payload.targets as unknown as PipelineTargetIdentity[]
         break
       case 'sample.completed':
         if (
@@ -1482,13 +1527,18 @@ export async function streamPipelinePreview(
           !Array.isArray(payload.documents) ||
           !payload.documents.every(isRecord) ||
           !Number.isInteger(payload.rowCount) ||
-          payload.rowCount !== payload.documents.length
+          payload.rowCount !== payload.documents.length ||
+          (payload.logicalDocuments !== undefined &&
+            (!Array.isArray(payload.logicalDocuments) ||
+              !payload.logicalDocuments.every(isRecord) ||
+              payload.logicalDocuments.length !== payload.rowCount))
         ) {
           throw new PipelineClientError('protocol', 'Tapstate returned invalid preview documents.')
         }
         resultCompleted = true
         format = resultFormat
         documents = payload.documents
+        logicalDocuments = payload.logicalDocuments as Record<string, unknown>[] | undefined
         rowCount = payload.rowCount
         break
       }
@@ -1595,6 +1645,8 @@ export async function streamPipelinePreview(
     sampleId,
     rowCount,
     failure,
+    ...(identityPlans === undefined ? {} : { identityPlans }),
+    ...(logicalDocuments === undefined ? {} : { logicalDocuments }),
   }
 }
 
