@@ -181,7 +181,7 @@ export function OnboardingPage({
   const clusterName = currentOrganization
     ? toSlug(clusterNameInput).slice(0, 100)
     : organizationSlug
-      ? `${organizationSlug}-stream`.slice(0, 100)
+      ? organizationSlug.slice(0, 100)
       : ''
 
   useEffect(() => {

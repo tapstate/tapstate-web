@@ -30,7 +30,7 @@ function clusterSlug(value: string): string {
 }
 
 function uniqueClusterName(slug: string, existing: string[]): string {
-  const base = `${clusterSlug(slug)}-stream`.slice(0, 90).replace(/-+$/g, '') || 'tapstate-stream'
+  const base = clusterSlug(slug).slice(0, 90).replace(/-+$/g, '') || 'tapstate'
   const taken = new Set(existing.map((name) => name.toLowerCase()))
   if (!taken.has(base)) return base
   for (let suffix = 2; suffix < 1000; suffix += 1) {

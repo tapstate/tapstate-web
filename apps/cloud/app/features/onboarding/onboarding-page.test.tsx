@@ -250,7 +250,7 @@ describe('Cloud onboarding payment', () => {
 
     expect(onCreateWorkspace).toHaveBeenCalledWith(
       expect.objectContaining({
-        clusterName: 'acme-data-stream',
+        clusterName: 'acme-data',
         organizationSlug: 'acme-data',
         specKey: 'small',
       }),
@@ -338,7 +338,7 @@ describe('Cloud onboarding subscription cancellation', () => {
     expect(onCreateWorkspace.mock.calls[1]?.[0]).toMatchObject({
       organizationName: 'Acme Data',
       organizationSlug: 'acme-data',
-      clusterName: 'acme-data-stream',
+      clusterName: 'acme-data',
       region: { code: alternateRegion.code },
     })
     expect(cancelSubscription).toHaveBeenCalledWith(organization.id, activeSubscription.id)

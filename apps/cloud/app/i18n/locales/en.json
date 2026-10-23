@@ -246,7 +246,7 @@
     "organizationPlaceholder": "Acme Data",
     "slugHint": "Use English letters and numbers so we can create a unique organization address.",
     "newClusterLabel": "Cluster name",
-    "clusterNamePlaceholder": "acme-stream-2",
+    "clusterNamePlaceholder": "acme-data-2",
     "clusterNameHint": "Use English letters and numbers, separated by hyphens.",
     "regionLabel": "Open region",
     "openRegions": "Available cloud regions",

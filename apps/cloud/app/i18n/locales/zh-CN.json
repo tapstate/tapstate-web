@@ -246,7 +246,7 @@
     "organizationPlaceholder": "示例数据平台",
     "slugHint": "请使用英文字母和数字，以便创建唯一的组织地址。",
     "newClusterLabel": "集群名称",
-    "clusterNamePlaceholder": "acme-stream-2",
+    "clusterNamePlaceholder": "acme-data-2",
     "clusterNameHint": "请使用英文字母和数字，并以连字符分隔。",
     "regionLabel": "开放区域",
     "openRegions": "可用云区域",
