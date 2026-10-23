@@ -1187,7 +1187,8 @@
           "STOPPED": "已停止",
           "COMPLETED": "已完成",
           "FAILED": "失败",
-          "UNAVAILABLE": "不可用"
+          "UNAVAILABLE": "不可用",
+          "RECOVERY_REQUIRED": "需要全量恢复"
         }
       },
       "apiAccess": {
@@ -1999,13 +2000,14 @@
     },
     "managed": {
       "name": "Tapstate state store",
-      "type": "MongoDB · 服务器元数据库",
-      "access": "与此服务器已使用的 MongoDB 共用。生产环境请使用单独的 MongoDB。"
+      "type": "MongoDB · 应用数据库",
+      "access": "应用数据写入这个系统管理的默认数据源。配置与耐久缓存分别使用各自配置的数据库。",
+      "deleteReason": "此 store 由服务器管理"
     },
     "cloud": {
       "name": "Atlas state store",
-      "type": "MongoDB Atlas",
-      "access": "此组织唯一的 Atlas 目标，由 Tapstate 管理连接信息。"
+      "type": "MongoDB Atlas · 应用数据库",
+      "access": "此 Cluster 的默认应用数据目标。配置与耐久缓存分别使用各自配置的数据库。"
     },
     "states": {
       "loading": "正在加载 state store…",
@@ -2017,5 +2019,161 @@
     "sections": {
       "stateStore": "State store"
     }
+  },
+  "storage": {
+    "loading": "正在检查存储…",
+    "healthTitle": "存储健康",
+    "setupTitle": "设置集群存储",
+    "cloudSetup": "配置库由平台提供。请连接你的 Atlas 缓存库和主数据库。",
+    "opSetup": "填写一份 MongoDB 或 Atlas 连接及三个不同库名，逐库测试后保存。",
+    "connector": "数据库服务",
+    "uri": "连接 URI",
+    "platformProvided": "平台提供",
+    "tlsHelp": "支持 mongodb:// 和 mongodb+srv://。TLS 严格验证服务端证书和主机名，不支持客户端证书及私钥。",
+    "atlasHelp": "Atlas 须使用公网端点，将集群出口 IP 加入白名单，并启用 TLS。密码认证优先使用 SCRAM-SHA-256，也支持 SCRAM-SHA-1 账号；保留 authSource=admin。",
+    "customCa": "配置库和缓存库的自定义 CA",
+    "customCaHelp": "可选 PEM 证书集合，每份不超过 64 KiB。本期默认主数据库不支持仅自定义 CA 的连接。不要填写私钥。",
+    "configCa": "配置库 CA 证书",
+    "cacheCa": "缓存库 CA 证书",
+    "distinctDatabases": "三个存储层必须使用不同库名。",
+    "setupCommitHelp": "保存会将这些数据库绑定到当前集群。超时可能意味着操作仍在进行，请先刷新状态再重试。",
+    "save": "保存存储设置",
+    "working": "正在处理…",
+    "test": "测试连接",
+    "testPassed": "连接检查通过",
+    "testRequired": "需要测试连接",
+    "showUri": "显示连接串",
+    "hideUri": "隐藏连接串",
+    "testWorking": "正在检查连接…",
+    "testFailed": "连接检查失败",
+    "testExpired": "检查结果已过期，请重新测试",
+    "testAutomatic": "由系统自动检查",
+    "refresh": "刷新状态",
+    "continue": "继续",
+    "reauthorize": "输入新的安装凭证",
+    "ownerRequired": "由安装管理员继续",
+    "managementHelp": "请在服务器上打开安装命令给出的管理地址；远程访问须显式建立安全隧道。存储设置及首管创建仅能通过此专用通道完成。",
+    "capability": "安装凭证",
+    "capabilityHelp": "输入安装命令生成、仅部署账号可读的凭证文件中的当前凭证。它仅保留在本页内存；重启或过期后需通过安装命令重新授权。",
+    "loginTitle": "登录后继续",
+    "loginHelp": "存储设置与登录分别处理。请从原入口重新登录以取得新会话；已保存的存储设置会保留。",
+    "cloudLogin": "返回 Cloud 登录",
+    "opLogin": "前往登录",
+    "firstAdminTitle": "创建首个管理员",
+    "createAdmin": "创建管理员",
+    "adminComplete": "管理员设置已完成",
+    "normalLoginHelp": "请打开集群普通服务地址，使用刚创建的账号登录。此管理通道不承载普通会话。",
+    "adminUnknownHelp": "请先检查状态。若账号已创建，请普通登录，不要重复创建管理员或重置密码。",
+    "resourceIds": "资源 ID，以逗号分隔",
+    "operationId": "用于结果查询的操作 ID",
+    "originalResultHelp": "请保留此 ID，以便刷新或重新登录后查询。结果未知时必须先核对原操作，不要另建操作重试。",
+    "queryResult": "查询原操作结果",
+    "operationStatus": "结果：{{phase}}",
+    "layers": {
+      "CONFIG": "配置",
+      "CACHE": "耐久缓存",
+      "MASTER": "主数据"
+    },
+    "health": {
+      "UNKNOWN": "尚未核验",
+      "AVAILABLE": "可用",
+      "UNAVAILABLE": "不可用",
+      "AUTH_READY": "可登录，业务未就绪"
+    },
+    "errors": {
+      "authentication": "会话已失效，请重新登录。",
+      "permission": "当前凭证不能执行此操作，请核对用途及有效期。",
+      "conflict": "状态已改变，请刷新并重新核对后再确认。",
+      "dependency": "存储暂不可用，请恢复原存储后刷新。重新登录不能绕过此依赖故障。",
+      "request": "请求被拒绝，请核对设置或查询原操作结果后再重试。",
+      "network": "无法确认响应，请检查连接并核对原操作结果。",
+      "databaseCredentials": "数据库拒绝了这些凭据。请检查数据库用户名、密码和认证数据库。",
+      "databasePermissions": "此账号缺少所需的数据库权限。请检查所选数据库的读、写、索引和事务权限。",
+      "databaseConnection": "无法连接数据库。请检查 DNS、网络访问、Atlas IP 访问列表和 TLS 设置。"
+    },
+    "recovery": {
+      "title": "恢复运行存储与 Pipeline",
+      "help": "整库恢复只准备新的运行存储，所有受影响 Pipeline 保持停止。随后逐个预检并明确确认全量重建，核对源数据和目标处理前置。",
+      "scope": "重建范围",
+      "cluster": "集群运行存储",
+      "pipelines": "单个 Pipeline 全量重建",
+      "previous": "服务端要求时填写原恢复操作 ID",
+      "preview": "预检影响范围",
+      "affected": "受影响的 Pipeline",
+      "noPipelines": "此方案不包含 Pipeline。",
+      "confirmHelp": "我已核对这个 Pipeline、源全量能力、模型与目标处理，明确确认发起新的全量重建。范围变化后须重新预检。",
+      "confirm": "确认全量重建",
+      "clusterConfirmHelp": "我已通过部署工具停止并隔离全部旧 Cluster 成员，并确认源/目标端旧连接和在途写入均已结束。我确认本次完整范围。Cluster 核验本机释放和存储身份，跨机器隔离由我负责。所有受影响 Pipeline 将保持停止。",
+      "clusterConfirm": "确认恢复运行存储",
+      "clusterComplete": "运行存储已就绪。所有受影响 Pipeline 保持停止，需要逐个明确确认全量重建；这不表示 Pipeline 数据或目标已恢复。",
+      "continueOriginal": "继续此原操作",
+      "targets": "本次全量的目标处理方式",
+      "executionFailed": "此操作尚未完成。请查看任务错误；运行失败时，先停止任务，再明确继续此原操作。",
+      "stalePreview": "当前输入已不匹配此预检。请核对原范围并重新预检，再确认执行。",
+      "selectPipeline": "选择一个任务做全量重建",
+      "repreview": "重新预检此范围",
+      "policy": {
+        "APPEND": "保留已有数据，按配置的写入模式写入。",
+        "CLEAR": "先清空选中的目标表，再重新全量读取源数据。",
+        "FAIL": "选中的目标表已有数据时，拒绝执行全量。"
+      },
+      "reviewRequired": "查看全量恢复"
+    },
+    "transfer": {
+      "title": "配置转移",
+      "help": "导出选中资源及其必要定义的加密包，不包含运行状态、业务数据和集群密钥。请另行保管传输密钥，本页不会保存。",
+      "key": "传输密钥（32 字节，无填充 base64url）",
+      "export": "导出配置",
+      "users": "包含的 OP 用户名",
+      "download": "下载加密包",
+      "import": "导入配置",
+      "file": "加密包文件",
+      "mapping": "默认目标：{{source}} → {{destination}}",
+      "preflight": "预检导入",
+      "confirmHelp": "我确认此默认目标映射及预检配置的插入。既有资源不会被覆盖，Pipeline 不会自动启动。",
+      "commit": "确认导入"
+    },
+    "phase": {
+      "NOT_CONFIGURED": "需要设置存储",
+      "PREPARING": "正在准备存储",
+      "RESTART_REQUIRED": "需要重启",
+      "FIRST_ADMIN_REQUIRED": "创建首个管理员",
+      "AUTH_READY": "登录已就绪",
+      "READY": "存储已准入",
+      "UNAVAILABLE": "存储不可用",
+      "AWAITING_REBUILD_CONFIRMATION": "等待确认重建",
+      "RECOVERING": "正在重建运行状态",
+      "CLEANUP_REQUIRED": "清理结果待核验"
+    },
+    "phaseHelp": {
+      "NOT_CONFIGURED": "使用集群前需完成数据库测试与保存。",
+      "PREPARING": "正在准备原设置，可刷新查看进度；已保存绑定会保留。",
+      "RESTART_REQUIRED": "存储设置已保存。请通过安装流程受控重启，再授权创建首管。",
+      "FIRST_ADMIN_REQUIRED": "请在管理通道使用当前首管凭证。",
+      "AUTH_READY": "鉴权可用，业务服务仍在等待存储准入。",
+      "READY": "运行存储已准入；下方分别显示各层核验状态。",
+      "UNAVAILABLE": "请恢复原存储后再次检查，不要替换绑定或重复安装。",
+      "AWAITING_REBUILD_CONFIRMATION": "登录已恢复，业务状态尚未恢复。请预检并明确确认重建。",
+      "RECOVERING": "请查询原恢复操作，核验完成前业务保持禁入。",
+      "CLEANUP_REQUIRED": "上次尝试的资源清理尚未确认，请保留原设置并再次检查。"
+    },
+    "operationPhase": {
+      "PLANNED": "待确认",
+      "CONFIRMED": "已确认，等待完成",
+      "RUNNING": "进行中",
+      "COMPLETE": "已完成",
+      "COMMITTED": "已提交",
+      "PREPARED": "等待确认提交",
+      "NOT_COMMITTED": "未提交",
+      "EXPIRED": "已过期",
+      "UNKNOWN": "结果待确认",
+      "FAILED": "失败，请核对原结果",
+      "PENDING": "待确认",
+      "COMMITTING": "提交结果待确认",
+      "ABORTED": "未提交"
+    },
+    "mongodb": "MongoDB",
+    "atlas": "MongoDB Atlas",
+    "title": "集群存储"
   }
 }

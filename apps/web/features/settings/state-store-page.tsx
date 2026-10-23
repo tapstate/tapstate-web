@@ -3,22 +3,24 @@ import { HardDrive } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
+import { ConfigurationTransfer } from '@/features/storage/configuration-transfer'
+import { useStorage } from '@/features/storage/storage-context'
+import { StorageRecovery } from '@/features/storage/storage-recovery'
+import { StorageHealthPanel } from '@/features/storage/storage-ui'
 import { listSources } from '@/service/source-client'
-import { stateStoreSource } from '@/service/state-store-source'
+import { stateStoreDatabase, stateStoreSource } from '@/service/state-store-source'
 import { useAuthStore } from '@/stores/auth-store'
 import { getDeploymentProfile } from '@/utils/deployment-profile'
 
-/** Settings, State stores: one deployment-managed destination, never a data source. */
+/** Settings show the system-owned default Source used for application data. */
 export function StateStorePage() {
   const { t } = useTranslation()
+  const { snapshot, refresh } = useStorage()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const sourcesQuery = useQuery({ queryKey: ['sources'], queryFn: () => listSources(apiFetch) })
   const profile = getDeploymentProfile()
   const managed = stateStoreSource(sourcesQuery.data ?? [], profile)
-  const database =
-    typeof managed?.config.database === 'string' && managed.config.database.trim().length > 0
-      ? managed.config.database
-      : null
+  const database = managed ? stateStoreDatabase(managed) : null
 
   return (
     <section className="settings-page">
@@ -37,6 +39,12 @@ export function StateStorePage() {
           </span>
         </nav>
         <div className="settings-page__body">
+          {snapshot && <StorageHealthPanel snapshot={snapshot} />}
+          <div>
+            <Button variant="outline" onClick={() => void refresh()}>
+              {t('storage.refresh')}
+            </Button>
+          </div>
           <div className="settings-page__section-header">
             <h2 className="text-foreground text-[15px] font-semibold">
               {t('stateStorePage.title')}
@@ -104,6 +112,10 @@ export function StateStorePage() {
               </li>
             </ul>
           )}
+          {snapshot?.allowedActions.includes('configuration.import.status') && (
+            <ConfigurationTransfer defaultSourceId={managed?.id} />
+          )}
+          {snapshot?.allowedActions.includes('storage.recovery.plan') && <StorageRecovery />}
         </div>
       </div>
     </section>

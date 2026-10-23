@@ -19,6 +19,51 @@ function memoryStorage(initialToken?: string): Storage {
 }
 
 describe('auth store deployment profiles', () => {
+  it('ignores a late 401 from a superseded on-prem session', async () => {
+    let finish!: (response: Response) => void
+    const fetcher = vi.fn<typeof fetch>(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve
+        }),
+    )
+    const store = createAuthStore({ profile: 'on-prem', storage: memoryStorage('old'), fetcher })
+    const pending = store.getState().apiFetch('/api/storage/status')
+    store.getState().setToken('new')
+    finish(new Response(null, { status: 401 }))
+    await pending
+    expect(store.getState().token).toBe('new')
+    expect(store.getState().isAuthenticated).toBe(true)
+  })
+
+  it('invalidates once and waits for an explicit sign-in action on concurrent Cloud failures', async () => {
+    const redirectToCloudConsole = vi.fn()
+    const store = createAuthStore({
+      profile: 'cloud',
+      origin: 'https://cluster.test',
+      fetcher: vi.fn<typeof fetch>(async () => new Response(null, { status: 401 })),
+      redirectToCloudConsole,
+    })
+    await Promise.all([
+      store.getState().apiFetch('/api/storage/status'),
+      store.getState().apiFetch('/api/sources'),
+    ])
+    expect(redirectToCloudConsole).not.toHaveBeenCalled()
+    expect(store.getState().sessionRevision).toBe(1)
+  })
+
+  it('retains identity on dependency unavailability', async () => {
+    const redirectToCloudConsole = vi.fn()
+    const store = createAuthStore({
+      profile: 'cloud',
+      origin: 'https://cluster.test',
+      fetcher: vi.fn<typeof fetch>(async () => new Response(null, { status: 503 })),
+      redirectToCloudConsole,
+    })
+    await store.getState().apiFetch('/api/storage/status')
+    expect(store.getState().isAuthenticated).toBe(true)
+    expect(redirectToCloudConsole).not.toHaveBeenCalled()
+  })
   it('keeps the existing on-prem token lifecycle', () => {
     const storage = memoryStorage('stored-token')
     const store = createAuthStore({ profile: 'on-prem', storage })
@@ -59,8 +104,7 @@ describe('auth store deployment profiles', () => {
 
     expect(store.getState().isAuthenticated).toBe(false)
     expect(fetcher).toHaveBeenCalledTimes(1)
-    expect(redirectToCloudConsole).toHaveBeenCalledOnce()
-    expect(redirectToCloudConsole).toHaveBeenCalledWith('https://dev.cloud.tapstate.com/')
+    expect(redirectToCloudConsole).not.toHaveBeenCalled()
   })
 
   it('logs out of the Cluster and Cloud sessions without activating the route guard', async () => {

@@ -284,6 +284,7 @@ export function PipelineBuilderGuide({
   onApplyPreset,
   onAddFormula,
   onSaveDraft,
+  launchDisabled = false,
   onLaunch,
 }: {
   open: boolean
@@ -301,6 +302,7 @@ export function PipelineBuilderGuide({
   onApplyPreset: () => void
   onAddFormula: () => void
   onSaveDraft: () => void
+  launchDisabled?: boolean
   onLaunch: () => void
 }) {
   const { t } = useTranslation()
@@ -472,7 +474,7 @@ export function PipelineBuilderGuide({
         <Button
           type="button"
           size="sm"
-          disabled={step === 4 && formulaAdded}
+          disabled={step === 4 && (formulaAdded || launchDisabled)}
           onClick={() => (step === 4 ? onLaunch() : onStepChange(step + 1))}
           className={
             step === 4

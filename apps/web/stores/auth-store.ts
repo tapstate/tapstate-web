@@ -6,7 +6,7 @@ import {
   logoutCloudAccount,
   logoutCloudSession,
 } from '@/service/auth-client'
-import { cloudConsoleUrl, replaceWithCloudConsole } from '@/utils/cloud-console'
+import { cloudConsoleUrl } from '@/utils/cloud-console'
 import { deploymentProfile, type DeploymentProfile } from '@/utils/deployment-profile'
 
 import {
@@ -20,6 +20,7 @@ interface AuthState {
   profile: DeploymentProfile
   token: string | null
   isAuthenticated: boolean
+  sessionRevision: number
   setToken: (token: string) => void
   clear: () => void
   logout: () => Promise<void>
@@ -40,21 +41,21 @@ export function createAuthStore(options: AuthStoreOptions = {}) {
   const storage = options.storage === undefined ? browserSessionStorage() : options.storage
   const fetcher = options.fetcher ?? fetch
   const consoleUrl = options.cloudConsoleUrl ?? cloudConsoleUrl
-  const redirectToCloud = options.redirectToCloudConsole ?? replaceWithCloudConsole
   const storedToken = profile === 'on-prem' ? loadStoredToken(storage) : null
 
   return create<AuthState>((set, get) => ({
     profile,
     token: storedToken,
     isAuthenticated: profile === 'cloud' || Boolean(storedToken),
+    sessionRevision: 0,
     setToken: (token) => {
       if (profile === 'cloud') return
       saveStoredToken(storage, token)
-      set({ token, isAuthenticated: true })
+      set({ token, isAuthenticated: true, sessionRevision: get().sessionRevision + 1 })
     },
     clear: () => {
       if (profile === 'on-prem') clearStoredToken(storage)
-      set({ token: null, isAuthenticated: false })
+      set({ token: null, isAuthenticated: false, sessionRevision: get().sessionRevision + 1 })
     },
     logout: async () => {
       if (profile === 'cloud') {
@@ -69,13 +70,18 @@ export function createAuthStore(options: AuthStoreOptions = {}) {
       get().clear()
     },
     apiFetch: async (input, init = {}) => {
+      const originalSession = get().sessionRevision
       const response =
         profile === 'cloud'
           ? await cloudSessionFetch(input, init, fetcher, options.origin)
           : await authenticatedFetch(input, init, get().token, fetcher)
-      if (response.status === 401) {
+      if (
+        response.status === 401 &&
+        originalSession === get().sessionRevision &&
+        get().isAuthenticated
+      ) {
         get().clear()
-        if (profile === 'cloud') redirectToCloud(consoleUrl)
+        // The entry gate offers an explicit sign-in action; automatic redirects can loop on outages.
       }
       return response
     },

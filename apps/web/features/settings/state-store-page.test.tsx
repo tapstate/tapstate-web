@@ -21,6 +21,10 @@ vi.mock('@/stores/auth-store', () => ({
 }))
 vi.mock('@/utils/deployment-profile', () => ({ getDeploymentProfile: () => mockState.profile }))
 
+vi.mock('@/features/storage/storage-context', () => ({
+  useStorage: () => ({ snapshot: undefined, refresh: vi.fn() }),
+}))
+
 import { StateStorePage } from './state-store-page'
 
 function source(
@@ -101,10 +105,14 @@ describe('StateStorePage', () => {
 
   it('shows the managed store details without incomplete controls or placeholder sections', async () => {
     mockState.listSources.mockResolvedValue([
-      source('views', {
-        database: 'tapstate_acc',
-        uri: 'mongodb://admin:secret@internal:27017/tapstate',
-      }),
+      source(
+        'views',
+        {
+          database: 'tapstate_acc',
+          uri: 'mongodb://admin:secret@internal:27017/tapstate',
+        },
+        { metadata: { labels: { store: 'true' } } },
+      ),
       source('orders'),
     ])
 
@@ -125,7 +133,9 @@ describe('StateStorePage', () => {
       'Database',
       'Access',
     ])
-    expect(container.querySelectorAll('button')).toHaveLength(0)
+    expect([...container.querySelectorAll('button')].map((button) => button.textContent)).toEqual([
+      'Refresh status',
+    ])
     expect(container.textContent).not.toContain('Members')
     expect(container.textContent).not.toContain('API keys')
     expect(container.textContent).not.toContain('Add store')
@@ -137,7 +147,9 @@ describe('StateStorePage', () => {
   })
 
   it('omits the database row when the server does not report it', async () => {
-    mockState.listSources.mockResolvedValue([source('views')])
+    mockState.listSources.mockResolvedValue([
+      source('views', {}, { metadata: { labels: { store: 'true' } } }),
+    ])
 
     await render()
 
@@ -165,7 +177,9 @@ describe('StateStorePage', () => {
     expect(container.querySelector('li')?.textContent).toContain('tapstate_cloud')
     expect(container.textContent).not.toContain('Tapstate state store')
     expect(container.textContent).not.toContain('unmarked')
-    expect(container.querySelectorAll('button')).toHaveLength(0)
+    expect([...container.querySelectorAll('button')].map((button) => button.textContent)).toEqual([
+      'Refresh status',
+    ])
     expect(container.textContent).not.toContain('Members')
     expect(container.textContent).not.toContain('API keys')
     expect(container.textContent).not.toContain('Add store')

@@ -1187,7 +1187,8 @@
           "STOPPED": "已停止",
           "COMPLETED": "已完成",
           "FAILED": "失敗",
-          "UNAVAILABLE": "無法使用"
+          "UNAVAILABLE": "無法使用",
+          "RECOVERY_REQUIRED": "需要全量恢復"
         }
       },
       "apiAccess": {
@@ -1999,13 +2000,14 @@
     },
     "managed": {
       "name": "Tapstate state store",
-      "type": "MongoDB · 伺服器中繼資料庫",
-      "access": "與此伺服器已使用的 MongoDB 共用。正式環境請使用獨立的 MongoDB。"
+      "type": "MongoDB · 應用資料庫",
+      "access": "應用資料寫入此系統管理的預設資料來源。設定與耐久快取分別使用各自設定的資料庫。",
+      "deleteReason": "此 store 由伺服器管理"
     },
     "cloud": {
       "name": "Atlas state store",
-      "type": "MongoDB Atlas",
-      "access": "此組織唯一的 Atlas 目標，由 Tapstate 管理連線資訊。"
+      "type": "MongoDB Atlas · 應用資料庫",
+      "access": "此 Cluster 的預設應用資料目的地。設定與耐久快取分別使用各自設定的資料庫。"
     },
     "states": {
       "loading": "正在載入 state store…",
@@ -2017,5 +2019,161 @@
     "sections": {
       "stateStore": "State store"
     }
+  },
+  "storage": {
+    "loading": "正在檢查儲存…",
+    "healthTitle": "儲存健康",
+    "setupTitle": "設定叢集儲存",
+    "cloudSetup": "設定庫由平台提供。請連接你的 Atlas 快取庫和主資料庫。",
+    "opSetup": "填寫一份 MongoDB 或 Atlas 連接及三個不同庫名，逐庫測試後儲存。",
+    "connector": "資料庫服務",
+    "uri": "連接 URI",
+    "platformProvided": "平台提供",
+    "tlsHelp": "支援 mongodb:// 和 mongodb+srv://。TLS 嚴格驗證伺服器憑證和主機名稱，不支援用戶端憑證及私鑰。",
+    "atlasHelp": "Atlas 須使用公網端點，將叢集出口 IP 加入允許清單，並啟用 TLS。密碼驗證優先使用 SCRAM-SHA-256，也支援 SCRAM-SHA-1 帳號；保留 authSource=admin。",
+    "customCa": "設定庫和快取庫的自訂 CA",
+    "customCaHelp": "選填 PEM 憑證集合，每份不超過 64 KiB。本期預設主資料庫不支援僅自訂 CA 的連接。請勿填寫私鑰。",
+    "configCa": "設定庫 CA 憑證",
+    "cacheCa": "快取庫 CA 憑證",
+    "distinctDatabases": "三個儲存層必須使用不同庫名。",
+    "setupCommitHelp": "儲存會將這些資料庫綁定到目前叢集。逾時可能代表操作仍在進行，請先重新整理狀態再重試。",
+    "save": "儲存設定",
+    "working": "正在處理…",
+    "test": "測試連接",
+    "testPassed": "連接檢查通過",
+    "testRequired": "需要測試連接",
+    "showUri": "顯示連線字串",
+    "hideUri": "隱藏連線字串",
+    "testWorking": "正在檢查連線…",
+    "testFailed": "連線檢查失敗",
+    "testExpired": "檢查結果已過期，請重新測試",
+    "testAutomatic": "由系統自動檢查",
+    "refresh": "重新整理狀態",
+    "continue": "繼續",
+    "reauthorize": "輸入新的安裝憑證",
+    "ownerRequired": "由安裝管理員繼續",
+    "managementHelp": "請在伺服器上開啟安裝命令提供的管理位址；遠端存取須明確建立安全通道。儲存設定及首位管理員建立僅能透過此專用通道完成。",
+    "capability": "安裝憑證",
+    "capabilityHelp": "輸入安裝命令產生、僅部署帳號可讀的憑證檔案中的目前憑證。它僅保留於本頁記憶體；重新啟動或到期後須透過安裝命令重新授權。",
+    "loginTitle": "登入後繼續",
+    "loginHelp": "儲存設定與登入分別處理。請從原入口重新登入以取得新工作階段；已儲存的設定會保留。",
+    "cloudLogin": "返回 Cloud 登入",
+    "opLogin": "前往登入",
+    "firstAdminTitle": "建立首位管理員",
+    "createAdmin": "建立管理員",
+    "adminComplete": "管理員設定已完成",
+    "normalLoginHelp": "請開啟叢集一般服務位址，使用剛建立的帳號登入。此管理通道不承載一般工作階段。",
+    "adminUnknownHelp": "請先檢查狀態。若帳號已建立，請正常登入，不要重複建立管理員或重設密碼。",
+    "resourceIds": "資源 ID，以逗號分隔",
+    "operationId": "用於結果查詢的操作 ID",
+    "originalResultHelp": "請保留此 ID，以便重新整理或登入後查詢。結果未知時必須先核對原操作，請勿另建操作重試。",
+    "queryResult": "查詢原操作結果",
+    "operationStatus": "結果：{{phase}}",
+    "layers": {
+      "CONFIG": "設定",
+      "CACHE": "耐久快取",
+      "MASTER": "主資料"
+    },
+    "health": {
+      "UNKNOWN": "尚未驗證",
+      "AVAILABLE": "可用",
+      "UNAVAILABLE": "無法使用",
+      "AUTH_READY": "可登入，業務未就緒"
+    },
+    "errors": {
+      "authentication": "工作階段已失效，請重新登入。",
+      "permission": "目前憑證無法執行此操作，請核對用途及有效期。",
+      "conflict": "狀態已變更，請重新整理並核對後再確認。",
+      "dependency": "儲存暫時無法使用，請恢復原儲存後重新整理。重新登入無法繞過此相依故障。",
+      "request": "要求遭拒，請核對設定或查詢原操作結果後重試。",
+      "network": "無法確認回應，請檢查連接並核對原操作結果。",
+      "databaseCredentials": "資料庫拒絕了這些憑證。請檢查資料庫使用者名稱、密碼和驗證資料庫。",
+      "databasePermissions": "此帳號缺少所需的資料庫權限。請檢查所選資料庫的讀取、寫入、索引和交易權限。",
+      "databaseConnection": "無法連線至資料庫。請檢查 DNS、網路存取、Atlas IP 存取清單和 TLS 設定。"
+    },
+    "recovery": {
+      "title": "恢復執行儲存與 Pipeline",
+      "help": "整庫恢復只準備新的執行儲存，所有受影響 Pipeline 保持停止。隨後逐一預檢並明確確認全量重建，核對來源資料及目標處理前置。",
+      "scope": "重建範圍",
+      "cluster": "叢集執行儲存",
+      "pipelines": "單一 Pipeline 全量重建",
+      "previous": "伺服器要求時填寫原恢復操作 ID",
+      "preview": "預檢影響範圍",
+      "affected": "受影響的 Pipeline",
+      "noPipelines": "此方案不包含 Pipeline。",
+      "confirmHelp": "我已核對這個 Pipeline、來源全量能力、模型與目標處理，明確確認發起新的全量重建。範圍變更後須重新預檢。",
+      "confirm": "確認全量重建",
+      "clusterConfirmHelp": "我已透過部署工具停止並隔離全部舊 Cluster 成員，並確認來源/目標端舊連線和進行中的寫入均已結束。我確認本次完整範圍。Cluster 核驗本機釋放和儲存身分，跨機器隔離由我負責。所有受影響 Pipeline 將保持停止。",
+      "clusterConfirm": "確認恢復執行儲存",
+      "clusterComplete": "執行儲存已就緒。所有受影響 Pipeline 保持停止，需要逐一明確確認全量重建；這不表示 Pipeline 資料或目標已恢復。",
+      "continueOriginal": "繼續此原操作",
+      "targets": "本次全量的目標處理方式",
+      "executionFailed": "此操作尚未完成。請查看任務錯誤；執行失敗時，先停止任務，再明確繼續此原操作。",
+      "stalePreview": "目前輸入已不符合此預檢。請核對原範圍並重新預檢，再確認執行。",
+      "selectPipeline": "選擇一個任務進行全量重建",
+      "repreview": "重新預檢此範圍",
+      "policy": {
+        "APPEND": "保留既有資料，依設定的寫入模式寫入。",
+        "CLEAR": "先清空選中的目標表，再重新全量讀取來源資料。",
+        "FAIL": "選中的目標表已有資料時，拒絕執行全量。"
+      },
+      "reviewRequired": "查看全量恢復"
+    },
+    "transfer": {
+      "title": "設定轉移",
+      "help": "匯出所選資源及其必要定義的加密套件，不包含執行狀態、業務資料與叢集金鑰。請另外保管傳輸金鑰，本頁不會儲存。",
+      "key": "傳輸金鑰（32 位元組，無填補 base64url）",
+      "export": "匯出設定",
+      "users": "包含的 OP 使用者名稱",
+      "download": "下載加密套件",
+      "import": "匯入設定",
+      "file": "加密套件檔案",
+      "mapping": "預設目標：{{source}} → {{destination}}",
+      "preflight": "預檢匯入",
+      "confirmHelp": "我確認此預設目標對應及預檢設定的插入。既有資源不會被覆寫，Pipeline 不會自動啟動。",
+      "commit": "確認匯入"
+    },
+    "phase": {
+      "NOT_CONFIGURED": "需要設定儲存",
+      "PREPARING": "正在準備儲存",
+      "RESTART_REQUIRED": "需要重新啟動",
+      "FIRST_ADMIN_REQUIRED": "建立首位管理員",
+      "AUTH_READY": "登入已就緒",
+      "READY": "儲存已准入",
+      "UNAVAILABLE": "儲存無法使用",
+      "AWAITING_REBUILD_CONFIRMATION": "等待確認重建",
+      "RECOVERING": "正在重建執行狀態",
+      "CLEANUP_REQUIRED": "清理結果待驗證"
+    },
+    "phaseHelp": {
+      "NOT_CONFIGURED": "使用叢集前須完成資料庫測試與儲存。",
+      "PREPARING": "正在準備原設定，可重新整理查看進度；已儲存綁定會保留。",
+      "RESTART_REQUIRED": "儲存設定已完成。請透過安裝流程重新啟動，再授權建立首位管理員。",
+      "FIRST_ADMIN_REQUIRED": "請在管理通道使用目前首位管理員憑證。",
+      "AUTH_READY": "驗證可用，業務服務仍在等待儲存准入。",
+      "READY": "執行儲存已准入；下方分別顯示各層驗證狀態。",
+      "UNAVAILABLE": "請恢復原儲存後再次檢查，請勿替換綁定或重複安裝。",
+      "AWAITING_REBUILD_CONFIRMATION": "登入已恢復，業務狀態尚未恢復。請預檢並明確確認重建。",
+      "RECOVERING": "請查詢原恢復操作，驗證完成前業務維持禁止存取。",
+      "CLEANUP_REQUIRED": "上次嘗試的資源清理尚未確認，請保留原設定並再次檢查。"
+    },
+    "operationPhase": {
+      "PLANNED": "待確認",
+      "CONFIRMED": "已確認，等待完成",
+      "RUNNING": "進行中",
+      "COMPLETE": "已完成",
+      "COMMITTED": "已提交",
+      "PREPARED": "等待確認提交",
+      "NOT_COMMITTED": "未提交",
+      "EXPIRED": "已到期",
+      "UNKNOWN": "結果待確認",
+      "FAILED": "失敗，請核對原結果",
+      "PENDING": "待確認",
+      "COMMITTING": "提交結果待確認",
+      "ABORTED": "未提交"
+    },
+    "mongodb": "MongoDB",
+    "atlas": "MongoDB Atlas",
+    "title": "叢集儲存"
   }
 }
