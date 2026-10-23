@@ -2190,6 +2190,12 @@
       "empty": "还没有 state store。设置之前 pipeline 无法启动。"
     },
     "settings": "设置",
+    "about": {
+      "title": "关于",
+      "version": "版本",
+      "loading": "正在加载版本…",
+      "unavailable": "暂不可用"
+    },
     "sectionsLabel": "设置分区",
     "sections": {
       "stateStore": "State store"

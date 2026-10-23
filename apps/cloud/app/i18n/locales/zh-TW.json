@@ -41,6 +41,8 @@
     "clearSearch": "清除叢集搜尋",
     "name": "叢集名稱",
     "status": "狀態",
+    "runtimeVersion": "執行階段版本",
+    "runtimeVersionNotReported": "未回報",
     "region": "區域",
     "plan": "方案",
     "created": "建立時間",

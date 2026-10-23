@@ -41,6 +41,8 @@
     "clearSearch": "清除集群搜索",
     "name": "集群名称",
     "status": "状态",
+    "runtimeVersion": "运行版本",
+    "runtimeVersionNotReported": "未上报",
     "region": "区域",
     "plan": "套餐",
     "created": "创建时间",

@@ -64,6 +64,10 @@ export default defineConfig(({ mode }) => {
           target: process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080',
           changeOrigin: true,
         },
+        '/version': {
+          target: process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080',
+          changeOrigin: true,
+        },
         '/connector-icons': {
           target: process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080',
           changeOrigin: true,

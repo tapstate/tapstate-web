@@ -2190,6 +2190,12 @@
       "empty": "No state store yet. Pipelines cannot start until one is set."
     },
     "settings": "Settings",
+    "about": {
+      "title": "About",
+      "version": "Version",
+      "loading": "Loading version…",
+      "unavailable": "Unavailable"
+    },
     "sectionsLabel": "Settings sections",
     "sections": {
       "stateStore": "State store"

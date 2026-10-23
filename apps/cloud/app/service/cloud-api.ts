@@ -108,6 +108,7 @@ export interface Cluster {
   lastHeartbeatAt?: string | null
   createdAt?: string
   readyAt?: string | null
+  runtimeVersion?: string | null
 }
 
 export interface Spec {

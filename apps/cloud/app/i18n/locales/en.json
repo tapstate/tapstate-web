@@ -41,6 +41,8 @@
     "clearSearch": "Clear cluster search",
     "name": "Cluster name",
     "status": "Status",
+    "runtimeVersion": "Runtime version",
+    "runtimeVersionNotReported": "Not reported",
     "region": "Region",
     "plan": "Plan",
     "created": "Created",

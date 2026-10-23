@@ -203,6 +203,7 @@ export function ClustersPage() {
               <tr className="[&>th]:px-3 [&>th]:text-left [&>th]:font-[weight:inherit]">
                 <th>{t('clusterList.name')}</th>
                 <th>{t('clusterList.status')}</th>
+                <th>{t('clusterList.runtimeVersion')}</th>
                 <th>{t('clusterList.region')}</th>
                 <th>Outbound IP</th>
                 <th>{t('clusterList.plan')}</th>
@@ -238,6 +239,9 @@ export function ClustersPage() {
                       />
                       <span>{t(`clusterList.states.${cluster.state}`)}</span>
                     </span>
+                  </td>
+                  <td className="px-3 py-2 font-mono text-xs">
+                    {cluster.runtimeVersion?.trim() || t('clusterList.runtimeVersionNotReported')}
                   </td>
                   <td className="px-3 py-2 font-mono text-xs">AWS {cluster.region}</td>
                   <td className="px-3 py-2">
