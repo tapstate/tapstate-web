@@ -1365,6 +1365,13 @@
   },
   "wizard": {
     "eyebrow": "Pipeline 构建器",
+    "search": {
+      "sources": "搜索数据源",
+      "tables": "搜索数据表",
+      "fields": "搜索字段",
+      "noResults": "没有匹配的选项。",
+      "openOptions": "打开选项"
+    },
     "draft": "草稿",
     "dslMode": "DSL 引导模式",
     "backToPipelines": "返回 Pipelines",

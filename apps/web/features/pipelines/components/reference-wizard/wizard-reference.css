@@ -33,14 +33,14 @@
   min-height: 0;
 }
 @layer components {
-  .wizard-reference button {
+  .wizard-reference button:not([data-wizard-search-trigger]) {
     border-radius: var(--wizard-control-radius);
   }
 }
 .wizard-reference .wizard-reference-relation-radius {
   border-radius: var(--wizard-card-radius);
 }
-.wizard-reference input,
+.wizard-reference input:not([data-wizard-search-control]),
 .wizard-reference select,
 .wizard-reference textarea {
   border-radius: var(--wizard-control-radius);
