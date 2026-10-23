@@ -20,23 +20,39 @@ function formatTime(value?: string | null) {
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString()
 }
 
+const PAGE_SIZE = 20
+
 export function DeliveryHistoryPage() {
   const { t } = useTranslation()
   const { activeOrganization } = useCloudAppState()
   const organizationId = activeOrganization?.id
   const [deliveries, setDeliveries] = useState<NotificationDelivery[]>([])
+  const [pageIndex, setPageIndex] = useState(0)
+  const [total, setTotal] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
 
   useEffect(() => {
-    if (!organizationId) return
+    setPageIndex(0)
+  }, [organizationId])
+
+  useEffect(() => {
+    if (!organizationId) {
+      setDeliveries([])
+      setTotal(0)
+      setIsLoading(false)
+      return
+    }
     let active = true
     setIsLoading(true)
     setHasError(false)
     void cloudApi
-      .deliveries(organizationId)
-      .then((rows) => {
-        if (active) setDeliveries(rows)
+      .deliveries(organizationId, pageIndex, PAGE_SIZE)
+      .then((page) => {
+        if (active) {
+          setDeliveries(page.items)
+          setTotal(page.total)
+        }
       })
       .catch(() => {
         if (active) setHasError(true)
@@ -47,7 +63,9 @@ export function DeliveryHistoryPage() {
     return () => {
       active = false
     }
-  }, [organizationId])
+  }, [organizationId, pageIndex])
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-y-auto">
@@ -117,6 +135,28 @@ export function DeliveryHistoryPage() {
           </div>
         )}
       </div>
+
+      {!isLoading && !hasError && (deliveries.length > 0 || pageIndex > 0) && (
+        <div className="flex items-center justify-end gap-3 px-6 pb-6 text-[11px] text-neutral-500">
+          <button
+            className="rounded-lg border border-black/[0.08] px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/[0.1]"
+            disabled={pageIndex === 0}
+            onClick={() => setPageIndex((current) => Math.max(0, current - 1))}
+            type="button"
+          >
+            {t('events.pagination.previous')}
+          </button>
+          <span>{t('events.pagination.pageOf', { page: pageIndex + 1, pages: totalPages })}</span>
+          <button
+            className="rounded-lg border border-black/[0.08] px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/[0.1]"
+            disabled={pageIndex + 1 >= totalPages}
+            onClick={() => setPageIndex((current) => current + 1)}
+            type="button"
+          >
+            {t('events.pagination.next')}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

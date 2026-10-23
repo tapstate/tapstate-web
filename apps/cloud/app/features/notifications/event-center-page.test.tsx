@@ -91,7 +91,8 @@ describe('EventCenterPage', () => {
     expect(cloudApi.events).toHaveBeenCalledWith('org-1', {
       type: undefined,
       severity: undefined,
-      limit: 50,
+      limit: 20,
+      cursor: undefined,
     })
     expect(host.textContent).toContain('Cluster provisioning failed')
     expect(host.textContent).toContain('Critical')
@@ -132,6 +133,32 @@ describe('EventCenterPage', () => {
 
     expect(host.textContent).toContain('Current filter event')
     expect(host.textContent).not.toContain('Old filter event')
+  })
+
+  it('pages through events with a 20-row page and a cursor', async () => {
+    vi.mocked(cloudApi.events)
+      .mockResolvedValueOnce({
+        items: [event('evt-1', 'First page event')],
+        nextCursor: 'cursor-2',
+      })
+      .mockResolvedValueOnce({ items: [event('evt-2', 'Second page event')], nextCursor: null })
+
+    await renderPage()
+    expect(host.textContent).toContain('Page 1')
+
+    await act(async () => {
+      button('Next')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      await Promise.resolve()
+    })
+
+    expect(cloudApi.events).toHaveBeenLastCalledWith('org-1', {
+      type: undefined,
+      severity: undefined,
+      limit: 20,
+      cursor: 'cursor-2',
+    })
+    expect(host.textContent).toContain('Second page event')
+    expect(host.textContent).toContain('Page 2')
   })
 
   it('renders the event detail action as a keyboard-focusable button', async () => {
