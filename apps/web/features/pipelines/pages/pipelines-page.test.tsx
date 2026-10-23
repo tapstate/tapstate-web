@@ -33,6 +33,7 @@ const {
 vi.mock('@tanstack/react-router', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@tanstack/react-router')>()),
   useNavigate: () => navigate,
+  useSearch: () => ({}),
 }))
 
 vi.mock('@/service/source-client', () => ({ listSources }))

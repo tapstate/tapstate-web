@@ -131,7 +131,7 @@ describe('ConnectorFormily', () => {
       colorBorder: 'transparent',
       colorPrimary: 'var(--color-text-accent)',
       colorText: 'var(--color-text-primary)',
-      controlOutline: 'color-mix(in srgb, var(--color-state-accent-solid) 20%, transparent)',
+      controlOutline: 'var(--color-state-accent-solid)',
     })
   })
 

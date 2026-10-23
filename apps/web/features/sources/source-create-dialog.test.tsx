@@ -418,7 +418,9 @@ describe('SourceCreateDialog', () => {
     ).toBe(true)
 
     const modeGroup = document.body.querySelector('[role="group"][aria-label="Read mode"]')
-    expect(hasClasses(modeGroup, 'inline-flex', 'bg-muted', 'border-border')).toBe(true)
+    expect(hasClasses(modeGroup, 'inline-flex', 'bg-components-segmented-control-bg-normal')).toBe(
+      true,
+    )
     const cdcMode = [...(modeGroup?.querySelectorAll('button') ?? [])].find(
       (button) => button.textContent === 'cdc',
     )
