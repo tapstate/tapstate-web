@@ -384,7 +384,7 @@ describe('ReferenceWizardBuilder searchable pickers', () => {
               keys: ['customer_id'],
               discovered: true,
               rowCount: '1',
-              columns: ['customer_id', 'company_name'],
+              columns: ['customer_id', 'company_name', 'tenant_id'],
             },
             {
               name: 'crm_orders',
@@ -397,7 +397,7 @@ describe('ReferenceWizardBuilder searchable pickers', () => {
             {
               name: 'crm_invoices',
               primaryKey: 'invoice_id',
-              keys: ['customer_id', 'tenant_id'],
+              keys: ['invoice_id'],
               discovered: true,
               rowCount: '3',
               columns: ['invoice_id', 'customer_id', 'tenant_id'],
@@ -409,7 +409,6 @@ describe('ReferenceWizardBuilder searchable pickers', () => {
         ...renderInitial,
         root: {
           ...renderInitial.root!,
-          keys: ['customer_id', 'tenant_id'],
           columns: ['customer_id', 'company_name', 'tenant_id'],
         },
         relations: [
