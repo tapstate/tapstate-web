@@ -7,12 +7,12 @@ import type { ViewSummary } from '@/service/view-client'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { listSources } from '@/service/source-client'
+import { listConnectors, listSources } from '@/service/source-client'
 import { stateStoreSource } from '@/service/state-store-source'
 import { useAuthStore } from '@/stores/auth-store'
 import { getDeploymentProfile } from '@/utils/deployment-profile'
 
-import { StoredIn, useDurationText, ViewStatus } from './components/view-status'
+import { StoredInSourceLink, useDurationText, ViewStatus } from './components/view-status'
 import { sortViews, summarizeViews } from './views-model'
 import { useViewsQuery } from './views-query'
 
@@ -66,6 +66,12 @@ export function ViewsPage() {
 
 function ViewsList({ views }: { views: ViewSummary[] }) {
   const { t } = useTranslation()
+  const apiFetch = useAuthStore((state) => state.apiFetch)
+  const sourcesQuery = useQuery({ queryKey: ['sources'], queryFn: () => listSources(apiFetch) })
+  const connectorsQuery = useQuery({
+    queryKey: ['connectors'],
+    queryFn: () => listConnectors(apiFetch),
+  })
   const duration = useDurationText()
   const summary = summarizeViews(views)
   const now = Date.now()
@@ -98,44 +104,47 @@ function ViewsList({ views }: { views: ViewSummary[] }) {
             </tr>
           </thead>
           <tbody>
-            {sortViews(views).map((view) => (
-              <tr
-                key={view.id}
-                className="border-divider-subtle hover:bg-background-default-hover h-8 border-b"
-              >
-                <td>
-                  <Link to="/views/$viewId" params={{ viewId: view.id }} className="views-link">
-                    {view.location.collection}
-                  </Link>
-                </td>
-                <td>
-                  <Badge variant="dimm" uppercase={false}>
-                    {t(`views.kind.${view.kind}`)}
-                  </Badge>
-                </td>
-                <td>
-                  <StoredIn location={view.location} />
-                </td>
-                <td>
-                  <ViewStatus status={view.status} />
-                </td>
-                <td>{view.documents === null ? '—' : view.documents.toLocaleString()}</td>
-                <td>
-                  {view.lastAppliedAt === null
-                    ? '—'
-                    : t('views.ago', { age: duration((now - view.lastAppliedAt) / 1000) })}
-                </td>
-                <td>
-                  <Link
-                    to="/pipelines/$pipelineId/edit"
-                    params={{ pipelineId: view.pipelineId }}
-                    className="views-link"
-                  >
-                    {view.pipelineId}
-                  </Link>
-                </td>
-              </tr>
-            ))}
+            {sortViews(views).map((view) => {
+              const source = sourcesQuery.data?.find((item) => item.id === view.location.storeId)
+              const connector = source
+                ? connectorsQuery.data?.find((item) => item.id === source.connector)
+                : undefined
+
+              return (
+                <tr
+                  key={view.id}
+                  className="border-divider-subtle hover:bg-background-default-hover border-b"
+                >
+                  <td>
+                    <Link to="/views/$viewId" params={{ viewId: view.id }} className="views-link">
+                      {view.location.collection}
+                    </Link>
+                  </td>
+                  <td>
+                    <Badge variant="dimm" uppercase={false}>
+                      {t(`views.kind.${view.kind}`)}
+                    </Badge>
+                  </td>
+                  <td>
+                    <StoredInSourceLink
+                      location={view.location}
+                      source={source}
+                      connector={connector}
+                    />
+                  </td>
+                  <td>
+                    <ViewStatus status={view.status} />
+                  </td>
+                  <td>{view.documents === null ? '—' : view.documents.toLocaleString()}</td>
+                  <td>
+                    {view.lastAppliedAt === null
+                      ? '—'
+                      : t('views.ago', { age: duration((now - view.lastAppliedAt) / 1000) })}
+                  </td>
+                  <td>{view.pipelineId}</td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
