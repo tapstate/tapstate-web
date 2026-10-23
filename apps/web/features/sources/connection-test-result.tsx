@@ -6,6 +6,7 @@ import type { ConnectionTestCheck, ConnectionTestReport } from '@/service/source
 
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -28,21 +29,23 @@ function CheckResultRow({ check }: { check: ConnectionTestCheck }) {
     check.status === 'FAILED' ? 'error' : check.status === 'WARNING' ? 'warning' : 'success'
 
   return (
-    <li className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 py-3 first:pt-1 last:pb-1">
-      <div className="min-w-0">
-        <p className="system-sm-medium text-text-primary">{check.name}</p>
+    <li className="flex items-start justify-between gap-4 py-3 first:pt-1 last:pb-1">
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-start justify-between gap-4">
+          <p className="system-sm-medium text-text-primary min-w-0">{check.name}</p>
+          <span
+            className={`system-xs-medium inline-flex shrink-0 items-center gap-2 whitespace-nowrap ${check.status === 'FAILED' ? 'text-text-destructive' : 'text-text-secondary'}`}
+          >
+            <StatusDot className="rounded-full" size="small" status={dotStatus} />
+            {t(`sources.test.status.${check.status.toLowerCase()}`)}
+          </span>
+        </div>
         {checkDetail(check) && (
           <p className="system-xs-regular text-text-secondary mt-1 break-words">
             {checkDetail(check)}
           </p>
         )}
       </div>
-      <span
-        className={`system-xs-medium inline-flex shrink-0 items-center gap-2 whitespace-nowrap ${check.status === 'FAILED' ? 'text-text-destructive' : 'text-text-secondary'}`}
-      >
-        <StatusDot className="rounded-full" size="small" status={dotStatus} />
-        {t(`sources.test.status.${check.status.toLowerCase()}`)}
-      </span>
     </li>
   )
 }
@@ -156,13 +159,15 @@ export function ConnectionTestResultDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         closeLabel={t('ask.actions.close')}
-        className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-[640px]"
+        className="max-h-[calc(100dvh-2rem)] overflow-hidden sm:max-w-[640px]"
       >
         <DialogHeader>
           <DialogTitle>{t('sources.test.title')}</DialogTitle>
           <DialogDescription>{t('sources.test.description')}</DialogDescription>
         </DialogHeader>
-        <ConnectionTestResult report={report} error={error} />
+        <DialogBody className="grid gap-4 px-6 py-5 sm:px-8">
+          <ConnectionTestResult report={report} error={error} />
+        </DialogBody>
       </DialogContent>
     </Dialog>
   )
