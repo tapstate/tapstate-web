@@ -22,6 +22,7 @@ const {
   getSourceSchema,
   getStartChecks,
   runPipeline,
+  stopPipeline,
   savePipelineLayout,
   updatePipeline,
   createPipelineDraft,
@@ -42,6 +43,7 @@ const {
   getSourceSchema: vi.fn(),
   getStartChecks: vi.fn(),
   runPipeline: vi.fn(),
+  stopPipeline: vi.fn(),
   savePipelineLayout: vi.fn(),
   updatePipeline: vi.fn(),
   createPipelineDraft: vi.fn(),
@@ -83,6 +85,7 @@ vi.mock('@/service/pipelines/pipeline-client', () => ({
   getPipelineStatus,
   getStartChecks,
   runPipeline,
+  stopPipeline,
   savePipelineLayout,
   updatePipeline,
   createPipelineDraft,
@@ -578,6 +581,7 @@ beforeEach(() => {
     artifactHash: 'a'.repeat(64),
   })
   runPipeline.mockResolvedValue({ pipelineId: 'orders_to_warehouse' })
+  stopPipeline.mockResolvedValue({})
   previewPipelineDraft.mockResolvedValue({
     pipelineId: 'orders_to_warehouse',
     revision: 2,
@@ -984,6 +988,31 @@ describe('PipelineEditorPage', () => {
     expect(elementWithText('a', 'Build')?.querySelector('span')?.className).toContain(
       'max-sm:sr-only',
     )
+  })
+
+  it('confirms a stop before sending the request for a running pipeline', async () => {
+    getPipelineStatus.mockResolvedValue({ pipelineId: 'orders_to_warehouse', state: 'RUNNING' })
+    await renderPage()
+
+    await act(async () => {
+      await vi.waitFor(() => expect(elementWithText('button', 'Stop')).toBeDefined())
+      elementWithText('button', 'Stop')?.click()
+      await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')).not.toBeNull())
+    })
+
+    expect(stopPipeline).not.toHaveBeenCalled()
+
+    await act(async () => {
+      elementWithText('button', 'Stop and keep state')?.click()
+      await vi.waitFor(() =>
+        expect(stopPipeline).toHaveBeenCalledWith(
+          'orders_to_warehouse',
+          false,
+          expect.any(Function),
+        ),
+      )
+    })
+    await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')).toBeNull())
   })
 
   it('keeps navigation as a docked workspace aside inside the 4px workspace gutter', async () => {

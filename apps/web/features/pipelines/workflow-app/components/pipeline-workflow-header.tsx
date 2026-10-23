@@ -158,6 +158,20 @@ export function PipelineWorkflowHeader({
       role="toolbar"
       aria-label={t('pipelines.workspace.actions.toolbar')}
     >
+      {!isReadOnly && (
+        <Button
+          type="button"
+          variant="secondary"
+          size="medium"
+          disabled={!(canSave ?? isDirty) || isSaving || isBusy}
+          onClick={onSave}
+        >
+          <span className="i-ri-save-3-line size-4" aria-hidden="true" />
+          {isSaving
+            ? (savePendingLabel ?? t('pipelines.workspace.actions.saving'))
+            : (saveLabel ?? t('pipelines.workspace.actions.save'))}
+        </Button>
+      )}
       {stopAction ??
         (!isReadOnly && (
           <Button
@@ -175,20 +189,6 @@ export function PipelineWorkflowHeader({
               : (runLabel ?? t('pipelines.workspace.actions.run'))}
           </Button>
         ))}
-      {!isReadOnly && (
-        <Button
-          type="button"
-          variant="secondary"
-          size="medium"
-          disabled={!(canSave ?? isDirty) || isSaving || isBusy}
-          onClick={onSave}
-        >
-          <span className="i-ri-save-3-line size-4" aria-hidden="true" />
-          {isSaving
-            ? (savePendingLabel ?? t('pipelines.workspace.actions.saving'))
-            : (saveLabel ?? t('pipelines.workspace.actions.save'))}
-        </Button>
-      )}
     </div>
   )
 

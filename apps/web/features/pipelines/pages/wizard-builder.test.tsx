@@ -306,6 +306,33 @@ afterEach(() => {
 })
 
 describe('WizardBuilder publish flow', () => {
+  it('places Save before the primary Save & start action', async () => {
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={queryClient}>
+          <WizardBuilder pipelineId={initialDraft.pipelineId} draft={initialDraft} etag='"1"' />
+        </QueryClientProvider>,
+      )
+    })
+    await act(async () => {
+      await vi.waitFor(() =>
+        expect(container?.querySelector('[data-workflow-header]')).not.toBeNull(),
+      )
+    })
+
+    const actions = Array.from(
+      container?.querySelectorAll<HTMLButtonElement>('[data-workflow-header] button') ?? [],
+    )
+    expect(actions.map((button) => button.textContent?.trim())).toEqual(['Save', 'Save & start'])
+    expect(actions[0]?.className).toContain('bg-components-button-secondary-bg')
+    expect(actions[1]?.className).toContain('bg-components-button-primary-bg')
+  })
+
   it('flushes the latest editor draft and returns the saved revision before an assistant request', async () => {
     container = document.createElement('div')
     document.body.append(container)
