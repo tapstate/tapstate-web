@@ -2192,9 +2192,11 @@
     "settings": "設定",
     "about": {
       "title": "關於",
-      "versionLabel": "版本 {{version}}",
+      "version": "版本",
       "loading": "正在載入版本…",
-      "unavailable": "暫時無法使用"
+      "unavailable": "暫時無法使用",
+      "license": "開源授權",
+      "releaseNotes": "版本說明"
     },
     "sectionsLabel": "設定分區",
     "sections": {

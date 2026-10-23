@@ -2192,9 +2192,11 @@
     "settings": "Settings",
     "about": {
       "title": "About",
-      "versionLabel": "Version {{version}}",
+      "version": "Version",
       "loading": "Loading version…",
-      "unavailable": "Unavailable"
+      "unavailable": "Unavailable",
+      "license": "Open source license",
+      "releaseNotes": "Release notes"
     },
     "sectionsLabel": "Settings sections",
     "sections": {
