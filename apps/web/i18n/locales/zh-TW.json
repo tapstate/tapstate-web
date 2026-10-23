@@ -2192,7 +2192,7 @@
     "settings": "設定",
     "about": {
       "title": "關於",
-      "version": "版本",
+      "versionLabel": "版本 {{version}}",
       "loading": "正在載入版本…",
       "unavailable": "暫時無法使用"
     },

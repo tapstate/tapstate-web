@@ -2192,7 +2192,7 @@
     "settings": "Settings",
     "about": {
       "title": "About",
-      "version": "Version",
+      "versionLabel": "Version {{version}}",
       "loading": "Loading version…",
       "unavailable": "Unavailable"
     },

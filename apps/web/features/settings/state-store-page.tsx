@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { HardDrive } from 'lucide-react'
+import { HardDrive, Terminal } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -151,16 +151,22 @@ export function StateStorePage() {
                   {t('stateStorePage.about.title')}
                 </h2>
               </div>
-              <dl className="settings-about__details">
-                <div className="settings-about__row">
-                  <dt>{t('stateStorePage.about.version')}</dt>
-                  <dd aria-busy={versionQuery.isPending}>
-                    {versionQuery.isPending
-                      ? t('stateStorePage.about.loading')
-                      : versionQuery.data || t('stateStorePage.about.unavailable')}
-                  </dd>
-                </div>
-              </dl>
+              <div className="settings-about__identity" aria-label={t('app.brand')}>
+                <span className="app-sidebar__mark" aria-hidden="true">
+                  <Terminal className="h-3 w-3 text-white" />
+                </span>
+                <span className="system-xl-semibold text-text-primary">{t('app.brand')}</span>
+              </div>
+              <p
+                className="system-xs-regular text-text-tertiary"
+                aria-busy={versionQuery.isPending}
+              >
+                {versionQuery.isPending
+                  ? t('stateStorePage.about.loading')
+                  : versionQuery.data
+                    ? t('stateStorePage.about.versionLabel', { version: versionQuery.data })
+                    : t('stateStorePage.about.unavailable')}
+              </p>
             </section>
           )}
         </div>
