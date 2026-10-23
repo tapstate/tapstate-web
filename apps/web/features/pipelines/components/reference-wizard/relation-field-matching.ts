@@ -34,6 +34,23 @@ export function matchRelationFields(
     ...(parent.keys ?? []),
     parent.primaryKey,
   ]).filter((field) => parentColumns.has(normalize(field)))
+  const sharedFields = child.columns.filter((field) => {
+    const normalized = normalize(field)
+    const isKnownKey =
+      childKeys.some((key) => normalize(key) === normalized) ||
+      parentKeys.some((key) => normalize(key) === normalized)
+    return (
+      isKnownKey && parentColumns.has(normalized) && normalized !== 'id' && normalized !== 'uuid'
+    )
+  })
+
+  if (sharedFields.length === 1) {
+    return {
+      childField: sharedFields[0],
+      parentField: parentColumns.get(normalize(sharedFields[0]))!,
+    }
+  }
+
   const tableStems = relatedTableStems(parent.name)
   const inferred = parentKeys.flatMap((parentKey) => {
     const keySuffix = normalize(parentKey).split(/[_-]/).at(-1) || normalize(parentKey)
@@ -56,23 +73,6 @@ export function matchRelationFields(
 
   if (inferred.length === 1) return inferred[0]
   if (inferred.length > 1) return null
-
-  const sharedFields = child.columns.filter((field) => {
-    const normalized = normalize(field)
-    const isKnownKey =
-      childKeys.some((key) => normalize(key) === normalized) ||
-      parentKeys.some((key) => normalize(key) === normalized)
-    return (
-      isKnownKey && parentColumns.has(normalized) && normalized !== 'id' && normalized !== 'uuid'
-    )
-  })
-
-  if (sharedFields.length === 1) {
-    return {
-      childField: sharedFields[0],
-      parentField: parentColumns.get(normalize(sharedFields[0]))!,
-    }
-  }
 
   return null
 }

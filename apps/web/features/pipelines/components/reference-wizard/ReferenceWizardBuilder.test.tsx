@@ -368,6 +368,174 @@ describe('ReferenceWizardBuilder searchable pickers', () => {
     expect(childField?.value).toBe('order_id')
     expect(parentField?.value).toBe('order_id')
   })
+
+  it('preserves composite join conditions when changing the related table', async () => {
+    const host = renderBuilder({
+      catalog: [
+        {
+          id: 'crm',
+          name: 'crm',
+          badge: 'CRM',
+          connector: 'mysql',
+          tables: [
+            {
+              name: 'crm_customers',
+              primaryKey: 'customer_id',
+              keys: ['customer_id'],
+              discovered: true,
+              rowCount: '1',
+              columns: ['customer_id', 'company_name'],
+            },
+            {
+              name: 'crm_orders',
+              primaryKey: 'order_id',
+              keys: ['order_id'],
+              discovered: true,
+              rowCount: '2',
+              columns: ['order_id', 'customer_id', 'tenant_id'],
+            },
+            {
+              name: 'crm_invoices',
+              primaryKey: 'invoice_id',
+              keys: ['customer_id', 'tenant_id'],
+              discovered: true,
+              rowCount: '3',
+              columns: ['invoice_id', 'customer_id', 'tenant_id'],
+            },
+          ],
+        },
+      ],
+      initial: {
+        ...renderInitial,
+        root: {
+          ...renderInitial.root!,
+          keys: ['customer_id', 'tenant_id'],
+          columns: ['customer_id', 'company_name', 'tenant_id'],
+        },
+        relations: [
+          {
+            ...relation,
+            isTableEditing: true,
+            conditions: [
+              {
+                childKey: 'customer_id',
+                parentTable: 'crm_customers',
+                parentKey: 'customer_id',
+                operator: '=',
+              },
+              {
+                childKey: 'tenant_id',
+                parentTable: 'crm_customers',
+                parentKey: 'tenant_id',
+                operator: '=',
+              },
+            ],
+          },
+        ],
+      },
+    })
+    const tablePicker = host.querySelector<HTMLInputElement>('input[placeholder="Search tables"]')
+
+    await openPicker(tablePicker)
+    await vi.waitFor(() => expect(getPickerOptions().length).toBeGreaterThan(0))
+    const invoiceOption = getPickerOptions().find((option) =>
+      option.textContent?.includes('crm_invoices'),
+    )
+    await act(async () => invoiceOption?.click())
+
+    const childFields = [
+      ...host.querySelectorAll<HTMLInputElement>('input[aria-label="Related table field"]'),
+    ]
+    const parentFields = [
+      ...host.querySelectorAll<HTMLInputElement>('input[aria-label="Existing Pipeline field"]'),
+    ]
+    expect(childFields.map((input) => input.value)).toEqual(['customer_id', 'tenant_id'])
+    expect(parentFields.map((input) => input.value)).toEqual(['customer_id', 'tenant_id'])
+  })
+
+  it('matches nested fields against the selected parent when its table name matches the root', async () => {
+    const host = renderBuilder({
+      catalog: [
+        {
+          id: 'crm',
+          name: 'crm',
+          badge: 'CRM',
+          connector: 'mysql',
+          tables: [
+            {
+              name: 'crm_customers',
+              primaryKey: 'customer_id',
+              keys: ['customer_id'],
+              discovered: true,
+              rowCount: '1',
+              columns: ['customer_id', 'company_name'],
+            },
+          ],
+        },
+        {
+          id: 'archive',
+          name: 'archive',
+          badge: 'Archive',
+          connector: 'postgres',
+          tables: [
+            {
+              name: 'crm_customers',
+              primaryKey: 'archive_customer_id',
+              keys: ['archive_customer_id'],
+              discovered: true,
+              rowCount: '1',
+              columns: ['archive_customer_id', 'archive_name'],
+            },
+            {
+              name: 'archive_children',
+              primaryKey: 'id',
+              keys: ['id'],
+              defaultKey: 'id',
+              discovered: true,
+              rowCount: '2',
+              columns: ['id', 'archive_customer_id', 'customer_id'],
+            },
+          ],
+        },
+      ],
+      initial: {
+        ...renderInitial,
+        relations: [
+          {
+            ...relation,
+            id: 'archive-parent',
+            source: 'archive',
+            table: 'crm_customers',
+            key: 'archive_customer_id',
+            primaryKey: ['archive_customer_id'],
+          },
+        ],
+      },
+    })
+    const nestedAdd = [...host.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('Add Sub-relation to crm_customers'),
+    )
+
+    await act(async () => nestedAdd?.click())
+    const nestedTable = [
+      ...host.querySelectorAll<HTMLInputElement>('input[placeholder="Search tables"]'),
+    ].at(-1)!
+    await openPicker(nestedTable)
+    await vi.waitFor(() => expect(getPickerOptions().length).toBeGreaterThan(0))
+    const tableOption = getPickerOptions().find((option) =>
+      option.textContent?.includes('archive_children'),
+    )
+    await act(async () => tableOption?.click())
+
+    const childField = [
+      ...host.querySelectorAll<HTMLInputElement>('input[aria-label="Related table field"]'),
+    ].at(-1)
+    const parentField = [
+      ...host.querySelectorAll<HTMLInputElement>('input[aria-label="Existing Pipeline field"]'),
+    ].at(-1)
+    expect(childField?.value).toBe('archive_customer_id')
+    expect(parentField?.value).toBe('archive_customer_id')
+  })
 })
 
 describe('unwind identity across wizard sections', () => {

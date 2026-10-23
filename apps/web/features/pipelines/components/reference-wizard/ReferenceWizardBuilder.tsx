@@ -597,7 +597,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     return source?.tables.find((table) => table.name === tableName)
   }
   const relationFieldTable = (sourceNameOrId: string, tableName: string): RelationFieldTable => {
-    if (rootConfig?.table === tableName) {
+    const sourceName =
+      AVAILABLE_DATA_SOURCES.find(
+        (source) => source.name === sourceNameOrId || source.id === sourceNameOrId,
+      )?.name || sourceNameOrId
+    if (rootConfig?.table === tableName && (!sourceName || rootConfig.source === sourceName)) {
       return {
         name: rootConfig.table,
         columns: rootConfig.columns,
@@ -607,9 +611,17 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       }
     }
 
-    const relation = flattenRelations(relations).find(
-      (candidate) => tableToken(candidate) === tableName || candidate.table === tableName,
-    )
+    const candidates = flattenRelations(relations)
+    const relation =
+      candidates.find(
+        (candidate) =>
+          tableToken(candidate) === tableName && (!sourceName || candidate.source === sourceName),
+      ) ||
+      (sourceName
+        ? candidates.find(
+            (candidate) => candidate.table === tableName && candidate.source === sourceName,
+          )
+        : candidates.find((candidate) => candidate.table === tableName))
     if (relation) {
       return (
         findTableMeta(relation.source, relation.table) ?? {
@@ -657,26 +669,44 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       let after = updater(before)
       if (before.source !== after.source || before.table !== after.table) {
         const meta = getTablesForSource(after.source).find((t) => t.name === after.table)
+        const previousConditions = getConditions(before)
         const parentTable =
-          getConditions(before)[0]?.parentTable || before.parentTable || rootConfig?.table || ''
-        const match = meta ? matchRelationFields(meta, relationFieldTable('', parentTable)) : null
+          previousConditions[0]?.parentTable || before.parentTable || rootConfig?.table || ''
+        const parentMeta = relationFieldTable('', parentTable)
+        const match =
+          meta && previousConditions.length === 1 ? matchRelationFields(meta, parentMeta) : null
         const fallbackChildKey =
           (meta?.columns.includes(after.key) ? after.key : '') ||
           meta?.defaultKey ||
           meta?.primaryKey ||
           ''
+        const parentColumns = new Set(parentMeta.columns)
         after = {
           ...after,
           ...relationKeysForTableChange(after.type, meta),
           key: match?.childField ?? fallbackChildKey,
           parentKey: match?.parentField ?? after.parentKey,
-          conditions: getConditions(before).map((condition) => ({
-            ...condition,
-            childKey:
-              match?.childField ??
-              (meta?.columns.includes(condition.childKey) ? condition.childKey : fallbackChildKey),
-            parentKey: match?.parentField ?? condition.parentKey,
-          })),
+          conditions: previousConditions.map((condition) => {
+            const childFieldIsValid = Boolean(meta?.columns.includes(condition.childKey))
+            const parentFieldIsValid = parentColumns.has(condition.parentKey)
+            return {
+              ...condition,
+              childKey:
+                match?.childField ??
+                (childFieldIsValid
+                  ? condition.childKey
+                  : previousConditions.length === 1
+                    ? fallbackChildKey
+                    : ''),
+              parentKey:
+                match?.parentField ??
+                (parentFieldIsValid
+                  ? condition.parentKey
+                  : previousConditions.length === 1
+                    ? after.parentKey
+                    : ''),
+            }
+          }),
         }
       }
       const walk = (nodes: RelationNode[]): RelationNode[] =>

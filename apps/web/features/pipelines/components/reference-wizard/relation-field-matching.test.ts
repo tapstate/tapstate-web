@@ -36,4 +36,23 @@ describe('relation field matching', () => {
       ),
     ).toBeNull()
   })
+
+  it('prefers an exact shared key over a table-name guess', () => {
+    expect(
+      matchRelationFields(
+        {
+          name: 'archive_children',
+          columns: ['id', 'archive_customer_id', 'customer_id'],
+          primaryKey: 'id',
+          keys: ['id'],
+        },
+        {
+          name: 'crm_customers',
+          columns: ['archive_customer_id', 'archive_name'],
+          primaryKey: 'archive_customer_id',
+          keys: ['archive_customer_id'],
+        },
+      ),
+    ).toEqual({ childField: 'archive_customer_id', parentField: 'archive_customer_id' })
+  })
 })
