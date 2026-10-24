@@ -77,7 +77,9 @@ async function mount(value = context) {
   await act(async () => render(value))
 }
 function button(text: string) {
-  return [...container.querySelectorAll('button')].find((node) => node.textContent?.includes(text))!
+  return [...container.querySelectorAll('button')].find(
+    (node) => node.textContent?.includes(text) || node.getAttribute('aria-label')?.includes(text),
+  )!
 }
 async function generate() {
   const suggestion = button('Infer parent')
@@ -117,6 +119,64 @@ function response(baseRevision = proposal.baseRevision) {
 }
 
 describe('Pipeline Builder assistant', () => {
+  it('renders text deltas while the response remains open', async () => {
+    let controller!: ReadableStreamDefaultController<Uint8Array>
+    useAuthStore.setState({
+      apiFetch: vi.fn().mockResolvedValue(
+        new Response(
+          new ReadableStream({
+            start(value) {
+              controller = value
+            },
+          }),
+          {
+            headers: { 'Content-Type': 'text/event-stream', 'x-vercel-ai-ui-message-stream': 'v1' },
+          },
+        ),
+      ),
+    })
+    await mount()
+    await generate()
+    const emit = (part: unknown) =>
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify(part)}\n\n`))
+    await act(async () => {
+      emit({ type: 'start', messageId: 'incremental' })
+      emit({ type: 'text-start', id: 'text' })
+      emit({ type: 'text-delta', id: 'text', delta: 'First streamed paragraph.' })
+    })
+    await vi.waitFor(() => expect(container.textContent).toContain('First streamed paragraph.'))
+    expect(container.querySelector('[aria-label="Stop"]')).not.toBeNull()
+    expect(container.textContent).not.toContain('Review proposed')
+    await act(async () => {
+      emit({ type: 'text-delta', id: 'text', delta: ' Another paragraph.' })
+    })
+    await vi.waitFor(() => expect(container.textContent).toContain('Another paragraph.'))
+    await act(async () => {
+      emit({ type: 'text-end', id: 'text' })
+      emit({ type: 'finish', finishReason: 'stop' })
+      controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+      controller.close()
+    })
+  })
+
+  it('can stop while preparing the draft before a provider request starts', async () => {
+    let finishSave!: (revision: number) => void
+    const prepareRequest = () =>
+      new Promise<number>((resolve) => {
+        finishSave = resolve
+      })
+    const apiFetch = vi.fn()
+    useAuthStore.setState({ apiFetch })
+    await mount({ ...context, prepareRequest })
+    await generate()
+    const stop = container.querySelector<HTMLButtonElement>('[aria-label="Stop"]')
+    expect(stop).not.toBeNull()
+    await act(async () => stop!.click())
+    await act(async () => finishSave(3))
+    expect(apiFetch).not.toHaveBeenCalled()
+    expect(container.querySelector('[aria-label="Stop"]')).toBeNull()
+  })
+
   it.skipIf(!javaStreamFixturePath)(
     'consumes a Java-produced stream through the real AI SDK client',
     async () => {
@@ -192,7 +252,7 @@ describe('Pipeline Builder assistant', () => {
     await act(async () => button('Validate and apply').click())
     expect(apiFetch.mock.calls[1][0]).toBe('/api/pipelines/customers/draft:assistant-validate')
     expect(context.onApply).toHaveBeenCalledExactlyOnceWith(candidate)
-    expect(button('Applied to editor').disabled).toBe(true)
+    expect(button('Applied to editor').matches(':disabled, [aria-disabled="true"]')).toBe(true)
   })
   it('omits an empty assistant reply from the next request history', async () => {
     const apiFetch = vi

@@ -1,4 +1,3 @@
-import { Button as DifyButton } from '@langgenius/dify-ui/button'
 import { IconButton as DifyIconButton } from '@langgenius/dify-ui/icon-button'
 import {
   Popover,
@@ -7,7 +6,6 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from '@langgenius/dify-ui/popover'
-import { Textarea as DifyTextarea } from '@langgenius/dify-ui/textarea'
 import {
   Database,
   Table2,
@@ -32,7 +30,6 @@ import { useTranslation } from 'react-i18next'
 import type { PipelinePreviewRun } from '@/service/pipelines/pipeline-client'
 
 import { ConnectorIcon } from '@/components/connector-icon'
-import { Button } from '@/components/ui/button'
 
 import './wizard-reference.css'
 import { Input } from '@/components/ui/input'
@@ -48,6 +45,7 @@ import { cn } from '@/lib/utils'
 import type { DeploymentProfile } from '../../model/deployment-profile'
 
 import { UnwindTargetIdentitySummary } from '../unwind-target-identity-summary'
+import { AssistantComposer } from './AssistantComposer'
 import { PipelineAiCopilot, type BuilderAssistantContext } from './PipelineAiCopilot'
 import { matchRelationFields, type RelationFieldTable } from './relation-field-matching'
 import { FieldAutocomplete, SearchablePicker } from './searchable-picker'
@@ -315,21 +313,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     intent: string
     text: string
   } | null>(null)
-  const assistantHelperComposerRef = React.useRef<HTMLDivElement>(null)
-  React.useEffect(() => {
-    const textarea = assistantHelperComposerRef.current?.querySelector('textarea')
-    if (!textarea) return
-    textarea.style.height = 'auto'
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 158)}px`
-  }, [assistantHelperDraft?.text])
   const [rootPrompt, setRootPrompt] = React.useState('')
-  const rootPromptInput = React.useRef<HTMLTextAreaElement>(null)
-  React.useEffect(() => {
-    const field = rootPromptInput.current
-    if (!field) return
-    field.style.height = 'auto'
-    field.style.height = `${Math.min(field.scrollHeight, 158)}px`
-  }, [rootPrompt])
   const rootPromptRequestId = React.useRef<number | null>(null)
   const assistantPromptSequence = React.useRef(0)
   const [activeContext, setActiveContext] = React.useState('root')
@@ -517,9 +501,9 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     setAssistantPrompt({ id: ++assistantPromptSequence.current, text, submit: true })
     setAssistantHelperDraft(null)
   }
-  function submitRootPrompt(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    event.stopPropagation()
+  function submitRootPrompt(event?: React.FormEvent<HTMLFormElement>) {
+    event?.preventDefault()
+    event?.stopPropagation()
     const text = rootPrompt.trim()
     if (!text || readOnly || !assistant || assistantPrompt?.submit) return
     const id = ++assistantPromptSequence.current
@@ -640,58 +624,27 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
               >
                 {t('wizard.assistant.helperPopover.prompt')}
               </label>
-              <div
-                ref={assistantHelperComposerRef}
-                className="pipeline-ai-composer pipeline-ai-composer--inline"
-              >
-                <DifyTextarea
-                  id={`assistant-helper-${focus}-${intent}`}
-                  autoFocus
-                  size="medium"
-                  rows={1}
-                  value={
-                    assistantHelperDraft?.focus === focus && assistantHelperDraft?.intent === intent
-                      ? assistantHelperDraft.text
-                      : ''
-                  }
-                  onValueChange={(text) =>
-                    setAssistantHelperDraft((current) =>
-                      current?.focus === focus && current.intent === intent
-                        ? { ...current, text }
-                        : current,
-                    )
-                  }
-                  onKeyDown={(event) => {
-                    if (
-                      event.key === 'Enter' &&
-                      !event.shiftKey &&
-                      !event.nativeEvent.isComposing
-                    ) {
-                      event.preventDefault()
-                      sendAssistantHelper()
-                    }
-                  }}
-                  placeholder={t(`wizard.assistant.helperPopover.placeholders.${intent}`)}
-                  className="pipeline-ai-composer-input min-h-8 resize-none rounded-none border-0 bg-transparent px-1 py-1 pe-10 focus:border-transparent focus:bg-transparent focus:ring-0"
-                  aria-label={t('wizard.assistant.helperPopover.prompt')}
-                />
-                <DifyButton
-                  type="button"
-                  variant="primary"
-                  size="medium"
-                  aria-label={t('wizard.assistant.helperPopover.send')}
-                  title={t('wizard.assistant.helperPopover.send')}
-                  disabled={
-                    !assistantHelperDraft?.text.trim() ||
-                    assistant.blocked ||
-                    (assistant.sendBlocked ?? assistant.blocked)
-                  }
-                  onClick={sendAssistantHelper}
-                  className="pipeline-ai-composer-send w-8 shrink-0 px-0"
-                >
-                  <span className="i-ri-send-plane-2-fill size-4" aria-hidden="true" />
-                </DifyButton>
-              </div>
+              <AssistantComposer
+                id={`assistant-helper-${focus}-${intent}`}
+                autoFocus
+                value={
+                  assistantHelperDraft?.focus === focus && assistantHelperDraft?.intent === intent
+                    ? assistantHelperDraft.text
+                    : ''
+                }
+                onValueChange={(text) =>
+                  setAssistantHelperDraft((current) =>
+                    current?.focus === focus && current.intent === intent
+                      ? { ...current, text }
+                      : current,
+                  )
+                }
+                onSend={sendAssistantHelper}
+                label={t('wizard.assistant.helperPopover.prompt')}
+                placeholder={t(`wizard.assistant.helperPopover.placeholders.${intent}`)}
+                sendLabel={t('wizard.assistant.helperPopover.send')}
+                disabled={assistant.blocked || (assistant.sendBlocked ?? assistant.blocked)}
+              />
             </div>
           </div>
         </PopoverContent>
@@ -2599,48 +2552,23 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                             >
                               {t('wizard.assistant.rootPromptLabel')}
                             </label>
-                            <div className="pipeline-ai-composer">
-                              <textarea
-                                ref={rootPromptInput}
-                                id="pipeline-root-assistant-prompt"
-                                aria-label={t('wizard.assistant.rootPromptLabel')}
-                                value={rootPrompt}
-                                onChange={(event) => setRootPrompt(event.target.value)}
-                                onKeyDown={(event) => {
-                                  if (
-                                    event.key === 'Enter' &&
-                                    !event.shiftKey &&
-                                    !event.nativeEvent.isComposing
-                                  ) {
-                                    event.preventDefault()
-                                    event.currentTarget.form?.requestSubmit()
-                                  }
-                                }}
-                                placeholder={t('wizard.assistant.rootPromptPlaceholder')}
-                                rows={1}
-                                maxLength={4000}
-                                className="pipeline-ai-composer-input"
-                              />
-                              <div className="pipeline-ai-composer-actions">
-                                <span className="system-xs-regular text-text-tertiary">
-                                  {t('wizard.assistant.newline')}
-                                </span>
-                                <Button
-                                  type="submit"
-                                  size="medium"
-                                  loading={Boolean(assistantPrompt?.submit)}
-                                  aria-label={t('wizard.assistant.send')}
-                                  title={t('wizard.assistant.send')}
-                                  disabled={!rootPrompt.trim() || Boolean(assistantPrompt?.submit)}
-                                  className="w-8 shrink-0 px-0"
-                                >
-                                  <span
-                                    className="i-ri-send-plane-2-fill size-4"
-                                    aria-hidden="true"
-                                  />
-                                </Button>
-                              </div>
-                            </div>
+                            <AssistantComposer
+                              id="pipeline-root-assistant-prompt"
+                              value={rootPrompt}
+                              onValueChange={setRootPrompt}
+                              onSend={() => submitRootPrompt()}
+                              onStop={() => {
+                                setAssistantPrompt(null)
+                                rootPromptRequestId.current = null
+                              }}
+                              label={t('wizard.assistant.rootPromptLabel')}
+                              placeholder={t('wizard.assistant.rootPromptPlaceholder')}
+                              sendLabel={t('wizard.assistant.send')}
+                              stopLabel={t('wizard.assistant.stop')}
+                              state={assistantPrompt?.submit ? 'waiting' : 'idle'}
+                              hint={t('wizard.assistant.newline')}
+                              maxLength={4000}
+                            />
                             {assistantPrompt?.submit && (
                               <p role="status" className="text-muted-foreground text-[11px]">
                                 {t('wizard.assistant.queuedRootPrompt')}

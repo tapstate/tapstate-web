@@ -906,10 +906,14 @@ describe('ReferenceWizardBuilder assistant isolation', () => {
     )!
     act(() => helper.click())
     expect(onChange).not.toHaveBeenCalled()
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Scope:')
+    expect(
+      document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Your request"]')?.value,
+    ).toBe('')
     expect(
       host.querySelector<HTMLTextAreaElement>('textarea[aria-label="Pipeline assistant prompt"]')
         ?.value,
-    ).toContain('focused table')
+    ).toBe('')
   })
   it('sends a blank-builder prompt from the Input Table card into the same review flow', async () => {
     const promptText = 'Sync PostgreSQL orders to MySQL and keep customer totals up to date.'

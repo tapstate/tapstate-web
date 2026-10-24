@@ -6,10 +6,8 @@ import {
   ChevronRight,
   Loader2,
   RotateCcw,
-  Send,
   Settings2,
   Sparkles,
-  Square,
   X,
 } from 'lucide-react'
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
@@ -28,6 +26,7 @@ import {
 } from '@/service/pipelines/pipeline-assistant-client'
 import { useAuthStore } from '@/stores/auth-store'
 
+import { AssistantComposer } from './AssistantComposer'
 import { AssistantProviderForm } from './AssistantProviderForm'
 
 const AssistantMarkdown = lazy(() => import('./AssistantMarkdown'))
@@ -120,12 +119,6 @@ export function PipelineAiCopilot({
   const requestRevision = useRef<number | null>(null)
   const composerInput = useRef<HTMLTextAreaElement>(null)
   useEffect(() => {
-    const field = composerInput.current
-    if (!field) return
-    field.style.height = 'auto'
-    field.style.height = `${Math.min(field.scrollHeight, 158)}px`
-  }, [input, tab])
-  useEffect(() => {
     if (tab === 'chat' && promptRequest && !promptRequest.submit) composerInput.current?.focus()
   }, [tab, promptRequest])
   const end = useRef<HTMLDivElement>(null)
@@ -210,6 +203,15 @@ export function PipelineAiCopilot({
     },
     [chat.stop],
   )
+  function stop() {
+    generation.current += 1
+    sendingRef.current = false
+    setPreparing(false)
+    setSending(false)
+    setComplete(false)
+    setCanceled(true)
+    void chat.stop()
+  }
   function send(text: string): boolean {
     const prompt = text.trim()
     const currentContext = latest.current.context
@@ -690,71 +692,31 @@ export function PipelineAiCopilot({
                 {t('wizard.assistant.waitForSave')}
               </p>
             )}
-            {preparing && (
-              <p role="status" className="mb-2 flex items-center gap-2 text-[11px] text-gray-600">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                {t('wizard.assistant.savingDraft')}
-              </p>
-            )}
             {prepareError && (
               <p role="alert" className="mb-2 text-[11px] leading-relaxed text-red-700">
                 {t('wizard.assistant.saveBeforeSendFailed')}
               </p>
             )}
-            <div className="pipeline-ai-composer">
-              <textarea
-                ref={composerInput}
-                aria-label={t('wizard.assistant.prompt')}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                    e.preventDefault()
-                    send(input)
-                  }
-                }}
-                placeholder={t('wizard.assistant.placeholder')}
-                rows={1}
-                className="pipeline-ai-composer-input"
-              />
-              <div className="pipeline-ai-composer-actions">
-                <span>{t('wizard.assistant.newline')}</span>
-                {streaming ? (
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      generation.current += 1
-                      sendingRef.current = false
-                      setPreparing(false)
-                      setSending(false)
-                      setComplete(false)
-                      setCanceled(true)
-                      void chat.stop()
-                    }}
-                    aria-label={t('wizard.assistant.stop')}
-                    title={t('wizard.assistant.stop')}
-                    variant="secondary"
-                    size="medium"
-                    className="w-8 shrink-0 px-0"
-                  >
-                    <Square className="h-4 w-4" />
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    disabled={!input.trim() || sendBlocked}
-                    onClick={() => send(input)}
-                    aria-label={t('wizard.assistant.send')}
-                    title={t('wizard.assistant.send')}
-                    variant="primary"
-                    size="medium"
-                    className="w-8 shrink-0 px-0"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </div>
+            <AssistantComposer
+              inputRef={composerInput}
+              value={input}
+              onValueChange={setInput}
+              onSend={() => send(input)}
+              onStop={stop}
+              label={t('wizard.assistant.prompt')}
+              placeholder={t('wizard.assistant.placeholder')}
+              sendLabel={t('wizard.assistant.send')}
+              stopLabel={t('wizard.assistant.stop')}
+              disabled={sendBlocked}
+              state={
+                preparing || sending || streaming
+                  ? preparing || !responseHasText
+                    ? 'waiting'
+                    : 'streaming'
+                  : 'idle'
+              }
+              hint={t('wizard.assistant.newline')}
+            />
           </div>
         </>
       )}
