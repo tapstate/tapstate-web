@@ -1,4 +1,13 @@
-import { Popover, PopoverContent, PopoverTrigger } from '@langgenius/dify-ui/popover'
+import { Button as DifyButton } from '@langgenius/dify-ui/button'
+import { IconButton as DifyIconButton } from '@langgenius/dify-ui/icon-button'
+import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverTitle,
+  PopoverTrigger,
+} from '@langgenius/dify-ui/popover'
+import { Textarea as DifyTextarea } from '@langgenius/dify-ui/textarea'
 import {
   Database,
   Table2,
@@ -16,7 +25,6 @@ import {
   Workflow,
   Copy,
   Sparkles,
-  Send,
 } from 'lucide-react'
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
@@ -289,6 +297,13 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     intent: string
     text: string
   } | null>(null)
+  const assistantHelperComposerRef = React.useRef<HTMLDivElement>(null)
+  React.useEffect(() => {
+    const textarea = assistantHelperComposerRef.current?.querySelector('textarea')
+    if (!textarea) return
+    textarea.style.height = 'auto'
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 158)}px`
+  }, [assistantHelperDraft?.text])
   const [rootPrompt, setRootPrompt] = React.useState('')
   const rootPromptInput = React.useRef<HTMLTextAreaElement>(null)
   React.useEffect(() => {
@@ -558,71 +573,81 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       >
         <PopoverTrigger
           render={
-            <Button
+            <DifyIconButton
               type="button"
-              variant="ghost"
-              size="icon"
+              variant="ghost-accent"
+              size="md"
               aria-label={t(`wizard.assistant.helpers.${intent}`)}
               title={t(`wizard.assistant.helpers.${intent}`)}
               onClick={(event) => event.stopPropagation()}
-              className="text-text-accent hover:bg-state-accent-hover"
+              className="data-popup-open:bg-state-accent-active"
             >
-              <Sparkles className="h-4 w-4" />
-            </Button>
+              <Sparkles className="h-4 w-4" aria-hidden="true" />
+            </DifyIconButton>
           }
         />
         <PopoverContent
-          placement="bottom-end"
-          className="z-[80] w-[min(22rem,calc(100vw-2rem))] p-0"
+          className="pipeline-ai-helper-popover w-72 max-w-[calc(100vw-2rem)] p-4"
           onClick={(event) => event.stopPropagation()}
         >
-          <div className="space-y-3 p-3.5">
+          <div className="space-y-3">
             <div>
-              <p className="text-[13px] font-semibold text-gray-900">
+              <PopoverTitle className="system-sm-semibold text-text-primary">
                 {t(`wizard.assistant.intents.${intent}`)}
-              </p>
-              <p className="mt-1 text-[11px] text-gray-500">
+              </PopoverTitle>
+              <PopoverDescription className="system-xs-regular text-text-tertiary mt-1 flex min-w-0 items-baseline gap-1">
                 {t('wizard.assistant.helperPopover.scope')}{' '}
-                <span className="font-medium text-gray-800">{assistantScope(focus)}</span>
-              </p>
+                <span className="system-xs-medium text-text-secondary truncate font-mono">
+                  {assistantScope(focus)}
+                </span>
+              </PopoverDescription>
             </div>
-            <div>
+            <div className="space-y-1">
               <label
                 htmlFor={`assistant-helper-${focus}-${intent}`}
-                className="mb-1.5 block text-[11px] font-medium text-gray-700"
+                className="system-xs-medium text-text-secondary block"
               >
                 {t('wizard.assistant.helperPopover.prompt')}
               </label>
-              <div className="relative">
-                <textarea
+              <div
+                ref={assistantHelperComposerRef}
+                className="pipeline-ai-composer pipeline-ai-composer--inline"
+              >
+                <DifyTextarea
                   id={`assistant-helper-${focus}-${intent}`}
                   autoFocus
+                  size="medium"
+                  rows={1}
                   value={
                     assistantHelperDraft?.focus === focus && assistantHelperDraft?.intent === intent
                       ? assistantHelperDraft.text
                       : ''
                   }
-                  onChange={(event) =>
+                  onValueChange={(text) =>
                     setAssistantHelperDraft((current) =>
                       current?.focus === focus && current.intent === intent
-                        ? { ...current, text: event.target.value }
+                        ? { ...current, text }
                         : current,
                     )
                   }
                   onKeyDown={(event) => {
-                    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+                    if (
+                      event.key === 'Enter' &&
+                      !event.shiftKey &&
+                      !event.nativeEvent.isComposing
+                    ) {
                       event.preventDefault()
                       sendAssistantHelper()
                     }
                   }}
                   placeholder={t(`wizard.assistant.helperPopover.placeholders.${intent}`)}
-                  rows={4}
-                  className="w-full resize-y rounded-md border border-gray-300 bg-white px-2.5 py-2 pb-12 text-[12px] leading-relaxed text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="pipeline-ai-composer-input min-h-8 resize-none rounded-none border-0 bg-transparent px-1 py-1 pe-10 focus:border-transparent focus:bg-transparent focus:ring-0"
                   aria-label={t('wizard.assistant.helperPopover.prompt')}
                 />
-                <Button
+                <DifyButton
                   type="button"
-                  size="icon"
+                  variant="primary"
+                  size="medium"
                   aria-label={t('wizard.assistant.helperPopover.send')}
                   title={t('wizard.assistant.helperPopover.send')}
                   disabled={
@@ -631,14 +656,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                     (assistant.sendBlocked ?? assistant.blocked)
                   }
                   onClick={sendAssistantHelper}
-                  className="absolute right-2 bottom-2 h-8 w-8 shadow-sm"
+                  className="pipeline-ai-composer-send w-8 shrink-0 px-0"
                 >
-                  <Send className="h-3.5 w-3.5" />
-                </Button>
+                  <span className="i-ri-send-plane-2-fill size-4" aria-hidden="true" />
+                </DifyButton>
               </div>
-              <p className="mt-2 text-[10px] text-gray-500">
-                {t('wizard.assistant.helperPopover.reviewHint')}
-              </p>
             </div>
           </div>
         </PopoverContent>

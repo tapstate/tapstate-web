@@ -1699,13 +1699,12 @@
       },
       "helperPopover": {
         "scope": "Scope:",
-        "prompt": "What should AI change?",
+        "prompt": "Your request",
         "placeholders": {
-          "clean": "Describe a filter or field change using this table’s fields…",
-          "relations": "Name the related tables and the fields that connect them…",
-          "metrics": "Describe the metric and the fields it should use…"
+          "clean": "Describe a filter or field change…",
+          "relations": "Name the related tables and join fields…",
+          "metrics": "Describe the metric to calculate…"
         },
-        "reviewHint": "AI will prepare a proposal for review.",
         "send": "Ask AI"
       },
       "inputTableFocus": "Input table",

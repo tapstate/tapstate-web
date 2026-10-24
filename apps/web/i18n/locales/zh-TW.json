@@ -1699,13 +1699,12 @@
       },
       "helperPopover": {
         "scope": "目前作用範圍：",
-        "prompt": "希望 AI 幫你修改什麼？",
+        "prompt": "描述你的需求",
         "placeholders": {
-          "clean": "使用目前資料表中的欄位描述篩選條件或欄位變更…",
-          "relations": "說明要關聯的資料表，以及連接它們的欄位…",
-          "metrics": "說明要計算的指標及使用的欄位…"
+          "clean": "描述篩選條件或欄位變更…",
+          "relations": "說明要關聯的資料表和關聯欄位…",
+          "metrics": "描述要計算的指標…"
         },
-        "reviewHint": "AI 會先產生提案供你檢閱。",
         "send": "詢問 AI"
       },
       "inputTableFocus": "輸入資料表",

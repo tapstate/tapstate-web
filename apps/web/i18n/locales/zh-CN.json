@@ -1699,13 +1699,12 @@
       },
       "helperPopover": {
         "scope": "当前作用范围：",
-        "prompt": "希望 AI 帮你修改什么？",
+        "prompt": "描述你的需求",
         "placeholders": {
-          "clean": "使用当前表中的字段描述过滤条件或字段变更…",
-          "relations": "说明要关联的表，以及连接它们的字段…",
-          "metrics": "说明要计算的指标及使用的字段…"
+          "clean": "描述过滤条件或字段变更…",
+          "relations": "说明要关联的表和关联字段…",
+          "metrics": "描述要计算的指标…"
         },
-        "reviewHint": "AI 会先生成提案供你审核。",
         "send": "询问 AI"
       },
       "inputTableFocus": "输入表",

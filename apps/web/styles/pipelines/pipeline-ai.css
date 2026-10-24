@@ -1,6 +1,7 @@
 /* Shared assistant anatomy: compact controls, flexible transcript, one composer. */
 .pipeline-ai-copilot,
-.pipeline-ai-inline {
+.pipeline-ai-inline,
+.pipeline-ai-helper-popover {
   --ai-input-radius: 12px;
   --ai-compose-padding: 9px;
 }
@@ -93,6 +94,14 @@
 }
 .pipeline-ai-composer-input::placeholder {
   color: var(--color-text-placeholder);
+}
+.pipeline-ai-composer--inline {
+  position: relative;
+}
+.pipeline-ai-composer--inline .pipeline-ai-composer-send {
+  position: absolute;
+  inset-inline-end: var(--ai-compose-padding);
+  inset-block-end: var(--ai-compose-padding);
 }
 .pipeline-ai-composer-actions {
   display: flex;
