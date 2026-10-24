@@ -1,3 +1,4 @@
+@import './pipelines/pipeline-ai.css' layer(components);
 @import './pipelines/pipeline-canvas.css' layer(components);
 @import './pipelines/pipeline-list.css' layer(components);
 @import './pipelines/pipeline-logs.css' layer(components);

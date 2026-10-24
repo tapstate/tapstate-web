@@ -3,6 +3,8 @@ import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   getAiProviderSettings,
   updateAiProviderSettings,
@@ -94,8 +96,8 @@ export function AssistantProviderForm({ onBack }: { onBack: () => void }) {
       >
         <label className="block">
           {t('wizard.assistant.provider.endpoint')}
-          <input
-            className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-[12px] text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none"
+          <Input
+            className="mt-1.5"
             type="url"
             value={baseUrl ?? query.data?.baseUrl ?? DEFAULT_PROVIDER_BASE_URL}
             onChange={(e) => setBaseUrl(e.target.value)}
@@ -105,8 +107,8 @@ export function AssistantProviderForm({ onBack }: { onBack: () => void }) {
         </label>
         <label className="block">
           {t('wizard.assistant.provider.model')}
-          <input
-            className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-[12px] text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none"
+          <Input
+            className="mt-1.5"
             required
             value={model ?? query.data?.model ?? ''}
             onChange={(e) => setModel(e.target.value)}
@@ -115,8 +117,8 @@ export function AssistantProviderForm({ onBack }: { onBack: () => void }) {
         </label>
         <label className="block">
           {t('wizard.assistant.provider.key')}
-          <input
-            className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-[12px] text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none"
+          <Input
+            className="mt-1.5"
             type="password"
             autoComplete="off"
             required={!query.data?.configured}
@@ -129,31 +131,33 @@ export function AssistantProviderForm({ onBack }: { onBack: () => void }) {
         <p className="rounded-lg bg-gray-50 px-3 py-2.5 text-[11px] leading-5 text-gray-500">
           {t('wizard.assistant.provider.secretHint')}
         </p>
-        <div className="flex flex-wrap items-center gap-2 border-t border-gray-200 pt-4">
-          <button
-            className="rounded-lg bg-blue-600 px-3 py-2 font-medium text-white hover:bg-blue-700 active:scale-[0.98] disabled:opacity-50"
+        <div className="pipeline-ai-provider-actions flex flex-wrap items-center gap-2 border-t border-gray-200 pt-4">
+          <Button
+            variant="primary"
+            className="order-3 ml-auto"
             disabled={disabled || !apiKey}
             type="submit"
           >
             {t('wizard.assistant.provider.save')}
-          </button>
-          <button
-            className="rounded-lg border border-gray-300 px-3 py-2 font-medium text-gray-700 hover:bg-gray-50 active:scale-[0.98] disabled:opacity-50"
+          </Button>
+          <Button
+            variant="secondary"
             disabled={disabled || (!apiKey && !query.data?.configured)}
             type="button"
             onClick={() => mutation.mutate('check')}
           >
             {t('wizard.assistant.provider.check')}
-          </button>
+          </Button>
           {query.data?.configured && (
-            <button
-              className="rounded-lg px-3 py-2 text-red-700 hover:bg-red-50 active:scale-[0.98] disabled:opacity-50"
+            <Button
+              variant="ghost"
+              tone="destructive"
               disabled={disabled}
               type="button"
               onClick={() => mutation.mutate('delete')}
             >
               {t('wizard.assistant.provider.delete')}
-            </button>
+            </Button>
           )}
         </div>
         {mutation.isPending && (

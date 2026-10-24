@@ -80,7 +80,22 @@ function button(text: string) {
   return [...container.querySelectorAll('button')].find((node) => node.textContent?.includes(text))!
 }
 async function generate() {
-  await act(async () => button('Infer parent').click())
+  const suggestion = button('Infer parent')
+  if (suggestion) {
+    await act(async () => suggestion.click())
+    return
+  }
+  const input = container.querySelector<HTMLTextAreaElement>(
+    '[aria-label="Pipeline assistant prompt"]',
+  )!
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(
+      input,
+      'Analyze available table metadata and infer parent relationships',
+    )
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Send"]')!.click())
 }
 afterEach(async () => {
   await act(async () => root?.unmount())

@@ -902,7 +902,7 @@ describe('ReferenceWizardBuilder assistant isolation', () => {
     expect(previewPanel()?.classList.contains('hidden')).toBe(true)
     expect(previewPanel()?.classList.contains('flex')).toBe(false)
     const helper = [...host.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('AI cleaning'),
+      button.getAttribute('aria-label')?.includes('AI cleaning'),
     )!
     act(() => helper.click())
     expect(onChange).not.toHaveBeenCalled()

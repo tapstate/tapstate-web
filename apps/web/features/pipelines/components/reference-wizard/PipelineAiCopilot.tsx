@@ -18,6 +18,7 @@ import remarkGfm from 'remark-gfm'
 
 import type { PipelineJsonObject } from '@/service/pipelines/pipeline-client'
 
+import { Button } from '@/components/ui/button'
 import {
   validateAssistantProposal,
   assistantStreamFetch,
@@ -108,6 +109,16 @@ export function PipelineAiCopilot({
   const sendingRef = useRef(false)
   const generation = useRef(0)
   const requestRevision = useRef<number | null>(null)
+  const composerInput = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => {
+    const field = composerInput.current
+    if (!field) return
+    field.style.height = 'auto'
+    field.style.height = `${Math.min(field.scrollHeight, 158)}px`
+  }, [input, tab])
+  useEffect(() => {
+    if (tab === 'chat' && promptRequest && !promptRequest.submit) composerInput.current?.focus()
+  }, [tab, promptRequest])
   const end = useRef<HTMLDivElement>(null)
   const handledPromptRequest = useRef<number | null>(null)
   const sendRef = useRef<(text: string) => boolean>(() => false)
@@ -387,15 +398,16 @@ export function PipelineAiCopilot({
             },
             { icon: X, label: 'close', action: onClose },
           ].map(({ icon: Icon, label, action }) => (
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               key={label}
               type="button"
               aria-label={t(`wizard.assistant.${label}`)}
               onClick={action}
-              className="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-200/60 hover:text-gray-700"
             >
-              <Icon className="h-3.5 w-3.5" />
-            </button>
+              <Icon className="h-4 w-4" />
+            </Button>
           ))}
         </div>
       </div>
@@ -418,13 +430,11 @@ export function PipelineAiCopilot({
         <AssistantProviderForm onBack={() => setTab('chat')} />
       ) : (
         <>
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+          <div className="pipeline-ai-transcript min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
             {tab === 'chat' ? (
               <>
                 {chat.messages.length === 0 && (
-                  <div className="max-w-[92%] rounded-xl rounded-tl-xs border border-gray-200/70 bg-gray-50 p-3 text-[12px] leading-relaxed whitespace-pre-wrap text-gray-800">
-                    {t('wizard.assistant.welcome')}
-                  </div>
+                  <div className="pipeline-ai-welcome">{t('wizard.assistant.welcome')}</div>
                 )}
                 {visibleMessages.map((message) => (
                   <div
@@ -437,7 +447,7 @@ export function PipelineAiCopilot({
                       )}
                     </span>
                     <div
-                      className={`max-w-[92%] rounded-xl p-3 text-[12px] leading-relaxed break-words ${message.role === 'user' ? 'rounded-tr-xs bg-blue-600 text-white' : 'rounded-tl-xs border border-gray-200/70 bg-gray-50 text-gray-800'}`}
+                      className={`pipeline-ai-bubble ${message.role === 'user' ? 'pipeline-ai-bubble-user' : 'pipeline-ai-bubble-answer'}`}
                     >
                       {message.role === 'user' ? (
                         <span className="whitespace-pre-wrap">
@@ -466,14 +476,15 @@ export function PipelineAiCopilot({
                   </p>
                 )}
                 {proposal && complete && (
-                  <button
-                    className="flex w-full items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-3 text-[12px] font-medium text-blue-800 hover:bg-blue-100"
+                  <Button
+                    variant="secondary"
+                    className="w-full justify-between"
                     type="button"
                     onClick={() => setTab('diff')}
                   >
                     <span>{t('wizard.assistant.review')}</span>
                     <ChevronRight className="h-3.5 w-3.5" />
-                  </button>
+                  </Button>
                 )}
               </>
             ) : (
@@ -503,11 +514,13 @@ export function PipelineAiCopilot({
                       {t('wizard.assistant.reviewHint')}
                     </p>
                     <div className="flex gap-2">
-                      <button
+                      <Button
+                        variant="primary"
+                        loading={applying}
                         type="button"
                         onClick={() => void apply()}
                         disabled={blocked || stale || applied}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-[12px] font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                        className="flex-1"
                       >
                         {applying ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -517,8 +530,9 @@ export function PipelineAiCopilot({
                           <Sparkles className="h-3.5 w-3.5" />
                         )}
                         {t(applied ? 'wizard.assistant.applied' : 'wizard.assistant.apply')}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="secondary"
                         type="button"
                         disabled={applying || (applied && context.undoBlocked)}
                         onClick={() => {
@@ -539,10 +553,9 @@ export function PipelineAiCopilot({
                           setComplete(false)
                           setTab('chat')
                         }}
-                        className="rounded-lg border border-gray-200 px-3 py-2 text-[12px] hover:bg-gray-50"
                       >
                         {t(applied ? 'wizard.assistant.undoApply' : 'wizard.assistant.reject')}
-                      </button>
+                      </Button>
                     </div>
                     {undoError && (
                       <p role="status" className="text-[11px] text-amber-700">
@@ -587,26 +600,28 @@ export function PipelineAiCopilot({
             )}
             <div ref={end} />
           </div>
-          <div className="shrink-0 border-t border-gray-200/80 bg-gray-50/50 p-3">
-            <div className="mb-2 text-[10px] font-semibold tracking-wider text-gray-400">
-              {t('wizard.assistant.suggestions')}
+          {chat.messages.length === 0 && tab === 'chat' && (
+            <div className="pipeline-ai-suggestions shrink-0 p-3">
+              <div className="mb-2 text-[10px] font-semibold tracking-wider text-gray-400">
+                {t('wizard.assistant.suggestions')}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {suggestions.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    disabled={sendBlocked}
+                    onClick={() => send(t(`wizard.assistant.prompts.${key}`))}
+                    className="pipeline-ai-suggestion"
+                  >
+                    <span>{t(`wizard.assistant.intents.${key}`)}</span>
+                    <ChevronRight className="h-3 w-3 shrink-0 text-gray-400" />
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="max-h-36 space-y-1.5 overflow-y-auto">
-              {suggestions.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  disabled={sendBlocked}
-                  onClick={() => send(t(`wizard.assistant.prompts.${key}`))}
-                  className="flex w-full items-center justify-between gap-1.5 rounded-lg border border-gray-200/80 bg-white px-2.5 py-1.5 text-left text-[11px] text-gray-700 transition-colors hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50"
-                >
-                  <span>{t(`wizard.assistant.intents.${key}`)}</span>
-                  <ChevronRight className="h-3 w-3 shrink-0 text-gray-400" />
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="shrink-0 border-t border-gray-200 p-3">
+          )}
+          <div className="pipeline-ai-compose-area shrink-0 p-3">
             {context.blocked && !contextSendBlocked && !preparing && (
               <p role="status" className="mb-2 text-[11px] leading-relaxed text-amber-800">
                 {t('wizard.assistant.saveBeforeSend')}
@@ -628,8 +643,9 @@ export function PipelineAiCopilot({
                 {t('wizard.assistant.saveBeforeSendFailed')}
               </p>
             )}
-            <div className="rounded-xl border border-gray-300 bg-white p-2 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-100">
+            <div className="pipeline-ai-composer">
               <textarea
+                ref={composerInput}
                 aria-label={t('wizard.assistant.prompt')}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -640,13 +656,13 @@ export function PipelineAiCopilot({
                   }
                 }}
                 placeholder={t('wizard.assistant.placeholder')}
-                rows={2}
-                className="w-full resize-none border-none text-[12px] text-gray-900 outline-none placeholder:text-gray-400"
+                rows={1}
+                className="pipeline-ai-composer-input"
               />
-              <div className="flex items-center justify-between border-t border-gray-100 pt-1 text-[10px] text-gray-400">
+              <div className="pipeline-ai-composer-actions">
                 <span>{t('wizard.assistant.newline')}</span>
                 {streaming ? (
-                  <button
+                  <Button
                     type="button"
                     onClick={() => {
                       generation.current += 1
@@ -657,21 +673,27 @@ export function PipelineAiCopilot({
                       setCanceled(true)
                       void chat.stop()
                     }}
-                    className="flex items-center gap-1 rounded-md bg-gray-100 px-3 py-1 text-gray-700 hover:bg-gray-200"
+                    aria-label={t('wizard.assistant.stop')}
+                    title={t('wizard.assistant.stop')}
+                    variant="secondary"
+                    size="medium"
+                    className="w-8 shrink-0 px-0"
                   >
-                    <Square className="h-3 w-3" />
-                    {t('wizard.assistant.stop')}
-                  </button>
+                    <Square className="h-4 w-4" />
+                  </Button>
                 ) : (
-                  <button
+                  <Button
                     type="button"
                     disabled={!input.trim() || sendBlocked}
                     onClick={() => send(input)}
-                    className="flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1 text-[11px] font-semibold text-white hover:bg-blue-700 disabled:bg-gray-100 disabled:text-gray-400"
+                    aria-label={t('wizard.assistant.send')}
+                    title={t('wizard.assistant.send')}
+                    variant="primary"
+                    size="medium"
+                    className="w-8 shrink-0 px-0"
                   >
-                    {t('wizard.assistant.send')}
-                    <Send className="h-3 w-3" />
-                  </button>
+                    <Send className="h-4 w-4" />
+                  </Button>
                 )}
               </div>
             </div>

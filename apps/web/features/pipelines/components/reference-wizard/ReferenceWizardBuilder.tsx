@@ -233,6 +233,13 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     submit?: boolean
   } | null>(null)
   const [rootPrompt, setRootPrompt] = React.useState('')
+  const rootPromptInput = React.useRef<HTMLTextAreaElement>(null)
+  React.useEffect(() => {
+    const field = rootPromptInput.current
+    if (!field) return
+    field.style.height = 'auto'
+    field.style.height = `${Math.min(field.scrollHeight, 158)}px`
+  }, [rootPrompt])
   const rootPromptRequestId = React.useRef<number | null>(null)
   const assistantPromptSequence = React.useRef(0)
   const [activeContext, setActiveContext] = React.useState('root')
@@ -468,17 +475,20 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   }
   const assistantHelper = (focus: string, intent: string) =>
     assistant && !readOnly ? (
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon"
+        aria-label={t(`wizard.assistant.helpers.${intent}`)}
+        title={t(`wizard.assistant.helpers.${intent}`)}
         onClick={(event) => {
           event.stopPropagation()
           askAssistant(focus, intent)
         }}
-        className="inline-flex items-center gap-1.5 rounded-md border border-blue-200/80 bg-blue-50/80 px-2.5 py-1 text-[11px] font-medium text-blue-700 transition-colors hover:bg-blue-100"
+        className="text-text-accent hover:bg-state-accent-hover"
       >
-        <Sparkles className="h-3 w-3" />
-        {t(`wizard.assistant.helpers.${intent}`)}
-      </button>
+        <Sparkles className="h-4 w-4" />
+      </Button>
     ) : null
 
   // Inline Add Relation workflow state
@@ -1488,7 +1498,6 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
               : 'border-gray-200 hover:border-gray-300',
         )}
       >
-        <div className="mb-2">{assistantHelper(rel.id, 'clean')}</div>
         {/* Card Header (2-row title on the left, actions on the right) */}
         <div className="flex items-start justify-between gap-3">
           {/* Left side: 2 rows */}
@@ -1666,6 +1675,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
 
           {/* Right Card Actions */}
           <div className="flex shrink-0 items-center gap-1.5">
+            {assistantHelper(rel.id, 'clean')}
             {/* Switch Table Toggle */}
             <button
               type="button"
@@ -2316,6 +2326,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
 
                     {/* Top Right Actions */}
                     <div className="flex shrink-0 items-center gap-1.5">
+                      {isRootConfigured && assistantHelper('root', 'clean')}
                       {isRootConfigured && !isRootEditing ? (
                         <>
                           <button
@@ -2371,15 +2382,19 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                     >
                       {assistant && !readOnly && !isRootConfigured && (
                         <>
-                          <form onSubmit={submitRootPrompt} className="space-y-1.5">
+                          <form
+                            onSubmit={submitRootPrompt}
+                            className="pipeline-ai-inline space-y-1.5"
+                          >
                             <label
                               htmlFor="pipeline-root-assistant-prompt"
                               className="text-foreground block text-[11px] font-medium"
                             >
                               {t('wizard.assistant.rootPromptLabel')}
                             </label>
-                            <div className="border-components-chat-input-border bg-components-panel-bg-blur rounded-xl border p-2.5 shadow-md">
+                            <div className="pipeline-ai-composer">
                               <textarea
+                                ref={rootPromptInput}
                                 id="pipeline-root-assistant-prompt"
                                 aria-label={t('wizard.assistant.rootPromptLabel')}
                                 value={rootPrompt}
@@ -2395,17 +2410,18 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                                   }
                                 }}
                                 placeholder={t('wizard.assistant.rootPromptPlaceholder')}
-                                rows={2}
+                                rows={1}
                                 maxLength={4000}
-                                className="system-sm-regular text-text-primary placeholder:text-text-placeholder block max-h-39.5 min-h-12 w-full resize-none bg-transparent p-1 outline-hidden"
+                                className="pipeline-ai-composer-input"
                               />
-                              <div className="mt-1 flex items-center justify-between gap-2">
+                              <div className="pipeline-ai-composer-actions">
                                 <span className="system-xs-regular text-text-tertiary">
                                   {t('wizard.assistant.newline')}
                                 </span>
                                 <Button
                                   type="submit"
                                   size="medium"
+                                  loading={Boolean(assistantPrompt?.submit)}
                                   aria-label={t('wizard.assistant.send')}
                                   title={t('wizard.assistant.send')}
                                   disabled={!rootPrompt.trim() || Boolean(assistantPrompt?.submit)}
@@ -2516,9 +2532,6 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                     </div>
                   )}
 
-                  {isRootConfigured && (
-                    <div className="mt-2">{assistantHelper('root', 'clean')}</div>
-                  )}
                   {/* Columns preview (when configured and not editing) */}
                   {rootConfig && !isRootEditing && (
                     <div className="mt-2.5 flex items-center justify-between border-t border-gray-100 pt-2 text-[11px] text-gray-400">
@@ -2586,7 +2599,6 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   label={readOnlyLabel ?? t('pipelines.workspace.readOnly.editorStatus')}
                 >
                   <div className="wizard-reference-relation-list flex flex-col gap-4">
-                    <div>{assistantHelper('relations', 'relations')}</div>
                     {/* Dynamically Render Each Relation Node */}
                     {relations.map((rel) => renderRelation(rel))}
 
@@ -2599,7 +2611,8 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
 
                       {/* ADD BUTTON (When closed) */}
                       {!isAddingRelation ? (
-                        <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {assistantHelper('relations', 'relations')}
                           <button
                             type="button"
                             onClick={openInlineAddRelation}
@@ -2613,7 +2626,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                             </span>
                           </button>
                           {!isRootConfigured && (
-                            <div className="mt-1 text-[11px] text-amber-600">
+                            <div className="w-full text-[11px] text-amber-600">
                               Please confirm the Input Table above first.
                             </div>
                           )}
@@ -2873,9 +2886,9 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                         </span>
                       </div>
                     </div>
+                    {assistantHelper('doc_process', 'metrics')}
                   </div>
                   <div className="mt-3.5" onClick={(event) => event.stopPropagation()}>
-                    <div className="mb-3">{assistantHelper('doc_process', 'metrics')}</div>
                     <TableTransformsManager
                       identityPlans={identityPlans}
                       tableName={rootConfig?.table || 'root'}

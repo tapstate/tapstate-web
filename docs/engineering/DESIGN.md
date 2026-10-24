@@ -234,3 +234,52 @@ The current page inventory and review status live in [ui-page-audit.md](ui-page-
 5. Treat an unaudited screen as pending, even if it builds and its colors resemble the token palette.
 
 The current migration is **in progress**. Vendoring and a green typecheck of the subpackage do not imply that existing pages or the old UI Kit have passed this review gate.
+
+## Assistant chat and provider settings
+
+Apply this scene contract to every assistant panel and provider credentials form.
+The shared implementation is `apps/web/styles/pipelines/pipeline-ai.css`; consumers
+must reuse its roles rather than inventing per-screen colors or control sizes.
+
+- Keep a flexible, full-width transcript and one bottom composer. Every flex child
+  must permit shrinking. Long text wraps; code blocks scroll within the message.
+- Render assistant answers as readable document content. Use a quiet surface for
+  user messages. Do not render a bubble before the first nonblank text arrives.
+- Show suggested prompts only before the first message, in a wrapping group. They
+  must not reserve a second scrolling panel throughout the conversation.
+- Place send/stop inside the composer. Reuse the shared Button with an accessible
+  name, a 32px icon control and a 16px glyph. Never substitute a wide text CTA.
+- Enter submits, Shift+Enter inserts a newline, and IME composition never submits.
+  Grow the textarea from one line up to 158px, then scroll its contents.
+- Reuse provider input tokens for normal, hover and focus states. Inputs are 32px
+  high with an 8px radius. Keep credentials masked and retain the server's secret
+  handling. Put the primary save action at the right of secondary actions.
+- Preserve streaming cancellation, error recovery, draft validation, proposal
+  review and explicit apply. Visual changes cannot bypass these contracts.
+
+Source mapping (application revision `65e1fbcc2b4fd43f0bb78b58922eb543983df78e`):
+
+| Part             | Application source                                                                    | Source anatomy                                                                                | Local implementation                                                                | Product adaptation                                               |
+| ---------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Composer         | `web/app/components/base/chat/chat/chat-input-area/index.tsx`                         | 12px shell radius, semantic chat border/panel background, 9px inset, 158px maximum input area | `PipelineAiCopilot.tsx`, `.pipeline-ai-composer`                                    | Existing stream transport and draft preparation                  |
+| Send             | `web/app/components/base/chat/chat/chat-input-area/operation.tsx`                     | Shared primary Button, 32px width, 16px glyph, accessible label                               | Shared Button through existing compatibility export                                 | Stop occupies the same operation slot                            |
+| Credential input | `web/app/components/header/account-setting/model-provider-page/model-modal/Input.tsx` | 32px height, 8px radius, semantic input states                                                | `AssistantProviderForm.tsx`, shared Input through the existing compatibility export | Existing endpoint/model/key API and encrypted credential storage |
+
+Step-card AI actions follow `web/app/components/workflow/nodes/llm/components/prompt-generator-btn.tsx`
+at the same application revision: a shared 24px icon action with a 16px glyph,
+accessible name and semantic accent hover. Place it in the relevant card header
+or beside the related-table action. Tapstate opens the existing assistant panel,
+sets the step context, fills the prompt and focuses the composer; it does not
+apply a generated edit automatically. The Input Table composer shares the chat
+shell and operation geometry. Provider inputs and all submit/review actions reuse
+the existing shared Input/Button implementations, including loading and disabled
+states.
+
+The application question bubble uses a background token introduced after the
+vendored baseline; use the existing panel alternative token until that component
+baseline is upgraded, rather than referencing an undefined CSS variable.
+
+Component geometry and interaction states remain owned by the existing shared
+component implementation. The application reference supplies composition; it does
+not introduce a second chat transport or credentials store. Rendering evidence
+must be recorded separately; this mapping alone is not visual acceptance.
