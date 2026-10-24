@@ -1,64 +1,33 @@
-# Testing and Development
+# Verification and Development
 
-Run `vp check packages/ui` from the repository root for formatting, lint, and TypeScript
-diagnostics. Run the remaining commands from `packages/ui/`:
+## Available checks
 
-- `vp test --project unit` runs primitive unit tests.
-- `vp run storybook` starts Storybook.
-- `vp test --project storybook --run` runs Storybook component tests in browser mode.
-- `vp test` runs both test projects.
+Run the package typecheck from the repository root:
 
-## Test boundary
+```sh
+pnpm --filter @tapstate-web/ui typecheck
+```
 
-This guide owns the shared UI testing policy and runtime setup. Add tests for observable shared UI
-integration behavior or a reproducible regression, not merely because a component or prop exists.
-Check existing stories and tests before adding coverage. Browser execution alone does not justify
-a new case; review incidental visual adjustments in Storybook without adding a permanent test.
+The package does not define its own lint, format, build, or runtime-test scripts. The workspace
+commands cover the shared source and its consumers:
 
-The package has two [Vitest projects]. Both run in Playwright Chromium [Browser Mode]; the project
-name identifies the behavior owner, not a different runtime.
+```sh
+pnpm lint
+pnpm typecheck
+pnpm --filter web build
+pnpm --filter cloud build
+```
 
-Use Storybook for a documented component example. Every story is a render contract and runs the
-configured accessibility checks through the [Storybook Vitest addon]. Add `play` when the example
-also owns visible state changes, user interaction, keyboard paths, overlay flows, form behavior,
-loading behavior, or controlled-state coordination.
+For a change used by only one app, run that app's typecheck and build. A successful typecheck or
+build confirms compilation, not keyboard behavior, focus handling, accessibility, or visual fidelity.
+For UI changes, follow the matching browser review in `docs/engineering/DESIGN.md`.
 
-Use regular Vitest tests for shared UI integration behavior that does not need a documented example,
-such as submitted values, store behavior, or a known regression reached through a public API.
-Prop passthrough alone does not justify a test. Assert the resulting behavior instead of CSS class
-names or private structure, and do not duplicate behavior already owned by Base UI or the browser.
-Vitest 5 browser locators match string names exactly by default. Assert a control's accessible name
-or description when that is the contract. `toHaveTextContent` also checks the full text exactly;
-use `toMatchTextContent` only when the complete text is intentionally outside the test's scope.
+## Test infrastructure
 
-Storybook [accessibility testing] uses `a11y.test = 'error'`, so enabled violations fail the test.
-Color contrast is the only globally disabled rule because it is a known design-token gap. Do not
-add another global exception. Keep a temporary exception local to the affected story, and do not
-use a `play` test in place of an accessibility fix.
+There is currently no unit-test runner, Storybook project, browser-test setup, or test fixture under
+`packages/ui`. Do not rely on `vp test`, Storybook commands, Vitest projects, or a package
+`vitest.setup.ts`; those commands and files are not configured here.
 
-## Type contracts
-
-Keep compile-only public API fixtures in `__tests__/types.tsx`; package type checking includes them
-without registering runtime tests. Import public subpaths, verify useful inference with
-`expectTypeOf`, and use `@ts-expect-error` for intentional API boundaries. Cover nullable callbacks,
-value models and unsupported composition, not every forwarded prop. Runtime assertions cannot
-prove TypeScript inference, and type fixtures cannot prove focus, DOM semantics or interaction.
-
-A documented example and its `play` belong in one story; do not create an automatic duplicate just
-to run the same render. Keep Docs autoplay off for examples that move focus or open portals. Retain
-explicit open previews when needed for accessibility checks on popup content. Regressions that do
-not teach a distinct usage belong in the unit project rather than extra sidebar entries.
-
-## Animation setup
-
-Base UI can wait for `element.getAnimations()` before unmounting transition-driven components.
-[`vitest.setup.ts`] sets `BASE_UI_ANIMATIONS_DISABLED = true` for primitive tests
-that assert final DOM state. Storybook uses its preview setup and retains real animation lifecycles.
-A unit test that intentionally asserts animation behavior may set the flag to `false` locally,
-but must restore the previous value during cleanup.
-
-[Browser Mode]: https://vitest.dev/guide/browser
-[Storybook Vitest addon]: https://storybook.js.org/docs/writing-tests/integrations/vitest-addon/index
-[Vitest projects]: https://vitest.dev/guide/projects.html
-[`vitest.setup.ts`]: ../vitest.setup.ts
-[accessibility testing]: https://storybook.js.org/docs/writing-tests/accessibility-testing
+If test infrastructure is added later, update this guide and the package scripts together. Until
+then, protect public component changes with package typecheck, the affected app's checks, and the
+rendered interaction review required by the page-design contract.

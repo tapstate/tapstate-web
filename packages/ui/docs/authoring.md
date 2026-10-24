@@ -16,8 +16,8 @@ use an existing utility entrypoint; otherwise import directly from `@base-ui/uti
 
 ## React imports
 
-Use React namespace imports throughout this package, including stories and tests. Use
-`import * as React from 'react'` when calling React runtime APIs, and
+Use React namespace imports throughout this package. If stories or tests are added later, follow
+the same convention there. Use `import * as React from 'react'` when calling React runtime APIs, and
 `import type * as React from 'react'` when referencing only React types. A runtime namespace
 import also covers React types; do not add separate named type imports. JSX alone does not
 require an explicit React import.
@@ -28,7 +28,7 @@ Write grouping fragments as `<React.Fragment>` and remove unnecessary fragment w
 ## Component writing style
 
 Define named components with function declarations or function expressions. Arrow functions
-remain appropriate for event handlers, render props, and Storybook render callbacks. Name function
+remain appropriate for event handlers and render callbacks. Name function
 expressions when JavaScript cannot infer their name. Use `event` or `error` instead of `e`.
 
 ## Subpaths and names
@@ -89,8 +89,9 @@ Do not add state callbacks to native DOM props or unrelated custom APIs. See [St
 
 ## Evidence
 
-Use local public-subpath type tests to protect generic inference, required relationships, and
-intentional errors. Read current official Base UI documentation and installed type declarations
-before changing an upstream-derived contract.
+Use the package typecheck and its app consumers to validate public API changes. If public-subpath
+type-test fixtures are added with test infrastructure, use them to protect generic inference,
+required relationships, and intentional errors. Read current official Base UI documentation and
+installed type declarations before changing an upstream-derived contract.
 
 [Styling]: ./styling.md
