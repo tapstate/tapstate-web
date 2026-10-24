@@ -2195,7 +2195,7 @@
       "version": "版本",
       "loading": "正在加载版本…",
       "unavailable": "暂不可用",
-      "license": "开源许可",
+      "license": "Apache 2.0 许可证",
       "releaseNotes": "版本说明"
     },
     "sectionsLabel": "设置分区",

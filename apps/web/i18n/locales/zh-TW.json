@@ -2195,7 +2195,7 @@
       "version": "版本",
       "loading": "正在載入版本…",
       "unavailable": "暫時無法使用",
-      "license": "開源授權",
+      "license": "Apache 2.0 授權",
       "releaseNotes": "版本說明"
     },
     "sectionsLabel": "設定分區",

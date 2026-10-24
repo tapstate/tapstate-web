@@ -151,36 +151,38 @@ export function StateStorePage() {
                   {t('stateStorePage.about.title')}
                 </h2>
               </div>
-              <div className="settings-about__identity" aria-label={t('app.brand')}>
-                <span className="settings-about__mark app-sidebar__mark" aria-hidden="true">
-                  <Terminal className="h-5 w-5 text-white" />
-                </span>
-                <span className="settings-about__brand">{t('app.brand')}</span>
+              <div className="settings-about__content">
+                <div className="settings-about__identity" aria-label={t('app.brand')}>
+                  <span className="settings-about__mark app-sidebar__mark" aria-hidden="true">
+                    <Terminal className="h-5 w-5 text-white" />
+                  </span>
+                  <span className="settings-about__brand">{t('app.brand')}</span>
+                </div>
+                <dl className="settings-about__version">
+                  <dt>{t('stateStorePage.about.version')}</dt>
+                  <dd aria-busy={versionQuery.isPending}>
+                    {versionQuery.isPending
+                      ? t('stateStorePage.about.loading')
+                      : (versionQuery.data ?? t('stateStorePage.about.unavailable'))}
+                  </dd>
+                </dl>
+                <footer className="settings-about__links">
+                  <a
+                    href="https://github.com/tapstate/tapstate/blob/main/LICENSE"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t('stateStorePage.about.license')}
+                  </a>
+                  <a
+                    href="https://github.com/tapstate/tapstate/releases"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t('stateStorePage.about.releaseNotes')}
+                  </a>
+                </footer>
               </div>
-              <dl className="settings-about__version">
-                <dt>{t('stateStorePage.about.version')}</dt>
-                <dd aria-busy={versionQuery.isPending}>
-                  {versionQuery.isPending
-                    ? t('stateStorePage.about.loading')
-                    : (versionQuery.data ?? t('stateStorePage.about.unavailable'))}
-                </dd>
-              </dl>
-              <footer className="settings-about__links">
-                <a
-                  href="https://github.com/tapstate/tapstate/blob/main/LICENSE"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {t('stateStorePage.about.license')}
-                </a>
-                <a
-                  href="https://github.com/tapstate/tapstate/releases"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {t('stateStorePage.about.releaseNotes')}
-                </a>
-              </footer>
             </section>
           )}
         </div>

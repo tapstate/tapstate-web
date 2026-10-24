@@ -2195,7 +2195,7 @@
       "version": "Version",
       "loading": "Loading version…",
       "unavailable": "Unavailable",
-      "license": "Open source license",
+      "license": "Apache License 2.0",
       "releaseNotes": "Release notes"
     },
     "sectionsLabel": "Settings sections",
