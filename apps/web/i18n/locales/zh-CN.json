@@ -1748,7 +1748,9 @@
         "stale": "此建议基于旧草稿，请为当前已保存草稿重新生成。",
         "overloaded": "AI 助理繁忙，请稍后重试。",
         "requestFailed": "AI 请求失败。请检查服务配置后重试。已返回的部分内容未修改流水线。"
-      }
+      },
+      "copyCode": "复制代码",
+      "copied": "已复制"
     },
     "targetIdentity": {
       "title": "目标标识检查",

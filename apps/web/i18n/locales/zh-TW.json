@@ -1748,7 +1748,9 @@
         "stale": "此建議使用舊草稿，請為目前已儲存草稿重新產生。",
         "overloaded": "AI 助理忙碌中，請稍後重試。",
         "requestFailed": "AI 請求失敗，請檢查服務設定後重試。已傳回的部分內容未修改管線。"
-      }
+      },
+      "copyCode": "複製程式碼",
+      "copied": "已複製"
     },
     "targetIdentity": {
       "title": "目標識別值檢查",

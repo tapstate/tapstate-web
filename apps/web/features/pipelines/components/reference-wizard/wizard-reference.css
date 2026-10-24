@@ -302,69 +302,6 @@
   outline-offset: 2px;
 }
 
-.wizard-reference .pipeline-ai-message > :first-child {
-  margin-top: 0;
-}
-.wizard-reference .pipeline-ai-message > :last-child {
-  margin-bottom: 0;
-}
-.wizard-reference .pipeline-ai-message p,
-.wizard-reference .pipeline-ai-message ul,
-.wizard-reference .pipeline-ai-message ol,
-.wizard-reference .pipeline-ai-message pre,
-.wizard-reference .pipeline-ai-message blockquote {
-  margin: 0.5em 0;
-}
-.wizard-reference .pipeline-ai-message h1,
-.wizard-reference .pipeline-ai-message h2,
-.wizard-reference .pipeline-ai-message h3 {
-  margin: 0.85em 0 0.35em;
-  font-size: 1em;
-  font-weight: 650;
-  color: #111827;
-}
-.wizard-reference .pipeline-ai-message ul {
-  padding-left: 1.2em;
-  list-style: disc;
-}
-.wizard-reference .pipeline-ai-message ol {
-  padding-left: 1.2em;
-  list-style: decimal;
-}
-.wizard-reference .pipeline-ai-message li + li {
-  margin-top: 0.25em;
-}
-.wizard-reference .pipeline-ai-message code {
-  border-radius: 3px;
-  background: #e5e7eb;
-  padding: 0.1em 0.25em;
-  font-size: 0.92em;
-}
-.wizard-reference .pipeline-ai-message pre {
-  overflow-x: auto;
-  border-radius: 6px;
-  background: #e5e7eb;
-  padding: 0.65em;
-}
-.wizard-reference .pipeline-ai-message pre code {
-  background: transparent;
-  padding: 0;
-}
-.wizard-reference .pipeline-ai-message table {
-  display: block;
-  max-width: 100%;
-  overflow-x: auto;
-  border-collapse: collapse;
-}
-.wizard-reference .pipeline-ai-message th,
-.wizard-reference .pipeline-ai-message td {
-  border: 1px solid #d1d5db;
-  padding: 0.25em 0.5em;
-}
-.wizard-reference .pipeline-ai-message a {
-  color: #1d4ed8;
-  text-decoration: underline;
-}
 @media (max-width: 1100px) {
   .wizard-reference .wizard-reference-sidebar {
     width: 100%;

@@ -11,10 +11,8 @@ import {
   Square,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 
 import type { PipelineJsonObject } from '@/service/pipelines/pipeline-client'
 
@@ -29,6 +27,8 @@ import {
 import { useAuthStore } from '@/stores/auth-store'
 
 import { AssistantProviderForm } from './AssistantProviderForm'
+
+const AssistantMarkdown = lazy(() => import('./AssistantMarkdown'))
 
 export interface BuilderAssistantContext {
   pipelineId: string
@@ -120,6 +120,7 @@ export function PipelineAiCopilot({
     if (tab === 'chat' && promptRequest && !promptRequest.submit) composerInput.current?.focus()
   }, [tab, promptRequest])
   const end = useRef<HTMLDivElement>(null)
+  const followOutput = useRef(true)
   const handledPromptRequest = useRef<number | null>(null)
   const sendRef = useRef<(text: string) => boolean>(() => false)
   const transport = useMemo(
@@ -183,12 +184,15 @@ export function PipelineAiCopilot({
       setComplete(!isAbort && !isDisconnect && !isError && streamCompleted.current),
   })
   const streaming = chat.status === 'streaming' || chat.status === 'submitted'
+  const responseHasText =
+    chat.messages.at(-1)?.role === 'assistant' &&
+    chat.messages.at(-1)?.parts.some((part) => part.type === 'text' && part.text.trim().length > 0)
   const contextSendBlocked = context.sendBlocked ?? context.blocked
   const sendBlocked = contextSendBlocked || streaming || applying || preparing || sending
   const blocked = context.blocked || streaming || applying || preparing || sending
   const stale = proposal !== null && proposal.baseRevision !== context.revision
   useEffect(() => {
-    end.current?.scrollIntoView?.({ block: 'nearest' })
+    if (followOutput.current) end.current?.scrollIntoView?.({ block: 'nearest' })
   }, [chat.messages, streaming])
   useEffect(
     () => () => {
@@ -222,6 +226,7 @@ export function PipelineAiCopilot({
     setProgress('connecting')
     setStreamErrorCode('')
     setCanceled(false)
+    followOutput.current = true
     setInput('')
     setTab('chat')
     setPreparing(true)
@@ -430,7 +435,14 @@ export function PipelineAiCopilot({
         <AssistantProviderForm onBack={() => setTab('chat')} />
       ) : (
         <>
-          <div className="pipeline-ai-transcript min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+          <div
+            className="pipeline-ai-transcript min-h-0 flex-1 space-y-4 overflow-y-auto p-4"
+            onScroll={(event) => {
+              const viewport = event.currentTarget
+              followOutput.current =
+                viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 48
+            }}
+          >
             {tab === 'chat' ? (
               <>
                 {chat.messages.length === 0 && (
@@ -457,21 +469,42 @@ export function PipelineAiCopilot({
                             .join('')}
                         </span>
                       ) : (
-                        <div className="pipeline-ai-message" aria-live="polite">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>
-                            {message.parts
-                              .filter((part) => part.type === 'text')
-                              .map((part) => part.text)
-                              .join('')}
-                          </ReactMarkdown>
+                        <div
+                          className="pipeline-ai-message"
+                          aria-busy={streaming && message.id === chat.messages.at(-1)?.id}
+                        >
+                          <Suspense
+                            fallback={
+                              <span className="whitespace-pre-wrap">
+                                {message.parts
+                                  .filter((part) => part.type === 'text')
+                                  .map((part) => part.text)
+                                  .join('')}
+                              </span>
+                            }
+                          >
+                            <AssistantMarkdown
+                              content={message.parts
+                                .filter((part) => part.type === 'text')
+                                .map((part) => part.text)
+                                .join('')}
+                              responding={streaming && message.id === chat.messages.at(-1)?.id}
+                            />
+                          </Suspense>
                         </div>
                       )}
                     </div>
                   </div>
                 ))}
-                {streaming && (
+                {streaming && (!responseHasText || progress === 'validating') && (
                   <p role="status" className="flex items-center gap-2 text-[12px] text-gray-600">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
+                    {!responseHasText ? (
+                      <span className="pipeline-ai-waiting" aria-hidden="true">
+                        <span />
+                      </span>
+                    ) : (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
+                    )}
                     {t(`wizard.assistant.progress.${progress}`)}
                   </p>
                 )}

@@ -1748,7 +1748,9 @@
         "stale": "This proposal is based on an older draft. Generate a new proposal for the current saved draft.",
         "overloaded": "The assistant is busy. Wait a moment and retry.",
         "requestFailed": "The assistant request failed. Check the provider configuration and try again. Partial output has not changed the pipeline."
-      }
+      },
+      "copyCode": "Copy code",
+      "copied": "Copied"
     },
     "targetIdentity": {
       "title": "Target identity check",

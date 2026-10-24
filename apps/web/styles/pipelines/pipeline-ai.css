@@ -106,3 +106,54 @@
   outline: 2px solid var(--color-components-input-border-active);
   outline-offset: 2px;
 }
+
+.pipeline-ai-waiting {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 20px;
+}
+.pipeline-ai-waiting > span,
+.pipeline-ai-waiting > span::before,
+.pipeline-ai-waiting > span::after {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-text-tertiary);
+  animation: pipeline-ai-dot 1s infinite linear alternate;
+}
+.pipeline-ai-waiting > span {
+  position: relative;
+  animation-delay: 0.5s;
+}
+.pipeline-ai-waiting > span::before,
+.pipeline-ai-waiting > span::after {
+  content: '';
+  position: absolute;
+  top: 0;
+}
+.pipeline-ai-waiting > span::before {
+  left: -7px;
+  animation-delay: 0s;
+}
+.pipeline-ai-waiting > span::after {
+  left: 7px;
+  animation-delay: 1s;
+}
+@keyframes pipeline-ai-dot {
+  from {
+    opacity: 1;
+  }
+  50%,
+  to {
+    opacity: 0.3;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pipeline-ai-waiting > span,
+  .pipeline-ai-waiting > span::before,
+  .pipeline-ai-waiting > span::after {
+    animation: none;
+  }
+}

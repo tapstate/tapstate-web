@@ -283,3 +283,31 @@ Component geometry and interaction states remain owned by the existing shared
 component implementation. The application reference supplies composition; it does
 not introduce a second chat transport or credentials store. Rendering evidence
 must be recorded separately; this mapping alone is not visual acceptance.
+
+### Streaming assistant messages
+
+Use `AssistantMarkdown.tsx` for assistant output. It lazy-loads Streamdown 2.7.0,
+matching the application reference at the revision above, with streaming mode,
+incomplete Markdown parsing and the actual responding state. Keep the streaming
+parser after cancellation so partially generated formatting remains readable.
+The code plugin supplies Shiki highlighting and code-copy controls; translations
+come from the application's locale resources. Do not add an artificial timer to
+replay text that has already arrived from the server.
+
+Source mapping: `web/app/components/base/markdown/streamdown-wrapper.tsx` owns the
+parser recipe; `web/app/components/base/chat/chat/answer/basic-content.tsx` owns
+answer content and UNC-path preservation; `web/app/components/base/chat/chat/answer/index.tsx`
+and `loading-anim/` own first-text waiting feedback. Use the 24×20px waiting slot,
+4px dots with 7px offsets, one-second alternating animation and staggered delays;
+colors come from semantic text tokens, and reduced motion disables the animation.
+
+The existing transport still owns server events, cancellation and completion.
+Do not announce the entire growing response through an aria-live region on every
+token. Announce status separately and mark the active response busy. Follow output
+while the transcript is at the bottom; scrolling up to read must preserve that
+position until the user returns to the bottom or submits a new request.
+
+Browser acceptance used delayed SSE chunks through the real chat component:
+waiting before the first text, incomplete emphasis, partial table/code output,
+and cancellation with retained content. This is rendering evidence with a local
+fixture, not evidence of availability of a deployed model provider.
