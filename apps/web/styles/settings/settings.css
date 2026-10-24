@@ -223,12 +223,22 @@
 }
 
 .settings-page .settings-about__links a {
-  color: var(--brand-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--muted-foreground);
   text-decoration: none;
 }
 
 .settings-page .settings-about__links a:hover {
+  color: var(--foreground);
   text-decoration: underline;
+}
+
+.settings-page .settings-about__external-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex: none;
 }
 
 .settings-page .settings-about__links a:focus-visible {

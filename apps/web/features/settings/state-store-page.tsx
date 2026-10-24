@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { HardDrive, Terminal } from 'lucide-react'
+import { ExternalLink, HardDrive, Terminal } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -173,6 +173,7 @@ export function StateStorePage() {
                     rel="noopener noreferrer"
                   >
                     {t('stateStorePage.about.license')}
+                    <ExternalLink className="settings-about__external-icon" aria-hidden="true" />
                   </a>
                   <a
                     href="https://github.com/tapstate/tapstate/releases"
@@ -180,6 +181,7 @@ export function StateStorePage() {
                     rel="noopener noreferrer"
                   >
                     {t('stateStorePage.about.releaseNotes')}
+                    <ExternalLink className="settings-about__external-icon" aria-hidden="true" />
                   </a>
                 </footer>
               </div>
