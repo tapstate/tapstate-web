@@ -1320,6 +1320,13 @@
   },
   "wizard": {
     "eyebrow": "Pipeline builder",
+    "search": {
+      "sources": "Search sources",
+      "tables": "Search tables",
+      "fields": "Search fields",
+      "noResults": "No matching options.",
+      "openOptions": "Open options"
+    },
     "draft": "Draft",
     "dslMode": "DSL guided",
     "backToPipelines": "Back to Pipelines",

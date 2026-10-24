@@ -422,8 +422,11 @@ describe('WizardBuilder publish flow', () => {
         container?.querySelector('[aria-labelledby="wizard-destination-source-label"]'),
       ).not.toBeNull(),
     )
-    const trigger = container.querySelector<HTMLButtonElement>(
+    const input = container.querySelector<HTMLInputElement>(
       '[aria-labelledby="wizard-destination-source-label"]',
+    )
+    const trigger = input?.parentElement?.querySelector<HTMLButtonElement>(
+      '[data-wizard-search-trigger]',
     )
     await act(async () => trigger?.click())
     await vi.waitFor(() => expect(document.body.querySelector('[role="listbox"]')).not.toBeNull())
