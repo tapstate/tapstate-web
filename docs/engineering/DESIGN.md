@@ -18,10 +18,13 @@ Application-scene research added on 2026-10-23 was read from the user's local up
 4. **One action weight.** Each view has one obvious primary action. Secondary and ghost actions are quieter. Destructive intent uses the component's `tone`; do not create a new red button style. Place low-frequency item actions in a menu.
 5. **State is part of the composition.** Grid loading skeletons preserve final card geometry; the document table's initial load uses a centered source Spinner. Choose from the analogous source page instead of imposing one loading treatment everywhere. First-use empty states and filtered-empty states have different messages and actions. Errors show recovery. Disabled, invalid, selected, hover, active, and keyboard-focus states come from component APIs and Base UI data attributes; color alone never carries status.
 6. **Content ownership.** App code owns labels, translated text, permissions, data and navigation. The source component owns geometry, focus, dismissal, layers, field behavior and variants. Keep styling changes in token/theme mapping or the source, with upstream provenance, rather than scattered `className` corrections.
+7. **Continuity before novelty.** Start a new page or major composition from the closest existing source page pattern. Reuse its hierarchy, information density, alignment, control groups, surface roles, and responsive behavior; introduce differences only for a concrete product need and record the reason.
 
 ## Source fidelity is a delivery requirement
 
 For every new UI and every visual correction, read this document and the relevant source family before editing. A semantic-looking token or a successful build does not establish a source match. The pinned component source, the analogous application page, and explicit user decisions determine the result, in that order of responsibility: components own their parts; application references own composition; user decisions own intentional product differences.
+
+A new page must match the closest page in the pinned reference at the composition level, not just use the same components and colors. When a comparable Tapstate page exists, inspect it too and keep its product hierarchy unless the source pattern or product behavior requires a change. Compare title and action placement, content order, density, widths, alignment, grouping, surfaces, and state structure. If no direct analogue exists, choose the closest page recipe below and record each adaptation and its reason before approval.
 
 Record a source mapping in the PR or page audit for each changed composition:
 
@@ -213,6 +216,7 @@ Every new page and substantial visual change must attach a review matrix with th
 | Check       | Required evidence                                                                                                                                  |
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Composition | Screenshot or browser inspection at desktop and narrow viewport; title/action/filter/content hierarchy and justified grid/table/card choice        |
+| Continuity  | Closest matching source page and comparable Tapstate page; pattern reused at the same viewport, with each composition difference justified         |
 | Components  | Import inventory showing source component subpaths or a documented Tapstate adapter; no new homegrown form/control/overlay styling                 |
 | Tokens      | Changed classes use source semantic tokens; no new raw palette, arbitrary shadow, radius or call-site overlay z-index without source-backed reason |
 | States      | Loading, first-use empty, filtered empty, error, disabled, invalid and selected states exercised where applicable                                  |
@@ -233,7 +237,7 @@ The current page inventory and review status live in [ui-page-audit.md](ui-page-
 4. Compare each migrated screen with the appropriate upstream page recipe and the existing Tapstate shell. Record deviations in the review, not as an undocumented one-off class.
 5. Treat an unaudited screen as pending, even if it builds and its colors resemble the token palette.
 
-The current migration is **in progress**. Vendoring and a green typecheck of the subpackage do not imply that existing pages or the old UI Kit have passed this review gate.
+The current migration is **in progress**. Adding shared component source and passing its typecheck do not imply that existing pages or the UI Kit have passed this review gate.
 
 ## Assistant chat and provider settings
 

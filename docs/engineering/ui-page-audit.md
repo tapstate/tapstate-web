@@ -32,7 +32,7 @@ Inventory captured from the current worktree on 2026-10-18. “Direct” means a
 
 ## Review record required for each page
 
-- Route and state fixture; Upstream source path for the analogous page composition.
+- Route and state fixture; closest matching source page and, when one exists, comparable Tapstate page. Record their revisions/paths, the hierarchy and density reused, and the reason for each composition difference.
 - Desktop 1280×800 and mobile 375×812 screenshots; light/dark if supported.
 - Component import inventory including child controls, table rows, cards, forms, menus, and dialogs.
 - Loading/empty/error/disabled/selected states, focus and keyboard, overlay focus return.

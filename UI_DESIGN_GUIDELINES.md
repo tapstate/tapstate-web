@@ -2,7 +2,7 @@
 
 Tapstate's authoritative page composition and review contract is [docs/engineering/DESIGN.md](docs/engineering/DESIGN.md). The component/token source and migration status are in [docs/engineering/design-system.md](docs/engineering/design-system.md).
 
-For every new or substantially changed Web/Cloud page, import components from the direct `@tapstate-web/ui/<component>` public subpaths, use their semantic CSS tokens, and follow the page review matrix in `DESIGN.md`. The package `src/` tree keeps the source component layout; app-owned adapters bridge only Formily, localization, or router behavior. Keep Tapstate's app shell, main surface, navigation, and branding.
+For every new or substantially changed Web/Cloud page, start from the closest matching page pattern in the pinned source and preserve its hierarchy, information density, alignment, and responsive behavior. Import components from the direct `@tapstate-web/ui/<component>` public subpaths, use their semantic CSS tokens, and follow the page review matrix in `DESIGN.md`; record why any composition differs. The package `src/` tree keeps the source component layout; app-owned adapters bridge only Formily, localization, or router behavior. Keep Tapstate's app shell, main surface, navigation, and branding.
 
 Do not approve a page solely because its colors resemble the theme or its build passes. Review its hierarchy, component origin, loading/empty/error states, keyboard and overlay behavior, desktop/mobile layout, translations, and shell boundary against the pinned source examples.
 
