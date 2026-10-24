@@ -109,19 +109,12 @@
   min-width: 32px;
   padding: 0;
   border-radius: 50%;
-  background: var(--color-text-primary);
-  color: var(--color-components-panel-bg);
-  box-shadow: none;
   transition:
     background-color 120ms,
     transform 120ms;
 }
 .pipeline-ai-composer .pipeline-ai-composer-send:active {
   transform: scale(0.94);
-}
-.pipeline-ai-composer .pipeline-ai-composer-send[data-disabled] {
-  background: var(--color-components-button-tertiary-bg);
-  color: var(--color-text-disabled);
 }
 .pipeline-ai-composer-actions {
   position: absolute;
