@@ -12,13 +12,19 @@ export function StorageRecovery() {
   const { t } = useTranslation()
   const { fetcher, snapshot, refresh } = useStorage()
   const action = useStorageAction()
-  const [scope, setScope] = useState<'CLUSTER' | 'PIPELINE'>('CLUSTER')
+  const [scope, setScope] = useState<RecoveryPlan['scope']>(
+    snapshot?.businessPhase === 'READY' ? 'SHARED_SRS' : 'CLUSTER',
+  )
+  const [canonicalChain, setCanonicalChain] = useState('')
+  const [physicalChain, setPhysicalChain] = useState('')
   const [pipelineIds, setPipelineIds] = useState('')
   const [previousOperationId, setPreviousOperationId] = useState('')
   const [operationId, setOperationId] = useState(snapshot?.operationId ?? '')
   const [plan, setPlan] = useState<RecoveryPlan | null>(null)
   const [confirmed, setConfirmed] = useState(false)
   const canPlan = snapshot?.allowedActions.includes('storage.recovery.plan')
+  const scopes: RecoveryPlan['scope'][] =
+    snapshot?.businessPhase === 'READY' ? ['PIPELINE', 'SHARED_SRS'] : ['CLUSTER', 'PIPELINE']
   const clearPlan = () => {
     setPlan(null)
     setConfirmed(false)
@@ -32,8 +38,8 @@ export function StorageRecovery() {
         <fieldset disabled={action.busy} className="space-y-3">
           <div className="block space-y-1 text-sm">
             <span>{t('storage.recovery.scope')}</span>
-            <span className="flex gap-4">
-              {(['CLUSTER', 'PIPELINE'] as const).map((value) => (
+            <span className="flex flex-wrap gap-x-4">
+              {scopes.map((value) => (
                 <label key={value} className="flex min-h-11 items-center gap-2">
                   <input
                     type="radio"
@@ -45,7 +51,11 @@ export function StorageRecovery() {
                     }}
                   />
                   {t(
-                    value === 'CLUSTER' ? 'storage.recovery.cluster' : 'storage.recovery.pipelines',
+                    value === 'CLUSTER'
+                      ? 'storage.recovery.cluster'
+                      : value === 'SHARED_SRS'
+                        ? 'storage.recovery.shared'
+                        : 'storage.recovery.pipelines',
                   )}
                 </label>
               ))}
@@ -64,6 +74,33 @@ export function StorageRecovery() {
               />
             </label>
           )}
+          {scope === 'SHARED_SRS' && (
+            <>
+              <p className="text-muted-foreground text-sm">{t('storage.recovery.sharedHelp')}</p>
+              <label className="block space-y-1 text-sm">
+                <span>{t('storage.recovery.canonicalChain')}</span>
+                <input
+                  className={inputClass}
+                  value={canonicalChain}
+                  onChange={(event) => {
+                    setCanonicalChain(event.target.value)
+                    clearPlan()
+                  }}
+                />
+              </label>
+              <label className="block space-y-1 text-sm">
+                <span>{t('storage.recovery.physicalChain')}</span>
+                <input
+                  className={inputClass}
+                  value={physicalChain}
+                  onChange={(event) => {
+                    setPhysicalChain(event.target.value)
+                    clearPlan()
+                  }}
+                />
+              </label>
+            </>
+          )}
           <label className="block space-y-1 text-sm">
             <span>{t('storage.recovery.previous')}</span>
             <input
@@ -79,14 +116,23 @@ export function StorageRecovery() {
             className="min-h-11 sm:min-h-8"
             type="button"
             variant="outline"
-            disabled={scope === 'PIPELINE' && splitIds(pipelineIds).length !== 1}
+            disabled={
+              (scope === 'PIPELINE' && splitIds(pipelineIds).length !== 1) ||
+              (scope === 'SHARED_SRS' && (!canonicalChain.trim() || !physicalChain.trim()))
+            }
             onClick={() => {
               clearPlan()
               void action.run(
                 () =>
                   storageRequest<RecoveryPlan>(fetcher, 'storage.recovery.plan', {
                     scope,
-                    pipelineIds: scope === 'CLUSTER' ? [] : splitIds(pipelineIds),
+                    pipelineIds: scope === 'PIPELINE' ? splitIds(pipelineIds) : [],
+                    ...(scope === 'SHARED_SRS'
+                      ? {
+                          canonicalChain: canonicalChain.trim(),
+                          physicalChain: physicalChain.trim(),
+                        }
+                      : {}),
                     ...(previousOperationId.trim()
                       ? { previousOperationId: previousOperationId.trim() }
                       : {}),
@@ -104,6 +150,11 @@ export function StorageRecovery() {
       )}
       {plan && (
         <div className="space-y-3" aria-live="polite">
+          {plan.scope === 'SHARED_SRS' && (
+            <p className="text-sm break-all">
+              {plan.canonicalChain} → {plan.physicalChain}
+            </p>
+          )}
           <p className="text-sm">{t('storage.recovery.affected')}</p>
           <ul className="list-inside list-disc text-sm">
             {(plan.affectedPipelineIds ?? []).map((id) => (
@@ -125,7 +176,13 @@ export function StorageRecovery() {
               role="alert"
               className="border-destructive/30 bg-destructive/5 rounded-md border p-3 text-sm"
             >
-              <p>{t('storage.recovery.executionFailed')}</p>
+              <p>
+                {t(
+                  plan.scope === 'SHARED_SRS'
+                    ? 'storage.recovery.sharedFailure'
+                    : 'storage.recovery.executionFailed',
+                )}
+              </p>
               <code className="mt-1 block text-xs">{plan.executionErrorCode}</code>
             </div>
           )}
@@ -154,6 +211,16 @@ export function StorageRecovery() {
               {t('storage.recovery.stalePreview')}
             </p>
           )}
+          {plan.phase === 'COMPLETE' && plan.scope === 'SHARED_SRS' && (
+            <>
+              <p className="text-muted-foreground text-sm">
+                {t('storage.recovery.sharedComplete')}
+              </p>
+              <Button asChild variant="outline" className="min-h-11 sm:min-h-8">
+                <a href="/pipelines">{t('storage.recovery.openPipelines')}</a>
+              </Button>
+            </>
+          )}
           {plan.phase === 'COMPLETE' && plan.scope === 'CLUSTER' && (
             <>
               <p className="text-muted-foreground text-sm">
@@ -174,30 +241,39 @@ export function StorageRecovery() {
               </Button>
             </>
           )}
-          {plan.phase === 'PLANNED' && canPlan && (
-            <Button
-              type="button"
-              variant="outline"
-              disabled={action.busy}
-              onClick={() => {
-                setConfirmed(false)
-                void action.run(
-                  () =>
-                    storageRequest<RecoveryPlan>(fetcher, 'storage.recovery.plan', {
-                      scope: plan.scope,
-                      pipelineIds: plan.pipelineIds,
-                      operationId: plan.operationId,
-                    }),
-                  (result) => {
-                    setPlan(result)
-                    setConfirmed(false)
-                  },
-                )
-              }}
-            >
-              {t('storage.recovery.repreview')}
-            </Button>
-          )}
+          {(plan.phase === 'PLANNED' ||
+            (plan.scope === 'SHARED_SRS' && ['CONFIRMED', 'RUNNING'].includes(plan.phase))) &&
+            canPlan && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={action.busy}
+                onClick={() => {
+                  setConfirmed(false)
+                  void action.run(
+                    () =>
+                      storageRequest<RecoveryPlan>(fetcher, 'storage.recovery.plan', {
+                        scope: plan.scope,
+                        pipelineIds: plan.pipelineIds,
+                        ...(plan.scope === 'SHARED_SRS'
+                          ? {
+                              canonicalChain: plan.canonicalChain,
+                              physicalChain: plan.physicalChain,
+                            }
+                          : {}),
+                        operationId: plan.operationId,
+                      }),
+                    async (result) => {
+                      setPlan(result)
+                      setConfirmed(false)
+                      if (result.phase === 'COMPLETE') await refresh()
+                    },
+                  )
+                }}
+              >
+                {t('storage.recovery.repreview')}
+              </Button>
+            )}
           {plan.phase === 'PLANNED' && canPlan && (
             <>
               <label className="flex items-start gap-2 text-sm">
@@ -212,7 +288,9 @@ export function StorageRecovery() {
                   {t(
                     plan.scope === 'CLUSTER'
                       ? 'storage.recovery.clusterConfirmHelp'
-                      : 'storage.recovery.confirmHelp',
+                      : plan.scope === 'SHARED_SRS'
+                        ? 'storage.recovery.sharedConfirmHelp'
+                        : 'storage.recovery.confirmHelp',
                   )}
                 </span>
               </label>
@@ -223,6 +301,7 @@ export function StorageRecovery() {
                   !confirmed ||
                   action.busy ||
                   plan.preflightCurrent === false ||
+                  (plan.scope === 'SHARED_SRS' && plan.preflightCurrent !== true) ||
                   (plan.scope === 'PIPELINE' &&
                     (plan.preflightCurrent !== true || !plan.targetPolicies?.length))
                 }
@@ -246,7 +325,9 @@ export function StorageRecovery() {
                 {t(
                   plan.scope === 'CLUSTER'
                     ? 'storage.recovery.clusterConfirm'
-                    : 'storage.recovery.confirm',
+                    : plan.scope === 'SHARED_SRS'
+                      ? 'storage.recovery.sharedConfirm'
+                      : 'storage.recovery.confirm',
                 )}
               </Button>
             </>
@@ -307,8 +388,14 @@ export function StorageRecovery() {
             async (result) => {
               setPlan(result)
               setConfirmed(false)
-              if (result.scope === 'CLUSTER' || result.scope === 'PIPELINE') {
+              if (
+                result.scope === 'CLUSTER' ||
+                result.scope === 'PIPELINE' ||
+                result.scope === 'SHARED_SRS'
+              ) {
                 setScope(result.scope)
+                setCanonicalChain(result.canonicalChain ?? '')
+                setPhysicalChain(result.physicalChain ?? '')
                 setPipelineIds((result.pipelineIds ?? []).join(', '))
                 setPreviousOperationId(result.previousOperationId ?? '')
               }

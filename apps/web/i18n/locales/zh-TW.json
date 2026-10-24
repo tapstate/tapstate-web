@@ -2085,7 +2085,16 @@
         "CLEAR": "先清空選中的目標表，再重新全量讀取來源資料。",
         "FAIL": "選中的目標表已有資料時，拒絕執行全量。"
       },
-      "reviewRequired": "查看全量恢復"
+      "reviewRequired": "查看全量恢復",
+      "shared": "單一共享日誌範圍",
+      "canonicalChain": "原共享採集身分",
+      "physicalChain": "原實體日誌身分",
+      "sharedHelp": "填寫儲存診斷中的兩個原身分。伺服器核對實際受影響的 Pipeline；其他共享日誌及其消費者繼續執行。",
+      "sharedConfirmHelp": "我已在所有機器停止並隔離列表中的 Pipeline 和原共享採集，確認其舊來源/目標連線與進行中的寫入已結束。我確認這個確切範圍。受影響 Pipeline 將保持停止，隨後須逐一明確確認全量重建。",
+      "sharedConfirm": "確認恢復共享日誌",
+      "sharedComplete": "新的共享日誌已就緒。請逐一對列表中的 Pipeline 執行「停止並清空狀態」，再明確啟動全量；其他 Pipeline 保留原狀態。受影響的資料和目標尚未恢復。",
+      "sharedFailure": "此原共享恢復尚未完成。請查看錯誤，並重新預檢同一範圍；預檢變更後需要再次確認。",
+      "openPipelines": "前往 Pipeline"
     },
     "transfer": {
       "title": "設定轉移",

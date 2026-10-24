@@ -46,7 +46,9 @@ export interface RecoveryPlan {
   operationId: string
   previousOperationId: string | null
   phase: string
-  scope: 'CLUSTER' | 'PIPELINE'
+  scope: 'CLUSTER' | 'PIPELINE' | 'SHARED_SRS'
+  canonicalChain?: string
+  physicalChain?: string
   pipelineIds: string[]
   affectedPipelineIds: string[]
   controlRevision: number

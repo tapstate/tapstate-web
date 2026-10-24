@@ -2085,7 +2085,16 @@
         "CLEAR": "Clear the selected target tables before loading the full source again.",
         "FAIL": "Refuse the full load if a selected target table already contains rows."
       },
-      "reviewRequired": "Review full recovery"
+      "reviewRequired": "Review full recovery",
+      "shared": "One shared log storage scope",
+      "canonicalChain": "Original shared capture identity",
+      "physicalChain": "Original physical log identity",
+      "sharedHelp": "Use both original identities from the storage diagnosis. The server determines the actual affected pipelines. Other shared logs and their readers continue to run.",
+      "sharedConfirmHelp": "I have stopped and isolated the listed pipelines and the old shared capture on every machine, and verified that their old source/target connections and in-flight writes have ended. I confirm this exact scope. The affected pipelines will remain stopped and each needs an explicit full rebuild.",
+      "sharedConfirm": "Confirm shared log recovery",
+      "sharedComplete": "The replacement shared log is ready. For each listed pipeline, use Stop with clear state, then explicitly start its full load. Other pipelines keep their state. The affected data and targets have not yet recovered.",
+      "sharedFailure": "This original shared recovery has not completed. Inspect its error and recheck this same scope before confirming a changed preview.",
+      "openPipelines": "Open pipelines"
     },
     "transfer": {
       "title": "Transfer configuration",

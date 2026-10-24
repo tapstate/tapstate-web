@@ -317,6 +317,137 @@ describe('storage setup form', () => {
   })
 })
 describe('explicit recovery and import', () => {
+  const sharedPlan = {
+    operationId: 'shared-recovery',
+    previousOperationId: null,
+    scope: 'SHARED_SRS',
+    pipelineIds: [],
+    canonicalChain: 'canonical-s1',
+    physicalChain: 'original-s1',
+    affectedPipelineIds: ['pipeline-a', 'pipeline-b'],
+    phase: 'PLANNED',
+    controlRevision: 8,
+    planHash: 'original-hash',
+    preflightCurrent: true,
+  }
+  function sharedReady() {
+    storage.snapshot = {
+      ...base,
+      setupPhase: 'COMPLETE',
+      businessPhase: 'READY',
+      authGeneration: 1,
+      allowedActions: [
+        'storage.recovery.plan',
+        'storage.recovery.confirm',
+        'storage.recovery.status',
+      ],
+    }
+  }
+  function sharedConfirmation() {
+    return [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === i18n.t('storage.recovery.sharedConfirm'),
+    )!
+  }
+  it('previews both original shared identities and keeps the influence list server-owned', async () => {
+    sharedReady()
+    storage.fetcher.mockResolvedValue(Response.json(sharedPlan))
+    await render(<StorageRecovery />)
+    await click('storage.recovery.preview')
+    expect(storage.fetcher).not.toHaveBeenCalled()
+    await fill('storage.recovery.canonicalChain', 'canonical-s1')
+    await click('storage.recovery.preview')
+    expect(storage.fetcher).not.toHaveBeenCalled()
+    await fill('storage.recovery.physicalChain', 'original-s1')
+    await click('storage.recovery.preview')
+    expect(JSON.parse(String(storage.fetcher.mock.calls[0][1]?.body))).toEqual({
+      scope: 'SHARED_SRS',
+      pipelineIds: [],
+      canonicalChain: 'canonical-s1',
+      physicalChain: 'original-s1',
+    })
+    expect(container.textContent).toContain('pipeline-a')
+    expect(container.textContent).toContain('pipeline-b')
+    expect(container.textContent).not.toContain('pipeline-c')
+    expect(sharedConfirmation().disabled).toBe(true)
+    expect(container.textContent).toContain(i18n.t('storage.recovery.sharedConfirmHelp'))
+    await act(async () =>
+      container.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click(),
+    )
+    expect(sharedConfirmation().disabled).toBe(false)
+    await fill('storage.recovery.physicalChain', 'changed-s1')
+    expect(sharedConfirmation()).toBeUndefined()
+  })
+  it.each([false, undefined])(
+    'does not authorize a shared h0 without finalized preflight %s',
+    async (preflightCurrent) => {
+      sharedReady()
+      storage.fetcher.mockResolvedValue(Response.json({ ...sharedPlan, preflightCurrent }))
+      await render(<StorageRecovery />)
+      await fill('storage.operationId', sharedPlan.operationId)
+      await click('storage.queryResult')
+      await act(async () =>
+        container.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click(),
+      )
+      expect(sharedConfirmation().disabled).toBe(true)
+      await click('storage.recovery.sharedConfirm')
+      expect(storage.fetcher).toHaveBeenCalledTimes(1)
+    },
+  )
+  it('rechecks a cancelled running shared scope under the same operation and requires a fresh confirmation', async () => {
+    sharedReady()
+    storage.fetcher
+      .mockResolvedValueOnce(
+        Response.json({
+          ...sharedPlan,
+          phase: 'RUNNING',
+          executionErrorCode: 'io.cache-business-fenced',
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({ ...sharedPlan, controlRevision: 12, planHash: 'rechecked-hash' }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          ...sharedPlan,
+          controlRevision: 12,
+          planHash: 'rechecked-hash',
+          phase: 'COMPLETE',
+        }),
+      )
+    await render(<StorageRecovery />)
+    await fill('storage.operationId', sharedPlan.operationId)
+    await click('storage.queryResult')
+    expect(container.textContent).toContain(i18n.t('storage.recovery.sharedFailure'))
+    await click('storage.recovery.repreview')
+    expect(JSON.parse(String(storage.fetcher.mock.calls[1][1]?.body))).toEqual({
+      scope: 'SHARED_SRS',
+      pipelineIds: [],
+      canonicalChain: 'canonical-s1',
+      physicalChain: 'original-s1',
+      operationId: 'shared-recovery',
+    })
+    expect(sharedConfirmation().disabled).toBe(true)
+    await act(async () =>
+      container.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click(),
+    )
+    await click('storage.recovery.sharedConfirm')
+    expect(JSON.parse(String(storage.fetcher.mock.calls[2][1]?.body))).toEqual({
+      operationId: 'shared-recovery',
+      planHash: 'rechecked-hash',
+      controlRevision: 12,
+      confirmed: true,
+    })
+    expect(container.textContent).toContain(i18n.t('storage.recovery.sharedComplete'))
+    expect(storage.fetcher).toHaveBeenCalledTimes(3)
+    expect(container.querySelector('a[href="/pipelines"]')).toBeTruthy()
+    expect(
+      [...container.querySelectorAll('button')].some(
+        (button) => button.textContent === i18n.t('storage.recovery.selectPipeline'),
+      ),
+    ).toBe(false)
+    expect(storage.fetcher).toHaveBeenCalledTimes(3)
+  })
+
   it('locks the selected recovery ID while its original result is being checked', async () => {
     storage.snapshot = {
       ...base,
@@ -449,9 +580,11 @@ describe('explicit recovery and import', () => {
     )
     await render(<StorageRecovery />)
     await click('storage.queryResult')
-    expect(container.querySelectorAll<HTMLInputElement>('input[type="radio"]')[1].checked).toBe(
-      true,
-    )
+    expect(
+      [...container.querySelectorAll('label')]
+        .find((label) => label.textContent === i18n.t('storage.recovery.pipelines'))
+        ?.querySelector<HTMLInputElement>('input[type="radio"]')?.checked,
+    ).toBe(true)
     await act(async () =>
       container.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click(),
     )
