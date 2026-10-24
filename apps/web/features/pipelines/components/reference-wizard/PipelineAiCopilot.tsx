@@ -334,6 +334,11 @@ export function PipelineAiCopilot({
     }
   }
   const suggestions = ['assemble', 'relations', 'clean', 'metrics', 'diagnose'] as const
+  const visibleMessages = chat.messages.filter(
+    (message) =>
+      message.role === 'user' ||
+      message.parts.some((part) => part.type === 'text' && part.text.trim().length > 0),
+  )
   return (
     <aside
       className="pipeline-ai-copilot flex h-full min-h-0 min-w-0 flex-col bg-white"
@@ -421,7 +426,7 @@ export function PipelineAiCopilot({
                     {t('wizard.assistant.welcome')}
                   </div>
                 )}
-                {chat.messages.map((message) => (
+                {visibleMessages.map((message) => (
                   <div
                     key={message.id}
                     className={`flex flex-col ${message.role === 'user' ? 'items-end' : 'items-start'}`}

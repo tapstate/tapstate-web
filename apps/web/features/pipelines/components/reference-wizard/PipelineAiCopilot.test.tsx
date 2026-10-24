@@ -508,4 +508,49 @@ describe('Pipeline Builder assistant', () => {
     expect(container.textContent).toContain('Generation stopped')
     expect(context.onApply).not.toHaveBeenCalled()
   })
+  it('does not render an empty assistant bubble before the first reply token', async () => {
+    let controller!: ReadableStreamDefaultController<Uint8Array>
+    const body = new ReadableStream<Uint8Array>({
+      start(streamController) {
+        controller = streamController
+        controller.enqueue(
+          encoder.encode(
+            'data: {"type":"start","messageId":"waiting"}\n\ndata: {"type":"text-start","id":"reply"}\n\n',
+          ),
+        )
+      },
+    })
+    useAuthStore.setState({
+      apiFetch: vi.fn().mockResolvedValue(
+        new Response(body, {
+          headers: { 'Content-Type': 'text/event-stream', 'x-vercel-ai-ui-message-stream': 'v1' },
+        }),
+      ),
+    })
+    await mount()
+    await generate()
+
+    await vi.waitFor(() =>
+      expect(container.textContent).toContain('Connecting to your AI provider…'),
+    )
+    expect(container.querySelector('.pipeline-ai-message')).toBeNull()
+
+    await act(async () => {
+      controller.enqueue(
+        encoder.encode('data: {"type":"text-delta","id":"reply","delta":"Hello"}\n\n'),
+      )
+    })
+    await vi.waitFor(() =>
+      expect(container.querySelector('.pipeline-ai-message')?.textContent).toBe('Hello'),
+    )
+
+    await act(async () => {
+      controller.enqueue(
+        encoder.encode(
+          'data: {"type":"text-end","id":"reply"}\n\ndata: {"type":"finish","finishReason":"stop"}\n\ndata: [DONE]\n\n',
+        ),
+      )
+      controller.close()
+    })
+  })
 })
