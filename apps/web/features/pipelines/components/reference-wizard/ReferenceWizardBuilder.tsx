@@ -213,6 +213,24 @@ function expandNewAssistantTransforms(
   }
 }
 
+function assistantTransformIds(state: WizardViewState): string[] {
+  const ids = (state.root?.transforms || []).map((step) => step.id)
+  const visit = (relations: RelationNode[]) => {
+    for (const relation of relations) {
+      ids.push(...(relation.transforms || []).map((step) => step.id))
+      visit(relation.children || [])
+    }
+  }
+  visit(state.relations)
+  ids.push(...state.transforms.map((step) => step.id))
+  return ids
+}
+
+function firstNewAssistantTransformId(next: WizardViewState, previous: WizardViewState) {
+  const previousIds = new Set(assistantTransformIds(previous))
+  return assistantTransformIds(next).find((id) => !previousIds.has(id)) ?? null
+}
+
 function ReadOnlyFieldset({
   disabled,
   label,
@@ -455,6 +473,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     previous: WizardViewState
     appliedFingerprint: string
   } | null>(null)
+  const pendingAssistantRevealId = React.useRef<string | null>(null)
   React.useEffect(() => {
     const fingerprint = JSON.stringify(viewState)
     if (lastView.current !== fingerprint) {
@@ -462,6 +481,17 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       onChangeRef.current(viewState)
     }
   }, [viewState])
+  React.useEffect(() => {
+    const id = pendingAssistantRevealId.current
+    if (!id) return
+    const builder = document.querySelector('.wizard-reference')
+    const target = Array.from(
+      builder?.querySelectorAll<HTMLElement>('[data-transform-id]') || [],
+    ).find((element) => element.dataset.transformId === id)
+    if (!target) return
+    pendingAssistantRevealId.current = null
+    target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
+  }, [rootConfig, relations, pipelineTransforms])
 
   function assistantScope(focus: string) {
     if (focus === 'root') return rootConfig?.table || t('wizard.assistant.inputTableFocus')
@@ -516,6 +546,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       AVAILABLE_DATA_SOURCES,
     )
     const next = expandNewAssistantTransforms(decoded, previous)
+    pendingAssistantRevealId.current = firstNewAssistantTransformId(next, previous)
     assistantUndo.current = { previous, appliedFingerprint: JSON.stringify(next) }
     setRootConfig(next.root)
     setRelations(next.relations)

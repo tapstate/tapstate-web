@@ -359,6 +359,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
           return (
             <div
               key={step.id}
+              data-transform-id={step.id}
               className={cn(
                 'overflow-hidden rounded-xl border bg-white shadow-2xs transition-all duration-150',
                 step.isExpanded
