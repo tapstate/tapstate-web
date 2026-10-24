@@ -153,8 +153,12 @@ export function StateStorePage() {
               </div>
               <div className="settings-about__content">
                 <div className="settings-about__identity" aria-label={t('app.brand')}>
-                  <img alt="" className="h-10 w-10 dark:hidden" src="/tapstate-mark-light.svg" />
-                  <img alt="" className="hidden h-10 w-10 dark:block" src="/tapstate-mark.svg" />
+                  <img alt="" className="h-10 w-10 dark:hidden" src="/tapstate-mark.svg" />
+                  <img
+                    alt=""
+                    className="hidden h-10 w-10 dark:block"
+                    src="/tapstate-mark-light.svg"
+                  />
                   <span className="settings-about__brand">{t('app.brand')}</span>
                 </div>
                 <dl className="settings-about__version">

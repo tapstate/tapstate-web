@@ -118,8 +118,8 @@ export function AppSidebar() {
       ) : (
         <div className="app-sidebar__brand mt-2">
           <div className="app-sidebar__mark" aria-hidden="true">
-            <img alt="" className="h-5 w-5 dark:hidden" src="/tapstate-mark-light.svg" />
-            <img alt="" className="hidden h-5 w-5 dark:block" src="/tapstate-mark.svg" />
+            <img alt="" className="h-5 w-5 dark:hidden" src="/tapstate-mark.svg" />
+            <img alt="" className="hidden h-5 w-5 dark:block" src="/tapstate-mark-light.svg" />
           </div>
           <span className="app-sidebar__title">{t('app.brand')}</span>
         </div>
