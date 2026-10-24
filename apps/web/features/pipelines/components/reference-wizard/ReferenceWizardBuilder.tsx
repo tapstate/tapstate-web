@@ -3088,7 +3088,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   )}
                 >
                   <Sparkles className="h-3 w-3 text-blue-600" />
-                  {t('wizard.assistant.open')} (Copilot)
+                  {t('wizard.assistant.open')}
                 </button>
                 <button
                   type="button"
