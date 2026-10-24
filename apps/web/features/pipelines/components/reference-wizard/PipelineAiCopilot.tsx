@@ -1,4 +1,5 @@
 import { useChat } from '@ai-sdk/react'
+import { Button as DifyButton } from '@langgenius/dify-ui/button'
 import { DefaultChatTransport, type UIMessage } from 'ai'
 import {
   CheckCircle2,
@@ -12,6 +13,7 @@ import {
   X,
 } from 'lucide-react'
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 
 import type { PipelineJsonObject } from '@/service/pipelines/pipeline-client'
@@ -84,6 +86,13 @@ export function PipelineAiCopilot({
   const apiFetch = useAuthStore((s) => s.apiFetch)
   const latest = useRef({ context, focus })
   latest.current = { context, focus }
+  const assistantPanelRef = useRef<HTMLElement>(null)
+  const [assistantActionHost, setAssistantActionHost] = useState<HTMLElement | null>(null)
+  useEffect(() => {
+    const builder = assistantPanelRef.current?.closest('.wizard-reference')
+    const host = builder?.querySelector('[data-assistant-apply-action-slot]')
+    if (host instanceof HTMLElement) setAssistantActionHost(host)
+  }, [])
   const [tab, setTab] = useState<'chat' | 'diff' | 'settings'>('chat')
   const [input, setInput] = useState('')
   const [proposal, setProposal] = useState<AssistantProposal | null>(null)
@@ -338,6 +347,7 @@ export function PipelineAiCopilot({
       latest.current.context.onApply(validated.candidateWizard)
       setApplied(true)
       setUndoError(false)
+      if (assistantActionHost) setTab('chat')
     } catch (error) {
       setReviewError(
         error instanceof AssistantClientError
@@ -349,6 +359,62 @@ export function PipelineAiCopilot({
       setApplying(false)
     }
   }
+  function rejectOrUndo() {
+    if (applied) {
+      if (latest.current.context.onUndoApply?.()) {
+        setProposal(null)
+        setComplete(false)
+        setApplied(false)
+        setUndoError(false)
+        setTab('chat')
+      } else {
+        setUndoError(true)
+      }
+      return
+    }
+    generation.current += 1
+    setProposal(null)
+    setComplete(false)
+    setTab('chat')
+  }
+  const proposalActions =
+    proposal && complete ? (
+      <div
+        className="flex items-center gap-2"
+        role="group"
+        aria-label={t('wizard.assistant.diffTitle')}
+      >
+        <DifyButton
+          variant={applied ? 'secondary' : 'secondary-accent'}
+          size="medium"
+          loading={applying}
+          type="button"
+          onClick={() => void apply()}
+          disabled={blocked || stale || applied}
+          focusableWhenDisabled={applied}
+          className="shrink-0"
+        >
+          {applied ? (
+            <CheckCircle2 className="h-3.5 w-3.5" />
+          ) : (
+            <Sparkles className="h-3.5 w-3.5" />
+          )}
+          {t(applied ? 'wizard.assistant.applied' : 'wizard.assistant.apply')}
+        </DifyButton>
+        <DifyButton
+          variant="secondary"
+          type="button"
+          disabled={applying || (applied && context.undoBlocked)}
+          onClick={rejectOrUndo}
+        >
+          {t(applied ? 'wizard.assistant.undoApply' : 'wizard.assistant.reject')}
+        </DifyButton>
+      </div>
+    ) : null
+  const externalProposalActions =
+    assistantActionHost && proposalActions
+      ? createPortal(proposalActions, assistantActionHost)
+      : null
   const suggestions = ['assemble', 'relations', 'clean', 'metrics', 'diagnose'] as const
   const visibleMessages = chat.messages.filter(
     (message) =>
@@ -357,9 +423,11 @@ export function PipelineAiCopilot({
   )
   return (
     <aside
+      ref={assistantPanelRef}
       className="pipeline-ai-copilot flex h-full min-h-0 min-w-0 flex-col bg-white"
       aria-label={t('wizard.assistant.title')}
     >
+      {externalProposalActions}
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-gray-200 bg-gray-50/70 px-4">
         <div className="flex min-w-0 items-center gap-2">
           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-blue-600 text-white">
@@ -546,50 +614,7 @@ export function PipelineAiCopilot({
                     <p className="text-[11px] leading-relaxed text-gray-500">
                       {t('wizard.assistant.reviewHint')}
                     </p>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="primary"
-                        loading={applying}
-                        type="button"
-                        onClick={() => void apply()}
-                        disabled={blocked || stale || applied}
-                        className="flex-1"
-                      >
-                        {applying ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : applied ? (
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                        ) : (
-                          <Sparkles className="h-3.5 w-3.5" />
-                        )}
-                        {t(applied ? 'wizard.assistant.applied' : 'wizard.assistant.apply')}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        type="button"
-                        disabled={applying || (applied && context.undoBlocked)}
-                        onClick={() => {
-                          if (applied) {
-                            if (latest.current.context.onUndoApply?.()) {
-                              setProposal(null)
-                              setComplete(false)
-                              setApplied(false)
-                              setUndoError(false)
-                              setTab('chat')
-                            } else {
-                              setUndoError(true)
-                            }
-                            return
-                          }
-                          generation.current += 1
-                          setProposal(null)
-                          setComplete(false)
-                          setTab('chat')
-                        }}
-                      >
-                        {t(applied ? 'wizard.assistant.undoApply' : 'wizard.assistant.reject')}
-                      </Button>
-                    </div>
+                    {!assistantActionHost && proposalActions}
                     {undoError && (
                       <p role="status" className="text-[11px] text-amber-700">
                         {t('wizard.assistant.undoStale')}
