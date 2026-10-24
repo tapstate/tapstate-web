@@ -1,19 +1,27 @@
-import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area'
 import { cn } from '@tapstate-web/ui/cn'
+import {
+  ScrollArea as SourceScrollArea,
+  ScrollAreaCorner,
+  ScrollAreaScrollbar,
+  ScrollAreaThumb,
+  ScrollAreaViewport,
+} from '@tapstate-web/ui/scroll-area'
 
-function ScrollArea({ className, children, ...props }: React.ComponentProps<'div'>) {
+function ScrollArea({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof SourceScrollArea>) {
   return (
-    <ScrollAreaPrimitive.Root
-      data-slot="scroll-area"
-      className={cn('ui-scroll-area', className)}
+    <SourceScrollArea
       {...props}
+      data-slot="scroll-area"
+      className={cn('relative min-h-0 overflow-hidden', className)}
     >
-      <ScrollAreaPrimitive.Viewport className="ui-scroll-area-viewport">
-        {children}
-      </ScrollAreaPrimitive.Viewport>
+      <ScrollAreaViewport data-slot="scroll-area-viewport">{children}</ScrollAreaViewport>
       <ScrollBar />
-      <ScrollAreaPrimitive.Corner />
-    </ScrollAreaPrimitive.Root>
+      <ScrollAreaCorner />
+    </SourceScrollArea>
   )
 }
 
@@ -21,16 +29,16 @@ function ScrollBar({
   className,
   orientation = 'vertical',
   ...props
-}: React.ComponentProps<'div'> & { orientation?: 'vertical' | 'horizontal' }) {
+}: React.ComponentProps<typeof ScrollAreaScrollbar>) {
   return (
-    <ScrollAreaPrimitive.Scrollbar
+    <ScrollAreaScrollbar
+      {...props}
       data-slot="scroll-area-scrollbar"
       orientation={orientation}
-      className={cn('ui-scroll-area-scrollbar', className)}
-      {...props}
+      className={className}
     >
-      <ScrollAreaPrimitive.Thumb className="ui-scroll-area-thumb" />
-    </ScrollAreaPrimitive.Scrollbar>
+      <ScrollAreaThumb />
+    </ScrollAreaScrollbar>
   )
 }
 

@@ -1,1 +1,1 @@
-export { Textarea } from '@tapstate-web/ui/textarea'
+export { Textarea } from './input'
