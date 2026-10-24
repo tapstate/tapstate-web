@@ -427,7 +427,7 @@ export function SourceEditDialog({
     >
       <DialogContent
         closeDisabled={submitting || testing || pendingFileReads}
-        closeLabel={t('ask.actions.close')}
+        closeLabel={t('common.close')}
         className="bg-background border-border flex h-[90vh] max-h-[800px] w-full max-w-[1100px] flex-col gap-0 overflow-hidden rounded-2xl border p-0 shadow-2xl ring-0 sm:max-w-[1100px]"
       >
         <DialogHeader className="border-border bg-background flex h-14 shrink-0 flex-row items-center border-b px-6 pr-12">

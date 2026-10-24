@@ -11,9 +11,6 @@
     },
     "notifications": "查看通知",
     "logout": "登出",
-    "shortcuts": {
-      "ask": "⌘J"
-    },
     "user": {
       "avatar": "使用者頭像",
       "initial": "U"
@@ -1319,48 +1316,6 @@
         "item2": "每天的行程數量趨勢是什麼？",
         "item3": "哪些區域的小費最高？"
       }
-    }
-  },
-  "ask": {
-    "launch": "Ask Tapstate",
-    "newChat": "新對話",
-    "panelLabel": "Ask Tapstate 面板",
-    "skills": "技能",
-    "actions": {
-      "attach": "新增附件",
-      "close": "關閉",
-      "maximize": "最大化",
-      "minimize": "最小化",
-      "send": "傳送"
-    },
-    "input": {
-      "placeholder": "詢問 Tapstate..."
-    },
-    "preview": {
-      "rows": "100k+ 列"
-    },
-    "prompts": {
-      "pipeline": "建立流水線",
-      "pipelinePrompt": "建立一條新流水線",
-      "source": "建立資料來源",
-      "sourcePrompt": "建立一個資料來源",
-      "trends": "分析資料趨勢",
-      "trendsPrompt": "分析活躍使用者趨勢"
-    },
-    "responses": {
-      "default": "我可以協助你探索資料。\n\n1. 分析 trips 資料來源\n2. 建立新流水線\n3. 檢查 best_tip_zones API\n\n你想從哪一步開始？",
-      "queryPreview": "我已經為你查詢 [View: daily_active_users]。以下是最新資料預覽：\n\n[DataPreview: daily_active_users]\n\n資料看起來正常，並且正在即時更新。需要我分析本週趨勢嗎？",
-      "sourceCreated": "我已經建立資料來源 [DataSource: user_events]，並連接到 PostgreSQL 實例。你可以打開它查看 schema 和同步狀態。"
-    },
-    "shortcuts": {
-      "context": "將目前視圖加入上下文",
-      "contextKey": "Tab",
-      "mention": "提及任意表、視圖或 API",
-      "mentionKey": "{'@'}"
-    },
-    "welcome": {
-      "body": "可以提問，也可以告訴 Tapstate 你需要什麼。",
-      "title": "歡迎使用 Tapstate"
     }
   },
   "wizard": {

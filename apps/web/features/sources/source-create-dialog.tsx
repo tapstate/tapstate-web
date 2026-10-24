@@ -359,7 +359,7 @@ export function SourceCreateDialog({
               <DialogTitle>{t('sources.create.chooseConnector')}</DialogTitle>
               <DialogCloseButton
                 disabled={submitting || testing || pendingFileReads}
-                aria-label={t('ask.actions.close')}
+                aria-label={t('common.close')}
               />
             </DialogHeader>
 
@@ -464,7 +464,7 @@ export function SourceCreateDialog({
               </div>
               <DialogCloseButton
                 disabled={submitting || testing || pendingFileReads}
-                aria-label={t('ask.actions.close')}
+                aria-label={t('common.close')}
               />
             </DialogHeader>
 

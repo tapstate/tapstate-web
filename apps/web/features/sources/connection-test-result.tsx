@@ -158,7 +158,7 @@ export function ConnectionTestResultDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        closeLabel={t('ask.actions.close')}
+        closeLabel={t('common.close')}
         className="max-h-[calc(100dvh-2rem)] overflow-hidden"
       >
         <DialogHeader>

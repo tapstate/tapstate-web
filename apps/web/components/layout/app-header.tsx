@@ -1,13 +1,12 @@
 import { Avatar, AvatarFallback } from '@langgenius/dify-ui/avatar'
 import { IconButton } from '@langgenius/dify-ui/icon-button'
 import { useNavigate } from '@tanstack/react-router'
-import { Bell, Languages, LogOut, Sparkles } from 'lucide-react'
+import { Bell, Languages, LogOut } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { AppLocale } from '@/i18n'
 
-import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +15,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { SUPPORTED_LOCALES } from '@/i18n'
 import { useAuthStore } from '@/stores/auth-store'
-import { useUiStore } from '@/stores/ui-store'
 import { cloudConsoleUrl, replaceWithCloudConsole } from '@/utils/cloud-console'
 
 const footerIconButtonClassName =
@@ -27,7 +25,6 @@ export function AppHeader() {
   const { t, i18n } = useTranslation()
   const logoutSession = useAuthStore((state) => state.logout)
   const authProfile = useAuthStore((state) => state.profile)
-  const setAskTapstateOpen = useUiStore((state) => state.setAskTapstateOpen)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState(false)
 
@@ -55,17 +52,6 @@ export function AppHeader() {
   return (
     <header className="app-sidebar__footer">
       <div className="app-sidebar__actions">
-        <Button
-          type="button"
-          variant="ghost"
-          className="app-sidebar__ask"
-          onClick={() => setAskTapstateOpen(true)}
-        >
-          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-          <span>{t('ask.launch')}</span>
-          <kbd>{t('app.shortcuts.ask')}</kbd>
-        </Button>
-
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <IconButton

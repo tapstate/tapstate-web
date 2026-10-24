@@ -417,41 +417,6 @@
     gap: 8px;
   }
 
-  .app-sidebar__ask {
-    display: inline-flex;
-    width: 100%;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    border-radius: var(--radius);
-    padding: 6px 10px;
-    border: 1px solid var(--app-border);
-    background: var(--app-bg-elevated);
-    box-shadow: var(--app-shadow-sm);
-    color: #374151;
-    font-size: 12px;
-    font-weight: 600;
-    transition:
-      background 0.16s ease,
-      color 0.16s ease;
-  }
-
-  .app-sidebar__ask:hover {
-    background: #f8fafc;
-    color: var(--app-text);
-  }
-
-  .app-sidebar__ask kbd {
-    border: 1px solid var(--app-border);
-    border-radius: 4px;
-    background: #f8fafc;
-    color: var(--app-text-subtle);
-    font-size: 10px;
-    font-weight: 600;
-    line-height: 1;
-    padding: 3px 5px;
-  }
-
   .view {
     padding: 24px;
   }
@@ -710,25 +675,6 @@
 }
 
 @layer components {
-  .ask-panel {
-    position: fixed;
-    right: 24px;
-    bottom: 24px;
-    z-index: 50;
-  }
-
-  .ask-panel__window {
-    display: flex;
-    width: min(400px, calc(100vw - 32px));
-    height: min(550px, calc(100vh - 48px));
-    flex-direction: column;
-    overflow: hidden;
-    border: 1px solid rgba(229, 231, 235, 0.8);
-    border-radius: 16px;
-    background: white;
-    box-shadow: 0 22px 70px rgba(15, 23, 42, 0.18);
-  }
-
   .source-field {
     display: grid;
     align-content: start;
@@ -904,19 +850,6 @@
     font-size: 12px;
     line-height: 18px;
   }
-
-  @media (max-width: 760px) {
-    .ask-panel {
-      right: 12px;
-      bottom: 12px;
-      left: 12px;
-    }
-
-    .ask-panel__window {
-      width: 100%;
-      height: min(580px, calc(100vh - 24px));
-    }
-  }
 }
 
 @layer components {
@@ -954,32 +887,6 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-  }
-
-  .login-auth__brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    color: #1e293b;
-    font-size: 15px;
-    font-weight: 720;
-    letter-spacing: -0.012em;
-    text-decoration: none;
-  }
-
-  .login-auth__brand-mark {
-    display: inline-flex;
-    width: 28px;
-    height: 28px;
-    align-items: center;
-    justify-content: center;
-    border-radius: 7px;
-    background: #101a2c;
-    color: #fff;
-    font-family: Georgia, 'Times New Roman', serif;
-    font-size: 17px;
-    font-weight: 700;
-    line-height: 1;
   }
 
   .login-auth__locale select {

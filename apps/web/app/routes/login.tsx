@@ -186,11 +186,7 @@ function OnPremLoginRouteComponent() {
           <div className="relative z-10">
             <div className="mb-10 flex items-center gap-2">
               <div className="flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-[4px] bg-gray-900">
-                  <span className="text-[11px] leading-none font-bold text-white select-none">
-                    {t('app.brand').slice(0, 1)}
-                  </span>
-                </div>
+                <img alt="" className="h-6 w-6" src="/tapstate-mark.svg" />
                 <span className="text-[15px] font-medium tracking-tight">{t('app.brand')}</span>
               </div>
             </div>

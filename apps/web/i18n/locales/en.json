@@ -11,9 +11,6 @@
     },
     "notifications": "View notifications",
     "logout": "Sign out",
-    "shortcuts": {
-      "ask": "⌘J"
-    },
     "user": {
       "avatar": "User avatar",
       "initial": "U"
@@ -1319,48 +1316,6 @@
         "item2": "What is the daily trip count trend?",
         "item3": "Which zones have the highest tips?"
       }
-    }
-  },
-  "ask": {
-    "launch": "Ask Tapstate",
-    "newChat": "New chat",
-    "panelLabel": "Ask Tapstate panel",
-    "skills": "Skills",
-    "actions": {
-      "attach": "Attach file",
-      "close": "Close",
-      "maximize": "Maximize",
-      "minimize": "Minimize",
-      "send": "Send"
-    },
-    "input": {
-      "placeholder": "Ask Tapstate..."
-    },
-    "preview": {
-      "rows": "100k+ rows"
-    },
-    "prompts": {
-      "pipeline": "Create Pipeline",
-      "pipelinePrompt": "Create a new pipeline",
-      "source": "Create Data Source",
-      "sourcePrompt": "Create a data source",
-      "trends": "Analyze data trends",
-      "trendsPrompt": "Analyze active user trends"
-    },
-    "responses": {
-      "default": "I can help you explore your data.\n\n1. Analyze your trips data source\n2. Create a new pipeline\n3. Check the best_tip_zones API\n\nWhat would you like to start with?",
-      "queryPreview": "I queried [View: daily_active_users] for you. Here is a preview of the latest data:\n\n[DataPreview: daily_active_users]\n\nThe data looks clean and is updating in real time. Do you want me to analyze this week's trend?",
-      "sourceCreated": "I created the Data Source [DataSource: user_events] connected to your PostgreSQL instance. Open it to inspect schema and sync status."
-    },
-    "shortcuts": {
-      "context": "to add current view to context",
-      "contextKey": "Tab",
-      "mention": "to mention any table, view, or API",
-      "mentionKey": "{'@'}"
-    },
-    "welcome": {
-      "body": "Ask anything or tell Tapstate what you need.",
-      "title": "Welcome to Tapstate"
     }
   },
   "wizard": {
