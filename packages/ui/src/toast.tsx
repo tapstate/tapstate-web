@@ -1,4 +1,4 @@
-import { createToast, createToastManager, Toaster } from '@langgenius/dify-ui/toast'
+import { createToast, createToastManager, Toaster } from './vendor/toast'
 import * as React from 'react'
 
 export type ToastTone = 'info' | 'success' | 'warning' | 'danger'

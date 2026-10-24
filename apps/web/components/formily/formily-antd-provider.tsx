@@ -67,7 +67,7 @@ export const formilyAntdTheme: ThemeConfig = {
   },
 }
 
-export const formilyDifyTheme: ThemeConfig = {
+export const formilySharedUITheme: ThemeConfig = {
   token: {
     ...formilyAntdTheme.token,
     controlOutline: 'var(--color-state-accent-solid)',

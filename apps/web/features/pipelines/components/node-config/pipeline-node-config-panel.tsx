@@ -1,16 +1,16 @@
 import type { Field } from '@formily/core'
 
 import { connect, mapProps } from '@formily/react'
-import { Button } from '@langgenius/dify-ui/button'
-import { Checkbox } from '@langgenius/dify-ui/checkbox'
+import { Button } from '@tapstate-web/ui/button'
+import { Checkbox } from '@tapstate-web/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@langgenius/dify-ui/dropdown-menu'
-import { IconButton } from '@langgenius/dify-ui/icon-button'
-import { Tabs, TabsList, TabsPanel, TabsTab } from '@langgenius/dify-ui/tabs'
+} from '@tapstate-web/ui/dropdown-menu'
+import { IconButton } from '@tapstate-web/ui/icon-button'
+import { Tabs, TabsList, TabsPanel, TabsTab } from '@tapstate-web/ui/tabs'
 import * as AntdFormily from '@potop/formily-antd-v6'
 import { FormilySchema, useFormilyForm, type FormilyComponentMap } from '@tapstate-web/formily'
 import { Check, Plus, Regex, Search, Trash2, X } from 'lucide-react'

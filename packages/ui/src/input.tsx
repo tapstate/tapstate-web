@@ -1,10 +1,10 @@
-import { Input as SourceInput } from '@langgenius/dify-ui/input'
+import { Input as SourceInput } from './vendor/input'
 import {
   InputGroup as SourceInputGroup,
   InputGroupAddon as SourceInputGroupAddon,
   InputGroupInput as SourceInputGroupInput,
-} from '@langgenius/dify-ui/input-group'
-import { Textarea as SourceTextarea } from '@langgenius/dify-ui/textarea'
+} from './vendor/input-group'
+import { Textarea as SourceTextarea } from './vendor/textarea'
 import * as React from 'react'
 
 import { useFieldContext } from './field'

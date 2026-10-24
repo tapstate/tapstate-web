@@ -1,7 +1,7 @@
 # Web UI Compatibility Exports
 
-The visual component source is `packages/dify-ui`, imported through
-`@langgenius/dify-ui/<component>`. This directory preserves old Web import
+The visual component source is `packages/ui`, imported through
+`@tapstate-web/ui/<component>`. This directory preserves old Web import
 paths while features migrate.
 
 ## Rules
@@ -10,8 +10,8 @@ paths while features migrate.
   implementation here or in `packages/ui`.
 - Compatibility files only re-export the shared API. They must not add styles,
   alter component state, or wrap a primitive with a new behavior.
-- Component styles and semantic tokens live in `packages/dify-ui/src/styles`
-  and `packages/dify-ui/src/themes`.
+- Component styles and semantic tokens live in `packages/ui/src/vendor/styles`
+  and `packages/ui/src/vendor/themes`.
 - App and feature code may compose a shared component but must not override its
   size, color, state, focus ring, overlay layer, or motion.
 - Base UI owns keyboard navigation and focus management for supported

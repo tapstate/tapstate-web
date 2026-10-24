@@ -25,7 +25,7 @@
 - 项目仍在早期探索阶段，优先采用简单、可回滚、容易调整的实现。
 - 小改动直接完成；较大的改动在聊天、issue 或 PR 中说明范围、风险和验证方式，不在仓库内强制创建额外的过程文档。
 - 先确认现有目录、依赖和数据流，再做最小范围修改。
-- 生成新 UI 前，先查 `packages/dify-ui` 的公开组件及其契约，再查上游应用页面模式和仓库中相近的 Tapstate 实现；任何新视觉变体都需记录源码依据和原因。
+- 生成新 UI 前，先查 `packages/ui` 的公开组件及其契约，再查上游应用页面模式和仓库中相近的 Tapstate 实现；任何新视觉变体都需记录源码依据和原因。
 - 按业务域和职责组织代码；只有当文件数量或依赖关系产生真实认知负担时再继续拆目录。
 - 不做无关重构、依赖升级或全仓格式化；发现后续坏味道时记录在 PR 或交付说明中。
 
@@ -33,7 +33,7 @@
 
 生成或修改 UI 前必须遵循根目录 `UI_DESIGN_GUIDELINES.md`、`docs/engineering/DESIGN.md`、`docs/engineering/design-system.md`，以及所在目录下就近的 `components/ui/AGENTS.md`（组件契约）；涉及浮层组件时额外遵循 `docs/engineering/overlay-conventions.md`。主动检查并修正 Anti-Slop、布局、排版、颜色、交互和表单问题。
 
-其中 `DESIGN.md` 是页面和审查契约；组件源码、尺寸、状态和 token 以 vendored `packages/dify-ui` 为准。Tapstate 的 Logo、导航、外层 shell 与产品文案仍由应用定义。每个新增或重大改动页面要按矩阵审查。
+其中 `DESIGN.md` 是页面和审查契约；组件源码、尺寸、状态和 token 以 vendored `packages/ui` 为准。Tapstate 的 Logo、导航、外层 shell 与产品文案仍由应用定义。每个新增或重大改动页面要按矩阵审查。
 
 任何新增或调整的 UI 都必须先匹配 `DESIGN.md` 的 Scene contracts，并在 PR 或页面审计里填写源码映射表：实际 revision/文件、原组件和 class/token、本地对应项、差异原因、渲染证据。不能凭感觉指定背景、padding、圆角、图标大小或响应式覆盖；弹窗内容区域与输入控件必须按 Surface and token decision table 区分。没有源码依据或没有看到实际渲染结果，不能宣称“源码对齐”或视觉验收完成。
 
@@ -43,7 +43,7 @@
 
 - 使用 React 19，页面路由使用 TanStack Router File Routes，路由源码放在 `apps/web/app/routes/`，由 `@tanstack/router-plugin` 生成 `apps/web/app/routeTree.gen.ts`；开发、预览和打包都使用 Vite。
 - 遵循 strict TypeScript；避免 `any`，除非有明确技术原因。
-- `packages/dify-ui` 是默认 UI 组件源；Base UI 是其底层交互。`packages/ui` 和旧 `components/ui` 是迁移兼容层，不新增独立的视觉实现。
+- `packages/ui` 是默认 UI 组件源；Base UI 是其底层交互。`packages/ui` 和旧 `components/ui` 是迁移兼容层，不新增独立的视觉实现。
 - Select / Dropdown / Menu 优先使用 vendored 公开子路径，不手写 floating dropdown。浮层的 portal、focus、dismiss 和层级按 vendored overlay 契约处理，调用方不覆盖 z-index。
 - 受控 `open` / `onOpenChange` 和条件挂载按具体 vendored 组件的 presence 契约选择，不能用一条泛化规则代替组件行为。
 - 动效使用 Motion，保持克制，优先用于浮层进入/退出、状态切换和局部过渡。

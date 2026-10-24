@@ -1,4 +1,4 @@
-import { Button } from '@langgenius/dify-ui/button'
+import { Button } from '@tapstate-web/ui/button'
 import { ArrowRight, ArrowUpRight, Plus } from 'lucide-react'
 
 import type { Cluster, Organization } from '../../service/cloud-api'

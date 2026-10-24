@@ -5,8 +5,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@langgenius/dify-ui/dropdown-menu'
-import { IconButton } from '@langgenius/dify-ui/icon-button'
+} from '@tapstate-web/ui/dropdown-menu'
+import { IconButton } from '@tapstate-web/ui/icon-button'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -19,9 +19,9 @@ interface PipelineNodeToolbarProps {
 }
 
 /**
- * Dify-style action bar for a selected node.
+ * source-matched action bar for a selected node.
  *
- * The Dify-style outer wrapper owns positioning and visibility. The inner
+ * The source-matched outer wrapper owns positioning and visibility. The inner
  * action bar is an interaction island, so node dragging and canvas panning
  * never compete with the delete button.
  */

@@ -1,5 +1,5 @@
 import '@xyflow/react/dist/style.css'
-import { TooltipProvider } from '@langgenius/dify-ui/tooltip'
+import { TooltipProvider } from '@tapstate-web/ui/tooltip'
 import { useOptionalToast } from '@tapstate-web/ui'
 import {
   addEdge,

@@ -108,8 +108,8 @@ pnpm lint         # oxlint diagnostics + repo-wide format check
 ### 样式基线
 
 - 产品内 UI 规范见 `docs/engineering/DESIGN.md`，共享变量和组件 API 见 `docs/engineering/design-system.md`。
-- Web 和 Cloud 的目标组件源是 vendored `@langgenius/dify-ui`；`@tapstate-web/ui` 暂作迁移兼容层。Base UI 承担底层交互。
-- `apps/web/styles/main.css` 和 `apps/cloud/app/styles/main.css` 汇总各自样式入口；组件样式和内容 token 以 `packages/dify-ui` 为准。
+- Web 和 Cloud 的目标组件源是 vendored `@tapstate-web/ui`；`@tapstate-web/ui` 暂作迁移兼容层。Base UI 承担底层交互。
+- `apps/web/styles/main.css` 和 `apps/cloud/app/styles/main.css` 汇总各自样式入口；组件样式和内容 token 以 `packages/ui` 为准。
 - Tailwind CSS v4 使用 CSS-first token，并显式声明 `@layer theme, base, components, utilities;`。
 - `.app-shell`、`.app-shell__main`、Cloud `.main-surface` 及其主题行为由各应用维护，UI 组件不得重设外层布局和表面。
 - Select / Dropdown / Menu 使用共享 primitive，不在业务页使用原生 `<select>` 或手写 floating dropdown。

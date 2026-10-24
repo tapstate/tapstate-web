@@ -11,7 +11,7 @@
 | Routing              | TanStack Router File Routes     | Route source lives in each app's `app/routes/`; Vite generates the route tree  |
 | Build                | Vite 8                          | Development, production build, and preview                                     |
 | Workspace            | pnpm                            | `apps/*` and `packages/*` are workspace members                                |
-| Shared UI            | `@langgenius/dify-ui` + Base UI | Vendored component source in `packages/dify-ui`; `packages/ui` is transitional |
+| Shared UI            | `@tapstate-web/ui` + Base UI | Vendored component source in `packages/ui`; `packages/ui` is transitional |
 | Styling              | Tailwind CSS v4                 | CSS-first theme tokens; app shell styles stay app-owned                        |
 | Motion               | Motion                          | Use for product-level motion when CSS state transitions are not sufficient     |
 | Icons                | lucide-react                    | Avoid one-off complex SVGs                                                     |
@@ -32,9 +32,9 @@
 ## Styling and package boundaries
 
 - `apps/*/app/styles/main.css` imports the app's Tailwind and application styles.
-- Each app imports `@langgenius/dify-ui/styles.css` once and scans
-  `packages/dify-ui/src` for Tailwind utilities.
-- `packages/dify-ui` owns reusable control geometry, visual states, content
+- Each app imports `@tapstate-web/ui/styles.css` once and scans
+  `packages/ui/src/vendor` for Tailwind utilities.
+- `packages/ui` owns reusable control geometry, visual states, content
   tokens and overlays. `packages/ui` is a migration compatibility layer.
   App shells, navigation, branding and feature-specific canvas visuals remain
   Tapstate-owned.

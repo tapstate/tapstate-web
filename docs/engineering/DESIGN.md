@@ -6,7 +6,7 @@ This is the review contract for all new and existing content inside Tapstate Web
 
 The system-level interaction inventory and per-flow review protocol live in [ui-interaction-audit.md](ui-interaction-audit.md). Use it whenever a page opens an overlay, displays feedback, accepts a value, or changes data.
 
-Component source baseline: revision `3552815c89415716dfd9cac80fd7c73aac3b051e`, 2026-10-17; package attribution and license are recorded in [`packages/dify-ui/UPSTREAM.md`](../../packages/dify-ui/UPSTREAM.md). Page rules below were read from the upstream knowledge list header, resource list/card, document header, and the package's styling/overlay/form guides. When a rule and a remembered screenshot disagree, inspect that pinned source and record the decision before inventing a new variant.
+Component source baseline: revision `3552815c89415716dfd9cac80fd7c73aac3b051e`, 2026-10-17; the component LICENSE is preserved in `packages/ui/LICENSE`. Page rules below were read from the upstream knowledge list header, resource list/card, document header, and the package's styling/overlay/form guides. When a rule and a remembered screenshot disagree, inspect that pinned source and record the decision before inventing a new variant.
 
 Application-scene research added on 2026-10-23 was read from the user's local upstream checkout at revision `65e1fbcc2b4fd43f0bb78b58922eb543983df78e`. This supplies the result/trace, datasource authorization, workflow-log, empty-state and API-test examples in the scene contracts below. It does not silently upgrade the vendored component revision. Use the vendored implementation for exact component anatomy; record any later application recipe separately with its actual revision. When prose or an upstream guide contradicts the copied runtime source, inspect and resolve the difference before implementation; do not present the prose as proof of the runtime behavior.
 
@@ -50,7 +50,7 @@ Choose a surface by its purpose, not by sampling a grey from a screenshot. Value
 | Text                                                | `text-primary`, `text-secondary`, `text-tertiary`, placeholder/disabled/semantic roles | Keep labels, supporting content, placeholders and disabled values distinct                             |
 | Code and graph                                      | Source syntax / `workflow-*` tokens                                                    | Their specialized palette does not become the ordinary page palette                                    |
 
-Evidence: vendored `src/themes/{light,dark,theme}.css`, `src/internal/{form-control,menu,overlay}.ts`; upstream `web/app/components/workflow/run/{result-text,workflow-tool-tracing}.tsx`, `rag-pipeline/components/panel/test-run/result/index.tsx`, `header/account-setting/data-source-page-new/card.tsx`, `plugins/plugin-auth/plugin-auth.tsx`.
+Evidence: vendored `packages/ui/src/vendor/themes/{light,dark,theme}.css`, `packages/ui/src/vendor/internal/{form-control,menu,overlay}.ts`; upstream `web/app/components/workflow/run/{result-text,workflow-tool-tracing}.tsx`, `rag-pipeline/components/panel/test-run/result/index.tsx`, `header/account-setting/data-source-page-new/card.tsx`, `plugins/plugin-auth/plugin-auth.tsx`.
 
 `background-section-burn` is a common content surface, not a blanket replacement for all backgrounds inside dialogs. For example, upstream `tools/edit-custom-collection-modal/test-api.tsx` deliberately uses `components-input-bg-normal` for its textual API output. The Source check list follows the result/trace grouping references above and the user's explicit section-burn direction. Retain this distinction when adding other result types.
 
@@ -62,12 +62,12 @@ These contracts cover the current public component catalog and the application c
 
 - Compose centered work as `DialogContent` → `DialogHeader` → `DialogBody` → optional `DialogFooter`. Content itself does not supply body padding. Put a form across these parts with `contents` when required; retain the flex/min-height chain. The default body owns scrolling between the fixed header/footer. Never place ordinary body content directly under the popup and assume header padding applies to it.
 - The pinned header is `px-6 pt-6 pb-3`; body is `px-6 py-3`; footer is `px-6 pt-5 pb-6`. Horizontal inset is 24px. The default close control is 32px at `top-5 inset-e-5`. Source results retain the default 480px dialog width. A wider composition requires explicit source-backed width as well as a viewport clamp; changing only `max-width` does not change the source `w-120` width or justify different interior insets.
-- Modal surface, backdrop, radius, shadow, transition and nested stack transform belong to `src/internal/overlay.ts` and `src/dialog/index.tsx`. A dialog is not a generic card with a backdrop. Avoid duplicate close affordances when one top close is sufficient; decision dialogs still need clear cancel/confirm actions.
+- Modal surface, backdrop, radius, shadow, transition and nested stack transform belong to `packages/ui/src/vendor/internal/overlay.ts` and `packages/ui/src/vendor/dialog/index.tsx`. A dialog is not a generic card with a backdrop. Avoid duplicate close affordances when one top close is sufficient; decision dialogs still need clear cancel/confirm actions.
 - Use `AlertDialog` for explicit confirmation, with object name, consequence, pending and failure states. Preserve its outside-dismiss/Escape contract rather than guessing that all modal types dismiss identically.
 - Drawers use the exported root, portal, backdrop, viewport, popup and content. Side placement, swipe direction, viewport clearance, width and scroll regions come from the analogous source page. The tool test drawer is 600px with 8px viewport insets; that is its recipe, not the width for every side panel.
 - A nested picker/menu/dialog uses its primitive's portal and focus lifecycle. No local z-index escalation, manually portalled clone, full-screen click blocker or force-mounted invisible popup.
 
-Sources: vendored `src/{dialog,alert-dialog,drawer}/index.tsx`, `docs/overlays.md`; upstream `tools/edit-custom-collection-modal/test-api.tsx` and `app/create-app-modal/index.tsx`.
+Sources: vendored `packages/ui/src/vendor/{dialog,alert-dialog,drawer}/index.tsx`, `docs/overlays.md`; upstream `tools/edit-custom-collection-modal/test-api.tsx` and `app/create-app-modal/index.tsx`.
 
 ### Results, diagnostics and operational state
 
@@ -77,7 +77,7 @@ Sources: vendored `src/{dialog,alert-dialog,drawer}/index.tsx`, `docs/overlays.m
 - A result section can be inline in an editor or live in a contextual drawer; keep the source page's trigger/result relationship. List-triggered Tapstate connection results currently use a focused dialog. Do not silently change this behavior and describe it as source parity.
 - Logs use the source workflow-log table/filter/empty-state recipes. Monitoring uses actual operational data; zero is zero and unavailable is unavailable. Do not start polling a screen with no backend condition that can produce updates; refresh behavior is a product contract, independent of visual styling.
 
-Sources: upstream `workflow/run/{result-text,status-container,workflow-tool-tracing}.tsx`, `rag-pipeline/components/panel/test-run/result/index.tsx`, `tools/edit-custom-collection-modal/test-api.tsx`, `app/workflow-log/list.tsx`, `app/log/empty-element.tsx`; vendored `src/{status-dot,collapsible,spinner,progress,meter}`. The Source result-row alignment and polling constraints are explicit Tapstate requirements.
+Sources: upstream `workflow/run/{result-text,status-container,workflow-tool-tracing}.tsx`, `rag-pipeline/components/panel/test-run/result/index.tsx`, `tools/edit-custom-collection-modal/test-api.tsx`, `app/workflow-log/list.tsx`, `app/log/empty-element.tsx`; vendored `packages/ui/src/vendor/{status-dot,collapsible,spinner,progress,meter}`. The Source result-row alignment and polling constraints are explicit Tapstate requirements.
 
 ### Forms and schema-driven controls
 
@@ -89,7 +89,7 @@ Sources: upstream `workflow/run/{result-text,status-container,workflow-tool-trac
 - Checkbox/radio groups use fieldset/legend and real group semantics. A single Switch represents a boolean. Sliders keep labels, keyboard values and units. Date/time pickers use their source civil-date/time value model, localized label/format and commit/cancel behavior.
 - Search uses `search-input` or the exact input-group pattern of the selected source page. Clear behavior, Escape, IME and accessible names are part of the control. Search alignment/width follows the enclosing composition; the connector chooser's centered 400px maximum is an explicit Tapstate requirement, not a global search width.
 
-Sources: vendored `docs/{forms,selection,styling}.md`, `src/internal/form-control.ts`, `src/{field,fieldset,form,input,input-group,textarea,number-field,select,combobox,autocomplete,checkbox,checkbox-group,radio-group,switch,slider,segmented-control,date-time,search-input}`; upstream `base/search-input`.
+Sources: vendored `docs/{forms,selection,styling}.md`, `packages/ui/src/vendor/internal/form-control.ts`, `packages/ui/src/vendor/{field,fieldset,form,input,input-group,textarea,number-field,select,combobox,autocomplete,checkbox,checkbox-group,radio-group,switch,slider,segmented-control,date-time,search-input}`; upstream `base/search-input`.
 
 ### Buttons, icon buttons and action groups
 
@@ -99,7 +99,7 @@ Sources: vendored `docs/{forms,selection,styling}.md`, `src/internal/form-contro
 - Loading/disabled/pending preserve button geometry and block duplicate submission. Tooltip names and keyboard focus remain available; a tooltip does not replace `aria-label`.
 - Keep one primary action for a decision area. Resource names can carry link emphasis; secondary source/pipeline navigation uses quiet text plus meaningful connector identity. Avoid making every table column a blue primary link.
 
-Sources: vendored `src/{button,icon-button,toggle,kbd}/index.tsx`, `src/internal/{focus,menu}.ts`; upstream workflow operator/header components. Builder action priority, quiet secondary navigation and stable more-action icons are explicit Tapstate requirements.
+Sources: vendored `packages/ui/src/vendor/{button,icon-button,toggle,kbd}/index.tsx`, `packages/ui/src/vendor/internal/{focus,menu}.ts`; upstream workflow operator/header components. Builder action priority, quiet secondary navigation and stable more-action icons are explicit Tapstate requirements.
 
 ### Menus, filters and contextual help
 
@@ -108,7 +108,7 @@ Sources: vendored `src/{button,icon-button,toggle,kbd}/index.tsx`, `src/internal
 - Popover is reachable interactive content. Tooltip is supplementary naming for an existing action. Infotip is a deliberate information trigger; PreviewCard enhances a real link without owning essential data. Preserve touch, keyboard, outside-dismiss and focus return.
 - Popup width/height derive from anchor/available-space variables, with viewport collision handling. Do not hardcode an unclamped width or detach it from the trigger during scrolling.
 
-Sources: vendored `src/{dropdown-menu,context-menu,chip,popover,tooltip,infotip,preview-card,select,combobox,autocomplete}`, `src/internal/{menu,placement,overlay}.ts`, `docs/{selection,overlays}.md`.
+Sources: vendored `packages/ui/src/vendor/{dropdown-menu,context-menu,chip,popover,tooltip,infotip,preview-card,select,combobox,autocomplete}`, `packages/ui/src/vendor/internal/{menu,placement,overlay}.ts`, `docs/{selection,overlays}.md`.
 
 ### Lists, detail pages and navigation
 
@@ -119,7 +119,7 @@ Sources: vendored `src/{dropdown-menu,context-menu,chip,popover,tooltip,infotip,
 - Collection/file hierarchies use `file-tree`; expanding is separate from selecting and opening. Avatar, Badge and Kbd carry identity, neutral metadata and shortcuts respectively. StatusDot is operational state, not a fabricated colored Badge variant.
 - Detail pages lead with identity/status/actions, then the main operational question, then secondary metadata. Keep the existing shell and data model. Settings use field groups and source save/validation boundaries; authentication, provider configuration, permissions and billing use the corresponding source form/card/modal rather than a generic dashboard recipe.
 
-Sources: upstream `datasets/list`, `datasets/documents/components`, `app/workflow-log/list.tsx`, `app/log/list.tsx`, `app-sidebar`, `header/account-setting/data-source-page-new/card.tsx`, `billing/plan/index.tsx`; vendored `src/{breadcrumb,tabs,pagination,file-tree,avatar,badge,kbd,separator}`.
+Sources: upstream `datasets/list`, `datasets/documents/components`, `app/workflow-log/list.tsx`, `app/log/list.tsx`, `app-sidebar`, `header/account-setting/data-source-page-new/card.tsx`, `billing/plan/index.tsx`; vendored `packages/ui/src/vendor/{breadcrumb,tabs,pagination,file-tree,avatar,badge,kbd,separator}`.
 
 ### Empty, loading, error, notification and progress
 
@@ -128,7 +128,7 @@ Sources: upstream `datasets/list`, `datasets/documents/components`, `app/workflo
 - Toast uses one application owner and one notification per completed action. Keep mutation feedback out of replayed effects and do not emit the same success from both dialog and parent. Persistent errors stay next to the task with recovery; source Alert is its specific informational composition, not a universal result background.
 - Toast completion does not replace cache invalidation/real data refresh. An optimistic state must have a defined failure path and may not show success before the action succeeds.
 
-Sources: vendored `src/{toast,alert,filter-empty-state,first-empty-action-card,skeleton,loading-placeholder,spinner,progress,meter}`; upstream `app/log/empty-element.tsx`, `datasets/list/first-empty-state`, `datasets/documents/components/list.tsx`.
+Sources: vendored `packages/ui/src/vendor/{toast,alert,filter-empty-state,first-empty-action-card,skeleton,loading-placeholder,spinner,progress,meter}`; upstream `app/log/empty-element.tsx`, `datasets/list/first-empty-state`, `datasets/documents/components/list.tsx`.
 
 ### Editors, previews, upload and visualization
 
@@ -137,7 +137,7 @@ Sources: vendored `src/{toast,alert,filter-empty-state,first-empty-action-card,s
 - A chart uses truthful data/ranges, source text and surrounding controls. The visual series or graph layout may be Tapstate-specific; surrounding menus, filters, empty/error states and overlays still follow this contract. Distinguish an unavailable metric from zero.
 - ScrollArea owns its viewport/scrollbar geometry. Collapsible owns expanded state, disclosure semantics and transition. DirectionProvider handles source logical direction; layout additions must not hardcode physical placement where the source uses logical properties.
 
-Sources: upstream `workflow/run/{result-panel,result-text,output-panel}.tsx`, `base/file-uploader`, `workflow/{operator,block-selector,nodes/_base}`; vendored `src/{scroll-area,collapsible,direction-provider}`, plus the relevant component source for every surrounding control.
+Sources: upstream `workflow/run/{result-panel,result-text,output-panel}.tsx`, `base/file-uploader`, `workflow/{operator,block-selector,nodes/_base}`; vendored `packages/ui/src/vendor/{scroll-area,collapsible,direction-provider}`, plus the relevant component source for every surrounding control.
 
 ### Responsive layout, theme, localization and accessibility
 
@@ -146,7 +146,7 @@ Sources: upstream `workflow/run/{result-panel,result-text,output-panel}.tsx`, `b
 - Use `system-*` roles with their associated line-height/weight. Preserve registered connector marks and source SVGs. Check English, Simplified Chinese and Traditional Chinese, long names, numbers, empty values and CJK line wrapping. Never infer padding or glyph dimensions from a resized screenshot.
 - All controls need real names and label relationships. Check keyboard entry, selection, Escape, focus return, form submit, invalid/disabled/read-only and reduced-motion behavior as applicable. `accessible-names-and-descriptions.md` and component READMEs own the detailed contract.
 
-Sources: vendored `docs/{styling,forms,selection,overlays,accessible-names-and-descriptions}.md`, `src/styles`, `src/themes`, component READMEs and the analogous application page's responsive classes.
+Sources: vendored `docs/{styling,forms,selection,overlays,accessible-names-and-descriptions}.md`, `packages/ui/src/vendor/styles`, `packages/ui/src/vendor/themes`, component READMEs and the analogous application page's responsive classes.
 
 ## Page recipes
 
@@ -162,7 +162,7 @@ Group fields by decision. Use `Field`, `FieldLabel`, `FieldDescription`, `FieldE
 
 When choosing among a small number of rich options, use the source application `RadioCard` inside the source `RadioGroup`: the icon, title, description, selection indicator, and selected border/background are one interaction. Do not replace it with an independently styled pressed button or card.
 
-Evidence: vendored `docs/forms.md`, `src/field`, `src/input`, `src/select`, `src/form`.
+Evidence: vendored `docs/forms.md`, `packages/ui/src/vendor/field`, `packages/ui/src/vendor/input`, `packages/ui/src/vendor/select`, `packages/ui/src/vendor/form`.
 
 ### Detail and monitoring
 
@@ -192,17 +192,17 @@ The NEXT STEP preview follows the source `next-step` component family: a 36 px o
 
 The editor uses the upstream system sans stack (`-apple-system`, `BlinkMacSystemFont`, `Segoe UI`, `Roboto`, `Helvetica Neue`, `Noto Sans`, `Arial`, `sans-serif`) across the rail, canvas controls, selector, and node panel. Scope this stack to the pipeline workspace so other Tapstate surfaces keep their own typography. The workflow's Run/history group uses the source secondary-button surface, 32 px group height, and 28 px inner controls. In the node panel, NEXT STEP lists existing downstream nodes and opens the 328 px selector. Selecting a step there appends a connection from the selected node; it must keep any existing downstream connection. Inserting on an edge is a separate operation and replaces that edge.
 
-Evidence: upstream `web/app/components/app-sidebar/app-info/app-info-header.tsx`, `web/app/components/workflow/{operator/control.tsx,operator/add-block.tsx,block-selector/index.tsx,block-selector/tabs.tsx,nodes/_base/node.tsx,nodes/_base/components/workflow-panel/index.tsx,header/header-in-normal.tsx}`, vendored `src/{icon-button,toggle,tabs}` and `src/themes/{light,dark}.css`. A source match is only a starting point: verify the rendered rail, toolbar, selector in all three tabs, ordinary and selected nodes, each node configuration kind, and the action groups at equal desktop viewport sizes before claiming visual fidelity.
+Evidence: upstream `web/app/components/app-sidebar/app-info/app-info-header.tsx`, `web/app/components/workflow/{operator/control.tsx,operator/add-block.tsx,block-selector/index.tsx,block-selector/tabs.tsx,nodes/_base/node.tsx,nodes/_base/components/workflow-panel/index.tsx,header/header-in-normal.tsx}`, vendored `packages/ui/src/vendor/{icon-button,toggle,tabs}` and `packages/ui/src/vendor/themes/{light,dark}.css`. A source match is only a starting point: verify the rendered rail, toolbar, selector in all three tabs, ordinary and selected nodes, each node configuration kind, and the action groups at equal desktop viewport sizes before claiming visual fidelity.
 
 ### Overlay and notification
 
-Choose `Dialog` for focused modal work, `AlertDialog` for decisions requiring explicit confirmation, `Drawer` for contextual side work, `DropdownMenu` for actions, `Select`/`Combobox` for values, `Popover` for reachable interactive explanations, `Tooltip` only for supplementary labels, and `Toast` for transient feedback. Use the app-level `@langgenius/dify-ui/badge` for neutral metadata labels; it has `default`/`dimm`, not success/warning/danger tones. Show operational state with source `StatusDot` plus text. Use the app-level `@langgenius/dify-ui/alert` for the blue gradient informational Alert; it comes from `web/app/components/base/alert.tsx`, accepts message, close label and hide callback, and is distinct from `AlertDialog`. Do not use the older flat `.ui-alert` styling for new screens. Let the component own its portal and focus lifecycle. Do not add call-site z-index or a second portal. An isolated application root lets body portals layer by DOM order. Toast does not replace the authoritative data refresh after mutation.
+Choose `Dialog` for focused modal work, `AlertDialog` for decisions requiring explicit confirmation, `Drawer` for contextual side work, `DropdownMenu` for actions, `Select`/`Combobox` for values, `Popover` for reachable interactive explanations, `Tooltip` only for supplementary labels, and `Toast` for transient feedback. Use the app-level `@tapstate-web/ui/badge` for neutral metadata labels; it has `default`/`dimm`, not success/warning/danger tones. Show operational state with source `StatusDot` plus text. Use the app-level `@tapstate-web/ui/alert` for the blue gradient informational Alert; it comes from `web/app/components/base/alert.tsx`, accepts message, close label and hide callback, and is distinct from `AlertDialog`. Do not use the older flat `.ui-alert` styling for new screens. Let the component own its portal and focus lifecycle. Do not add call-site z-index or a second portal. An isolated application root lets body portals layer by DOM order. Toast does not replace the authoritative data refresh after mutation.
 
-Evidence: vendored `docs/overlays.md`, `src/toast`, `src/dialog`, `src/alert-dialog`.
+Evidence: vendored `docs/overlays.md`, `packages/ui/src/vendor/toast`, `packages/ui/src/vendor/dialog`, `packages/ui/src/vendor/alert-dialog`.
 
 ## Tokens and geometry
 
-The exact palette is the vendored `src/themes/light.css`, `dark.css`, and `theme.css`. Application content uses `text-*`, `background-*`, `components-*`, `state-*`, `divider-*`, and shadow utilities exported by the package. The Tapstate product accent may be changed through a documented theme override; leave component token relationships intact. Do not translate these tokens to a smaller invented `ui-*` palette. Use the upstream `system-*` text roles and component variants. In the graph, use `workflow-link-line-normal`, `workflow-link-line-active`, and `workflow-link-line-handle` for connections, and `workflow-minimap-block` and `workflow-minimap-bg` for the minimap. These tokens must resolve through the vendored theme in both light and dark modes; avoid raw color substitutes.
+The exact palette is the vendored `packages/ui/src/vendor/themes/light.css`, `dark.css`, and `theme.css`. Application content uses `text-*`, `background-*`, `components-*`, `state-*`, `divider-*`, and shadow utilities exported by the package. The Tapstate product accent may be changed through a documented theme override; leave component token relationships intact. Do not translate these tokens to a smaller invented `ui-*` palette. Use the upstream `system-*` text roles and component variants. In the graph, use `workflow-link-line-normal`, `workflow-link-line-active`, and `workflow-link-line-handle` for connections, and `workflow-minimap-block` and `workflow-minimap-bg` for the minimap. These tokens must resolve through the vendored theme in both light and dark modes; avoid raw color substitutes.
 
 Verified source measurements: Button small/medium/large heights 24/32/36 px with radii 6/8/10 px; Select uses the same heights/radii. Standard centered Dialog surface is 480 px wide, bounded by 32 px viewport clearance, with 24 px horizontal interior padding. Use those source values as the canonical measurements for their components. For other components inspect their source rather than extrapolating a global radius or spacing rule.
 

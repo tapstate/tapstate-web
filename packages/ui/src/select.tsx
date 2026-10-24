@@ -9,7 +9,7 @@ import {
   SelectSeparator as SourceSelectSeparator,
   SelectTrigger as SourceSelectTrigger,
   SelectValue as SourceSelectValue,
-} from '@langgenius/dify-ui/select'
+} from './vendor/select'
 import * as React from 'react'
 
 import { useFieldContext } from './field'

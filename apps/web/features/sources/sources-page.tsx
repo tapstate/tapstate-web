@@ -10,19 +10,19 @@ import {
   AlertDialogFooter as SourceAlertDialogFooter,
   AlertDialogHeader as SourceAlertDialogHeader,
   AlertDialogTitle as SourceAlertDialogTitle,
-} from '@langgenius/dify-ui/alert-dialog'
-import { Button as SourceButton } from '@langgenius/dify-ui/button'
+} from '@tapstate-web/ui/alert-dialog'
+import { Button as SourceButton } from '@tapstate-web/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@langgenius/dify-ui/dropdown-menu'
-import { FirstEmptyActionCard } from '@langgenius/dify-ui/first-empty-action-card'
-import { LoadingPlaceholder } from '@langgenius/dify-ui/loading-placeholder'
-import { SearchInput } from '@langgenius/dify-ui/search-input'
-import { StatusDot } from '@langgenius/dify-ui/status-dot'
+} from '@tapstate-web/ui/dropdown-menu'
+import { FirstEmptyActionCard } from '@tapstate-web/ui/first-empty-action-card'
+import { LoadingPlaceholder } from '@tapstate-web/ui/loading-placeholder'
+import { SearchInput } from '@tapstate-web/ui/search-input'
+import { StatusDot } from '@tapstate-web/ui/status-dot'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useOptionalToast } from '@tapstate-web/ui'

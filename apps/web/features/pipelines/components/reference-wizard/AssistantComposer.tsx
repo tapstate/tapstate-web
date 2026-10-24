@@ -1,5 +1,5 @@
-import { IconButton } from '@langgenius/dify-ui/icon-button'
-import { Textarea } from '@langgenius/dify-ui/textarea'
+import { IconButton } from '@tapstate-web/ui/icon-button'
+import { Textarea } from '@tapstate-web/ui/textarea'
 import { ArrowUp, LoaderCircle, Square } from 'lucide-react'
 import { useCallback, useLayoutEffect, useRef, type RefObject } from 'react'
 

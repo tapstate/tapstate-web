@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react'
 
-import { Tooltip, TooltipContent, TooltipTrigger } from '@langgenius/dify-ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@tapstate-web/ui/tooltip'
 
 export function PipelineCanvasTooltip({
   label,

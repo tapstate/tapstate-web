@@ -15,8 +15,8 @@ import {
   DropdownMenuSubContent as SourceSubContent,
   DropdownMenuSubTrigger as SourceSubTrigger,
   DropdownMenuTrigger as SourceTrigger,
-} from '@langgenius/dify-ui/dropdown-menu'
-import { Kbd } from '@langgenius/dify-ui/kbd'
+} from './vendor/dropdown-menu'
+import { Kbd } from './vendor/kbd'
 import * as React from 'react'
 
 type PositionProps = {

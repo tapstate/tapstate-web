@@ -61,7 +61,7 @@ describe('PipelineNodeToolbar', () => {
     expect(toolbar?.classList.contains('visible')).toBe(false)
   })
 
-  it('exposes the Dify-style more button and keeps menu clicks inside the interaction island', async () => {
+  it('exposes the source-matched more button and keeps menu clicks inside the interaction island', async () => {
     const onRequestDelete = vi.fn()
     const parentClick = vi.fn()
     const host = renderToolbar({ onRequestDelete, onParentClick: parentClick })
@@ -98,7 +98,7 @@ describe('PipelineNodeToolbar', () => {
     expect(host.querySelector('[data-toolbar-action="more"]')).toHaveProperty('disabled', false)
   })
 
-  it('keeps Dify action-bar hover styling in Tailwind utilities', () => {
+  it('keeps shared UI action-bar hover styling in Tailwind utilities', () => {
     expect(pipelineCanvasStyles).not.toContain('.pipeline-canvas__node-toolbar-button:hover')
     expect(pipelineNodeToolbarSource).toContain('hover:bg-pipeline-actionbar-bg-accent')
     expect(pipelineNodeToolbarSource).toContain('hover:text-[var(--pipeline-text)]')

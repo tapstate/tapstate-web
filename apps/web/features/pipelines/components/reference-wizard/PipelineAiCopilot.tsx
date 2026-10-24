@@ -1,5 +1,5 @@
 import { useChat } from '@ai-sdk/react'
-import { Button as DifyButton } from '@langgenius/dify-ui/button'
+import { Button as SharedUIButton } from '@tapstate-web/ui/button'
 import { DefaultChatTransport, type UIMessage } from 'ai'
 import {
   CheckCircle2,
@@ -386,7 +386,7 @@ export function PipelineAiCopilot({
         role="group"
         aria-label={t('wizard.assistant.diffTitle')}
       >
-        <DifyButton
+        <SharedUIButton
           variant={applied ? 'secondary' : 'secondary-accent'}
           size="medium"
           loading={applying}
@@ -402,15 +402,15 @@ export function PipelineAiCopilot({
             <Sparkles className="h-3.5 w-3.5" />
           )}
           {t(applied ? 'wizard.assistant.applied' : 'wizard.assistant.apply')}
-        </DifyButton>
-        <DifyButton
+        </SharedUIButton>
+        <SharedUIButton
           variant="secondary"
           type="button"
           disabled={applying || (applied && context.undoBlocked)}
           onClick={rejectOrUndo}
         >
           {t(applied ? 'wizard.assistant.undoApply' : 'wizard.assistant.reject')}
-        </DifyButton>
+        </SharedUIButton>
       </div>
     ) : null
   const externalProposalActions =

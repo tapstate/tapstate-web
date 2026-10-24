@@ -3,7 +3,7 @@ import {
   PopoverClose as SourcePopoverClose,
   PopoverContent as SourcePopoverContent,
   PopoverTrigger as SourcePopoverTrigger,
-} from '@langgenius/dify-ui/popover'
+} from './vendor/popover'
 import * as React from 'react'
 
 type PopoverRootProps = React.ComponentProps<typeof SourcePopover>

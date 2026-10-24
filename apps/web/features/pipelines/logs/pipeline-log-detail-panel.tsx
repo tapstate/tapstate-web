@@ -1,5 +1,5 @@
-import { DrawerClose, DrawerTitle } from '@langgenius/dify-ui/drawer'
-import { IconButton } from '@langgenius/dify-ui/icon-button'
+import { DrawerClose, DrawerTitle } from '@tapstate-web/ui/drawer'
+import { IconButton } from '@tapstate-web/ui/icon-button'
 import { X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 

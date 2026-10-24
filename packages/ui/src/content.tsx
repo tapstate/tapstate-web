@@ -1,4 +1,4 @@
-import { SkeletonRectangle } from '@langgenius/dify-ui/skeleton'
+import { SkeletonRectangle } from './vendor/skeleton'
 import * as React from 'react'
 
 export function Skeleton({ className, ...props }: React.ComponentProps<'div'>) {

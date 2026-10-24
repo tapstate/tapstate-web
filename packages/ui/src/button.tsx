@@ -1,6 +1,6 @@
-import { Button as SourceButton, buttonVariants } from '@langgenius/dify-ui/button'
-import { cn } from '@langgenius/dify-ui/cn'
-import { IconButton as SourceIconButton } from '@langgenius/dify-ui/icon-button'
+import { Button as SourceButton, buttonVariants } from './vendor/button'
+import { cn } from './vendor/cn'
+import { IconButton as SourceIconButton } from './vendor/icon-button'
 import * as React from 'react'
 
 export type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'ghost' | 'destructive'

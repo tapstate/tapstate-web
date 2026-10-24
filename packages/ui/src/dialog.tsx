@@ -1,4 +1,4 @@
-import { AlertDialog, AlertDialogContent } from '@langgenius/dify-ui/alert-dialog'
+import { AlertDialog, AlertDialogContent } from './vendor/alert-dialog'
 import {
   Dialog as SourceDialog,
   DialogBackdrop as SourceDialogBackdrop,
@@ -12,8 +12,8 @@ import {
   DialogPortal as SourceDialogPortal,
   DialogTitle as SourceDialogTitle,
   DialogTrigger as SourceDialogTrigger,
-} from '@langgenius/dify-ui/dialog'
-import { Drawer, DrawerContent } from '@langgenius/dify-ui/drawer'
+} from './vendor/dialog'
+import { Drawer, DrawerContent } from './vendor/drawer'
 import * as React from 'react'
 
 import { Button } from './button'

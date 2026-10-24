@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { ConnectorConfigField } from '@/service/source-client'
 
-import { formilyAntdPrefixCls, formilyDifyTheme } from '@/components/formily/formily-antd-provider'
+import { formilyAntdPrefixCls, formilySharedUITheme } from '@/components/formily/formily-antd-provider'
 
 import { ConnectorFormily } from './connector-formily'
 import {
@@ -125,7 +125,7 @@ function fieldControl(label: string) {
 describe('ConnectorFormily', () => {
   it('uses the shared Tapstate tokens for Formily controls', () => {
     expect(formilyAntdPrefixCls).toBe('tap')
-    expect(formilyDifyTheme.token).toMatchObject({
+    expect(formilySharedUITheme.token).toMatchObject({
       borderRadius: 8,
       colorBgContainer: 'var(--color-components-input-bg-normal)',
       colorBorder: 'transparent',
@@ -135,7 +135,7 @@ describe('ConnectorFormily', () => {
     })
   })
 
-  it('renders Formily radio groups with the vendored Dify segmented control', async () => {
+  it('renders Formily radio groups with the vendored shared UI segmented control', async () => {
     const changes: Array<Record<string, unknown>> = []
     container = document.createElement('div')
     document.body.append(container)

@@ -6,8 +6,8 @@ import {
   BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbSeparator,
-} from '@langgenius/dify-ui/breadcrumb'
-import { Tabs, TabsList, TabsPanel, TabsTab } from '@langgenius/dify-ui/tabs'
+} from '@tapstate-web/ui/breadcrumb'
+import { Tabs, TabsList, TabsPanel, TabsTab } from '@tapstate-web/ui/tabs'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'

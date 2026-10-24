@@ -1,7 +1,7 @@
 import { Radio as RadioPrimitive } from '@base-ui/react/radio'
 import { RadioGroup as RadioGroupPrimitive } from '@base-ui/react/radio-group'
-import { Checkbox as SourceCheckbox } from '@langgenius/dify-ui/checkbox'
-import { Switch as SourceSwitch } from '@langgenius/dify-ui/switch'
+import { Checkbox as SourceCheckbox } from './vendor/checkbox'
+import { Switch as SourceSwitch } from './vendor/switch'
 import { CircleIcon } from 'lucide-react'
 import * as React from 'react'
 

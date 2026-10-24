@@ -1,5 +1,5 @@
-import { SearchInput } from '@langgenius/dify-ui/search-input'
-import { Tabs, TabsList, TabsPanel, TabsTab } from '@langgenius/dify-ui/tabs'
+import { SearchInput } from '@tapstate-web/ui/search-input'
+import { Tabs, TabsList, TabsPanel, TabsTab } from '@tapstate-web/ui/tabs'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {

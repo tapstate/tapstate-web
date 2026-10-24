@@ -1,5 +1,5 @@
-import { Avatar, AvatarFallback } from '@langgenius/dify-ui/avatar'
-import { IconButton } from '@langgenius/dify-ui/icon-button'
+import { Avatar, AvatarFallback } from '@tapstate-web/ui/avatar'
+import { IconButton } from '@tapstate-web/ui/icon-button'
 import { useNavigate } from '@tanstack/react-router'
 import { Bell, Languages, LogOut } from 'lucide-react'
 import { useState } from 'react'
@@ -18,7 +18,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { cloudConsoleUrl, replaceWithCloudConsole } from '@/utils/cloud-console'
 
 const footerIconButtonClassName =
-  'size-7 rounded-full border border-components-card-border bg-components-card-bg p-0 text-text-tertiary shadow-xs transition-colors hover:bg-components-card-bg-alt hover:text-saas-dify-blue-inverted data-popup-open:bg-components-card-bg-alt data-popup-open:text-saas-dify-blue-inverted'
+  'size-7 rounded-full border border-components-card-border bg-components-card-bg p-0 text-text-tertiary shadow-xs transition-colors hover:bg-components-card-bg-alt hover:text-ui-brand-blue-inverted data-popup-open:bg-components-card-bg-alt data-popup-open:text-ui-brand-blue-inverted'
 
 export function AppHeader() {
   const navigate = useNavigate()

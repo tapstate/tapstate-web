@@ -1,6 +1,6 @@
 import type { MouseEvent, ReactNode } from 'react'
 
-import { Button } from '@langgenius/dify-ui/button'
+import { Button } from '@tapstate-web/ui/button'
 import { Link } from '@tanstack/react-router'
 import { useReactFlow } from '@xyflow/react'
 import { useTranslation } from 'react-i18next'

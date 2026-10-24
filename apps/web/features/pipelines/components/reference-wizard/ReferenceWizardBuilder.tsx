@@ -1,11 +1,11 @@
-import { IconButton as DifyIconButton } from '@langgenius/dify-ui/icon-button'
+import { IconButton as SharedUIIconButton } from '@tapstate-web/ui/icon-button'
 import {
   Popover,
   PopoverContent,
   PopoverDescription,
   PopoverTitle,
   PopoverTrigger,
-} from '@langgenius/dify-ui/popover'
+} from '@tapstate-web/ui/popover'
 import {
   Database,
   Table2,
@@ -588,7 +588,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       >
         <PopoverTrigger
           render={
-            <DifyIconButton
+            <SharedUIIconButton
               type="button"
               variant="ghost-accent"
               size="md"
@@ -598,7 +598,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
               className="data-popup-open:bg-state-accent-active"
             >
               <Sparkles className="h-4 w-4" aria-hidden="true" />
-            </DifyIconButton>
+            </SharedUIIconButton>
           }
         />
         <PopoverContent

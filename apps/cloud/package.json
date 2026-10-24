@@ -13,7 +13,6 @@
     "i18n:check": "node ./scripts/check-i18n.mjs"
   },
   "dependencies": {
-    "@langgenius/dify-ui": "workspace:*",
     "@tanstack/react-router": "^1.170.18",
     "@tapstate-web/ui": "workspace:*",
     "i18next": "^26.3.6",

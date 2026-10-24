@@ -1,4 +1,4 @@
-import { StatusDot } from '@langgenius/dify-ui/status-dot'
+import { StatusDot } from '@tapstate-web/ui/status-dot'
 import { Link } from '@tanstack/react-router'
 import { Database } from 'lucide-react'
 import { useTranslation } from 'react-i18next'

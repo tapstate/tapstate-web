@@ -3,8 +3,8 @@ import {
   FieldDescription as SourceFieldDescription,
   FieldError as SourceFieldError,
   FieldLabel as SourceFieldLabel,
-} from '@langgenius/dify-ui/field'
-import { SpinnerIcon } from '@langgenius/dify-ui/spinner'
+} from './vendor/field'
+import { SpinnerIcon } from './vendor/spinner'
 import * as React from 'react'
 
 interface FieldContextValue {

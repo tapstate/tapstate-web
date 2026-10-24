@@ -5,7 +5,7 @@ import {
   DropdownMenuPopup,
   DropdownMenuPositioner,
   DropdownMenuTrigger,
-} from '@langgenius/dify-ui/dropdown-menu'
+} from '@tapstate-web/ui/dropdown-menu'
 import { useReactFlow, useViewport, type Viewport } from '@xyflow/react'
 import { useTranslation } from 'react-i18next'
 

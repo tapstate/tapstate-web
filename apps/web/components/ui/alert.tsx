@@ -1,1 +1,1 @@
-export { default as Alert } from '@langgenius/dify-ui/alert'
+export { default as Alert } from '@tapstate-web/ui/alert'
