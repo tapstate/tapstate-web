@@ -1,4 +1,4 @@
-import { createToast, createToastManager, Toaster } from './vendor/toast'
+import { createToast, createToastManager, Toaster } from '@tapstate-web/ui/toast'
 import * as React from 'react'
 
 export type ToastTone = 'info' | 'success' | 'warning' | 'danger'

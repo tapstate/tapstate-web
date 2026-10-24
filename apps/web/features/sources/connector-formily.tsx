@@ -11,7 +11,10 @@ import { useTranslation } from 'react-i18next'
 
 import type { ConnectorConfigField, JsonValue } from '@/service/source-client'
 
-import { FormilyAntdProvider, formilySharedUITheme } from '@/components/formily/formily-antd-provider'
+import {
+  FormilyAntdProvider,
+  formilySharedUITheme,
+} from '@/components/formily/formily-antd-provider'
 import { FormilySegmentedRadioGroup } from '@/components/formily/formily-segmented-radio'
 import { Button } from '@/components/ui/button'
 

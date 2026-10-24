@@ -1,11 +1,7 @@
 # Tapstate Web UI
 
-`@tapstate-web/ui` is the shared component and token package for the Web and
-Cloud applications. Import components from public subpaths such as
-`@tapstate-web/ui/button` or from the root compatibility API. Import
-`@tapstate-web/ui/styles.css` once after Tailwind in each application's style
-entry point.
+`@tapstate-web/ui` contains the shared source components and styles used by Web and Cloud. The `src/` directory keeps the component source layout directly; public subpaths map to those source files in `package.json`.
 
-The `src/vendor` tree contains shared low-level primitives. `src/` root modules
-adapt those primitives to existing Tapstate field, dialog, toast and navigation
-contracts. Keep both surfaces covered when changing a shared primitive.
+Import components through their public subpaths, for example `@tapstate-web/ui/button`, `@tapstate-web/ui/dialog`, and `@tapstate-web/ui/search-input`. Import `@tapstate-web/ui/styles.css` once after Tailwind in each app's stylesheet.
+
+There is no package root barrel. App-specific behavior such as Formily bindings, localized providers, and route navigation belongs in the applications and should compose these source components.

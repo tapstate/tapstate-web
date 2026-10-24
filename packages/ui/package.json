@@ -4,250 +4,246 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": {
-      "types": "./src/index.ts",
-      "default": "./src/index.ts"
-    },
-    "./styles.css": "./src/styles/all.css",
     "./alert": {
-      "types": "./src/vendor/alert/index.tsx",
-      "import": "./src/vendor/alert/index.tsx"
+      "types": "./src/alert/index.tsx",
+      "import": "./src/alert/index.tsx"
     },
     "./badge": {
-      "types": "./src/vendor/badge/index.tsx",
-      "import": "./src/vendor/badge/index.tsx"
+      "types": "./src/badge/index.tsx",
+      "import": "./src/badge/index.tsx"
     },
     "./radio-card": {
-      "types": "./src/vendor/radio-card/index.tsx",
-      "import": "./src/vendor/radio-card/index.tsx"
+      "types": "./src/radio-card/index.tsx",
+      "import": "./src/radio-card/index.tsx"
     },
     "./filter-empty-state": {
-      "types": "./src/vendor/filter-empty-state/index.tsx",
-      "import": "./src/vendor/filter-empty-state/index.tsx"
+      "types": "./src/filter-empty-state/index.tsx",
+      "import": "./src/filter-empty-state/index.tsx"
     },
     "./search-input": {
-      "types": "./src/vendor/search-input/index.tsx",
-      "import": "./src/vendor/search-input/index.tsx"
+      "types": "./src/search-input/index.tsx",
+      "import": "./src/search-input/index.tsx"
     },
     "./skeleton": {
-      "types": "./src/vendor/skeleton/index.tsx",
-      "import": "./src/vendor/skeleton/index.tsx"
+      "types": "./src/skeleton/index.tsx",
+      "import": "./src/skeleton/index.tsx"
     },
     "./loading-placeholder": {
-      "types": "./src/vendor/loading-placeholder/index.tsx",
-      "import": "./src/vendor/loading-placeholder/index.tsx"
+      "types": "./src/loading-placeholder/index.tsx",
+      "import": "./src/loading-placeholder/index.tsx"
     },
     "./first-empty-action-card": {
-      "types": "./src/vendor/first-empty-action-card/index.tsx",
-      "import": "./src/vendor/first-empty-action-card/index.tsx"
+      "types": "./src/first-empty-action-card/index.tsx",
+      "import": "./src/first-empty-action-card/index.tsx"
     },
+    "./styles.css": "./src/styles/styles.css",
     "./cn": {
-      "types": "./src/vendor/cn.ts",
-      "import": "./src/vendor/cn.ts"
+      "types": "./src/cn.ts",
+      "import": "./src/cn.ts"
     },
     "./use-merged-refs": {
-      "types": "./src/vendor/use-merged-refs.ts",
-      "import": "./src/vendor/use-merged-refs.ts"
+      "types": "./src/use-merged-refs.ts",
+      "import": "./src/use-merged-refs.ts"
     },
     "./use-ref-with-init": {
-      "types": "./src/vendor/use-ref-with-init.ts",
-      "import": "./src/vendor/use-ref-with-init.ts"
+      "types": "./src/use-ref-with-init.ts",
+      "import": "./src/use-ref-with-init.ts"
     },
     "./use-render": {
-      "types": "./src/vendor/use-render.ts",
-      "import": "./src/vendor/use-render.ts"
+      "types": "./src/use-render.ts",
+      "import": "./src/use-render.ts"
     },
     "./merge-props": {
-      "types": "./src/vendor/merge-props.ts",
-      "import": "./src/vendor/merge-props.ts"
+      "types": "./src/merge-props.ts",
+      "import": "./src/merge-props.ts"
     },
     "./alert-dialog": {
-      "types": "./src/vendor/alert-dialog/index.tsx",
-      "import": "./src/vendor/alert-dialog/index.tsx"
+      "types": "./src/alert-dialog/index.tsx",
+      "import": "./src/alert-dialog/index.tsx"
     },
     "./autocomplete": {
-      "types": "./src/vendor/autocomplete/index.tsx",
-      "import": "./src/vendor/autocomplete/index.tsx"
+      "types": "./src/autocomplete/index.tsx",
+      "import": "./src/autocomplete/index.tsx"
     },
     "./avatar": {
-      "types": "./src/vendor/avatar/index.tsx",
-      "import": "./src/vendor/avatar/index.tsx"
+      "types": "./src/avatar/index.tsx",
+      "import": "./src/avatar/index.tsx"
     },
     "./breadcrumb": {
-      "types": "./src/vendor/breadcrumb/index.tsx",
-      "import": "./src/vendor/breadcrumb/index.tsx"
+      "types": "./src/breadcrumb/index.tsx",
+      "import": "./src/breadcrumb/index.tsx"
     },
     "./button": {
-      "types": "./src/vendor/button/index.tsx",
-      "import": "./src/vendor/button/index.tsx"
+      "types": "./src/button/index.tsx",
+      "import": "./src/button/index.tsx"
     },
     "./icon-button": {
-      "types": "./src/vendor/icon-button/index.tsx",
-      "import": "./src/vendor/icon-button/index.tsx"
+      "types": "./src/icon-button/index.tsx",
+      "import": "./src/icon-button/index.tsx"
     },
     "./toggle": {
-      "types": "./src/vendor/toggle/index.tsx",
-      "import": "./src/vendor/toggle/index.tsx"
+      "types": "./src/toggle/index.tsx",
+      "import": "./src/toggle/index.tsx"
     },
     "./checkbox": {
-      "types": "./src/vendor/checkbox/index.tsx",
-      "import": "./src/vendor/checkbox/index.tsx"
+      "types": "./src/checkbox/index.tsx",
+      "import": "./src/checkbox/index.tsx"
     },
     "./checkbox-group": {
-      "types": "./src/vendor/checkbox-group/index.tsx",
-      "import": "./src/vendor/checkbox-group/index.tsx"
+      "types": "./src/checkbox-group/index.tsx",
+      "import": "./src/checkbox-group/index.tsx"
     },
     "./chip": {
-      "types": "./src/vendor/chip/index.tsx",
-      "import": "./src/vendor/chip/index.tsx"
+      "types": "./src/chip/index.tsx",
+      "import": "./src/chip/index.tsx"
     },
     "./combobox": {
-      "types": "./src/vendor/combobox/index.tsx",
-      "import": "./src/vendor/combobox/index.tsx"
+      "types": "./src/combobox/index.tsx",
+      "import": "./src/combobox/index.tsx"
     },
     "./collapsible": {
-      "types": "./src/vendor/collapsible/index.tsx",
-      "import": "./src/vendor/collapsible/index.tsx"
+      "types": "./src/collapsible/index.tsx",
+      "import": "./src/collapsible/index.tsx"
     },
     "./context-menu": {
-      "types": "./src/vendor/context-menu/index.tsx",
-      "import": "./src/vendor/context-menu/index.tsx"
+      "types": "./src/context-menu/index.tsx",
+      "import": "./src/context-menu/index.tsx"
     },
     "./dialog": {
-      "types": "./src/vendor/dialog/index.tsx",
-      "import": "./src/vendor/dialog/index.tsx"
+      "types": "./src/dialog/index.tsx",
+      "import": "./src/dialog/index.tsx"
     },
     "./date-picker": {
-      "types": "./src/vendor/date-time/date-picker/index.tsx",
-      "import": "./src/vendor/date-time/date-picker/index.tsx"
+      "types": "./src/date-time/date-picker/index.tsx",
+      "import": "./src/date-time/date-picker/index.tsx"
     },
     "./date-time-picker": {
-      "types": "./src/vendor/date-time/date-time-picker/index.tsx",
-      "import": "./src/vendor/date-time/date-time-picker/index.tsx"
+      "types": "./src/date-time/date-time-picker/index.tsx",
+      "import": "./src/date-time/date-time-picker/index.tsx"
     },
     "./drawer": {
-      "types": "./src/vendor/drawer/index.tsx",
-      "import": "./src/vendor/drawer/index.tsx"
+      "types": "./src/drawer/index.tsx",
+      "import": "./src/drawer/index.tsx"
     },
     "./dropdown-menu": {
-      "types": "./src/vendor/dropdown-menu/index.tsx",
-      "import": "./src/vendor/dropdown-menu/index.tsx"
+      "types": "./src/dropdown-menu/index.tsx",
+      "import": "./src/dropdown-menu/index.tsx"
     },
     "./field": {
-      "types": "./src/vendor/field/index.tsx",
-      "import": "./src/vendor/field/index.tsx"
+      "types": "./src/field/index.tsx",
+      "import": "./src/field/index.tsx"
     },
     "./fieldset": {
-      "types": "./src/vendor/fieldset/index.tsx",
-      "import": "./src/vendor/fieldset/index.tsx"
+      "types": "./src/fieldset/index.tsx",
+      "import": "./src/fieldset/index.tsx"
     },
     "./file-tree": {
-      "types": "./src/vendor/file-tree/index.tsx",
-      "import": "./src/vendor/file-tree/index.tsx"
+      "types": "./src/file-tree/index.tsx",
+      "import": "./src/file-tree/index.tsx"
     },
     "./form": {
-      "types": "./src/vendor/form/index.tsx",
-      "import": "./src/vendor/form/index.tsx"
+      "types": "./src/form/index.tsx",
+      "import": "./src/form/index.tsx"
     },
     "./input": {
-      "types": "./src/vendor/input/index.tsx",
-      "import": "./src/vendor/input/index.tsx"
+      "types": "./src/input/index.tsx",
+      "import": "./src/input/index.tsx"
     },
     "./input-group": {
-      "types": "./src/vendor/input-group/index.tsx",
-      "import": "./src/vendor/input-group/index.tsx"
+      "types": "./src/input-group/index.tsx",
+      "import": "./src/input-group/index.tsx"
     },
     "./kbd": {
-      "types": "./src/vendor/kbd/index.tsx",
-      "import": "./src/vendor/kbd/index.tsx"
+      "types": "./src/kbd/index.tsx",
+      "import": "./src/kbd/index.tsx"
     },
     "./meter": {
-      "types": "./src/vendor/meter/index.tsx",
-      "import": "./src/vendor/meter/index.tsx"
+      "types": "./src/meter/index.tsx",
+      "import": "./src/meter/index.tsx"
     },
     "./progress": {
-      "types": "./src/vendor/progress/index.tsx",
-      "import": "./src/vendor/progress/index.tsx"
+      "types": "./src/progress/index.tsx",
+      "import": "./src/progress/index.tsx"
     },
     "./number-field": {
-      "types": "./src/vendor/number-field/index.tsx",
-      "import": "./src/vendor/number-field/index.tsx"
+      "types": "./src/number-field/index.tsx",
+      "import": "./src/number-field/index.tsx"
     },
     "./pagination": {
-      "types": "./src/vendor/pagination/index.tsx",
-      "import": "./src/vendor/pagination/index.tsx"
+      "types": "./src/pagination/index.tsx",
+      "import": "./src/pagination/index.tsx"
     },
     "./radio-group": {
-      "types": "./src/vendor/radio-group/index.tsx",
-      "import": "./src/vendor/radio-group/index.tsx"
+      "types": "./src/radio-group/index.tsx",
+      "import": "./src/radio-group/index.tsx"
     },
     "./popover": {
-      "types": "./src/vendor/popover/index.tsx",
-      "import": "./src/vendor/popover/index.tsx"
+      "types": "./src/popover/index.tsx",
+      "import": "./src/popover/index.tsx"
     },
     "./preview-card": {
-      "types": "./src/vendor/preview-card/index.tsx",
-      "import": "./src/vendor/preview-card/index.tsx"
+      "types": "./src/preview-card/index.tsx",
+      "import": "./src/preview-card/index.tsx"
     },
     "./scroll-area": {
-      "types": "./src/vendor/scroll-area/index.tsx",
-      "import": "./src/vendor/scroll-area/index.tsx"
+      "types": "./src/scroll-area/index.tsx",
+      "import": "./src/scroll-area/index.tsx"
     },
     "./select": {
-      "types": "./src/vendor/select/index.tsx",
-      "import": "./src/vendor/select/index.tsx"
+      "types": "./src/select/index.tsx",
+      "import": "./src/select/index.tsx"
     },
     "./status-dot": {
-      "types": "./src/vendor/status-dot/index.tsx",
-      "import": "./src/vendor/status-dot/index.tsx"
+      "types": "./src/status-dot/index.tsx",
+      "import": "./src/status-dot/index.tsx"
     },
     "./slider": {
-      "types": "./src/vendor/slider/index.tsx",
-      "import": "./src/vendor/slider/index.tsx"
+      "types": "./src/slider/index.tsx",
+      "import": "./src/slider/index.tsx"
     },
     "./switch": {
-      "types": "./src/vendor/switch/index.tsx",
-      "import": "./src/vendor/switch/index.tsx"
+      "types": "./src/switch/index.tsx",
+      "import": "./src/switch/index.tsx"
     },
     "./segmented-control": {
-      "types": "./src/vendor/segmented-control/index.tsx",
-      "import": "./src/vendor/segmented-control/index.tsx"
+      "types": "./src/segmented-control/index.tsx",
+      "import": "./src/segmented-control/index.tsx"
     },
     "./tabs": {
-      "types": "./src/vendor/tabs/index.tsx",
-      "import": "./src/vendor/tabs/index.tsx"
+      "types": "./src/tabs/index.tsx",
+      "import": "./src/tabs/index.tsx"
     },
     "./textarea": {
-      "types": "./src/vendor/textarea/index.tsx",
-      "import": "./src/vendor/textarea/index.tsx"
+      "types": "./src/textarea/index.tsx",
+      "import": "./src/textarea/index.tsx"
     },
     "./time-picker": {
-      "types": "./src/vendor/date-time/time-picker/index.tsx",
-      "import": "./src/vendor/date-time/time-picker/index.tsx"
+      "types": "./src/date-time/time-picker/index.tsx",
+      "import": "./src/date-time/time-picker/index.tsx"
     },
     "./toast": {
-      "types": "./src/vendor/toast/index.tsx",
-      "import": "./src/vendor/toast/index.tsx"
+      "types": "./src/toast/index.tsx",
+      "import": "./src/toast/index.tsx"
     },
     "./tooltip": {
-      "types": "./src/vendor/tooltip/index.tsx",
-      "import": "./src/vendor/tooltip/index.tsx"
+      "types": "./src/tooltip/index.tsx",
+      "import": "./src/tooltip/index.tsx"
     },
     "./spinner": {
-      "types": "./src/vendor/spinner/index.tsx",
-      "import": "./src/vendor/spinner/index.tsx"
+      "types": "./src/spinner/index.tsx",
+      "import": "./src/spinner/index.tsx"
     },
     "./separator": {
-      "types": "./src/vendor/separator/index.tsx",
-      "import": "./src/vendor/separator/index.tsx"
+      "types": "./src/separator/index.tsx",
+      "import": "./src/separator/index.tsx"
     },
     "./infotip": {
-      "types": "./src/vendor/infotip/index.tsx",
-      "import": "./src/vendor/infotip/index.tsx"
+      "types": "./src/infotip/index.tsx",
+      "import": "./src/infotip/index.tsx"
     },
     "./direction-provider": {
-      "types": "./src/vendor/direction-provider/index.tsx",
-      "import": "./src/vendor/direction-provider/index.tsx"
+      "types": "./src/direction-provider/index.tsx",
+      "import": "./src/direction-provider/index.tsx"
     }
   },
   "scripts": {
@@ -262,10 +258,7 @@
     "@tanstack/react-virtual": "3.14.13",
     "class-variance-authority": "0.7.1",
     "cn": "0.4.0",
-    "date-fns": "4.4.0",
-    "clsx": "^2.1.1",
-    "lucide-react": "^1.26.0",
-    "tailwind-merge": "^3.4.0"
+    "date-fns": "4.4.0"
   },
   "devDependencies": {
     "@egoist/tailwindcss-icons": "1.9.2",

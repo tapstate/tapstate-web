@@ -7,7 +7,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { ConnectorConfigField } from '@/service/source-client'
 
-import { formilyAntdPrefixCls, formilySharedUITheme } from '@/components/formily/formily-antd-provider'
+import {
+  formilyAntdPrefixCls,
+  formilySharedUITheme,
+} from '@/components/formily/formily-antd-provider'
 
 import { ConnectorFormily } from './connector-formily'
 import {

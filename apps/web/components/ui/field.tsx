@@ -3,8 +3,8 @@ import {
   FieldDescription as SourceFieldDescription,
   FieldError as SourceFieldError,
   FieldLabel as SourceFieldLabel,
-} from './vendor/field'
-import { SpinnerIcon } from './vendor/spinner'
+} from '@tapstate-web/ui/field'
+import { SpinnerIcon } from '@tapstate-web/ui/spinner'
 import * as React from 'react'
 
 interface FieldContextValue {

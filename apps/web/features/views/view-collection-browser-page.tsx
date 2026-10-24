@@ -1,7 +1,7 @@
-import { SearchInput } from '@tapstate-web/ui/search-input'
-import { Tabs, TabsList, TabsPanel, TabsTab } from '@tapstate-web/ui/tabs'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { SearchInput } from '@tapstate-web/ui/search-input'
+import { Tabs, TabsList, TabsPanel, TabsTab } from '@tapstate-web/ui/tabs'
 import {
   AlertCircle,
   Boxes,

@@ -48,9 +48,9 @@ stylesheet:
 
 ```css
 /* Example only: resolve paths from this stylesheet. */
-@source '../../../packages/ui/src/vendor';
-@source not '../../../packages/ui/src/vendor/**/*.{spec,test}.{ts,tsx}';
-@source not '../../../packages/ui/src/vendor/**/*.stories.{ts,tsx}';
+@source '../../../packages/ui/src';
+@source not '../../../packages/ui/src/**/*.{spec,test}.{ts,tsx}';
+@source not '../../../packages/ui/src/**/*.stories.{ts,tsx}';
 ```
 
 ## Border radius

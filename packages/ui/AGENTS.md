@@ -1,18 +1,12 @@
 # Shared UI Package Rules
 
-Read `../../docs/engineering/DESIGN.md` and
-`../../docs/engineering/design-system.md` before changing components or tokens.
+Read `../../docs/engineering/DESIGN.md` and `../../docs/engineering/design-system.md` before changing components or tokens.
 
-- This package is the shared visual component source for Web and Cloud. Keep
-  public subpaths stable and preserve the root compatibility exports.
-- Prefer existing semantic tokens, variants, component contracts, and overlay
-  behavior. Do not add a second visual system or copy business-page markup here.
-- Keep Tapstate brand values in Tapstate-owned tokens. App shells and navigation
-  remain app-owned.
-- Use CSS variables and data attributes for component appearance and state.
-  Avoid raw palette values, arbitrary geometry, and call-site stacking layers.
-- Keep public component props typed and small. Keep Base UI types internal
-  unless the public API intentionally exposes a composition primitive.
-- Components must define focus-visible and disabled states and support reduced
-  motion where they animate.
-- User-visible copy is passed from the app's i18n resources.
+- Preserve the direct `src/` component layout and public subpaths declared in `package.json`. Do not add a nested source wrapper or a package root barrel.
+- Keep source component behavior, props, styles, and CSS entry paths aligned with the component files under `src/`.
+- Keep app-specific providers, Formily bindings, router state, and translated product behavior in `apps/web` or `apps/cloud`; compose source primitives there when needed.
+- Keep Tapstate product text, app shells, and brand values in app-owned code. Do not copy business-page markup into this package.
+- Use CSS variables and component state attributes for appearance. Avoid app-specific raw geometry, stacked overlays, or duplicated visual implementations.
+- Keep public component props typed and small. Keep Base UI types internal unless the source API intentionally exposes a composition primitive.
+- Components must define focus-visible and disabled states and support reduced motion where they animate.
+- User-visible copy belongs to the application and its i18next resources.

@@ -1,23 +1,9 @@
-# Web UI Compatibility Exports
+# Web UI Adapters
 
-The visual component source is `packages/ui`, imported through
-`@tapstate-web/ui/<component>`. This directory preserves old Web import
-paths while features migrate.
+This directory contains Web-owned integrations around the shared component source in `packages/ui/src`. Import primitives from their direct public subpaths, such as `@tapstate-web/ui/button` or `@tapstate-web/ui/field`.
 
-## Rules
-
-- Prefer a vendored public component subpath. Do not author a second visual
-  implementation here or in `packages/ui`.
-- Compatibility files only re-export the shared API. They must not add styles,
-  alter component state, or wrap a primitive with a new behavior.
-- Component styles and semantic tokens live in `packages/ui/src/vendor/styles`
-  and `packages/ui/src/vendor/themes`.
-- App and feature code may compose a shared component but must not override its
-  size, color, state, focus ring, overlay layer, or motion.
-- Base UI owns keyboard navigation and focus management for supported
-  primitives. Do not reimplement those behaviors in a page.
-- Icon-only actions require an accessible name.
-- New copy uses existing i18next resources for `en`, `zh-CN`, and `zh-TW`.
-
-Read `docs/engineering/design-system.md` before component changes and
-`docs/engineering/overlay-conventions.md` before overlay changes.
+- Keep adapters for Web-only behavior such as Formily field context, localized close labels, and route state here.
+- Adapters may compose source primitives and bridge app props; they must not create a second visual implementation.
+- Prefer a direct source import when the app API already matches the source API.
+- Keep translated text in i18next resources and keep application branding in app-owned code.
+- Read `docs/engineering/design-system.md` and `docs/engineering/overlay-conventions.md` before changing a primitive or overlay adapter.

@@ -3,7 +3,7 @@ import {
   TooltipContent as SourceTooltipContent,
   TooltipProvider as SourceTooltipProvider,
   TooltipTrigger as SourceTooltipTrigger,
-} from './vendor/tooltip'
+} from '@tapstate-web/ui/tooltip'
 import * as React from 'react'
 
 type TooltipRootProps = React.ComponentProps<typeof SourceTooltip>

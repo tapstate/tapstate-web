@@ -33,25 +33,25 @@
 
 生成或修改 UI 前必须遵循根目录 `UI_DESIGN_GUIDELINES.md`、`docs/engineering/DESIGN.md`、`docs/engineering/design-system.md`，以及所在目录下就近的 `components/ui/AGENTS.md`（组件契约）；涉及浮层组件时额外遵循 `docs/engineering/overlay-conventions.md`。主动检查并修正 Anti-Slop、布局、排版、颜色、交互和表单问题。
 
-其中 `DESIGN.md` 是页面和审查契约；组件源码、尺寸、状态和 token 以 vendored `packages/ui` 为准。Tapstate 的 Logo、导航、外层 shell 与产品文案仍由应用定义。每个新增或重大改动页面要按矩阵审查。
+其中 `DESIGN.md` 是页面和审查契约；组件源码、尺寸、状态和 token 以 `packages/ui/src` 为准。Tapstate 的 Logo、导航、外层 shell 与产品文案仍由应用定义。每个新增或重大改动页面要按矩阵审查。
 
 任何新增或调整的 UI 都必须先匹配 `DESIGN.md` 的 Scene contracts，并在 PR 或页面审计里填写源码映射表：实际 revision/文件、原组件和 class/token、本地对应项、差异原因、渲染证据。不能凭感觉指定背景、padding、圆角、图标大小或响应式覆盖；弹窗内容区域与输入控件必须按 Surface and token decision table 区分。没有源码依据或没有看到实际渲染结果，不能宣称“源码对齐”或视觉验收完成。
 
-组件优先使用 vendored API 和语义 token；上游组件中有源码确认的精确数值（如 10px 圆角）可以保留。新增裸色值、任意几何或调用点浮层层级需有来源依据和审查记录。
+组件优先使用 `packages/ui/src` 的公开 API 和语义 token；上游组件中有源码确认的精确数值（如 10px 圆角）可以保留。新增裸色值、任意几何或调用点浮层层级需有来源依据和审查记录。
 
 ## Frontend Rules
 
 - 使用 React 19，页面路由使用 TanStack Router File Routes，路由源码放在 `apps/web/app/routes/`，由 `@tanstack/router-plugin` 生成 `apps/web/app/routeTree.gen.ts`；开发、预览和打包都使用 Vite。
 - 遵循 strict TypeScript；避免 `any`，除非有明确技术原因。
-- `packages/ui` 是默认 UI 组件源；Base UI 是其底层交互。`packages/ui` 和旧 `components/ui` 是迁移兼容层，不新增独立的视觉实现。
-- Select / Dropdown / Menu 优先使用 vendored 公开子路径，不手写 floating dropdown。浮层的 portal、focus、dismiss 和层级按 vendored overlay 契约处理，调用方不覆盖 z-index。
-- 受控 `open` / `onOpenChange` 和条件挂载按具体 vendored 组件的 presence 契约选择，不能用一条泛化规则代替组件行为。
+- `packages/ui/src` 保持组件源码的目录结构；Base UI 提供底层交互。Tapstate 专属适配留在 `apps/web` 或 `apps/cloud`，包内不加 root barrel 或重复的视觉组件。
+- Select / Dropdown / Menu 使用 `@tapstate-web/ui/<component>` 公开子路径，不手写 floating dropdown。浮层的 portal、focus、dismiss 和层级按 source overlay 契约处理，调用方不覆盖 z-index。
+- 受控 `open` / `onOpenChange` 和条件挂载按具体 source 组件的 presence 契约选择，不能用一条泛化规则代替组件行为。
 - 动效使用 Motion，保持克制，优先用于浮层进入/退出、状态切换和局部过渡。
 - 服务端状态使用 TanStack Query；客户端 UI/session 状态使用 Zustand。
 - 国际化使用 i18next + react-i18next。用户可见文案必须走 i18next；新增 key 必须同步 `en`、`zh-CN`、`zh-TW`。
 - 样式入口必须分层：`main.css` 只汇总 import，Tailwind 放 `tailwind.css`，应用语义样式放 `app.css`。
 - Tailwind v4 显式使用 `@layer theme, base, components, utilities;`；自定义默认样式放 `@layer base`，应用语义 class 放 `@layer components`，确保 utilities 能覆盖默认样式。
-- UI 风格按 `DESIGN.md` 的页面配方与 `design-system.md` 的真实源码收敛；尺寸和圆角逐组件以 vendored 实现为准。
+- UI 风格按 `DESIGN.md` 的页面配方与 `design-system.md` 的真实源码收敛；尺寸和圆角逐组件以 `packages/ui/src` 的实现为准。
 - 源码对齐场景优先保留对应的源图标、尺寸和 SVG 资产；源图标不可用时再用 lucide-react 等现有图标集并记录差异，不手写一次性复杂 SVG。
 - UI 组件应考虑 loading、empty、error、success；表单还要考虑 disabled、validation、submitting。
 - 页面应该是企业产品工作台气质：信息密度清晰、布局稳定、操作路径短，不做营销式 hero。

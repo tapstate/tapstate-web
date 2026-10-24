@@ -1,5 +1,7 @@
 import type { ComponentType, SVGProps } from 'react'
 
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import {
   AlertDialog as SourceAlertDialog,
   AlertDialogBody as SourceAlertDialogBody,
@@ -23,9 +25,7 @@ import { FirstEmptyActionCard } from '@tapstate-web/ui/first-empty-action-card'
 import { LoadingPlaceholder } from '@tapstate-web/ui/loading-placeholder'
 import { SearchInput } from '@tapstate-web/ui/search-input'
 import { StatusDot } from '@tapstate-web/ui/status-dot'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
-import { useOptionalToast } from '@tapstate-web/ui'
+import { Tabs, TabsList, TabsTab } from '@tapstate-web/ui/tabs'
 import {
   Activity,
   AlertCircle,
@@ -60,7 +60,7 @@ import { ConnectorIcon } from '@/components/connector-icon'
 import { ResourceListHeader } from '@/components/resource-list-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { RouteTabs } from '@/components/ui/route-tabs'
+import { useOptionalToast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
 import {
   isSampleSource,
@@ -1026,13 +1026,15 @@ function SourceTableDetailHeader({
           {tableName}
         </span>
       </nav>
-      <RouteTabs
-        aria-label={t('sources.tabs.label')}
-        className="mt-3"
-        items={tabs.map((tab) => ({ value: tab.value, label: t(tab.labelKey) }))}
-        value={activeTab}
-        onValueChange={onSelectTab}
-      />
+      <Tabs value={activeTab} onValueChange={(value) => onSelectTab(value as SourceTab)}>
+        <TabsList className="mt-3" aria-label={t('sources.tabs.label')}>
+          {tabs.map((tab) => (
+            <TabsTab key={tab.value} value={tab.value} className="ui-route-tab">
+              {t(tab.labelKey)}
+            </TabsTab>
+          ))}
+        </TabsList>
+      </Tabs>
     </div>
   )
 }

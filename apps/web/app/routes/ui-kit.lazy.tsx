@@ -1,5 +1,6 @@
 import { createForm } from '@formily/core'
 import { Field as FormilyField, FormProvider } from '@formily/react'
+import { createLazyFileRoute } from '@tanstack/react-router'
 import SourceAlert from '@tapstate-web/ui/alert'
 import {
   AlertDialog as SourceAlertDialog,
@@ -14,6 +15,7 @@ import {
 } from '@tapstate-web/ui/alert-dialog'
 import SourceBadge from '@tapstate-web/ui/badge'
 import { Button as SourceButton } from '@tapstate-web/ui/button'
+import { Checkbox } from '@tapstate-web/ui/checkbox'
 import {
   Drawer as SourceDrawer,
   DrawerBackdrop as SourceDrawerBackdrop,
@@ -32,48 +34,7 @@ import SourceRadioCard from '@tapstate-web/ui/radio-card'
 import { RadioGroup as SourceRadioGroup } from '@tapstate-web/ui/radio-group'
 import { SearchInput as SourceSearchInput } from '@tapstate-web/ui/search-input'
 import { StatusDot } from '@tapstate-web/ui/status-dot'
-import { createLazyFileRoute } from '@tanstack/react-router'
-import {
-  Button,
-  Checkbox,
-  Dialog,
-  DialogBody,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  Field,
-  IconButton,
-  Input,
-  InputAddon,
-  InputGroup,
-  InputGroupInput,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Skeleton,
-  Switch,
-  Textarea,
-  ToastProvider,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-  useToast,
-} from '@tapstate-web/ui'
+import { Switch } from '@tapstate-web/ui/switch'
 import { Plus, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -83,6 +44,39 @@ import {
   FormilyInput,
   FormilySelect,
 } from '@/components/formily/formily-ui-adapters'
+import { Button, IconButton } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogBody,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Field } from '@/components/ui/field'
+import { Input, InputAddon, InputGroup, InputGroupInput } from '@/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
+import { ToastProvider, useToast } from '@/components/ui/toast'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 export const Route = createLazyFileRoute('/ui-kit')({
   component: UiKitPage,

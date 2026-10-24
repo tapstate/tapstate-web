@@ -9,8 +9,7 @@
 @import '@fontsource-variable/geist';
 
 @source '../../../packages/ui/src';
-@source '../../../packages/ui/src/vendor';
-@plugin '../../../packages/ui/src/vendor/plugins/icons.ts';
+@plugin '../../../packages/ui/src/plugins/icons.ts';
 
 @custom-variant dark (&:is(.dark *));
 

@@ -257,27 +257,18 @@ importers:
       class-variance-authority:
         specifier: 0.7.1
         version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
       cn:
         specifier: 0.4.0
         version: 0.4.0
       date-fns:
         specifier: 4.4.0
         version: 4.4.0
-      lucide-react:
-        specifier: ^1.26.0
-        version: 1.26.0(react@19.2.8)
       react:
         specifier: ^19.2.8
         version: 19.2.8
       react-dom:
         specifier: ^19.2.8
         version: 19.2.8(react@19.2.8)
-      tailwind-merge:
-        specifier: ^3.4.0
-        version: 3.6.0
       tailwindcss:
         specifier: ^4.3.0
         version: 4.3.3

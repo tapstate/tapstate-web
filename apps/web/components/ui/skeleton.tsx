@@ -1,1 +1,1 @@
-export { Skeleton } from '@tapstate-web/ui'
+export { SkeletonRectangle as Skeleton } from '@tapstate-web/ui/skeleton'

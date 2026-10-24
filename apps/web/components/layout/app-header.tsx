@@ -1,6 +1,6 @@
+import { useNavigate } from '@tanstack/react-router'
 import { Avatar, AvatarFallback } from '@tapstate-web/ui/avatar'
 import { IconButton } from '@tapstate-web/ui/icon-button'
-import { useNavigate } from '@tanstack/react-router'
 import { Bell, Languages, LogOut } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'

@@ -1,6 +1,8 @@
 import type { Field } from '@formily/core'
 
 import { connect, mapProps } from '@formily/react'
+import * as AntdFormily from '@potop/formily-antd-v6'
+import { FormilySchema, useFormilyForm, type FormilyComponentMap } from '@tapstate-web/formily'
 import { Button } from '@tapstate-web/ui/button'
 import { Checkbox } from '@tapstate-web/ui/checkbox'
 import {
@@ -11,8 +13,6 @@ import {
 } from '@tapstate-web/ui/dropdown-menu'
 import { IconButton } from '@tapstate-web/ui/icon-button'
 import { Tabs, TabsList, TabsPanel, TabsTab } from '@tapstate-web/ui/tabs'
-import * as AntdFormily from '@potop/formily-antd-v6'
-import { FormilySchema, useFormilyForm, type FormilyComponentMap } from '@tapstate-web/formily'
 import { Check, Plus, Regex, Search, Trash2, X } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'

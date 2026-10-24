@@ -2,8 +2,7 @@
 @import '@tapstate-web/ui/styles.css';
 
 @source '../../../../packages/ui/src';
-@source '../../../../packages/ui/src/vendor';
-@plugin '../../../../packages/ui/src/vendor/plugins/icons.ts';
+@plugin '../../../../packages/ui/src/plugins/icons.ts';
 
 @theme {
   --radius-md: 8px;
