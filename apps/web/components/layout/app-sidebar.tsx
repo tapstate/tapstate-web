@@ -10,7 +10,6 @@ import {
   LayoutDashboard,
   Settings,
   Table2,
-  Terminal,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -119,7 +118,8 @@ export function AppSidebar() {
       ) : (
         <div className="app-sidebar__brand mt-2">
           <div className="app-sidebar__mark" aria-hidden="true">
-            <Terminal className="h-3 w-3 text-white" />
+            <img alt="" className="h-5 w-5 dark:hidden" src="/tapstate-mark-light.svg" />
+            <img alt="" className="hidden h-5 w-5 dark:block" src="/tapstate-mark.svg" />
           </div>
           <span className="app-sidebar__title">{t('app.brand')}</span>
         </div>
