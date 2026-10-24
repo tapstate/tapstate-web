@@ -586,54 +586,59 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                 <span className="font-medium text-gray-800">{assistantScope(focus)}</span>
               </p>
             </div>
-            <label className="block">
-              <span className="mb-1.5 block text-[11px] font-medium text-gray-700">
+            <div>
+              <label
+                htmlFor={`assistant-helper-${focus}-${intent}`}
+                className="mb-1.5 block text-[11px] font-medium text-gray-700"
+              >
                 {t('wizard.assistant.helperPopover.prompt')}
-              </span>
-              <textarea
-                autoFocus
-                value={
-                  assistantHelperDraft?.focus === focus && assistantHelperDraft?.intent === intent
-                    ? assistantHelperDraft.text
-                    : ''
-                }
-                onChange={(event) =>
-                  setAssistantHelperDraft((current) =>
-                    current?.focus === focus && current.intent === intent
-                      ? { ...current, text: event.target.value }
-                      : current,
-                  )
-                }
-                onKeyDown={(event) => {
-                  if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-                    event.preventDefault()
-                    sendAssistantHelper()
+              </label>
+              <div className="relative">
+                <textarea
+                  id={`assistant-helper-${focus}-${intent}`}
+                  autoFocus
+                  value={
+                    assistantHelperDraft?.focus === focus && assistantHelperDraft?.intent === intent
+                      ? assistantHelperDraft.text
+                      : ''
                   }
-                }}
-                placeholder={t(`wizard.assistant.helperPopover.placeholders.${intent}`)}
-                rows={4}
-                className="w-full resize-y rounded-md border border-gray-300 bg-white px-2.5 py-2 text-[12px] leading-relaxed text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                aria-label={t('wizard.assistant.helperPopover.prompt')}
-              />
-            </label>
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[10px] text-gray-500">
+                  onChange={(event) =>
+                    setAssistantHelperDraft((current) =>
+                      current?.focus === focus && current.intent === intent
+                        ? { ...current, text: event.target.value }
+                        : current,
+                    )
+                  }
+                  onKeyDown={(event) => {
+                    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+                      event.preventDefault()
+                      sendAssistantHelper()
+                    }
+                  }}
+                  placeholder={t(`wizard.assistant.helperPopover.placeholders.${intent}`)}
+                  rows={4}
+                  className="w-full resize-y rounded-md border border-gray-300 bg-white px-2.5 py-2 pb-12 text-[12px] leading-relaxed text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  aria-label={t('wizard.assistant.helperPopover.prompt')}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  aria-label={t('wizard.assistant.helperPopover.send')}
+                  title={t('wizard.assistant.helperPopover.send')}
+                  disabled={
+                    !assistantHelperDraft?.text.trim() ||
+                    assistant.blocked ||
+                    (assistant.sendBlocked ?? assistant.blocked)
+                  }
+                  onClick={sendAssistantHelper}
+                  className="absolute right-2 bottom-2 h-8 w-8 shadow-sm"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <p className="mt-2 text-[10px] text-gray-500">
                 {t('wizard.assistant.helperPopover.reviewHint')}
               </p>
-              <Button
-                type="button"
-                size="sm"
-                disabled={
-                  !assistantHelperDraft?.text.trim() ||
-                  assistant.blocked ||
-                  (assistant.sendBlocked ?? assistant.blocked)
-                }
-                onClick={sendAssistantHelper}
-                className="h-8 shrink-0 gap-1.5 px-2.5 text-[11px]"
-              >
-                <Send className="h-3.5 w-3.5" />
-                {t('wizard.assistant.helperPopover.send')}
-              </Button>
             </div>
           </div>
         </PopoverContent>
