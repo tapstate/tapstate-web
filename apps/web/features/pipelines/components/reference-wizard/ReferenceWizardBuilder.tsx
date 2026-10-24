@@ -1,3 +1,4 @@
+import { Popover, PopoverContent, PopoverTrigger } from '@langgenius/dify-ui/popover'
 import {
   Database,
   Table2,
@@ -15,6 +16,7 @@ import {
   Workflow,
   Copy,
   Sparkles,
+  Send,
 } from 'lucide-react'
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
@@ -153,6 +155,56 @@ export interface WizardViewState {
   destinationWriteMode: string
 }
 
+function expandNewAssistantTransforms(
+  next: WizardViewState,
+  previous: WizardViewState,
+): WizardViewState {
+  const expandSteps = (steps: TransformStep[] = [], prior: TransformStep[] = []) => {
+    const priorById = new Map(prior.map((step) => [step.id, step]))
+    return steps.map((step) => {
+      const previousStep = priorById.get(step.id)
+      return { ...step, isExpanded: previousStep ? previousStep.isExpanded : true }
+    })
+  }
+  const expandRelations = (relations: RelationNode[], prior: RelationNode[]): RelationNode[] => {
+    const priorById = new Map(prior.map((relation) => [relation.id, relation]))
+    return relations.map((relation) => {
+      const previousRelation = priorById.get(relation.id)
+      const transforms = expandSteps(relation.transforms, previousRelation?.transforms)
+      const hasNewTransform = transforms.some(
+        (step) => !previousRelation?.transforms?.some((oldStep) => oldStep.id === step.id),
+      )
+      return {
+        ...relation,
+        transforms,
+        isPreProcessOpen: hasNewTransform
+          ? true
+          : (previousRelation?.isPreProcessOpen ?? relation.isPreProcessOpen),
+        children: expandRelations(relation.children || [], previousRelation?.children || []),
+      }
+    })
+  }
+
+  const rootTransforms = expandSteps(next.root?.transforms, previous.root?.transforms)
+  const hasNewRootTransform = rootTransforms.some(
+    (step) => !previous.root?.transforms?.some((oldStep) => oldStep.id === step.id),
+  )
+  return {
+    ...next,
+    root: next.root
+      ? {
+          ...next.root,
+          transforms: rootTransforms,
+          isTransformsOpen: hasNewRootTransform
+            ? true
+            : (previous.root?.isTransformsOpen ?? next.root.isTransformsOpen),
+        }
+      : null,
+    relations: expandRelations(next.relations, previous.relations),
+    transforms: expandSteps(next.transforms, previous.transforms),
+  }
+}
+
 function ReadOnlyFieldset({
   disabled,
   label,
@@ -231,6 +283,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     id: number
     text: string
     submit?: boolean
+  } | null>(null)
+  const [assistantHelperDraft, setAssistantHelperDraft] = React.useState<{
+    focus: string
+    intent: string
+    text: string
   } | null>(null)
   const [rootPrompt, setRootPrompt] = React.useState('')
   const rootPromptInput = React.useRef<HTMLTextAreaElement>(null)
@@ -391,20 +448,29 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     }
   }, [viewState])
 
-  function askAssistant(focus: string, intent: string) {
-    setActiveContext(focus)
+  function assistantScope(focus: string) {
+    if (focus === 'root') return rootConfig?.table || t('wizard.assistant.inputTableFocus')
+    if (focus === 'doc_process') return t('wizard.assistant.documentFocus')
+    if (focus === 'relations') return t('wizard.assistant.relationsFocus')
+    return flattenRelations(relations).find((relation) => relation.id === focus)?.table || focus
+  }
+  function sendAssistantHelper() {
+    const draft = assistantHelperDraft
+    const text = draft?.text.trim()
+    if (
+      !draft ||
+      !text ||
+      readOnly ||
+      assistant?.blocked ||
+      (assistant?.sendBlocked ?? assistant?.blocked) ||
+      assistantPrompt?.submit
+    )
+      return
+    setActiveContext(draft.focus)
     setAssistantOpen(true)
     setRightPanelTab('copilot')
-    const target =
-      focus === 'root'
-        ? rootConfig?.table
-        : focus === 'doc_process'
-          ? t('wizard.assistant.documentFocus')
-          : flattenRelations(relations).find((relation) => relation.id === focus)?.table
-    setAssistantPrompt({
-      id: ++assistantPromptSequence.current,
-      text: `${t(`wizard.assistant.prompts.${intent}`)}${target ? `\n${t('wizard.assistant.focus')} ${target}` : ''}`,
-    })
+    setAssistantPrompt({ id: ++assistantPromptSequence.current, text, submit: true })
+    setAssistantHelperDraft(null)
   }
   function submitRootPrompt(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -430,10 +496,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   ) {
     if (readOnly || unconfirmedRootEdit || assistant?.blocked) return
     const previous = currentView.current
-    const next = readWizard(
+    const decoded = readWizard(
       writeWizard(candidate as unknown as WizardViewState, null, '', deploymentProfile),
       AVAILABLE_DATA_SOURCES,
     )
+    const next = expandNewAssistantTransforms(decoded, previous)
     assistantUndo.current = { previous, appliedFingerprint: JSON.stringify(next) }
     setRootConfig(next.root)
     setRelations(next.relations)
@@ -475,20 +542,102 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   }
   const assistantHelper = (focus: string, intent: string) =>
     assistant && !readOnly ? (
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        aria-label={t(`wizard.assistant.helpers.${intent}`)}
-        title={t(`wizard.assistant.helpers.${intent}`)}
-        onClick={(event) => {
-          event.stopPropagation()
-          askAssistant(focus, intent)
+      <Popover
+        open={assistantHelperDraft?.focus === focus && assistantHelperDraft?.intent === intent}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAssistantHelperDraft(null)
+            return
+          }
+          setAssistantHelperDraft({
+            focus,
+            intent,
+            text: '',
+          })
         }}
-        className="text-text-accent hover:bg-state-accent-hover"
       >
-        <Sparkles className="h-4 w-4" />
-      </Button>
+        <PopoverTrigger
+          render={
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={t(`wizard.assistant.helpers.${intent}`)}
+              title={t(`wizard.assistant.helpers.${intent}`)}
+              onClick={(event) => event.stopPropagation()}
+              className="text-text-accent hover:bg-state-accent-hover"
+            >
+              <Sparkles className="h-4 w-4" />
+            </Button>
+          }
+        />
+        <PopoverContent
+          placement="bottom-end"
+          className="z-[80] w-[min(22rem,calc(100vw-2rem))] p-0"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="space-y-3 p-3.5">
+            <div>
+              <p className="text-[13px] font-semibold text-gray-900">
+                {t(`wizard.assistant.intents.${intent}`)}
+              </p>
+              <p className="mt-1 text-[11px] text-gray-500">
+                {t('wizard.assistant.helperPopover.scope')}{' '}
+                <span className="font-medium text-gray-800">{assistantScope(focus)}</span>
+              </p>
+            </div>
+            <label className="block">
+              <span className="mb-1.5 block text-[11px] font-medium text-gray-700">
+                {t('wizard.assistant.helperPopover.prompt')}
+              </span>
+              <textarea
+                autoFocus
+                value={
+                  assistantHelperDraft?.focus === focus && assistantHelperDraft?.intent === intent
+                    ? assistantHelperDraft.text
+                    : ''
+                }
+                onChange={(event) =>
+                  setAssistantHelperDraft((current) =>
+                    current?.focus === focus && current.intent === intent
+                      ? { ...current, text: event.target.value }
+                      : current,
+                  )
+                }
+                onKeyDown={(event) => {
+                  if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+                    event.preventDefault()
+                    sendAssistantHelper()
+                  }
+                }}
+                placeholder={t(`wizard.assistant.helperPopover.placeholders.${intent}`)}
+                rows={4}
+                className="w-full resize-y rounded-md border border-gray-300 bg-white px-2.5 py-2 text-[12px] leading-relaxed text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                aria-label={t('wizard.assistant.helperPopover.prompt')}
+              />
+            </label>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[10px] text-gray-500">
+                {t('wizard.assistant.helperPopover.reviewHint')}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                disabled={
+                  !assistantHelperDraft?.text.trim() ||
+                  assistant.blocked ||
+                  (assistant.sendBlocked ?? assistant.blocked)
+                }
+                onClick={sendAssistantHelper}
+                className="h-8 shrink-0 gap-1.5 px-2.5 text-[11px]"
+              >
+                <Send className="h-3.5 w-3.5" />
+                {t('wizard.assistant.helperPopover.send')}
+              </Button>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
     ) : null
 
   // Inline Add Relation workflow state
