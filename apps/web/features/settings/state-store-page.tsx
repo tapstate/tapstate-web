@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ExternalLink, HardDrive, Terminal } from 'lucide-react'
+import { ExternalLink, HardDrive } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -153,9 +153,8 @@ export function StateStorePage() {
               </div>
               <div className="settings-about__content">
                 <div className="settings-about__identity" aria-label={t('app.brand')}>
-                  <span className="settings-about__mark app-sidebar__mark" aria-hidden="true">
-                    <Terminal className="h-5 w-5 text-white" />
-                  </span>
+                  <img alt="" className="h-10 w-10 dark:hidden" src="/tapstate-mark-light.svg" />
+                  <img alt="" className="hidden h-10 w-10 dark:block" src="/tapstate-mark.svg" />
                   <span className="settings-about__brand">{t('app.brand')}</span>
                 </div>
                 <dl className="settings-about__version">

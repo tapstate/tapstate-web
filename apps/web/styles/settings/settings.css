@@ -169,14 +169,6 @@
   padding: 0.5rem 1rem 2rem;
 }
 
-.settings-page .settings-about__mark {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.625rem;
-  background: #1f2937;
-  box-shadow: none;
-}
-
 .settings-page .settings-about__brand {
   color: var(--foreground);
   font-size: 1.25rem;
