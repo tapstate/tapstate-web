@@ -187,7 +187,7 @@ export function wizardPublicationIssue(value: PipelineJsonObject | null): string
   const root = object(wizard.root)
   const output = object(object(wizard.output).config)
   if (!text(root.sourceId) || !text(root.table))
-    return 'Select and confirm a root table before publishing.'
+    return 'Select and confirm a input table before publishing.'
   if (!text(output.sourceId) || !text(output.table))
     return 'Choose a writable destination source and target table before publishing.'
   const transforms = [

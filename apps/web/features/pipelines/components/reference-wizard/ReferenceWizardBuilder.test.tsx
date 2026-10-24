@@ -167,7 +167,7 @@ async function openPicker(input: HTMLInputElement | null) {
 }
 
 describe('ReferenceWizardBuilder searchable pickers', () => {
-  it('searches sources and tables in the root table picker', async () => {
+  it('searches sources and tables in the input table picker', async () => {
     const host = renderBuilder({
       catalog: [
         {
@@ -911,7 +911,7 @@ describe('ReferenceWizardBuilder assistant isolation', () => {
         ?.value,
     ).toContain('focused table')
   })
-  it('sends a blank-builder prompt from the Root Table card into the same review flow', async () => {
+  it('sends a blank-builder prompt from the Input Table card into the same review flow', async () => {
     const promptText = 'Sync PostgreSQL orders to MySQL and keep customer totals up to date.'
     const apiFetch = vi.fn().mockResolvedValue(
       new Response(
@@ -956,9 +956,7 @@ describe('ReferenceWizardBuilder assistant isolation', () => {
     })
     expect(host.textContent).toContain('Or choose a source and table manually')
     await act(async () => {
-      Array.from(host.querySelectorAll('button'))
-        .find((button) => button.textContent?.includes('Draft with AI'))
-        ?.click()
+      host.querySelector<HTMLButtonElement>('form button[aria-label="Send"]')?.click()
       await Promise.resolve()
     })
     await vi.waitFor(() => expect(apiFetch).toHaveBeenCalledOnce())
@@ -1013,7 +1011,7 @@ describe('ReferenceWizardBuilder assistant isolation', () => {
     await act(async () => button('Infer parent').click())
     expect(host.textContent).toContain('Review proposed pipeline changes')
     await act(async () => button('Switch Table').click())
-    const rootTable = host.querySelector<HTMLInputElement>('input[aria-label="Root table"]')!
+    const rootTable = host.querySelector<HTMLInputElement>('input[aria-label="Input table"]')!
     await openPicker(rootTable)
     await vi.waitFor(() => expect(getPickerOptions().length).toBeGreaterThan(0))
     const tableOption = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find(
@@ -1125,7 +1123,7 @@ describe('ReferenceWizardBuilder assistant isolation', () => {
     await act(async () => button('Validate and apply').click())
     expect(onApply).toHaveBeenCalledExactlyOnceWith(candidate)
     await act(async () => button('Switch Table').click())
-    const rootTable = host.querySelector<HTMLInputElement>('input[aria-label="Root table"]')!
+    const rootTable = host.querySelector<HTMLInputElement>('input[aria-label="Input table"]')!
     await openPicker(rootTable)
     const tableOption = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find(
       (item) => item.textContent?.includes('crm_orders'),

@@ -33,7 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 
 import type { DeploymentProfile } from '../../model/deployment-profile'
@@ -2274,7 +2273,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="rounded-lg border border-blue-200/60 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-blue-700 uppercase">
-                            Root Table
+                            Input Table
                           </span>
                           {isRootConfigured && !isRootEditing && rootConfig ? (
                             <h2 className="font-mono text-[13px] font-semibold text-gray-900">
@@ -2282,7 +2281,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                             </h2>
                           ) : (
                             <span className="text-[13px] font-semibold text-gray-900">
-                              {isRootConfigured ? 'Edit Root Table' : 'Select Root Table'}
+                              {isRootConfigured ? 'Edit Input Table' : 'Select Input Table'}
                             </span>
                           )}
                         </div>
@@ -2333,7 +2332,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                                 ? 'border-blue-300 bg-blue-50 text-blue-700'
                                 : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900',
                             )}
-                            title="Configure transforms and pre-processing for root table"
+                            title="Configure transforms and pre-processing for input table"
                           >
                             <Workflow className="h-3 w-3 text-blue-600" />
                             <span>Transforms</span>
@@ -2379,12 +2378,12 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                             >
                               {t('wizard.assistant.rootPromptLabel')}
                             </label>
-                            <div className="flex items-end gap-2">
-                              <Textarea
+                            <div className="border-components-chat-input-border bg-components-panel-bg-blur rounded-xl border p-2.5 shadow-md">
+                              <textarea
                                 id="pipeline-root-assistant-prompt"
                                 aria-label={t('wizard.assistant.rootPromptLabel')}
                                 value={rootPrompt}
-                                onValueChange={(value) => setRootPrompt(value)}
+                                onChange={(event) => setRootPrompt(event.target.value)}
                                 onKeyDown={(event) => {
                                   if (
                                     event.key === 'Enter' &&
@@ -2398,17 +2397,26 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                                 placeholder={t('wizard.assistant.rootPromptPlaceholder')}
                                 rows={2}
                                 maxLength={4000}
-                                className="max-h-24 min-h-14 resize-y px-2.5 py-1.5 text-xs shadow-none"
+                                className="system-sm-regular text-text-primary placeholder:text-text-placeholder block max-h-39.5 min-h-12 w-full resize-none bg-transparent p-1 outline-hidden"
                               />
-                              <Button
-                                type="submit"
-                                size="sm"
-                                disabled={!rootPrompt.trim() || Boolean(assistantPrompt?.submit)}
-                                className="h-9 shrink-0 text-xs"
-                              >
-                                <Sparkles aria-hidden="true" />
-                                {t('wizard.assistant.rootPromptSubmit')}
-                              </Button>
+                              <div className="mt-1 flex items-center justify-between gap-2">
+                                <span className="system-xs-regular text-text-tertiary">
+                                  {t('wizard.assistant.newline')}
+                                </span>
+                                <Button
+                                  type="submit"
+                                  size="medium"
+                                  aria-label={t('wizard.assistant.send')}
+                                  title={t('wizard.assistant.send')}
+                                  disabled={!rootPrompt.trim() || Boolean(assistantPrompt?.submit)}
+                                  className="w-8 shrink-0 px-0"
+                                >
+                                  <span
+                                    className="i-ri-send-plane-2-fill size-4"
+                                    aria-hidden="true"
+                                  />
+                                </Button>
+                              </div>
                             </div>
                             {assistantPrompt?.submit && (
                               <p role="status" className="text-muted-foreground text-[11px]">
@@ -2501,7 +2509,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                             className="flex cursor-pointer items-center gap-1 bg-blue-600 px-3.5 py-1.5 text-[11px] font-medium text-white shadow-2xs transition-colors hover:bg-blue-700"
                           >
                             <Check className="h-3 w-3" />
-                            {isRootConfigured ? 'Save Changes' : 'Confirm Root Table'}
+                            {isRootConfigured ? 'Save Changes' : 'Confirm Input Table'}
                           </button>
                         </div>
                       </div>
@@ -2537,7 +2545,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                     </div>
                   )}
 
-                  {/* Root Table Transforms Manager (Expanded) */}
+                  {/* Input Table Transforms Manager (Expanded) */}
                   {rootConfig && !isRootEditing && rootConfig.isTransformsOpen && (
                     <div
                       className="mt-3 border-t border-gray-100 pt-3"
@@ -2606,7 +2614,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                           </button>
                           {!isRootConfigured && (
                             <div className="mt-1 text-[11px] text-amber-600">
-                              Please confirm the Root Table above first.
+                              Please confirm the Input Table above first.
                             </div>
                           )}
                         </div>
