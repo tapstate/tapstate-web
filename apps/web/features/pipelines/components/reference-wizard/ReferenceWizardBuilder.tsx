@@ -688,19 +688,13 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   const flattenRelations = (nodes: RelationNode[]): RelationNode[] =>
     nodes.flatMap((r) => [r, ...flattenRelations(r.children || [])])
   const availableUnionInputs = React.useMemo(() => {
-    const selectedSources = new Set([
-      ...(rootConfig ? [rootConfig.source] : []),
-      ...flattenRelations(relations).map((relation) => relation.source),
-    ])
-    return AVAILABLE_DATA_SOURCES.filter(
-      (source) => !source.sink && selectedSources.has(source.id),
-    ).flatMap((source) =>
+    return AVAILABLE_DATA_SOURCES.filter((source) => !source.sink).flatMap((source) =>
       source.tables.map((table) => ({
         reference: `${source.id}.${table.name}`,
         label: `${source.name} · ${table.name}`,
       })),
     )
-  }, [AVAILABLE_DATA_SOURCES, rootConfig, relations])
+  }, [AVAILABLE_DATA_SOURCES])
   const unionInputsFor = (
     sourceNameOrId: string,
     tableName: string,

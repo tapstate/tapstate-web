@@ -537,6 +537,67 @@ describe('ReferenceWizardBuilder searchable pickers', () => {
   })
 })
 
+describe('ReferenceWizardBuilder union transform choices', () => {
+  it('offers union inputs from an available source outside the current pipeline scope', async () => {
+    const host = renderBuilder({
+      catalog: [
+        {
+          id: 'crm',
+          name: 'crm',
+          badge: 'CRM',
+          connector: 'mysql',
+          tables: [
+            {
+              name: 'crm_customers',
+              primaryKey: 'customer_id',
+              keys: ['customer_id'],
+              discovered: true,
+              rowCount: '1',
+              columns: ['customer_id', 'company_name'],
+            },
+            {
+              name: 'crm_orders',
+              primaryKey: 'order_id',
+              keys: ['order_id'],
+              discovered: true,
+              rowCount: '2',
+              columns: ['order_id', 'customer_id'],
+            },
+          ],
+        },
+        {
+          id: 'archive',
+          name: 'archive',
+          badge: 'Archive',
+          connector: 'postgres',
+          tables: [
+            {
+              name: 'archive_orders',
+              primaryKey: 'order_id',
+              keys: ['order_id'],
+              discovered: true,
+              rowCount: '4',
+              columns: ['order_id', 'customer_id'],
+            },
+          ],
+        },
+      ],
+    })
+
+    const pipelineTransforms = host.querySelector('#step-doc-process')
+    const addTransform = [...(pipelineTransforms?.querySelectorAll('button') || [])].find(
+      (button) => button.textContent?.includes('Add transform'),
+    )
+    await act(async () => addTransform?.click())
+
+    expect(
+      [...(pipelineTransforms?.querySelectorAll('button') || [])].some((button) =>
+        button.textContent?.includes('Union'),
+      ),
+    ).toBe(true)
+  })
+})
+
 describe('unwind identity across wizard sections', () => {
   it.each([false, true])('matches inherited execution with relations=%s', (withRelations) => {
     const panel = renderBuilder({
