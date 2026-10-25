@@ -710,6 +710,38 @@ describe('explicit recovery and import', () => {
     })
     expect(storage.fetcher.mock.calls.some(([url]) => String(url).endsWith('/confirm'))).toBe(false)
   })
+  it.each(['en', 'zh-CN', 'zh-TW'])(
+    'keeps configuration transfer collapsed until explicitly opened in %s',
+    async (locale) => {
+      await i18n.changeLanguage(locale)
+      storage.snapshot = {
+        ...base,
+        setupPhase: 'COMPLETE',
+        businessPhase: 'READY',
+        allowedActions: ['configuration.export', 'configuration.import.preflight'],
+      }
+      await render(<ConfigurationTransfer />)
+      const summary = [...container.querySelectorAll('summary')].find(
+        (element) => element.textContent === i18n.t('storage.transfer.title'),
+      )
+      expect(summary).toBeTruthy()
+      const disclosure = summary!.parentElement as HTMLDetailsElement
+      expect(disclosure.tagName).toBe('DETAILS')
+      expect(disclosure.open).toBe(false)
+      expect(container.querySelector('input')?.closest('details')).toBe(disclosure)
+      await act(async () => summary!.click())
+      expect(disclosure.open).toBe(true)
+      await fill('storage.transfer.key', 'request-only-key')
+      await act(async () => summary!.click())
+      expect(disclosure.open).toBe(false)
+      await act(async () => summary!.click())
+      expect(disclosure.open).toBe(true)
+      expect(container.querySelector<HTMLInputElement>('input[type="password"]')?.value).toBe(
+        'request-only-key',
+      )
+      expect(storage.fetcher).not.toHaveBeenCalled()
+    },
+  )
   it('keeps an unknown import attached to the original ID and queries before another submission', async () => {
     storage.snapshot = {
       ...base,
@@ -740,6 +772,7 @@ describe('explicit recovery and import', () => {
       })
     })
     await render(<ConfigurationTransfer defaultSourceId="destination-default" />)
+    await act(async () => container.querySelector('summary')!.click())
     await fill('storage.transfer.key', 'request-only-key')
     const file = container.querySelector<HTMLInputElement>('input[type="file"]')!
     Object.defineProperty(file, 'files', {

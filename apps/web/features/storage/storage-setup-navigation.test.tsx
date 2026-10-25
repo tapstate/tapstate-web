@@ -125,6 +125,7 @@ describe('whole-site storage boundary', () => {
       </>,
     )
     expect(container.textContent).not.toContain('imported-source')
+    await act(async () => container.querySelector('summary')!.click())
     const id = [...container.querySelectorAll('label')]
       .find((label) => label.textContent?.includes('Operation ID'))!
       .querySelector('input')!
