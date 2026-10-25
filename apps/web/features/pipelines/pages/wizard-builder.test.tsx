@@ -185,6 +185,7 @@ const originalScrollIntoView = Object.getOwnPropertyDescriptor(
   HTMLElement.prototype,
   'scrollIntoView',
 )
+const originalElementScrollTo = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollTo')
 
 const initialDraft: PipelineDraft = {
   pipelineId: 'wizard-ui-test',
@@ -214,6 +215,10 @@ const initialDraft: PipelineDraft = {
 beforeEach(() => {
   vi.stubGlobal('scrollTo', vi.fn())
   Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+    configurable: true,
+    value: vi.fn(),
+  })
+  Object.defineProperty(HTMLElement.prototype, 'scrollTo', {
     configurable: true,
     value: vi.fn(),
   })
@@ -283,6 +288,9 @@ afterEach(() => {
   if (originalScrollIntoView)
     Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', originalScrollIntoView)
   else Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView')
+  if (originalElementScrollTo)
+    Object.defineProperty(HTMLElement.prototype, 'scrollTo', originalElementScrollTo)
+  else Reflect.deleteProperty(HTMLElement.prototype, 'scrollTo')
   root = undefined
   container = undefined
 })
@@ -348,6 +356,14 @@ describe('WizardBuilder publish flow', () => {
           expect(next).toBeDefined()
           await act(async () => next!.click())
         }
+        await act(async () => {
+          await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
+        })
+        const canvas = container!.querySelector<HTMLElement>('#wizard-canvas-main')!
+        expect(HTMLElement.prototype.scrollTo).toHaveBeenCalledWith({
+          top: canvas.scrollHeight,
+          behavior: 'smooth',
+        })
       }
       const launch = Array.from(container!.querySelectorAll('button')).filter((button) =>
         /^(Save & start|Launch)/.test(button.textContent?.trim() || ''),

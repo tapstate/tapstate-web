@@ -19,7 +19,8 @@ export function StorageRecovery() {
   const [physicalChain, setPhysicalChain] = useState('')
   const [pipelineIds, setPipelineIds] = useState('')
   const [previousOperationId, setPreviousOperationId] = useState('')
-  const [operationId, setOperationId] = useState(snapshot?.operationId ?? '')
+  const [enteredOperationId, setOperationId] = useState<string | null>(null)
+  const operationId = enteredOperationId ?? snapshot?.operationId ?? ''
   const [plan, setPlan] = useState<RecoveryPlan | null>(null)
   const [confirmed, setConfirmed] = useState(false)
   const canPlan = snapshot?.allowedActions.includes('storage.recovery.plan')
@@ -122,6 +123,7 @@ export function StorageRecovery() {
             }
             onClick={() => {
               clearPlan()
+              setOperationId(null)
               void action.run(
                 () =>
                   storageRequest<RecoveryPlan>(fetcher, 'storage.recovery.plan', {
@@ -140,6 +142,9 @@ export function StorageRecovery() {
                 (result) => {
                   setPlan(result)
                   setOperationId(result.operationId)
+                },
+                () => {
+                  void refresh()
                 },
               )
             }}

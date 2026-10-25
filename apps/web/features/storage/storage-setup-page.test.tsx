@@ -393,6 +393,79 @@ describe('explicit recovery and import', () => {
       expect(storage.fetcher).toHaveBeenCalledTimes(1)
     },
   )
+  it('finds a saved provisional operation after the first preview fails and only explicitly rechecks that operation', async () => {
+    sharedReady()
+    storage.fetcher
+      .mockResolvedValueOnce(
+        Response.json({ code: 'control.storage-recovery-member-unavailable' }, { status: 500 }),
+      )
+      .mockResolvedValueOnce(Response.json({ ...sharedPlan, preflightCurrent: false }))
+      .mockResolvedValueOnce(
+        Response.json({ ...sharedPlan, controlRevision: 9, planHash: 'rechecked-hash' }),
+      )
+    await render(<StorageRecovery />)
+    await fill('storage.recovery.canonicalChain', 'canonical-s1')
+    await fill('storage.recovery.physicalChain', 'original-s1')
+    await click('storage.recovery.preview')
+    expect(storage.refresh).toHaveBeenCalledTimes(1)
+    expect(storage.fetcher).toHaveBeenCalledTimes(1)
+    storage.snapshot = { ...storage.snapshot!, operationId: sharedPlan.operationId }
+    await render(<StorageRecovery />)
+    const operation = [...container.querySelectorAll('label')]
+      .find((label) => label.querySelector('span')?.textContent === i18n.t('storage.operationId'))!
+      .querySelector('input')!
+    expect(operation.value).toBe(sharedPlan.operationId)
+    await click('storage.queryResult')
+    expect(JSON.parse(String(storage.fetcher.mock.calls[1][1]?.body))).toEqual({
+      operationId: sharedPlan.operationId,
+    })
+    expect(sharedConfirmation().disabled).toBe(true)
+    await click('storage.recovery.repreview')
+    expect(JSON.parse(String(storage.fetcher.mock.calls[2][1]?.body))).toEqual({
+      scope: 'SHARED_SRS',
+      pipelineIds: [],
+      canonicalChain: 'canonical-s1',
+      physicalChain: 'original-s1',
+      operationId: sharedPlan.operationId,
+    })
+    expect(sharedConfirmation().disabled).toBe(true)
+    expect(storage.fetcher).toHaveBeenCalledTimes(3)
+  })
+  it('preserves an explicitly entered operation when the server snapshot refreshes', async () => {
+    sharedReady()
+    await render(<StorageRecovery />)
+    await fill('storage.operationId', 'original-manual-operation')
+    storage.snapshot = { ...storage.snapshot!, operationId: sharedPlan.operationId }
+    await render(<StorageRecovery />)
+    storage.fetcher.mockResolvedValue(Response.json({ ...sharedPlan, preflightCurrent: false }))
+    await click('storage.queryResult')
+    expect(JSON.parse(String(storage.fetcher.mock.calls[0][1]?.body))).toEqual({
+      operationId: 'original-manual-operation',
+    })
+    expect(sharedConfirmation().disabled).toBe(true)
+  })
+  it('does not refresh or discover a provisional result from an old login session', async () => {
+    sharedReady()
+    let finish!: (response: Response) => void
+    storage.fetcher.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    await render(<StorageRecovery />)
+    await fill('storage.recovery.canonicalChain', 'canonical-s1')
+    await fill('storage.recovery.physicalChain', 'original-s1')
+    await click('storage.recovery.preview')
+    useAuthStore.setState({ sessionRevision: 1 })
+    await act(async () =>
+      finish(
+        Response.json({ code: 'control.storage-recovery-member-unavailable' }, { status: 500 }),
+      ),
+    )
+    expect(storage.refresh).not.toHaveBeenCalled()
+    expect(storage.fetcher).toHaveBeenCalledTimes(1)
+    expect(sharedConfirmation()).toBeUndefined()
+  })
   it('rechecks a cancelled running shared scope under the same operation and requires a fresh confirmation', async () => {
     sharedReady()
     storage.fetcher
