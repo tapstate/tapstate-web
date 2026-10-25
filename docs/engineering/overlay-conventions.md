@@ -4,7 +4,7 @@ The source of truth is the source [`packages/ui/docs/overlays.md`](../../package
 
 - Use `@tapstate-web/ui/dialog`, `/alert-dialog`, `/drawer`, `/popover`, `/dropdown-menu`, `/tooltip`, `/infotip`, `/select`, and `/toast` according to their intended semantics. Do not retain an independently styled overlay when migrating a page.
 - Let the component own portal, focus, Escape, outside dismissal, placement, motion and layer behavior. Do not add call-site `z-*`, a second portal, or manual document event handlers for the same job.
-- Isolate each app root so body portals stack correctly. Confirm nested Select/Popover inside Dialog with keyboard and pointer during review.
+- Preserve the package-owned z-40 backdrop and z-50 surface/positioner adaptation, with Drawer's own viewport layers. The latest reference no-z-index model does not replace this shipped contract. Isolate each app root and inspect equal-layer DOM order and modal guards together. Confirm nested Select/Popover inside Dialog with keyboard and pointer during review.
 - Tapstate owns labels, translations, state and actions. The component owns the visible surface and interaction behavior.
 - For each changed overlay, inspect opening, closing, focus return, scroll, narrow viewport and an accessible name. The page review matrix is in [DESIGN.md](DESIGN.md).
 

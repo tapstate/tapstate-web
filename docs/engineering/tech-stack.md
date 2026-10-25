@@ -60,6 +60,7 @@
 ## Verification commands
 
 ```sh
+pnpm ui:docs:check
 pnpm format:check
 pnpm lint:code
 pnpm typecheck

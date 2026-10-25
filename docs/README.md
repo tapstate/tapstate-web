@@ -14,7 +14,7 @@ docs/
 │   ├── design-system.md             tokens and shared component contract
 │   ├── overlay-conventions.md       overlay behavior and focus rules
 │   ├── tech-stack.md                technical choices and engineering gates
-│   └── ui-design-constraints.md      authoring and review constraints
+│   └── ui/                          source atlas, foundations, page/component/token catalogs and review procedure
 ```
 
 ## 放置规则
@@ -25,3 +25,5 @@ docs/
 
 UI work reads `engineering/DESIGN.md` first, then `engineering/design-system.md`;
 overlay and engineering procedures are maintained in their linked documents.
+
+Detailed source evidence and reading routes are indexed in [the UI handbook](engineering/ui/README.md). Reference study and shipped component revisions are explicitly separate.

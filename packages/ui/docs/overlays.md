@@ -44,10 +44,15 @@ clipping.
 
 ## Layering
 
-Overlays set no z-index; portal DOM order stacks them. A Base UI modal blocks outside clicks with
-an unstyled sibling of its popup, so any overlay z-index can lift a lower layer above that guard.
-Only a body-level layer that must stay above overlays mounted after it sets one. A portal into an
-application container sits inside the isolated root and layers against its siblings there.
+This package owns an explicit local layer adaptation: floating positioners and modal surfaces use
+`z-50`, while modal backdrops use `z-40` in `src/internal/overlay.ts`. Drawer owns a `z-40`
+viewport/backdrop and a `z-50` popup in `src/drawer/index.tsx`. Preserve these component-owned
+layers. The reference package's ordinary no-z-index/DOM-order model is not the shipped contract.
+
+Portal DOM order still affects equal-level surfaces; root isolation, explicit layers and modal
+interaction guards must be reviewed together. A caller's extra z-index can lift a lower surface
+above the modal guard. Inspect nested picker/dialog/drawer behavior instead of assuming one
+universal order. A portal into an application container layers within that container's context.
 
 Positioners hide with their anchor: Base UI marks them `data-anchor-hidden` when the anchor is
 clipped, `display: none` or unmounted, and the shared positioner class turns that into

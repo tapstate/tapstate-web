@@ -23,7 +23,8 @@ tapstate-web/
 │   └── engineering/
 │   │   ├── DESIGN.md                      UI 视觉与组件规范
 │   │   ├── design-system.md               共享 token 与组件契约
-│   │   └── tech-stack.md                  技术栈登记 + 未决雷达
+│   │   ├── tech-stack.md                  技术栈登记 + 未决雷达
+│   │   └── ui/                            完整页面/组件/token 研究与执行手册
 ├── AGENTS.md                          Codex / agent 项目规则
 ├── CLAUDE.md                          Claude Code 项目入口
 ├── .agents/                           Codex repo-scoped skills
@@ -113,3 +114,5 @@ pnpm lint         # oxlint diagnostics + repo-wide format check
 - Tailwind CSS v4 使用 CSS-first token，并显式声明 `@layer theme, base, components, utilities;`。
 - `.app-shell`、`.app-shell__main`、Cloud `.main-surface` 及其主题行为由各应用维护，UI 组件不得重设外层布局和表面。
 - Select / Dropdown / Menu 使用共享 primitive，不在业务页使用原生 `<select>` 或手写 floating dropdown。
+
+UI 规范、组件导出或研究目录变更运行 `pnpm ui:docs:check`。完整源码研究通过 `docs/engineering/ui/README.md` 按任务加载，静态覆盖不能代替页面渲染与交互验收。

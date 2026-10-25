@@ -1,34 +1,34 @@
 # Existing page UI audit
 
-Inventory captured from the current worktree on 2026-10-18. “Direct” means a source import exists in that file; it does **not** prove the whole page follows the design. Every row remains pending visual/state review until the evidence matrix in [DESIGN.md](DESIGN.md) is completed. Child components and dialogs must be included during each page review.
+Import inventory refreshed from the local worktree on 2026-10-25. This is the product acceptance ledger, not the reference-source catalog or another design specification. Static import use does not prove page fidelity. Every row remains pending until its applicable rendered matrix in [DESIGN.md](DESIGN.md) is complete; include child components and dialogs.
 
-| Page                                                                  | Current component source in page file                     | Upstream page recipe   | Review  |
-| --------------------------------------------------------------------- | --------------------------------------------------------- | ---------------------- | ------- |
-| `apps/cloud/app/features/access/access-denied-page.tsx`               | inspect child components                                  | inspect by task        | Pending |
-| `apps/cloud/app/features/auth/auth-page.tsx`                          | old shared                                                | form / creation flow   | Pending |
-| `apps/cloud/app/features/billing/billing-page.tsx`                    | inspect child components                                  | detail / monitoring    | Pending |
-| `apps/cloud/app/features/clusters/clusters-page.tsx`                  | old shared                                                | resource list / detail | Pending |
-| `apps/cloud/app/features/onboarding/onboarding-page.tsx`              | old shared                                                | form / creation flow   | Pending |
-| `apps/cloud/app/features/onboarding/provisioning-view.tsx`            | old shared                                                | form / creation flow   | Pending |
-| `apps/cloud/app/features/organizations/organizations-page.tsx`        | old shared                                                | resource list / detail | Pending |
-| `apps/cloud/app/features/overview/cloud-overview-view.tsx`            | source direct, old shared                                 | detail / monitoring    | Pending |
-| `apps/cloud/app/features/overview/overview-page.tsx`                  | inspect child components                                  | detail / monitoring    | Pending |
-| `apps/cloud/app/features/settings/settings-page.tsx`                  | old shared                                                | form / creation flow   | Pending |
-| `apps/web/features/ask-tapstate/ask-tapstate.tsx`                     | old Web UI                                                | inspect by task        | Pending |
-| `apps/web/features/explorations/explorations-page.tsx`                | old Web UI                                                | inspect by task        | Pending |
-| `apps/web/features/overview/overview-page.tsx`                        | old shared                                                | detail / monitoring    | Pending |
-| `apps/web/features/pipelines/logs/pipeline-logs-page.tsx`             | old Web UI                                                | inspect by task        | Pending |
-| `apps/web/features/pipelines/monitoring/pipeline-monitoring-page.tsx` | inspect child components                                  | detail / monitoring    | Pending |
-| `apps/web/features/pipelines/pages/pipeline-editor-page.tsx`          | old Web UI; searchable picker adapter in Reference Wizard | inspect by task        | Pending |
-| `apps/web/features/pipelines/pages/pipelines-page.tsx`                | old Web UI                                                | resource list / detail | Pending |
-| `apps/web/features/settings/state-store-page.tsx`                     | old Web UI                                                | form / creation flow   | Pending |
-| `apps/web/features/sources/pages/source-detail-page.tsx`              | inspect child components                                  | resource list / detail | Pending |
-| `apps/web/features/sources/pages/source-table-detail-page.tsx`        | inspect child components                                  | resource list / detail | Pending |
-| `apps/web/features/sources/pages/sources-catalog-page.tsx`            | inspect child components                                  | resource list / detail | Pending |
-| `apps/web/features/sources/sources-page.tsx`                          | source direct, old shared                                 | resource list / detail | Pending |
-| `apps/web/features/views/view-collection-browser-page.tsx`            | old Web UI                                                | resource list / detail | Pending |
-| `apps/web/features/views/view-detail-page.tsx`                        | old Web UI                                                | resource list / detail | Pending |
-| `apps/web/features/views/views-page.tsx`                              | source table pattern, source Badge/StatusDot, old shell   | resource list / detail | Pending |
+| Page                                                                  | Current import surface (static)                     | Upstream page recipe   | Review  |
+| --------------------------------------------------------------------- | --------------------------------------------------- | ---------------------- | ------- |
+| `apps/cloud/app/features/access/access-denied-page.tsx`               | feature composition; inspect child controls         | inspect by task        | Pending |
+| `apps/cloud/app/features/auth/auth-page.tsx`                          | direct shared subpaths                              | form / creation flow   | Pending |
+| `apps/cloud/app/features/billing/billing-page.tsx`                    | feature composition; inspect child controls         | detail / monitoring    | Pending |
+| `apps/cloud/app/features/clusters/clusters-page.tsx`                  | direct shared subpaths                              | resource list / detail | Pending |
+| `apps/cloud/app/features/onboarding/onboarding-page.tsx`              | direct shared subpaths                              | form / creation flow   | Pending |
+| `apps/cloud/app/features/onboarding/provisioning-view.tsx`            | feature composition; inspect child controls         | form / creation flow   | Pending |
+| `apps/cloud/app/features/organizations/organizations-page.tsx`        | direct shared subpaths                              | resource list / detail | Pending |
+| `apps/cloud/app/features/overview/cloud-overview-view.tsx`            | direct shared subpaths                              | detail / monitoring    | Pending |
+| `apps/cloud/app/features/overview/overview-page.tsx`                  | feature composition; inspect child controls         | detail / monitoring    | Pending |
+| `apps/cloud/app/features/settings/settings-page.tsx`                  | feature composition; inspect child controls         | form / creation flow   | Pending |
+| `apps/web/features/ask-tapstate/ask-tapstate.tsx`                     | route/implementation moved; reconcile before review | inspect by task        | Pending |
+| `apps/web/features/explorations/explorations-page.tsx`                | app behavior adapters                               | inspect by task        | Pending |
+| `apps/web/features/overview/overview-page.tsx`                        | app behavior adapters                               | detail / monitoring    | Pending |
+| `apps/web/features/pipelines/logs/pipeline-logs-page.tsx`             | direct shared subpaths                              | inspect by task        | Pending |
+| `apps/web/features/pipelines/monitoring/pipeline-monitoring-page.tsx` | direct shared subpaths                              | detail / monitoring    | Pending |
+| `apps/web/features/pipelines/pages/pipeline-editor-page.tsx`          | direct shared subpaths, app behavior adapters       | inspect by task        | Pending |
+| `apps/web/features/pipelines/pages/pipelines-page.tsx`                | app behavior adapters                               | resource list / detail | Pending |
+| `apps/web/features/settings/state-store-page.tsx`                     | app behavior adapters                               | form / creation flow   | Pending |
+| `apps/web/features/sources/pages/source-detail-page.tsx`              | feature composition; inspect child controls         | resource list / detail | Pending |
+| `apps/web/features/sources/pages/source-table-detail-page.tsx`        | feature composition; inspect child controls         | resource list / detail | Pending |
+| `apps/web/features/sources/pages/sources-catalog-page.tsx`            | feature composition; inspect child controls         | resource list / detail | Pending |
+| `apps/web/features/sources/sources-page.tsx`                          | direct shared subpaths, app behavior adapters       | resource list / detail | Pending |
+| `apps/web/features/views/view-collection-browser-page.tsx`            | direct shared subpaths, app behavior adapters       | resource list / detail | Pending |
+| `apps/web/features/views/view-detail-page.tsx`                        | direct shared subpaths, app behavior adapters       | resource list / detail | Pending |
+| `apps/web/features/views/views-page.tsx`                              | app behavior adapters                               | resource list / detail | Pending |
 
 ## Review record required for each page
 
@@ -41,8 +41,8 @@ Inventory captured from the current worktree on 2026-10-18. “Direct” means a
 
 ## Current conclusions
 
-- The source package is available and Cloud Overview has one direct Button use, but almost every page still imports the old shared/Web controls or delegates to child components. They are not source-aligned yet.
-- Earlier mechanical palette replacement touched many feature files without proving component provenance or page composition. Review those diffs against the pinned source before retaining them.
+- Both Web and Cloud declare and consume the shared UI package, directly or through app-owned behavior adapters. Import coverage is established; complete page-level visual/interaction acceptance is not. The latest reference-source inventory is maintained separately in [the handbook](ui/README.md).
+- Inspect remaining feature-local controls and presentation at their actual ownership boundary. Preserve the limited scope of the dated observations below; they do not close the overall page audit.
 
 ## Sources catalog: first source-to-page review
 
@@ -71,7 +71,7 @@ This reviews the result component only, not the Sources page or live connector e
 | Check rows      | Tapstate structured checks composed with source text and StatusDot                                                                                                                                                | Passed/Warning/Failed remain at the right of the title, including a long name wrapping on 375px; details wrap below without displacing the status     |
 | Theme and state | Semantic section/text/status tokens                                                                                                                                                                               | Light success/warning and dark failure sample results were visibly inspected; real network errors, keyboard return and translations remain pending    |
 
-Task-local visual evidence (not repository-hosted): `source-result-section-burn-desktop.png`, `source-result-section-burn-mobile.png`, `source-result-section-burn-dark-mobile.png`, under `/Users/xf/.codex/visualizations/2026/10/23/01a167a9-77c7-77b2-9a02-ca9775e85809/`. Desktop used the existing 1728×557 browser viewport; narrow review used 375×812. This is not the full 1280×800/page-state acceptance matrix, so the parent Sources audit rows remain Pending.
+Task-local visual evidence (not repository-hosted): `source-result-section-burn-desktop.png`, `source-result-section-burn-mobile.png`, `source-result-section-burn-dark-mobile.png`, recorded as task-local artifacts without a shared repository attachment. Desktop used the existing 1728×557 browser viewport; narrow review used 375×812. These artifacts are not available from a fresh checkout and are not the full 1280×800/page-state acceptance matrix, so the parent Sources audit rows remain Pending.
 
 ## Cloud authentication source alignment (partial)
 
@@ -113,7 +113,7 @@ This checks the Builder action group and the creation modal's preview region onl
 | Save actions     | Source `packages/ui/src/button/index.tsx`; `PipelineWorkflowHeader.builderActions` uses source `Button` variants.                                                                                | Save is secondary on the left; Save & start is primary on the right. The 1280×800 rendered preview matches the intended action priority. |
 | Creation preview | `PipelineCreationPreview` displays `features/pipelines/assets/pipeline-builder-preview.png` (664×448). The stage now fills its preview column; the image keeps its aspect ratio and is centered. | At 1280×800, the backdrop fills the column and the illustration is centered without distortion.                                          |
 
-Task-local visual evidence (not repository-hosted): `pipeline-actions-1280x800.png` and `pipeline-creation-1280x800.png` under `/Users/xf/.codex/visualizations/2026/10/23/01a1696f-d204-7bf1-b848-fb2440d94692/`. The pipeline stop button retains the source `ghost` destructive treatment, which intentionally has no outline.
+Task-local visual evidence (not repository-hosted): `pipeline-actions-1280x800.png` and `pipeline-creation-1280x800.png` recorded as task-local artifacts without a shared repository attachment. The pipeline stop button retains the source `ghost` destructive treatment, which intentionally has no outline.
 
 ## Pipeline Builder step-card AI prompt popover — partial visual review
 

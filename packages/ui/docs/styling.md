@@ -49,9 +49,14 @@ stylesheet:
 ```css
 /* Example only: resolve paths from this stylesheet. */
 @source '../../../packages/ui/src';
+@plugin '../../../packages/ui/src/plugins/icons.ts';
 @source not '../../../packages/ui/src/**/*.{spec,test}.{ts,tsx}';
 @source not '../../../packages/ui/src/**/*.stories.{ts,tsx}';
 ```
+
+The icon plugin generates the `i-ri-*` utilities used by default component glyphs. Importing the
+theme and scanning source without this plugin does not produce those icons. The example plugin
+path is a workspace path, resolved from the consumer stylesheet, not a public component import.
 
 ## Border radius
 

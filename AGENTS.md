@@ -16,7 +16,7 @@
 6. `docs/engineering/tech-stack.md`：需求触及依赖、构建、i18n、测试策略或工程约束时读取。
 7. `docs/engineering/design-system.md`：需求触及视觉、组件、样式或前端架构时读取。
 8. `docs/engineering/overlay-conventions.md`：需求涉及 Select / Dropdown / Dialog / Popover / Menu / Tooltip / Drawer 等任意浮层组件时读取，覆盖 z-index 归属、受控 `open`/`onOpenChange` 模式、焦点处理。
-9. `docs/engineering/ui-design-constraints.md`：需要了解某条 UI/样式规则的来源和取舍依据，或推进"语义 token 化、失效 class 检查"这类 UI 工程治理改动时读取；日常开发不必主动读，出现分歧或要做治理类改动时查。
+9. `docs/engineering/ui/README.md`：完整源码研究索引；按任务选择 foundations、页面/组件目录、token/排版全表、产品例外和 authoring-review，不把最新参考版本当成本地运行时版本。
 
 另有一份不在上面列表里、但会被大多数支持 `AGENTS.md` 目录发现机制的工具自动读取的文件：`apps/web/components/ui/AGENTS.md`。凡是改动 `components/ui/*` 下任意原子组件，即使这份 Read Order 没显式列出，也视为必读——它定义了 token 使用规则、圆角/间距角色化和组件新增前的检查清单，是 `docs/engineering/design-system.md` 在组件目录层面的落地细则，不是替代关系。
 
@@ -31,11 +31,11 @@
 
 ## UI Quality Gate
 
-生成或修改 UI 前必须遵循根目录 `UI_DESIGN_GUIDELINES.md`、`docs/engineering/DESIGN.md`、`docs/engineering/design-system.md`，以及所在目录下就近的 `components/ui/AGENTS.md`（组件契约）；涉及浮层组件时额外遵循 `docs/engineering/overlay-conventions.md`。主动检查并修正 Anti-Slop、布局、排版、颜色、交互和表单问题。
+生成或修改 UI 前必须遵循根目录 `UI_DESIGN_GUIDELINES.md`、`docs/engineering/DESIGN.md`、`docs/engineering/design-system.md`，以及所在目录下就近的 `components/ui/AGENTS.md`（组件契约）；涉及浮层组件时额外遵循 `docs/engineering/overlay-conventions.md`。以实际源码和渲染证据核查布局、排版、颜色、交互和表单，不使用泛化审美预设覆盖既定系统。
 
 其中 `DESIGN.md` 是页面和审查契约；组件源码、尺寸、状态和 token 以 `packages/ui/src` 为准。Tapstate 的 Logo、导航、外层 shell 与产品文案仍由应用定义。每个新增或重大改动页面要按矩阵审查。
 
-任何新增或调整的 UI 都必须先匹配 `DESIGN.md` 的 Scene contracts，并在 PR 或页面审计里填写源码映射表：实际 revision/文件、原组件和 class/token、本地对应项、差异原因、渲染证据。不能凭感觉指定背景、padding、圆角、图标大小或响应式覆盖；弹窗内容区域与输入控件必须按 Surface and token decision table 区分。没有源码依据或没有看到实际渲染结果，不能宣称“源码对齐”或视觉验收完成。
+任何新增或调整的 UI 都必须先匹配 `DESIGN.md` 的 Scene contracts，并按 `ui/authoring-review.md` 填写源码映射表：实际 revision/文件、原组件和 class/token、本地对应项、差异原因、渲染证据。不能凭感觉指定背景、padding、圆角、图标大小或响应式覆盖；按 `ui/foundations.md` 区分内容表面和输入控件。没有源码依据或没有看到实际渲染结果，不能宣称“源码对齐”或视觉验收完成。规范/目录/组件导出变更运行 `pnpm ui:docs:check`；它不代替浏览器验收。
 
 组件优先使用 `packages/ui/src` 的公开 API 和语义 token；上游组件中有源码确认的精确数值（如 10px 圆角）可以保留。新增裸色值、任意几何或调用点浮层层级需有来源依据和审查记录。
 

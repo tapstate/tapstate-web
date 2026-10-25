@@ -10,3 +10,5 @@ Read `../../docs/engineering/DESIGN.md` and `../../docs/engineering/design-syste
 - Keep public component props typed and small. Keep Base UI types internal unless the source API intentionally exposes a composition primitive.
 - Components must define focus-visible and disabled states and support reduced motion where they animate.
 - User-visible copy belongs to the application and its i18next resources.
+
+Latest-reference study does not silently upgrade this package. Check the shipped public types and tokens before adopting a newer example. Keep the component-owned overlay integration and app-specific differences documented in the shared design contract.

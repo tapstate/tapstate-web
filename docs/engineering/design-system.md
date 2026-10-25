@@ -1,94 +1,104 @@
-# Component and token source
+# Shipped component and token contract
 
-This file identifies the implementation that Tapstate page authors and reviewers must use. [DESIGN.md](DESIGN.md) owns page composition and review. The pinned source revision is stated in [DESIGN.md](DESIGN.md); the package preserves its `LICENSE`.
+[DESIGN.md](DESIGN.md) owns page composition and review. [The evidence handbook](ui/README.md) routes the complete latest reference study. This file describes the local runtime, not a promise that every newer reference API is available.
 
-## Ownership
+## Baselines and owners
 
-- `packages/ui/src` preserves the component source directory layout from revision `3552815c89415716dfd9cac80fd7c73aac3b051e`. `package.json` maps public subpaths directly to those files; the private workspace package has no root barrel.
-- `@base-ui/react` owns headless keyboard, selection, focus and popup behavior underneath many components. Importing Base UI directly and restyling it does **not** reproduce the source component contract.
-- `apps/web` and `apps/cloud` own product text, data, branded shells and app-specific behavior. When Formily, providers, or route behavior differs from a source component API, compose an app-owned adapter that delegates to the source primitive.
-- The upstream application's `web/app/components/base` holds application-level patterns such as Badge, Alert, SearchInput and skeletons that are not exported by upstream `packages/ui`. Review their dependency and CSS footprint before porting a pattern; do not invent a substitute and call it an upstream component.
-- `search-input` is now an example of that port: its behavior and structure come from upstream `web/app/components/base/search-input`, with labels supplied by Tapstate i18n. The local adaptation is implemented in the `packages/ui` component source.
+- Latest application/component research: `21a2081267a217ead3ec847c2d3a2522f3c30c2d`.
+- Shipped component origin: `3552815c89415716dfd9cac80fd7c73aac3b051e`, plus the explicit adaptations in [product contracts](ui/product-contracts.md).
+- `packages/ui/src` preserves the direct component source layout. Public subpaths map directly to their files; there is no package root barrel or nested source wrapper.
+- Base UI owns headless mechanics. The package owns styled primitive anatomy, public types, variants, focus, disabled states and local overlay integration.
+- Applications own translated copy, branded shells, routes, domain data, permissions, Formily and provider/session behavior. App adapters compose package primitives without a separate visual implementation.
 
-## Import and style contract
+Local application-source ports add Alert, Badge, Chip, SearchInput, RadioCard, Skeleton, LoadingPlaceholder, first-use action cards and filtered-empty patterns. Their local public APIs, not a remembered source example, are authoritative. Card/table page composition stays feature-owned; there is no invented generic Table API.
 
-Use named subpaths such as `@tapstate-web/ui/button`, `/field`, `/input`, `/select`, `/dialog`, `/toast`. Each app imports `@tapstate-web/ui/styles.css` after Tailwind and scans `packages/ui/src` with `@source`. Theme values are selected by `html[data-theme='light'|'dark']`. The Cloud theme switch synchronizes this attribute with its existing `.dark` class; Web currently initializes light. Product branding and shell CSS stay app-owned. The component theme is not the shell theme.
+## CSS and themes
 
-The CSS entry is `packages/ui/src/styles/styles.css`; it imports the component styles and theme files under `packages/ui/src/themes`. Source families include `--color-text-*`, `--color-background-*`, `--color-components-*`, `--color-state-*`, `--color-divider-*` and package shadow/text utilities. Copy the token _relationships_ and state selectors; a brand override changes the accent values at the theme boundary. Do not map everything into generic neutral/success/danger aliases and lose component-specific roles.
+Each application imports `@tapstate-web/ui/styles.css` after Tailwind, scans `packages/ui/src`, and registers the shared icon plugin. Resolve the relative paths from the consuming stylesheet:
 
-## Public component catalog
+```css
+@import 'tailwindcss';
+@import '@tapstate-web/ui/styles.css';
+@source '../../../packages/ui/src';
+@plugin '../../../packages/ui/src/plugins/icons.ts';
+```
 
-| Need               | Source subpath                                                                                                             | Compose / review                                                                                                                                                                        |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Actions            | `button`, `icon-button`, `toggle`                                                                                          | `Button` variant `primary`, `secondary`, `secondary-accent`, `tertiary`, `ghost`, `text`; tone `default`/`destructive`; size `small`/`medium`/`large`; loading keeps label and geometry |
-| Fields             | `field`, `fieldset`, `form`, `input`, `input-group`, `textarea`, `number-field`                                            | Native labels, descriptions, errors, required/invalid/disabled state; control owns focus ring                                                                                           |
-| Choices            | `checkbox`, `checkbox-group`, `radio-group`, `switch`, `select`, `combobox`, `autocomplete`, `slider`, `segmented-control` | Use typed value primitives; list popups own keyboard navigation and positioning                                                                                                         |
-| Date/time          | `date-picker`, `time-picker`, `date-time-picker`                                                                           | Use package value/localization contract before adding app parsing                                                                                                                       |
-| Feedback           | `toast`, `progress`, `meter`, `spinner`, `status-dot`                                                                      | Toast supports info/success/warning/error, update/dismiss/promise and a mounted `Toaster`                                                                                               |
-| Floating           | `dialog`, `alert-dialog`, `drawer`, `popover`, `tooltip`, `infotip`, `preview-card`                                        | Match the semantic intent; preserve package portal/focus/dismiss behavior                                                                                                               |
-| Navigation/actions | `dropdown-menu`, `context-menu`, `tabs`, `breadcrumb`, `pagination`, `file-tree`                                           | Menus are actions; selects/comboboxes are values                                                                                                                                        |
-| Content/layout     | `avatar`, `collapsible`, `scroll-area`, `separator`, `kbd`                                                                 | Use semantic tokens and package geometry                                                                                                                                                |
+The package CSS entry imports semantic registration, paired light/dark values, typography utilities, palette/shadow roles and component CSS. Theme values are selected with `html[data-theme]`; synchronize any app-owned theme selector. The icon plugin generates `i-ri-*` glyph utilities used by default component parts. Theme import and source scanning alone do not generate those icons.
 
-The full public export list and exact prop types live in `packages/ui/package.json` and the corresponding `packages/ui/src/<component>/index.tsx` source file. Do not document guessed props in app code. `cn`, `merge-props`, `use-render` and ref helpers have public subpaths for package composition.
+Keep `main.css` as the stylesheet import owner, Tailwind configuration in the app Tailwind entry and feature semantic CSS in its existing layer. Use the app's established `@layer theme, base, components, utilities` arrangement. The latest reference has its own preflight and manual app-gradient layer; do not copy them wholesale over Tapstate's shell or import preflight twice.
 
-## Complete scene routing
+The [complete token catalog](ui/token-catalog.json) records definitions, paired values, references, usage files and local availability. The [foundations](ui/foundations.md) explain semantic choice. A reference-only variable, a neutral brand-evidence alias or a later package prop must not enter a local call site until explicitly ported.
 
-Read DESIGN.md's **Source fidelity is a delivery requirement**, **Surface and token decision table**, and **Scene contracts** before composing a new surface. This catalog routes every current public export to its contract; it does not replace the actual implementation or component README. Review this table against `package.json` whenever exports change.
+## Local public subpaths
 
-| Scene / responsibility                                              | Public subpaths                                                                                               | Contract owner                                                                                  |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Action and shortcut                                                 | `button`, `icon-button`, `toggle`, `kbd`                                                                      | DESIGN.md: Buttons, icon buttons and action groups; each component source                       |
-| Form boundary and label/error association                           | `form`, `field`, `fieldset`                                                                                   | `docs/forms.md`, `docs/accessible-names-and-descriptions.md`                                    |
-| Plain, grouped, multiline and numeric entry                         | `input`, `input-group`, `textarea`, `number-field`                                                            | `packages/ui/src/internal/form-control.ts`; DESIGN.md: Forms and schema-driven controls         |
-| Boolean, exclusive and range choice                                 | `checkbox`, `checkbox-group`, `radio-group`, `radio-card`, `switch`, `slider`, `segmented-control`            | `docs/selection.md`; component and application RadioCard source                                 |
-| Closed/searchable/free-form collection values                       | `select`, `combobox`, `autocomplete`                                                                          | `docs/selection.md`; typed collections, selected labels and popup lifecycle                     |
-| Search and applied filter                                           | `search-input`, `chip`                                                                                        | Ported application source; DESIGN.md: Menus, filters and contextual help                        |
-| Civil date, time and timestamp entry                                | `date-picker`, `time-picker`, `date-time-picker`                                                              | `packages/ui/src/date-time/README.md`; preserve commit/localization semantics                   |
-| Focused and confirming modal work                                   | `dialog`, `alert-dialog`                                                                                      | `docs/overlays.md`; DESIGN.md: Dialogs, drawers and nested surfaces                             |
-| Contextual side work                                                | `drawer`                                                                                                      | `docs/overlays.md`; matching application drawer composition                                     |
-| Command surface                                                     | `dropdown-menu`, `context-menu`                                                                               | `packages/ui/src/internal/menu.ts`, component source and READMEs                                |
-| Nearby interactive explanation / supplementary label / link preview | `popover`, `infotip`, `tooltip`, `preview-card`                                                               | `docs/overlays.md`; preserve distinct interaction intent                                        |
-| Location, panel selection and paging                                | `breadcrumb`, `tabs`, `pagination`                                                                            | Component source; DESIGN.md: Lists, detail pages and navigation                                 |
-| Hierarchy, expansion, scrolling and separation                      | `file-tree`, `collapsible`, `scroll-area`, `separator`                                                        | Component source; preserve keyboard, scroll and expanded state                                  |
-| Identity, metadata and state                                        | `avatar`, `badge`, `status-dot`                                                                               | Source variants; Badge is neutral metadata, StatusDot carries operational status                |
-| Transient/persistent feedback and measured work                     | `toast`, `alert`, `spinner`, `progress`, `meter`                                                              | Source component semantics; DESIGN.md: Empty, loading, error, notification and progress         |
-| Initial load, first use and filtered empty                          | `skeleton`, `loading-placeholder`, `first-empty-action-card`, `filter-empty-state`                            | Matching application composition; retain source SVG/illustration and hierarchy                  |
-| Theme, direction and composition infrastructure                     | `styles.css`, `direction-provider`, `cn`, `merge-props`, `use-render`, `use-merged-refs`, `use-ref-with-init` | Styling/overlay/accessibility guides and helper implementations; no independent visual defaults |
+All 61 local exports are listed below. The latest reference has 52, all also named locally; API/version parity still requires reading the actual files. The matching package guide owns component behavior, while the [component pattern catalog](ui/component-patterns.md) supplies latest-source analysis and caveats.
 
-### Content surfaces versus control surfaces
+| Public subpath                             | Local source                                                                                             | Contract                                                  |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `@tapstate-web/ui/alert`                   | [./src/alert/index.tsx](../../packages/ui/src/alert/index.tsx)                                           | Matching source component and page scene                  |
+| `@tapstate-web/ui/badge`                   | [./src/badge/index.tsx](../../packages/ui/src/badge/index.tsx)                                           | Matching source component and page scene                  |
+| `@tapstate-web/ui/radio-card`              | [./src/radio-card/index.tsx](../../packages/ui/src/radio-card/index.tsx)                                 | Matching source component and page scene                  |
+| `@tapstate-web/ui/filter-empty-state`      | [./src/filter-empty-state/index.tsx](../../packages/ui/src/filter-empty-state/index.tsx)                 | Matching source component and page scene                  |
+| `@tapstate-web/ui/search-input`            | [./src/search-input/index.tsx](../../packages/ui/src/search-input/index.tsx)                             | Matching source component and page scene                  |
+| `@tapstate-web/ui/skeleton`                | [./src/skeleton/index.tsx](../../packages/ui/src/skeleton/index.tsx)                                     | Matching source component and page scene                  |
+| `@tapstate-web/ui/loading-placeholder`     | [./src/loading-placeholder/index.tsx](../../packages/ui/src/loading-placeholder/index.tsx)               | Matching source component and page scene                  |
+| `@tapstate-web/ui/first-empty-action-card` | [./src/first-empty-action-card/index.tsx](../../packages/ui/src/first-empty-action-card/index.tsx)       | Matching source component and page scene                  |
+| `@tapstate-web/ui/styles.css`              | [./src/styles/styles.css](../../packages/ui/src/styles/styles.css)                                       | Theme/composition infrastructure                          |
+| `@tapstate-web/ui/cn`                      | [./src/cn.ts](../../packages/ui/src/cn.ts)                                                               | Theme/composition infrastructure                          |
+| `@tapstate-web/ui/use-merged-refs`         | [./src/use-merged-refs.ts](../../packages/ui/src/use-merged-refs.ts)                                     | Theme/composition infrastructure                          |
+| `@tapstate-web/ui/use-ref-with-init`       | [./src/use-ref-with-init.ts](../../packages/ui/src/use-ref-with-init.ts)                                 | Theme/composition infrastructure                          |
+| `@tapstate-web/ui/use-render`              | [./src/use-render.ts](../../packages/ui/src/use-render.ts)                                               | Theme/composition infrastructure                          |
+| `@tapstate-web/ui/merge-props`             | [./src/merge-props.ts](../../packages/ui/src/merge-props.ts)                                             | Theme/composition infrastructure                          |
+| `@tapstate-web/ui/alert-dialog`            | [./src/alert-dialog/index.tsx](../../packages/ui/src/alert-dialog/index.tsx)                             | Overlay semantic choice, presence, focus and local layers |
+| `@tapstate-web/ui/autocomplete`            | [./src/autocomplete/index.tsx](../../packages/ui/src/autocomplete/index.tsx)                             | Selection, typed values and focus                         |
+| `@tapstate-web/ui/avatar`                  | [./src/avatar/index.tsx](../../packages/ui/src/avatar/index.tsx)                                         | Matching source component and page scene                  |
+| `@tapstate-web/ui/breadcrumb`              | [./src/breadcrumb/index.tsx](../../packages/ui/src/breadcrumb/index.tsx)                                 | Matching source component and page scene                  |
+| `@tapstate-web/ui/button`                  | [./src/button/index.tsx](../../packages/ui/src/button/index.tsx)                                         | Command/link semantics, variants and naming               |
+| `@tapstate-web/ui/icon-button`             | [./src/icon-button/index.tsx](../../packages/ui/src/icon-button/index.tsx)                               | Command/link semantics, variants and naming               |
+| `@tapstate-web/ui/toggle`                  | [./src/toggle/index.tsx](../../packages/ui/src/toggle/index.tsx)                                         | Command/link semantics, variants and naming               |
+| `@tapstate-web/ui/checkbox`                | [./src/checkbox/index.tsx](../../packages/ui/src/checkbox/index.tsx)                                     | Selection, typed values and focus                         |
+| `@tapstate-web/ui/checkbox-group`          | [./src/checkbox-group/index.tsx](../../packages/ui/src/checkbox-group/index.tsx)                         | Selection, typed values and focus                         |
+| `@tapstate-web/ui/chip`                    | [./src/chip/index.tsx](../../packages/ui/src/chip/index.tsx)                                             | Matching source component and page scene                  |
+| `@tapstate-web/ui/combobox`                | [./src/combobox/index.tsx](../../packages/ui/src/combobox/index.tsx)                                     | Selection, typed values and focus                         |
+| `@tapstate-web/ui/collapsible`             | [./src/collapsible/index.tsx](../../packages/ui/src/collapsible/index.tsx)                               | Matching source component and page scene                  |
+| `@tapstate-web/ui/context-menu`            | [./src/context-menu/index.tsx](../../packages/ui/src/context-menu/index.tsx)                             | Overlay semantic choice, presence, focus and local layers |
+| `@tapstate-web/ui/dialog`                  | [./src/dialog/index.tsx](../../packages/ui/src/dialog/index.tsx)                                         | Overlay semantic choice, presence, focus and local layers |
+| `@tapstate-web/ui/date-picker`             | [./src/date-time/date-picker/index.tsx](../../packages/ui/src/date-time/date-picker/index.tsx)           | Civil/time/instant model and commit semantics             |
+| `@tapstate-web/ui/date-time-picker`        | [./src/date-time/date-time-picker/index.tsx](../../packages/ui/src/date-time/date-time-picker/index.tsx) | Civil/time/instant model and commit semantics             |
+| `@tapstate-web/ui/drawer`                  | [./src/drawer/index.tsx](../../packages/ui/src/drawer/index.tsx)                                         | Overlay semantic choice, presence, focus and local layers |
+| `@tapstate-web/ui/dropdown-menu`           | [./src/dropdown-menu/index.tsx](../../packages/ui/src/dropdown-menu/index.tsx)                           | Overlay semantic choice, presence, focus and local layers |
+| `@tapstate-web/ui/field`                   | [./src/field/index.tsx](../../packages/ui/src/field/index.tsx)                                           | Forms, labels, field values and state                     |
+| `@tapstate-web/ui/fieldset`                | [./src/fieldset/index.tsx](../../packages/ui/src/fieldset/index.tsx)                                     | Forms, labels, field values and state                     |
+| `@tapstate-web/ui/file-tree`               | [./src/file-tree/index.tsx](../../packages/ui/src/file-tree/index.tsx)                                   | Matching source component and page scene                  |
+| `@tapstate-web/ui/form`                    | [./src/form/index.tsx](../../packages/ui/src/form/index.tsx)                                             | Forms, labels, field values and state                     |
+| `@tapstate-web/ui/input`                   | [./src/input/index.tsx](../../packages/ui/src/input/index.tsx)                                           | Forms, labels, field values and state                     |
+| `@tapstate-web/ui/input-group`             | [./src/input-group/index.tsx](../../packages/ui/src/input-group/index.tsx)                               | Forms, labels, field values and state                     |
+| `@tapstate-web/ui/kbd`                     | [./src/kbd/index.tsx](../../packages/ui/src/kbd/index.tsx)                                               | Command/link semantics, variants and naming               |
+| `@tapstate-web/ui/meter`                   | [./src/meter/index.tsx](../../packages/ui/src/meter/index.tsx)                                           | Matching source component and page scene                  |
+| `@tapstate-web/ui/progress`                | [./src/progress/index.tsx](../../packages/ui/src/progress/index.tsx)                                     | Matching source component and page scene                  |
+| `@tapstate-web/ui/number-field`            | [./src/number-field/index.tsx](../../packages/ui/src/number-field/index.tsx)                             | Forms, labels, field values and state                     |
+| `@tapstate-web/ui/pagination`              | [./src/pagination/index.tsx](../../packages/ui/src/pagination/index.tsx)                                 | Matching source component and page scene                  |
+| `@tapstate-web/ui/radio-group`             | [./src/radio-group/index.tsx](../../packages/ui/src/radio-group/index.tsx)                               | Selection, typed values and focus                         |
+| `@tapstate-web/ui/popover`                 | [./src/popover/index.tsx](../../packages/ui/src/popover/index.tsx)                                       | Overlay semantic choice, presence, focus and local layers |
+| `@tapstate-web/ui/preview-card`            | [./src/preview-card/index.tsx](../../packages/ui/src/preview-card/index.tsx)                             | Overlay semantic choice, presence, focus and local layers |
+| `@tapstate-web/ui/scroll-area`             | [./src/scroll-area/index.tsx](../../packages/ui/src/scroll-area/index.tsx)                               | Matching source component and page scene                  |
+| `@tapstate-web/ui/select`                  | [./src/select/index.tsx](../../packages/ui/src/select/index.tsx)                                         | Selection, typed values and focus                         |
+| `@tapstate-web/ui/status-dot`              | [./src/status-dot/index.tsx](../../packages/ui/src/status-dot/index.tsx)                                 | Matching source component and page scene                  |
+| `@tapstate-web/ui/slider`                  | [./src/slider/index.tsx](../../packages/ui/src/slider/index.tsx)                                         | Selection, typed values and focus                         |
+| `@tapstate-web/ui/switch`                  | [./src/switch/index.tsx](../../packages/ui/src/switch/index.tsx)                                         | Selection, typed values and focus                         |
+| `@tapstate-web/ui/segmented-control`       | [./src/segmented-control/index.tsx](../../packages/ui/src/segmented-control/index.tsx)                   | Selection, typed values and focus                         |
+| `@tapstate-web/ui/tabs`                    | [./src/tabs/index.tsx](../../packages/ui/src/tabs/index.tsx)                                             | Matching source component and page scene                  |
+| `@tapstate-web/ui/textarea`                | [./src/textarea/index.tsx](../../packages/ui/src/textarea/index.tsx)                                     | Forms, labels, field values and state                     |
+| `@tapstate-web/ui/time-picker`             | [./src/date-time/time-picker/index.tsx](../../packages/ui/src/date-time/time-picker/index.tsx)           | Civil/time/instant model and commit semantics             |
+| `@tapstate-web/ui/toast`                   | [./src/toast/index.tsx](../../packages/ui/src/toast/index.tsx)                                           | Matching source component and page scene                  |
+| `@tapstate-web/ui/tooltip`                 | [./src/tooltip/index.tsx](../../packages/ui/src/tooltip/index.tsx)                                       | Overlay semantic choice, presence, focus and local layers |
+| `@tapstate-web/ui/spinner`                 | [./src/spinner/index.tsx](../../packages/ui/src/spinner/index.tsx)                                       | Matching source component and page scene                  |
+| `@tapstate-web/ui/separator`               | [./src/separator/index.tsx](../../packages/ui/src/separator/index.tsx)                                   | Matching source component and page scene                  |
+| `@tapstate-web/ui/infotip`                 | [./src/infotip/index.tsx](../../packages/ui/src/infotip/index.tsx)                                       | Overlay semantic choice, presence, focus and local layers |
+| `@tapstate-web/ui/direction-provider`      | [./src/direction-provider/index.tsx](../../packages/ui/src/direction-provider/index.tsx)                 | Theme/composition infrastructure                          |
 
-Use `bg-background-section-burn` for Source connection-test results and recessed result/trace/grouped content. The source references and exact pinned light/dark values are in DESIGN.md's surface table. Keep `components-input-bg-normal` and its hover/active/disabled siblings on actual input-family controls. Some source pages deliberately use an input surface for text output; record that specific page mapping instead of treating it as the rule for every result panel.
+## Change procedure
 
-Dialog header/body/footer side padding is 24px from `dialog/index.tsx`. A DialogContent alone does not pad arbitrary children: use DialogBody. Inner result-well padding is a separate measurement; Source check results use 12px from the text-result composition. Do not merge outer and inner spacing into a guessed 32px page default.
+Read the local source, its matching package guide and the closest studied page before changing an API or appearance. Preserve generic value relationships, refs/events, state callbacks and full primitive anatomy. Data attributes and CSS variables own styling state; another React state machine solely for CSS is not a replacement.
 
-IconButton's `md` is 24px and `lg` is 32px; Button's `medium` is 32px. These are different size APIs. The glyph and the hit area are also different measurements. Copy the source call site's icon dimensions instead of applying a blanket SVG rule.
-
-`StatusDot` source defaults are rounded squares. Product status markers retain the existing circular silhouette by passing `className="rounded-full"` at the call site; choose `small` or `medium` to preserve the existing surface's size, and keep the source status color.
-
-## Verified dimensions and states
-
-| Component      | Source-backed dimensions                                                                              | State owner                                                                                                      |
-| -------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Button         | 24/32/36 px heights; 6/8/10 px radius                                                                 | `button/index.tsx`: variant, tone, size, loading, disabled, focus-visible                                        |
-| Select trigger | 24/32/36 px heights; 6/8/10 px radius                                                                 | `select/index.tsx`: placeholder, open, hover, disabled, selected; when values differ from labels, supply `items` |
-| Input          | 8 px radius and component input background/text tokens                                                | `input/index.tsx`: hover, focus, invalid, disabled                                                               |
-| Dialog         | 480 px default width; max viewport minus 32 px; 24 px side padding                                    | `dialog/index.tsx`: portal, focus containment, body scrolling, header/footer                                     |
-| Resource card  | 0.5 px border, 12 px radius, tokenized hover and small shadow in the upstream knowledge-resource grid | Upstream `web/app/components/datasets/list/dataset-card/index.tsx`; page pattern, not package primitive          |
-
-Use the source `docs/styling.md`, `forms.md`, `selection.md`, `overlays.md`, `accessible-names-and-descriptions.md`, and component README files as detailed behavior contracts. State styling should use Base UI data attributes and CSS variables. The call site must not mirror primitive state in React merely to style it.
-
-## Migration and deviation review
-
-For each app screen, record: current control/overlay imports, direct source replacement, state matrix, desktop/mobile screenshot, light/dark result, and shell comparison. A direct import is preferred. An adapter is allowed for Tapstate data, i18n, router or Formily binding; it cannot own independent geometry, color, shadows, focus or overlay layering. If the package lacks an upstream application-level pattern, cite the upstream `web/app/components/base` source and list every dependency before deciding whether to port it. Any necessary Tapstate-specific visual deviation goes into a named theme override or a documented local component contract, with source and reason.
-
-Current status: **the package source tree matches the original component layout, and apps use direct subpaths or app-owned behavior adapters**. Page-level visual and interaction reviews remain in progress. Earlier `@tapstate-web/ui` token tables and UI Kit examples are legacy work and are not evidence of source fidelity.
-
-## Provenance correction: shared content controls
-
-The initial UI Kit displayed a locally styled flat Alert while the upstream app uses `web/app/components/base/alert.tsx` with a blue gradient. The flat implementation and its public export have been removed. The UI Kit now renders the source application Alert directly. `AlertDialog` is a separate confirmation primitive, and Toast is the transient notification primitive.
-
-Tapstate-only page compositions such as panels, selectable cards, action rows, and empty states stay in application code. Shared package exports map directly to the component source tree. The UI Kit uses the application-level source `RadioCard` and `FilterEmptyState` from `@tapstate-web/ui`. Its surrounding sections are page composition, not component exports. For new pages, select the source empty-state pattern for the actual state: filtered results, first use, and loading have different source implementations. A UI Kit example alone is not acceptance evidence for a business page.
-
-The application-level Badge now comes from upstream `web/app/components/base/badge.tsx` through `@tapstate-web/ui/badge`; its actual variants are `default` and `dimm`. Colored success/warning states in the UI Kit use `StatusDot` with text instead of fabricated Badge tones.
-
-The upstream document list has no generic Table component: `web/app/components/datasets/documents/components/list.tsx` renders a semantic table, while `style.module.css` supplies cell spacing and `document-table-row.tsx` supplies row hover/navigation. Tapstate Views and the UI Kit now use this page pattern directly. Do not recreate a second table API merely to mimic the markup; review table composition in each resource page.
+Document any new component export in the scene routing and source mapping. Run `pnpm ui:docs:check`, focused typecheck/lint and the owning workstream's required behavior/render checks. [Page acceptance](ui-page-audit.md) and [interaction acceptance](ui-interaction-audit.md) remain separate from import coverage.

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "ui:docs:check": "node tools/check-ui-docs.mjs",
     "dev": "pnpm --filter web dev",
     "build": "pnpm --filter web build",
     "preview": "pnpm --filter web preview",
