@@ -507,7 +507,7 @@ function PipelineWorkspaceNav({
                 </div>
                 {hasArtifact ? (
                   <PipelineStatusBadge status={status} />
-                ) : (
+                ) : status === 'DRAFT' ? (
                   <span
                     className="text-text-tertiary inline-flex items-center text-[10px] leading-3 font-medium uppercase"
                     data-testid="pipeline-status"
@@ -515,7 +515,7 @@ function PipelineWorkspaceNav({
                   >
                     {t('wizard.draft')}
                   </span>
-                )}
+                ) : null}
               </div>
             )}
             <Button
@@ -764,11 +764,7 @@ function PipelineOrchestrationPage({
   }
   const serverDocument = pipelineDraft.data?.mode === 'dag' ? pipelineDraft.data.document : null
   const isReadOnly =
-    isPipelineReadOnly(runtimeStatus) ||
-    Boolean(
-      serverDocument?.hasPublishedRevision &&
-      (runtimeObservationPending || runtimeObservationError),
-    )
+    isPipelineReadOnly(runtimeStatus) || runtimeObservationPending || runtimeObservationError
 
   const sources = useQuery({
     queryKey: ['sources'],
@@ -1806,7 +1802,7 @@ export function PipelineWorkspacePage({
     projectedStatus === 'NEW' || projectedStatus === 'UNAVAILABLE' ? undefined : projectedStatus
   const runtimeStatus = hasArtifact ? lifecycleStatus : undefined
   const runtimeObservationError =
-    hasArtifact && (mergedStatus.isError || (mergedStatus.isSuccess && !lifecycleStatus))
+    mergedStatus.isError || (mergedStatus.isSuccess && !lifecycleStatus)
   const basicInfo = useMemo<PipelineDraftBasicInfo>(() => {
     const draft = pipelineDraft.data?.draft
     if (draft) {
@@ -1907,7 +1903,7 @@ export function PipelineWorkspacePage({
     pipelineDraft.isSuccess &&
     (pipelineDraft.data !== null || pipelineInfo.isSuccess) &&
     !isPipelineReadOnly(runtimeStatus) &&
-    !(hasArtifact && (mergedStatus.isPending || runtimeObservationError)) &&
+    !(mergedStatus.isPending || runtimeObservationError) &&
     (section !== 'orchestrate' || basicInfoSaverReady)
 
   return (
@@ -1931,7 +1927,7 @@ export function PipelineWorkspacePage({
           pipelineId={pipelineId}
           runtimeStatus={runtimeStatus}
           lifecycleStatus={lifecycleStatus}
-          runtimeObservationPending={hasArtifact && mergedStatus.isPending}
+          runtimeObservationPending={mergedStatus.isPending}
           runtimeObservationError={runtimeObservationError}
           onRetryRuntimeObservation={() => {
             void mergedStatus.refetch()

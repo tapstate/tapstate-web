@@ -1209,6 +1209,25 @@ describe('PipelineEditorPage', () => {
     expect(elementWithText('button', 'Run')).toBeUndefined()
   })
 
+  it('guards a hashless draft when authoritative lifecycle cannot be read', async () => {
+    getPipelineDraft.mockResolvedValue({
+      draft: {
+        ...draftAfterStartChange,
+        baseArtifactHash: null,
+        publishedArtifactHash: null,
+        publishedDraftRevision: null,
+      },
+      etag: '"4"',
+    })
+    getPipelineStatus.mockRejectedValue(new Error('status unavailable'))
+    await renderPage()
+    await vi.waitFor(() =>
+      expect(container?.textContent).toContain('Could not confirm runtime status.'),
+    )
+    expect(elementWithText('button', 'Run')).toBeUndefined()
+    expect(document.querySelector('[data-testid="pipeline-status"]')).toBeNull()
+  })
+
   it('shows the backend not-started projection without inventing a runtime observation', async () => {
     getPipelineStatus.mockResolvedValue({
       pipelineId: 'orders_to_warehouse',
