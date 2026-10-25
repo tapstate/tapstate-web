@@ -3,6 +3,8 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import type { StartCheckReport } from '@/service/pipelines/pipeline-client'
+
 import fixture from './__fixtures__/client-fixture-v1.json'
 import { useStartPipeline } from './use-start-pipeline'
 
@@ -25,7 +27,7 @@ afterEach(async () => {
   container?.remove()
   vi.resetAllMocks()
 })
-async function blockedStart(report = fixture.unknownBehavior) {
+async function blockedStart(report: StartCheckReport = fixture.unknownBehavior) {
   container = document.createElement('div')
   document.body.append(container)
   root = createRoot(container)
