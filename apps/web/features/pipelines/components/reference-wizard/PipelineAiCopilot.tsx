@@ -1,17 +1,17 @@
 import { useChat } from '@ai-sdk/react'
+import { Button as SharedUIButton } from '@tapstate-web/ui/button'
 import { DefaultChatTransport, type UIMessage } from 'ai'
 import {
   CheckCircle2,
   ChevronRight,
   Loader2,
   RotateCcw,
-  Send,
   Settings2,
   Sparkles,
-  Square,
   X,
 } from 'lucide-react'
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 
 import type { PipelineJsonObject } from '@/service/pipelines/pipeline-client'
@@ -26,6 +26,7 @@ import {
 } from '@/service/pipelines/pipeline-assistant-client'
 import { useAuthStore } from '@/stores/auth-store'
 
+import { AssistantComposer } from './AssistantComposer'
 import { AssistantProviderForm } from './AssistantProviderForm'
 
 const AssistantMarkdown = lazy(() => import('./AssistantMarkdown'))
@@ -84,6 +85,13 @@ export function PipelineAiCopilot({
   const apiFetch = useAuthStore((s) => s.apiFetch)
   const latest = useRef({ context, focus })
   latest.current = { context, focus }
+  const assistantPanelRef = useRef<HTMLElement>(null)
+  const [assistantActionHost, setAssistantActionHost] = useState<HTMLElement | null>(null)
+  useEffect(() => {
+    const builder = assistantPanelRef.current?.closest('.wizard-reference')
+    const host = builder?.querySelector('[data-assistant-apply-action-slot]')
+    if (host instanceof HTMLElement) setAssistantActionHost(host)
+  }, [])
   const [tab, setTab] = useState<'chat' | 'diff' | 'settings'>('chat')
   const [input, setInput] = useState('')
   const [proposal, setProposal] = useState<AssistantProposal | null>(null)
@@ -110,12 +118,6 @@ export function PipelineAiCopilot({
   const generation = useRef(0)
   const requestRevision = useRef<number | null>(null)
   const composerInput = useRef<HTMLTextAreaElement>(null)
-  useEffect(() => {
-    const field = composerInput.current
-    if (!field) return
-    field.style.height = 'auto'
-    field.style.height = `${Math.min(field.scrollHeight, 158)}px`
-  }, [input, tab])
   useEffect(() => {
     if (tab === 'chat' && promptRequest && !promptRequest.submit) composerInput.current?.focus()
   }, [tab, promptRequest])
@@ -201,6 +203,15 @@ export function PipelineAiCopilot({
     },
     [chat.stop],
   )
+  function stop() {
+    generation.current += 1
+    sendingRef.current = false
+    setPreparing(false)
+    setSending(false)
+    setComplete(false)
+    setCanceled(true)
+    void chat.stop()
+  }
   function send(text: string): boolean {
     const prompt = text.trim()
     const currentContext = latest.current.context
@@ -338,6 +349,7 @@ export function PipelineAiCopilot({
       latest.current.context.onApply(validated.candidateWizard)
       setApplied(true)
       setUndoError(false)
+      if (assistantActionHost) setTab('chat')
     } catch (error) {
       setReviewError(
         error instanceof AssistantClientError
@@ -349,6 +361,62 @@ export function PipelineAiCopilot({
       setApplying(false)
     }
   }
+  function rejectOrUndo() {
+    if (applied) {
+      if (latest.current.context.onUndoApply?.()) {
+        setProposal(null)
+        setComplete(false)
+        setApplied(false)
+        setUndoError(false)
+        setTab('chat')
+      } else {
+        setUndoError(true)
+      }
+      return
+    }
+    generation.current += 1
+    setProposal(null)
+    setComplete(false)
+    setTab('chat')
+  }
+  const proposalActions =
+    proposal && complete ? (
+      <div
+        className="flex items-center gap-2"
+        role="group"
+        aria-label={t('wizard.assistant.diffTitle')}
+      >
+        <SharedUIButton
+          variant={applied ? 'secondary' : 'secondary-accent'}
+          size="medium"
+          loading={applying}
+          type="button"
+          onClick={() => void apply()}
+          disabled={blocked || stale || applied}
+          focusableWhenDisabled={applied}
+          className="shrink-0"
+        >
+          {applied ? (
+            <CheckCircle2 className="h-3.5 w-3.5" />
+          ) : (
+            <Sparkles className="h-3.5 w-3.5" />
+          )}
+          {t(applied ? 'wizard.assistant.applied' : 'wizard.assistant.apply')}
+        </SharedUIButton>
+        <SharedUIButton
+          variant="secondary"
+          type="button"
+          disabled={applying || (applied && context.undoBlocked)}
+          onClick={rejectOrUndo}
+        >
+          {t(applied ? 'wizard.assistant.undoApply' : 'wizard.assistant.reject')}
+        </SharedUIButton>
+      </div>
+    ) : null
+  const externalProposalActions =
+    assistantActionHost && proposalActions
+      ? createPortal(proposalActions, assistantActionHost)
+      : null
   const suggestions = ['assemble', 'relations', 'clean', 'metrics', 'diagnose'] as const
   const visibleMessages = chat.messages.filter(
     (message) =>
@@ -357,9 +425,11 @@ export function PipelineAiCopilot({
   )
   return (
     <aside
+      ref={assistantPanelRef}
       className="pipeline-ai-copilot flex h-full min-h-0 min-w-0 flex-col bg-white"
       aria-label={t('wizard.assistant.title')}
     >
+      {externalProposalActions}
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-gray-200 bg-gray-50/70 px-4">
         <div className="flex min-w-0 items-center gap-2">
           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-blue-600 text-white">
@@ -546,50 +616,7 @@ export function PipelineAiCopilot({
                     <p className="text-[11px] leading-relaxed text-gray-500">
                       {t('wizard.assistant.reviewHint')}
                     </p>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="primary"
-                        loading={applying}
-                        type="button"
-                        onClick={() => void apply()}
-                        disabled={blocked || stale || applied}
-                        className="flex-1"
-                      >
-                        {applying ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : applied ? (
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                        ) : (
-                          <Sparkles className="h-3.5 w-3.5" />
-                        )}
-                        {t(applied ? 'wizard.assistant.applied' : 'wizard.assistant.apply')}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        type="button"
-                        disabled={applying || (applied && context.undoBlocked)}
-                        onClick={() => {
-                          if (applied) {
-                            if (latest.current.context.onUndoApply?.()) {
-                              setProposal(null)
-                              setComplete(false)
-                              setApplied(false)
-                              setUndoError(false)
-                              setTab('chat')
-                            } else {
-                              setUndoError(true)
-                            }
-                            return
-                          }
-                          generation.current += 1
-                          setProposal(null)
-                          setComplete(false)
-                          setTab('chat')
-                        }}
-                      >
-                        {t(applied ? 'wizard.assistant.undoApply' : 'wizard.assistant.reject')}
-                      </Button>
-                    </div>
+                    {!assistantActionHost && proposalActions}
                     {undoError && (
                       <p role="status" className="text-[11px] text-amber-700">
                         {t('wizard.assistant.undoStale')}
@@ -665,71 +692,31 @@ export function PipelineAiCopilot({
                 {t('wizard.assistant.waitForSave')}
               </p>
             )}
-            {preparing && (
-              <p role="status" className="mb-2 flex items-center gap-2 text-[11px] text-gray-600">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                {t('wizard.assistant.savingDraft')}
-              </p>
-            )}
             {prepareError && (
               <p role="alert" className="mb-2 text-[11px] leading-relaxed text-red-700">
                 {t('wizard.assistant.saveBeforeSendFailed')}
               </p>
             )}
-            <div className="pipeline-ai-composer">
-              <textarea
-                ref={composerInput}
-                aria-label={t('wizard.assistant.prompt')}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                    e.preventDefault()
-                    send(input)
-                  }
-                }}
-                placeholder={t('wizard.assistant.placeholder')}
-                rows={1}
-                className="pipeline-ai-composer-input"
-              />
-              <div className="pipeline-ai-composer-actions">
-                <span>{t('wizard.assistant.newline')}</span>
-                {streaming ? (
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      generation.current += 1
-                      sendingRef.current = false
-                      setPreparing(false)
-                      setSending(false)
-                      setComplete(false)
-                      setCanceled(true)
-                      void chat.stop()
-                    }}
-                    aria-label={t('wizard.assistant.stop')}
-                    title={t('wizard.assistant.stop')}
-                    variant="secondary"
-                    size="medium"
-                    className="w-8 shrink-0 px-0"
-                  >
-                    <Square className="h-4 w-4" />
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    disabled={!input.trim() || sendBlocked}
-                    onClick={() => send(input)}
-                    aria-label={t('wizard.assistant.send')}
-                    title={t('wizard.assistant.send')}
-                    variant="primary"
-                    size="medium"
-                    className="w-8 shrink-0 px-0"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </div>
+            <AssistantComposer
+              inputRef={composerInput}
+              value={input}
+              onValueChange={setInput}
+              onSend={() => send(input)}
+              onStop={stop}
+              label={t('wizard.assistant.prompt')}
+              placeholder={t('wizard.assistant.placeholder')}
+              sendLabel={t('wizard.assistant.send')}
+              stopLabel={t('wizard.assistant.stop')}
+              disabled={sendBlocked}
+              state={
+                preparing || sending || streaming
+                  ? preparing || !responseHasText
+                    ? 'waiting'
+                    : 'streaming'
+                  : 'idle'
+              }
+              hint={t('wizard.assistant.newline')}
+            />
           </div>
         </>
       )}

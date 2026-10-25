@@ -1,17 +1,18 @@
 import type { Field as FormilyFieldState } from '@formily/core'
 
 import { connect, mapProps } from '@formily/react'
+import { isValidElement, type ComponentType, type ReactNode } from 'react'
+
+import { Field } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
 import {
-  Field,
-  Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Textarea,
-} from '@tapstate-web/ui'
-import { isValidElement, type ComponentType, type ReactNode } from 'react'
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 
 type FormilyFieldProps = {
   value?: string | number

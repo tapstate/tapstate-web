@@ -1,3 +1,11 @@
+import { IconButton as SharedUIIconButton } from '@tapstate-web/ui/icon-button'
+import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverTitle,
+  PopoverTrigger,
+} from '@tapstate-web/ui/popover'
 import {
   Database,
   Table2,
@@ -22,7 +30,6 @@ import { useTranslation } from 'react-i18next'
 import type { PipelinePreviewRun } from '@/service/pipelines/pipeline-client'
 
 import { ConnectorIcon } from '@/components/connector-icon'
-import { Button } from '@/components/ui/button'
 
 import './wizard-reference.css'
 import { Input } from '@/components/ui/input'
@@ -38,6 +45,7 @@ import { cn } from '@/lib/utils'
 import type { DeploymentProfile } from '../../model/deployment-profile'
 
 import { UnwindTargetIdentitySummary } from '../unwind-target-identity-summary'
+import { AssistantComposer } from './AssistantComposer'
 import { PipelineAiCopilot, type BuilderAssistantContext } from './PipelineAiCopilot'
 import { matchRelationFields, type RelationFieldTable } from './relation-field-matching'
 import { FieldAutocomplete, SearchablePicker } from './searchable-picker'
@@ -153,6 +161,74 @@ export interface WizardViewState {
   destinationWriteMode: string
 }
 
+function expandNewAssistantTransforms(
+  next: WizardViewState,
+  previous: WizardViewState,
+): WizardViewState {
+  const expandSteps = (steps: TransformStep[] = [], prior: TransformStep[] = []) => {
+    const priorById = new Map(prior.map((step) => [step.id, step]))
+    return steps.map((step) => {
+      const previousStep = priorById.get(step.id)
+      return { ...step, isExpanded: previousStep ? previousStep.isExpanded : true }
+    })
+  }
+  const expandRelations = (relations: RelationNode[], prior: RelationNode[]): RelationNode[] => {
+    const priorById = new Map(prior.map((relation) => [relation.id, relation]))
+    return relations.map((relation) => {
+      const previousRelation = priorById.get(relation.id)
+      const transforms = expandSteps(relation.transforms, previousRelation?.transforms)
+      const hasNewTransform = transforms.some(
+        (step) => !previousRelation?.transforms?.some((oldStep) => oldStep.id === step.id),
+      )
+      return {
+        ...relation,
+        transforms,
+        isPreProcessOpen: hasNewTransform
+          ? true
+          : (previousRelation?.isPreProcessOpen ?? relation.isPreProcessOpen),
+        children: expandRelations(relation.children || [], previousRelation?.children || []),
+      }
+    })
+  }
+
+  const rootTransforms = expandSteps(next.root?.transforms, previous.root?.transforms)
+  const hasNewRootTransform = rootTransforms.some(
+    (step) => !previous.root?.transforms?.some((oldStep) => oldStep.id === step.id),
+  )
+  return {
+    ...next,
+    root: next.root
+      ? {
+          ...next.root,
+          transforms: rootTransforms,
+          isTransformsOpen: hasNewRootTransform
+            ? true
+            : (previous.root?.isTransformsOpen ?? next.root.isTransformsOpen),
+        }
+      : null,
+    relations: expandRelations(next.relations, previous.relations),
+    transforms: expandSteps(next.transforms, previous.transforms),
+  }
+}
+
+function assistantTransformIds(state: WizardViewState): string[] {
+  const ids = (state.root?.transforms || []).map((step) => step.id)
+  const visit = (relations: RelationNode[]) => {
+    for (const relation of relations) {
+      ids.push(...(relation.transforms || []).map((step) => step.id))
+      visit(relation.children || [])
+    }
+  }
+  visit(state.relations)
+  ids.push(...state.transforms.map((step) => step.id))
+  return ids
+}
+
+function firstNewAssistantTransformId(next: WizardViewState, previous: WizardViewState) {
+  const previousIds = new Set(assistantTransformIds(previous))
+  return assistantTransformIds(next).find((id) => !previousIds.has(id)) ?? null
+}
+
 function ReadOnlyFieldset({
   disabled,
   label,
@@ -232,14 +308,12 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     text: string
     submit?: boolean
   } | null>(null)
+  const [assistantHelperDraft, setAssistantHelperDraft] = React.useState<{
+    focus: string
+    intent: string
+    text: string
+  } | null>(null)
   const [rootPrompt, setRootPrompt] = React.useState('')
-  const rootPromptInput = React.useRef<HTMLTextAreaElement>(null)
-  React.useEffect(() => {
-    const field = rootPromptInput.current
-    if (!field) return
-    field.style.height = 'auto'
-    field.style.height = `${Math.min(field.scrollHeight, 158)}px`
-  }, [rootPrompt])
   const rootPromptRequestId = React.useRef<number | null>(null)
   const assistantPromptSequence = React.useRef(0)
   const [activeContext, setActiveContext] = React.useState('root')
@@ -383,6 +457,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     previous: WizardViewState
     appliedFingerprint: string
   } | null>(null)
+  const pendingAssistantRevealId = React.useRef<string | null>(null)
   React.useEffect(() => {
     const fingerprint = JSON.stringify(viewState)
     if (lastView.current !== fingerprint) {
@@ -390,25 +465,45 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       onChangeRef.current(viewState)
     }
   }, [viewState])
+  React.useEffect(() => {
+    const id = pendingAssistantRevealId.current
+    if (!id) return
+    const builder = document.querySelector('.wizard-reference')
+    const target = Array.from(
+      builder?.querySelectorAll<HTMLElement>('[data-transform-id]') || [],
+    ).find((element) => element.dataset.transformId === id)
+    if (!target) return
+    pendingAssistantRevealId.current = null
+    target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
+  }, [rootConfig, relations, pipelineTransforms])
 
-  function askAssistant(focus: string, intent: string) {
-    setActiveContext(focus)
+  function assistantScope(focus: string) {
+    if (focus === 'root') return rootConfig?.table || t('wizard.assistant.inputTableFocus')
+    if (focus === 'doc_process') return t('wizard.assistant.documentFocus')
+    if (focus === 'relations') return t('wizard.assistant.relationsFocus')
+    return flattenRelations(relations).find((relation) => relation.id === focus)?.table || focus
+  }
+  function sendAssistantHelper() {
+    const draft = assistantHelperDraft
+    const text = draft?.text.trim()
+    if (
+      !draft ||
+      !text ||
+      readOnly ||
+      assistant?.blocked ||
+      (assistant?.sendBlocked ?? assistant?.blocked) ||
+      assistantPrompt?.submit
+    )
+      return
+    setActiveContext(draft.focus)
     setAssistantOpen(true)
     setRightPanelTab('copilot')
-    const target =
-      focus === 'root'
-        ? rootConfig?.table
-        : focus === 'doc_process'
-          ? t('wizard.assistant.documentFocus')
-          : flattenRelations(relations).find((relation) => relation.id === focus)?.table
-    setAssistantPrompt({
-      id: ++assistantPromptSequence.current,
-      text: `${t(`wizard.assistant.prompts.${intent}`)}${target ? `\n${t('wizard.assistant.focus')} ${target}` : ''}`,
-    })
+    setAssistantPrompt({ id: ++assistantPromptSequence.current, text, submit: true })
+    setAssistantHelperDraft(null)
   }
-  function submitRootPrompt(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    event.stopPropagation()
+  function submitRootPrompt(event?: React.FormEvent<HTMLFormElement>) {
+    event?.preventDefault()
+    event?.stopPropagation()
     const text = rootPrompt.trim()
     if (!text || readOnly || !assistant || assistantPrompt?.submit) return
     const id = ++assistantPromptSequence.current
@@ -430,10 +525,12 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   ) {
     if (readOnly || unconfirmedRootEdit || assistant?.blocked) return
     const previous = currentView.current
-    const next = readWizard(
+    const decoded = readWizard(
       writeWizard(candidate as unknown as WizardViewState, null, '', deploymentProfile),
       AVAILABLE_DATA_SOURCES,
     )
+    const next = expandNewAssistantTransforms(decoded, previous)
+    pendingAssistantRevealId.current = firstNewAssistantTransformId(next, previous)
     assistantUndo.current = { previous, appliedFingerprint: JSON.stringify(next) }
     setRootConfig(next.root)
     setRelations(next.relations)
@@ -475,20 +572,83 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   }
   const assistantHelper = (focus: string, intent: string) =>
     assistant && !readOnly ? (
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        aria-label={t(`wizard.assistant.helpers.${intent}`)}
-        title={t(`wizard.assistant.helpers.${intent}`)}
-        onClick={(event) => {
-          event.stopPropagation()
-          askAssistant(focus, intent)
+      <Popover
+        open={assistantHelperDraft?.focus === focus && assistantHelperDraft?.intent === intent}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAssistantHelperDraft(null)
+            return
+          }
+          setAssistantHelperDraft({
+            focus,
+            intent,
+            text: '',
+          })
         }}
-        className="text-text-accent hover:bg-state-accent-hover"
       >
-        <Sparkles className="h-4 w-4" />
-      </Button>
+        <PopoverTrigger
+          render={
+            <SharedUIIconButton
+              type="button"
+              variant="ghost-accent"
+              size="md"
+              aria-label={t(`wizard.assistant.helpers.${intent}`)}
+              title={t(`wizard.assistant.helpers.${intent}`)}
+              onClick={(event) => event.stopPropagation()}
+              className="data-popup-open:bg-state-accent-active"
+            >
+              <Sparkles className="h-4 w-4" aria-hidden="true" />
+            </SharedUIIconButton>
+          }
+        />
+        <PopoverContent
+          className="pipeline-ai-helper-popover w-72 max-w-[calc(100vw-2rem)] p-4"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="space-y-3">
+            <div>
+              <PopoverTitle className="system-sm-semibold text-text-primary">
+                {t(`wizard.assistant.intents.${intent}`)}
+              </PopoverTitle>
+              <PopoverDescription className="system-xs-regular text-text-tertiary mt-1 flex min-w-0 items-baseline gap-1">
+                {t('wizard.assistant.helperPopover.scope')}{' '}
+                <span className="system-xs-medium text-text-secondary truncate font-mono">
+                  {assistantScope(focus)}
+                </span>
+              </PopoverDescription>
+            </div>
+            <div className="space-y-1">
+              <label
+                htmlFor={`assistant-helper-${focus}-${intent}`}
+                className="system-xs-medium text-text-secondary block"
+              >
+                {t('wizard.assistant.helperPopover.prompt')}
+              </label>
+              <AssistantComposer
+                id={`assistant-helper-${focus}-${intent}`}
+                autoFocus
+                value={
+                  assistantHelperDraft?.focus === focus && assistantHelperDraft?.intent === intent
+                    ? assistantHelperDraft.text
+                    : ''
+                }
+                onValueChange={(text) =>
+                  setAssistantHelperDraft((current) =>
+                    current?.focus === focus && current.intent === intent
+                      ? { ...current, text }
+                      : current,
+                  )
+                }
+                onSend={sendAssistantHelper}
+                label={t('wizard.assistant.helperPopover.prompt')}
+                placeholder={t(`wizard.assistant.helperPopover.placeholders.${intent}`)}
+                sendLabel={t('wizard.assistant.helperPopover.send')}
+                disabled={assistant.blocked || (assistant.sendBlocked ?? assistant.blocked)}
+              />
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
     ) : null
 
   // Inline Add Relation workflow state
@@ -528,19 +688,13 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   const flattenRelations = (nodes: RelationNode[]): RelationNode[] =>
     nodes.flatMap((r) => [r, ...flattenRelations(r.children || [])])
   const availableUnionInputs = React.useMemo(() => {
-    const selectedSources = new Set([
-      ...(rootConfig ? [rootConfig.source] : []),
-      ...flattenRelations(relations).map((relation) => relation.source),
-    ])
-    return AVAILABLE_DATA_SOURCES.filter(
-      (source) => !source.sink && selectedSources.has(source.id),
-    ).flatMap((source) =>
+    return AVAILABLE_DATA_SOURCES.filter((source) => !source.sink).flatMap((source) =>
       source.tables.map((table) => ({
         reference: `${source.id}.${table.name}`,
         label: `${source.name} · ${table.name}`,
       })),
     )
-  }, [AVAILABLE_DATA_SOURCES, rootConfig, relations])
+  }, [AVAILABLE_DATA_SOURCES])
   const unionInputsFor = (
     sourceNameOrId: string,
     tableName: string,
@@ -2392,48 +2546,23 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                             >
                               {t('wizard.assistant.rootPromptLabel')}
                             </label>
-                            <div className="pipeline-ai-composer">
-                              <textarea
-                                ref={rootPromptInput}
-                                id="pipeline-root-assistant-prompt"
-                                aria-label={t('wizard.assistant.rootPromptLabel')}
-                                value={rootPrompt}
-                                onChange={(event) => setRootPrompt(event.target.value)}
-                                onKeyDown={(event) => {
-                                  if (
-                                    event.key === 'Enter' &&
-                                    !event.shiftKey &&
-                                    !event.nativeEvent.isComposing
-                                  ) {
-                                    event.preventDefault()
-                                    event.currentTarget.form?.requestSubmit()
-                                  }
-                                }}
-                                placeholder={t('wizard.assistant.rootPromptPlaceholder')}
-                                rows={1}
-                                maxLength={4000}
-                                className="pipeline-ai-composer-input"
-                              />
-                              <div className="pipeline-ai-composer-actions">
-                                <span className="system-xs-regular text-text-tertiary">
-                                  {t('wizard.assistant.newline')}
-                                </span>
-                                <Button
-                                  type="submit"
-                                  size="medium"
-                                  loading={Boolean(assistantPrompt?.submit)}
-                                  aria-label={t('wizard.assistant.send')}
-                                  title={t('wizard.assistant.send')}
-                                  disabled={!rootPrompt.trim() || Boolean(assistantPrompt?.submit)}
-                                  className="w-8 shrink-0 px-0"
-                                >
-                                  <span
-                                    className="i-ri-send-plane-2-fill size-4"
-                                    aria-hidden="true"
-                                  />
-                                </Button>
-                              </div>
-                            </div>
+                            <AssistantComposer
+                              id="pipeline-root-assistant-prompt"
+                              value={rootPrompt}
+                              onValueChange={setRootPrompt}
+                              onSend={() => submitRootPrompt()}
+                              onStop={() => {
+                                setAssistantPrompt(null)
+                                rootPromptRequestId.current = null
+                              }}
+                              label={t('wizard.assistant.rootPromptLabel')}
+                              placeholder={t('wizard.assistant.rootPromptPlaceholder')}
+                              sendLabel={t('wizard.assistant.send')}
+                              stopLabel={t('wizard.assistant.stop')}
+                              state={assistantPrompt?.submit ? 'waiting' : 'idle'}
+                              hint={t('wizard.assistant.newline')}
+                              maxLength={4000}
+                            />
                             {assistantPrompt?.submit && (
                               <p role="status" className="text-muted-foreground text-[11px]">
                                 {t('wizard.assistant.queuedRootPrompt')}

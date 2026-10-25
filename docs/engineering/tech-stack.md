@@ -5,20 +5,20 @@
 
 ## Selected stack
 
-| Area                 | Choice                          | Contract                                                                       |
-| -------------------- | ------------------------------- | ------------------------------------------------------------------------------ |
-| Runtime              | React 19                        | Shared application runtime                                                     |
-| Routing              | TanStack Router File Routes     | Route source lives in each app's `app/routes/`; Vite generates the route tree  |
-| Build                | Vite 8                          | Development, production build, and preview                                     |
-| Workspace            | pnpm                            | `apps/*` and `packages/*` are workspace members                                |
-| Shared UI            | `@langgenius/dify-ui` + Base UI | Vendored component source in `packages/dify-ui`; `packages/ui` is transitional |
-| Styling              | Tailwind CSS v4                 | CSS-first theme tokens; app shell styles stay app-owned                        |
-| Motion               | Motion                          | Use for product-level motion when CSS state transitions are not sufficient     |
-| Icons                | lucide-react                    | Avoid one-off complex SVGs                                                     |
-| Server state         | TanStack Query                  | API list/detail/create state                                                   |
-| Client state         | Zustand                         | Session and cross-route UI state                                               |
-| Internationalization | i18next + react-i18next         | `en`, `zh-CN`, and `zh-TW`                                                     |
-| Lint / format        | Oxlint / OXC formatter          | Root scripts cover the repository and workspace apps                           |
+| Area                 | Choice                       | Contract                                                                      |
+| -------------------- | ---------------------------- | ----------------------------------------------------------------------------- |
+| Runtime              | React 19                     | Shared application runtime                                                    |
+| Routing              | TanStack Router File Routes  | Route source lives in each app's `app/routes/`; Vite generates the route tree |
+| Build                | Vite 8                       | Development, production build, and preview                                    |
+| Workspace            | pnpm                         | `apps/*` and `packages/*` are workspace members                               |
+| Shared UI            | `@tapstate-web/ui` + Base UI | Public subpaths map directly to `packages/ui/src` source files                |
+| Styling              | Tailwind CSS v4              | CSS-first theme tokens; app shell styles stay app-owned                       |
+| Motion               | Motion                       | Use for product-level motion when CSS state transitions are not sufficient    |
+| Icons                | lucide-react                 | Avoid one-off complex SVGs                                                    |
+| Server state         | TanStack Query               | API list/detail/create state                                                  |
+| Client state         | Zustand                      | Session and cross-route UI state                                              |
+| Internationalization | i18next + react-i18next      | `en`, `zh-CN`, and `zh-TW`                                                    |
+| Lint / format        | Oxlint / OXC formatter       | Root scripts cover the repository and workspace apps                          |
 
 ## Internationalization
 
@@ -32,16 +32,16 @@
 ## Styling and package boundaries
 
 - `apps/*/app/styles/main.css` imports the app's Tailwind and application styles.
-- Each app imports `@langgenius/dify-ui/styles.css` once and scans
-  `packages/dify-ui/src` for Tailwind utilities.
-- `packages/dify-ui` owns reusable control geometry, visual states, content
-  tokens and overlays. `packages/ui` is a migration compatibility layer.
+- Each app imports `@tapstate-web/ui/styles.css` once and scans
+  `packages/ui/src` for Tailwind utilities.
+- `packages/ui` owns reusable control geometry, visual states, content
+  tokens and overlays. App-specific behavior adapters stay in the applications.
   App shells, navigation, branding and feature-specific canvas visuals remain
   Tapstate-owned.
 - Web shell selectors are `.app-shell` and `.app-shell__main`.
 - Cloud shell selectors are `.app-shell` and `.main-surface`.
 - Preserve the Web and Cloud shell styles and their existing theme selection.
-- New visual roles start from the vendored semantic token hierarchy and require
+- New visual roles start from the source semantic token hierarchy and require
   a documented theme or source change, not a parallel palette.
 - Feature code composes shared components. Do not recreate buttons, fields,
   menus, notifications, or modal primitives in feature CSS.
@@ -60,6 +60,7 @@
 ## Verification commands
 
 ```sh
+pnpm ui:docs:check
 pnpm format:check
 pnpm lint:code
 pnpm typecheck

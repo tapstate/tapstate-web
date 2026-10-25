@@ -1,1 +1,1 @@
-export { default as Badge } from '@langgenius/dify-ui/badge'
+export { default as Badge } from '@tapstate-web/ui/badge'

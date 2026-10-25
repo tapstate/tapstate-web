@@ -20,9 +20,6 @@ importers:
 
   apps/cloud:
     dependencies:
-      '@langgenius/dify-ui':
-        specifier: workspace:*
-        version: link:../../packages/dify-ui
       '@tanstack/react-router':
         specifier: ^1.170.18
         version: 1.170.18(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -93,9 +90,6 @@ importers:
       '@formily/react':
         specifier: ^2.3.2
         version: 2.3.7(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react-is@19.2.8)(react@19.2.8)(typescript@6.0.3)
-      '@langgenius/dify-ui':
-        specifier: workspace:*
-        version: link:../../packages/dify-ui
       '@potop/formily-antd-v6':
         specifier: ^2.0.2
         version: 2.0.2(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(antd@6.6.1(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react-is@19.2.8)(react@19.2.8)(typescript@6.0.3)
@@ -203,7 +197,44 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.0.1)(@vitest/browser-preview@4.1.10)(jsdom@29.1.1)(vite@8.1.0(@types/node@26.0.1)(jiti@2.7.0)(terser@5.49.0)(yaml@2.9.0))
 
-  packages/dify-ui:
+  packages/formily:
+    dependencies:
+      '@formily/core':
+        specifier: ^2.3.2
+        version: 2.3.7
+      '@formily/json-schema':
+        specifier: ^2.3.2
+        version: 2.3.7(typescript@6.0.3)
+      '@formily/react':
+        specifier: ^2.3.2
+        version: 2.3.7(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react-is@19.2.8)(react@19.2.8)(typescript@6.0.3)
+      react:
+        specifier: ^19.2.8
+        version: 19.2.8
+      react-is:
+        specifier: ^19.2.8
+        version: 19.2.8
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.17
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.17)
+      jsdom:
+        specifier: ^29.1.1
+        version: 29.1.1
+      react-dom:
+        specifier: ^19.2.8
+        version: 19.2.8(react@19.2.8)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@26.0.1)(@vitest/browser-preview@4.1.10)(jsdom@29.1.1)(vite@8.1.0(@types/node@26.0.1)(jiti@2.7.0)(terser@5.49.0)(yaml@2.9.0))
+
+  packages/ui:
     dependencies:
       '@base-ui/react':
         specifier: 1.9.0
@@ -248,77 +279,6 @@ importers:
       '@iconify-json/ri':
         specifier: 1.2.10
         version: 1.2.10
-      '@types/react':
-        specifier: ^19.2.17
-        version: 19.2.17
-      '@types/react-dom':
-        specifier: ^19.2.3
-        version: 19.2.3(@types/react@19.2.17)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/formily:
-    dependencies:
-      '@formily/core':
-        specifier: ^2.3.2
-        version: 2.3.7
-      '@formily/json-schema':
-        specifier: ^2.3.2
-        version: 2.3.7(typescript@6.0.3)
-      '@formily/react':
-        specifier: ^2.3.2
-        version: 2.3.7(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react-is@19.2.8)(react@19.2.8)(typescript@6.0.3)
-      react:
-        specifier: ^19.2.8
-        version: 19.2.8
-      react-is:
-        specifier: ^19.2.8
-        version: 19.2.8
-    devDependencies:
-      '@types/react':
-        specifier: ^19.2.17
-        version: 19.2.17
-      '@types/react-dom':
-        specifier: ^19.2.3
-        version: 19.2.3(@types/react@19.2.17)
-      jsdom:
-        specifier: ^29.1.1
-        version: 29.1.1
-      react-dom:
-        specifier: ^19.2.8
-        version: 19.2.8(react@19.2.8)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.1.10
-        version: 4.1.10(@types/node@26.0.1)(@vitest/browser-preview@4.1.10)(jsdom@29.1.1)(vite@8.1.0(@types/node@26.0.1)(jiti@2.7.0)(terser@5.49.0)(yaml@2.9.0))
-
-  packages/ui:
-    dependencies:
-      '@base-ui/react':
-        specifier: ^1.6.0
-        version: 1.6.0(@date-fns/tz@1.5.0)(@types/react@19.2.17)(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      '@langgenius/dify-ui':
-        specifier: workspace:*
-        version: link:../dify-ui
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      lucide-react:
-        specifier: ^1.26.0
-        version: 1.26.0(react@19.2.8)
-      react:
-        specifier: ^19.2.8
-        version: 19.2.8
-      react-dom:
-        specifier: ^19.2.8
-        version: 19.2.8(react@19.2.8)
-      tailwind-merge:
-        specifier: ^3.4.0
-        version: 3.6.0
-    devDependencies:
       '@types/react':
         specifier: ^19.2.17
         version: 19.2.17
@@ -3027,9 +2987,6 @@ packages:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
     engines: {node: '>=0.10.0'}
 
-  reselect@5.2.0:
-    resolution: {integrity: sha512-AgZ3UOZm3YndfrJ4OYjgrT7bmCm/1iqkjvEfH/oYjzh6PD2qw4QuT3jjnXIrpdt4MTpMXclMT3lXbmRY+XRakw==}
-
   reselect@5.3.0:
     resolution: {integrity: sha512-XGoLeRAVzUTcJ1qkxPQhDJyIZ5d6zzZD9nT7AEZOaaU9UbWclhycElmhO+VD5bFeLuzhPBaOV2oXC8uG35ZSpg==}
 
@@ -3753,8 +3710,8 @@ snapshots:
       '@floating-ui/utils': 0.2.12
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
-      reselect: 5.2.0
-      use-sync-external-store: 1.6.0(react@19.2.8)
+      reselect: 5.3.0
+      use-sync-external-store: 1.7.0(react@19.2.8)
     optionalDependencies:
       '@types/react': 19.2.17
 
@@ -4711,14 +4668,14 @@ snapshots:
       '@tanstack/store': 0.11.2
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
-      use-sync-external-store: 1.6.0(react@19.2.8)
+      use-sync-external-store: 1.7.0(react@19.2.8)
 
   '@tanstack/react-store@0.9.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
       '@tanstack/store': 0.9.3
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
-      use-sync-external-store: 1.6.0(react@19.2.8)
+      use-sync-external-store: 1.7.0(react@19.2.8)
 
   '@tanstack/react-virtual@3.14.13(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
@@ -6328,8 +6285,6 @@ snapshots:
   remend@1.4.0: {}
 
   require-from-string@2.0.2: {}
-
-  reselect@5.2.0: {}
 
   reselect@5.3.0: {}
 

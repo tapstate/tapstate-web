@@ -1,6 +1,7 @@
 import { createForm } from '@formily/core'
 import { Field as FormilyField, FormProvider } from '@formily/react'
-import SourceAlert from '@langgenius/dify-ui/alert'
+import { createLazyFileRoute } from '@tanstack/react-router'
+import SourceAlert from '@tapstate-web/ui/alert'
 import {
   AlertDialog as SourceAlertDialog,
   AlertDialogCancelButton as SourceAlertDialogCancelButton,
@@ -11,9 +12,10 @@ import {
   AlertDialogHeader as SourceAlertDialogHeader,
   AlertDialogTitle as SourceAlertDialogTitle,
   AlertDialogTrigger as SourceAlertDialogTrigger,
-} from '@langgenius/dify-ui/alert-dialog'
-import SourceBadge from '@langgenius/dify-ui/badge'
-import { Button as SourceButton } from '@langgenius/dify-ui/button'
+} from '@tapstate-web/ui/alert-dialog'
+import SourceBadge from '@tapstate-web/ui/badge'
+import { Button as SourceButton } from '@tapstate-web/ui/button'
+import { Checkbox } from '@tapstate-web/ui/checkbox'
 import {
   Drawer as SourceDrawer,
   DrawerBackdrop as SourceDrawerBackdrop,
@@ -25,55 +27,18 @@ import {
   DrawerTitle as SourceDrawerTitle,
   DrawerTrigger as SourceDrawerTrigger,
   DrawerViewport as SourceDrawerViewport,
-} from '@langgenius/dify-ui/drawer'
-import FilterEmptyState from '@langgenius/dify-ui/filter-empty-state'
-import { Input as SourceInput } from '@langgenius/dify-ui/input'
-import SourceRadioCard from '@langgenius/dify-ui/radio-card'
-import { RadioGroup as SourceRadioGroup } from '@langgenius/dify-ui/radio-group'
-import { SearchInput as SourceSearchInput } from '@langgenius/dify-ui/search-input'
-import { StatusDot } from '@langgenius/dify-ui/status-dot'
-import { createLazyFileRoute } from '@tanstack/react-router'
+} from '@tapstate-web/ui/drawer'
 import {
-  Button,
-  Checkbox,
-  Dialog,
-  DialogBody,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  Field,
-  IconButton,
-  Input,
-  InputAddon,
-  InputGroup,
-  InputGroupInput,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Skeleton,
-  Switch,
-  Textarea,
-  ToastProvider,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-  useToast,
-} from '@tapstate-web/ui'
+  Fieldset as SourceFieldset,
+  FieldsetLegend as SourceFieldsetLegend,
+} from '@tapstate-web/ui/fieldset'
+import FilterEmptyState from '@tapstate-web/ui/filter-empty-state'
+import { Input as SourceInput } from '@tapstate-web/ui/input'
+import SourceRadioCard from '@tapstate-web/ui/radio-card'
+import { RadioGroup as SourceRadioGroup } from '@tapstate-web/ui/radio-group'
+import { SearchInput as SourceSearchInput } from '@tapstate-web/ui/search-input'
+import { StatusDot } from '@tapstate-web/ui/status-dot'
+import { Switch } from '@tapstate-web/ui/switch'
 import { Plus, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -83,6 +48,39 @@ import {
   FormilyInput,
   FormilySelect,
 } from '@/components/formily/formily-ui-adapters'
+import { Button, IconButton } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogBody,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Field } from '@/components/ui/field'
+import { Input, InputAddon, InputGroup, InputGroupInput } from '@/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
+import { ToastProvider, useToast } from '@/components/ui/toast'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 export const Route = createLazyFileRoute('/ui-kit')({
   component: UiKitPage,
@@ -158,7 +156,7 @@ function UiKitPageContent({
   }
 
   return (
-    <div className="bg-ui-bg-canvas text-ui-text-primary min-h-screen">
+    <div className="bg-background-body text-text-primary min-h-screen">
       <section
         className="bg-background-body text-text-primary px-6 py-5"
         aria-label="Source components"
@@ -203,14 +201,14 @@ function UiKitPageContent({
           />
         </div>
       </section>
-      <header className="border-ui-border-default bg-ui-bg-surface border-b">
+      <header className="border-divider-subtle bg-components-panel-bg border-b">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4">
           <div>
             <h1 className="text-xl font-semibold tracking-tight">{t('uiKit.title')}</h1>
-            <p className="text-ui-text-tertiary mt-1 text-sm">{t('uiKit.subtitle')}</p>
+            <p className="text-text-tertiary mt-1 text-sm">{t('uiKit.subtitle')}</p>
           </div>
           <div className="flex flex-wrap items-center gap-4">
-            <div className="text-ui-text-secondary flex items-center gap-2 text-sm">
+            <div className="text-text-secondary flex items-center gap-2 text-sm">
               <span>{t('uiKit.language')}</span>
               <Select
                 value={locale}
@@ -226,7 +224,7 @@ function UiKitPageContent({
                 </SelectContent>
               </Select>
             </div>
-            <div className="text-ui-text-secondary flex items-center gap-2 text-sm">
+            <div className="text-text-secondary flex items-center gap-2 text-sm">
               <Switch
                 aria-label={t('uiKit.darkMode')}
                 checked={darkMode}
@@ -317,12 +315,10 @@ function UiKitPageContent({
                 rows={3}
               />
             </Field>
-            <div className="border-ui-border-subtle space-y-3 border-t pt-4 sm:col-span-2">
+            <div className="border-divider-regular space-y-3 border-t pt-4 sm:col-span-2">
               <div>
                 <h3 className="text-sm font-semibold">{t('uiKit.schema.title')}</h3>
-                <p className="text-ui-text-tertiary mt-1 text-sm">
-                  {t('uiKit.schema.description')}
-                </p>
+                <p className="text-text-tertiary mt-1 text-sm">{t('uiKit.schema.description')}</p>
               </div>
               <UiKitFormilyFixture key={i18n.resolvedLanguage} />
             </div>
@@ -353,8 +349,8 @@ function UiKitPageContent({
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="ui-field">
-                <span className="ui-field-label">{t('uiKit.selection.radio')}</span>
+              <SourceFieldset>
+                <SourceFieldsetLegend>{t('uiKit.selection.radio')}</SourceFieldsetLegend>
                 <SourceRadioGroup
                   aria-label={t('uiKit.selection.radio')}
                   onValueChange={(value) => setRadioValue(String(value))}
@@ -384,7 +380,7 @@ function UiKitPageContent({
                     description={t('uiKit.selection.radioDescription')}
                   />
                 </SourceRadioGroup>
-              </div>
+              </SourceFieldset>
               <Field id="ui-kit-select" label={t('uiKit.selection.selectOption')}>
                 <Select value={region} onValueChange={(value) => setRegion(String(value))}>
                   <SelectTrigger>
@@ -540,9 +536,7 @@ function UiKitPageContent({
           <div className="space-y-4">
             <section className="border-components-panel-border bg-components-panel-bg space-y-1 rounded-xl border p-3">
               <h3 className="text-sm font-semibold">{t('uiKit.surfaces.panelTitle')}</h3>
-              <p className="text-ui-text-tertiary text-sm">
-                {t('uiKit.surfaces.panelDescription')}
-              </p>
+              <p className="text-text-tertiary text-sm">{t('uiKit.surfaces.panelDescription')}</p>
             </section>
             <div className="grid gap-4 sm:grid-cols-2">
               <section className="border-components-panel-border bg-components-panel-bg relative min-h-60 overflow-hidden rounded-xl border p-0">
@@ -621,7 +615,7 @@ function UiKitPageContent({
               </PopoverTrigger>
               <PopoverContent className="w-72 p-4">
                 <h3 className="text-sm font-semibold">{t('uiKit.overlays.popoverTitle')}</h3>
-                <p className="text-ui-text-tertiary mt-1 text-sm">
+                <p className="text-text-tertiary mt-1 text-sm">
                   {t('uiKit.overlays.popoverDescription')}
                 </p>
               </PopoverContent>

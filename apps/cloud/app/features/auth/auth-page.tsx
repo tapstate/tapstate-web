@@ -1,8 +1,8 @@
-import { Button } from '@langgenius/dify-ui/button'
-import { Field as DifyField, FieldDescription, FieldLabel } from '@langgenius/dify-ui/field'
-import { IconButton } from '@langgenius/dify-ui/icon-button'
-import { Input } from '@langgenius/dify-ui/input'
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@langgenius/dify-ui/input-group'
+import { Button } from '@tapstate-web/ui/button'
+import { Field as SharedUIField, FieldDescription, FieldLabel } from '@tapstate-web/ui/field'
+import { IconButton } from '@tapstate-web/ui/icon-button'
+import { Input } from '@tapstate-web/ui/input'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@tapstate-web/ui/input-group'
 import { AlertCircle, Eye, EyeOff, Moon, RefreshCw, ShieldCheck, Sun } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -728,9 +728,9 @@ function AuthField({
   label: string
 }) {
   return (
-    <DifyField name={name}>
+    <SharedUIField name={name}>
       <FieldLabel>{label}</FieldLabel>
       {children}
-    </DifyField>
+    </SharedUIField>
   )
 }

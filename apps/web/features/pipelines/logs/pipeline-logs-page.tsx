@@ -1,4 +1,4 @@
-import Chip, { type Item as ChipItem } from '@langgenius/dify-ui/chip'
+import Chip, { type Item as ChipItem } from '@tapstate-web/ui/chip'
 import {
   Drawer,
   DrawerBackdrop,
@@ -7,9 +7,9 @@ import {
   DrawerPortal,
   DrawerTrigger,
   DrawerViewport,
-} from '@langgenius/dify-ui/drawer'
-import { SearchInput } from '@langgenius/dify-ui/search-input'
-import { Spinner } from '@langgenius/dify-ui/spinner'
+} from '@tapstate-web/ui/drawer'
+import { SearchInput } from '@tapstate-web/ui/search-input'
+import { Spinner } from '@tapstate-web/ui/spinner'
 import { ArrowDown, ArrowUp } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'

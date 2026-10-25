@@ -1,5 +1,5 @@
-import { Button } from '@langgenius/dify-ui/button'
-import { Spinner } from '@langgenius/dify-ui/spinner'
+import { Button } from '@tapstate-web/ui/button'
+import { Spinner } from '@tapstate-web/ui/spinner'
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 

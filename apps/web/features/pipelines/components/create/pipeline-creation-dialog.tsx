@@ -1,19 +1,19 @@
-import { Button } from '@langgenius/dify-ui/button'
+import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
+import { Button } from '@tapstate-web/ui/button'
 import {
   Dialog,
   DialogBackdrop,
   DialogPopup,
   DialogPortal,
   DialogTitle,
-} from '@langgenius/dify-ui/dialog'
-import { Field, FieldDescription } from '@langgenius/dify-ui/field'
-import { Fieldset, FieldsetLegend } from '@langgenius/dify-ui/fieldset'
-import { Input } from '@langgenius/dify-ui/input'
-import { Kbd, KbdGroup } from '@langgenius/dify-ui/kbd'
-import { Separator } from '@langgenius/dify-ui/separator'
-import { Textarea } from '@langgenius/dify-ui/textarea'
-import { useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
+} from '@tapstate-web/ui/dialog'
+import { Field, FieldDescription } from '@tapstate-web/ui/field'
+import { Fieldset, FieldsetLegend } from '@tapstate-web/ui/fieldset'
+import { Input } from '@tapstate-web/ui/input'
+import { Kbd, KbdGroup } from '@tapstate-web/ui/kbd'
+import { Separator } from '@tapstate-web/ui/separator'
+import { Textarea } from '@tapstate-web/ui/textarea'
 import { useEffect, useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 

@@ -1,1 +1,1 @@
-export { Checkbox } from '@tapstate-web/ui'
+export { Checkbox } from '@tapstate-web/ui/checkbox'

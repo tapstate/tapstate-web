@@ -1,4 +1,4 @@
-import { StatusDot } from '@langgenius/dify-ui/status-dot'
+import { StatusDot } from '@tapstate-web/ui/status-dot'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 

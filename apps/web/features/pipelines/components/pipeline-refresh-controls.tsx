@@ -1,5 +1,5 @@
-import { Button } from '@langgenius/dify-ui/button'
-import { IconButton } from '@langgenius/dify-ui/icon-button'
+import { Button } from '@tapstate-web/ui/button'
+import { IconButton } from '@tapstate-web/ui/icon-button'
 import { Pause, Play, RefreshCw } from 'lucide-react'
 
 import { cn } from '@/lib/utils'

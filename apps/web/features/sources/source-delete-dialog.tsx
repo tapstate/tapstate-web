@@ -8,7 +8,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@langgenius/dify-ui/alert-dialog'
+} from '@tapstate-web/ui/alert-dialog'
 import { LoaderCircle } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'

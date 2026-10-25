@@ -1697,6 +1697,18 @@
         "relations": "AI 關聯子表",
         "metrics": "AI 產生 CEL 衍生指標"
       },
+      "helperPopover": {
+        "scope": "目前作用範圍：",
+        "prompt": "描述你的需求",
+        "placeholders": {
+          "clean": "描述篩選條件或欄位變更…",
+          "relations": "說明要關聯的資料表和關聯欄位…",
+          "metrics": "描述要計算的指標…"
+        },
+        "send": "詢問 AI"
+      },
+      "inputTableFocus": "輸入資料表",
+      "relationsFocus": "關聯資料表",
       "intents": {
         "assemble": "使用可用資料表組裝管線",
         "relations": "推導父子表關聯",

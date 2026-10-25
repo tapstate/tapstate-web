@@ -1,7 +1,7 @@
 import type { MouseEvent, ReactNode } from 'react'
 
-import { Button } from '@langgenius/dify-ui/button'
 import { Link } from '@tanstack/react-router'
+import { Button } from '@tapstate-web/ui/button'
 import { useReactFlow } from '@xyflow/react'
 import { useTranslation } from 'react-i18next'
 
@@ -158,6 +158,7 @@ export function PipelineWorkflowHeader({
       role="toolbar"
       aria-label={t('pipelines.workspace.actions.toolbar')}
     >
+      <div data-assistant-apply-action-slot className="flex items-center gap-2 empty:hidden" />
       {!isReadOnly && (
         <Button
           type="button"

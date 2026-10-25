@@ -1697,6 +1697,18 @@
         "relations": "AI 智能关联子表",
         "metrics": "AI 生成 CEL 衍生指标"
       },
+      "helperPopover": {
+        "scope": "当前作用范围：",
+        "prompt": "描述你的需求",
+        "placeholders": {
+          "clean": "描述过滤条件或字段变更…",
+          "relations": "说明要关联的表和关联字段…",
+          "metrics": "描述要计算的指标…"
+        },
+        "send": "询问 AI"
+      },
+      "inputTableFocus": "输入表",
+      "relationsFocus": "关联表",
       "intents": {
         "assemble": "使用可用表装配流水线",
         "relations": "推导主子表关联关系",

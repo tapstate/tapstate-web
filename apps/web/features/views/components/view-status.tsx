@@ -1,5 +1,5 @@
-import { StatusDot } from '@langgenius/dify-ui/status-dot'
 import { Link } from '@tanstack/react-router'
+import { StatusDot } from '@tapstate-web/ui/status-dot'
 import { Database } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 

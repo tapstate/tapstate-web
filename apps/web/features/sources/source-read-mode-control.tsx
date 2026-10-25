@@ -1,4 +1,4 @@
-import { SegmentedControl, SegmentedControlItem } from '@langgenius/dify-ui/segmented-control'
+import { SegmentedControl, SegmentedControlItem } from '@tapstate-web/ui/segmented-control'
 
 interface SourceReadModeControlProps {
   ariaLabel: string

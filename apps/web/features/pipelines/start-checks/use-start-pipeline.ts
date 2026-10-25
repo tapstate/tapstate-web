@@ -1,9 +1,9 @@
-import { useOptionalToast } from '@tapstate-web/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { ApiFetcher } from '@/service/source-client'
 
+import { useOptionalToast } from '@/components/ui/toast'
 import {
   getStartChecks,
   runPipeline,

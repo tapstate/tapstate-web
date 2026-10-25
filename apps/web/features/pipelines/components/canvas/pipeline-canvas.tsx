@@ -1,6 +1,5 @@
 import '@xyflow/react/dist/style.css'
-import { TooltipProvider } from '@langgenius/dify-ui/tooltip'
-import { useOptionalToast } from '@tapstate-web/ui'
+import { TooltipProvider } from '@tapstate-web/ui/tooltip'
 import {
   addEdge,
   applyEdgeChanges,
@@ -24,6 +23,8 @@ import { useTranslation } from 'react-i18next'
 
 import type { PipelineDag, PipelineLayout } from '@/service/pipelines/pipeline-client'
 import type { ConnectorSummary, SourceView } from '@/service/source-client'
+
+import { useOptionalToast } from '@/components/ui/toast'
 
 import type { PipelineNodeConfiguration } from '../../model/pipeline-node-model'
 import type { PipelineTableLoader } from '../node-config/pipeline-data-node-schema'

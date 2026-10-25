@@ -1,7 +1,8 @@
-import { Button } from '@tapstate-web/ui'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it } from 'vitest'
+
+import { Button } from '@/components/ui/button'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 

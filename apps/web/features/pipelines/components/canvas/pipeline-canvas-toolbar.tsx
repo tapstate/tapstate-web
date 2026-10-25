@@ -1,8 +1,8 @@
 import type { MouseEvent } from 'react'
 
-import { IconButton } from '@langgenius/dify-ui/icon-button'
-import { Separator } from '@langgenius/dify-ui/separator'
-import { Toggle } from '@langgenius/dify-ui/toggle'
+import { IconButton } from '@tapstate-web/ui/icon-button'
+import { Separator } from '@tapstate-web/ui/separator'
+import { Toggle } from '@tapstate-web/ui/toggle'
 import { useReactFlow } from '@xyflow/react'
 import { useTranslation } from 'react-i18next'
 

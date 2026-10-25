@@ -1,7 +1,7 @@
-import FilterEmptyState from '@langgenius/dify-ui/filter-empty-state'
-import { Spinner } from '@langgenius/dify-ui/spinner'
-import { StatusDot, type StatusDotStatus } from '@langgenius/dify-ui/status-dot'
 import { useQueryClient } from '@tanstack/react-query'
+import FilterEmptyState from '@tapstate-web/ui/filter-empty-state'
+import { Spinner } from '@tapstate-web/ui/spinner'
+import { StatusDot, type StatusDotStatus } from '@tapstate-web/ui/status-dot'
 import { useTranslation } from 'react-i18next'
 
 import { PipelineClientError, type PipelineCatalogState } from '@/service/pipelines/pipeline-client'

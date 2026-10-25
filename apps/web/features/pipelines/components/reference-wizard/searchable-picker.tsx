@@ -12,7 +12,7 @@ import {
   AutocompletePortal,
   AutocompletePositioner,
   AutocompleteTrigger,
-} from '@langgenius/dify-ui/autocomplete'
+} from '@tapstate-web/ui/autocomplete'
 import {
   Combobox,
   ComboboxEmpty,
@@ -26,7 +26,7 @@ import {
   ComboboxPortal,
   ComboboxPositioner,
   createComboboxItems,
-} from '@langgenius/dify-ui/combobox'
+} from '@tapstate-web/ui/combobox'
 import { useMemo } from 'react'
 
 import { cn } from '@/lib/utils'

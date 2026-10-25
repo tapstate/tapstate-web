@@ -1697,6 +1697,18 @@
         "relations": "AI infer relationships",
         "metrics": "AI generate CEL metrics"
       },
+      "helperPopover": {
+        "scope": "Scope:",
+        "prompt": "Your request",
+        "placeholders": {
+          "clean": "Describe a filter or field change…",
+          "relations": "Name the related tables and join fields…",
+          "metrics": "Describe the metric to calculate…"
+        },
+        "send": "Ask AI"
+      },
+      "inputTableFocus": "Input table",
+      "relationsFocus": "Related tables",
       "intents": {
         "assemble": "Assemble a pipeline from available tables",
         "relations": "Infer parent and child relationships",

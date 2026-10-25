@@ -23,7 +23,8 @@ tapstate-web/
 │   └── engineering/
 │   │   ├── DESIGN.md                      UI 视觉与组件规范
 │   │   ├── design-system.md               共享 token 与组件契约
-│   │   └── tech-stack.md                  技术栈登记 + 未决雷达
+│   │   ├── tech-stack.md                  技术栈登记 + 未决雷达
+│   │   └── ui/                            完整页面/组件/token 研究与执行手册
 ├── AGENTS.md                          Codex / agent 项目规则
 ├── CLAUDE.md                          Claude Code 项目入口
 ├── .agents/                           Codex repo-scoped skills
@@ -39,7 +40,7 @@ tapstate-web/
 │       ├── stores/                        Zustand stores
 │       ├── styles/                        main.css / tailwind.css / app.css
 │       └── utils/
-├── packages/                          vendored 组件源与迁移兼容包
+├── packages/                          shared component and form packages
 ├── .vscode/                           i18n Ally 配置（Cursor 预览国际化）
 ├── tsconfig.base.json                 strict + noImplicitAny
 └── pnpm-workspace.yaml
@@ -108,8 +109,10 @@ pnpm lint         # oxlint diagnostics + repo-wide format check
 ### 样式基线
 
 - 产品内 UI 规范见 `docs/engineering/DESIGN.md`，共享变量和组件 API 见 `docs/engineering/design-system.md`。
-- Web 和 Cloud 的目标组件源是 vendored `@langgenius/dify-ui`；`@tapstate-web/ui` 暂作迁移兼容层。Base UI 承担底层交互。
-- `apps/web/styles/main.css` 和 `apps/cloud/app/styles/main.css` 汇总各自样式入口；组件样式和内容 token 以 `packages/dify-ui` 为准。
+- Web 和 Cloud 直接使用 `@tapstate-web/ui/<component>` 公共子路径；包内 `src/` 保持组件源目录结构。Base UI 承担底层交互；应用适配器只处理 Formily、i18n 和路由等应用行为。
+- `apps/web/styles/main.css` 和 `apps/cloud/app/styles/main.css` 汇总各自样式入口；组件样式和内容 token 以 `packages/ui` 为准。
 - Tailwind CSS v4 使用 CSS-first token，并显式声明 `@layer theme, base, components, utilities;`。
 - `.app-shell`、`.app-shell__main`、Cloud `.main-surface` 及其主题行为由各应用维护，UI 组件不得重设外层布局和表面。
 - Select / Dropdown / Menu 使用共享 primitive，不在业务页使用原生 `<select>` 或手写 floating dropdown。
+
+UI 规范、组件导出或研究目录变更运行 `pnpm ui:docs:check`。完整源码研究通过 `docs/engineering/ui/README.md` 按任务加载，静态覆盖不能代替页面渲染与交互验收。

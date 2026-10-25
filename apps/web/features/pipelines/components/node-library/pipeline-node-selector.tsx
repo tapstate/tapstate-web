@@ -5,9 +5,9 @@ import {
   PopoverPortal,
   PopoverPositioner,
   PopoverTitle,
-} from '@langgenius/dify-ui/popover'
-import { SearchInput } from '@langgenius/dify-ui/search-input'
-import { Tabs, TabsIndicator, TabsList, TabsPanel, TabsTab } from '@langgenius/dify-ui/tabs'
+} from '@tapstate-web/ui/popover'
+import { SearchInput } from '@tapstate-web/ui/search-input'
+import { Tabs, TabsIndicator, TabsList, TabsPanel, TabsTab } from '@tapstate-web/ui/tabs'
 import {
   ArrowDownToLine,
   Boxes,

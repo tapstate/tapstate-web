@@ -1,5 +1,5 @@
-import { Button as DifyButton } from '@langgenius/dify-ui/button'
 import { useQueryClient } from '@tanstack/react-query'
+import { Button as SharedUIButton } from '@tapstate-web/ui/button'
 import { Copy, LoaderCircle, MoreHorizontal, Pencil, Play, Square, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -222,7 +222,7 @@ export function PipelineLifecycleMenu({
   return (
     <>
       {presentation === 'stop-button' ? (
-        <DifyButton
+        <SharedUIButton
           type="button"
           variant="ghost"
           tone="destructive"
@@ -238,7 +238,7 @@ export function PipelineLifecycleMenu({
             <Square className="size-3.5" fill="currentColor" aria-hidden="true" />
           )}
           {pending ? t('pipelines.lifecycle.stopping') : t('pipelines.lifecycle.stop')}
-        </DifyButton>
+        </SharedUIButton>
       ) : (
         <div className="pipeline-list__lifecycle-menu">
           <div className="pipeline-list__actions-default pointer-events-auto flex items-center justify-end opacity-100 transition-opacity duration-200 group-focus-within:pointer-events-none group-focus-within:opacity-0 group-hover:pointer-events-none group-hover:opacity-0">

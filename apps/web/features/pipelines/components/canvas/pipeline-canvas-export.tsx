@@ -6,8 +6,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@langgenius/dify-ui/dropdown-menu'
-import { IconButton } from '@langgenius/dify-ui/icon-button'
+} from '@tapstate-web/ui/dropdown-menu'
+import { IconButton } from '@tapstate-web/ui/icon-button'
 import { getNodesBounds, useReactFlow } from '@xyflow/react'
 import { toJpeg, toPng, toSvg } from 'html-to-image'
 import { useState } from 'react'

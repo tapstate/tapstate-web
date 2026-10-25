@@ -7,7 +7,7 @@ import {
   AlertDialogFooter as SourceAlertDialogFooter,
   AlertDialogHeader as SourceAlertDialogHeader,
   AlertDialogTitle as SourceAlertDialogTitle,
-} from '@langgenius/dify-ui/alert-dialog'
+} from '@tapstate-web/ui/alert-dialog'
 
 /**
  * A dialog that interrupts an action and asks for an explicit answer. It shares the Dialog surface,

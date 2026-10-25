@@ -1,4 +1,4 @@
-import { cn } from '@langgenius/dify-ui/cn'
+import { cn } from '@tapstate-web/ui/cn'
 import { useTranslation } from 'react-i18next'
 
 import type { PipelineCreationModeDefinition } from './pipeline-creation-mode'

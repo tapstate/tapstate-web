@@ -1,6 +1,7 @@
 /* Shared assistant anatomy: compact controls, flexible transcript, one composer. */
 .pipeline-ai-copilot,
-.pipeline-ai-inline {
+.pipeline-ai-inline,
+.pipeline-ai-helper-popover {
   --ai-input-radius: 12px;
   --ai-compose-padding: 9px;
 }
@@ -66,38 +67,63 @@
   cursor: not-allowed;
 }
 .pipeline-ai-composer {
+  position: relative;
   overflow: hidden;
   border: 1px solid var(--color-components-chat-input-border);
   border-radius: var(--ai-input-radius);
-  padding: var(--ai-compose-padding);
+  padding: var(--ai-compose-padding) var(--ai-compose-padding) 44px;
   background: var(--color-components-panel-bg-blur);
   box-shadow: var(--shadow-md);
 }
 .pipeline-ai-composer:focus-within {
   border-color: var(--color-components-input-border-active);
 }
-.pipeline-ai-composer-input {
+.pipeline-ai-composer .pipeline-ai-composer-input {
   display: block;
   width: 100%;
-  min-height: 32px;
+  min-height: 24px;
   max-height: 158px;
   resize: none;
   border: 0;
-  padding: 4px;
+  padding: 2px 4px;
   background: transparent;
   color: var(--color-text-primary);
   font: inherit;
   font-size: 14px;
-  line-height: 24px;
+  line-height: 20px;
   outline: none;
+  box-shadow: none;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  border-radius: 0;
 }
 .pipeline-ai-composer-input::placeholder {
   color: var(--color-text-placeholder);
 }
+.pipeline-ai-composer .pipeline-ai-composer-send {
+  position: absolute;
+  inset-inline-end: var(--ai-compose-padding);
+  inset-block-end: var(--ai-compose-padding);
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  border-radius: 50%;
+  transition:
+    background-color 120ms,
+    transform 120ms;
+}
+.pipeline-ai-composer .pipeline-ai-composer-send:active {
+  transform: scale(0.94);
+}
 .pipeline-ai-composer-actions {
+  position: absolute;
+  inset-inline-start: 13px;
+  inset-inline-end: 49px;
+  inset-block-end: var(--ai-compose-padding);
+  min-height: 32px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   font-size: 11px;
   color: var(--color-text-tertiary);

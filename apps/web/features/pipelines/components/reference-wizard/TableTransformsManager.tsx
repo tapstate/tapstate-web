@@ -306,19 +306,21 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
           </div>
 
           <div className="grid grid-cols-1 gap-2 md:grid-cols-5">
-            {WIZARD_ADDABLE_TRANSFORM_TYPES.filter(
-              (type) => type !== 'union' || availableUnionInputs.length > 0,
-            ).map((type) => {
+            {WIZARD_ADDABLE_TRANSFORM_TYPES.map((type) => {
               const meta = TRANSFORM_TYPE_META[type]
               const IconComp = meta.icon
+              const unionUnavailable = type === 'union' && availableUnionInputs.length === 0
               return (
                 <button
                   key={type}
                   type="button"
+                  disabled={unionUnavailable}
                   onClick={() => handleCreateStep(type)}
                   className={cn(
-                    'group flex cursor-pointer flex-col justify-between rounded-xl border p-2.5 text-left transition-all duration-150 hover:shadow-xs',
-                    'border-gray-200 bg-gray-50/70 hover:border-blue-300 hover:bg-white',
+                    'group flex flex-col justify-between rounded-xl border p-2.5 text-left transition-all duration-150',
+                    unionUnavailable
+                      ? 'cursor-not-allowed border-gray-200 bg-gray-100/70'
+                      : 'cursor-pointer border-gray-200 bg-gray-50/70 hover:border-blue-300 hover:bg-white hover:shadow-xs',
                   )}
                 >
                   <div className="space-y-1.5">
@@ -347,6 +349,11 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
               )
             })}
           </div>
+          {availableUnionInputs.length === 0 && (
+            <p className="text-[11px] text-gray-500" role="status">
+              {t('pipelines.workspace.transform.wizard.unionNoAdditionalInputs')}
+            </p>
+          )}
         </div>
       )}
 
@@ -359,6 +366,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
           return (
             <div
               key={step.id}
+              data-transform-id={step.id}
               className={cn(
                 'overflow-hidden rounded-xl border bg-white shadow-2xs transition-all duration-150',
                 step.isExpanded

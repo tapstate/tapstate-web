@@ -67,7 +67,7 @@ export const formilyAntdTheme: ThemeConfig = {
   },
 }
 
-export const formilyDifyTheme: ThemeConfig = {
+export const formilySharedUITheme: ThemeConfig = {
   token: {
     ...formilyAntdTheme.token,
     controlOutline: 'var(--color-state-accent-solid)',
@@ -138,7 +138,7 @@ export const formilyDifyTheme: ThemeConfig = {
 /** Keeps schema layout on Formily while mapping its compatibility styles to shared UI tokens. */
 export function FormilyAntdProvider({
   children,
-  theme = formilyAntdTheme,
+  theme = formilySharedUITheme,
 }: PropsWithChildren<{ theme?: ThemeConfig }>) {
   return (
     <ConfigProvider prefixCls={formilyAntdPrefixCls} theme={theme}>

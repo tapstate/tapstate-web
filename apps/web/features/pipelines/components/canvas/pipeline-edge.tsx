@@ -20,7 +20,7 @@ export function PipelineEdge({
   const [isHovered, setIsHovered] = useState(false)
   const [isTriggerHovered, setIsTriggerHovered] = useState(false)
   const [edgePath, labelX, labelY] = getBezierPath({
-    // React Flow calculates endpoints at the center of the 16px handles. Dify
+    // React Flow calculates endpoints at the center of the 16px handles. shared UI
     // pulls the rendered path inward by half the handle width so it meets the
     // blue bar rather than stopping at the outer edge of the hit area.
     sourceX: sourceX - 8,

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { connect, mapProps } from '@formily/react'
-import { SegmentedControl, SegmentedControlItem } from '@langgenius/dify-ui/segmented-control'
+import { SegmentedControl, SegmentedControlItem } from '@tapstate-web/ui/segmented-control'
 
 type RadioOption = {
   disabled?: boolean
@@ -61,7 +61,7 @@ function SegmentedRadioGroup({
 }
 
 /**
- * A Formily Radio.Group renderer using the vendored Dify segmented control.
+ * A Formily Radio.Group renderer using the vendored shared UI segmented control.
  */
 export const FormilySegmentedRadioGroup = connect(
   SegmentedRadioGroup,

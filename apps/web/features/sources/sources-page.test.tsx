@@ -8,11 +8,11 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router'
-import { ToastProvider } from '@tapstate-web/ui'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { ToastProvider } from '@/components/ui/toast'
 import {
   SourceClientError,
   type ConnectorSummary,
@@ -326,8 +326,8 @@ describe('SourcesPage', () => {
     expect(tableDetailHeader?.textContent).toContain('orders')
     expect(buttonWithLabel('Expand')).toBeUndefined()
     const columnsTab = buttonWithText('Columns')
-    expect(columnsTab?.getAttribute('data-active')).toBe('true')
-    expect(columnsTab?.className).toContain('ui-route-tab')
+    expect(columnsTab?.getAttribute('role')).toBe('tab')
+    expect(columnsTab?.getAttribute('aria-selected')).toBe('true')
   })
 
   it('derives the table detail and tab selection directly from the route', async () => {

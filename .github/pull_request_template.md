@@ -2,8 +2,9 @@
 
 ## UI review (complete for a new page or substantial visual change)
 
+- [ ] Closest source page/family and matching Tapstate precedent are identified in the UI handbook; reference revision and shipped API compatibility are checked.
 - [ ] Page composition follows `docs/engineering/DESIGN.md`; name the source page pattern and explain card/table choice.
-- [ ] Controls and overlays use the vendored component public subpaths or a documented thin adapter; list any deviations and their source files.
+- [ ] Controls and overlays use the shared component public subpaths or a documented thin adapter; list any deviations and their source files.
 - [ ] Light/dark semantic tokens, loading/empty/error/disabled/selected states, keyboard focus, accessible names and overlay dismissal were inspected where applicable.
 - [ ] Desktop 1280×800 and mobile 375×812 screenshots or recordings are attached; English, Simplified Chinese and Traditional Chinese fit.
 - [ ] Tapstate branding, navigation, app shell and main surface were compared with the base branch.
@@ -18,6 +19,8 @@ For UI changes, fill this table; for non-UI changes, state not applicable.
 
 | Surface / part | Source revision and file | Source component / classes | Local component / classes | Difference and reason | Rendered evidence |
 | -------------- | ------------------------ | -------------------------- | ------------------------- | --------------------- | ----------------- |
+
+- [ ] Rule/catalog/export changes pass `pnpm ui:docs:check`; reference-only tokens/props and intentionally adapted local layers are identified. Static checks are not recorded as rendered acceptance.
 
 ## Verification
 
