@@ -123,7 +123,12 @@ describe('wizard transform picker', () => {
 
     await act(async () => container?.querySelector('button')?.click())
     const choices = Array.from(container.querySelectorAll('button'))
-    expect(choices.some((button) => button.textContent?.includes('Union'))).toBe(false)
+    const union = choices.find((button) => button.textContent?.includes('Union'))
+    expect(union).toBeDefined()
+    expect(union?.disabled).toBe(true)
+    expect(container.querySelector('[role="status"]')?.textContent).toContain(
+      'No additional source tables are available for this Union.',
+    )
     expect(choices.some((button) => button.textContent?.includes('Unwind'))).toBe(true)
 
     const javascript = choices.find((button) => button.textContent?.includes('JavaScript'))
