@@ -1,4 +1,5 @@
 {
+  "notFound": { "message": "此頁面無法使用。", "back": "返回總覽" },
   "app": {
     "brand": "Tapstate Cloud",
     "console": "Cloud 主控台",
