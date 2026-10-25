@@ -2,6 +2,8 @@ import { ArrowRight, ArrowUpRight, Plus } from 'lucide-react'
 
 import type { Cluster, Organization } from '../../service/cloud-api'
 
+import { canEnterCluster } from '../clusters/cluster-entry-state'
+
 interface CloudOverviewViewProps {
   organization: Organization | null
   subscriptionLabel?: string
@@ -170,7 +172,7 @@ export function CloudOverviewView({
                     key={cluster.id}
                     onClick={() => onEnterCluster(cluster)}
                     className="group flex w-full items-center justify-between gap-4 px-4 py-3.5 text-left transition-colors hover:bg-black/[0.02] disabled:cursor-default disabled:hover:bg-transparent dark:hover:bg-white/[0.02] dark:disabled:hover:bg-white/[0.02]"
-                    disabled={cluster.state !== 'READY' || enteringClusterId !== null}
+                    disabled={!canEnterCluster(cluster.state) || enteringClusterId !== null}
                     type="button"
                   >
                     <span className="flex items-center gap-3">
@@ -205,7 +207,7 @@ export function CloudOverviewView({
                           {dateLabel(cluster.createdAt)}
                         </span>
                       </span>
-                      {cluster.state === 'READY' && (
+                      {canEnterCluster(cluster.state) && (
                         <ArrowUpRight className="h-4 w-4 text-neutral-400 transition-colors group-hover:text-neutral-800 dark:group-hover:text-white" />
                       )}
                     </span>
