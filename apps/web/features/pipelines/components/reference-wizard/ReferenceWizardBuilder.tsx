@@ -688,7 +688,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   const flattenRelations = (nodes: RelationNode[]): RelationNode[] =>
     nodes.flatMap((r) => [r, ...flattenRelations(r.children || [])])
   const availableUnionInputs = React.useMemo(() => {
-    return AVAILABLE_DATA_SOURCES.filter((source) => !source.sink).flatMap((source) =>
+    return AVAILABLE_DATA_SOURCES.flatMap((source) =>
       source.tables.map((table) => ({
         reference: `${source.id}.${table.name}`,
         label: `${source.name} · ${table.name}`,

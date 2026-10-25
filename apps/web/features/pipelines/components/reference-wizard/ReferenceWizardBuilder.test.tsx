@@ -546,6 +546,7 @@ describe('ReferenceWizardBuilder union transform choices', () => {
           name: 'crm',
           badge: 'CRM',
           connector: 'mysql',
+          sink: true,
           tables: [
             {
               name: 'crm_customers',
@@ -570,6 +571,7 @@ describe('ReferenceWizardBuilder union transform choices', () => {
           name: 'archive',
           badge: 'Archive',
           connector: 'postgres',
+          sink: true,
           tables: [
             {
               name: 'archive_orders',
@@ -590,11 +592,12 @@ describe('ReferenceWizardBuilder union transform choices', () => {
     )
     await act(async () => addTransform?.click())
 
-    expect(
-      [...(pipelineTransforms?.querySelectorAll('button') || [])].some((button) =>
-        button.textContent?.includes('Union'),
-      ),
-    ).toBe(true)
+    const union = [...(pipelineTransforms?.querySelectorAll('button') || [])].find((button) =>
+      button.textContent?.includes('Union'),
+    )
+    expect(union?.disabled).toBe(false)
+    await act(async () => union?.click())
+    expect(pipelineTransforms?.textContent).toContain('archive · archive_orders')
   })
 })
 
