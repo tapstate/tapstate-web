@@ -76,7 +76,7 @@
       "title": "欢迎回来",
       "subtitle": "登录后继续处理实时数据。",
       "usernameLabel": "用户名",
-      "usernamePlaceholder": "you{'@'}company.com",
+      "usernamePlaceholder": "you@company.com",
       "passwordLabel": "密码",
       "passwordPlaceholder": "输入密码",
       "passwordShow": "显示密码",

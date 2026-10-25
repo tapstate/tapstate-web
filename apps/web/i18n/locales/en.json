@@ -76,7 +76,7 @@
       "title": "Welcome back",
       "subtitle": "Sign in to continue working with your live data.",
       "usernameLabel": "Username",
-      "usernamePlaceholder": "you{'@'}company.com",
+      "usernamePlaceholder": "you@company.com",
       "passwordLabel": "Password",
       "passwordPlaceholder": "Enter your password",
       "passwordShow": "Show password",
