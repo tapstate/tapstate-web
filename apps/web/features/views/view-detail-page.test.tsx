@@ -56,6 +56,21 @@ afterEach(() => {
 })
 
 describe('ViewDetailPage', () => {
+  it('does not interpret an unreported application time as an unapplied view', async () => {
+    const view = viewEntry('customer_360', 'view', 'build-c360', {
+      state: 'stale',
+      staleSeconds: 0,
+    })
+    listViews.mockResolvedValue({
+      available: true,
+      views: [{ ...view, documents: 3, lastAppliedAt: null }],
+    })
+    page = await renderPage(<ViewDetailPage viewId="views/customer_360" />)
+    const text = page.container.textContent ?? ''
+    expect(text).toContain('Last applied time is not reported')
+    expect(text).not.toContain('no change applied yet')
+  })
+
   it('shows the Overview tab with the same status wording as the list', async () => {
     page = await renderPage(<ViewDetailPage viewId="views/customer_360" />)
 

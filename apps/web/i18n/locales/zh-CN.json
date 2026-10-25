@@ -1753,7 +1753,7 @@
       "siblings": "此 pipeline 还写入：",
       "freshness": "新鲜度",
       "lastApplied": "最近一次变更在 {{age}}前",
-      "neverApplied": "尚未应用任何变更",
+      "lastAppliedUnknown": "上次应用时间未上报",
       "documentLimit": "单个文档上限 16 MB",
       "initialLoad": "初次加载",
       "upToDate": "已是最新",
@@ -1922,7 +1922,7 @@
       "viewStale": "过期的视图",
       "lastApplied_one": "最近一次变更在 {{count}} 分钟前",
       "lastApplied_other": "最近一次变更在 {{count}} 分钟前",
-      "neverApplied": "尚未应用任何变更",
+      "lastAppliedUnknown": "上次应用时间未上报",
       "pipelineIs": {
         "running": "其 pipeline {{pipeline}} 正在运行",
         "idle": "其 pipeline {{pipeline}} 已停止",

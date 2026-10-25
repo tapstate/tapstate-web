@@ -30,7 +30,7 @@ export interface ViewSummary {
   status: ViewFreshness
   documents: number | null
   sizeBytes: number | null
-  /** Epoch milliseconds of the last change applied, or null before the first one. */
+  /** Epoch milliseconds of the last measured applied change, or null when not reported. */
   lastAppliedAt: number | null
 }
 

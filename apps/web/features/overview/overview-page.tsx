@@ -713,7 +713,7 @@ function OverviewAttentionRow({ item }: { item: OverviewModel['attention'][numbe
       <span className="text-muted-foreground">
         {[
           minutes === null
-            ? t('overview.attention.neverApplied')
+            ? t('overview.attention.lastAppliedUnknown')
             : t('overview.attention.lastApplied', { count: minutes }),
           t(`overview.attention.pipelineIs.${item.pipelineHealth ?? 'unknown'}`, {
             pipeline: item.pipelineId,

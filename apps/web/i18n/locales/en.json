@@ -1753,7 +1753,7 @@
       "siblings": "Also written by this pipeline:",
       "freshness": "Freshness",
       "lastApplied": "last change applied {{age}} ago",
-      "neverApplied": "no change applied yet",
+      "lastAppliedUnknown": "Last applied time is not reported",
       "documentLimit": "limit 16 MB per document",
       "initialLoad": "Initial load",
       "upToDate": "Up to date",
@@ -1922,7 +1922,7 @@
       "viewStale": "Stale view",
       "lastApplied_one": "last change applied {{count}} min ago",
       "lastApplied_other": "last change applied {{count}} min ago",
-      "neverApplied": "no change applied yet",
+      "lastAppliedUnknown": "Last applied time is not reported",
       "pipelineIs": {
         "running": "its pipeline {{pipeline}} is running",
         "idle": "its pipeline {{pipeline}} is stopped",
