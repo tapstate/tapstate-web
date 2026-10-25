@@ -558,6 +558,12 @@
       "dismissFeedback": "关闭生命周期错误"
     },
     "startChecks": {
+      "descriptionUnavailable": "启动检查未能完成。重新检查以获取最新结果；Pipeline 尚未启动。",
+      "temporarilyUnavailable": "此检查未能完成，目前尚未确认需要修改配置。",
+      "recheck": "重新检查",
+      "rechecking": "正在重新检查…",
+      "recheckFailed": "无法刷新检查结果，请重试。",
+      "details": "技术详情",
       "title": "启动 {{id}} 前的检查",
       "descriptionBlocked": "有问题阻止了这次启动。处理后再重新启动 Pipeline。",
       "descriptionConfirm": "为每个问题选择处理方式，然后启动。",

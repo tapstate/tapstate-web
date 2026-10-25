@@ -53,6 +53,7 @@ export interface StartChecksSession {
   /** The definition moved while the person was answering, so the checks were run again. */
   changedWhileConfirming: boolean
   submitting: boolean
+  recheckFailed?: boolean
 }
 
 export interface StartChecksDialogState {
@@ -60,6 +61,7 @@ export interface StartChecksDialogState {
   session: StartChecksSession | null
   onConfirm: (decisions: StartDecision[]) => void
   onCancel: () => void
+  onRecheck?: () => void
 }
 
 export interface StartPipelineOptions {
@@ -326,6 +328,23 @@ export function useStartPipeline({ apiFetch, onDefinitionChanged }: StartPipelin
     [answer, showSession],
   )
 
+  const onRecheck = useCallback(() => {
+    const current = sessionRef.current
+    if (!current || current.submitting || !pendingRef.current) return
+    showSession({ ...current, submitting: true, recheckFailed: false })
+    void (async () => {
+      try {
+        const report = await getStartChecks(current.pipelineId, 'start', apiFetchRef.current)
+        if (!pendingRef.current || sessionRef.current?.version !== current.version) return
+        // A recheck never starts a pipeline or carries answers across a new report.
+        ask(current.pipelineId, report, [], report.contentHash !== current.report.contentHash)
+      } catch {
+        if (!pendingRef.current || sessionRef.current?.version !== current.version) return
+        showSession({ ...current, submitting: false, recheckFailed: true })
+      }
+    })()
+  }, [ask, showSession])
+
   const onCancel = useCallback(() => {
     if (sessionRef.current?.submitting) return
     settle({ outcome: { status: 'cancelled' } })
@@ -335,6 +354,6 @@ export function useStartPipeline({ apiFetch, onDefinitionChanged }: StartPipelin
     setNotices((current) => current.filter((notice) => notice.id !== id))
   }, [])
 
-  const dialog: StartChecksDialogState = { open, session, onConfirm, onCancel }
+  const dialog: StartChecksDialogState = { open, session, onConfirm, onCancel, onRecheck }
   return { startPipeline, dialog, notices, dismissNotice }
 }
