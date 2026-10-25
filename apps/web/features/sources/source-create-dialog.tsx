@@ -295,17 +295,13 @@ export function SourceCreateDialog({
   }
 
   const normalizedSearch = searchTerm.trim().toLocaleLowerCase()
-  const sourceConnectors =
-    getDeploymentProfile() === 'cloud'
-      ? connectors.filter((item) => item.id !== 'mongodb-atlas')
-      : connectors
   const visibleConnectors = normalizedSearch
-    ? sourceConnectors.filter((item) =>
+    ? connectors.filter((item) =>
         [item.name, item.id, item.group, ...item.modes].some((value) =>
           value.toLocaleLowerCase().includes(normalizedSearch),
         ),
       )
-    : sourceConnectors
+    : connectors
   const selectedConnector = connectors.find((item) => item.id === connectorId)
   const configuredConnectorName = connector?.name ?? selectedConnector?.name
   const egressAddress = cloudContext.isError ? null : cloudContext.data?.ec2PublicIp?.trim() || null
