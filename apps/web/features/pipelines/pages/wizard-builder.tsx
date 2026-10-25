@@ -13,7 +13,6 @@ import {
   type PipelineDraftMutation,
   type PipelineDraftPreview,
   type PipelinePreviewRun,
-  type PipelineRuntimeState,
   type PipelineCatalogState,
 } from '@/service/pipelines/pipeline-client'
 import { isSampleSource } from '@/service/sample-source-client'
@@ -74,7 +73,7 @@ export function WizardBuilder({
   draft: PipelineDraft
   etag: string
   readOnly?: boolean
-  runtimeStatus?: PipelineRuntimeState
+  runtimeStatus?: PipelineCatalogState
   lifecycleStatus?: PipelineCatalogState
   runtimeObservationPending?: boolean
   runtimeObservationError?: boolean

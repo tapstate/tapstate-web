@@ -1241,6 +1241,7 @@
         },
         "states": {
           "DRAFT": "Draft",
+          "NOT_STARTED": "Not started",
           "NEW": "New",
           "STARTING": "Starting",
           "RUNNING": "Running",

@@ -18,6 +18,7 @@ function isObservationUnavailable(error: unknown) {
 
 const stateDotStatus: Record<PipelineCatalogState, StatusDotStatus> = {
   DRAFT: 'disabled',
+  NOT_STARTED: 'normal',
   NEW: 'normal',
   STARTING: 'normal',
   RUNNING: 'success',
