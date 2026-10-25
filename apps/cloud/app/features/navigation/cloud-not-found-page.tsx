@@ -14,7 +14,10 @@ export function CloudNotFoundPage() {
       <Link
         className="text-sm font-medium text-indigo-600 underline underline-offset-4"
         to="/"
-        search={{ organizationId: undefined }}
+        search={(previous) => ({
+          organizationId:
+            typeof previous.organizationId === 'string' ? previous.organizationId : undefined,
+        })}
       >
         {t('notFound.back')}
       </Link>
