@@ -194,7 +194,7 @@ export function createAuthStore(options: AuthStoreOptions = {}) {
           } catch {
             /* A successful session check restores the existing account. */
           }
-          if (!get().isAuthenticated) set({ status: 'unavailable' })
+          if (!get().isAuthenticated && get().status !== 'anonymous') set({ status: 'unavailable' })
           throw error
         }
       },

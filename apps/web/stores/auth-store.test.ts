@@ -293,3 +293,21 @@ it('shows a recoverable browser-support error when cross-tab locking is unavaila
     else Reflect.deleteProperty(navigator, 'locks')
   }
 })
+
+it('keeps an authoritative expired session anonymous when logout recovery fails', async () => {
+  let outcome: 'restore' | 'logout' = 'restore'
+  const fetcher = vi.fn<typeof fetch>(async (input) => {
+    if (String(input) === '/auth/browser/logout' || outcome === 'logout')
+      return Response.json({ code: 'control.unauthenticated' }, { status: 401 })
+    return Response.json(access())
+  })
+  const store = createAuthStore({ profile: 'on-prem', storage: null, fetcher, sync: testSync() })
+  await store.getState().restore()
+  outcome = 'logout'
+  await expect(store.getState().logout()).rejects.toMatchObject({ status: 401 })
+  expect(store.getState()).toMatchObject({
+    status: 'anonymous',
+    isAuthenticated: false,
+    token: null,
+  })
+})
