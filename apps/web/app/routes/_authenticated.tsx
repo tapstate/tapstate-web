@@ -1,4 +1,4 @@
-import { createFileRoute, Navigate, Outlet } from '@tanstack/react-router'
+import { createFileRoute, Navigate, Outlet, useLocation } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { AppShell } from '@/components/layout/app-shell'
@@ -11,13 +11,14 @@ export const Route = createFileRoute('/_authenticated')({
 
 function AuthenticatedRouteComponent() {
   const { t } = useTranslation()
+  const location = useLocation()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const status = useAuthStore((state) => state.status)
   const epoch = useAuthStore((state) => state.authEpoch)
   if (!isAuthenticated && (status === 'checking' || status === 'unavailable'))
     return <SessionRecovery />
   if (!isAuthenticated) {
-    return <Navigate replace to="/login" />
+    return <Navigate replace to="/login" search={{ redirect: location.href }} />
   }
 
   return (

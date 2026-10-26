@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import type { AppLocale } from '@/i18n'
 
 import { Button } from '@/components/ui/button'
+import { safeLoginReturn } from '@/features/auth/login-return'
 import { SessionRecovery } from '@/features/auth/session-recovery'
 import { SUPPORTED_LOCALES } from '@/i18n'
 import { cn } from '@/lib/utils'
@@ -15,6 +16,9 @@ import { replaceWithCloudConsole } from '@/utils/cloud-console'
 import { deploymentProfile } from '@/utils/deployment-profile'
 
 export const Route = createFileRoute('/login')({
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
+    redirect: safeLoginReturn(search.redirect),
+  }),
   component: LoginRouteComponent,
 })
 
@@ -44,6 +48,7 @@ function CloudLoginRouteComponent() {
 
 function OnPremLoginRouteComponent() {
   const navigate = useNavigate()
+  const redirect = safeLoginReturn(Route.useSearch().redirect)
   const { t, i18n } = useTranslation()
   const login = useAuthStore((state) => state.login)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
@@ -74,8 +79,8 @@ function OnPremLoginRouteComponent() {
   )
 
   useEffect(() => {
-    if (isAuthenticated) void navigate({ replace: true, to: '/overview' })
-  }, [isAuthenticated, navigate])
+    if (isAuthenticated) void navigate({ replace: true, to: redirect })
+  }, [isAuthenticated, navigate, redirect])
 
   useEffect(() => {
     setVisibleLines([])
@@ -132,7 +137,7 @@ function OnPremLoginRouteComponent() {
     setIsSubmitting(true)
     try {
       await login({ username: username.trim(), password })
-      void navigate({ replace: true, to: '/overview' })
+      void navigate({ replace: true, to: redirect })
     } catch (error) {
       setFormError(errorMessage(error))
     } finally {
