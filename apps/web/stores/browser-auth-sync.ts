@@ -38,9 +38,9 @@ export function createBrowserAuthSync(): BrowserAuthSync {
   window.addEventListener('storage', storage)
   return {
     revision,
-    read: (action) => locks().request(LOCK_NAME, { mode: 'shared' }, action),
-    mutate: (action) =>
-      locks().request(LOCK_NAME, async () => {
+    read: async (action) => await locks().request(LOCK_NAME, { mode: 'shared' }, action),
+    mutate: async (action) =>
+      await locks().request(LOCK_NAME, async () => {
         publish()
         let value
         try {

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { AUTH_TOKEN_KEY } from './auth-session'
 import { createAuthStore } from './auth-store'
+import { createBrowserAuthSync } from './browser-auth-sync'
 
 function memoryStorage(initialToken?: string): Storage {
   const values = new Map<string, string>()
@@ -274,4 +275,21 @@ it('distinguishes an older server from a temporary session outage', async () => 
   })
   await expect(store.getState().restore()).rejects.toBeDefined()
   expect(store.getState()).toMatchObject({ status: 'unavailable', recoveryReason: 'upgrade' })
+})
+
+it('shows a recoverable browser-support error when cross-tab locking is unavailable', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(navigator, 'locks')
+  Object.defineProperty(navigator, 'locks', { configurable: true, value: undefined })
+  try {
+    const store = createAuthStore({
+      profile: 'on-prem',
+      storage: null,
+      sync: createBrowserAuthSync(),
+    })
+    await expect(store.getState().restore()).rejects.toMatchObject({ kind: 'browser' })
+    expect(store.getState()).toMatchObject({ status: 'unavailable', recoveryReason: 'browser' })
+  } finally {
+    if (descriptor) Object.defineProperty(navigator, 'locks', descriptor)
+    else delete navigator.locks
+  }
 })
