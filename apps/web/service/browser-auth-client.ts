@@ -14,10 +14,26 @@ export async function browserAuthRequest(
   fetcher: typeof fetch,
   credentials?: LoginCredentials,
 ): Promise<BrowserAccessGrant | null> {
+  const controller = new AbortController()
+  const timeout = action === 'session' ? setTimeout(() => controller.abort(), 15_000) : null
+  try {
+    return await request(action, fetcher, credentials, controller.signal)
+  } finally {
+    if (timeout !== null) clearTimeout(timeout)
+  }
+}
+
+async function request(
+  action: 'login' | 'session' | 'logout',
+  fetcher: typeof fetch,
+  credentials: LoginCredentials | undefined,
+  signal: AbortSignal,
+): Promise<BrowserAccessGrant | null> {
   let response: Response
   try {
     response = await fetcher(`/auth/browser/${action}`, {
       method: 'POST',
+      signal,
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', 'X-Tapstate-Browser-Request': '1' },
       ...(credentials ? { body: JSON.stringify(credentials) } : {}),

@@ -247,3 +247,20 @@ describe('on-prem browser session recovery', () => {
     expect(store.getState().status).toBe('anonymous')
   })
 })
+
+describe('OP transport credential scope', () => {
+  it('does not send a workbench bearer to another origin', async () => {
+    const fetcher = vi.fn<typeof fetch>(async () => Response.json({ ok: true }))
+    const store = createAuthStore({
+      profile: 'on-prem',
+      storage: null,
+      origin: 'https://workbench.example',
+      fetcher,
+    })
+    store.setState({ token: 'workbench-secret', isAuthenticated: true })
+    await expect(
+      store.getState().apiFetch('https://other.example/api/sources'),
+    ).rejects.toBeDefined()
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+})

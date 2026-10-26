@@ -215,6 +215,10 @@ export function createAuthStore(options: AuthStoreOptions = {}) {
           }
           return response
         }
+        const origin = options.origin ?? window.location.origin
+        const target = input instanceof Request ? input.url : input.toString()
+        if (new URL(target, origin).origin !== origin)
+          throw new AuthClientError('protocol', 'workbench requests must use the current origin')
         const starting = get()
         const expected = starting.sessionId
         const principal = starting.principal
@@ -260,9 +264,10 @@ export function createAuthStore(options: AuthStoreOptions = {}) {
         )
           return response
         const identity = get().sessionId
+        const retryPrincipal = get().principal
         await get().restore()
         stable()
-        if (get().sessionId !== identity || get().principal !== principal) throw authChanged()
+        if (get().sessionId !== identity || get().principal !== retryPrincipal) throw authChanged()
         if (typeof ReadableStream !== 'undefined' && init.body instanceof ReadableStream)
           return response
         const retried = await send()
