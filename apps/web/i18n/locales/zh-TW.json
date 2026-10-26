@@ -2124,7 +2124,7 @@
     },
     "phaseHelp": {
       "NOT_CONFIGURED": "使用叢集前須完成資料庫測試與儲存。",
-      "PREPARING": "正在準備原設定，可重新整理查看進度；已儲存綁定會保留。",
+      "PREPARING": "正在繼續原設定，已儲存的資料庫設定會保留。",
       "RESTART_REQUIRED": "儲存設定已完成。請透過安裝流程重新啟動，再授權建立首位管理員。",
       "FIRST_ADMIN_REQUIRED": "請在管理通道使用目前首位管理員憑證。",
       "AUTH_READY": "驗證可用，業務服務仍在等待儲存准入。",
@@ -2161,9 +2161,11 @@
       "checkedAt": "最近驗證時間：",
       "help": "重新整理狀態會檢查目前預設目的地，驗證結果在 10 分鐘後到期。"
     },
+    "autoRefresh": "狀態會自動更新，無需手動重新整理或重複提交。",
+    "autoRetry": "暫時無法取得狀態，正在自動重試查詢，不會重複提交原請求。",
     "setupProgressTitle": "正在完成叢集設定",
-    "setupSubmittingHelp": "正在儲存資料庫設定並準備叢集。等待期間可以重新整理查看進度。",
-    "setupSavedHelp": "資料庫設定已儲存，叢集正在初始化執行環境。可重新整理查看進度。",
+    "setupSubmittingHelp": "正在儲存資料庫設定並準備叢集。",
+    "setupSavedHelp": "資料庫設定已儲存，叢集正在初始化執行環境。",
     "resumeSetupTitle": "繼續已儲存的儲存設定",
     "resumeSetupHelp": "資料庫繫結已儲存。請使用原連線資訊繼續；若上次結果仍不確定，請先重新整理狀態。",
     "resumeSetup": "繼續原設定"

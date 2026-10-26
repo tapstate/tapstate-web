@@ -33,6 +33,8 @@ interface StorageState {
   authorized: boolean
   session: number
   authorityRevision: number
+  setSetupPending: (pending: boolean) => void
+  autoRefreshing: boolean
 }
 const Context = createContext<StorageState | null>(null)
 export function useStorage() {
@@ -45,6 +47,7 @@ export function StorageProvider({ children }: { children: ReactNode }) {
   const auth = useAuthStore()
   const queryClient = useQueryClient()
   const [authorization, setAuthorization] = useState({ secret: '', revision: 0 })
+  const [setupPending, setSetupPending] = useState(false)
   const previous = useRef<StorageSnapshot | undefined>(undefined)
   const queryKey = useMemo(
     () => ['storage', window.location.origin, auth.sessionRevision, authorization.revision],
@@ -60,6 +63,35 @@ export function StorageProvider({ children }: { children: ReactNode }) {
       },
     [authorization.secret, auth.apiFetch],
   )
+  function pollInterval(
+    snapshot: StorageSnapshot | undefined,
+    failure: unknown,
+    entry?: StorageEntry,
+  ) {
+    const authorized = entry
+      ? entry.management
+        ? Boolean(authorization.secret)
+        : auth.isAuthenticated
+      : Boolean(authorization.secret) || auth.isAuthenticated
+    if (!authorized) return false
+    if (
+      entry &&
+      (['RESTART_REQUIRED', 'FIRST_ADMIN_REQUIRED', 'UNAVAILABLE'].includes(entry.entry) ||
+        (entry.management && entry.entry === 'LOGIN'))
+    )
+      return false
+    const temporaryFailure =
+      failure instanceof TypeError ||
+      (failure instanceof StorageClientError && failure.status >= 500)
+    if (failure && !temporaryFailure) return false
+    const phase = (snapshot ?? previous.current)?.businessPhase
+    const transitioning = ['PREPARING', 'RECOVERING', 'AUTH_READY'].includes(phase ?? '')
+    // A known intervention or terminal phase wins over an outstanding write or failed read.
+    if (phase && !transitioning && !(setupPending && phase === 'NOT_CONFIGURED')) return false
+    if (temporaryFailure) return 10000
+    if (!setupPending && !transitioning) return false
+    return 3000
+  }
   const query = useQuery<{ entry: StorageEntry; snapshot?: StorageSnapshot; failure?: unknown }>({
     queryKey,
     staleTime: 0,
@@ -67,11 +99,11 @@ export function StorageProvider({ children }: { children: ReactNode }) {
     retry: false,
     refetchOnWindowFocus: true,
     refetchInterval: (query) =>
-      query.state.dataUpdateCount < 12 &&
-      !query.state.data?.failure &&
-      ['PREPARING', 'RECOVERING'].includes(query.state.data?.snapshot?.businessPhase ?? '')
-        ? 3000
-        : false,
+      pollInterval(
+        query.state.data?.snapshot,
+        query.state.error ?? query.state.data?.failure,
+        query.state.data?.entry,
+      ),
     queryFn: async ({ signal }) => {
       const response = await fetch('/auth/storage-entry', {
         cache: 'no-store',
@@ -148,6 +180,10 @@ export function StorageProvider({ children }: { children: ReactNode }) {
         authorized: Boolean(authorization.secret),
         session: auth.sessionRevision,
         authorityRevision: authorization.revision,
+        setSetupPending,
+        autoRefreshing: Boolean(
+          pollInterval(query.data?.snapshot, query.error ?? query.data?.failure, query.data?.entry),
+        ),
         authorize: (secret) => {
           previous.current = undefined
           setAuthorization((current) => ({ secret, revision: current.revision + 1 }))

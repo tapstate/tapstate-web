@@ -2124,7 +2124,7 @@
     },
     "phaseHelp": {
       "NOT_CONFIGURED": "Test and save the databases before using the cluster.",
-      "PREPARING": "The original setup is being prepared. Refresh to check progress; saved bindings stay in place.",
+      "PREPARING": "The original setup is being prepared. Saved database settings stay in place.",
       "RESTART_REQUIRED": "Storage is saved. Restart through the installation command, then authorize first-administrator creation.",
       "FIRST_ADMIN_REQUIRED": "Use the current first-administrator credential on the management channel.",
       "AUTH_READY": "Authentication is available. Business services are still waiting for storage admission.",
@@ -2161,9 +2161,11 @@
       "checkedAt": "Last checked:",
       "help": "Refresh status checks the current default destination. Results expire after 10 minutes."
     },
+    "autoRefresh": "Status updates automatically. You do not need to refresh or submit again.",
+    "autoRetry": "The status check could not complete. Retrying automatically; your original request has not been resubmitted.",
     "setupProgressTitle": "Finishing cluster setup",
-    "setupSubmittingHelp": "Saving your database settings and preparing the cluster. You can refresh to check progress.",
-    "setupSavedHelp": "The database settings are saved. The cluster is preparing its runtime. Refresh to check progress.",
+    "setupSubmittingHelp": "Saving your database settings and preparing the cluster.",
+    "setupSavedHelp": "The database settings are saved. The cluster is preparing its runtime.",
     "resumeSetupTitle": "Continue saved storage setup",
     "resumeSetupHelp": "These databases are already bound. Use the original connection details to continue. If the previous result is uncertain, refresh its status first.",
     "resumeSetup": "Continue original setup"

@@ -32,7 +32,7 @@ export function StorageIndicator({
   return (
     <span className={`inline-flex items-center gap-2 font-medium ${color}`}>
       <Icon
-        className={`size-5 shrink-0 ${tone === 'working' ? 'animate-spin' : ''}`}
+        className={`size-5 shrink-0 ${tone === 'working' ? 'animate-spin motion-reduce:animate-none' : ''}`}
         aria-hidden="true"
       />
       <span>{children}</span>
@@ -109,10 +109,12 @@ export function StorageHealthPanel({
   snapshot,
   checkingApplicationData = false,
   unverifiedApplicationData = false,
+  autoRefreshing = false,
 }: {
   snapshot: StorageSnapshot
   checkingApplicationData?: boolean
   unverifiedApplicationData?: boolean
+  autoRefreshing?: boolean
 }) {
   const { t, i18n } = useTranslation()
   const verification = snapshot.applicationDataVerification
@@ -135,10 +137,21 @@ export function StorageHealthPanel({
   return (
     <section className="space-y-4" aria-label={t('storage.healthTitle')}>
       <div className="border-border rounded-lg border p-4">
-        <h2 className="font-medium">{t(`storage.phase.${snapshot.businessPhase}`)}</h2>
+        <h2 className="font-medium" role={autoRefreshing ? 'status' : undefined}>
+          {autoRefreshing ? (
+            <StorageIndicator tone="working">
+              {t(`storage.phase.${snapshot.businessPhase}`)}
+            </StorageIndicator>
+          ) : (
+            t(`storage.phase.${snapshot.businessPhase}`)
+          )}
+        </h2>
         <p className="text-muted-foreground mt-1 text-sm">
           {t(`storage.phaseHelp.${snapshot.businessPhase}`)}
         </p>
+        {autoRefreshing && (
+          <p className="text-muted-foreground mt-2 text-sm">{t('storage.autoRefresh')}</p>
+        )}
       </div>
       <dl className="grid gap-3 sm:grid-cols-3">
         {(['CONFIG', 'CACHE', 'MASTER'] as const).map((layer) => (

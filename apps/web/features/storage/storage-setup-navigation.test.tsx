@@ -43,7 +43,8 @@ const entry = (management = false, value = 'LOGIN') =>
   Response.json({ mode: 'OP', management, entry: value })
 async function settle() {
   await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 10))
+    if (vi.isFakeTimers()) await vi.advanceTimersByTimeAsync(10)
+    else await new Promise((resolve) => setTimeout(resolve, 10))
   })
 }
 async function render(children: ReactNode = <div data-testid="business">Business page</div>) {
@@ -93,6 +94,7 @@ afterEach(() => {
   client.clear()
   container.remove()
   vi.unstubAllGlobals()
+  vi.useRealTimers()
 })
 
 describe('whole-site storage boundary', () => {
@@ -147,6 +149,235 @@ describe('whole-site storage boundary', () => {
     await click('Save storage settings')
     return setup
   }
+
+  it('automatically follows a pending setup beyond twelve updates without submitting it again', async () => {
+    vi.useFakeTimers()
+    const setup = await startPendingCloudSetup()
+    const statusCount = () =>
+      fetcher.mock.calls.filter(([url]) => url === '/api/storage/status').length
+    const before = statusCount()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3100)
+    })
+    expect(statusCount()).toBeGreaterThan(before)
+    expect(container.querySelector('[role="status"] svg')).not.toBeNull()
+    setup.snapshot = {
+      ...setup.snapshot,
+      businessPhase: 'PREPARING',
+      setupPhase: 'STORAGE_BOUND',
+      bindingVersion: 1,
+      authGeneration: 1,
+      stateVersion: 11,
+    }
+    for (let i = 0; i < 15; i++)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3100)
+      })
+    expect(statusCount()).toBeGreaterThan(14)
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')).toHaveLength(
+      1,
+    )
+    setup.snapshot = state({ mode: 'CLOUD', stateVersion: 12 })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3100)
+    })
+    expect(container.querySelector('[data-testid="business"]')).not.toBeNull()
+    const readyCount = statusCount()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15000)
+    })
+    expect(statusCount()).toBe(readyCount)
+  })
+  it('automatically enters the business page when sign-in-ready storage becomes ready', async () => {
+    vi.useFakeTimers()
+    let snapshot = state({ businessPhase: 'AUTH_READY' })
+    fetcher.mockImplementation(async (url) =>
+      String(url) === '/auth/storage-entry' ? entry() : Response.json(snapshot),
+    )
+    await render()
+    expect(container.querySelector('[role="status"] svg')).not.toBeNull()
+    snapshot = state({ stateVersion: 11 })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3100)
+    })
+    expect(container.querySelector('[data-testid="business"]')).not.toBeNull()
+  })
+  it('rechecks a transient startup read failure but stops on lost permission', async () => {
+    vi.useFakeTimers()
+    let status = 200
+    fetcher.mockImplementation(async (url) =>
+      String(url) === '/auth/storage-entry'
+        ? entry()
+        : status === 200
+          ? Response.json(state({ businessPhase: 'PREPARING' }))
+          : Response.json({ code: 'control.storage-unavailable' }, { status }),
+    )
+    await render()
+    status = 503
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3100)
+    })
+    expect(container.querySelector('[role="alert"]')).not.toBeNull()
+    status = 200
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10100)
+    })
+    expect(container.querySelector('[role="alert"]')).toBeNull()
+    status = 403
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3100)
+    })
+    const calls = fetcher.mock.calls.length
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30000)
+    })
+    expect(fetcher.mock.calls).toHaveLength(calls)
+    expect(container.querySelector('[data-testid="business"]')).toBeNull()
+  })
+
+  it.each([
+    'AWAITING_REBUILD_CONFIRMATION',
+    'RESTART_REQUIRED',
+    'FIRST_ADMIN_REQUIRED',
+    'CLEANUP_REQUIRED',
+    'UNAVAILABLE',
+  ] as const)(
+    'does not animate or poll a phase that requires intervention: %s',
+    async (businessPhase) => {
+      vi.useFakeTimers()
+      fetcher.mockImplementation(async (url) =>
+        String(url) === '/auth/storage-entry' ? entry() : Response.json(state({ businessPhase })),
+      )
+      await render()
+      const calls = fetcher.mock.calls.length
+      expect(container.querySelector('[role="status"] svg')).toBeNull()
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30000)
+      })
+      expect(fetcher.mock.calls).toHaveLength(calls)
+      expect(container.querySelector('[data-testid="business"]')).toBeNull()
+    },
+  )
+  it('recovers from an initial network read failure without a reload or another write', async () => {
+    vi.useFakeTimers()
+    let failed = true
+    fetcher.mockImplementation(async (url) => {
+      if (failed) throw new TypeError('network unavailable')
+      return String(url) === '/auth/storage-entry' ? entry() : Response.json(state())
+    })
+    await render()
+    expect(container.querySelector('[role="alert"]')).not.toBeNull()
+    failed = false
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10100)
+    })
+    expect(container.querySelector('[data-testid="business"]')).not.toBeNull()
+    expect(
+      fetcher.mock.calls.every(([url]) =>
+        ['/auth/storage-entry', '/api/storage/status'].includes(String(url)),
+      ),
+    ).toBe(true)
+  })
+
+  it('stops waiting when cleanup is required even while the original commit response is pending', async () => {
+    vi.useFakeTimers()
+    const setup = await startPendingCloudSetup()
+    setup.snapshot = {
+      ...setup.snapshot,
+      businessPhase: 'CLEANUP_REQUIRED',
+      stateVersion: 11,
+      allowedActions: ['storage.status'],
+    }
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3100)
+    })
+    expect(container.textContent).toContain('Cleanup needs verification')
+    expect(container.querySelector('[role="status"] svg')).toBeNull()
+    const calls = fetcher.mock.calls.length
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30000)
+    })
+    expect(fetcher.mock.calls).toHaveLength(calls)
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')).toHaveLength(
+      1,
+    )
+  })
+  it('does not restart polling after a transient manual read failure in a known intervention state', async () => {
+    vi.useFakeTimers()
+    let failed = false
+    fetcher.mockImplementation(async (url) =>
+      String(url) === '/auth/storage-entry'
+        ? entry()
+        : failed
+          ? Response.json({ code: 'control.storage-unavailable' }, { status: 503 })
+          : Response.json(state({ businessPhase: 'AWAITING_REBUILD_CONFIRMATION' })),
+    )
+    await render()
+    failed = true
+    await click('Refresh status')
+    const calls = fetcher.mock.calls.length
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30000)
+    })
+    expect(fetcher.mock.calls).toHaveLength(calls)
+  })
+
+  it('stops polling when the management entry requires restart without returning another snapshot', async () => {
+    vi.useFakeTimers()
+    let restart = false
+    fetcher.mockImplementation(async (url) =>
+      String(url) === '/auth/storage-entry'
+        ? entry(true, restart ? 'RESTART_REQUIRED' : 'SETUP_REQUIRED')
+        : Response.json(state({ setupPhase: 'STORAGE_BOUND', businessPhase: 'PREPARING' })),
+    )
+    await render()
+    await input(container.querySelector('input')!, 'owner-secret')
+    await click('Continue')
+    restart = true
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3100)
+    })
+    expect(container.textContent).toContain('Restart required')
+    const calls = fetcher.mock.calls.length
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30000)
+    })
+    expect(fetcher.mock.calls).toHaveLength(calls)
+  })
+
+  it('automatically rechecks a failed entry read after the installation owner provides a capability', async () => {
+    vi.useFakeTimers()
+    useAuthStore.setState({ isAuthenticated: false, token: null })
+    let failed = false
+    fetcher.mockImplementation(async (url) =>
+      String(url) === '/auth/storage-entry'
+        ? failed
+          ? new Response('', { status: 503 })
+          : entry(true, 'SETUP_REQUIRED')
+        : Response.json(state({ businessPhase: 'PREPARING' })),
+    )
+    await render()
+    await input(container.querySelector('input')!, 'owner-secret')
+    failed = true
+    await click('Continue')
+    expect(container.querySelector('[role="alert"]')).not.toBeNull()
+    failed = false
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10100)
+    })
+    expect(container.querySelector('[role="alert"]')).toBeNull()
+    expect(container.textContent).toContain('Preparing storage')
+    const statuses = fetcher.mock.calls.filter(([url]) => url === '/api/storage/status')
+    expect(statuses).toHaveLength(1)
+    expect(new Headers(statuses[0][1]?.headers).get('X-Tapstate-Setup-Capability')).toBe(
+      'owner-secret',
+    )
+    expect(
+      fetcher.mock.calls.every(([url]) =>
+        ['/auth/storage-entry', '/api/storage/status'].includes(String(url)),
+      ),
+    ).toBe(true)
+  })
 
   it('keeps the original setup submission across binding publication without reopening an empty form', async () => {
     const setup = await startPendingCloudSetup()

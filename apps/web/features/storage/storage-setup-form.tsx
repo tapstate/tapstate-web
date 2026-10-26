@@ -132,12 +132,15 @@ export function StorageSetupForm({
   if (submission.busy) {
     return (
       <section className="space-y-4" aria-label={t('storage.setupProgressTitle')}>
-        <h2 className="text-base font-semibold">{t('storage.setupProgressTitle')}</h2>
-        <p role="status" className="text-muted-foreground text-sm">
+        <h2 className="text-base font-semibold" role="status">
+          <StorageIndicator tone="working">{t('storage.setupProgressTitle')}</StorageIndicator>
+        </h2>
+        <p className="text-muted-foreground text-sm">
           {t(
             snapshot.bindingVersion > 0 ? 'storage.setupSavedHelp' : 'storage.setupSubmittingHelp',
           )}
         </p>
+        <p className="text-muted-foreground text-sm">{t('storage.autoRefresh')}</p>
         {Boolean(submission.error) && <StorageError error={submission.error} />}
         <Button
           className="min-h-11 sm:min-h-8"

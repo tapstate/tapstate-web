@@ -1,5 +1,5 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,13 @@ import { ConfigurationTransfer } from './configuration-transfer'
 import { StorageProvider, useStorage } from './storage-context'
 import { StorageRecovery } from './storage-recovery'
 import { StorageSetupForm } from './storage-setup-form'
-import { inputClass, StorageError, StorageFrame, StorageHealthPanel } from './storage-ui'
+import {
+  inputClass,
+  StorageError,
+  StorageFrame,
+  StorageHealthPanel,
+  StorageIndicator,
+} from './storage-ui'
 import { useStorageAction } from './use-storage-action'
 
 export function StorageBoundary({ children }: { children: ReactNode }) {
@@ -26,19 +32,40 @@ export function StorageBoundary({ children }: { children: ReactNode }) {
 export function StorageGate({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
-  const { entry, snapshot, loading, error, refresh, authorized, authorize } = useStorage()
+  const {
+    entry,
+    snapshot,
+    loading,
+    error,
+    refresh,
+    authorized,
+    authorize,
+    setSetupPending,
+    autoRefreshing,
+  } = useStorage()
   const authenticated = useAuthStore((state) => state.isAuthenticated)
   const setupSubmission = useStorageAction('setup')
+  useEffect(() => {
+    setSetupPending(setupSubmission.busy)
+    return () => setSetupPending(false)
+  }, [setSetupPending, setupSubmission.busy])
   if (loading)
     return (
       <StorageFrame>
-        <p role="status">{t('storage.loading')}</p>
+        <p role="status">
+          <StorageIndicator tone="working">{t('storage.loading')}</StorageIndicator>
+        </p>
       </StorageFrame>
     )
   if (error)
     return (
       <StorageFrame>
         <StorageError error={error} />
+        {autoRefreshing && (
+          <p role="status" className="text-muted-foreground text-sm">
+            {t('storage.autoRetry')}
+          </p>
+        )}
         <Button className="min-h-11 sm:min-h-8" variant="outline" onClick={() => void refresh()}>
           {t('storage.refresh')}
         </Button>
@@ -70,11 +97,11 @@ export function StorageGate({ children }: { children: ReactNode }) {
     )
   if (snapshot) {
     if (snapshot.businessPhase === 'READY' && !entry.management) return children
-    const showSetup =
-      setupSubmission.busy ||
-      (snapshot.setupPhase !== 'COMPLETE' &&
+    const showSetup = setupSubmission.busy
+      ? ['NOT_CONFIGURED', 'PREPARING', 'AUTH_READY', 'RECOVERING'].includes(snapshot.businessPhase)
+      : snapshot.setupPhase !== 'COMPLETE' &&
         snapshot.allowedActions.includes('storage.setup.commit') &&
-        !snapshot.allowedActions.includes('storage.recovery.plan'))
+        !snapshot.allowedActions.includes('storage.recovery.plan')
     return (
       <StorageFrame>
         <div
@@ -86,7 +113,10 @@ export function StorageGate({ children }: { children: ReactNode }) {
           className="space-y-6"
         >
           <h1 className="text-xl font-semibold">{t('storage.title')}</h1>
-          <StorageHealthPanel snapshot={snapshot} />
+          <StorageHealthPanel
+            snapshot={snapshot}
+            autoRefreshing={autoRefreshing && !setupSubmission.busy}
+          />
           {showSetup && <StorageSetupForm submission={setupSubmission} />}
           {!showSetup && Boolean(setupSubmission.error) && (
             <StorageError error={setupSubmission.error} />
