@@ -108,6 +108,7 @@ export function PipelineCanvasContent({
   notes: controlledNotes,
   onNotesChange,
   focusNodeId,
+  selectedNodeId,
   readOnly = false,
 }: {
   pipelineId: string
@@ -139,6 +140,7 @@ export function PipelineCanvasContent({
   notes?: CanvasNoteRecord[]
   onNotesChange?: (notes: CanvasNoteRecord[], options?: PipelineCanvasNotesChangeOptions) => void
   focusNodeId?: string | null
+  selectedNodeId?: string | null
   readOnly?: boolean
 }) {
   const { t } = useTranslation()
@@ -205,19 +207,48 @@ export function PipelineCanvasContent({
         const canvasRect = canvas.getBoundingClientRect()
         const panelRect = panel.getBoundingClientRect()
         const currentViewport = getViewport()
-        const nodeLeft =
-          canvasRect.left + currentViewport.x + node.position.x * currentViewport.zoom
-        const nodeRight = nodeLeft + (node.measured?.width ?? 240) * currentViewport.zoom
-        const safeRight = panelRect.left - 24
         const safeLeft = canvasRect.left + 64
-        const shift = Math.min(0, safeRight - nodeRight)
-        if (shift === 0 || nodeLeft + shift < safeLeft) return
+        const panelOverlaysCanvas = panelRect.top < canvasRect.top + 80
+        const safeRight = panelOverlaysCanvas ? panelRect.left - 24 : canvasRect.right - 64
+        const safeWidth = safeRight - safeLeft
+        const nodeWidth = node.measured?.width ?? 240
+        if (safeWidth <= 0) return
+
+        const zoom = Math.min(currentViewport.zoom, safeWidth / nodeWidth)
+        if (zoom < currentViewport.zoom) {
+          const nodeLeft = safeLeft + (safeWidth - nodeWidth * zoom) / 2
+          const x = nodeLeft - canvasRect.left - node.position.x * zoom
+          void panViewport({ ...currentViewport, x, zoom }, { duration: 180 })
+          return
+        }
+
+        const nodeLeft = canvasRect.left + currentViewport.x + node.position.x * zoom
+        const nodeRight = nodeLeft + nodeWidth * zoom
+        const shift =
+          nodeLeft < safeLeft
+            ? safeLeft - nodeLeft
+            : nodeRight > safeRight
+              ? safeRight - nodeRight
+              : 0
+        if (shift === 0) return
 
         void panViewport({ ...currentViewport, x: currentViewport.x + shift }, { duration: 180 })
       })
     },
     [getNode, getViewport, panViewport],
   )
+
+  useEffect(() => {
+    if (!selectedNodeId || typeof ResizeObserver === 'undefined') return
+    const workspace = document.querySelector<HTMLElement>(
+      '[data-testid="pipeline-workflow-container"]',
+    )
+    const panel = workspace?.querySelector<HTMLElement>('[data-workflow-right-panel]')
+    if (!panel) return
+    const observer = new ResizeObserver(() => keepSelectedNodeVisible(selectedNodeId))
+    observer.observe(panel)
+    return () => observer.disconnect()
+  }, [keepSelectedNodeVisible, selectedNodeId])
 
   useEffect(() => {
     if (!focusNodeId) return

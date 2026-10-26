@@ -69,9 +69,18 @@ export function PipelineHandle({
       {canOpenBlockSelector && (
         <button
           type="button"
-          tabIndex={-1}
+          tabIndex={0}
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            const bounds = event.currentTarget.getBoundingClientRect()
+            onRequestAdd?.(direction, {
+              x: event.clientX || bounds.left + bounds.width / 2,
+              y: event.clientY || bounds.top + bounds.height / 2,
+            })
+          }}
           className={cn(
-            'bg-util-colors-blue-brand-blue-brand-500 pointer-events-none absolute top-0 left-0 z-10 grid size-4 place-items-center rounded-full border-0 p-0 text-white opacity-0 shadow-xs transition-opacity duration-150 group-hover:opacity-100 group-hover/handle:opacity-100',
+            'bg-util-colors-blue-brand-blue-brand-500 focus-visible:ring-components-input-border-hover pointer-events-none absolute top-0 left-0 z-10 grid size-4 place-items-center rounded-full border-0 p-0 text-white opacity-0 shadow-xs transition-opacity duration-150 group-hover:opacity-100 group-hover/handle:opacity-100 focus-visible:opacity-100 focus-visible:ring-2',
             nodeSelected && 'opacity-100',
           )}
           aria-label={t('pipelines.workspace.nodeSelector.addNode')}

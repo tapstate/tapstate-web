@@ -72,7 +72,10 @@ export function PipelineNode({ data, selected }: NodeProps<CanvasNode>) {
           </div>
         )}
         {description.trim() && (
-          <p className="px-3 pt-1 pb-2 text-xs leading-[18px] wrap-break-word whitespace-pre-line text-[var(--pipeline-text-muted)]">
+          <p
+            className="line-clamp-2 px-3 pt-1 pb-2 text-xs leading-[18px] wrap-break-word whitespace-pre-line text-[var(--pipeline-text-muted)]"
+            title={description}
+          >
             {description}
           </p>
         )}

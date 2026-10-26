@@ -97,6 +97,20 @@ describe('TransformEditor', () => {
     expect(host.querySelector<HTMLInputElement>('input[aria-label="Field"]')?.value).toBe('')
   })
 
+  it('offers schema-backed filter fields in a searchable picker', () => {
+    const host = renderEditor({
+      config: { ...base, transformType: 'filter', body: { expr: 'status == "ACTIVE"' } },
+      fieldTypes: { status: 'string', amount: 'int' },
+    })
+
+    expect(
+      host.querySelector('input[data-wizard-search-control][aria-label="Field"]'),
+    ).not.toBeNull()
+    expect(host.querySelector('input[aria-label="Field"]')?.getAttribute('placeholder')).toBe(
+      'Field',
+    )
+  })
+
   it('serializes map field rules using the DSL value forms', () => {
     const changes: Array<Record<string, unknown>> = []
     const host = renderEditor({
@@ -134,6 +148,28 @@ describe('TransformEditor', () => {
         literal: 'fixed',
       },
     })
+  })
+
+  it('offers schema-backed Map references in a searchable picker', () => {
+    const host = renderEditor({
+      config: {
+        ...base,
+        transformType: 'map',
+        body: { fields: { customer: '$customerId' } },
+      },
+      fieldTypes: { customerId: 'string', accountId: 'string' },
+    })
+
+    expect(
+      host.querySelector(
+        'input[data-wizard-search-control][aria-label="Source field or expression"]',
+      ),
+    ).not.toBeNull()
+    expect(
+      host
+        .querySelector('input[aria-label="Source field or expression"]')
+        ?.getAttribute('placeholder'),
+    ).toBe('Source field or expression')
   })
 
   it('edits join aliases while preserving the SQL body contract', () => {
@@ -234,6 +270,58 @@ describe('TransformEditor', () => {
     expect(changes.at(-1)).toEqual(['orders', 'refunds'])
   })
 
+  it('shows connected DAG inputs for Union instead of editable stream text fields', () => {
+    const host = renderEditor({
+      config: { ...base, transformType: 'union', from: ['orders'], body: {} },
+      upstreamInputs: ['orders', 'returns'],
+    } as unknown as TransformEditorProps)
+
+    expect(host.textContent).toContain('orders')
+    expect(host.textContent).toContain('returns')
+    expect(host.querySelector('input[aria-label="Input branch"]')).toBeNull()
+    expect(host.textContent).toContain(
+      'Add or remove Union inputs by connecting nodes on the canvas.',
+    )
+  })
+
+  it('shows connected graph inputs as read-only sources for Join aliases', () => {
+    const join = renderEditor({
+      config: {
+        ...base,
+        transformType: 'join',
+        from: { orders: 'orders' },
+        body: { engine: 'builtin', aliases: { orders: 'orders' }, sql: 'select *' },
+      },
+      upstreamInputs: ['orders', 'returns'],
+    } as unknown as TransformEditorProps)
+    const input = join.querySelector<HTMLInputElement>('input[aria-label="Upstream input"]')
+    expect(input?.disabled).toBe(true)
+    expect(input?.value).toBe('orders')
+  })
+
+  it('uses graph input choices for Nest root and child streams', () => {
+    const host = renderEditor({
+      config: {
+        ...base,
+        transformType: 'nest',
+        body: {
+          root: {
+            from: 'orders',
+            key: ['id'],
+            mode: 'upsert',
+            embed: [{ from: 'returns', on: { order_id: 'id' }, as: 'array', path: 'returns' }],
+          },
+        },
+      },
+      upstreamInputs: ['orders', 'returns'],
+    } as unknown as TransformEditorProps)
+
+    expect(host.querySelector('button[aria-label="Root stream"]')).not.toBeNull()
+    expect(host.querySelector('button[aria-label="Child stream"]')).not.toBeNull()
+    expect(host.querySelector('input[aria-label="Root stream"]')).toBeNull()
+    expect(host.querySelector('input[aria-label="Child stream"]')).toBeNull()
+  })
+
   it('initializes JavaScript language from body.engine', () => {
     const host = renderEditor({
       config: {
@@ -244,7 +332,7 @@ describe('TransformEditor', () => {
     })
 
     expect(host.textContent).toContain('TypeScript')
-    expect(host.querySelector('[data-slot="select-trigger"]')).not.toBeNull()
+    expect(host.querySelector('button[aria-label="Language"]')).not.toBeNull()
     expect(host.querySelector('.ant-select')).toBeNull()
     expect(host.querySelector<HTMLTextAreaElement>('textarea[aria-label="Script"]')?.value).toBe(
       'return record',

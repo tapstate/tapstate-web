@@ -1,10 +1,9 @@
+import { Button } from '@tapstate-web/ui/button'
+import { Input } from '@tapstate-web/ui/input'
+import { Textarea } from '@tapstate-web/ui/textarea'
 import { GitMerge, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 
 import { TransformEditorShell } from './transform-editor-shell'
 import { TransformSelect } from './transform-select'
@@ -31,7 +30,7 @@ function fromFor(aliases: JoinAlias[]) {
   )
 }
 
-export function JoinEditor({ config, onChange }: TransformEditorProps) {
+export function JoinEditor({ config, onChange, upstreamInputs }: TransformEditorProps) {
   const { t } = useTranslation()
   const [aliases, setAliases] = useState(() => initialAliases(config.from))
   const [engine, setEngine] = useState(() =>
@@ -70,7 +69,7 @@ export function JoinEditor({ config, onChange }: TransformEditorProps) {
 
   return (
     <TransformEditorShell
-      from={config.from}
+      from={upstreamInputs ?? config.from}
       icon={GitMerge}
       title={t('pipelines.workspace.transform.join.title')}
     >
@@ -92,22 +91,32 @@ export function JoinEditor({ config, onChange }: TransformEditorProps) {
                 )
               }
             />
-            <Input
-              aria-label={t('pipelines.workspace.transform.upstreamInput')}
-              value={entry.input}
-              placeholder={t('pipelines.workspace.transform.upstreamInput')}
-              onChange={(event) =>
-                update(
-                  aliases.map((item, itemIndex) =>
-                    itemIndex === index ? { ...item, input: event.target.value } : item,
-                  ),
-                )
-              }
-            />
+            {upstreamInputs === undefined ? (
+              <Input
+                aria-label={t('pipelines.workspace.transform.upstreamInput')}
+                value={entry.input}
+                placeholder={t('pipelines.workspace.transform.upstreamInput')}
+                onChange={(event) =>
+                  update(
+                    aliases.map((item, itemIndex) =>
+                      itemIndex === index ? { ...item, input: event.target.value } : item,
+                    ),
+                  )
+                }
+              />
+            ) : (
+              <Input
+                aria-label={t('pipelines.workspace.transform.upstreamInput')}
+                value={upstreamInputs[index] || ''}
+                disabled
+                placeholder={t('pipelines.workspace.transform.noUpstreamInputs')}
+              />
+            )}
             <Button
               type="button"
               variant="ghost"
-              size="icon-sm"
+              size="small"
+              className="size-6 p-0"
               aria-label={t('pipelines.workspace.transform.removeAlias')}
               onClick={() => {
                 const nextAliases = aliases.filter((_, itemIndex) => itemIndex !== index)
@@ -121,8 +130,8 @@ export function JoinEditor({ config, onChange }: TransformEditorProps) {
       </div>
       <Button
         type="button"
-        variant="outline"
-        size="sm"
+        variant="secondary"
+        size="small"
         className="w-fit gap-1.5"
         onClick={() => update([...aliases, { alias: '', input: '' }])}
       >
