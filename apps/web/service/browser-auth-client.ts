@@ -15,11 +15,11 @@ export async function browserAuthRequest(
   credentials?: LoginCredentials,
 ): Promise<BrowserAccessGrant | null> {
   const controller = new AbortController()
-  const timeout = action === 'session' ? setTimeout(() => controller.abort(), 15_000) : null
+  const timeout = setTimeout(() => controller.abort(), 15_000)
   try {
     return await request(action, fetcher, credentials, controller.signal)
   } finally {
-    if (timeout !== null) clearTimeout(timeout)
+    clearTimeout(timeout)
   }
 }
 

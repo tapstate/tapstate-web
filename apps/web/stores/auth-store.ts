@@ -164,7 +164,13 @@ export function createAuthStore(options: AuthStoreOptions = {}) {
             accept(result.value)
           }
         } catch (error) {
-          if (get().authEpoch === epoch) set({ status: 'anonymous' })
+          if (get().authEpoch === epoch) {
+            try {
+              await get().restore()
+            } catch {
+              /* restore records the recoverable authority state. */
+            }
+          }
           throw error
         }
       },
@@ -183,7 +189,12 @@ export function createAuthStore(options: AuthStoreOptions = {}) {
           await coordinator().mutate(() => browserAuthRequest('logout', fetcher))
           invalidate('anonymous')
         } catch (error) {
-          set({ status: 'unavailable' })
+          try {
+            await get().restore()
+          } catch {
+            /* A successful session check restores the existing account. */
+          }
+          if (!get().isAuthenticated) set({ status: 'unavailable' })
           throw error
         }
       },
