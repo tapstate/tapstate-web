@@ -346,7 +346,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
               className={cn(
                 'overflow-hidden rounded-xl border-[0.5px] bg-white shadow-2xs transition-all duration-150',
                 isExpanded
-                  ? 'border-[var(--pipeline-selection)] ring-1 ring-[var(--pipeline-selection-ring)]'
+                  ? 'border-[1px] border-[var(--pipeline-selection)] ring-2 ring-[var(--pipeline-selection-ring)]'
                   : 'border-gray-200 hover:border-gray-300',
               )}
             >
