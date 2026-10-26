@@ -32,6 +32,7 @@ interface StorageState {
   authorize: (capability: string) => void
   authorized: boolean
   session: number
+  authorityRevision: number
 }
 const Context = createContext<StorageState | null>(null)
 export function useStorage() {
@@ -146,6 +147,7 @@ export function StorageProvider({ children }: { children: ReactNode }) {
         refresh,
         authorized: Boolean(authorization.secret),
         session: auth.sessionRevision,
+        authorityRevision: authorization.revision,
         authorize: (secret) => {
           previous.current = undefined
           setAuthorization((current) => ({ secret, revision: current.revision + 1 }))

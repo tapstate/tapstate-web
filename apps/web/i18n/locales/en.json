@@ -2160,6 +2160,12 @@
       "EXPIRED": "Check expired",
       "checkedAt": "Last checked:",
       "help": "Refresh status checks the current default destination. Results expire after 10 minutes."
-    }
+    },
+    "setupProgressTitle": "Finishing cluster setup",
+    "setupSubmittingHelp": "Saving your database settings and preparing the cluster. You can refresh to check progress.",
+    "setupSavedHelp": "The database settings are saved. The cluster is preparing its runtime. Refresh to check progress.",
+    "resumeSetupTitle": "Continue saved storage setup",
+    "resumeSetupHelp": "These databases are already bound. Use the original connection details to continue. If the previous result is uncertain, refresh its status first.",
+    "resumeSetup": "Continue original setup"
   }
 }

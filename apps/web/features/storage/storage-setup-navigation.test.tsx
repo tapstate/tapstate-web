@@ -96,6 +96,216 @@ afterEach(() => {
 })
 
 describe('whole-site storage boundary', () => {
+  async function startPendingCloudSetup() {
+    useAuthStore.setState({ profile: 'cloud' })
+    const setup = {
+      snapshot: state({
+        mode: 'CLOUD',
+        bindingVersion: 0,
+        authGeneration: 0,
+        setupPhase: 'CONFIG_PREPARED',
+        businessPhase: 'NOT_CONFIGURED',
+        allowedActions: ['storage.test', 'storage.setup.commit'],
+      }),
+      entry: 'SETUP_REQUIRED',
+      statusFailure: false,
+      complete: (_response: Response): void => {
+        throw new Error('No submission')
+      },
+    }
+    fetcher.mockImplementation(async (url, init) => {
+      if (String(url) === '/auth/storage-entry')
+        return Response.json({ mode: 'CLOUD', management: false, entry: setup.entry })
+      if (String(url) === '/api/storage/status')
+        return setup.statusFailure
+          ? Response.json({ code: 'control.storage-unavailable' }, { status: 503 })
+          : Response.json(setup.snapshot)
+      if (String(url) === '/api/storage/test') {
+        const body = JSON.parse(String(init?.body))
+        return Response.json({
+          layer: body.layer,
+          testStamp: 'proof-' + body.layer,
+          expiresAt: new Date(Date.now() + 600000).toISOString(),
+          checks: [],
+        })
+      }
+      if (String(url) === '/api/storage/setup/commit')
+        return new Promise((resolve) => {
+          setup.complete = resolve
+        })
+      throw new Error('Unexpected request ' + String(url))
+    })
+    await render()
+    await input(
+      container.querySelector<HTMLInputElement>('input[type="password"]')!,
+      'mongodb+srv://user:secret@cluster/admin',
+    )
+    for (const button of [...container.querySelectorAll('button')].filter(
+      (x) => x.textContent === 'Test connection',
+    ))
+      await act(async () => button.click())
+    await click('Save storage settings')
+    return setup
+  }
+
+  it('keeps the original setup submission across binding publication without reopening an empty form', async () => {
+    const setup = await startPendingCloudSetup()
+    setup.snapshot = {
+      ...setup.snapshot,
+      setupPhase: 'STORAGE_BOUND',
+      bindingVersion: 1,
+      authGeneration: 1,
+      stateVersion: 11,
+      businessPhase: 'PREPARING',
+    }
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: ['storage'] })
+    })
+    await settle()
+    expect(container.querySelector('input[type="password"]')).toBeNull()
+    expect(container.querySelector('button[type="submit"]')).toBeNull()
+    expect(container.textContent).toContain('The database settings are saved')
+    expect(container.querySelector('[data-testid="business"]')).toBeNull()
+    // More read-side refreshes cannot create another write or retire the pending submission.
+    for (let i = 0; i < 12; i++)
+      await act(async () => {
+        await client.invalidateQueries({ queryKey: ['storage'] })
+      })
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')).toHaveLength(
+      1,
+    )
+    setup.entry = 'LOGIN'
+    await act(async () => setup.complete(Response.json({ setupPhase: 'COMPLETE' })))
+    await settle()
+    expect(useAuthStore.getState().isAuthenticated).toBe(false)
+    expect(container.textContent).toContain('Sign in to continue')
+    expect(container.querySelector('[data-testid="business"]')).toBeNull()
+    setup.snapshot = state({ mode: 'CLOUD', stateVersion: 12 })
+    await act(async () => useAuthStore.setState({ isAuthenticated: true, sessionRevision: 2 }))
+    await settle()
+    expect(container.querySelector('[data-testid="business"]')).not.toBeNull()
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')).toHaveLength(
+      1,
+    )
+  })
+
+  it.each(['session', 'operation', 'setup generation', 'binding generation', 'auth generation'])(
+    'does not accept the old setup response after a different %s',
+    async (change) => {
+      const setup = await startPendingCloudSetup()
+      if (change === 'session') await act(async () => useAuthStore.setState({ sessionRevision: 1 }))
+      else {
+        setup.snapshot = {
+          ...setup.snapshot,
+          stateVersion: 11,
+          ...(change === 'operation' ? { operationId: 'another-operation' } : {}),
+          ...(change === 'setup generation' ? { setupGeneration: 2 } : {}),
+          ...(['binding generation', 'auth generation'].includes(change)
+            ? {
+                setupPhase: 'STORAGE_BOUND',
+                businessPhase: 'PREPARING',
+                bindingVersion: change === 'binding generation' ? 2 : 1,
+                authGeneration: change === 'auth generation' ? 2 : 1,
+              }
+            : {}),
+        }
+        await act(async () => {
+          await client.invalidateQueries({ queryKey: ['storage'] })
+        })
+      }
+      await settle()
+      await act(async () => setup.complete(Response.json({ setupPhase: 'COMPLETE' })))
+      await settle()
+      expect(useAuthStore.getState().isAuthenticated).toBe(true)
+      expect(container.querySelector('[data-testid="business"]')).toBeNull()
+      expect(
+        fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit'),
+      ).toHaveLength(1)
+    },
+  )
+  it.each(['completed snapshot', 'read failure'])(
+    'keeps the accepted submission owner through a %s while its response is pending',
+    async (change) => {
+      const setup = await startPendingCloudSetup()
+      if (change === 'read failure') setup.statusFailure = true
+      else
+        setup.snapshot = {
+          ...setup.snapshot,
+          setupPhase: 'COMPLETE',
+          bindingVersion: 1,
+          authGeneration: 1,
+          stateVersion: 11,
+          businessPhase: 'AUTH_READY',
+          allowedActions: ['storage.status'],
+        }
+      await act(async () => {
+        await client.invalidateQueries({ queryKey: ['storage'] })
+      })
+      await settle()
+      expect(container.querySelector('input[type="password"]')).toBeNull()
+      expect(container.querySelector('[data-testid="business"]')).toBeNull()
+      setup.entry = 'LOGIN'
+      await act(async () => setup.complete(Response.json({ setupPhase: 'COMPLETE' })))
+      await settle()
+      expect(useAuthStore.getState().isAuthenticated).toBe(false)
+      expect(container.textContent).toContain('Sign in to continue')
+      expect(
+        fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit'),
+      ).toHaveLength(1)
+    },
+  )
+  it('does not clear an already admitted session when the original setup response arrives late', async () => {
+    const setup = await startPendingCloudSetup()
+    setup.snapshot = state({ mode: 'CLOUD', stateVersion: 11 })
+    setup.entry = 'LOGIN'
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: ['storage'] })
+    })
+    await settle()
+    expect(container.querySelector('[data-testid="business"]')).not.toBeNull()
+    await act(async () => setup.complete(Response.json({ setupPhase: 'COMPLETE' })))
+    await settle()
+    expect(useAuthStore.getState().isAuthenticated).toBe(true)
+    expect(container.querySelector('[data-testid="business"]')).not.toBeNull()
+  })
+  it('retains an explicit original-operation continuation after a bound submission fails', async () => {
+    const setup = await startPendingCloudSetup()
+    setup.snapshot = {
+      ...setup.snapshot,
+      setupPhase: 'STORAGE_BOUND',
+      bindingVersion: 1,
+      authGeneration: 1,
+      stateVersion: 11,
+      businessPhase: 'PREPARING',
+    }
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: ['storage'] })
+    })
+    await settle()
+    await act(async () =>
+      setup.complete(Response.json({ code: 'control.storage-unavailable' }, { status: 503 })),
+    )
+    await settle()
+    expect(container.querySelector<HTMLInputElement>('input[type="password"]')?.value).toBe(
+      'mongodb+srv://user:secret@cluster/admin',
+    )
+    expect(container.textContent).toContain('Continue saved storage setup')
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')).toHaveLength(
+      1,
+    )
+    for (const button of [...container.querySelectorAll('button')].filter(
+      (x) => x.textContent === 'Test connection',
+    ))
+      await act(async () => button.click())
+    await click('Continue original setup')
+    const writes = fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')
+    expect(writes).toHaveLength(2)
+    expect(JSON.parse(String(writes[1][1]?.body))).toEqual(JSON.parse(String(writes[0][1]?.body)))
+    setup.entry = 'LOGIN'
+    await act(async () => setup.complete(Response.json({ setupPhase: 'COMPLETE' })))
+    await settle()
+    expect(useAuthStore.getState().isAuthenticated).toBe(false)
+  })
   it('refreshes cached configuration projections when original import status proves committed', async () => {
     client.setQueryData(['sources'], ['old-source'])
     function Catalog() {

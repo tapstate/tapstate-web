@@ -1,20 +1,40 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { snapshotScope } from '@/service/storage-client'
+import { setupOperationScope, snapshotScope, StorageClientError } from '@/service/storage-client'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { useStorage } from './storage-context'
 
 /** A write is never retried or cancelled as if that rolled back its server effects. */
-export function useStorageAction() {
-  const { snapshot, session } = useStorage()
-  const identity = `${session}:${snapshot ? snapshotScope(snapshot) : ''}`
+export function useStorageAction(scope: 'storage' | 'setup' = 'storage') {
+  const { snapshot, session, authorityRevision = 0, error: queryError } = useStorage()
+  const lastSetupScope = useRef('')
+  if (snapshot) lastSetupScope.current = setupOperationScope(snapshot)
+  const temporaryReadFailure =
+    queryError instanceof TypeError ||
+    (queryError instanceof StorageClientError && queryError.status >= 500)
+  const selectedScope = snapshot
+    ? scope === 'setup'
+      ? setupOperationScope(snapshot)
+      : snapshotScope(snapshot)
+    : scope === 'setup' && temporaryReadFailure
+      ? lastSetupScope.current
+      : ''
+  const identity = `${session}:${authorityRevision}:${selectedScope}`
   const current = useRef(identity)
+  const revision = useRef(0)
+  if (current.current !== identity) revision.current += 1
   current.current = identity
   const mounted = useRef(true)
-  const pending = useRef<{ identity: string } | null>(null)
-  const [state, setState] = useState<{ identity: string; busy: boolean; error: unknown }>({
+  const pending = useRef<{ identity: string; revision: number } | null>(null)
+  const [state, setState] = useState<{
+    identity: string
+    revision: number
+    busy: boolean
+    error: unknown
+  }>({
     identity,
+    revision: revision.current,
     busy: false,
     error: null,
   })
@@ -30,33 +50,42 @@ export function useStorageAction() {
     reject?: (failure: unknown) => void,
   ) {
     const started = current.current
-    if (pending.current?.identity === started) return
-    const attempt = { identity: started }
+    const startedRevision = revision.current
+    if (pending.current?.identity === started && pending.current.revision === startedRevision)
+      return
+    const attempt = { identity: started, revision: startedRevision }
     pending.current = attempt
-    setState({ identity: started, busy: true, error: null })
+    setState({ ...attempt, busy: true, error: null })
     const isCurrent = () =>
       mounted.current &&
       current.current === started &&
+      revision.current === startedRevision &&
       useAuthStore.getState().sessionRevision === session
     try {
       const value = await work(isCurrent)
       if (isCurrent()) await accept(value)
     } catch (failure) {
       if (isCurrent()) {
-        setState({ identity: started, busy: true, error: failure })
+        setState({ ...attempt, busy: true, error: failure })
         reject?.(failure)
       }
     } finally {
       if (pending.current === attempt) pending.current = null
-      if (mounted.current && current.current === started)
-        setState((value) => (value.identity === started ? { ...value, busy: false } : value))
+      if (mounted.current && current.current === started && revision.current === startedRevision)
+        setState((value) =>
+          value.revision === startedRevision ? { ...value, busy: false } : value,
+        )
     }
   }
   return {
-    busy: state.identity === identity && state.busy,
-    error: state.identity === identity ? state.error : null,
+    busy: state.identity === identity && state.revision === revision.current && state.busy,
+    error: state.identity === identity && state.revision === revision.current ? state.error : null,
     run,
     reset: () =>
-      setState((value) => (value.identity === identity ? { ...value, error: null } : value)),
+      setState((value) =>
+        value.identity === identity && value.revision === revision.current
+          ? { ...value, error: null }
+          : value,
+      ),
   }
 }

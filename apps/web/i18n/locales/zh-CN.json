@@ -2160,6 +2160,12 @@
       "EXPIRED": "核验已过期",
       "checkedAt": "最近核验时间：",
       "help": "刷新状态会检查当前默认目标，核验结果在 10 分钟后过期。"
-    }
+    },
+    "setupProgressTitle": "正在完成集群设置",
+    "setupSubmittingHelp": "正在保存数据库设置并准备集群。等待期间可以刷新查看进度。",
+    "setupSavedHelp": "数据库设置已保存，集群正在初始化运行环境。可刷新查看进度。",
+    "resumeSetupTitle": "继续已保存的存储设置",
+    "resumeSetupHelp": "数据库绑定已保存。请使用原连接信息继续；若上次结果仍不确定，请先刷新状态。",
+    "resumeSetup": "继续原设置"
   }
 }

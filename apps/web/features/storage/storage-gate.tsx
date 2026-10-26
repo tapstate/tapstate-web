@@ -3,7 +3,7 @@ import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
-import { snapshotScope, StorageClientError } from '@/service/storage-client'
+import { setupOperationScope, snapshotScope, StorageClientError } from '@/service/storage-client'
 import { useAuthStore } from '@/stores/auth-store'
 import { replaceWithCloudConsole } from '@/utils/cloud-console'
 
@@ -28,6 +28,7 @@ export function StorageGate({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const { entry, snapshot, loading, error, refresh, authorized, authorize } = useStorage()
   const authenticated = useAuthStore((state) => state.isAuthenticated)
+  const setupSubmission = useStorageAction('setup')
   if (loading)
     return (
       <StorageFrame>
@@ -69,22 +70,33 @@ export function StorageGate({ children }: { children: ReactNode }) {
     )
   if (snapshot) {
     if (snapshot.businessPhase === 'READY' && !entry.management) return children
+    const showSetup =
+      setupSubmission.busy ||
+      (snapshot.setupPhase !== 'COMPLETE' &&
+        snapshot.allowedActions.includes('storage.setup.commit') &&
+        !snapshot.allowedActions.includes('storage.recovery.plan'))
     return (
       <StorageFrame>
-        <div key={snapshotScope(snapshot)} className="space-y-6">
+        <div
+          key={
+            snapshot.setupPhase === 'COMPLETE'
+              ? snapshotScope(snapshot)
+              : setupOperationScope(snapshot)
+          }
+          className="space-y-6"
+        >
           <h1 className="text-xl font-semibold">{t('storage.title')}</h1>
           <StorageHealthPanel snapshot={snapshot} />
-          {snapshot.allowedActions.includes('storage.setup.commit') &&
-            !snapshot.allowedActions.includes('storage.recovery.plan') && <StorageSetupForm />}
+          {showSetup && <StorageSetupForm submission={setupSubmission} />}
+          {!showSetup && Boolean(setupSubmission.error) && (
+            <StorageError error={setupSubmission.error} />
+          )}
           {snapshot.allowedActions.includes('first-admin') && <FirstAdminForm />}
           {snapshot.allowedActions.includes('storage.recovery.plan') && <StorageRecovery />}
           {snapshot.allowedActions.includes('configuration.import.status') && (
             <ConfigurationTransfer />
           )}
-          {!(
-            snapshot.allowedActions.includes('storage.setup.commit') &&
-            !snapshot.allowedActions.includes('storage.recovery.plan')
-          ) && (
+          {!showSetup && (
             <Button
               className="min-h-11 sm:min-h-8"
               variant="outline"

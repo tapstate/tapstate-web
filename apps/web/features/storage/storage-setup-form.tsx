@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import {
   storageCandidate,
   storageRequest,
+  snapshotScope,
   type StorageForm,
   type StorageLayer,
   type StorageTest,
@@ -16,7 +17,9 @@ import { useStorage } from './storage-context'
 import { inputClass, StorageError, StorageIndicator } from './storage-ui'
 import { useStorageAction } from './use-storage-action'
 
-export function StorageSetupForm() {
+export function StorageSetupForm({
+  submission: owner,
+}: { submission?: ReturnType<typeof useStorageAction> } = {}) {
   const { t } = useTranslation()
   const { snapshot, fetcher, refresh, authorize } = useStorage()
   const [form, setForm] = useState<StorageForm>({
@@ -36,6 +39,26 @@ export function StorageSetupForm() {
   const uriId = useId()
   const version = useRef(0)
   const action = useStorageAction()
+  const localSubmission = useStorageAction('setup')
+  const submission = owner ?? localSubmission
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
+  const busy = action.busy || submission.busy
+  const testingScope = snapshot ? snapshotScope(snapshot) : ''
+  const previousTestingScope = useRef(testingScope)
+  useEffect(() => {
+    if (previousTestingScope.current === testingScope) return
+    previousTestingScope.current = testingScope
+    version.current += 1
+    setProofs({})
+    setTestingLayer(null)
+    setFailedLayer(null)
+  }, [testingScope])
   useEffect(() => {
     const future = Object.values(proofs)
       .map((proof) => Date.parse(proof.expiresAt))
@@ -54,6 +77,7 @@ export function StorageSetupForm() {
     setTestingLayer(null)
     setFailedLayer(null)
     action.reset()
+    submission.reset()
   }
   const scope = { operationId: snapshot.operationId, generation: snapshot.setupGeneration }
   const databaseNames = [
@@ -105,6 +129,27 @@ export function StorageSetupForm() {
       },
     )
   }
+  if (submission.busy) {
+    return (
+      <section className="space-y-4" aria-label={t('storage.setupProgressTitle')}>
+        <h2 className="text-base font-semibold">{t('storage.setupProgressTitle')}</h2>
+        <p role="status" className="text-muted-foreground text-sm">
+          {t(
+            snapshot.bindingVersion > 0 ? 'storage.setupSavedHelp' : 'storage.setupSubmittingHelp',
+          )}
+        </p>
+        {Boolean(submission.error) && <StorageError error={submission.error} />}
+        <Button
+          className="min-h-11 sm:min-h-8"
+          type="button"
+          variant="outline"
+          onClick={() => void refresh()}
+        >
+          {t('storage.refresh')}
+        </Button>
+      </section>
+    )
+  }
   return (
     <form
       className="space-y-5"
@@ -112,7 +157,7 @@ export function StorageSetupForm() {
       onSubmit={(event) => {
         event.preventDefault()
         if (!(['CONFIG', 'CACHE', 'MASTER'] as const).every(fresh) || !valid) return
-        void action.run(
+        void submission.run(
           async () =>
             storageRequest<{ setupPhase: string }>(fetcher, 'storage.setup.commit', {
               ...scope,
@@ -123,24 +168,41 @@ export function StorageSetupForm() {
             }),
           async (result) => {
             if (result.setupPhase === 'COMPLETE') {
-              setForm((current) => ({ ...current, uri: '', configCaPem: '', cacheCaPem: '' }))
-              setProofs({})
-              setShowUri(false)
+              if (mounted.current) {
+                setForm((current) => ({ ...current, uri: '', configCaPem: '', cacheCaPem: '' }))
+                setProofs({})
+                setShowUri(false)
+              }
               if (mode === 'CLOUD') useAuthStore.getState().clear()
               else authorize('')
             }
             await refresh()
           },
+          () => {
+            if (mounted.current) setProofs({})
+          },
         )
       }}
     >
       <div>
-        <h2 className="text-base font-semibold">{t('storage.setupTitle')}</h2>
+        <h2 className="text-base font-semibold">
+          {t(
+            snapshot.setupPhase === 'STORAGE_BOUND'
+              ? 'storage.resumeSetupTitle'
+              : 'storage.setupTitle',
+          )}
+        </h2>
         <p className="text-muted-foreground mt-2 text-sm">
-          {t(mode === 'CLOUD' ? 'storage.cloudSetup' : 'storage.opSetup')}
+          {t(
+            snapshot.setupPhase === 'STORAGE_BOUND'
+              ? 'storage.resumeSetupHelp'
+              : mode === 'CLOUD'
+                ? 'storage.cloudSetup'
+                : 'storage.opSetup',
+          )}
         </p>
       </div>
-      <fieldset disabled={action.busy} className="space-y-4">
+      <fieldset disabled={busy} className="space-y-4">
         {mode === 'OP' && (
           <div className="block space-y-1 text-sm">
             <span>{t('storage.connector')}</span>
@@ -292,14 +354,17 @@ export function StorageSetupForm() {
         </details>
       </fieldset>
       {Boolean(action.error) && <StorageError error={action.error} />}
+      {Boolean(submission.error) && <StorageError error={submission.error} />}
       <p className="text-muted-foreground text-sm">{t('storage.setupCommitHelp')}</p>
       <div className="flex flex-wrap gap-2">
-        <Button
-          className="min-h-11 sm:min-h-8"
-          type="submit"
-          disabled={action.busy || !tested || !valid}
-        >
-          {t(action.busy ? 'storage.working' : 'storage.save')}
+        <Button className="min-h-11 sm:min-h-8" type="submit" disabled={busy || !tested || !valid}>
+          {t(
+            busy
+              ? 'storage.working'
+              : snapshot.setupPhase === 'STORAGE_BOUND'
+                ? 'storage.resumeSetup'
+                : 'storage.save',
+          )}
         </Button>
         <Button
           className="min-h-11 sm:min-h-8"

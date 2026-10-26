@@ -210,6 +210,19 @@ export function snapshotScope(value: StorageSnapshot): string {
   ])
 }
 
+/** Initial setup keeps its original operation while publishing the first binding and auth generation. */
+export function setupOperationScope(value: StorageSnapshot): string {
+  return JSON.stringify([
+    value.mode,
+    value.clusterId,
+    value.setupGeneration,
+    value.operationId,
+    Math.max(1, value.bindingVersion),
+    Math.max(1, value.authGeneration),
+    value.businessPhase === 'READY',
+  ])
+}
+
 /** Requests are serialized/cancelled by QueryClient. Reject regression but retain current health. */
 export function acceptSnapshot(
   previous: StorageSnapshot | undefined,

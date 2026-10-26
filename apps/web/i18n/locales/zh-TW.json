@@ -2160,6 +2160,12 @@
       "EXPIRED": "驗證已過期",
       "checkedAt": "最近驗證時間：",
       "help": "重新整理狀態會檢查目前預設目的地，驗證結果在 10 分鐘後到期。"
-    }
+    },
+    "setupProgressTitle": "正在完成叢集設定",
+    "setupSubmittingHelp": "正在儲存資料庫設定並準備叢集。等待期間可以重新整理查看進度。",
+    "setupSavedHelp": "資料庫設定已儲存，叢集正在初始化執行環境。可重新整理查看進度。",
+    "resumeSetupTitle": "繼續已儲存的儲存設定",
+    "resumeSetupHelp": "資料庫繫結已儲存。請使用原連線資訊繼續；若上次結果仍不確定，請先重新整理狀態。",
+    "resumeSetup": "繼續原設定"
   }
 }

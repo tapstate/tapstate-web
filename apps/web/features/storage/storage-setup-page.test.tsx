@@ -12,12 +12,14 @@ const storage = vi.hoisted(() => ({
   refresh: vi.fn(async () => {}),
   authorize: vi.fn(),
   session: 0,
+  authorityRevision: 0,
 }))
 vi.mock('./storage-context', () => ({ useStorage: () => storage }))
 import { ConfigurationTransfer } from './configuration-transfer'
 import { StorageRecovery } from './storage-recovery'
 import { StorageSetupForm } from './storage-setup-form'
 import { StorageError, StorageHealthPanel } from './storage-ui'
+import { useStorageAction } from './use-storage-action'
 
 let container: HTMLDivElement
 let root: Root
@@ -67,6 +69,7 @@ beforeEach(async () => {
   document.body.appendChild(container)
   root = createRoot(container)
   storage.session = 0
+  storage.authorityRevision = 0
   storage.snapshot = base
   storage.fetcher.mockReset()
   storage.refresh.mockClear()
@@ -79,6 +82,83 @@ afterEach(() => {
 })
 
 describe('storage setup form', () => {
+  it('rejects an old setup completion after the installation authority changes at the same storage scope', async () => {
+    let complete!: () => void
+    const accepted = vi.fn()
+    function Harness() {
+      const action = useStorageAction('setup')
+      return (
+        <button
+          onClick={() =>
+            void action.run(
+              () =>
+                new Promise<void>((resolve) => {
+                  complete = resolve
+                }),
+              accepted,
+            )
+          }
+        >
+          Start original
+        </button>
+      )
+    }
+    await render(<Harness />)
+    await act(async () => container.querySelector('button')!.click())
+    storage.authorityRevision = 1
+    await render(<Harness />)
+    await act(async () => complete())
+    expect(accepted).not.toHaveBeenCalled()
+  })
+  it('clears layer test progress and proofs at binding publication while preserving the entered connection', async () => {
+    storage.snapshot = { ...base, mode: 'CLOUD', setupPhase: 'CONFIG_PREPARED' }
+    let complete!: (response: Response) => void
+    storage.fetcher.mockImplementation(async (_url, init) => {
+      const body = JSON.parse(String(init?.body))
+      if (body.layer === 'CACHE')
+        return new Promise((resolve) => {
+          complete = resolve
+        })
+      return Response.json({
+        layer: body.layer,
+        testStamp: 'proof-' + body.layer,
+        expiresAt: new Date(Date.now() + 600000).toISOString(),
+        checks: [],
+      })
+    })
+    await render(<StorageSetupForm />)
+    await fill('storage.uri', 'mongodb+srv://user:secret@cluster/admin')
+    const button = [...container.querySelectorAll('button')].find(
+      (x) => x.textContent === i18n.t('storage.test'),
+    )!
+    await act(async () => button.click())
+    expect(container.querySelector('.animate-spin')).not.toBeNull()
+    storage.snapshot = {
+      ...storage.snapshot,
+      bindingVersion: 1,
+      authGeneration: 1,
+      setupPhase: 'STORAGE_BOUND',
+      businessPhase: 'PREPARING',
+    }
+    await render(<StorageSetupForm />)
+    expect(container.querySelector('.animate-spin')).toBeNull()
+    expect(container.textContent).not.toContain(i18n.t('storage.testPassed'))
+    expect(container.querySelector<HTMLInputElement>('input[type="password"]')?.value).toBe(
+      'mongodb+srv://user:secret@cluster/admin',
+    )
+    await act(async () =>
+      complete(
+        Response.json({
+          layer: 'CACHE',
+          testStamp: 'late',
+          expiresAt: new Date(Date.now() + 600000).toISOString(),
+          checks: [],
+        }),
+      ),
+    )
+    expect(container.querySelector('.animate-spin')).toBeNull()
+    expect(container.textContent).not.toContain(i18n.t('storage.testPassed'))
+  })
   it('keeps the URI hidden by default and reveals it only on explicit toggle', async () => {
     await render(<StorageSetupForm />)
     await fill('storage.uri', 'mongodb://user:visibility-sentinel@localhost/admin')
