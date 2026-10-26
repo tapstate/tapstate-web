@@ -481,7 +481,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     if (focus === 'root') return rootConfig?.table || t('wizard.assistant.inputTableFocus')
     if (focus === 'doc_process') return t('wizard.assistant.documentFocus')
     if (focus === 'relations') return t('wizard.assistant.relationsFocus')
-    return flattenRelations(relations).find((relation) => relation.id === focus)?.table || focus
+    if (focus === 'destination') return t('wizard.destinationContext')
+    return (
+      flattenRelations(relations).find((relation) => relation.id === focus)?.table ||
+      t('wizard.assistant.relationsFocus')
+    )
   }
   function sendAssistantHelper() {
     const draft = assistantHelperDraft
@@ -612,7 +616,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
               </PopoverTitle>
               <PopoverDescription className="system-xs-regular text-text-tertiary mt-1 flex min-w-0 items-baseline gap-1">
                 {t('wizard.assistant.helperPopover.scope')}{' '}
-                <span className="system-xs-medium text-text-secondary truncate font-mono">
+                <span className="system-xs-medium text-text-secondary truncate">
                   {assistantScope(focus)}
                 </span>
               </PopoverDescription>
@@ -3310,13 +3314,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   onUndoApply: undoAssistantApply,
                 }}
                 focus={activeContext}
-                focusLabel={
-                  activeContext === 'root'
-                    ? `Step 1 · ${rootConfig?.table || t('wizard.assistant.unconfigured')}`
-                    : activeContext === 'doc_process'
-                      ? t('wizard.assistant.documentFocus')
-                      : `Step 2 · ${activeContext}`
-                }
+                focusLabel={assistantScope(activeContext)}
                 promptRequest={assistantPrompt}
                 onClose={() => setAssistantOpen(false)}
               />

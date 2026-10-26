@@ -1731,7 +1731,7 @@
       "send": "Send",
       "stop": "Stop",
       "unconfigured": "Not configured",
-      "documentFocus": "Step 3 · Document transforms",
+      "documentFocus": "Document transforms",
       "helpers": {
         "clean": "AI cleaning / filtering",
         "relations": "AI infer relationships",

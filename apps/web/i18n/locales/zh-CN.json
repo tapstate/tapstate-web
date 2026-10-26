@@ -1731,7 +1731,7 @@
       "send": "发送",
       "stop": "停止",
       "unconfigured": "未配置",
-      "documentFocus": "Step 3 · 文档层转换",
+      "documentFocus": "文档转换",
       "helpers": {
         "clean": "AI 智能清洗 / 预筛选",
         "relations": "AI 智能关联子表",

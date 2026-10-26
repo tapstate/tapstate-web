@@ -1731,7 +1731,7 @@
       "send": "傳送",
       "stop": "停止",
       "unconfigured": "未設定",
-      "documentFocus": "Step 3 · 文件層轉換",
+      "documentFocus": "文件轉換",
       "helpers": {
         "clean": "AI 清理 / 預先篩選",
         "relations": "AI 關聯子表",
