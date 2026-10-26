@@ -677,8 +677,13 @@ describe('ReferenceWizardBuilder union transform choices', () => {
     )
     expect(union?.disabled).toBe(false)
     await act(async () => union?.click())
-    expect(pipelineTransforms?.textContent).toContain('archive · archive_orders')
-    expect(pipelineTransforms?.querySelector('.connector-icon')).not.toBeNull()
+    const archiveInput = pipelineTransforms?.querySelector<HTMLElement>(
+      '[data-union-input="archive.archive_orders"]',
+    )
+    expect(archiveInput?.textContent).toContain('archive_orders')
+    expect(archiveInput?.querySelector('[aria-label="archive · archive_orders"]')).not.toBeNull()
+    expect(archiveInput?.parentElement?.textContent).toContain('archive')
+    expect(archiveInput?.parentElement?.querySelector('.connector-icon')).not.toBeNull()
   })
 })
 
