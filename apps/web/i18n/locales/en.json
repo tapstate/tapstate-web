@@ -112,7 +112,10 @@
     },
     "session": {
       "expired": "Your session expired. Sign in again.",
-      "logoutFailed": "Cloud sign-out did not complete. Try again."
+      "logoutFailed": "Cloud sign-out did not complete. Try again.",
+      "unavailable": "Your session could not be verified. Check the connection and try again.",
+      "browserUnsupported": "This browser cannot safely coordinate sign-in across tabs. Use an up-to-date browser.",
+      "serverUpgradeRequired": "This server does not support browser sessions yet. Upgrade the server and try again."
     }
   },
   "state": {

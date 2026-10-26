@@ -9,7 +9,7 @@ export interface LoginResult {
   token: string
 }
 
-export type AuthClientErrorKind = 'auth' | 'network' | 'protocol'
+export type AuthClientErrorKind = 'auth' | 'network' | 'protocol' | 'browser'
 
 export class AuthClientError extends Error {
   readonly kind: AuthClientErrorKind

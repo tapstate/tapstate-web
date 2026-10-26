@@ -1,3 +1,5 @@
+import { AuthClientError } from '@/service/auth-client'
+
 export interface BrowserAuthSync {
   revision: () => string
   read: <T>(action: () => Promise<T>) => Promise<T>
@@ -26,7 +28,10 @@ export function createBrowserAuthSync(): BrowserAuthSync {
   }
   const locks = () => {
     if (!navigator.locks)
-      throw new Error('This browser requires Web Locks for secure session changes.')
+      throw new AuthClientError(
+        'browser',
+        'This browser requires Web Locks for secure session changes.',
+      )
     return navigator.locks
   }
   channel?.addEventListener('message', notify)

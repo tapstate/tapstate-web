@@ -264,3 +264,14 @@ describe('OP transport credential scope', () => {
     expect(fetcher).not.toHaveBeenCalled()
   })
 })
+
+it('distinguishes an older server from a temporary session outage', async () => {
+  const store = createAuthStore({
+    profile: 'on-prem',
+    storage: null,
+    sync: testSync(),
+    fetcher: vi.fn(async () => new Response(null, { status: 404 })),
+  })
+  await expect(store.getState().restore()).rejects.toBeDefined()
+  expect(store.getState()).toMatchObject({ status: 'unavailable', recoveryReason: 'upgrade' })
+})

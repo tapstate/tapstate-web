@@ -25,6 +25,7 @@ interface AuthState {
   sessionId: string | null
   issuer: string | null
   authEpoch: number
+  recoveryReason: 'network' | 'upgrade' | 'browser'
   accessExpiresAt: number
   clear: () => void
   restore: () => Promise<void>
@@ -105,6 +106,7 @@ export function createAuthStore(options: AuthStoreOptions = {}) {
       sessionId: null,
       authEpoch: 0,
       accessExpiresAt: 0,
+      recoveryReason: 'network',
       clear: () => invalidate('anonymous'),
       restore: async () => {
         if (profile === 'cloud') return
@@ -129,7 +131,17 @@ export function createAuthStore(options: AuthStoreOptions = {}) {
           .catch((error: unknown) => {
             if (get().authEpoch !== epoch) throw authChanged()
             if (isSessionRefusal(error)) invalidate('anonymous')
-            else set({ status: 'unavailable' })
+            else
+              set({
+                status: 'unavailable',
+                recoveryReason:
+                  error instanceof AuthClientError && error.kind === 'browser'
+                    ? 'browser'
+                    : error instanceof AuthClientError &&
+                        (error.status === 404 || error.status === 405)
+                      ? 'upgrade'
+                      : 'network',
+              })
             throw error
           })
           .finally(() => {

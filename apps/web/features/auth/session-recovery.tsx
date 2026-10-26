@@ -7,11 +7,20 @@ import { useAuthStore } from '@/stores/auth-store'
 export function SessionRecovery() {
   const { t } = useTranslation()
   const status = useAuthStore((state) => state.status)
+  const reason = useAuthStore((state) => state.recoveryReason)
   const restore = useAuthStore((state) => state.restore)
   if (status === 'checking') return <p role="status">{t('state.loading')}</p>
   return (
     <div role="alert">
-      <p>{t('auth.login.errors.network')}</p>
+      <p>
+        {t(
+          reason === 'browser'
+            ? 'auth.session.browserUnsupported'
+            : reason === 'upgrade'
+              ? 'auth.session.serverUpgradeRequired'
+              : 'auth.session.unavailable',
+        )}
+      </p>
       <Button
         onClick={() => {
           void restore().catch(() => undefined)

@@ -115,6 +115,8 @@ function OnPremLoginRouteComponent() {
 
   function errorMessage(error: unknown) {
     if (!(error instanceof AuthClientError)) return t('auth.login.errors.unknown')
+    if (error.kind === 'browser') return t('auth.session.browserUnsupported')
+    if (error.status === 404 || error.status === 405) return t('auth.session.serverUpgradeRequired')
     if (error.kind === 'network') return t('auth.login.errors.network')
     if (error.kind === 'protocol') return t('auth.login.errors.protocol')
     return error.code === 'control.auth-failed'
