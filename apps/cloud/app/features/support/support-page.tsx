@@ -19,6 +19,7 @@ function errorMessage(error: unknown, t: TFunction) {
   const codeKeys: Record<string, string> = {
     'ticket.not-configured': 'support.errors.notConfigured',
     'ticket.customer-not-ready': 'support.errors.customerNotReady',
+    'ticket.email-not-verified': 'support.errors.emailNotVerified',
     'ticket.integration-failed': 'support.errors.integrationFailed',
     'ticket.request-rejected': 'support.errors.requestRejected',
     'ticket.close-unavailable': 'support.errors.closeUnavailable',
