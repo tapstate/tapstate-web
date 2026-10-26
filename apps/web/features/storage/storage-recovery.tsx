@@ -32,8 +32,10 @@ export function StorageRecovery() {
     action.reset()
   }
   return (
-    <section className="border-border space-y-4 rounded-lg border p-4">
-      <h2 className="text-base font-semibold">{t('storage.recovery.title')}</h2>
+    <details className="border-border rounded-lg border p-4 open:space-y-4">
+      <summary className="cursor-pointer text-base font-semibold">
+        <h2 className="inline">{t('storage.recovery.title')}</h2>
+      </summary>
       <p className="text-muted-foreground text-sm">{t('storage.recovery.help')}</p>
       {canPlan && (
         <fieldset disabled={action.busy} className="space-y-3">
@@ -412,7 +414,7 @@ export function StorageRecovery() {
         {t('storage.queryResult')}
       </Button>
       {Boolean(action.error) && <StorageError error={action.error} />}
-    </section>
+    </details>
   )
 }
 export function splitIds(value: string): string[] {
