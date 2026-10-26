@@ -12,9 +12,12 @@ export function useStorageAction() {
   const current = useRef(identity)
   current.current = identity
   const mounted = useRef(true)
-  const pending = useRef(false)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<unknown>(null)
+  const pending = useRef<{ identity: string } | null>(null)
+  const [state, setState] = useState<{ identity: string; busy: boolean; error: unknown }>({
+    identity,
+    busy: false,
+    error: null,
+  })
   useEffect(() => {
     mounted.current = true
     return () => {
@@ -26,11 +29,11 @@ export function useStorageAction() {
     accept: (value: T) => void | Promise<void>,
     reject?: (failure: unknown) => void,
   ) {
-    if (pending.current) return
-    pending.current = true
-    setBusy(true)
-    setError(null)
     const started = current.current
+    if (pending.current?.identity === started) return
+    const attempt = { identity: started }
+    pending.current = attempt
+    setState({ identity: started, busy: true, error: null })
     const isCurrent = () =>
       mounted.current &&
       current.current === started &&
@@ -40,13 +43,20 @@ export function useStorageAction() {
       if (isCurrent()) await accept(value)
     } catch (failure) {
       if (isCurrent()) {
-        setError(failure)
+        setState({ identity: started, busy: true, error: failure })
         reject?.(failure)
       }
     } finally {
-      pending.current = false
-      if (mounted.current && current.current === started) setBusy(false)
+      if (pending.current === attempt) pending.current = null
+      if (mounted.current && current.current === started)
+        setState((value) => (value.identity === started ? { ...value, busy: false } : value))
     }
   }
-  return { busy, error, run, reset: () => setError(null) }
+  return {
+    busy: state.identity === identity && state.busy,
+    error: state.identity === identity ? state.error : null,
+    run,
+    reset: () =>
+      setState((value) => (value.identity === identity ? { ...value, error: null } : value)),
+  }
 }

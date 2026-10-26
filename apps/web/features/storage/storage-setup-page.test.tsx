@@ -239,6 +239,67 @@ describe('storage setup form', () => {
     expect(container.textContent).toContain(i18n.t('storage.health.UNKNOWN'))
   })
 
+  it('shows the actual application-data check time instead of an unverified placeholder', async () => {
+    const checkedAt = new Date().toISOString()
+    const verified = {
+      ...base,
+      applicationDataVerification: {
+        status: 'PASSED',
+        checkedAt,
+        validUntil: new Date(Date.now() + 600_000).toISOString(),
+      },
+    } as StorageSnapshot
+    await render(<StorageHealthPanel snapshot={verified} />)
+    expect(container.querySelector('time')?.dateTime).toBe(checkedAt)
+    expect(container.textContent).toContain('Last check passed')
+  })
+
+  it('expires a visible successful check without a network write or losing its check time', async () => {
+    vi.useFakeTimers()
+    try {
+      const checkedAt = new Date().toISOString()
+      await render(
+        <StorageHealthPanel
+          snapshot={{
+            ...base,
+            applicationDataVerification: {
+              status: 'PASSED',
+              checkedAt,
+              validUntil: new Date(Date.now() + 1000).toISOString(),
+            },
+          }}
+        />,
+      )
+      expect(container.textContent).toContain('Last check passed')
+      await act(async () => vi.advanceTimersByTime(1002))
+      expect(container.textContent).toContain('Check expired')
+      expect(container.textContent).not.toContain('Last check passed')
+      expect(container.querySelector('time')?.dateTime).toBe(checkedAt)
+      expect(storage.fetcher).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('shows a failed report with its timestamp and no successful application-data indicator', async () => {
+    const checkedAt = new Date().toISOString()
+    await render(
+      <StorageHealthPanel
+        snapshot={{
+          ...base,
+          applicationDataVerification: {
+            status: 'FAILED',
+            checkedAt,
+            validUntil: new Date(Date.now() + 600_000).toISOString(),
+          },
+        }}
+      />,
+    )
+    expect(container.textContent).toContain('Last check failed')
+    expect(container.querySelector('dd .text-destructive')).toBeTruthy()
+    expect(container.querySelector('time')?.dateTime).toBe(checkedAt)
+  })
+
   it.each(['en', 'zh-CN', 'zh-TW'])(
     'requires explicit layer tests and confirmation in %s',
     async (locale) => {

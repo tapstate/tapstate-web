@@ -2151,6 +2151,15 @@
     },
     "mongodb": "MongoDB",
     "atlas": "MongoDB Atlas",
-    "title": "Cluster storage"
+    "title": "Cluster storage",
+    "verification": {
+      "UNKNOWN": "Not verified",
+      "CHECKING": "Checking…",
+      "PASSED": "Last check passed",
+      "FAILED": "Last check failed",
+      "EXPIRED": "Check expired",
+      "checkedAt": "Last checked:",
+      "help": "Refresh status checks the current default destination. Results expire after 10 minutes."
+    }
   }
 }

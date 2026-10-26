@@ -1,6 +1,5 @@
-import type { ReactNode } from 'react'
-
 import { CheckCircle2, CircleHelp, CircleX, Loader2, TriangleAlert } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
@@ -106,8 +105,33 @@ export function StorageError({ error }: { error: unknown }) {
     </div>
   )
 }
-export function StorageHealthPanel({ snapshot }: { snapshot: StorageSnapshot }) {
-  const { t } = useTranslation()
+export function StorageHealthPanel({
+  snapshot,
+  checkingApplicationData = false,
+  unverifiedApplicationData = false,
+}: {
+  snapshot: StorageSnapshot
+  checkingApplicationData?: boolean
+  unverifiedApplicationData?: boolean
+}) {
+  const { t, i18n } = useTranslation()
+  const verification = snapshot.applicationDataVerification
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    setNow(Date.now())
+    if (!verification?.validUntil) return
+    const remaining = Date.parse(verification.validUntil) - Date.now()
+    if (remaining <= 0) return
+    const timer = window.setTimeout(() => setNow(Date.now()), remaining + 1)
+    return () => window.clearTimeout(timer)
+  }, [verification])
+  const verificationStatus = checkingApplicationData
+    ? 'CHECKING'
+    : unverifiedApplicationData
+      ? 'UNKNOWN'
+      : verification?.validUntil && Date.parse(verification.validUntil) <= now
+        ? 'EXPIRED'
+        : verification?.status
   return (
     <section className="space-y-4" aria-label={t('storage.healthTitle')}>
       <div className="border-border rounded-lg border p-4">
@@ -123,17 +147,45 @@ export function StorageHealthPanel({ snapshot }: { snapshot: StorageSnapshot }) 
             <dd className="text-muted-foreground mt-2 text-sm">
               <StorageIndicator
                 tone={
-                  snapshot.health[layer] === 'AVAILABLE'
-                    ? 'success'
-                    : snapshot.health[layer] === 'UNAVAILABLE'
-                      ? 'error'
-                      : snapshot.health[layer] === 'AUTH_READY'
-                        ? 'warning'
-                        : 'pending'
+                  layer === 'MASTER' && verificationStatus
+                    ? verificationStatus === 'PASSED'
+                      ? 'success'
+                      : verificationStatus === 'FAILED'
+                        ? 'error'
+                        : verificationStatus === 'EXPIRED'
+                          ? 'warning'
+                          : verificationStatus === 'CHECKING'
+                            ? 'working'
+                            : 'pending'
+                    : snapshot.health[layer] === 'AVAILABLE'
+                      ? 'success'
+                      : snapshot.health[layer] === 'UNAVAILABLE'
+                        ? 'error'
+                        : snapshot.health[layer] === 'AUTH_READY'
+                          ? 'warning'
+                          : 'pending'
                 }
               >
-                {t(`storage.health.${snapshot.health[layer]}`)}
+                {layer === 'MASTER' && verificationStatus
+                  ? t(`storage.verification.${verificationStatus}`)
+                  : t(`storage.health.${snapshot.health[layer]}`)}
               </StorageIndicator>
+              {layer === 'MASTER' && verification && (
+                <div className="mt-2 space-y-1 text-xs">
+                  {verification.checkedAt ? (
+                    <p>
+                      {t('storage.verification.checkedAt')}{' '}
+                      <time dateTime={verification.checkedAt}>
+                        {new Intl.DateTimeFormat(i18n.resolvedLanguage, {
+                          dateStyle: 'medium',
+                          timeStyle: 'medium',
+                        }).format(new Date(verification.checkedAt))}
+                      </time>
+                    </p>
+                  ) : null}
+                  <p>{t('storage.verification.help')}</p>
+                </div>
+              )}
             </dd>
           </div>
         ))}

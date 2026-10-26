@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button'
 import { ConfigurationTransfer } from '@/features/storage/configuration-transfer'
 import { useStorage } from '@/features/storage/storage-context'
 import { StorageRecovery } from '@/features/storage/storage-recovery'
-import { StorageHealthPanel } from '@/features/storage/storage-ui'
-import { listSources } from '@/service/source-client'
+import { StorageError, StorageHealthPanel } from '@/features/storage/storage-ui'
+import { useStorageAction } from '@/features/storage/use-storage-action'
+import { getSource, listSources, testConnection } from '@/service/source-client'
 import { stateStoreDatabase, stateStoreSource } from '@/service/state-store-source'
+import { StorageClientError } from '@/service/storage-client'
 import { useAuthStore } from '@/stores/auth-store'
 import { getDeploymentProfile } from '@/utils/deployment-profile'
 
@@ -21,6 +23,28 @@ export function StateStorePage() {
   const profile = getDeploymentProfile()
   const managed = stateStoreSource(sourcesQuery.data ?? [], profile)
   const database = managed ? stateStoreDatabase(managed) : null
+  const verification = useStorageAction()
+  const canVerify = Boolean(managed && snapshot?.allowedActions.includes('connection.test'))
+  function refreshStatus() {
+    void verification.run(
+      async (isCurrent) => {
+        try {
+          if (canVerify && managed) {
+            const { source } = await getSource(managed.id, apiFetch)
+            if (!isCurrent()) return
+            if (!stateStoreSource([source], profile)) throw new StorageClientError('stale', 409)
+            await testConnection(
+              { id: source.id, connectorId: source.connector, settings: source.config },
+              apiFetch,
+            )
+          }
+        } finally {
+          if (isCurrent()) await refresh()
+        }
+      },
+      () => {},
+    )
+  }
 
   return (
     <section className="settings-page">
@@ -39,12 +63,23 @@ export function StateStorePage() {
           </span>
         </nav>
         <div className="settings-page__body">
-          {snapshot && <StorageHealthPanel snapshot={snapshot} />}
+          {snapshot && (
+            <StorageHealthPanel
+              snapshot={snapshot}
+              checkingApplicationData={verification.busy && canVerify}
+              unverifiedApplicationData={Boolean(verification.error)}
+            />
+          )}
           <div>
-            <Button variant="outline" onClick={() => void refresh()}>
-              {t('storage.refresh')}
+            <Button variant="outline" disabled={verification.busy} onClick={refreshStatus}>
+              {t(
+                verification.busy && canVerify
+                  ? 'storage.verification.CHECKING'
+                  : 'storage.refresh',
+              )}
             </Button>
           </div>
+          {Boolean(verification.error) && <StorageError error={verification.error} />}
           <div className="settings-page__section-header">
             <h2 className="text-foreground text-[15px] font-semibold">
               {t('stateStorePage.title')}

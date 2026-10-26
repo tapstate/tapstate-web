@@ -1,5 +1,10 @@
 export type StorageLayer = 'CONFIG' | 'CACHE' | 'MASTER'
 export type StorageHealth = 'UNKNOWN' | 'AVAILABLE' | 'UNAVAILABLE' | 'AUTH_READY'
+export interface ApplicationDataVerification {
+  status: 'UNKNOWN' | 'CHECKING' | 'PASSED' | 'FAILED' | 'EXPIRED'
+  checkedAt: string | null
+  validUntil: string | null
+}
 export type BusinessPhase =
   | 'NOT_CONFIGURED'
   | 'PREPARING'
@@ -24,6 +29,7 @@ export interface StorageSnapshot {
   health: Record<StorageLayer, StorageHealth>
   allowedActions: string[]
   restartRequired: boolean
+  applicationDataVerification?: ApplicationDataVerification
 }
 export interface StorageConnection {
   kind: 'MONGODB' | 'ATLAS'
@@ -175,6 +181,21 @@ export function validateSnapshot(value: StorageSnapshot): StorageSnapshot {
     )
   ) {
     throw new StorageClientError('protocol', 200)
+  }
+  const verification = value.applicationDataVerification
+  if (verification !== undefined) {
+    const complete = ['PASSED', 'FAILED', 'EXPIRED'].includes(verification?.status)
+    if (
+      !verification ||
+      !['UNKNOWN', 'CHECKING', 'PASSED', 'FAILED', 'EXPIRED'].includes(verification.status) ||
+      (complete
+        ? typeof verification.checkedAt !== 'string' ||
+          typeof verification.validUntil !== 'string' ||
+          !Number.isFinite(Date.parse(verification.checkedAt)) ||
+          !(Date.parse(verification.validUntil) > Date.parse(verification.checkedAt))
+        : verification.checkedAt !== null || verification.validUntil !== null)
+    )
+      throw new StorageClientError('protocol', 200)
   }
   return value
 }

@@ -26,6 +26,38 @@ export function snapshot(overrides: Partial<StorageSnapshot> = {}): StorageSnaps
   }
 }
 describe('storage wire and snapshot admission', () => {
+  it('retains the real report time and accepts a newer failure at the same configuration version', () => {
+    const verification = {
+      status: 'PASSED' as const,
+      checkedAt: '2026-10-26T02:00:00Z',
+      validUntil: '2026-10-26T02:10:00Z',
+    }
+    const before = snapshot({ applicationDataVerification: verification })
+    const after = snapshot({
+      applicationDataVerification: {
+        ...verification,
+        status: 'FAILED',
+        checkedAt: '2026-10-26T02:01:00Z',
+        validUntil: '2026-10-26T02:11:00Z',
+      },
+    })
+    expect(acceptSnapshot(before, after)).toBe(after)
+  })
+  it.each([
+    { status: 'PASSED', checkedAt: null, validUntil: null },
+    { status: 'PASSED', checkedAt: 'invalid', validUntil: '2026-10-26T02:10:00Z' },
+    { status: 'PASSED', checkedAt: '2026-10-26T02:11:00Z', validUntil: '2026-10-26T02:10:00Z' },
+    { status: 'UNKNOWN', checkedAt: '2026-10-26T02:00:00Z', validUntil: null },
+  ])('refuses malformed verification timestamps %j', (value) => {
+    expect(() =>
+      acceptSnapshot(
+        undefined,
+        snapshot({
+          applicationDataVerification: value as StorageSnapshot['applicationDataVerification'],
+        }),
+      ),
+    ).toThrow(StorageClientError)
+  })
   it('accepts current degraded health without rolling back completion', () => {
     const next = snapshot({
       businessPhase: 'UNAVAILABLE',
