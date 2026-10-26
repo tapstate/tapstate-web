@@ -179,6 +179,7 @@ export function PipelineLogsPage({ pipelineId }: { pipelineId: string }) {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
+      timeZoneName: 'short',
     }).format(timestampMillis)
 
   const hasLines = (logs.data?.lines.length ?? 0) > 0

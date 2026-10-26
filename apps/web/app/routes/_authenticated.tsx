@@ -4,8 +4,11 @@ import { useTranslation } from 'react-i18next'
 import { AppShell } from '@/components/layout/app-shell'
 import { useAuthStore } from '@/stores/auth-store'
 
+import { NotFoundContent } from './-not-found'
+
 export const Route = createFileRoute('/_authenticated')({
   component: AuthenticatedRouteComponent,
+  notFoundComponent: NotFoundContent,
 })
 
 function AuthenticatedRouteComponent() {

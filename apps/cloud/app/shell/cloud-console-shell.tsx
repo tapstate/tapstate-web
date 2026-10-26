@@ -17,7 +17,8 @@ import {
   Settings,
   Sun,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import type { Cluster, Organization } from '../service/cloud-api'
 import type { UserProfile } from '../types'
@@ -32,13 +33,19 @@ import { useCloudAppState } from '../state/cloud-app-state'
 
 const navigation = [
   { label: 'Overview', path: '/', icon: Home, exact: true },
-  { label: 'Organizations', path: '/organizations', icon: Building2, exact: false },
+  { label: 'Organization', path: '/organizations', icon: Building2, exact: false },
   { label: 'Clusters', path: '/clusters', icon: Server, exact: false },
   { label: 'Events', path: '/events', icon: BellRing, exact: false },
   { label: 'Alert policies', path: '/alert-policies', icon: BellRing, exact: false },
   { label: 'Deliveries', path: '/deliveries', icon: Inbox, exact: false },
   { label: 'Billing', path: '/billing', icon: CreditCard, exact: false },
 ] as const
+
+function searchShortcutLabel() {
+  const applePlatform =
+    typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform)
+  return applePlatform ? '⌘K' : 'Ctrl+K'
+}
 
 interface CloudConsoleShellProps {
   children: ReactNode
@@ -79,9 +86,11 @@ export function CloudConsoleShell({
   const [showOrganizationMenu, setShowOrganizationMenu] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [search, setSearch] = useState('')
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const { enterCluster, enteringId, entryError } = useClusterEntry()
 
   const currentOrganization = activeOrganization ?? organization
+  const { t } = useTranslation()
   const currentClusters = activeOrganization ? stateClusters : loaderClusters
   const visibleClusters = currentClusters
     .filter((cluster) => cluster.name.toLowerCase().includes(search.toLowerCase()))
@@ -94,6 +103,17 @@ export function CloudConsoleShell({
   const visibleNavigation = navigation.filter(
     (item) => item.path !== '/alert-policies' || canManageAlertPolicies,
   )
+
+  useEffect(() => {
+    function focusClusterSearch(event: KeyboardEvent) {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') return
+      event.preventDefault()
+      searchInputRef.current?.focus()
+    }
+
+    window.addEventListener('keydown', focusClusterSearch)
+    return () => window.removeEventListener('keydown', focusClusterSearch)
+  }, [])
 
   const selectOrganization = (nextOrganization: Organization) => {
     setActiveOrganization(nextOrganization)
@@ -121,26 +141,41 @@ export function CloudConsoleShell({
     >
       <aside className="flex h-full w-[240px] shrink-0 flex-col px-2 py-3 text-neutral-800 dark:text-neutral-200">
         <div className="relative mb-3 px-1">
-          <button
-            aria-expanded={showOrganizationMenu}
-            className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
-            onClick={() => setShowOrganizationMenu((open) => !open)}
-            type="button"
-          >
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-600 dark:border-indigo-400/20 dark:bg-indigo-400/10 dark:text-indigo-300">
-                <Building2 aria-hidden="true" className="h-4 w-4" />
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-xs leading-tight font-semibold tracking-tight text-neutral-900 dark:text-white">
-                  {currentOrganization?.name ?? 'Organization'}
+          {organizations.length > 1 ? (
+            <button
+              aria-expanded={showOrganizationMenu}
+              className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
+              onClick={() => setShowOrganizationMenu((open) => !open)}
+              type="button"
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-600 dark:border-indigo-400/20 dark:bg-indigo-400/10 dark:text-indigo-300">
+                  <Building2 aria-hidden="true" className="h-4 w-4" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-xs leading-tight font-semibold tracking-tight text-neutral-900 dark:text-white">
+                    {currentOrganization?.name ?? 'Organization'}
+                  </span>
                 </span>
               </span>
-            </span>
-            <ChevronDown className="ml-1 h-3.5 w-3.5 shrink-0 text-neutral-400" />
-          </button>
+              <ChevronDown className="ml-1 h-3.5 w-3.5 shrink-0 text-neutral-400" />
+            </button>
+          ) : (
+            <div className="flex w-full items-center rounded-lg px-2.5 py-1.5 text-left">
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-600 dark:border-indigo-400/20 dark:bg-indigo-400/10 dark:text-indigo-300">
+                  <Building2 aria-hidden="true" className="h-4 w-4" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-xs leading-tight font-semibold tracking-tight text-neutral-900 dark:text-white">
+                    {currentOrganization?.name ?? 'Organization'}
+                  </span>
+                </span>
+              </span>
+            </div>
+          )}
 
-          {showOrganizationMenu && (
+          {showOrganizationMenu && organizations.length > 1 && (
             <>
               <button
                 aria-label="Close organization menu"
@@ -174,13 +209,14 @@ export function CloudConsoleShell({
           <label className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-neutral-500 transition-colors hover:bg-black/[0.04] dark:text-neutral-400 dark:hover:bg-white/[0.05]">
             <Search className="h-3.5 w-3.5 shrink-0" />
             <input
+              ref={searchInputRef}
               aria-label="Search clusters"
               className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-neutral-500"
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search"
               value={search}
             />
-            <span className="font-mono text-[10px] opacity-60">⌘K</span>
+            <span className="font-mono text-[10px] opacity-60">{searchShortcutLabel()}</span>
           </label>
         </div>
 
@@ -198,7 +234,9 @@ export function CloudConsoleShell({
               to={path}
             >
               <Icon className="h-4 w-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
-              <span className="truncate">{label}</span>
+              <span className="truncate">
+                {path === '/organizations' ? t('sections.organizations.title') : label}
+              </span>
             </Link>
           ))}
 

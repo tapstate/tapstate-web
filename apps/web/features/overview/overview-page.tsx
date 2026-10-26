@@ -438,6 +438,12 @@ function OverviewContent({
 
 function OverviewRuntimeMetrics({ overview }: { overview: OverviewModel }) {
   const { t } = useTranslation()
+  const healthCounts = [
+    ['running', overview.pipelines.running],
+    ['idle', overview.pipelines.idle],
+    ['blocked', overview.pipelines.blocked],
+    ['failed', overview.pipelines.error],
+  ] as const
   return (
     <div className="overview-runtime-metrics" aria-label={t('overview.streamStatus.label')}>
       <span>{t('overview.streamStatus.sources', { count: overview.sources.count })}</span>
@@ -447,6 +453,14 @@ function OverviewRuntimeMetrics({ overview }: { overview: OverviewModel }) {
           ? t('overview.pipelines.none')
           : t('overview.pipelines.metric', { count: overview.pipelines.total })}
       </span>
+      {healthCounts
+        .filter(([, count]) => count > 0)
+        .map(([state, count]) => (
+          <span key={state} className="contents">
+            <span aria-hidden="true">·</span>
+            <span>{t(`overview.pipelines.health.${state}`, { count })}</span>
+          </span>
+        ))}
       <span aria-hidden="true">·</span>
       <span>
         {overview.stateStore.ready
@@ -685,21 +699,29 @@ function OverviewAttention({ items }: { items: OverviewModel['attention'] }) {
 }
 
 function attentionKey(item: OverviewModel['attention'][number]) {
-  return item.kind === 'pipelineFailed' ? `pipeline-${item.pipelineId}` : `view-${item.viewId}`
+  return item.kind === 'viewStale' ? `view-${item.viewId}` : `pipeline-${item.pipelineId}`
 }
 
 function OverviewAttentionRow({ item }: { item: OverviewModel['attention'][number] }) {
   const { t } = useTranslation()
-  if (item.kind === 'pipelineFailed') {
+  if (item.kind !== 'viewStale') {
+    const labelKey =
+      item.kind === 'pipelineBlocked'
+        ? 'overview.attention.pipelineBlocked'
+        : item.kind === 'pipelineUnavailable'
+          ? 'overview.attention.pipelineUnavailable'
+          : 'overview.attention.pipelineFailed'
     return (
       <li className="overview-attention__item">
         <span
           className="overview-attention__dot overview-attention__dot--error"
           aria-hidden="true"
         />
-        <span className="overview-attention__kind">{t('overview.attention.pipelineFailed')}</span>
+        <span className="overview-attention__kind">{t(labelKey)}</span>
         <span className="text-foreground font-medium">{item.pipelineId}</span>
-        {item.code && <code className="text-muted-foreground text-[12px]">{item.code}</code>}
+        {'code' in item && item.code && (
+          <code className="text-muted-foreground text-[12px]">{item.code}</code>
+        )}
         <Link
           to="/pipelines/$pipelineId/edit/monitoring"
           params={{ pipelineId: item.pipelineId }}

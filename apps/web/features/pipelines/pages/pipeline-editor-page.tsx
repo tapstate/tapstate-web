@@ -1579,6 +1579,7 @@ function PipelineOrchestrationPage({
             header={{
               isDirty,
               pipelineId,
+              runtimeStatus,
               draftUpdatedAt:
                 autosave.lastResult?.draft.updatedAt ?? pipelineDraft.data?.draft?.updatedAt,
               hasPublishedArtifact: Boolean(pipelineDraft.data?.draft?.publishedArtifactHash),

@@ -26,6 +26,7 @@ const {
   getSource,
   getSourceSchema,
   listConnectors,
+  listPipelineArtifacts,
   listSources,
   testConnection,
   registerCreated,
@@ -43,6 +44,7 @@ const {
     getSource: vi.fn(),
     getSourceSchema: vi.fn(),
     listConnectors: vi.fn(),
+    listPipelineArtifacts: vi.fn(),
     listSources: vi.fn(),
     testConnection: vi.fn(),
     registerCreated: (callback: (source: SourceView) => void) => {
@@ -84,6 +86,11 @@ vi.mock('@/service/source-client', async (importOriginal) => ({
   listConnectors,
   listSources,
   testConnection,
+}))
+
+vi.mock('@/service/pipelines/pipeline-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/service/pipelines/pipeline-client')>()),
+  listPipelineArtifacts,
 }))
 
 vi.mock('./source-create-dialog', () => ({
@@ -240,6 +247,7 @@ beforeEach(() => {
   getSampleInstallStatus.mockReset()
   loadSampleSources.mockResolvedValue(null)
   listConnectors.mockResolvedValue([mysqlConnector])
+  listPipelineArtifacts.mockResolvedValue([])
   listSources.mockResolvedValue([source])
   getSource.mockResolvedValue({ source, etag: `"${source.contentHash}"` })
   getSourceSchema.mockResolvedValue(schemaReport)
@@ -305,7 +313,7 @@ describe('SourcesPage', () => {
     await waitForPage(() => expect(container?.textContent).toContain('Discovered'))
 
     expect(container.textContent).toContain('Tables in orders')
-    expect(container.textContent).toContain('1 configured secrets')
+    expect(container.textContent).toContain('1 configured secret')
     expect(container.textContent).not.toContain('Last 24h')
     expect(container.textContent).not.toContain('—')
 
