@@ -68,6 +68,19 @@ export function StorageProvider({ children }: { children: ReactNode }) {
     failure: unknown,
     entry?: StorageEntry,
   ) {
+    const temporaryFailure =
+      failure instanceof TypeError ||
+      (failure instanceof StorageClientError && failure.status >= 500)
+    // Only rediscover the public entry after the temporary Cloud session is retired.
+    // The query function still refuses protected status reads without a current session.
+    if (
+      auth.profile === 'cloud' &&
+      !auth.isAuthenticated &&
+      !authorization.secret &&
+      (!entry || (!entry.management && entry.entry === 'UNAVAILABLE')) &&
+      (temporaryFailure || (!failure && entry?.entry === 'UNAVAILABLE'))
+    )
+      return 10000
     const authorized = entry
       ? entry.management
         ? Boolean(authorization.secret)
@@ -80,9 +93,6 @@ export function StorageProvider({ children }: { children: ReactNode }) {
         (entry.management && entry.entry === 'LOGIN'))
     )
       return false
-    const temporaryFailure =
-      failure instanceof TypeError ||
-      (failure instanceof StorageClientError && failure.status >= 500)
     if (failure && !temporaryFailure) return false
     const phase = (snapshot ?? previous.current)?.businessPhase
     const transitioning = ['PREPARING', 'RECOVERING', 'AUTH_READY'].includes(phase ?? '')

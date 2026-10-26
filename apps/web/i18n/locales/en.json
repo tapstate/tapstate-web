@@ -2161,6 +2161,7 @@
       "checkedAt": "Last checked:",
       "help": "Refresh status checks the current default destination. Results expire after 10 minutes."
     },
+    "entryUnavailable": "Cluster sign-in is temporarily unavailable. Your saved storage settings are retained.",
     "autoRefresh": "Status updates automatically. You do not need to refresh or submit again.",
     "autoRetry": "The status check could not complete. Retrying automatically; your original request has not been resubmitted.",
     "setupProgressTitle": "Finishing cluster setup",

@@ -44,6 +44,7 @@ export function StorageGate({ children }: { children: ReactNode }) {
     autoRefreshing,
   } = useStorage()
   const authenticated = useAuthStore((state) => state.isAuthenticated)
+  const cloudProfile = useAuthStore((state) => state.profile === 'cloud')
   const setupSubmission = useStorageAction('setup')
   useEffect(() => {
     setSetupPending(setupSubmission.busy)
@@ -74,7 +75,7 @@ export function StorageGate({ children }: { children: ReactNode }) {
             {t('storage.reauthorize')}
           </Button>
         )}
-        {!authenticated && <LoginAction cloud={entry?.mode === 'CLOUD'} />}
+        {!authenticated && <LoginAction cloud={entry ? entry.mode === 'CLOUD' : cloudProfile} />}
       </StorageFrame>
     )
   if (!entry)
@@ -147,7 +148,18 @@ export function StorageGate({ children }: { children: ReactNode }) {
   if (entry.entry === 'UNAVAILABLE')
     return (
       <StorageFrame>
-        <StorageError error={new StorageClientError('unavailable', 503)} />
+        {entry.mode === 'CLOUD' && !authenticated ? (
+          <div role="alert" className="border-border rounded-md border p-3 text-sm">
+            {t('storage.entryUnavailable')}
+          </div>
+        ) : (
+          <StorageError error={new StorageClientError('unavailable', 503)} />
+        )}
+        {autoRefreshing && (
+          <p role="status" className="text-muted-foreground text-sm">
+            {t('storage.autoRetry')}
+          </p>
+        )}
         <Button className="min-h-11 sm:min-h-8" variant="outline" onClick={() => void refresh()}>
           {t('storage.refresh')}
         </Button>

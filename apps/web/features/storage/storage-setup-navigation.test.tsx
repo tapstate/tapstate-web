@@ -379,6 +379,55 @@ describe('whole-site storage boundary', () => {
     ).toBe(true)
   })
 
+  it('rediscovers the public Cloud sign-in entry after a temporary handoff outage without protected requests', async () => {
+    vi.useFakeTimers()
+    useAuthStore.setState({ profile: 'cloud', isAuthenticated: false, token: null })
+    let currentEntry = 'UNAVAILABLE'
+    fetcher.mockImplementation(async (url) => {
+      expect(String(url)).toBe('/auth/storage-entry')
+      return Response.json({ mode: 'CLOUD', management: false, entry: currentEntry })
+    })
+    await render()
+    expect(container.querySelector('[role="alert"]')).not.toBeNull()
+    currentEntry = 'LOGIN'
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10100)
+    })
+    expect(container.textContent).toContain('Sign in to continue')
+    expect(container.textContent).toContain('Return to Cloud sign-in')
+    expect(container.querySelector('[role="alert"]')).toBeNull()
+    const calls = fetcher.mock.calls.length
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20000)
+    })
+    expect(fetcher.mock.calls).toHaveLength(calls)
+    expect(useAuthStore.getState().isAuthenticated).toBe(false)
+  })
+
+  it.each([401, 403, 409])(
+    'does not retry a refused public entry (%s) while signed out',
+    async (status) => {
+      vi.useFakeTimers()
+      useAuthStore.setState({ profile: 'cloud', isAuthenticated: false, token: null })
+      fetcher.mockResolvedValue(new Response('', { status }))
+      await render()
+      const calls = fetcher.mock.calls.length
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30000)
+      })
+      expect(fetcher.mock.calls).toHaveLength(calls)
+      expect(container.querySelector('[data-testid="business"]')).toBeNull()
+    },
+  )
+  it('keeps the Cloud sign-in action during an initial public entry network outage', async () => {
+    vi.useFakeTimers()
+    useAuthStore.setState({ profile: 'cloud', isAuthenticated: false, token: null })
+    fetcher.mockRejectedValue(new TypeError('network unavailable'))
+    await render()
+    expect(container.textContent).toContain('Return to Cloud sign-in')
+    expect(container.querySelector('a[href="/login"]')).toBeNull()
+  })
+
   it('keeps the original setup submission across binding publication without reopening an empty form', async () => {
     const setup = await startPendingCloudSetup()
     setup.snapshot = {
