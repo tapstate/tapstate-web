@@ -58,7 +58,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/auth': {
           target: process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080',
-          changeOrigin: true,
+          changeOrigin: false,
         },
         '/api': {
           target: process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080',

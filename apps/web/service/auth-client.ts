@@ -108,7 +108,8 @@ export async function authenticatedFetch(
   token: string | null,
   fetcher: typeof fetch = fetch,
 ): Promise<Response> {
-  const headers = new Headers(init.headers)
+  const headers = new Headers(input instanceof Request ? input.headers : undefined)
+  new Headers(init.headers).forEach((value, key) => headers.set(key, value))
   if (token) headers.set('Authorization', `Bearer ${token}`)
 
   return fetcher(input, { ...init, headers })

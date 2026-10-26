@@ -6,9 +6,10 @@ import { useTranslation } from 'react-i18next'
 import type { AppLocale } from '@/i18n'
 
 import { Button } from '@/components/ui/button'
+import { SessionRecovery } from '@/features/auth/session-recovery'
 import { SUPPORTED_LOCALES } from '@/i18n'
 import { cn } from '@/lib/utils'
-import { AuthClientError, login } from '@/service/auth-client'
+import { AuthClientError } from '@/service/auth-client'
 import { useAuthStore } from '@/stores/auth-store'
 import { replaceWithCloudConsole } from '@/utils/cloud-console'
 import { deploymentProfile } from '@/utils/deployment-profile'
@@ -44,8 +45,9 @@ function CloudLoginRouteComponent() {
 function OnPremLoginRouteComponent() {
   const navigate = useNavigate()
   const { t, i18n } = useTranslation()
-  const setToken = useAuthStore((state) => state.setToken)
+  const login = useAuthStore((state) => state.login)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const status = useAuthStore((state) => state.status)
   const [visibleLines, setVisibleLines] = useState<TerminalLine[]>([])
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -127,8 +129,7 @@ function OnPremLoginRouteComponent() {
 
     setIsSubmitting(true)
     try {
-      const result = await login({ username: username.trim(), password })
-      setToken(result.token)
+      await login({ username: username.trim(), password })
       void navigate({ replace: true, to: '/overview' })
     } catch (error) {
       setFormError(errorMessage(error))
@@ -138,6 +139,9 @@ function OnPremLoginRouteComponent() {
   }
 
   const canSubmit = username.trim().length > 0 && password.length > 0 && !isSubmitting
+
+  if ((status === 'checking' && !isSubmitting) || status === 'unavailable')
+    return <SessionRecovery />
 
   return (
     <main
