@@ -1281,6 +1281,7 @@
         },
         "states": {
           "DRAFT": "草稿",
+          "NOT_STARTED": "尚未啟動",
           "NEW": "新增",
           "STARTING": "正在啟動",
           "RUNNING": "執行中",

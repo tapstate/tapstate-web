@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 
 const pipelineStatusClasses: Record<PipelineCatalogState, string> = {
   DRAFT: 'pipeline-list__status--draft text-slate-600 bg-slate-100 border-slate-200',
+  NOT_STARTED: 'pipeline-list__status--new text-sky-700 bg-sky-50/80 border-sky-200/50',
   NEW: 'pipeline-list__status--new text-sky-700 bg-sky-50/80 border-sky-200/50',
   STARTING: 'pipeline-list__status--starting text-blue-700 bg-blue-50/80 border-blue-200/50',
   RUNNING: 'pipeline-list__status--running text-blue-700 bg-blue-50/80 border-blue-200/50',

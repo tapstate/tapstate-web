@@ -237,6 +237,7 @@ export interface PipelineStatus {
 export type PipelineCatalogState =
   | PipelineRuntimeState
   | 'DRAFT'
+  | 'NOT_STARTED'
   | 'STARTING'
   | 'PAUSING'
   | 'RESUMING'

@@ -1281,6 +1281,7 @@
         },
         "states": {
           "DRAFT": "草稿",
+          "NOT_STARTED": "尚未启动",
           "NEW": "新建",
           "STARTING": "正在启动",
           "RUNNING": "运行中",
