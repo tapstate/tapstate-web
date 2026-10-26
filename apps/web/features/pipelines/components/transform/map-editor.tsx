@@ -1,10 +1,13 @@
+import { Button } from '@tapstate-web/ui/button'
+import { Input } from '@tapstate-web/ui/input'
 import { Braces, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-
+import {
+  SearchablePicker,
+  type SearchablePickerOption,
+} from '../reference-wizard/searchable-picker'
 import { TransformEditorShell } from './transform-editor-shell'
 import { TransformSelect } from './transform-select'
 import { mergeBody, type TransformEditorProps } from './types'
@@ -47,7 +50,7 @@ function fieldsFor(entries: MapEntry[]) {
   )
 }
 
-export function MapEditor({ config, onChange }: TransformEditorProps) {
+export function MapEditor({ config, onChange, fieldTypes, upstreamInputs }: TransformEditorProps) {
   const { t } = useTranslation()
   const [entries, setEntries] = useState(() =>
     initialEntries(config.body.fields as Record<string, unknown> | undefined),
@@ -65,7 +68,7 @@ export function MapEditor({ config, onChange }: TransformEditorProps) {
 
   return (
     <TransformEditorShell
-      from={config.from}
+      from={upstreamInputs ?? config.from}
       icon={Braces}
       title={t('pipelines.workspace.transform.map.title')}
     >
@@ -103,27 +106,54 @@ export function MapEditor({ config, onChange }: TransformEditorProps) {
                 )
               }
             />
-            <Input
-              aria-label={t('pipelines.workspace.transform.sourceField')}
-              value={entry.mode === 'drop' ? '' : entry.value}
-              disabled={entry.mode === 'drop'}
-              placeholder={
-                entry.mode === 'drop'
-                  ? t('pipelines.workspace.transform.dropValue')
-                  : t('pipelines.workspace.transform.sourceField')
-              }
-              onChange={(event) =>
-                update(
-                  entries.map((item, itemIndex) =>
-                    itemIndex === index ? { ...item, value: event.target.value } : item,
-                  ),
-                )
-              }
-            />
+            {entry.mode === 'reference' && Object.keys(fieldTypes ?? {}).length > 0 ? (
+              <SearchablePicker
+                ariaLabel={t('pipelines.workspace.transform.sourceField')}
+                emptyLabel={t('pipelines.workspace.transform.wizard.noFieldMatches')}
+                onValueChange={(value) =>
+                  update(
+                    entries.map((item, itemIndex) =>
+                      itemIndex === index ? { ...item, value } : item,
+                    ),
+                  )
+                }
+                openLabel={t('pipelines.workspace.transform.wizard.openFieldPicker')}
+                options={(() => {
+                  const options: SearchablePickerOption[] = Object.entries(fieldTypes ?? {}).map(
+                    ([field, type]) => ({ value: field, label: field, detail: type }),
+                  )
+                  if (entry.value && !options.some((option) => option.value === entry.value)) {
+                    options.unshift({ value: entry.value, label: entry.value })
+                  }
+                  return options
+                })()}
+                placeholder={t('pipelines.workspace.transform.sourceField')}
+                value={entry.value}
+              />
+            ) : (
+              <Input
+                aria-label={t('pipelines.workspace.transform.sourceField')}
+                value={entry.mode === 'drop' ? '' : entry.value}
+                disabled={entry.mode === 'drop'}
+                placeholder={
+                  entry.mode === 'drop'
+                    ? t('pipelines.workspace.transform.dropValue')
+                    : t('pipelines.workspace.transform.sourceField')
+                }
+                onChange={(event) =>
+                  update(
+                    entries.map((item, itemIndex) =>
+                      itemIndex === index ? { ...item, value: event.target.value } : item,
+                    ),
+                  )
+                }
+              />
+            )}
             <Button
               type="button"
               variant="ghost"
-              size="icon-sm"
+              size="small"
+              className="size-6 p-0"
               aria-label={t('pipelines.workspace.transform.removeMapping')}
               onClick={() => {
                 const nextEntries = entries.filter((_, itemIndex) => itemIndex !== index)
@@ -141,8 +171,8 @@ export function MapEditor({ config, onChange }: TransformEditorProps) {
       </div>
       <Button
         type="button"
-        variant="outline"
-        size="sm"
+        variant="secondary"
+        size="small"
         className="w-fit gap-1.5"
         onClick={() => update([...entries, { target: '', mode: 'reference', value: '' }])}
       >

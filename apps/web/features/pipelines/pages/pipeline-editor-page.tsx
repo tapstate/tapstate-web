@@ -105,6 +105,7 @@ import {
   addPipelineNodes,
   createPipelineGraphDraft,
   removePipelineNode,
+  upstreamPipelineReferences,
   updatePipelineNodeConfiguration,
   validatePipelineGraph,
   type PipelineGraphDiagnostic,
@@ -1148,51 +1149,66 @@ function PipelineOrchestrationPage({
       selection?.configuration?.kind === 'target' ? upstreamSourceTables(draft, selection.id) : [],
     [draft, selection?.configuration?.kind, selection?.id],
   )
-  const selectedFilterSourceRefs = useMemo(() => {
+  const selectedTransformSourceRefs = useMemo(() => {
     const configuration = selection?.configuration
-    return configuration?.kind === 'transform' && configuration.transformType === 'filter'
+    return configuration?.kind === 'transform' &&
+      ['filter', 'map'].includes(configuration.transformType)
       ? upstreamSourceTableRefs(draft, selection?.id)
       : []
   }, [draft, selection?.configuration, selection?.id])
-  const selectedFilterSourceIds = useMemo(
-    () => [...new Set(selectedFilterSourceRefs.map((reference) => reference.sourceId))],
-    [selectedFilterSourceRefs],
+  const selectedTransformSourceIds = useMemo(
+    () => [...new Set(selectedTransformSourceRefs.map((reference) => reference.sourceId))],
+    [selectedTransformSourceRefs],
   )
-  const filterSourceSchemas = useQueries({
-    queries: selectedFilterSourceIds.map((sourceId) => ({
+  const transformSourceSchemas = useQueries({
+    queries: selectedTransformSourceIds.map((sourceId) => ({
       queryKey: ['source-schema', sourceId],
       queryFn: () => getSourceSchema(sourceId, apiFetch),
       staleTime: 5 * 60 * 1000,
     })),
   })
-  const selectedFilterFieldTypes = useMemo(() => {
+  const selectedTransformFieldTypes = useMemo(() => {
     const fieldTypes: Record<string, string> = {}
     const ambiguousFields = new Set<string>()
     const schemasBySourceId = new Map(
-      selectedFilterSourceIds.map((sourceId, index) => [
+      selectedTransformSourceIds.map((sourceId, index) => [
         sourceId,
-        filterSourceSchemas[index]?.data,
+        transformSourceSchemas[index]?.data,
       ]),
     )
 
-    for (const reference of selectedFilterSourceRefs) {
+    for (const reference of selectedTransformSourceRefs) {
       if (reference.tableKind === 'regex') continue
       const table = schemasBySourceId
         .get(reference.sourceId)
         ?.tables.find((candidate) => candidate.name === reference.table)
       for (const field of table?.fields ?? []) {
-        if (!field.type || ambiguousFields.has(field.name)) continue
         const existingType = fieldTypes[field.name]
-        if (existingType && existingType.toLowerCase() !== field.type.toLowerCase()) {
-          delete fieldTypes[field.name]
+        if (ambiguousFields.has(field.name)) continue
+        if (existingType === undefined) {
+          fieldTypes[field.name] = field.type ?? ''
+          continue
+        }
+        if (!existingType) {
+          if (field.type) fieldTypes[field.name] = field.type
+          continue
+        }
+        if (field.type && existingType.toLowerCase() !== field.type.toLowerCase()) {
+          fieldTypes[field.name] = ''
           ambiguousFields.add(field.name)
           continue
         }
-        fieldTypes[field.name] = field.type
       }
     }
     return fieldTypes
-  }, [filterSourceSchemas, selectedFilterSourceIds, selectedFilterSourceRefs])
+  }, [selectedTransformSourceIds, selectedTransformSourceRefs, transformSourceSchemas])
+  const selectedUpstreamInputs = useMemo(
+    () =>
+      selection?.configuration?.kind === 'transform'
+        ? upstreamPipelineReferences(draft, selection.id)
+        : [],
+    [draft, selection?.configuration?.kind, selection?.id],
+  )
   const loadPipelineTables = useCallback<PipelineTableLoader>(
     async (sourceId) => {
       const report = await getSourceSchema(sourceId, apiFetch)
@@ -1517,6 +1533,7 @@ function PipelineOrchestrationPage({
               loadTables: loadPipelineTables,
               onSelectionChange: handleSelectionChange,
               focusNodeId,
+              selectedNodeId: selection?.id,
               readOnly: isReadOnly,
             }}
             header={{
@@ -1571,7 +1588,8 @@ function PipelineOrchestrationPage({
                 selection?.configuration?.kind === 'target' ? targetSourceOptions : sourceOptions,
               tableOptions: selectedTargetTableOptions,
               upstreamSourceTables: selectedTargetSourceTables,
-              fieldTypes: selectedFilterFieldTypes,
+              fieldTypes: selectedTransformFieldTypes,
+              upstreamInputs: selectedUpstreamInputs,
               loadTables: loadPipelineTables,
             }}
           />

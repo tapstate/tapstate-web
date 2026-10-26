@@ -692,6 +692,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       source.tables.map((table) => ({
         reference: `${source.id}.${table.name}`,
         label: `${source.name} · ${table.name}`,
+        sourceId: source.id,
+        sourceName: source.name,
+        connectorId: source.connector || source.badge,
+        iconPath: source.iconPath,
+        tableName: table.name,
       })),
     )
   }, [AVAILABLE_DATA_SOURCES])
@@ -1881,7 +1886,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                 e.stopPropagation()
                 removeRelation(rel.id)
               }}
-              className="cursor-pointer rounded-lg p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+              className="cursor-pointer rounded-md p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
               title="Remove relation"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -2026,72 +2031,95 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
 
         {/* Join Conditions Area (Multi-condition supported) */}
         <div className="mt-3 space-y-1.5 border-t border-gray-100 pt-2.5">
-          {getConditions(rel).map((cond, cIdx) => (
-            <div key={cIdx} className="flex flex-wrap items-center gap-2 text-[11px]">
-              {cIdx > 0 && (
-                <span className="rounded-lg border border-blue-200/80 bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-blue-700 uppercase">
-                  AND
-                </span>
+          <div
+            className="wizard-condition-group"
+            role="group"
+            aria-label={t('pipelines.workspace.transform.wizard.conditionsCombinedWithAnd')}
+          >
+            <div
+              className={cn(
+                'wizard-condition-group__rail',
+                getConditions(rel).length > 1 && 'wizard-condition-group__rail--multiple',
               )}
-
-              <FieldAutocomplete
-                ariaLabel={t('wizard.relations.childField')}
-                className="min-w-0 flex-1"
-                emptyLabel={t('wizard.search.noResults')}
-                inputClassName="font-mono"
-                openLabel={t('wizard.search.openOptions')}
-                options={getColumnsForTable(rel.source, rel.table)}
-                placeholder={t('wizard.search.fields')}
-                value={cond.childKey}
-                onValueChange={(field) => handleConditionChange(rel, cIdx, 'childKey', field)}
-              />
-
-              <span className="font-mono text-[13px] font-bold text-gray-400">=</span>
-
-              <SearchablePicker
-                ariaLabel={t('wizard.relations.parentTable')}
-                className="min-w-0 flex-1"
-                emptyLabel={t('wizard.search.noResults')}
-                openLabel={t('wizard.search.openOptions')}
-                options={getAvailableJoinTables(rel.id).pipelineTables.map((table) => ({
-                  value: table,
-                  label: table,
-                  detail: table === rootConfig?.table ? t('wizard.relations.rootTable') : undefined,
-                }))}
-                placeholder={t('wizard.search.tables')}
-                value={cond.parentTable || rel.parentTable}
-                onValueChange={(table) => handleConditionChange(rel, cIdx, 'parentTable', table)}
-              />
-              <FieldAutocomplete
-                ariaLabel={t('wizard.relations.parentField')}
-                className="min-w-0 flex-1"
-                emptyLabel={t('wizard.search.noResults')}
-                inputClassName="font-mono"
-                openLabel={t('wizard.search.openOptions')}
-                options={getColumnsForTable(undefined, cond.parentTable || rel.parentTable)}
-                placeholder={t('wizard.search.fields')}
-                value={cond.parentKey}
-                onValueChange={(field) => handleConditionChange(rel, cIdx, 'parentKey', field)}
-              />
-
-              {getConditions(rel).length > 1 && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleRemoveCondition(rel, cIdx)
-                  }}
-                  className="cursor-pointer rounded-lg p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
-                  title="Remove this condition"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'wizard-condition-group__logic',
+                  getConditions(rel).length > 1
+                    ? 'border-blue-200/80 bg-blue-50 text-blue-700'
+                    : 'wizard-condition-group__logic--single border-blue-200 bg-blue-50 text-blue-700',
+                )}
+              >
+                AND
+              </span>
             </div>
-          ))}
+            <div className="wizard-condition-group__rows">
+              {getConditions(rel).map((cond, cIdx) => (
+                <div key={cIdx} className="flex flex-wrap items-center gap-2 text-[11px]">
+                  <FieldAutocomplete
+                    ariaLabel={t('wizard.relations.childField')}
+                    className="min-w-0 flex-1"
+                    emptyLabel={t('wizard.search.noResults')}
+                    inputClassName="font-mono"
+                    openLabel={t('wizard.search.openOptions')}
+                    options={getColumnsForTable(rel.source, rel.table)}
+                    placeholder={t('wizard.search.fields')}
+                    value={cond.childKey}
+                    onValueChange={(field) => handleConditionChange(rel, cIdx, 'childKey', field)}
+                  />
+
+                  <span className="font-mono text-[13px] font-bold text-gray-400">=</span>
+
+                  <SearchablePicker
+                    ariaLabel={t('wizard.relations.parentTable')}
+                    className="min-w-0 flex-1"
+                    emptyLabel={t('wizard.search.noResults')}
+                    openLabel={t('wizard.search.openOptions')}
+                    options={getAvailableJoinTables(rel.id).pipelineTables.map((table) => ({
+                      value: table,
+                      label: table,
+                      detail:
+                        table === rootConfig?.table ? t('wizard.relations.rootTable') : undefined,
+                    }))}
+                    placeholder={t('wizard.search.tables')}
+                    value={cond.parentTable || rel.parentTable}
+                    onValueChange={(table) =>
+                      handleConditionChange(rel, cIdx, 'parentTable', table)
+                    }
+                  />
+                  <FieldAutocomplete
+                    ariaLabel={t('wizard.relations.parentField')}
+                    className="min-w-0 flex-1"
+                    emptyLabel={t('wizard.search.noResults')}
+                    inputClassName="font-mono"
+                    openLabel={t('wizard.search.openOptions')}
+                    options={getColumnsForTable(undefined, cond.parentTable || rel.parentTable)}
+                    placeholder={t('wizard.search.fields')}
+                    value={cond.parentKey}
+                    onValueChange={(field) => handleConditionChange(rel, cIdx, 'parentKey', field)}
+                  />
+
+                  {getConditions(rel).length > 1 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleRemoveCondition(rel, cIdx)
+                      }}
+                      className="cursor-pointer rounded-md p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                      title="Remove this condition"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* Join Actions: Add Condition & Validation Indicator */}
-          <div className="flex items-center justify-between pt-0.5 text-[10px]">
+          <div className="wizard-condition-group__actions flex items-center justify-between pt-0.5 text-[10px]">
             <button
               type="button"
               onClick={(e) => {

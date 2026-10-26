@@ -6,6 +6,7 @@ export interface TransformEditorProps {
   config: PipelineTransformNodeConfiguration
   onChange?: (patch: PipelineTransformConfigurationPatch) => void
   fieldTypes?: Readonly<Record<string, string>>
+  upstreamInputs?: readonly string[]
 }
 
 export interface PipelineTransformConfigurationPatch {

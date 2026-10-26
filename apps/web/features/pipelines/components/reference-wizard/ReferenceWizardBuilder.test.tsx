@@ -597,7 +597,9 @@ describe('ReferenceWizardBuilder union transform choices', () => {
     )
     expect(union?.disabled).toBe(false)
     await act(async () => union?.click())
-    expect(pipelineTransforms?.textContent).toContain('archive · archive_orders')
+    expect(pipelineTransforms?.textContent).toContain('archive_orders')
+    expect(pipelineTransforms?.textContent).toContain('archive')
+    expect(pipelineTransforms?.querySelector('.connector-icon')).not.toBeNull()
   })
 })
 

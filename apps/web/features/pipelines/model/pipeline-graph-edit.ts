@@ -1077,15 +1077,17 @@ function deriveFrom(
   nodeById: ReadonlyMap<string, PipelineDagNode>,
   configurations: ReadonlyMap<string, PipelineNodeConfiguration>,
 ) {
-  const refs = upstreamIds.flatMap((id) => referencesForNode(id, nodeById, configurations))
+  const refs = referencesForUpstreamIds(upstreamIds, nodeById, configurations)
   if (refs.length === 0) return null
   if (
     configuration.kind === 'transform' &&
     ['nest', 'join'].includes(configuration.transformType)
   ) {
-    const aliases = isRecord(configuration.body.aliases)
-      ? Object.keys(configuration.body.aliases)
-      : []
+    const aliases = isRecord(configuration.from)
+      ? Object.keys(configuration.from)
+      : isRecord(configuration.body.aliases)
+        ? Object.keys(configuration.body.aliases)
+        : []
     return Object.fromEntries(
       refs.map((ref, index) => [aliases[index] ?? `input_${index + 1}`, ref]),
     )
@@ -1123,6 +1125,27 @@ function referencesForNode(
   if (node.type === 'view')
     return [configuration?.kind === 'view' ? configuration.viewId : node.label]
   return node.label ? [node.label] : []
+}
+
+function referencesForUpstreamIds(
+  upstreamIds: readonly string[],
+  nodeById: ReadonlyMap<string, PipelineDagNode>,
+  configurations: ReadonlyMap<string, PipelineNodeConfiguration>,
+) {
+  return upstreamIds.flatMap((id) => referencesForNode(id, nodeById, configurations))
+}
+
+/** Uses the same direct-edge projection as mutation serialization for editor input summaries. */
+export function upstreamPipelineReferences(
+  draft: PipelineGraphDraft | null,
+  nodeId: string | undefined,
+): string[] {
+  if (!draft || !nodeId) return []
+  const nodeById = new Map(draft.dag.nodes.map((node) => [node.id, node]))
+  const upstreamIds = draft.dag.edges
+    .filter((edge) => edge.target === nodeId)
+    .map((edge) => edge.source)
+  return referencesForUpstreamIds(upstreamIds, nodeById, draft.configurations)
 }
 
 function referenceForNode(
