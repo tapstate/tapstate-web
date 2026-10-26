@@ -1,6 +1,7 @@
-import { createFileRoute, Navigate, Outlet, useLocation } from '@tanstack/react-router'
+import { createFileRoute, Outlet, useLocation } from '@tanstack/react-router'
+import { useRef } from 'react'
 
-import { SessionRecovery } from '@/features/auth/session-recovery'
+import { LoginRedirect, SessionRecovery } from '@/features/auth/session-recovery'
 import { useAuthStore } from '@/stores/auth-store'
 
 export const Route = createFileRoute('/_pipeline-editor')({
@@ -10,10 +11,12 @@ export const Route = createFileRoute('/_pipeline-editor')({
 function PipelineEditorRouteComponent() {
   const location = useLocation()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const returnTo = useRef(location.href)
+  if (isAuthenticated) returnTo.current = location.href
   const status = useAuthStore((state) => state.status)
   const epoch = useAuthStore((state) => state.authEpoch)
   if (!isAuthenticated && (status === 'checking' || status === 'unavailable'))
     return <SessionRecovery />
-  if (!isAuthenticated) return <Navigate replace to="/login" search={{ redirect: location.href }} />
+  if (!isAuthenticated) return <LoginRedirect returnTo={returnTo.current} />
   return <Outlet key={epoch} />
 }

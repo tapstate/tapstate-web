@@ -137,7 +137,6 @@ function OnPremLoginRouteComponent() {
     setIsSubmitting(true)
     try {
       await login({ username: username.trim(), password })
-      void navigate({ replace: true, to: redirect })
     } catch (error) {
       setFormError(errorMessage(error))
     } finally {

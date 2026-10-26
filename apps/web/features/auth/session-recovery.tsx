@@ -1,7 +1,10 @@
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/stores/auth-store'
+
+import { safeLoginReturn } from './login-return'
 
 /** An unavailable authority remains recoverable rather than pretending the session ended. */
 export function SessionRecovery() {
@@ -30,4 +33,12 @@ export function SessionRecovery() {
       </Button>
     </div>
   )
+}
+
+export function LoginRedirect({ returnTo }: { returnTo: string }) {
+  useEffect(() => {
+    const target = `/login?redirect=${encodeURIComponent(safeLoginReturn(returnTo))}`
+    if (window.location.pathname !== '/login') window.location.replace(target)
+  }, [returnTo])
+  return null
 }
