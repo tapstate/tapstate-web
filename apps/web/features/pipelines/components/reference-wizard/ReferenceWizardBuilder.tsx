@@ -48,7 +48,12 @@ import { UnwindTargetIdentitySummary } from '../unwind-target-identity-summary'
 import { AssistantComposer } from './AssistantComposer'
 import { PipelineAiCopilot, type BuilderAssistantContext } from './PipelineAiCopilot'
 import { matchRelationFields, type RelationFieldTable } from './relation-field-matching'
-import { FieldAutocomplete, SearchablePicker } from './searchable-picker'
+import {
+  FieldAutocomplete,
+  mergeFieldOptions,
+  SearchablePicker,
+  type SearchablePickerOption,
+} from './searchable-picker'
 import {
   TableTransformsManager,
   effectiveUnwindSourceIdField,
@@ -125,6 +130,7 @@ export interface TableMeta {
   discovered?: boolean
   rowCount: string
   columns: string[]
+  fieldTypes?: Record<string, string>
   defaultKey?: string
   defaultParentKey?: string
 }
@@ -481,7 +487,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     if (focus === 'root') return rootConfig?.table || t('wizard.assistant.inputTableFocus')
     if (focus === 'doc_process') return t('wizard.assistant.documentFocus')
     if (focus === 'relations') return t('wizard.assistant.relationsFocus')
-    return flattenRelations(relations).find((relation) => relation.id === focus)?.table || focus
+    if (focus === 'destination') return t('wizard.destinationContext')
+    return (
+      flattenRelations(relations).find((relation) => relation.id === focus)?.table ||
+      t('wizard.assistant.relationsFocus')
+    )
   }
   function sendAssistantHelper() {
     const draft = assistantHelperDraft
@@ -612,7 +622,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
               </PopoverTitle>
               <PopoverDescription className="system-xs-regular text-text-tertiary mt-1 flex min-w-0 items-baseline gap-1">
                 {t('wizard.assistant.helperPopover.scope')}{' '}
-                <span className="system-xs-medium text-text-secondary truncate font-mono">
+                <span className="system-xs-medium text-text-secondary truncate">
                   {assistantScope(focus)}
                 </span>
               </PopoverDescription>
@@ -692,6 +702,11 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
       source.tables.map((table) => ({
         reference: `${source.id}.${table.name}`,
         label: `${source.name} · ${table.name}`,
+        sourceId: source.id,
+        sourceName: source.name,
+        connectorId: source.connector || source.badge,
+        iconPath: source.iconPath,
+        tableName: table.name,
       })),
     )
   }, [AVAILABLE_DATA_SOURCES])
@@ -726,13 +741,60 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   const tableToken = (r: RelationNode) => r.table + ' · ' + r.id
   const getColumnsForTable = (sourceName?: string, tableName?: string): string[] => {
     const entity = flattenRelations(relations).find((r) => tableToken(r) === tableName)
-    const source = entity?.source || sourceName
+    const source =
+      entity?.source ||
+      sourceName ||
+      (rootConfig && tableName === rootConfig.table ? rootConfig.source : undefined)
     const table = entity?.table || tableName
     return (
       AVAILABLE_DATA_SOURCES.find(
-        (ds) => (!source || ds.name === source) && ds.tables.some((t) => t.name === table),
+        (ds) =>
+          (!source || ds.name === source || ds.id === source) &&
+          ds.tables.some((t) => t.name === table),
       )?.tables.find((t) => t.name === table)?.columns || []
     )
+  }
+  const getFieldOptionsForTable = (
+    sourceName?: string,
+    tableName?: string,
+  ): SearchablePickerOption[] => {
+    const entity = flattenRelations(relations).find(
+      (relation) => tableToken(relation) === tableName,
+    )
+    const source =
+      entity?.source ||
+      sourceName ||
+      (rootConfig && tableName === rootConfig.table ? rootConfig.source : undefined)
+    const table = entity?.table || tableName
+    const sourceMeta = AVAILABLE_DATA_SOURCES.find(
+      (candidate) =>
+        (!source || candidate.name === source || candidate.id === source) &&
+        candidate.tables.some((item) => item.name === table),
+    )
+    const tableMeta = sourceMeta?.tables.find((item) => item.name === table)
+    const isRootOutput = Boolean(
+      rootConfig && table === rootConfig.table && source === rootConfig.source,
+    )
+    const columns = [
+      ...new Set([
+        ...(tableMeta?.columns ?? getColumnsForTable(source, table)),
+        ...(isRootOutput ? (rootConfig?.columns ?? []) : []),
+      ]),
+    ]
+    const primaryKeys = new Set(
+      [
+        ...(tableMeta?.keys ?? []),
+        tableMeta?.primaryKey,
+        ...(isRootOutput ? (rootConfig?.keys ?? []) : []),
+        ...(isRootOutput && rootConfig ? [rootConfig.primaryKey] : []),
+      ].filter((field): field is string => Boolean(field)),
+    )
+    return columns.map((field) => ({
+      value: field,
+      label: field,
+      detail: tableMeta?.fieldTypes?.[field],
+      isPrimaryKey: primaryKeys.has(field),
+    }))
   }
   const getAvailableJoinTables = (id?: string) => {
     const current = flattenRelations(relations).find((r) => r.id === id)
@@ -1646,9 +1708,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
           !nested && rel.id === relations[0]?.id && activeGuideTarget === 'step-first-relation'
             ? 'border-indigo-500 bg-gradient-to-b from-indigo-50/15 to-white shadow-md ring-2 ring-indigo-500/40'
             : activeContext === rel.id
-              ? nested
-                ? 'border-purple-500 bg-white ring-1 ring-purple-500/20'
-                : 'border-blue-500 ring-1 ring-blue-500/20'
+              ? 'border-[var(--pipeline-selection)] ring-2 ring-[var(--pipeline-selection-ring)]'
               : 'border-gray-200 hover:border-gray-300',
         )}
       >
@@ -1881,7 +1941,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                 e.stopPropagation()
                 removeRelation(rel.id)
               }}
-              className="cursor-pointer rounded-lg p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+              className="cursor-pointer rounded-md p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
               title="Remove relation"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -2026,72 +2086,98 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
 
         {/* Join Conditions Area (Multi-condition supported) */}
         <div className="mt-3 space-y-1.5 border-t border-gray-100 pt-2.5">
-          {getConditions(rel).map((cond, cIdx) => (
-            <div key={cIdx} className="flex flex-wrap items-center gap-2 text-[11px]">
-              {cIdx > 0 && (
-                <span className="rounded-lg border border-blue-200/80 bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-blue-700 uppercase">
-                  AND
-                </span>
+          <div
+            className="wizard-condition-group"
+            role="group"
+            aria-label={t('pipelines.workspace.transform.wizard.conditionsCombinedWithAnd')}
+          >
+            <div
+              className={cn(
+                'wizard-condition-group__rail',
+                getConditions(rel).length > 1 && 'wizard-condition-group__rail--multiple',
               )}
-
-              <FieldAutocomplete
-                ariaLabel={t('wizard.relations.childField')}
-                className="min-w-0 flex-1"
-                emptyLabel={t('wizard.search.noResults')}
-                inputClassName="font-mono"
-                openLabel={t('wizard.search.openOptions')}
-                options={getColumnsForTable(rel.source, rel.table)}
-                placeholder={t('wizard.search.fields')}
-                value={cond.childKey}
-                onValueChange={(field) => handleConditionChange(rel, cIdx, 'childKey', field)}
-              />
-
-              <span className="font-mono text-[13px] font-bold text-gray-400">=</span>
-
-              <SearchablePicker
-                ariaLabel={t('wizard.relations.parentTable')}
-                className="min-w-0 flex-1"
-                emptyLabel={t('wizard.search.noResults')}
-                openLabel={t('wizard.search.openOptions')}
-                options={getAvailableJoinTables(rel.id).pipelineTables.map((table) => ({
-                  value: table,
-                  label: table,
-                  detail: table === rootConfig?.table ? t('wizard.relations.rootTable') : undefined,
-                }))}
-                placeholder={t('wizard.search.tables')}
-                value={cond.parentTable || rel.parentTable}
-                onValueChange={(table) => handleConditionChange(rel, cIdx, 'parentTable', table)}
-              />
-              <FieldAutocomplete
-                ariaLabel={t('wizard.relations.parentField')}
-                className="min-w-0 flex-1"
-                emptyLabel={t('wizard.search.noResults')}
-                inputClassName="font-mono"
-                openLabel={t('wizard.search.openOptions')}
-                options={getColumnsForTable(undefined, cond.parentTable || rel.parentTable)}
-                placeholder={t('wizard.search.fields')}
-                value={cond.parentKey}
-                onValueChange={(field) => handleConditionChange(rel, cIdx, 'parentKey', field)}
-              />
-
-              {getConditions(rel).length > 1 && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleRemoveCondition(rel, cIdx)
-                  }}
-                  className="cursor-pointer rounded-lg p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
-                  title="Remove this condition"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'wizard-condition-group__logic',
+                  getConditions(rel).length > 1
+                    ? 'border-blue-200/80 bg-blue-50 text-blue-700'
+                    : 'wizard-condition-group__logic--single border-blue-200 bg-blue-50 text-blue-700',
+                )}
+              >
+                AND
+              </span>
             </div>
-          ))}
+            <div className="wizard-condition-group__rows">
+              {getConditions(rel).map((cond, cIdx) => (
+                <div key={cIdx} className="flex flex-wrap items-center gap-2 text-[11px]">
+                  <FieldAutocomplete
+                    ariaLabel={t('wizard.relations.childField')}
+                    className="min-w-0 flex-1"
+                    emptyLabel={t('wizard.search.noResults')}
+                    inputClassName="font-mono"
+                    openLabel={t('wizard.search.openOptions')}
+                    options={getFieldOptionsForTable(rel.source, rel.table)}
+                    placeholder={t('wizard.search.fields')}
+                    value={cond.childKey}
+                    onValueChange={(field) => handleConditionChange(rel, cIdx, 'childKey', field)}
+                  />
+
+                  <span className="font-mono text-[13px] font-bold text-gray-400">=</span>
+
+                  <SearchablePicker
+                    ariaLabel={t('wizard.relations.parentTable')}
+                    className="min-w-0 flex-1"
+                    emptyLabel={t('wizard.search.noResults')}
+                    openLabel={t('wizard.search.openOptions')}
+                    options={getAvailableJoinTables(rel.id).pipelineTables.map((table) => ({
+                      value: table,
+                      label: table,
+                      detail:
+                        table === rootConfig?.table ? t('wizard.relations.rootTable') : undefined,
+                    }))}
+                    placeholder={t('wizard.search.tables')}
+                    value={cond.parentTable || rel.parentTable}
+                    onValueChange={(table) =>
+                      handleConditionChange(rel, cIdx, 'parentTable', table)
+                    }
+                  />
+                  <FieldAutocomplete
+                    ariaLabel={t('wizard.relations.parentField')}
+                    className="min-w-0 flex-1"
+                    emptyLabel={t('wizard.search.noResults')}
+                    inputClassName="font-mono"
+                    openLabel={t('wizard.search.openOptions')}
+                    options={getFieldOptionsForTable(
+                      undefined,
+                      cond.parentTable || rel.parentTable,
+                    )}
+                    placeholder={t('wizard.search.fields')}
+                    value={cond.parentKey}
+                    onValueChange={(field) => handleConditionChange(rel, cIdx, 'parentKey', field)}
+                  />
+
+                  {getConditions(rel).length > 1 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleRemoveCondition(rel, cIdx)
+                      }}
+                      className="cursor-pointer rounded-md p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                      title="Remove this condition"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* Join Actions: Add Condition & Validation Indicator */}
-          <div className="flex items-center justify-between pt-0.5 text-[10px]">
+          <div className="wizard-condition-group__actions flex items-center justify-between pt-0.5 text-[10px]">
             <button
               type="button"
               onClick={(e) => {
@@ -2121,6 +2207,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
               tableName={rel.table}
               sourceName={rel.source}
               columns={getColumnsForTable(rel.source, rel.table)}
+              fieldOptions={getFieldOptionsForTable(rel.source, rel.table)}
               transforms={rel.transforms || []}
               availableUnionInputs={unionInputsFor(rel.source, rel.table)}
               onChange={(nextTransforms) =>
@@ -2290,11 +2377,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                           emptyLabel={t('wizard.search.noResults')}
                           inputClassName="font-mono"
                           openLabel={t('wizard.search.openOptions')}
-                          options={
-                            getTablesForSource(newChildSource).find(
-                              (table) => table.name === newChildTable,
-                            )?.columns ?? []
-                          }
+                          options={getFieldOptionsForTable(newChildSource, newChildTable)}
                           placeholder={t('wizard.search.fields')}
                           value={newChildKey}
                           onValueChange={setNewChildKey}
@@ -2309,7 +2392,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                           emptyLabel={t('wizard.search.noResults')}
                           inputClassName="font-mono"
                           openLabel={t('wizard.search.openOptions')}
-                          options={getColumnsForTable(rel.source, rel.table)}
+                          options={getFieldOptionsForTable(rel.source, rel.table)}
                           placeholder={t('wizard.search.fields')}
                           value={newChildParentKey}
                           onValueChange={setNewChildParentKey}
@@ -2424,7 +2507,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                     activeGuideTarget === 'step-root-table'
                       ? 'border-indigo-500 bg-gradient-to-b from-indigo-50/15 to-white shadow-md ring-2 ring-indigo-500/40'
                       : activeContext === 'root'
-                        ? 'border-blue-500 ring-1 ring-blue-500/20'
+                        ? 'border-[var(--pipeline-selection)] ring-2 ring-[var(--pipeline-selection-ring)]'
                         : 'border-gray-200 hover:border-gray-300',
                   )}
                 >
@@ -2698,6 +2781,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                         tableName={rootConfig.table}
                         sourceName={rootConfig.source}
                         columns={rootConfig.columns}
+                        fieldOptions={getFieldOptionsForTable(rootConfig.source, rootConfig.table)}
                         transforms={rootConfig.transforms || []}
                         availableUnionInputs={unionInputsFor(rootConfig.source, rootConfig.table)}
                         onChange={(nextTransforms) =>
@@ -2906,11 +2990,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                                   emptyLabel={t('wizard.search.noResults')}
                                   inputClassName="font-mono"
                                   openLabel={t('wizard.search.openOptions')}
-                                  options={
-                                    getTablesForSource(newRelSource).find(
-                                      (table) => table.name === newRelTable,
-                                    )?.columns ?? []
-                                  }
+                                  options={getFieldOptionsForTable(newRelSource, newRelTable)}
                                   placeholder={t('wizard.search.fields')}
                                   value={newRelKey}
                                   onValueChange={setNewRelKey}
@@ -2925,7 +3005,10 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                                   emptyLabel={t('wizard.search.noResults')}
                                   inputClassName="font-mono"
                                   openLabel={t('wizard.search.openOptions')}
-                                  options={rootConfig?.columns ?? []}
+                                  options={getFieldOptionsForTable(
+                                    rootConfig?.source,
+                                    rootConfig?.table,
+                                  )}
                                   placeholder={t('wizard.search.fields')}
                                   value={newRelParentKey}
                                   onValueChange={setNewRelParentKey}
@@ -2991,7 +3074,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   activeGuideTarget === 'step-doc-process'
                     ? 'border-indigo-500 bg-gradient-to-b from-indigo-50/15 to-white shadow-md ring-2 ring-indigo-500/40'
                     : activeContext === 'doc_process'
-                      ? 'border-blue-500 ring-1 ring-blue-500/20'
+                      ? 'border-[var(--pipeline-selection)] ring-2 ring-[var(--pipeline-selection-ring)]'
                       : 'border-gray-200 hover:border-gray-300',
                 )}
               >
@@ -3029,6 +3112,12 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                             getColumnsForTable(relation.source, relation.table),
                           ),
                         ]),
+                      )}
+                      fieldOptions={mergeFieldOptions(
+                        getFieldOptionsForTable(rootConfig?.source, rootConfig?.table),
+                        ...flattenRelations(relations).map((relation) =>
+                          getFieldOptionsForTable(relation.source, relation.table),
+                        ),
                       )}
                       availableUnionInputs={
                         rootConfig
@@ -3068,7 +3157,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   className={cn(
                     'cursor-pointer rounded-xl border bg-white p-4 shadow-xs transition-all duration-150',
                     activeContext === 'destination'
-                      ? 'border-blue-500 ring-1 ring-blue-500/20'
+                      ? 'border-[var(--pipeline-selection)] ring-2 ring-[var(--pipeline-selection-ring)]'
                       : 'border-gray-200 hover:border-gray-300',
                   )}
                 >
@@ -3282,13 +3371,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   onUndoApply: undoAssistantApply,
                 }}
                 focus={activeContext}
-                focusLabel={
-                  activeContext === 'root'
-                    ? `Step 1 · ${rootConfig?.table || t('wizard.assistant.unconfigured')}`
-                    : activeContext === 'doc_process'
-                      ? t('wizard.assistant.documentFocus')
-                      : `Step 2 · ${activeContext}`
-                }
+                focusLabel={assistantScope(activeContext)}
                 promptRequest={assistantPrompt}
                 onClose={() => setAssistantOpen(false)}
               />
