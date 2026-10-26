@@ -778,14 +778,14 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
     const columns = [
       ...new Set([
         ...(tableMeta?.columns ?? getColumnsForTable(source, table)),
-        ...(isRootOutput ? rootConfig?.columns ?? [] : []),
+        ...(isRootOutput ? (rootConfig?.columns ?? []) : []),
       ]),
     ]
     const primaryKeys = new Set(
       [
         ...(tableMeta?.keys ?? []),
         tableMeta?.primaryKey,
-        ...(isRootOutput ? rootConfig?.keys ?? [] : []),
+        ...(isRootOutput ? (rootConfig?.keys ?? []) : []),
         ...(isRootOutput && rootConfig ? [rootConfig.primaryKey] : []),
       ].filter((field): field is string => Boolean(field)),
     )
