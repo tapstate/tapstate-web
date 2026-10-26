@@ -98,6 +98,7 @@ export function FilterEditor({
   config,
   onChange,
   fieldTypes,
+  fieldOptions: transformFieldOptions = [],
   upstreamInputs,
 }: TransformEditorProps) {
   const { t } = useTranslation()
@@ -160,28 +161,31 @@ export function FilterEditor({
           const fieldType = celFilterFieldType(row.field, fieldTypes)
           const fieldKind = celFilterFieldKind(fieldType)
           const containsSupported = fieldKind === 'string'
-          const hasFieldSchema = Object.keys(fieldTypes ?? {}).length > 0
+          const hasFieldSchema =
+            transformFieldOptions.length > 0 || Object.keys(fieldTypes ?? {}).length > 0
           const isKnownEnvelopeField = ['op', 'ts', 'src'].includes(row.field)
           const fieldOptions: SearchablePickerOption[] = [
-            ...Object.entries(fieldTypes ?? {}).map(([field, type]) => ({
-              value: field,
-              label: field,
-              detail: type || undefined,
-            })),
+            ...(transformFieldOptions.length > 0
+              ? transformFieldOptions
+              : Object.entries(fieldTypes ?? {}).map(([field, type]) => ({
+                  value: field,
+                  label: field,
+                  detail: type || undefined,
+                }))),
             {
               value: 'op',
               label: 'op',
-              detail: t('pipelines.workspace.transform.wizard.operationType'),
+              detail: t('pipelines.workspace.transform.wizard.operationTypeDetail'),
             },
             {
               value: 'ts',
               label: 'ts',
-              detail: t('pipelines.workspace.transform.wizard.eventTimestamp'),
+              detail: t('pipelines.workspace.transform.wizard.eventTimestampDetail'),
             },
             {
               value: 'src',
               label: 'src',
-              detail: t('pipelines.workspace.transform.wizard.sourceMetadata'),
+              detail: t('pipelines.workspace.transform.wizard.sourceMetadataDetail'),
             },
           ].filter(
             (option, optionIndex, options) =>

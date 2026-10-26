@@ -48,7 +48,12 @@ import { UnwindTargetIdentitySummary } from '../unwind-target-identity-summary'
 import { AssistantComposer } from './AssistantComposer'
 import { PipelineAiCopilot, type BuilderAssistantContext } from './PipelineAiCopilot'
 import { matchRelationFields, type RelationFieldTable } from './relation-field-matching'
-import { FieldAutocomplete, SearchablePicker } from './searchable-picker'
+import {
+  FieldAutocomplete,
+  mergeFieldOptions,
+  SearchablePicker,
+  type SearchablePickerOption,
+} from './searchable-picker'
 import {
   TableTransformsManager,
   effectiveUnwindSourceIdField,
@@ -125,6 +130,7 @@ export interface TableMeta {
   discovered?: boolean
   rowCount: string
   columns: string[]
+  fieldTypes?: Record<string, string>
   defaultKey?: string
   defaultParentKey?: string
 }
@@ -735,13 +741,60 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
   const tableToken = (r: RelationNode) => r.table + ' · ' + r.id
   const getColumnsForTable = (sourceName?: string, tableName?: string): string[] => {
     const entity = flattenRelations(relations).find((r) => tableToken(r) === tableName)
-    const source = entity?.source || sourceName
+    const source =
+      entity?.source ||
+      sourceName ||
+      (rootConfig && tableName === rootConfig.table ? rootConfig.source : undefined)
     const table = entity?.table || tableName
     return (
       AVAILABLE_DATA_SOURCES.find(
-        (ds) => (!source || ds.name === source) && ds.tables.some((t) => t.name === table),
+        (ds) =>
+          (!source || ds.name === source || ds.id === source) &&
+          ds.tables.some((t) => t.name === table),
       )?.tables.find((t) => t.name === table)?.columns || []
     )
+  }
+  const getFieldOptionsForTable = (
+    sourceName?: string,
+    tableName?: string,
+  ): SearchablePickerOption[] => {
+    const entity = flattenRelations(relations).find(
+      (relation) => tableToken(relation) === tableName,
+    )
+    const source =
+      entity?.source ||
+      sourceName ||
+      (rootConfig && tableName === rootConfig.table ? rootConfig.source : undefined)
+    const table = entity?.table || tableName
+    const sourceMeta = AVAILABLE_DATA_SOURCES.find(
+      (candidate) =>
+        (!source || candidate.name === source || candidate.id === source) &&
+        candidate.tables.some((item) => item.name === table),
+    )
+    const tableMeta = sourceMeta?.tables.find((item) => item.name === table)
+    const isRootOutput = Boolean(
+      rootConfig && table === rootConfig.table && source === rootConfig.source,
+    )
+    const columns = [
+      ...new Set([
+        ...(tableMeta?.columns ?? getColumnsForTable(source, table)),
+        ...(isRootOutput ? rootConfig?.columns ?? [] : []),
+      ]),
+    ]
+    const primaryKeys = new Set(
+      [
+        ...(tableMeta?.keys ?? []),
+        tableMeta?.primaryKey,
+        ...(isRootOutput ? rootConfig?.keys ?? [] : []),
+        ...(isRootOutput && rootConfig ? [rootConfig.primaryKey] : []),
+      ].filter((field): field is string => Boolean(field)),
+    )
+    return columns.map((field) => ({
+      value: field,
+      label: field,
+      detail: tableMeta?.fieldTypes?.[field],
+      isPrimaryKey: primaryKeys.has(field),
+    }))
   }
   const getAvailableJoinTables = (id?: string) => {
     const current = flattenRelations(relations).find((r) => r.id === id)
@@ -2065,7 +2118,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                     emptyLabel={t('wizard.search.noResults')}
                     inputClassName="font-mono"
                     openLabel={t('wizard.search.openOptions')}
-                    options={getColumnsForTable(rel.source, rel.table)}
+                    options={getFieldOptionsForTable(rel.source, rel.table)}
                     placeholder={t('wizard.search.fields')}
                     value={cond.childKey}
                     onValueChange={(field) => handleConditionChange(rel, cIdx, 'childKey', field)}
@@ -2096,7 +2149,10 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                     emptyLabel={t('wizard.search.noResults')}
                     inputClassName="font-mono"
                     openLabel={t('wizard.search.openOptions')}
-                    options={getColumnsForTable(undefined, cond.parentTable || rel.parentTable)}
+                    options={getFieldOptionsForTable(
+                      undefined,
+                      cond.parentTable || rel.parentTable,
+                    )}
                     placeholder={t('wizard.search.fields')}
                     value={cond.parentKey}
                     onValueChange={(field) => handleConditionChange(rel, cIdx, 'parentKey', field)}
@@ -2151,6 +2207,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
               tableName={rel.table}
               sourceName={rel.source}
               columns={getColumnsForTable(rel.source, rel.table)}
+              fieldOptions={getFieldOptionsForTable(rel.source, rel.table)}
               transforms={rel.transforms || []}
               availableUnionInputs={unionInputsFor(rel.source, rel.table)}
               onChange={(nextTransforms) =>
@@ -2320,11 +2377,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                           emptyLabel={t('wizard.search.noResults')}
                           inputClassName="font-mono"
                           openLabel={t('wizard.search.openOptions')}
-                          options={
-                            getTablesForSource(newChildSource).find(
-                              (table) => table.name === newChildTable,
-                            )?.columns ?? []
-                          }
+                          options={getFieldOptionsForTable(newChildSource, newChildTable)}
                           placeholder={t('wizard.search.fields')}
                           value={newChildKey}
                           onValueChange={setNewChildKey}
@@ -2339,7 +2392,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                           emptyLabel={t('wizard.search.noResults')}
                           inputClassName="font-mono"
                           openLabel={t('wizard.search.openOptions')}
-                          options={getColumnsForTable(rel.source, rel.table)}
+                          options={getFieldOptionsForTable(rel.source, rel.table)}
                           placeholder={t('wizard.search.fields')}
                           value={newChildParentKey}
                           onValueChange={setNewChildParentKey}
@@ -2728,6 +2781,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                         tableName={rootConfig.table}
                         sourceName={rootConfig.source}
                         columns={rootConfig.columns}
+                        fieldOptions={getFieldOptionsForTable(rootConfig.source, rootConfig.table)}
                         transforms={rootConfig.transforms || []}
                         availableUnionInputs={unionInputsFor(rootConfig.source, rootConfig.table)}
                         onChange={(nextTransforms) =>
@@ -2936,11 +2990,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                                   emptyLabel={t('wizard.search.noResults')}
                                   inputClassName="font-mono"
                                   openLabel={t('wizard.search.openOptions')}
-                                  options={
-                                    getTablesForSource(newRelSource).find(
-                                      (table) => table.name === newRelTable,
-                                    )?.columns ?? []
-                                  }
+                                  options={getFieldOptionsForTable(newRelSource, newRelTable)}
                                   placeholder={t('wizard.search.fields')}
                                   value={newRelKey}
                                   onValueChange={setNewRelKey}
@@ -2955,7 +3005,10 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                                   emptyLabel={t('wizard.search.noResults')}
                                   inputClassName="font-mono"
                                   openLabel={t('wizard.search.openOptions')}
-                                  options={rootConfig?.columns ?? []}
+                                  options={getFieldOptionsForTable(
+                                    rootConfig?.source,
+                                    rootConfig?.table,
+                                  )}
                                   placeholder={t('wizard.search.fields')}
                                   value={newRelParentKey}
                                   onValueChange={setNewRelParentKey}
@@ -3059,6 +3112,12 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                             getColumnsForTable(relation.source, relation.table),
                           ),
                         ]),
+                      )}
+                      fieldOptions={mergeFieldOptions(
+                        getFieldOptionsForTable(rootConfig?.source, rootConfig?.table),
+                        ...flattenRelations(relations).map((relation) =>
+                          getFieldOptionsForTable(relation.source, relation.table),
+                        ),
                       )}
                       availableUnionInputs={
                         rootConfig

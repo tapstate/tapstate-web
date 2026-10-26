@@ -50,7 +50,13 @@ function fieldsFor(entries: MapEntry[]) {
   )
 }
 
-export function MapEditor({ config, onChange, fieldTypes, upstreamInputs }: TransformEditorProps) {
+export function MapEditor({
+  config,
+  onChange,
+  fieldTypes,
+  fieldOptions: transformFieldOptions = [],
+  upstreamInputs,
+}: TransformEditorProps) {
   const { t } = useTranslation()
   const [entries, setEntries] = useState(() =>
     initialEntries(config.body.fields as Record<string, unknown> | undefined),
@@ -106,7 +112,8 @@ export function MapEditor({ config, onChange, fieldTypes, upstreamInputs }: Tran
                 )
               }
             />
-            {entry.mode === 'reference' && Object.keys(fieldTypes ?? {}).length > 0 ? (
+            {entry.mode === 'reference' &&
+            (transformFieldOptions.length > 0 || Object.keys(fieldTypes ?? {}).length > 0) ? (
               <SearchablePicker
                 ariaLabel={t('pipelines.workspace.transform.sourceField')}
                 emptyLabel={t('pipelines.workspace.transform.wizard.noFieldMatches')}
@@ -119,9 +126,14 @@ export function MapEditor({ config, onChange, fieldTypes, upstreamInputs }: Tran
                 }
                 openLabel={t('pipelines.workspace.transform.wizard.openFieldPicker')}
                 options={(() => {
-                  const options: SearchablePickerOption[] = Object.entries(fieldTypes ?? {}).map(
-                    ([field, type]) => ({ value: field, label: field, detail: type }),
-                  )
+                  const options: SearchablePickerOption[] =
+                    transformFieldOptions.length > 0
+                      ? [...transformFieldOptions]
+                      : Object.entries(fieldTypes ?? {}).map(([field, type]) => ({
+                          value: field,
+                          label: field,
+                          detail: type,
+                        }))
                   if (entry.value && !options.some((option) => option.value === entry.value)) {
                     options.unshift({ value: entry.value, label: entry.value })
                   }

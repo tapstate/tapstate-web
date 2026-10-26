@@ -272,11 +272,91 @@ describe('ReferenceWizardBuilder searchable pickers', () => {
       expect(document.body.querySelector('input[placeholder="Search fields"]')).not.toBeNull(),
     )
     await setInputValue(childField!, 'order')
-    await vi.waitFor(() =>
-      expect(getPickerOptions().map((option) => option.textContent)).toEqual(['order_id']),
-    )
+    await vi.waitFor(() => expect(getPickerOptions()).toHaveLength(1))
+    expect(getPickerOptions()[0]?.textContent).toContain('order_id')
+    expect(getPickerOptions()[0]?.textContent).toContain('PK')
     await setInputValue(childField!, 'custom_join')
     expect(childField?.value).toBe('custom_join')
+  })
+
+  it('uses the selected root source when another source has a same-named table', async () => {
+    const host = renderBuilder({
+      catalog: [
+        {
+          id: 'crm',
+          name: 'crm',
+          badge: 'CRM',
+          connector: 'mysql',
+          tables: [
+            {
+              name: 'crm_customers',
+              primaryKey: 'customer_id',
+              keys: ['customer_id'],
+              discovered: true,
+              rowCount: '1',
+              columns: ['customer_id', 'company_name'],
+            },
+            {
+              name: 'crm_orders',
+              primaryKey: 'order_id',
+              keys: ['order_id'],
+              discovered: true,
+              rowCount: '2',
+              columns: ['order_id', 'customer_id'],
+            },
+          ],
+        },
+        {
+          id: 'archive',
+          name: 'archive',
+          badge: 'Archive',
+          connector: 'postgres',
+          tables: [
+            {
+              name: 'crm_customers',
+              primaryKey: 'archive_customer_id',
+              keys: ['archive_customer_id'],
+              discovered: true,
+              rowCount: '1',
+              columns: ['archive_customer_id', 'archive_name'],
+            },
+          ],
+        },
+      ],
+      initial: {
+        ...renderInitial,
+        root: {
+          ...renderInitial.root!,
+          source: 'archive',
+          columns: ['archive_customer_id', 'archive_name'],
+          primaryKey: 'archive_customer_id',
+        },
+        relations: [
+          {
+            ...relation,
+            conditions: [
+              {
+                childKey: 'customer_id',
+                parentTable: 'crm_customers',
+                parentKey: 'archive_customer_id',
+                operator: '=',
+              },
+            ],
+          },
+        ],
+      },
+    })
+    const parentField = host.querySelector<HTMLInputElement>(
+      'input[aria-label="Existing Pipeline field"]',
+    )
+
+    await openPicker(parentField)
+    await setInputValue(parentField!, 'archive_name')
+    await vi.waitFor(() =>
+      expect(getPickerOptions().map((option) => option.textContent?.trim())).toContain(
+        'archive_name',
+      ),
+    )
   })
 
   it('searches fields and parent tables when editing an existing relation', async () => {

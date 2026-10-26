@@ -1152,7 +1152,7 @@ function PipelineOrchestrationPage({
   const selectedTransformSourceRefs = useMemo(() => {
     const configuration = selection?.configuration
     return configuration?.kind === 'transform' &&
-      ['filter', 'map'].includes(configuration.transformType)
+      ['filter', 'map', 'unwind'].includes(configuration.transformType)
       ? upstreamSourceTableRefs(draft, selection?.id)
       : []
   }, [draft, selection?.configuration, selection?.id])
@@ -1201,6 +1201,58 @@ function PipelineOrchestrationPage({
       }
     }
     return fieldTypes
+  }, [selectedTransformSourceIds, selectedTransformSourceRefs, transformSourceSchemas])
+  const selectedTransformFieldOptions = useMemo(() => {
+    const fields = new Map<
+      string,
+      {
+        type: string | null
+        ambiguousType: boolean
+        occurrences: number
+        primaryOccurrences: number
+      }
+    >()
+    const schemasBySourceId = new Map(
+      selectedTransformSourceIds.map((sourceId, index) => [
+        sourceId,
+        transformSourceSchemas[index]?.data,
+      ]),
+    )
+
+    for (const reference of selectedTransformSourceRefs) {
+      if (reference.tableKind === 'regex') continue
+      const table = schemasBySourceId
+        .get(reference.sourceId)
+        ?.tables.find((candidate) => candidate.name === reference.table)
+      if (!table) continue
+      const primaryKeys = new Set(table.primaryKey)
+      for (const field of table.fields) {
+        const current = fields.get(field.name)
+        if (!current) {
+          fields.set(field.name, {
+            type: field.type,
+            ambiguousType: false,
+            occurrences: 1,
+            primaryOccurrences: primaryKeys.has(field.name) ? 1 : 0,
+          })
+          continue
+        }
+        if (current.type && field.type && current.type.toLowerCase() !== field.type.toLowerCase()) {
+          current.type = null
+          current.ambiguousType = true
+        }
+        current.occurrences++
+        if (primaryKeys.has(field.name)) current.primaryOccurrences++
+      }
+    }
+
+    return [...fields].map(([name, metadata]) => ({
+      value: name,
+      label: name,
+      detail: metadata.ambiguousType ? undefined : (metadata.type ?? undefined),
+      isPrimaryKey:
+        metadata.occurrences > 0 && metadata.primaryOccurrences === metadata.occurrences,
+    }))
   }, [selectedTransformSourceIds, selectedTransformSourceRefs, transformSourceSchemas])
   const selectedUpstreamInputs = useMemo(
     () =>
@@ -1589,6 +1641,7 @@ function PipelineOrchestrationPage({
               tableOptions: selectedTargetTableOptions,
               upstreamSourceTables: selectedTargetSourceTables,
               fieldTypes: selectedTransformFieldTypes,
+              fieldOptions: selectedTransformFieldOptions,
               upstreamInputs: selectedUpstreamInputs,
               loadTables: loadPipelineTables,
             }}

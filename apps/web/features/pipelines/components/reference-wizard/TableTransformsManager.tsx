@@ -126,6 +126,7 @@ export interface TableTransformsManagerProps {
   tableName: string
   sourceName?: string
   columns: string[]
+  fieldOptions?: SearchablePickerOption[]
   transforms: TransformStep[]
   onChange: (transforms: TransformStep[]) => void
   hideHeader?: boolean
@@ -238,6 +239,7 @@ function resolveUnionInputOption(option: UnionInputOption): ResolvedUnionInputOp
 
 export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
   columns = [],
+  fieldOptions = [],
   transforms = [],
   onChange,
   hideHeader = false,
@@ -478,6 +480,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                     <FilterEditor
                       config={step.config.filter || { expr: "op != 'd'" }}
                       columns={columns}
+                      fieldOptions={fieldOptions}
                       onChange={(newFilter) =>
                         updateStep(idx, (prev) => ({
                           ...prev,
@@ -492,6 +495,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                     <MapEditor
                       config={step.config.map || { fields: [], passthroughUnlisted: true }}
                       columns={columns}
+                      fieldOptions={fieldOptions}
                       onChange={(newMap) =>
                         updateStep(idx, (prev) => ({
                           ...prev,
@@ -516,6 +520,7 @@ export const TableTransformsManager: React.FC<TableTransformsManagerProps> = ({
                         }
                       }
                       columns={columns}
+                      fieldOptions={fieldOptions}
                       onChange={(newUnwind) =>
                         updateStep(idx, (prev) => ({
                           ...prev,
@@ -835,10 +840,16 @@ function UnionInputsEditor({
 interface FilterEditorProps {
   config: FilterTransformConfig
   columns: string[]
+  fieldOptions: SearchablePickerOption[]
   onChange: (config: FilterTransformConfig) => void
 }
 
-const FilterEditor: React.FC<FilterEditorProps> = ({ config, columns, onChange }) => {
+const FilterEditor: React.FC<FilterEditorProps> = ({
+  config,
+  columns,
+  fieldOptions: columnOptions,
+  onChange,
+}) => {
   const { t } = useTranslation()
   const parsed = React.useMemo(() => parseWizardFilter(config.expr), [config.expr])
   const conditions: FilterCondition[] = config.conditions?.length
@@ -945,26 +956,27 @@ const FilterEditor: React.FC<FilterEditorProps> = ({ config, columns, onChange }
             </div>
             <div className="wizard-condition-group__rows">
               {conditions.map((cond, cIdx) => {
-                const schemaOptions: SearchablePickerOption[] = columns.map((column) => ({
-                  value: column,
-                  label: column,
-                  detail: t('pipelines.workspace.transform.wizard.schemaFields'),
-                }))
+                const schemaOptions: SearchablePickerOption[] = columnOptions.length
+                  ? columnOptions
+                  : columns.map((column) => ({
+                      value: column,
+                      label: column,
+                    }))
                 const envelopeOptions: SearchablePickerOption[] = [
                   {
                     value: 'op',
-                    label: t('pipelines.workspace.transform.wizard.operationType'),
-                    detail: t('pipelines.workspace.transform.wizard.cdcEnvelopeFields'),
+                    label: 'op',
+                    detail: t('pipelines.workspace.transform.wizard.operationTypeDetail'),
                   },
                   {
                     value: 'ts',
-                    label: t('pipelines.workspace.transform.wizard.eventTimestamp'),
-                    detail: t('pipelines.workspace.transform.wizard.cdcEnvelopeFields'),
+                    label: 'ts',
+                    detail: t('pipelines.workspace.transform.wizard.eventTimestampDetail'),
                   },
                   {
                     value: 'src',
-                    label: t('pipelines.workspace.transform.wizard.sourceMetadata'),
-                    detail: t('pipelines.workspace.transform.wizard.cdcEnvelopeFields'),
+                    label: 'src',
+                    detail: t('pipelines.workspace.transform.wizard.sourceMetadataDetail'),
                   },
                 ].filter(
                   (option) =>
@@ -1131,6 +1143,7 @@ interface UnwindEditorProps {
   identityPlans?: PipelineTargetIdentity[]
   config: UnwindTransformConfig
   columns: string[]
+  fieldOptions: SearchablePickerOption[]
   onChange: (config: UnwindTransformConfig) => void
 }
 
@@ -1138,6 +1151,7 @@ const UnwindEditor: React.FC<UnwindEditorProps> = ({
   inheritedSourceIdField,
   config,
   columns,
+  fieldOptions,
   onChange,
   identityPlans,
 }) => {
@@ -1179,10 +1193,9 @@ const UnwindEditor: React.FC<UnwindEditorProps> = ({
               onValueChange={(path) => onChange({ ...config, path })}
               openLabel={t('pipelines.workspace.transform.wizard.openFieldPicker')}
               options={(() => {
-                const options: SearchablePickerOption[] = columns.map((column) => ({
-                  value: column,
-                  label: column,
-                }))
+                const options: SearchablePickerOption[] = fieldOptions.length
+                  ? fieldOptions
+                  : columns.map((column) => ({ value: column, label: column }))
                 if (config.path && !options.some((option) => option.value === config.path)) {
                   options.unshift({
                     value: config.path,

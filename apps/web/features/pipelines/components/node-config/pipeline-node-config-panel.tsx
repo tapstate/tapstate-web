@@ -31,7 +31,7 @@ import type {
 } from '../../model/pipeline-node-model'
 import type { PipelineCanvasSelection } from '../canvas/pipeline-canvas-types'
 import type { PipelineSourceTableKind } from '../node-library/pipeline-node-library-types'
-import type { PipelineTransformConfigurationPatch } from '../transform/types'
+import type { PipelineTransformConfigurationPatch, TransformFieldOption } from '../transform/types'
 
 import {
   PIPELINE_ON_FULL_LOAD_POLICIES,
@@ -864,6 +864,7 @@ export function PipelineNodeConfigPanel({
   sources,
   upstreamSourceTables,
   fieldTypes,
+  fieldOptions,
   upstreamInputs,
 }: {
   selection: PipelineCanvasSelection
@@ -883,6 +884,7 @@ export function PipelineNodeConfigPanel({
   sources?: readonly SourceView[]
   upstreamSourceTables?: readonly PipelineSourceTableSelection[]
   fieldTypes?: Readonly<Record<string, string>>
+  fieldOptions?: readonly TransformFieldOption[]
   upstreamInputs?: readonly string[]
 }) {
   const { t } = useTranslation()
@@ -1014,6 +1016,7 @@ export function PipelineNodeConfigPanel({
               <TransformEditor
                 config={configuration}
                 fieldTypes={fieldTypes}
+                fieldOptions={fieldOptions}
                 upstreamInputs={upstreamInputs}
                 onChange={(patch) => emit(transformPatchValues(patch))}
               />

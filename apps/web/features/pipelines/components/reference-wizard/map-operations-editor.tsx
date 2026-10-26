@@ -24,7 +24,7 @@ import { useTranslation } from 'react-i18next'
 
 import type { MapFieldRule, MapTransformConfig } from './TableTransformsManager'
 
-import { SearchablePicker } from './searchable-picker'
+import { SearchablePicker, type SearchablePickerOption } from './searchable-picker'
 
 type Operation = MapFieldRule['ruleType']
 const operations = ['delete', 'literal', 'rename', 'compute'] as const
@@ -50,10 +50,12 @@ function completeRules(rules: MapFieldRule[]) {
 export function MapOperationsEditor({
   config,
   columns,
+  fieldOptions = [],
   onChange,
 }: {
   config: MapTransformConfig
   columns: string[]
+  fieldOptions?: SearchablePickerOption[]
   onChange: (value: MapTransformConfig) => void
 }) {
   const { t } = useTranslation()
@@ -258,11 +260,36 @@ export function MapOperationsEditor({
                           {t('pipelines.workspace.transform.wizard.noFieldMatches')}
                         </ComboboxEmpty>
                         <ComboboxList<string>>
-                          {(field) => (
-                            <ComboboxItem key={field} value={field}>
-                              <ComboboxItemText>{field}</ComboboxItemText>
-                            </ComboboxItem>
-                          )}
+                          {(field) => {
+                            const option = fieldOptions.find(
+                              (candidate) => candidate.value === field,
+                            )
+                            return (
+                              <ComboboxItem key={field} value={field}>
+                                <span className="flex w-full min-w-0 items-center gap-2">
+                                  <ComboboxItemText
+                                    className="min-w-0 flex-1 truncate"
+                                    title={option?.label ?? field}
+                                  >
+                                    {option?.label ?? field}
+                                  </ComboboxItemText>
+                                  {option?.isPrimaryKey && (
+                                    <span className="border-components-panel-border text-text-tertiary shrink-0 rounded border px-1 text-[9px] font-medium">
+                                      PK
+                                    </span>
+                                  )}
+                                  {option?.detail && (
+                                    <span
+                                      className="system-xs-regular text-text-tertiary max-w-[42%] min-w-0 truncate text-right"
+                                      title={option.detail}
+                                    >
+                                      {option.detail}
+                                    </span>
+                                  )}
+                                </span>
+                              </ComboboxItem>
+                            )
+                          }}
                         </ComboboxList>
                       </ComboboxPopup>
                     </ComboboxPositioner>
@@ -303,7 +330,13 @@ export function MapOperationsEditor({
                                 ...columns,
                                 ...(rule.value ? [rule.value.replace(/^\$/, '')] : []),
                               ]),
-                            ].map((field) => ({ value: field, label: field }))}
+                            ].map(
+                              (field) =>
+                                fieldOptions.find((option) => option.value === field) ?? {
+                                  value: field,
+                                  label: field,
+                                },
+                            )}
                             placeholder={copy('sourceField')}
                             openLabel={t('pipelines.workspace.transform.wizard.openFieldPicker')}
                             value={rule.value.replace(/^\$/, '')}

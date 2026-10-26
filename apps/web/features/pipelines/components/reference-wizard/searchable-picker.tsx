@@ -6,7 +6,6 @@ import {
   AutocompleteInput,
   AutocompleteInputGroup,
   AutocompleteItem,
-  AutocompleteItemText,
   AutocompleteList,
   AutocompletePopup,
   AutocompletePortal,
@@ -20,14 +19,13 @@ import {
   ComboboxInputGroup,
   ComboboxInputTrigger,
   ComboboxItem,
-  ComboboxItemText,
   ComboboxList,
   ComboboxPopup,
   ComboboxPortal,
   ComboboxPositioner,
   createComboboxItems,
 } from '@tapstate-web/ui/combobox'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { cn } from '@/lib/utils'
 
@@ -36,6 +34,66 @@ export interface SearchablePickerOption {
   label: string
   icon?: ReactNode
   detail?: string
+  isPrimaryKey?: boolean
+}
+
+function SearchablePickerOptionRow({ option }: { option: SearchablePickerOption }) {
+  return (
+    <span
+      className={cn(
+        'grid w-full min-w-0 items-center gap-2',
+        option.detail ? 'grid-cols-[minmax(0,1fr)_minmax(0,32%)]' : 'grid-cols-1',
+      )}
+    >
+      <span className="flex min-w-0 items-center gap-2">
+        {option.icon}
+        <span className="system-sm-medium min-w-0 flex-1 truncate" title={option.label}>
+          {option.label}
+        </span>
+        {option.isPrimaryKey ? (
+          <span className="border-components-panel-border text-text-tertiary shrink-0 rounded border px-1 text-[9px] font-medium">
+            PK
+          </span>
+        ) : null}
+      </span>
+      {option.detail ? (
+        <span
+          className="system-xs-regular text-text-tertiary min-w-0 truncate text-right"
+          title={option.detail}
+        >
+          {option.detail}
+        </span>
+      ) : null}
+    </span>
+  )
+}
+
+type SearchOption = string | SearchablePickerOption
+
+function normalizeOptions(options: readonly SearchOption[]): SearchablePickerOption[] {
+  return options.map((option) =>
+    typeof option === 'string' ? { value: option, label: option } : option,
+  )
+}
+
+export function mergeFieldOptions(
+  ...groups: readonly (readonly SearchablePickerOption[])[]
+): SearchablePickerOption[] {
+  const merged = new Map<string, SearchablePickerOption>()
+  for (const option of groups.flat()) {
+    const previous = merged.get(option.value)
+    if (!previous) {
+      merged.set(option.value, option)
+      continue
+    }
+    const details = new Set([previous.detail, option.detail].filter(Boolean))
+    merged.set(option.value, {
+      ...previous,
+      detail: details.size > 0 ? [...details].join(' / ') : undefined,
+      isPrimaryKey: previous.isPrimaryKey && option.isPrimaryKey,
+    })
+  }
+  return [...merged.values()]
 }
 
 export function SearchablePicker({
@@ -45,7 +103,7 @@ export function SearchablePicker({
   inputClassName,
   onValueChange,
   openLabel,
-  options,
+  options: rawOptions,
   placeholder,
   renderOption,
   renderSelectedLeading,
@@ -59,12 +117,13 @@ export function SearchablePicker({
   inputClassName?: string
   onValueChange: (value: string) => void
   openLabel: string
-  options: readonly SearchablePickerOption[]
+  options: readonly SearchOption[]
   placeholder: string
   renderOption?: (option: SearchablePickerOption) => ReactNode
   renderSelectedLeading?: (option: SearchablePickerOption | undefined) => ReactNode
   value: string
 }) {
+  const options = useMemo(() => normalizeOptions(rawOptions), [rawOptions])
   const items = useMemo(
     () =>
       createComboboxItems(options, {
@@ -101,17 +160,7 @@ export function SearchablePicker({
             <ComboboxList<SearchablePickerOption>>
               {(option) => (
                 <ComboboxItem key={option.value} value={option.value}>
-                  {renderOption?.(option) ?? (
-                    <span className="flex min-w-0 items-center gap-2">
-                      {option.icon}
-                      <ComboboxItemText>{option.label}</ComboboxItemText>
-                      {option.detail ? (
-                        <span className="system-xs-regular text-text-tertiary shrink-0">
-                          {option.detail}
-                        </span>
-                      ) : null}
-                    </span>
-                  )}
+                  {renderOption?.(option) ?? <SearchablePickerOptionRow option={option} />}
                 </ComboboxItem>
               )}
             </ComboboxList>
@@ -129,7 +178,7 @@ export function FieldAutocomplete({
   inputClassName,
   onValueChange,
   openLabel,
-  options,
+  options: rawOptions,
   placeholder,
   value,
 }: {
@@ -139,15 +188,61 @@ export function FieldAutocomplete({
   inputClassName?: string
   onValueChange: (value: string) => void
   openLabel: string
-  options: readonly string[]
+  options: readonly SearchOption[]
   placeholder: string
   value: string
 }) {
+  const options = useMemo(() => normalizeOptions(rawOptions), [rawOptions])
+  const values = useMemo(() => options.map((option) => option.value), [options])
+  const [open, setOpen] = useState(false)
+  const [searchActive, setSearchActive] = useState(false)
+  const [query, setQuery] = useState(value)
+  const openRef = useRef(open)
+  const latestValueRef = useRef(value)
+  const inputChangedWhileClosedRef = useRef(false)
+
+  useEffect(() => {
+    latestValueRef.current = value
+    if (!open) setQuery(value)
+  }, [open, value])
+
   return (
     <Autocomplete<string>
-      items={options}
-      value={value}
-      onValueChange={(nextValue) => onValueChange(nextValue ?? '')}
+      items={values}
+      filteredItems={open && !searchActive ? values : undefined}
+      open={open}
+      openOnInputClick
+      value={query}
+      onOpenChange={(nextOpen, eventDetails) => {
+        openRef.current = nextOpen
+        setOpen(nextOpen)
+        if (nextOpen) {
+          const preserveTypedQuery =
+            eventDetails.reason === 'input-change' && inputChangedWhileClosedRef.current
+          if (preserveTypedQuery) {
+            setSearchActive(true)
+          } else {
+            setQuery(value)
+            setSearchActive(false)
+          }
+          inputChangedWhileClosedRef.current = false
+        } else {
+          setQuery(latestValueRef.current)
+          setSearchActive(false)
+          inputChangedWhileClosedRef.current = false
+        }
+      }}
+      onValueChange={(nextValue) => {
+        const nextQuery = nextValue ?? ''
+        if (!openRef.current && nextQuery !== latestValueRef.current) {
+          inputChangedWhileClosedRef.current = true
+        } else if (openRef.current && nextQuery !== latestValueRef.current) {
+          setSearchActive(true)
+        }
+        latestValueRef.current = nextQuery
+        setQuery(nextQuery)
+        onValueChange(nextQuery)
+      }}
     >
       <AutocompleteInputGroup className={cn('w-full', className)}>
         <AutocompleteInput
@@ -164,11 +259,17 @@ export function FieldAutocomplete({
           <AutocompletePopup>
             <AutocompleteEmpty>{emptyLabel}</AutocompleteEmpty>
             <AutocompleteList<string>>
-              {(option) => (
-                <AutocompleteItem key={option} value={option}>
-                  <AutocompleteItemText>{option}</AutocompleteItemText>
-                </AutocompleteItem>
-              )}
+              {(value) => {
+                const option = options.find((candidate) => candidate.value === value) ?? {
+                  value,
+                  label: value,
+                }
+                return (
+                  <AutocompleteItem key={value} value={value}>
+                    <SearchablePickerOptionRow option={option} />
+                  </AutocompleteItem>
+                )
+              }}
             </AutocompleteList>
           </AutocompletePopup>
         </AutocompletePositioner>

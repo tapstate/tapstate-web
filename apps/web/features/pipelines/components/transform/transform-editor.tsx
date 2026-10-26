@@ -12,6 +12,7 @@ export function TransformEditor({
   config,
   onChange,
   fieldTypes,
+  fieldOptions,
   upstreamInputs,
 }: TransformEditorProps) {
   const definition = getPipelineTransformDefinition(config.transformType)
@@ -22,6 +23,7 @@ export function TransformEditor({
         config={config}
         onChange={onChange}
         fieldTypes={fieldTypes}
+        fieldOptions={fieldOptions}
         upstreamInputs={upstreamInputs}
       />
     )
