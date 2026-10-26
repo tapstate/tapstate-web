@@ -1361,6 +1361,11 @@ describe('PipelineEditorPage', () => {
     )
 
     await vi.waitFor(() => expect(document.querySelector('[role="separator"]')).not.toBeNull())
+    await act(async () => {
+      await Promise.all(getSourceSchema.mock.results.map(({ value }) => Promise.resolve(value)))
+      // Query observer notifications are scheduled after the request promise resolves.
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 0))
+    })
     const resizeHandle = document.querySelector<HTMLElement>('[role="separator"]')
     const canvasRenderCount = document
       .querySelector('[data-testid="pipeline-canvas-render-count"]')
