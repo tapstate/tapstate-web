@@ -28,13 +28,19 @@ export function startCheckItem(finding: StartCheckFinding, t: TFunction): CheckI
     tone: behaviorTones[behavior],
     toneLabel: t(`pipelines.startChecks.behavior.${behavior}`),
     title: finding.subject.label,
-    meta: [
-      finding.subject.kind,
-      finding.check,
-      finding.evaluation,
-      ...(isKnownBehavior(finding) ? [] : [finding.behavior]),
-    ],
-    message: finding.message,
+    meta:
+      finding.evaluation === 'UNAVAILABLE'
+        ? []
+        : [
+            finding.subject.kind,
+            finding.check,
+            finding.evaluation,
+            ...(isKnownBehavior(finding) ? [] : [finding.behavior]),
+          ],
+    message:
+      finding.evaluation === 'UNAVAILABLE'
+        ? t('pipelines.startChecks.temporarilyUnavailable')
+        : finding.message,
   }
 }
 

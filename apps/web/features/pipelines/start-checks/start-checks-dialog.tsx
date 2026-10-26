@@ -34,10 +34,12 @@ function StartChecksBody({
   session,
   onConfirm,
   onCancel,
+  onRecheck,
 }: {
   session: StartChecksSession
   onConfirm: StartChecksDialogState['onConfirm']
   onCancel: StartChecksDialogState['onCancel']
+  onRecheck: StartChecksDialogState['onRecheck']
 }) {
   const { t } = useTranslation()
   const [choices, setChoices] = useState<StartChoices>(() => choicesFrom(session.decisions))
@@ -45,6 +47,7 @@ function StartChecksBody({
   const { pipelineId, report, submitting } = session
   const findings = groupFindings(report)
   const blocked = startBlocked(report)
+  const unavailable = report.findings.filter((finding) => finding.evaluation === 'UNAVAILABLE')
   const groups: CheckGroup[] = [
     {
       id: 'block',
@@ -65,7 +68,9 @@ function StartChecksBody({
     },
   ]
   const description = blocked
-    ? 'pipelines.startChecks.descriptionBlocked'
+    ? unavailable.length > 0
+      ? 'pipelines.startChecks.descriptionUnavailable'
+      : 'pipelines.startChecks.descriptionBlocked'
     : findings.confirm.length > 0
       ? 'pipelines.startChecks.descriptionConfirm'
       : 'pipelines.startChecks.descriptionReady'
@@ -142,14 +147,49 @@ function StartChecksBody({
           </div>
         ) : null}
 
+        {session.recheckFailed ? (
+          <p role="alert">{t('pipelines.startChecks.recheckFailed')}</p>
+        ) : null}
+        {unavailable.length > 0 ? (
+          <details>
+            <summary className="text-muted-foreground cursor-pointer text-[13px]">
+              {t('pipelines.startChecks.details')}
+            </summary>
+            {unavailable.map((finding) => (
+              <p key={finding.key} className={plainText}>
+                {finding.check} · {finding.evaluation} · {finding.message}
+              </p>
+            ))}
+          </details>
+        ) : null}
         {report.plan.length > 0 ? <StartCheckPlan plan={report.plan} /> : null}
       </div>
 
       <AlertDialogFooter>
         {blocked ? (
-          <Button type="button" variant="outline" className="px-3 text-[13px]" onClick={onCancel}>
-            {t('pipelines.startChecks.close')}
-          </Button>
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              className="px-3 text-[13px]"
+              disabled={submitting}
+              onClick={onCancel}
+            >
+              {t('pipelines.startChecks.close')}
+            </Button>
+            {unavailable.length > 0 && onRecheck ? (
+              <Button
+                type="button"
+                disabled={submitting}
+                aria-busy={submitting}
+                onClick={onRecheck}
+              >
+                {t(
+                  submitting ? 'pipelines.startChecks.rechecking' : 'pipelines.startChecks.recheck',
+                )}
+              </Button>
+            ) : null}
+          </>
         ) : (
           <>
             <Button
@@ -186,7 +226,13 @@ function StartChecksBody({
  * Asks the start-check questions a start stopped on. A blocked start offers only Close; otherwise
  * Start stays disabled until every question has an answer.
  */
-export function StartChecksDialog({ open, session, onConfirm, onCancel }: StartChecksDialogState) {
+export function StartChecksDialog({
+  open,
+  session,
+  onConfirm,
+  onCancel,
+  onRecheck,
+}: StartChecksDialogState) {
   return (
     <AlertDialog
       open={open}
@@ -204,6 +250,7 @@ export function StartChecksDialog({ open, session, onConfirm, onCancel }: StartC
             session={session}
             onConfirm={onConfirm}
             onCancel={onCancel}
+            onRecheck={onRecheck}
           />
         ) : null}
       </AlertDialogContent>

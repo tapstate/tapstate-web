@@ -564,6 +564,12 @@
       "dismissFeedback": "關閉生命週期錯誤"
     },
     "startChecks": {
+      "descriptionUnavailable": "啟動檢查未能完成。重新檢查以取得最新結果；Pipeline 尚未啟動。",
+      "temporarilyUnavailable": "此檢查未能完成，目前尚未確認需要修改設定。",
+      "recheck": "重新檢查",
+      "rechecking": "正在重新檢查…",
+      "recheckFailed": "無法更新檢查結果，請重試。",
+      "details": "技術詳情",
       "title": "啟動 {{id}} 前的檢查",
       "descriptionBlocked": "有問題阻止了這次啟動。處理後再重新啟動 Pipeline。",
       "descriptionConfirm": "為每個問題選擇處理方式，然後啟動。",

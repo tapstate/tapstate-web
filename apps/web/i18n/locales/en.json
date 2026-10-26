@@ -558,6 +558,12 @@
       "dismissFeedback": "Dismiss lifecycle error"
     },
     "startChecks": {
+      "descriptionUnavailable": "A start check could not finish. Recheck to get an updated result; the pipeline has not been started.",
+      "temporarilyUnavailable": "This check could not finish. No configuration change has been confirmed as necessary.",
+      "recheck": "Recheck",
+      "rechecking": "Rechecking…",
+      "recheckFailed": "Could not refresh the checks. Try again.",
+      "details": "Technical details",
       "title": "Start checks for {{id}}",
       "descriptionBlocked": "Something stops this start. Resolve it, then start the Pipeline again.",
       "descriptionConfirm": "Choose how to handle each question, then start.",

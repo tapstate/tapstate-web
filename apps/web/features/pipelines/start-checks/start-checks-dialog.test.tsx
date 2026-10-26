@@ -45,6 +45,7 @@ function session(report: StartCheckReport): StartChecksSession {
 async function renderDialog(report: StartCheckReport) {
   const onConfirm = vi.fn()
   const onCancel = vi.fn()
+  const onRecheck = vi.fn()
   container = document.createElement('div')
   document.body.append(container)
   root = createRoot(container)
@@ -55,10 +56,11 @@ async function renderDialog(report: StartCheckReport) {
         session={session(report)}
         onConfirm={onConfirm}
         onCancel={onCancel}
+        onRecheck={onRecheck}
       />,
     )
   })
-  return { onConfirm, onCancel }
+  return { onConfirm, onCancel, onRecheck }
 }
 
 function dialog() {
@@ -120,6 +122,25 @@ describe('Start-check client fixture', () => {
     expect(warning?.querySelector('[data-check-tone-label="warning"]')?.textContent).toBe('Warning')
     expect(warning?.querySelector('svg')).not.toBeNull()
     expect(dialog()?.querySelector('button[aria-label*="Close"]')).toBeNull()
+  })
+
+  it('offers a safe recheck for an unavailable blocking check and folds its internals into details', async () => {
+    const finding = {
+      ...answerable.findings[0]!,
+      behavior: 'BLOCK',
+      evaluation: 'UNAVAILABLE',
+      actions: [],
+      message: 'Internal target check did not answer during remaining 714 ms wait',
+    }
+    const report = { ...answerable, outcome: 'BLOCKED', findings: [finding] }
+    const { onRecheck, onConfirm } = await renderDialog(report)
+    expect(button('Recheck')).toBeDefined()
+    expect(dialog()?.querySelector('details')?.textContent).toContain('714 ms')
+    expect(dialog()?.querySelector('details')?.hasAttribute('open')).toBe(false)
+    await act(async () => button('Recheck')?.click())
+    expect(onRecheck).toHaveBeenCalledOnce()
+    expect(onConfirm).not.toHaveBeenCalled()
+    expect(button('Start')).toBeUndefined()
   })
 
   it('previews what a destructive answer changes and styles it from its flag', async () => {
