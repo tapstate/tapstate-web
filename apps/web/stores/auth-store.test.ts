@@ -290,6 +290,6 @@ it('shows a recoverable browser-support error when cross-tab locking is unavaila
     expect(store.getState()).toMatchObject({ status: 'unavailable', recoveryReason: 'browser' })
   } finally {
     if (descriptor) Object.defineProperty(navigator, 'locks', descriptor)
-    else delete navigator.locks
+    else Reflect.deleteProperty(navigator, 'locks')
   }
 })
