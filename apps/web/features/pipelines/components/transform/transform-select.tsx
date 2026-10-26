@@ -4,7 +4,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from '@tapstate-web/ui/select'
 
 export function TransformSelect<T extends string>({
   value,

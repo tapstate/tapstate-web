@@ -9,6 +9,7 @@ import type {
   PipelineSchemaOption,
   PipelineTableLoader,
 } from '../../components/node-config/pipeline-data-node-schema'
+import type { TransformFieldOption } from '../../components/transform/types'
 import type {
   PipelineNodeConfigurationChange,
   PipelineSourceTableSelection,
@@ -44,6 +45,8 @@ export interface PipelineWorkflowPanelProps {
   sources?: readonly SourceView[]
   upstreamSourceTables?: readonly PipelineSourceTableSelection[]
   fieldTypes?: Readonly<Record<string, string>>
+  fieldOptions?: readonly TransformFieldOption[]
+  upstreamInputs?: readonly string[]
 }
 
 /** Owns the resizable inspector shell; form rendering remains in the node-config feature. */
@@ -66,6 +69,8 @@ export function PipelineWorkflowPanel({
   sources,
   upstreamSourceTables,
   fieldTypes,
+  fieldOptions,
+  upstreamInputs,
 }: PipelineWorkflowPanelProps) {
   const { t } = useTranslation()
   const [width, setWidth] = useState(NODE_PANEL_DEFAULT_WIDTH)
@@ -157,6 +162,8 @@ export function PipelineWorkflowPanel({
           sources={sources}
           upstreamSourceTables={upstreamSourceTables}
           fieldTypes={fieldTypes}
+          fieldOptions={fieldOptions}
+          upstreamInputs={upstreamInputs}
         />
       </div>
     </aside>

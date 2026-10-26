@@ -490,7 +490,7 @@ export function PipelineAiCopilot({
         <div className="flex items-center justify-between gap-2 border-b border-blue-100/60 bg-blue-50/40 px-4 py-1.5 text-[11px] text-blue-900">
           <span className="min-w-0 truncate">
             <span className="mr-1.5 text-gray-500">{t('wizard.assistant.focus')}</span>
-            <span className="font-mono font-semibold">{focusLabel}</span>
+            <span className="font-semibold">{focusLabel}</span>
           </span>
           <button
             type="button"

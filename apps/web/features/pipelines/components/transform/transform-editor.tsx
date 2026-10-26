@@ -1,19 +1,32 @@
+import { Textarea } from '@tapstate-web/ui/textarea'
 import { Code2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-
-import { Textarea } from '@/components/ui/textarea'
 
 import type { TransformEditorProps } from './types'
 
 import { getPipelineTransformDefinition } from './registry'
 import { TransformEditorShell } from './transform-editor-shell'
 
-export function TransformEditor({ config, onChange, fieldTypes }: TransformEditorProps) {
+export function TransformEditor({
+  config,
+  onChange,
+  fieldTypes,
+  fieldOptions,
+  upstreamInputs,
+}: TransformEditorProps) {
   const definition = getPipelineTransformDefinition(config.transformType)
   if (definition) {
     const Editor = definition.editor
-    return <Editor config={config} onChange={onChange} fieldTypes={fieldTypes} />
+    return (
+      <Editor
+        config={config}
+        onChange={onChange}
+        fieldTypes={fieldTypes}
+        fieldOptions={fieldOptions}
+        upstreamInputs={upstreamInputs}
+      />
+    )
   }
   return <UnknownTransformEditor config={config} onChange={onChange} title={config.transformType} />
 }

@@ -111,4 +111,40 @@ describe('PipelineNode selection', () => {
       'selected: nodesRef.current.find((node) => node.id === flowNode.id)?.selected ?? false',
     )
   })
+
+  it('clamps node descriptions so long copy cannot expand into the next graph row', () => {
+    const host = renderNode(false)
+    act(() =>
+      root?.render(
+        <ReactFlowProvider>
+          <PipelineNode
+            {...({
+              id: 'transform:filter',
+              type: 'transform',
+              data: {
+                ...nodeData,
+                nodeType: 'transform',
+                description: 'A long description '.repeat(20),
+              },
+              selected: false,
+              dragging: false,
+              draggable: true,
+              selectable: true,
+              deletable: true,
+              zIndex: 0,
+            } as NodeProps<import('./pipeline-canvas-types').CanvasNode>)}
+          />
+        </ReactFlowProvider>,
+      ),
+    )
+
+    const description = host.querySelector('p')
+    expect(description?.className).toContain('line-clamp-2')
+  })
+
+  it('rechecks the selected node when the inspector width changes', () => {
+    expect(pipelineCanvasSource).toContain('selectedNodeId?: string | null')
+    expect(pipelineCanvasSource).toContain('new ResizeObserver')
+    expect(pipelineCanvasSource).toContain('keepSelectedNodeVisible(selectedNodeId)')
+  })
 })

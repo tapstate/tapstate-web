@@ -140,6 +140,11 @@ export function WizardBuilder({
               discovered: Boolean(detail),
               rowCount: '—',
               columns: (detail?.fields || []).map((f) => f.name),
+              fieldTypes: Object.fromEntries(
+                (detail?.fields || []).flatMap((field) =>
+                  field.type ? [[field.name, field.type]] : [],
+                ),
+              ),
             }
           }),
         }
