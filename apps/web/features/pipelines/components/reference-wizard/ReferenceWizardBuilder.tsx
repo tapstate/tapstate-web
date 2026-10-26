@@ -1655,9 +1655,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
           !nested && rel.id === relations[0]?.id && activeGuideTarget === 'step-first-relation'
             ? 'border-indigo-500 bg-gradient-to-b from-indigo-50/15 to-white shadow-md ring-2 ring-indigo-500/40'
             : activeContext === rel.id
-              ? nested
-                ? 'border-purple-500 bg-white ring-1 ring-purple-500/20'
-                : 'border-blue-500 ring-1 ring-blue-500/20'
+              ? 'border-[var(--pipeline-selection)] ring-2 ring-[var(--pipeline-selection-ring)]'
               : 'border-gray-200 hover:border-gray-300',
         )}
       >
@@ -2456,7 +2454,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                     activeGuideTarget === 'step-root-table'
                       ? 'border-indigo-500 bg-gradient-to-b from-indigo-50/15 to-white shadow-md ring-2 ring-indigo-500/40'
                       : activeContext === 'root'
-                        ? 'border-blue-500 ring-1 ring-blue-500/20'
+                        ? 'border-[var(--pipeline-selection)] ring-2 ring-[var(--pipeline-selection-ring)]'
                         : 'border-gray-200 hover:border-gray-300',
                   )}
                 >
@@ -3023,7 +3021,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   activeGuideTarget === 'step-doc-process'
                     ? 'border-indigo-500 bg-gradient-to-b from-indigo-50/15 to-white shadow-md ring-2 ring-indigo-500/40'
                     : activeContext === 'doc_process'
-                      ? 'border-blue-500 ring-1 ring-blue-500/20'
+                      ? 'border-[var(--pipeline-selection)] ring-2 ring-[var(--pipeline-selection-ring)]'
                       : 'border-gray-200 hover:border-gray-300',
                 )}
               >
@@ -3100,7 +3098,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
                   className={cn(
                     'cursor-pointer rounded-xl border bg-white p-4 shadow-xs transition-all duration-150',
                     activeContext === 'destination'
-                      ? 'border-blue-500 ring-1 ring-blue-500/20'
+                      ? 'border-[var(--pipeline-selection)] ring-2 ring-[var(--pipeline-selection-ring)]'
                       : 'border-gray-200 hover:border-gray-300',
                   )}
                 >
