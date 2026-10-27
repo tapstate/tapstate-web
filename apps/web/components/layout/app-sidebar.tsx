@@ -93,13 +93,21 @@ export function AppSidebar() {
             <span
               className={cn(
                 'app-sidebar__cloud-cluster-status',
-                cloudContext.data?.clusterState === 'READY' &&
+                (cloudContext.data?.clusterState === 'READY' ||
+                  (cloudContext.isSuccess && cloudContext.data?.clusterState === null)) &&
                   'app-sidebar__cloud-cluster-status--ready',
                 cloudContext.data?.clusterState === 'DEGRADED' &&
                   'app-sidebar__cloud-cluster-status--degraded',
               )}
               aria-hidden="true"
             />
+            <span className="sr-only">
+              {cloudContext.data?.clusterState === 'READY'
+                ? t('app.cloudIdentity.clusterReady')
+                : cloudContext.isSuccess && cloudContext.data.clusterState === null
+                  ? t('app.cloudIdentity.clusterConnected')
+                  : t('app.cloudIdentity.clusterUnavailable')}
+            </span>
             <span className="app-sidebar__cloud-cluster-copy">
               <span className="app-sidebar__cloud-cluster-name">
                 {cloudContext.data?.clusterName ??
@@ -114,6 +122,11 @@ export function AppSidebar() {
               </span>
             </span>
           </div>
+          {cloudContext.data?.userEmail && (
+            <span className="app-sidebar__cloud-email" title={cloudContext.data.userEmail}>
+              {cloudContext.data.userEmail}
+            </span>
+          )}
         </div>
       ) : (
         <div className="app-sidebar__brand mt-2">
@@ -140,7 +153,7 @@ export function AppSidebar() {
         ))}
       </nav>
 
-      <AppHeader />
+      <AppHeader cloudUserEmail={profile === 'cloud' ? cloudContext.data?.userEmail : null} />
     </aside>
   )
 }

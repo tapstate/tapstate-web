@@ -1,11 +1,13 @@
-import { Link } from '@tanstack/react-router'
+import { Link, Navigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
-export function NotFoundRouteComponent() {
-  const { t } = useTranslation()
+import { AppShell } from '@/components/layout/app-shell'
+import { useAuthStore } from '@/stores/auth-store'
 
+export function NotFoundContent() {
+  const { t } = useTranslation()
   return (
-    <main className="page-state min-h-screen">
+    <main className="page-state min-h-full">
       <div className="page-state__eyebrow">{t('notFound.eyebrow')}</div>
       <h1 className="page-state__title">{t('notFound.title')}</h1>
       <p className="page-state__description">{t('notFound.description')}</p>
@@ -16,5 +18,15 @@ export function NotFoundRouteComponent() {
         {t('notFound.back')}
       </Link>
     </main>
+  )
+}
+
+export function NotFoundRouteComponent() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  if (!isAuthenticated) return <Navigate replace to="/login" />
+  return (
+    <AppShell>
+      <NotFoundContent />
+    </AppShell>
   )
 }

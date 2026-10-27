@@ -7,6 +7,7 @@ export interface CloudWorkspaceContext {
   clusterName: string
   region: string
   clusterState: string | null
+  userEmail?: string | null
   ec2PublicIp?: string | null
   egressAddressStatus?: string | null
 }
@@ -34,6 +35,7 @@ export async function loadCloudWorkspaceContext(
     clusterName: payload.clusterName,
     region: payload.region,
     clusterState: payload.clusterState,
+    userEmail: payload.userEmail,
     ec2PublicIp: payload.ec2PublicIp,
     egressAddressStatus: payload.egressAddressStatus,
   }
@@ -48,6 +50,9 @@ function isCloudWorkspaceContext(value: unknown): value is CloudWorkspaceContext
     typeof value.clusterName === 'string' &&
     typeof value.region === 'string' &&
     (value.clusterState === null || typeof value.clusterState === 'string') &&
+    (value.userEmail === undefined ||
+      value.userEmail === null ||
+      typeof value.userEmail === 'string') &&
     (value.ec2PublicIp === undefined ||
       value.ec2PublicIp === null ||
       typeof value.ec2PublicIp === 'string') &&

@@ -6,8 +6,9 @@ import { loadEnv } from 'vite'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig(({ mode }) => {
-  const localEnv = loadEnv(mode, process.cwd(), 'CLOUD_')
-  const legacyEnv = loadEnv(mode, process.cwd(), 'VITE_')
+  const envDir = process.env.TAPSTATE_LOCAL_PREVIEW_ENV_DIR ?? process.cwd()
+  const localEnv = loadEnv(mode, envDir, 'CLOUD_')
+  const legacyEnv = loadEnv(mode, envDir, 'VITE_')
   const proxyTarget =
     process.env.CLOUD_PROXY_TARGET ||
     localEnv.CLOUD_PROXY_TARGET ||
@@ -17,6 +18,7 @@ export default defineConfig(({ mode }) => {
   const proxyOrigin = new URL(proxyTarget).origin
 
   return {
+    envDir,
     plugins: [
       tanstackRouter({
         generatedRouteTree: './app/routeTree.gen.ts',

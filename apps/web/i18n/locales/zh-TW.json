@@ -14,6 +14,7 @@
     "logout": "登出",
     "user": {
       "avatar": "使用者頭像",
+      "avatarFor": "{{name}} 的使用者頭像",
       "initial": "U"
     },
     "secondaryNavigation": "次要導覽",
@@ -23,6 +24,8 @@
       "organizationLoading": "正在載入組織…",
       "organizationUnavailable": "無法取得組織資訊",
       "clusterLoading": "正在載入叢集…",
+      "clusterReady": "叢集已就緒",
+      "clusterConnected": "叢集控制台已連線",
       "clusterUnavailable": "無法取得叢集資訊",
       "region": "AWS {{region}}",
       "regionUnavailable": "無法取得區域資訊"
@@ -172,10 +175,30 @@
       "description": "結果以目前資料來源設定為準。",
       "action": "測試連線",
       "testing": "正在測試連線",
+      "checkingPipeline": "正在檢查 Pipeline 活動狀態",
       "notTested": "尚未測試",
       "statusUnavailable": "狀態暫不可用",
       "passed": "連線測試通過",
       "failed": "連線測試失敗",
+      "pipeline": {
+        "RUNNING": "已連線 · Pipeline 執行中",
+        "STARTING": "Pipeline 正在連線",
+        "RESUMING": "Pipeline 正在恢復",
+        "PAUSED": "曾用於已暫停的 Pipeline",
+        "STOPPED": "曾用於已停止的 Pipeline",
+        "COMPLETED": "曾用於已完成的 Pipeline"
+      },
+      "cdcReadiness": {
+        "title": "啟動 CDC 前",
+        "manualCheck": "連線測試不會檢查這些資料表層級的前置條件。",
+        "mysql": "確認二進位記錄使用列事件，並保留足以涵蓋預期來源中斷時間的記錄。",
+        "rdsMysql": "依預期中斷時間設定 RDS binlog 保留期；RDS for MySQL 預設不保留二進位記錄。",
+        "postgres": "確認 wal_level 為 logical、publication 涵蓋所選資料表、複寫槽可用，並為保留的 WAL 預留磁碟空間。",
+        "oracle": "啟用 ARCHIVELOG 和最小補充記錄；依所選資料表需求啟用索引鍵或資料表層級補充記錄。",
+        "sqlserver": "為資料庫和所選資料表啟用 CDC，並保持 SQL Server Agent 執行以處理擷取工作。",
+        "mongodb": "使用副本集或分片叢集。Pipeline 需要完整更新前映像時，請為資料集合啟用前映像。",
+        "db2": "為每個用於 CDC 的資料表啟用 DATA CAPTURE CHANGES。"
+      },
       "reenterSecrets": "測試此草稿前，請重新輸入已設定的密鑰。",
       "status": {
         "passed": "通過",
@@ -207,7 +230,7 @@
     },
     "empty": {
       "title": "尚未建立資料來源",
-      "body": "新增一個由連接器驅動的資料來源，讓 Tapstate 可以使用即時資料。",
+      "body": "連線資料來源，讓 Tapstate 可以使用即時資料。",
       "sampleDescription": "先透過範例資料來源探索，再連接自己的資料。"
     },
     "columns": {
@@ -244,11 +267,15 @@
       "connectionOnly": "僅連線",
       "endpointUnavailable": "未公開連線位址",
       "selectorUnavailable": "選擇器詳情不可用",
+      "selectorExactTable": "精確資料表名稱",
+      "openTable": "開啟",
+      "openTableNamed": "開啟資料表 {{name}}",
       "noConfiguration": "此資料來源沒有可顯示的非密鑰設定。",
       "secretConfigured": "已設定",
       "noTables": "此資料來源尚未設定資料表選擇器。",
       "unnamedTable": "未命名選擇器",
-      "secretConfiguredCount": "已設定 {{count}} 個密鑰",
+      "secretConfiguredCount_one": "已設定 {{count}} 個密鑰",
+      "secretConfiguredCount_other": "已設定 {{count}} 個密鑰",
       "srs": "共享記錄設定",
       "noSrs": "尚未設定共享記錄設定。",
       "hash": "內容雜湊"
@@ -461,7 +488,7 @@
     "allPipelines": "全部流水線",
     "explorer": "資源樹",
     "states": {
-      "empty": "目前工作區尚未儲存任何流水線。",
+      "empty": "尚無 Pipeline。建立一條即可開始處理資料。",
       "error": "無法載入已儲存的流水線。",
       "loading": "正在載入已儲存的流水線。"
     },
@@ -474,19 +501,19 @@
       "refreshPaused": "自動更新已暫停",
       "refresh": "更新流水線",
       "refreshAria": "更新流水線清單",
-      "pauseRefresh": "暫停更新",
+      "pauseRefresh": "暫停自動重新整理",
       "pauseRefreshAria": "暫停自動更新流水線",
-      "resumeRefresh": "恢復更新",
+      "resumeRefresh": "恢復自動重新整理",
       "resumeRefreshAria": "恢復自動更新流水線"
     },
     "createMenu": {
       "title": "建立方式",
       "wizard": "Pipeline 建構器",
-      "wizardDescription": "逐步設定資料來源、轉換與目標端",
+      "wizardDescription": "使用引導流程完成簡單的資料來源到目標端複製。",
       "sql": "使用 DuckDB SQL 構建",
       "sqlDescription": "編寫 SQL 轉換資料",
       "dag": "使用 DAG 設計器構建",
-      "dagDescription": "視覺化節點編輯器",
+      "dagDescription": "在畫布上安排資料來源、轉換步驟與目標端。",
       "ai": "使用 AI 構建",
       "aiDescription": "透過提示詞產生流水線"
     },
@@ -501,7 +528,7 @@
       "identityTitle": "命名 Pipeline",
       "identityHint": "Pipeline ID 會被 API 和執行環境作為穩定識別使用。",
       "idLabel": "Pipeline ID",
-      "idPlaceholder": "orders_to_warehouse",
+      "idPlaceholder": "orders_to_store",
       "idHint": "使用字母、數字、連字號或底線組成穩定 ID，建立後無法修改。",
       "idInvalid": "請輸入 1–64 個字母、數字、連字號或底線。",
       "descriptionLabel": "描述",
@@ -536,6 +563,7 @@
     "actions": {
       "collapseNode": "折疊 {{name}}",
       "expandNode": "展開 {{name}}",
+      "viewPipeline": "查看 {{id}} 詳情",
       "editPipeline": "編輯 {{id}}",
       "edit": "編輯",
       "copyPipeline": "複製流水線 ID",
@@ -572,7 +600,7 @@
       "recheckFailed": "無法更新檢查結果，請重試。",
       "details": "技術詳情",
       "title": "啟動 {{id}} 前的檢查",
-      "descriptionBlocked": "有問題阻止了這次啟動。處理後再重新啟動 Pipeline。",
+      "descriptionBlocked": "此 Pipeline 暫時無法啟動。請檢查並修復下方問題後重試。",
       "descriptionConfirm": "為每個問題選擇處理方式，然後啟動。",
       "descriptionReady": "查看檢查結果，然後啟動。",
       "changedWhileConfirming": "你確認期間 {{id}} 已被修改。檢查已重新執行，請在啟動前重新查看。",
@@ -618,6 +646,13 @@
       "resourceName": "資源名稱",
       "status": "狀態",
       "type": "類型",
+      "sources": "資料來源",
+      "target": "目標端",
+      "lag": "延遲",
+      "lagSeconds": "{{value}} 秒",
+      "lastError": "最近錯誤",
+      "targetTables_one": "{{count}} 張資料表",
+      "targetTables_other": "{{count}} 張資料表",
       "version": "版本",
       "draftRevision": "草稿 · r{{revision}}"
     },
@@ -1173,9 +1208,9 @@
           "lastRefreshed": "最近重新整理於 {{time}}",
           "refresh": "重新整理",
           "refreshAria": "重新整理日誌",
-          "pause": "暫停更新",
+          "pause": "暫停自動重新整理",
           "pauseAria": "暫停日誌自動重新整理",
-          "resume": "恢復更新",
+          "resume": "恢復自動重新整理",
           "resumeAria": "恢復日誌自動重新整理",
           "search": "搜尋目前日誌尾端",
           "allLevels": "全部等級",
@@ -1232,9 +1267,9 @@
           "lastRefreshed": "最近重新整理於 {{time}}",
           "refresh": "重新整理",
           "refreshAria": "重新整理監控資料",
-          "pause": "暫停更新",
+          "pause": "暫停自動重新整理",
           "pauseAria": "暫停監控自動重新整理",
-          "resume": "恢復更新",
+          "resume": "恢復自動重新整理",
           "resumeAria": "恢復監控自動重新整理",
           "noMetricsTitle": "暫無指標",
           "noMetricsBody": "此 Pipeline 尚未回報數值指標。",
@@ -1841,6 +1876,24 @@
       }
     }
   },
+  "pipelineDetails": {
+    "backToPipelines": "Pipelines",
+    "edit": "編輯 Pipeline",
+    "logs": "日誌",
+    "loading": "正在載入 Pipeline 詳情…",
+    "notFound": "無法取得 Pipeline {{id}}。",
+    "error": "無法載入 Pipeline 詳情。",
+    "observedAt": "最近觀測時間：{{time}}",
+    "lastError": "最近一次執行錯誤",
+    "sources": "資料來源",
+    "destinations": "目標端",
+    "transforms": "轉換步驟",
+    "noSources": "沒有記錄此 Pipeline 的資料來源。",
+    "noDestinations": "沒有記錄此 Pipeline 的目標端。",
+    "noTransforms": "尚未設定轉換步驟。",
+    "tableCount_one": "{{count}} 張資料表",
+    "tableCount_other": "{{count}} 張資料表"
+  },
   "views": {
     "title": "檢視",
     "subtitle": "瀏覽 Tapstate 在雲端版狀態儲存中持續維護的集合。",
@@ -2103,6 +2156,27 @@
         "close": "關閉"
       }
     },
+    "addSourcesDialog": {
+      "title": "新增資料來源",
+      "description": "連線 Pipeline 要讀取的資料庫。可用連接器取決於目前的 Cluster。",
+      "orConnect": "或連線資料來源",
+      "connect": "連線資料來源",
+      "connectAction": "連線",
+      "connected": "已連線：{{sources}}",
+      "done": "完成",
+      "connector": {
+        "relational": "關聯式資料庫",
+        "document": "文件資料庫",
+        "database": "資料庫"
+      },
+      "sample": {
+        "title": "訂單範例資料",
+        "tag": "推薦",
+        "description": "{{names}} 包含訂單資料。新增前可以先預覽文件。",
+        "view": "查看範例",
+        "choose": "選擇範例"
+      }
+    },
     "sources": {
       "title": "資料來源",
       "metric_one": "{{count}} 個資料來源",
@@ -2123,6 +2197,16 @@
       "running": "執行中",
       "idle": "閒置",
       "error": "錯誤",
+      "health": {
+        "running_one": "{{count}} 條執行中",
+        "running_other": "{{count}} 條執行中",
+        "idle_one": "{{count}} 條閒置",
+        "idle_other": "{{count}} 條閒置",
+        "blocked_one": "{{count}} 條啟動受阻",
+        "blocked_other": "{{count}} 條啟動受阻",
+        "failed_one": "{{count}} 條失敗",
+        "failed_other": "{{count}} 條失敗"
+      },
       "open": "Pipelines →",
       "none": "還沒有 pipeline。",
       "build": "建立第一條 pipeline",
@@ -2151,6 +2235,8 @@
       "title": "需要關注",
       "clear": "一切正常。沒有失敗的 pipeline 或過期的檢視。",
       "pipelineFailed": "失敗的 pipeline",
+      "pipelineBlocked": "Pipeline 啟動受阻",
+      "pipelineUnavailable": "Pipeline 狀態無法使用",
       "viewStale": "過期的檢視",
       "lastApplied_one": "最近一次變更在 {{count}} 分鐘前",
       "lastApplied_other": "最近一次變更在 {{count}} 分鐘前",
@@ -2158,6 +2244,7 @@
       "pipelineIs": {
         "running": "其 pipeline {{pipeline}} 正在執行",
         "idle": "其 pipeline {{pipeline}} 已停止",
+        "blocked": "其 pipeline {{pipeline}} 無法啟動",
         "error": "其 pipeline {{pipeline}} 已失敗",
         "unknown": "由 {{pipeline}} 維護"
       },
@@ -2206,7 +2293,7 @@
     "cloud": {
       "name": "Atlas state store",
       "type": "MongoDB Atlas",
-      "access": "此組織唯一的 Atlas 目標，由 Tapstate 管理連線資訊。"
+      "access": "此 Atlas URI 由你在設定時提供。此頁面不會顯示憑證。"
     },
     "states": {
       "loading": "正在載入 state store…",

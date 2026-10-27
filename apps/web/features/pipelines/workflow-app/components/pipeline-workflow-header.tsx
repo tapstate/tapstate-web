@@ -5,6 +5,10 @@ import { Button } from '@tapstate-web/ui/button'
 import { useReactFlow } from '@xyflow/react'
 import { useTranslation } from 'react-i18next'
 
+import type { PipelineCatalogState } from '@/service/pipelines/pipeline-client'
+
+import { PipelineStatusBadge } from '../../components/pipeline-status-badge'
+
 export interface PipelineWorkflowHeaderProps {
   placement?: 'floating' | 'sticky'
   isDirty: boolean
@@ -23,6 +27,7 @@ export interface PipelineWorkflowHeaderProps {
   dockStatus?: ReactNode
   draftUpdatedAt?: string | null
   hasPublishedArtifact?: boolean
+  runtimeStatus?: PipelineCatalogState
   pipelineId?: string
   selectedNodeId?: string | null
   stopAction?: ReactNode
@@ -79,6 +84,7 @@ export function PipelineWorkflowHeader({
   dockStatus,
   draftUpdatedAt,
   hasPublishedArtifact = false,
+  runtimeStatus,
   pipelineId,
   selectedNodeId,
   stopAction,
@@ -264,6 +270,7 @@ export function PipelineWorkflowHeader({
                         minute: '2-digit',
                         second: '2-digit',
                         hour12: false,
+                        timeZoneName: 'short',
                       })}
                     </time>
                   )}
@@ -276,6 +283,14 @@ export function PipelineWorkflowHeader({
                     ? t('pipelines.workspace.actions.published')
                     : t('pipelines.workspace.actions.unpublished')}
                 </span>
+              </>
+            )}
+            {runtimeStatus && (
+              <>
+                <span aria-hidden="true" className="mx-1">
+                  ·
+                </span>
+                <PipelineStatusBadge status={runtimeStatus} className="h-4 px-1 text-[9px]" />
               </>
             )}
           </div>

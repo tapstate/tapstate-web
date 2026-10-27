@@ -836,9 +836,11 @@ export function OnboardingPage({
                   </div>
                 )}
 
-                <p className="text-[11px] leading-normal text-neutral-500 dark:text-neutral-400">
-                  {t('onboarding.planHint')}
-                </p>
+                {!selectedSpecKey && (
+                  <p className="text-[11px] leading-normal text-neutral-500 dark:text-neutral-400">
+                    {t('onboarding.planHint')}
+                  </p>
+                )}
               </section>
 
               {canManage ? (

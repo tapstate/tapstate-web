@@ -267,8 +267,7 @@ export function ClustersPage() {
                       </div>
                       {cluster.egressAddressStatus === 'STABLE' ? (
                         <span className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
-                          Stable · use for source allowlists; re-enter Cluster to refresh Source
-                          setup
+                          {t('clusters.egress.sourceAllowlistHint')}
                         </span>
                       ) : cluster.egressAddressStatus === 'STABILIZING' ||
                         cluster.egressAddressStatus === 'ATTACHING' ? (

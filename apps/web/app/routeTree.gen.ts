@@ -22,6 +22,8 @@ import { Route as AuthenticatedPipelinesRouteImport } from './routes/_authentica
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated.settings'
 import { Route as AuthenticatedSourcesRouteImport } from './routes/_authenticated.sources'
 import { Route as AuthenticatedViewsRouteImport } from './routes/_authenticated.views'
+import { Route as AuthenticatedPipelinesIndexRouteImport } from './routes/_authenticated.pipelines.index'
+import { Route as AuthenticatedPipelinesPipelineIdRouteImport } from './routes/_authenticated.pipelines.$pipelineId'
 import { Route as AuthenticatedSourcesIndexRouteImport } from './routes/_authenticated.sources.index'
 import { Route as AuthenticatedSourcesSourceIdRouteImport } from './routes/_authenticated.sources.$sourceId'
 import { Route as AuthenticatedViewsIndexRouteImport } from './routes/_authenticated.views.index'
@@ -99,6 +101,18 @@ const AuthenticatedViewsRoute = AuthenticatedViewsRouteImport.update({
   path: '/views',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedPipelinesIndexRoute =
+  AuthenticatedPipelinesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedPipelinesRoute,
+  } as any)
+const AuthenticatedPipelinesPipelineIdRoute =
+  AuthenticatedPipelinesPipelineIdRouteImport.update({
+    id: '/$pipelineId',
+    path: '/$pipelineId',
+    getParentRoute: () => AuthenticatedPipelinesRoute,
+  } as any)
 const AuthenticatedSourcesIndexRoute =
   AuthenticatedSourcesIndexRouteImport.update({
     id: '/',
@@ -183,13 +197,15 @@ export interface FileRoutesByFullPath {
   '/destinations': typeof AuthenticatedDestinationsRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/overview': typeof AuthenticatedOverviewRoute
-  '/pipelines': typeof AuthenticatedPipelinesRoute
+  '/pipelines': typeof AuthenticatedPipelinesRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
   '/sources': typeof AuthenticatedSourcesRouteWithChildren
   '/views': typeof AuthenticatedViewsRouteWithChildren
+  '/pipelines/$pipelineId': typeof AuthenticatedPipelinesPipelineIdRoute
   '/sources/$sourceId': typeof AuthenticatedSourcesSourceIdRouteWithChildren
   '/views/$viewId': typeof AuthenticatedViewsViewIdRoute
   '/views/collections': typeof AuthenticatedViewsCollectionsRoute
+  '/pipelines/': typeof AuthenticatedPipelinesIndexRoute
   '/sources/': typeof AuthenticatedSourcesIndexRoute
   '/views/': typeof AuthenticatedViewsIndexRoute
   '/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
@@ -207,10 +223,11 @@ export interface FileRoutesByTo {
   '/destinations': typeof AuthenticatedDestinationsRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
   '/overview': typeof AuthenticatedOverviewRoute
-  '/pipelines': typeof AuthenticatedPipelinesRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/pipelines/$pipelineId': typeof AuthenticatedPipelinesPipelineIdRoute
   '/views/$viewId': typeof AuthenticatedViewsViewIdRoute
   '/views/collections': typeof AuthenticatedViewsCollectionsRoute
+  '/pipelines': typeof AuthenticatedPipelinesIndexRoute
   '/sources': typeof AuthenticatedSourcesIndexRoute
   '/views': typeof AuthenticatedViewsIndexRoute
   '/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
@@ -230,13 +247,15 @@ export interface FileRoutesById {
   '/_authenticated/destinations': typeof AuthenticatedDestinationsRoute
   '/_authenticated/explorations': typeof AuthenticatedExplorationsRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
-  '/_authenticated/pipelines': typeof AuthenticatedPipelinesRoute
+  '/_authenticated/pipelines': typeof AuthenticatedPipelinesRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/sources': typeof AuthenticatedSourcesRouteWithChildren
   '/_authenticated/views': typeof AuthenticatedViewsRouteWithChildren
+  '/_authenticated/pipelines/$pipelineId': typeof AuthenticatedPipelinesPipelineIdRoute
   '/_authenticated/sources/$sourceId': typeof AuthenticatedSourcesSourceIdRouteWithChildren
   '/_authenticated/views/$viewId': typeof AuthenticatedViewsViewIdRoute
   '/_authenticated/views/collections': typeof AuthenticatedViewsCollectionsRoute
+  '/_authenticated/pipelines/': typeof AuthenticatedPipelinesIndexRoute
   '/_authenticated/sources/': typeof AuthenticatedSourcesIndexRoute
   '/_authenticated/views/': typeof AuthenticatedViewsIndexRoute
   '/_authenticated/sources/$sourceId/$tableName': typeof AuthenticatedSourcesSourceIdTableNameRoute
@@ -260,9 +279,11 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sources'
     | '/views'
+    | '/pipelines/$pipelineId'
     | '/sources/$sourceId'
     | '/views/$viewId'
     | '/views/collections'
+    | '/pipelines/'
     | '/sources/'
     | '/views/'
     | '/sources/$sourceId/$tableName'
@@ -280,10 +301,11 @@ export interface FileRouteTypes {
     | '/destinations'
     | '/explorations'
     | '/overview'
-    | '/pipelines'
     | '/settings'
+    | '/pipelines/$pipelineId'
     | '/views/$viewId'
     | '/views/collections'
+    | '/pipelines'
     | '/sources'
     | '/views'
     | '/sources/$sourceId/$tableName'
@@ -306,9 +328,11 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/sources'
     | '/_authenticated/views'
+    | '/_authenticated/pipelines/$pipelineId'
     | '/_authenticated/sources/$sourceId'
     | '/_authenticated/views/$viewId'
     | '/_authenticated/views/collections'
+    | '/_authenticated/pipelines/'
     | '/_authenticated/sources/'
     | '/_authenticated/views/'
     | '/_authenticated/sources/$sourceId/$tableName'
@@ -421,6 +445,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedViewsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/pipelines/': {
+      id: '/_authenticated/pipelines/'
+      path: '/'
+      fullPath: '/pipelines/'
+      preLoaderRoute: typeof AuthenticatedPipelinesIndexRouteImport
+      parentRoute: typeof AuthenticatedPipelinesRoute
+    }
+    '/_authenticated/pipelines/$pipelineId': {
+      id: '/_authenticated/pipelines/$pipelineId'
+      path: '/$pipelineId'
+      fullPath: '/pipelines/$pipelineId'
+      preLoaderRoute: typeof AuthenticatedPipelinesPipelineIdRouteImport
+      parentRoute: typeof AuthenticatedPipelinesRoute
+    }
     '/_authenticated/sources/': {
       id: '/_authenticated/sources/'
       path: '/'
@@ -501,6 +539,23 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedPipelinesRouteChildren {
+  AuthenticatedPipelinesPipelineIdRoute: typeof AuthenticatedPipelinesPipelineIdRoute
+  AuthenticatedPipelinesIndexRoute: typeof AuthenticatedPipelinesIndexRoute
+}
+
+const AuthenticatedPipelinesRouteChildren: AuthenticatedPipelinesRouteChildren =
+  {
+    AuthenticatedPipelinesPipelineIdRoute:
+      AuthenticatedPipelinesPipelineIdRoute,
+    AuthenticatedPipelinesIndexRoute: AuthenticatedPipelinesIndexRoute,
+  }
+
+const AuthenticatedPipelinesRouteWithChildren =
+  AuthenticatedPipelinesRoute._addFileChildren(
+    AuthenticatedPipelinesRouteChildren,
+  )
+
 interface AuthenticatedSourcesSourceIdRouteChildren {
   AuthenticatedSourcesSourceIdTableNameRoute: typeof AuthenticatedSourcesSourceIdTableNameRoute
   AuthenticatedSourcesSourceIdIndexRoute: typeof AuthenticatedSourcesSourceIdIndexRoute
@@ -552,7 +607,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDestinationsRoute: typeof AuthenticatedDestinationsRoute
   AuthenticatedExplorationsRoute: typeof AuthenticatedExplorationsRoute
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
-  AuthenticatedPipelinesRoute: typeof AuthenticatedPipelinesRoute
+  AuthenticatedPipelinesRoute: typeof AuthenticatedPipelinesRouteWithChildren
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSourcesRoute: typeof AuthenticatedSourcesRouteWithChildren
   AuthenticatedViewsRoute: typeof AuthenticatedViewsRouteWithChildren
@@ -562,7 +617,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDestinationsRoute: AuthenticatedDestinationsRoute,
   AuthenticatedExplorationsRoute: AuthenticatedExplorationsRoute,
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
-  AuthenticatedPipelinesRoute: AuthenticatedPipelinesRoute,
+  AuthenticatedPipelinesRoute: AuthenticatedPipelinesRouteWithChildren,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSourcesRoute: AuthenticatedSourcesRouteWithChildren,
   AuthenticatedViewsRoute: AuthenticatedViewsRouteWithChildren,

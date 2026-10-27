@@ -1,4 +1,5 @@
 import '@/i18n/index'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -37,12 +38,13 @@ afterEach(async () => {
 })
 
 it('opens documentation or support from the sidebar Help menu', async () => {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   await act(async () =>
     root.render(
-      <>
+      <QueryClientProvider client={queryClient}>
         <AppHeader />
         <TawkFeedbackWidget />
-      </>,
+      </QueryClientProvider>,
     ),
   )
   const help = host.querySelector<HTMLButtonElement>('button[aria-label="Help"]')

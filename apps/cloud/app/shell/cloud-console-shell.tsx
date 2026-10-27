@@ -1,8 +1,18 @@
 import type { ReactNode } from 'react'
 
 import { Link, useNavigate } from '@tanstack/react-router'
-import { BellRing, ChevronRight, CreditCard, Home, Inbox, Search, Server } from 'lucide-react'
-import { useState } from 'react'
+import {
+  BellRing,
+  Building2,
+  ChevronRight,
+  CreditCard,
+  Home,
+  Inbox,
+  Search,
+  Server,
+} from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import type { Cluster, Organization } from '../service/cloud-api'
 import type { UserProfile } from '../types'
@@ -19,12 +29,19 @@ import { useCloudAppState } from '../state/cloud-app-state'
 
 const navigation = [
   { label: 'Overview', path: '/', icon: Home, exact: true },
+  { label: 'Organization', path: '/organizations', icon: Building2, exact: false },
   { label: 'Clusters', path: '/clusters', icon: Server, exact: false },
   { label: 'Events', path: '/events', icon: BellRing, exact: false },
   { label: 'Alert policies', path: '/alert-policies', icon: BellRing, exact: false },
   { label: 'Deliveries', path: '/deliveries', icon: Inbox, exact: false },
   { label: 'Billing', path: '/billing', icon: CreditCard, exact: false },
 ] as const
+
+function searchShortcutLabel() {
+  const applePlatform =
+    typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform)
+  return applePlatform ? '⌘K' : 'Ctrl+K'
+}
 
 interface CloudConsoleShellProps {
   children: ReactNode
@@ -48,9 +65,11 @@ export function CloudConsoleShell({
     clearIdentity,
   } = useCloudAppState()
   const [search, setSearch] = useState('')
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const { enterCluster, enteringId, entryError } = useClusterEntry()
 
   const currentOrganization = activeOrganization ?? organization
+  const { t } = useTranslation()
   const currentClusters = activeOrganization ? stateClusters : loaderClusters
   const visibleClusters = currentClusters
     .filter((cluster) => cluster.name.toLowerCase().includes(search.toLowerCase()))
@@ -61,6 +80,17 @@ export function CloudConsoleShell({
   const visibleNavigation = navigation.filter(
     (item) => item.path !== '/alert-policies' || canManageAlertPolicies,
   )
+
+  useEffect(() => {
+    function focusClusterSearch(event: KeyboardEvent) {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') return
+      event.preventDefault()
+      searchInputRef.current?.focus()
+    }
+
+    window.addEventListener('keydown', focusClusterSearch)
+    return () => window.removeEventListener('keydown', focusClusterSearch)
+  }, [])
 
   const signOut = async () => {
     cancelPendingClusterEntries()
@@ -100,13 +130,14 @@ export function CloudConsoleShell({
           <label className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-neutral-500 transition-colors hover:bg-black/[0.04] dark:text-neutral-400 dark:hover:bg-white/[0.05]">
             <Search className="h-3.5 w-3.5 shrink-0" />
             <input
+              ref={searchInputRef}
               aria-label="Search clusters"
               className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-neutral-500"
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search"
               value={search}
             />
-            <span className="font-mono text-[10px] opacity-60">⌘K</span>
+            <span className="font-mono text-[10px] opacity-60">{searchShortcutLabel()}</span>
           </label>
         </div>
 
@@ -124,7 +155,9 @@ export function CloudConsoleShell({
               to={path}
             >
               <Icon className="h-4 w-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
-              <span className="truncate">{label}</span>
+              <span className="truncate">
+                {path === '/organizations' ? t('sections.organizations.title') : label}
+              </span>
             </Link>
           ))}
 

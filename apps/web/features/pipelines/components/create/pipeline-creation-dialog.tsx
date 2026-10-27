@@ -34,6 +34,12 @@ import { PipelineCreationPreview as Preview } from './pipeline-creation-preview'
 const pipelineIdPattern = /^[A-Za-z0-9_-]+$/
 const CREATE_PIPELINE_HOTKEY = 'Mod+Enter'
 
+function createPipelineShortcutKeys() {
+  const applePlatform =
+    typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform)
+  return applePlatform ? ['⌘', '↵'] : ['Ctrl', 'Enter']
+}
+
 export interface PipelineCreationDialogProps {
   open: boolean
   onClose: () => void
@@ -51,6 +57,7 @@ export function PipelineCreationDialog({
   const idHint = 'pipeline-create-id-hint'
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const queryClient = useQueryClient()
+  const shortcutKeys = createPipelineShortcutKeys()
   const [mode, setMode] = useState<PipelineCreationMode>(() =>
     normalizePipelineCreationMode(defaultMode),
   )
@@ -294,8 +301,11 @@ export function PipelineCreationDialog({
                         >
                           {t('common.create')}
                           <KbdGroup aria-label={CREATE_PIPELINE_HOTKEY}>
-                            <Kbd color="white">⌘</Kbd>
-                            <Kbd color="white">↵</Kbd>
+                            {shortcutKeys.map((key) => (
+                              <Kbd key={key} color="white">
+                                {key}
+                              </Kbd>
+                            ))}
                           </KbdGroup>
                         </Button>
                       </div>
