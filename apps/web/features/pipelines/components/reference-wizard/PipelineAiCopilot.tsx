@@ -11,7 +11,6 @@ import {
   X,
 } from 'lucide-react'
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 
 import type { PipelineJsonObject } from '@/service/pipelines/pipeline-client'
@@ -31,6 +30,89 @@ import { AssistantProviderForm } from './AssistantProviderForm'
 
 const AssistantMarkdown = lazy(() => import('./AssistantMarkdown'))
 
+function ProposalDiff({ diff }: { diff: unknown }) {
+  const { t } = useTranslation()
+  const value = isRecord(diff) ? diff : {}
+  const changes = Array.isArray(value.changes) ? value.changes.filter(isRecord) : []
+  const before = typeof value.before === 'string' ? value.before : ''
+  const after = typeof value.after === 'string' ? value.after : ''
+  const display = (item: unknown) =>
+    item === undefined || item === null
+      ? '—'
+      : typeof item === 'string'
+        ? item
+        : JSON.stringify(item)
+  return (
+    <div className="space-y-3">
+      <h4 className="text-[11px] font-semibold text-gray-700">
+        {t('wizard.assistant.changeSummary')}
+      </h4>
+      <ul className="space-y-2 text-[11px] text-gray-700">
+        {changes.map((change, index) => (
+          <li key={index} className="rounded border border-gray-200 p-2 break-all">
+            <div className="font-medium">{display(change.path)}</div>
+            <div className="text-red-700">− {display(change.before)}</div>
+            <div className="text-green-700">+ {display(change.after)}</div>
+          </li>
+        ))}
+      </ul>
+      <h4 className="text-[11px] font-semibold text-gray-700">{t('wizard.assistant.dslDiff')}</h4>
+      <div className="overflow-x-auto rounded border border-gray-200 bg-gray-50 font-mono text-[11px] whitespace-pre">
+        {dslLines(before, after).map((line, index) => (
+          <div
+            key={index}
+            className={
+              line.kind === '+'
+                ? 'bg-green-50 text-green-800'
+                : line.kind === '-'
+                  ? 'bg-red-50 text-red-800'
+                  : 'text-gray-600'
+            }
+          >
+            {line.kind} {line.text}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function dslLines(before: string, after: string) {
+  const oldLines = before ? before.replace(/\n$/, '').split('\n') : []
+  const newLines = after ? after.replace(/\n$/, '').split('\n') : []
+  // Bound the comparison so large generated documents do not block the editor.
+  if (oldLines.length * newLines.length > 250000)
+    return [
+      ...oldLines.map((text) => ({ kind: '-', text })),
+      ...newLines.map((text) => ({ kind: '+', text })),
+    ]
+  const lengths = Array.from(
+    { length: oldLines.length + 1 },
+    () => new Uint32Array(newLines.length + 1),
+  )
+  for (let i = oldLines.length - 1; i >= 0; i--)
+    for (let j = newLines.length - 1; j >= 0; j--)
+      lengths[i][j] =
+        oldLines[i] === newLines[j]
+          ? lengths[i + 1][j + 1] + 1
+          : Math.max(lengths[i + 1][j], lengths[i][j + 1])
+  const result: { kind: string; text: string }[] = []
+  let i = 0,
+    j = 0
+  while (i < oldLines.length || j < newLines.length) {
+    if (i < oldLines.length && j < newLines.length && oldLines[i] === newLines[j]) {
+      result.push({ kind: ' ', text: oldLines[i++] })
+      j++
+    } else if (
+      i < oldLines.length &&
+      (j === newLines.length || lengths[i + 1][j] >= lengths[i][j + 1])
+    )
+      result.push({ kind: '-', text: oldLines[i++] })
+    else result.push({ kind: '+', text: newLines[j++] })
+  }
+  return result
+}
+
 export interface BuilderAssistantContext {
   pipelineId: string
   revision: number
@@ -46,6 +128,7 @@ type AssistantMessage = UIMessage<unknown, { status: unknown; proposal: Assistan
 interface AssistantValidationDiagnostic {
   code: string
   path?: string
+  reason?: string
 }
 function isRecord(value: unknown): value is PipelineJsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -60,6 +143,9 @@ function readAssistantValidationDiagnostics(value: unknown): AssistantValidation
         code: raw.code.slice(0, 256),
         ...(typeof params.path === 'string' && params.path.length <= 256
           ? { path: params.path }
+          : {}),
+        ...(typeof params.reason === 'string' && params.reason.length <= 500
+          ? { reason: params.reason }
           : {}),
       },
     ]
@@ -85,13 +171,6 @@ export function PipelineAiCopilot({
   const apiFetch = useAuthStore((s) => s.apiFetch)
   const latest = useRef({ context, focus })
   latest.current = { context, focus }
-  const assistantPanelRef = useRef<HTMLElement>(null)
-  const [assistantActionHost, setAssistantActionHost] = useState<HTMLElement | null>(null)
-  useEffect(() => {
-    const builder = assistantPanelRef.current?.closest('.wizard-reference')
-    const host = builder?.querySelector('[data-assistant-apply-action-slot]')
-    if (host instanceof HTMLElement) setAssistantActionHost(host)
-  }, [])
   const [tab, setTab] = useState<'chat' | 'diff' | 'settings'>('chat')
   const [input, setInput] = useState('')
   const [proposal, setProposal] = useState<AssistantProposal | null>(null)
@@ -150,8 +229,18 @@ export function PipelineAiCopilot({
               .map((message) => ({
                 role: message.role,
                 text: message.parts
-                  .filter((part) => part.type === 'text')
-                  .map((part) => part.text)
+                  .map((part) => {
+                    if (part.type === 'text') return part.text
+                    if (
+                      part.type === 'data-status' &&
+                      isRecord(part.data) &&
+                      part.data.state === 'needs-input'
+                    ) {
+                      const diagnostics = readAssistantValidationDiagnostics(part.data.diagnostics)
+                      return `\nValidation findings: ${JSON.stringify(diagnostics)}`
+                    }
+                    return ''
+                  })
                   .join(''),
               }))
               .filter((message) => message.text.trim().length > 0),
@@ -168,7 +257,15 @@ export function PipelineAiCopilot({
         const state = part.data.state ?? part.data.status
         if (
           typeof state === 'string' &&
-          ['connecting', 'streaming', 'validating', 'ready', 'complete', 'error'].includes(state)
+          [
+            'connecting',
+            'streaming',
+            'validating',
+            'ready',
+            'complete',
+            'needs-input',
+            'error',
+          ].includes(state)
         )
           setProgress(state)
         if (typeof part.data.code === 'string') setStreamErrorCode(part.data.code)
@@ -349,7 +446,7 @@ export function PipelineAiCopilot({
       latest.current.context.onApply(validated.candidateWizard)
       setApplied(true)
       setUndoError(false)
-      if (assistantActionHost) setTab('chat')
+      setTab('chat')
     } catch (error) {
       setReviewError(
         error instanceof AssistantClientError
@@ -413,10 +510,6 @@ export function PipelineAiCopilot({
         </SharedUIButton>
       </div>
     ) : null
-  const externalProposalActions =
-    assistantActionHost && proposalActions
-      ? createPortal(proposalActions, assistantActionHost)
-      : null
   const suggestions = ['assemble', 'relations', 'clean', 'metrics', 'diagnose'] as const
   const visibleMessages = chat.messages.filter(
     (message) =>
@@ -425,11 +518,9 @@ export function PipelineAiCopilot({
   )
   return (
     <aside
-      ref={assistantPanelRef}
       className="pipeline-ai-copilot flex h-full min-h-0 min-w-0 flex-col bg-white"
       aria-label={t('wizard.assistant.title')}
     >
-      {externalProposalActions}
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-gray-200 bg-gray-50/70 px-4">
         <div className="flex min-w-0 items-center gap-2">
           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-blue-600 text-white">
@@ -579,15 +670,24 @@ export function PipelineAiCopilot({
                   </p>
                 )}
                 {proposal && complete && (
-                  <Button
-                    variant="secondary"
-                    className="w-full justify-between"
-                    type="button"
-                    onClick={() => setTab('diff')}
-                  >
-                    <span>{t('wizard.assistant.review')}</span>
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </Button>
+                  <div className="space-y-2">
+                    <ProposalDiff diff={diff} />
+                    <Button
+                      variant="secondary"
+                      className="w-full justify-between"
+                      type="button"
+                      onClick={() => setTab('diff')}
+                    >
+                      <span>{t('wizard.assistant.review')}</span>
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
+                    {proposalActions}
+                    {undoError && (
+                      <p role="status" className="text-[11px] text-amber-700">
+                        {t('wizard.assistant.undoStale')}
+                      </p>
+                    )}
+                  </div>
                 )}
               </>
             ) : (
@@ -597,9 +697,7 @@ export function PipelineAiCopilot({
                   <p className="text-[12px] text-gray-500">{t('wizard.assistant.noProposal')}</p>
                 ) : (
                   <>
-                    <pre className="overflow-x-auto rounded-lg border border-gray-200 bg-gray-50 p-3 font-mono text-[11px] break-words whitespace-pre-wrap">
-                      {JSON.stringify(diff, null, 2)}
-                    </pre>
+                    <ProposalDiff diff={diff} />
                     <label className="block text-[11px] font-medium text-gray-600">
                       {t('wizard.assistant.editProposal')}
                       <textarea
@@ -616,7 +714,7 @@ export function PipelineAiCopilot({
                     <p className="text-[11px] leading-relaxed text-gray-500">
                       {t('wizard.assistant.reviewHint')}
                     </p>
-                    {!assistantActionHost && proposalActions}
+                    {proposalActions}
                     {undoError && (
                       <p role="status" className="text-[11px] text-amber-700">
                         {t('wizard.assistant.undoStale')}
@@ -643,12 +741,18 @@ export function PipelineAiCopilot({
                 {reviewError}
               </p>
             )}
+            {progress === 'needs-input' && (
+              <p role="status" className="text-[12px] leading-relaxed text-amber-800">
+                {t('wizard.assistant.needsInput')}
+              </p>
+            )}
             {validationDiagnostics.length > 0 && (
               <ul className="space-y-1 text-[10px] leading-relaxed text-red-700" role="list">
-                {validationDiagnostics.map(({ code, path }) => (
+                {validationDiagnostics.map(({ code, path, reason }) => (
                   <li key={`${code}:${path || ''}`}>
                     <code className="font-mono">{code}</code>
                     {path && <span> · {path}</span>}
+                    {reason && <span> · {reason}</span>}
                   </li>
                 ))}
               </ul>
