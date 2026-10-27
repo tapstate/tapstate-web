@@ -252,6 +252,7 @@ export function StartChecksDialog({
       }}
     >
       <AlertDialogContent
+        finalFocus={session?.returnFocus}
         className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-[560px]"
         data-testid="start-checks-dialog"
       >
