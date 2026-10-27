@@ -59,3 +59,25 @@ it('opens documentation or support from the sidebar Help menu', async () => {
   expect(showWidget).toHaveBeenCalled()
   expect(maximize).toHaveBeenCalled()
 })
+
+it('opens the account menu with the cloud identity and sign out action', async () => {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  await act(async () =>
+    root.render(
+      <QueryClientProvider client={queryClient}>
+        <AppHeader cloudUserEmail="alice@example.com" />
+      </QueryClientProvider>,
+    ),
+  )
+  const account = host.querySelector<HTMLButtonElement>('button[aria-label="Account menu"]')
+  expect(account?.textContent).toContain('alice')
+  await act(async () => account?.click())
+  expect(document.body.textContent).toContain('alice@example.com')
+  expect(document.body.textContent).toContain('Language')
+  expect(host.querySelector('button[aria-label="Language"]')).toBeNull()
+  expect(
+    [...document.querySelectorAll('[role="menuitem"]')].some((item) =>
+      item.textContent?.includes('Sign out'),
+    ),
+  ).toBe(true)
+})

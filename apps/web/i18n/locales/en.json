@@ -17,6 +17,7 @@
     "notifications": "View notifications",
     "logout": "Sign out",
     "user": {
+      "accountMenu": "Account menu",
       "avatar": "User avatar",
       "avatarFor": "User avatar for {{name}}",
       "initial": "U"

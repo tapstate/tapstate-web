@@ -2,15 +2,7 @@ import type { ComponentType, SVGProps } from 'react'
 
 import { useQuery } from '@tanstack/react-query'
 import { Link, useRouterState } from '@tanstack/react-router'
-import {
-  ArrowLeft,
-  Building2,
-  Database,
-  GitMerge,
-  LayoutDashboard,
-  Settings,
-  Table2,
-} from 'lucide-react'
+import { ArrowLeft, Building2, Database, GitMerge, LayoutDashboard, Table2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
@@ -31,11 +23,6 @@ const navigation: NavigationItem[] = [
   { labelKey: 'nav.sources', to: '/sources', icon: Database },
   { labelKey: 'nav.pipelines', to: '/pipelines', icon: GitMerge },
   { labelKey: 'nav.views', to: '/views', icon: Table2 },
-]
-
-/** Kept apart from the places above, at the foot of the sidebar. */
-const footerNavigation: NavigationItem[] = [
-  { labelKey: 'nav.settings', to: '/settings', icon: Settings },
 ]
 
 export function AppSidebar() {
@@ -122,11 +109,6 @@ export function AppSidebar() {
               </span>
             </span>
           </div>
-          {cloudContext.data?.userEmail && (
-            <span className="app-sidebar__cloud-email" title={cloudContext.data.userEmail}>
-              {cloudContext.data.userEmail}
-            </span>
-          )}
         </div>
       ) : (
         <div className="app-sidebar__brand mt-2">
@@ -140,15 +122,6 @@ export function AppSidebar() {
 
       <nav className="app-sidebar__nav" aria-label={t('app.primaryNavigation')}>
         {navigation.map((item) => (
-          <SidebarLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
-        ))}
-      </nav>
-
-      <nav
-        className="app-sidebar__nav app-sidebar__nav--footer"
-        aria-label={t('app.secondaryNavigation')}
-      >
-        {footerNavigation.map((item) => (
           <SidebarLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
         ))}
       </nav>
