@@ -216,7 +216,7 @@ describe('Start-check client fixture', () => {
       actions: [],
     }
     await renderDialog({ ...answerable, outcome: 'BLOCKED', findings: [blocker, warning] })
-    expect(dialog()?.textContent).toContain('Something stops this start.')
+    expect(dialog()?.textContent).toContain('This pipeline cannot start yet.')
     expect(dialog()?.textContent).toContain(blocker.message)
     expect(button('Recheck')).toBeDefined()
     expect(button('Start')).toBeUndefined()
@@ -287,7 +287,7 @@ describe('Start-check client fixture', () => {
     expect(startDecisions(unknownOutcome, {})).toEqual([])
     await renderDialog(unknownOutcome)
 
-    expect(dialog()?.textContent).toContain('Something stops this start.')
+    expect(dialog()?.textContent).toContain('This pipeline cannot start yet.')
     expect(button('Start')).toBeUndefined()
     expect(button('Close')).toBeDefined()
   })

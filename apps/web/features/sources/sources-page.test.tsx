@@ -321,7 +321,11 @@ describe('SourcesPage', () => {
       row.textContent?.includes('orders'),
     )
     expect(tableRow).toBeDefined()
-    await act(async () => (tableRow as HTMLElement).click())
+    const openTable = tableRow?.querySelector<HTMLButtonElement>(
+      'button[aria-label="Open table orders"]',
+    )
+    expect(openTable).toBeTruthy()
+    await act(async () => openTable?.click())
 
     expect(container.textContent).toContain('id')
     expect(container.textContent).toContain('BIGINT')
@@ -526,7 +530,11 @@ describe('SourcesPage', () => {
     const tableRow = [...(container?.querySelectorAll('tbody tr') ?? [])].find((row) =>
       row.textContent?.includes('orders'),
     )
-    await act(async () => (tableRow as HTMLElement).click())
+    const openTable = tableRow?.querySelector<HTMLButtonElement>(
+      'button[aria-label="Open table orders"]',
+    )
+    expect(openTable).toBeTruthy()
+    await act(async () => openTable?.click())
     expect(container.textContent).toContain('id')
     expect(container.textContent).toContain('BIGINT')
     expect(container.textContent).toContain('email')
