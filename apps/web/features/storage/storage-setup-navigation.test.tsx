@@ -107,10 +107,12 @@ describe('whole-site storage boundary', () => {
         authGeneration: 0,
         setupPhase: 'CONFIG_PREPARED',
         businessPhase: 'NOT_CONFIGURED',
+        health: { CONFIG: 'AVAILABLE', CACHE: 'UNKNOWN', MASTER: 'UNKNOWN' },
         allowedActions: ['storage.test', 'storage.setup.commit'],
       }),
       entry: 'SETUP_REQUIRED',
       statusFailure: false,
+      testFailure: false,
       complete: (_response: Response): void => {
         throw new Error('No submission')
       },
@@ -123,6 +125,8 @@ describe('whole-site storage boundary', () => {
           ? Response.json({ code: 'control.storage-unavailable' }, { status: 503 })
           : Response.json(setup.snapshot)
       if (String(url) === '/api/storage/test') {
+        if (setup.testFailure)
+          return Response.json({ code: 'control.storage-test-failed' }, { status: 400 })
         const body = JSON.parse(String(init?.body))
         return Response.json({
           layer: body.layer,
@@ -149,6 +153,116 @@ describe('whole-site storage boundary', () => {
     await click('Save storage settings')
     return setup
   }
+
+  function healthCard(name: string) {
+    const card = [...container.querySelectorAll('dl > div')].find(
+      (element) => element.querySelector('dt')?.textContent === name,
+    )
+    expect(card, name).toBeTruthy()
+    return card!
+  }
+
+  it('retains completed connection tests and their times while the original setup is pending', async () => {
+    vi.useFakeTimers()
+    const setup = await startPendingCloudSetup()
+    const checkedAt = healthCard('Durable cache').querySelector('time')?.dateTime
+    expect(checkedAt).toBeTruthy()
+    for (const name of ['Durable cache', 'Application data']) {
+      expect(healthCard(name).textContent).toContain('Connection checks passed')
+      expect(healthCard(name).textContent).not.toContain('Not verified')
+    }
+    setup.snapshot = {
+      ...setup.snapshot,
+      businessPhase: 'PREPARING',
+      setupPhase: 'STORAGE_BOUND',
+      bindingVersion: 1,
+      authGeneration: 1,
+      stateVersion: 11,
+    }
+    await click('Refresh status')
+    // The test is a historical result; expiry of its submission proof cannot erase it.
+    vi.setSystemTime(Date.now() + 660000)
+    await click('Refresh status')
+    expect(healthCard('Durable cache').querySelector('time')?.dateTime).toBe(checkedAt)
+    setup.statusFailure = true
+    await click('Refresh status')
+    expect(container.querySelector('[role="alert"]')).not.toBeNull()
+    setup.statusFailure = false
+    await click('Refresh status')
+    for (const name of ['Durable cache', 'Application data']) {
+      expect(healthCard(name).textContent).toContain('Connection checks passed')
+      expect(healthCard(name).textContent).toContain('Runtime preparation is still in progress')
+    }
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')).toHaveLength(
+      1,
+    )
+  })
+
+  it('shows a current storage failure instead of an earlier successful setup check', async () => {
+    const setup = await startPendingCloudSetup()
+    setup.snapshot = {
+      ...setup.snapshot,
+      businessPhase: 'PREPARING',
+      stateVersion: 11,
+      health: { CONFIG: 'AVAILABLE', CACHE: 'UNAVAILABLE', MASTER: 'UNAVAILABLE' },
+      applicationDataVerification: {
+        status: 'FAILED',
+        checkedAt: new Date().toISOString(),
+        validUntil: new Date(Date.now() + 600000).toISOString(),
+      },
+    }
+    await click('Refresh status')
+    for (const name of ['Durable cache', 'Application data']) {
+      expect(healthCard(name).textContent).not.toContain('Connection checks passed')
+      expect(healthCard(name).querySelector('.text-destructive')).not.toBeNull()
+    }
+  })
+
+  it.each([
+    { operationId: 'another-setup' },
+    { setupGeneration: 2 },
+    { bindingVersion: 2 },
+    { authGeneration: 2 },
+  ])('does not carry setup check results into a changed scope: %j', async (changed) => {
+    const setup = await startPendingCloudSetup()
+    expect(healthCard('Durable cache').textContent).toContain('Connection checks passed')
+    setup.snapshot = {
+      ...setup.snapshot,
+      businessPhase: 'PREPARING',
+      stateVersion: 11,
+      ...changed,
+    }
+    await click('Refresh status')
+    for (const name of ['Durable cache', 'Application data'])
+      expect(healthCard(name).textContent).not.toContain('Connection checks passed')
+  })
+
+  it('does not restore old check results when an earlier operation is seen again', async () => {
+    const setup = await startPendingCloudSetup()
+    setup.snapshot = {
+      ...setup.snapshot,
+      operationId: 'another-setup',
+      businessPhase: 'PREPARING',
+      stateVersion: 11,
+    }
+    await click('Refresh status')
+    setup.snapshot = { ...setup.snapshot, operationId: 'setup', stateVersion: 12 }
+    await click('Refresh status')
+    expect(healthCard('Durable cache').textContent).not.toContain('Connection checks passed')
+  })
+
+  it('does not carry check results into another authenticated session or Cluster', async () => {
+    const setup = await startPendingCloudSetup()
+    setup.snapshot = {
+      ...setup.snapshot,
+      clusterId: 'another-cluster',
+      businessPhase: 'PREPARING',
+    }
+    await act(async () => useAuthStore.setState({ sessionRevision: 1 }))
+    await settle()
+    for (const name of ['Durable cache', 'Application data'])
+      expect(healthCard(name).textContent).not.toContain('Connection checks passed')
+  })
 
   it('automatically follows a pending setup beyond twelve updates without submitting it again', async () => {
     vi.useFakeTimers()
@@ -573,6 +687,17 @@ describe('whole-site storage boundary', () => {
     expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')).toHaveLength(
       1,
     )
+    expect(healthCard('Durable cache').textContent).toContain('Connection checks passed')
+    setup.testFailure = true
+    await act(async () =>
+      [...container.querySelectorAll('button')]
+        .find((button) => button.textContent === 'Test connection')!
+        .click(),
+    )
+    await settle()
+    expect(container.textContent).toContain('Connection check failed')
+    expect(healthCard('Durable cache').textContent).not.toContain('Connection checks passed')
+    setup.testFailure = false
     for (const button of [...container.querySelectorAll('button')].filter(
       (x) => x.textContent === 'Test connection',
     ))
@@ -585,6 +710,30 @@ describe('whole-site storage boundary', () => {
     await act(async () => setup.complete(Response.json({ setupPhase: 'COMPLETE' })))
     await settle()
     expect(useAuthStore.getState().isAuthenticated).toBe(false)
+  })
+
+  it('discards submitted check evidence when continuation connection inputs are edited', async () => {
+    const setup = await startPendingCloudSetup()
+    setup.snapshot = {
+      ...setup.snapshot,
+      setupPhase: 'STORAGE_BOUND',
+      bindingVersion: 1,
+      authGeneration: 1,
+      stateVersion: 11,
+      businessPhase: 'PREPARING',
+    }
+    await click('Refresh status')
+    await act(async () =>
+      setup.complete(Response.json({ code: 'control.storage-unavailable' }, { status: 503 })),
+    )
+    await settle()
+    expect(healthCard('Application data').textContent).toContain('Connection checks passed')
+    await input(
+      container.querySelector<HTMLInputElement>('input[type="password"]')!,
+      'mongodb://other/admin',
+    )
+    for (const name of ['Durable cache', 'Application data'])
+      expect(healthCard(name).textContent).not.toContain('Connection checks passed')
   })
   it('refreshes cached configuration projections when original import status proves committed', async () => {
     client.setQueryData(['sources'], ['old-source'])

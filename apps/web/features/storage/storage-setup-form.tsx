@@ -19,7 +19,13 @@ import { useStorageAction } from './use-storage-action'
 
 export function StorageSetupForm({
   submission: owner,
-}: { submission?: ReturnType<typeof useStorageAction> } = {}) {
+  onSubmitted,
+  onTestsInvalidated,
+}: {
+  submission?: ReturnType<typeof useStorageAction>
+  onSubmitted?: (checkedAt: Record<StorageLayer, string>) => void
+  onTestsInvalidated?: () => void
+} = {}) {
   const { t } = useTranslation()
   const { snapshot, fetcher, refresh, authorize } = useStorage()
   const [form, setForm] = useState<StorageForm>({
@@ -31,7 +37,9 @@ export function StorageSetupForm({
     configCaPem: '',
     cacheCaPem: '',
   })
-  const [proofs, setProofs] = useState<Partial<Record<StorageLayer, StorageTest>>>({})
+  const [proofs, setProofs] = useState<
+    Partial<Record<StorageLayer, StorageTest & { checkedAt: string }>>
+  >({})
   const [showUri, setShowUri] = useState(false)
   const [testingLayer, setTestingLayer] = useState<StorageLayer | null>(null)
   const [failedLayer, setFailedLayer] = useState<StorageLayer | null>(null)
@@ -71,6 +79,7 @@ export function StorageSetupForm({
   const mode = snapshot.mode
   const candidate = storageCandidate(form, mode)
   function edit(key: keyof StorageForm, value: string) {
+    onTestsInvalidated?.()
     version.current += 1
     setForm((current) => ({ ...current, [key]: value }))
     setProofs({})
@@ -93,6 +102,7 @@ export function StorageSetupForm({
     Boolean(proofs[layer] && Date.parse(proofs[layer]!.expiresAt) > Date.now())
   const tested = (['CONFIG', 'CACHE', 'MASTER'] as const).every(fresh)
   function testLayer(layer: StorageLayer) {
+    onTestsInvalidated?.()
     const selectedVersion = version.current
     let attempted = layer
     setFailedLayer(null)
@@ -113,7 +123,10 @@ export function StorageSetupForm({
             layer: next,
           })
           if (isCurrent() && version.current === selectedVersion) {
-            setProofs((current) => ({ ...current, [next]: result }))
+            setProofs((current) => ({
+              ...current,
+              [next]: { ...result, checkedAt: new Date().toISOString() },
+            }))
           }
         }
         // Cloud owns CONFIG. Its existing server-issued proof is acquired with the customer's check.
@@ -161,14 +174,21 @@ export function StorageSetupForm({
         event.preventDefault()
         if (!(['CONFIG', 'CACHE', 'MASTER'] as const).every(fresh) || !valid) return
         void submission.run(
-          async () =>
-            storageRequest<{ setupPhase: string }>(fetcher, 'storage.setup.commit', {
+          async () => {
+            // Retain only display evidence, never credentials or reusable submission proofs.
+            onSubmitted?.({
+              CONFIG: proofs.CONFIG!.checkedAt,
+              CACHE: proofs.CACHE!.checkedAt,
+              MASTER: proofs.MASTER!.checkedAt,
+            })
+            return storageRequest<{ setupPhase: string }>(fetcher, 'storage.setup.commit', {
               ...scope,
               candidate,
               testStamps: Object.fromEntries(
                 Object.entries(proofs).map(([layer, proof]) => [layer, proof.testStamp]),
               ),
-            }),
+            })
+          },
           async (result) => {
             if (result.setupPhase === 'COMPLETE') {
               if (mounted.current) {

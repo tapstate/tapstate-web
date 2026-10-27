@@ -2009,6 +2009,7 @@
     "working": "Working…",
     "test": "Test connection",
     "testPassed": "Connection checks passed",
+    "setupCheckRetained": "Runtime preparation is still in progress. This is the connection test completed before saving.",
     "testRequired": "Connection test required",
     "showUri": "Show connection URI",
     "hideUri": "Hide connection URI",

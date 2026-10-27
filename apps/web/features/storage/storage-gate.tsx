@@ -3,7 +3,12 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
-import { setupOperationScope, snapshotScope, StorageClientError } from '@/service/storage-client'
+import {
+  setupOperationScope,
+  snapshotScope,
+  StorageClientError,
+  type StorageLayer,
+} from '@/service/storage-client'
 import { useAuthStore } from '@/stores/auth-store'
 import { replaceWithCloudConsole } from '@/utils/cloud-console'
 
@@ -42,10 +47,27 @@ export function StorageGate({ children }: { children: ReactNode }) {
     authorize,
     setSetupPending,
     autoRefreshing,
+    session,
+    authorityRevision,
   } = useStorage()
   const authenticated = useAuthStore((state) => state.isAuthenticated)
   const cloudProfile = useAuthStore((state) => state.profile === 'cloud')
   const setupSubmission = useStorageAction('setup')
+  const [submittedChecks, setSubmittedChecks] = useState<{
+    scope: string
+    checkedAt: Record<StorageLayer, string>
+  }>()
+  const setupScope = snapshot
+    ? `${session}:${authorityRevision}:${setupOperationScope(snapshot)}`
+    : ''
+  useEffect(() => {
+    if (
+      submittedChecks &&
+      ((snapshot && submittedChecks.scope !== setupScope) ||
+        (error instanceof StorageClientError && error.status < 500))
+    )
+      setSubmittedChecks(undefined)
+  }, [error, setupScope, snapshot, submittedChecks])
   useEffect(() => {
     setSetupPending(setupSubmission.busy)
     return () => setSetupPending(false)
@@ -117,8 +139,21 @@ export function StorageGate({ children }: { children: ReactNode }) {
           <StorageHealthPanel
             snapshot={snapshot}
             autoRefreshing={autoRefreshing && !setupSubmission.busy}
+            setupChecks={
+              submittedChecks?.scope === setupScope &&
+              ['NOT_CONFIGURED', 'PREPARING', 'AUTH_READY'].includes(snapshot.businessPhase) &&
+              (setupSubmission.busy || snapshot.businessPhase !== 'NOT_CONFIGURED')
+                ? submittedChecks.checkedAt
+                : undefined
+            }
           />
-          {showSetup && <StorageSetupForm submission={setupSubmission} />}
+          {showSetup && (
+            <StorageSetupForm
+              submission={setupSubmission}
+              onSubmitted={(checkedAt) => setSubmittedChecks({ scope: setupScope, checkedAt })}
+              onTestsInvalidated={() => setSubmittedChecks(undefined)}
+            />
+          )}
           {!showSetup && Boolean(setupSubmission.error) && (
             <StorageError error={setupSubmission.error} />
           )}

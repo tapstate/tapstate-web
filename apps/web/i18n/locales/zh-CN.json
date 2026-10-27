@@ -2009,6 +2009,7 @@
     "working": "正在处理…",
     "test": "测试连接",
     "testPassed": "连接检查通过",
+    "setupCheckRetained": "运行环境仍在准备中。这是保存前已完成的连接测试结果。",
     "testRequired": "需要测试连接",
     "showUri": "显示连接串",
     "hideUri": "隐藏连接串",
