@@ -71,6 +71,7 @@ pnpm lint         # oxlint diagnostics + repo-wide format check
 - TanStack Router 负责 SPA 路由；路由源码按 File Routes 形态维护在 `apps/web/app/routes/`，由 `@tanstack/router-plugin` 生成 `apps/web/app/routeTree.gen.ts`。
 - Cloud Console 在 `apps/cloud` 独立构建；使用同一套 File Routes / Oxlint / OXC / i18next 基线，业务路由在认证接通前默认拒绝访问。
 - 当前仍按 SPA / client-first 落地；不引入 SSR、Server Actions、API Routes 或 BFF。
+- 本地 Cloud / Cluster 联调使用 [仓库启动器](docs/engineering/local-cloud-preview.md)，每次显式输入远端 origin。
 
 依赖版本以各 `package.json` 的 `^` 范围为准；lockfile 以实际 install 为准。
 
