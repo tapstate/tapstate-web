@@ -1,5 +1,6 @@
 {
   "app": {
+    "help": { "openMenu": "帮助", "documentation": "文档", "contactSupport": "联系客服" },
     "brand": "Tapstate",
     "primaryNavigation": "主导航",
     "previewMode": "AI Studio 迁移预览",

@@ -32,6 +32,7 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { HelpMenu } from '@/components/layout/help-menu'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -560,19 +561,27 @@ function PipelineWorkspaceNav({
               )
             })}
           </nav>
-          <Link
-            to="/overview"
+          <div
             className={cn(
-              'mt-auto flex h-10 items-center gap-2 rounded-lg px-2 text-[13px] font-semibold text-[var(--pipeline-text-muted)] hover:bg-[var(--pipeline-surface-subtle)]',
-              collapsed && 'justify-center px-0',
+              'mt-auto flex items-center gap-2',
+              collapsed ? 'flex-col' : 'justify-between max-sm:flex-col',
             )}
-            aria-label={t('app.brand')}
           >
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--pipeline-selection)] text-white">
-              <Terminal className="size-3" aria-hidden="true" />
-            </span>
-            {!collapsed && <span className="max-sm:sr-only">{t('app.brand')}</span>}
-          </Link>
+            <Link
+              to="/overview"
+              className={cn(
+                'flex h-10 items-center gap-2 rounded-lg px-2 text-[13px] font-semibold text-[var(--pipeline-text-muted)] hover:bg-[var(--pipeline-surface-subtle)]',
+                collapsed && 'justify-center px-0',
+              )}
+              aria-label={t('app.brand')}
+            >
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--pipeline-selection)] text-white">
+                <Terminal className="size-3" aria-hidden="true" />
+              </span>
+              {!collapsed && <span className="max-sm:sr-only">{t('app.brand')}</span>}
+            </Link>
+            <HelpMenu />
+          </div>
         </div>
       </aside>
 
