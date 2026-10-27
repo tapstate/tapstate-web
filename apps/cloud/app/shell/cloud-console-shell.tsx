@@ -1,11 +1,9 @@
 import type { ReactNode } from 'react'
 
-import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import {
   BellRing,
   Building2,
-  Check,
-  ChevronDown,
   ChevronRight,
   CreditCard,
   Home,
@@ -56,20 +54,16 @@ interface CloudConsoleShellProps {
 export function CloudConsoleShell({
   children,
   organization,
-  organizations,
   clusters: loaderClusters,
   user,
 }: CloudConsoleShellProps) {
   const navigate = useNavigate()
-  const currentPath = useRouterState({ select: (state) => state.location.pathname })
   const {
     activeOrganization,
-    setActiveOrganization,
     clusters: stateClusters,
     darkMode,
     clearIdentity,
   } = useCloudAppState()
-  const [showOrganizationMenu, setShowOrganizationMenu] = useState(false)
   const [search, setSearch] = useState('')
   const searchInputRef = useRef<HTMLInputElement>(null)
   const { enterCluster, enteringId, entryError } = useClusterEntry()
@@ -97,15 +91,6 @@ export function CloudConsoleShell({
     window.addEventListener('keydown', focusClusterSearch)
     return () => window.removeEventListener('keydown', focusClusterSearch)
   }, [])
-
-  const selectOrganization = (nextOrganization: Organization) => {
-    setActiveOrganization(nextOrganization)
-    setShowOrganizationMenu(false)
-    void navigate({
-      to: currentPath,
-      search: { organizationId: nextOrganization.id },
-    })
-  }
 
   const signOut = async () => {
     cancelPendingClusterEntries()
@@ -140,57 +125,6 @@ export function CloudConsoleShell({
             </span>
           </Link>
         </div>
-
-        {organizations.length > 1 && (
-          <div className="relative mb-3 px-1">
-            <button
-              aria-expanded={showOrganizationMenu}
-              className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
-              onClick={() => setShowOrganizationMenu((open) => !open)}
-              type="button"
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-600 dark:border-indigo-400/20 dark:bg-indigo-400/10 dark:text-indigo-300">
-                  <Building2 aria-hidden="true" className="h-4 w-4" />
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-xs leading-tight font-semibold tracking-tight text-neutral-900 dark:text-white">
-                    {currentOrganization?.name ?? 'Organization'}
-                  </span>
-                </span>
-              </span>
-              <ChevronDown className="ml-1 h-3.5 w-3.5 shrink-0 text-neutral-400" />
-            </button>
-            {showOrganizationMenu && organizations.length > 1 && (
-              <>
-                <button
-                  aria-label="Close organization menu"
-                  className="fixed inset-0 z-40 cursor-default"
-                  onClick={() => setShowOrganizationMenu(false)}
-                  type="button"
-                />
-                <div className="absolute top-11 right-1 left-1 z-50 space-y-0.5 rounded-xl border border-black/[0.08] bg-white p-1 text-xs shadow-lg dark:border-white/[0.08] dark:bg-[#202124]">
-                  <div className="px-2.5 py-1 text-[10px] font-medium tracking-wider text-neutral-400 uppercase">
-                    Organizations
-                  </div>
-                  {organizations.map((item) => (
-                    <button
-                      className={`flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left transition-colors ${item.id === currentOrganization?.id ? 'bg-black/[0.06] font-medium dark:bg-white/[0.08]' : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.04]'}`}
-                      key={item.id}
-                      onClick={() => void selectOrganization(item)}
-                      type="button"
-                    >
-                      <span className="truncate">{item.name}</span>
-                      {item.id === currentOrganization?.id && (
-                        <Check className="h-3.5 w-3.5 shrink-0 text-neutral-700 dark:text-neutral-300" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        )}
 
         <div className="mb-3 px-1">
           <label className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-neutral-500 transition-colors hover:bg-black/[0.04] dark:text-neutral-400 dark:hover:bg-white/[0.05]">

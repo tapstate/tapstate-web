@@ -5,16 +5,11 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { expect, it, vi } from 'vitest'
 
-const { navigate, setActiveOrganization } = vi.hoisted(() => ({
-  navigate: vi.fn(),
-  setActiveOrganization: vi.fn(),
-}))
-
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children, ...props }: { children: ReactNode } & HTMLAttributes<HTMLAnchorElement>) => (
     <a {...props}>{children}</a>
   ),
-  useNavigate: () => navigate,
+  useNavigate: () => vi.fn(),
   useRouterState: ({ select }: { select: (state: { location: { pathname: string } }) => string }) =>
     select({ location: { pathname: '/' } }),
 }))
@@ -28,7 +23,7 @@ vi.mock('../state/cloud-app-state', () => ({
     clusters: [],
     darkMode: false,
     setDarkMode: vi.fn(),
-    setActiveOrganization,
+    setActiveOrganization: vi.fn(),
     clearIdentity: vi.fn(),
   }),
 }))
@@ -74,47 +69,5 @@ it('provides documentation and opens support from the Cloud sidebar', async () =
     host.remove()
     document.getElementById('tapstate-tawk-feedback-widget')?.remove()
     delete window.Tawk_API
-  }
-})
-
-it('preserves the account menu and switches organizations only when there is a choice', async () => {
-  const host = document.createElement('div')
-  document.body.append(host)
-  const root = createRoot(host)
-  const first = { id: 'first', name: 'First', slug: 'first' }
-  const second = { id: 'second', name: 'Second', slug: 'second' }
-  const renderShell = (organizations: (typeof first)[]) => (
-    <CloudConsoleShell
-      organization={first}
-      organizations={organizations}
-      clusters={[]}
-      user={{ email: 'user@example.com' }}
-    >
-      <main />
-    </CloudConsoleShell>
-  )
-  try {
-    await act(async () => root.render(renderShell([first])))
-    expect(
-      [...host.querySelectorAll('button')].find((button) => button.textContent === 'First'),
-    ).toBeUndefined()
-    expect(host.textContent).toContain('Tapstate Cloud')
-    await act(async () => root.render(renderShell([first, second])))
-    const switcher = [...host.querySelectorAll('button')].find(
-      (button) => button.textContent === 'First',
-    )!
-    expect(switcher).toBeTruthy()
-    await act(async () => switcher.click())
-    const target = [...host.querySelectorAll('button')].find(
-      (button) => button.textContent === 'Second',
-    )!
-    expect(target).toBeTruthy()
-    await act(async () => target.click())
-    expect(setActiveOrganization).toHaveBeenCalledWith(second)
-    expect(navigate).toHaveBeenCalledWith({ to: '/', search: { organizationId: 'second' } })
-  } finally {
-    await act(async () => root.unmount())
-    host.remove()
-    vi.clearAllMocks()
   }
 })
