@@ -106,4 +106,25 @@ describe('TawkFeedbackWidget', () => {
     )
     expect(notify.mock.calls[0]).toHaveLength(2)
   })
+
+  it('configures the widget to anchor on the bottom-left adjacent to the sidebar', async () => {
+    await act(async () => {
+      root.render(<TawkFeedbackWidget />)
+    })
+
+    expect(window.Tawk_API?.customStyle).toEqual({
+      visibility: {
+        desktop: {
+          position: 'bl',
+          xOffset: 260,
+          yOffset: 20,
+        },
+        mobile: {
+          position: 'bl',
+          xOffset: 10,
+          yOffset: 10,
+        },
+      },
+    })
+  })
 })

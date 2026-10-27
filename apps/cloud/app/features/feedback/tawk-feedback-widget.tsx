@@ -3,7 +3,23 @@ import { useEffect } from 'react'
 import { CloudApiError, cloudApi } from '../../service/cloud-api'
 import { resolveTawkWidgetConfig } from './tawk-widget-config'
 
+interface TawkCustomStyle {
+  visibility?: {
+    desktop?: {
+      position?: 'br' | 'bl' | 'tr' | 'tl' | 'cr' | 'cl'
+      xOffset?: number | string
+      yOffset?: number | string
+    }
+    mobile?: {
+      position?: 'br' | 'bl'
+      xOffset?: number | string
+      yOffset?: number | string
+    }
+  }
+}
+
 interface TawkApi {
+  customStyle?: TawkCustomStyle
   onBeforeLoad?: () => void
   onLoad?: () => void
   onChatMinimized?: () => void
@@ -20,6 +36,21 @@ declare global {
   interface Window {
     Tawk_API?: TawkApi
   }
+}
+
+const defaultCustomStyle: TawkCustomStyle = {
+  visibility: {
+    desktop: {
+      position: 'bl',
+      xOffset: 260,
+      yOffset: 20,
+    },
+    mobile: {
+      position: 'bl',
+      xOffset: 10,
+      yOffset: 10,
+    },
+  },
 }
 
 const scriptId = 'tapstate-tawk-feedback-widget'
@@ -42,6 +73,22 @@ function syncWidgetVisibility() {
 
 function ensureTawkScript(propertyId: string, widgetId: string) {
   const api = (window.Tawk_API ??= {})
+  api.customStyle = {
+    ...defaultCustomStyle,
+    ...api.customStyle,
+    visibility: {
+      ...defaultCustomStyle.visibility,
+      ...api.customStyle?.visibility,
+      desktop: {
+        ...defaultCustomStyle.visibility?.desktop,
+        ...api.customStyle?.visibility?.desktop,
+      },
+      mobile: {
+        ...defaultCustomStyle.visibility?.mobile,
+        ...api.customStyle?.visibility?.mobile,
+      },
+    },
+  }
   if (apiWithBeforeLoadHandler !== api) {
     const existingOnBeforeLoad = api.onBeforeLoad
     api.onBeforeLoad = () => {
