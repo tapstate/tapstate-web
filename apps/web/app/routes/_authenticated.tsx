@@ -6,8 +6,11 @@ import { AppShell } from '@/components/layout/app-shell'
 import { LoginRedirect, SessionRecovery } from '@/features/auth/session-recovery'
 import { useAuthStore } from '@/stores/auth-store'
 
+import { NotFoundContent } from './-not-found'
+
 export const Route = createFileRoute('/_authenticated')({
   component: AuthenticatedRouteComponent,
+  notFoundComponent: NotFoundContent,
 })
 
 function AuthenticatedRouteComponent() {

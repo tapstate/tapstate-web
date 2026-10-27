@@ -237,6 +237,7 @@ export interface PipelineStatus {
 export type PipelineCatalogState =
   | PipelineRuntimeState
   | 'DRAFT'
+  | 'NOT_STARTED'
   | 'STARTING'
   | 'PAUSING'
   | 'RESUMING'
@@ -1764,16 +1765,44 @@ export async function getPipeline(id: string, fetcher: ApiFetcher = fetch): Prom
   return payload
 }
 
-export async function listPipelines(fetcher: ApiFetcher = fetch): Promise<PipelineCatalogItem[]> {
-  const payload = await request('/pipelines', fetcher)
-  if (
-    !isRecord(payload) ||
-    !Array.isArray(payload.items) ||
-    !payload.items.every(isPipelineCatalogItem)
-  ) {
-    throw new PipelineClientError('protocol', 'Tapstate returned an invalid Pipeline list.')
+const PIPELINE_LIST_PAGE_SIZE = 200
+
+async function listAllPipelinePages<T>(
+  path: string,
+  fetcher: ApiFetcher,
+  isItem: (value: unknown) => value is T,
+  invalidResponseMessage: string,
+): Promise<T[]> {
+  const items: T[] = []
+  for (let offset = 0; ; offset += PIPELINE_LIST_PAGE_SIZE) {
+    const payload = await request(
+      `${path}?limit=${PIPELINE_LIST_PAGE_SIZE}&offset=${offset}`,
+      fetcher,
+    )
+    if (!isRecord(payload) || !Array.isArray(payload.items) || !payload.items.every(isItem)) {
+      throw new PipelineClientError('protocol', invalidResponseMessage)
+    }
+    items.push(...payload.items)
+    if (payload.items.length < PIPELINE_LIST_PAGE_SIZE) return items
   }
-  return payload.items
+}
+
+export async function listPipelineArtifacts(fetcher: ApiFetcher = fetch): Promise<PipelineView[]> {
+  return listAllPipelinePages(
+    '/pipelines:artifacts',
+    fetcher,
+    isPipelineView,
+    'Tapstate returned an invalid Pipeline artifact list.',
+  )
+}
+
+export async function listPipelines(fetcher: ApiFetcher = fetch): Promise<PipelineCatalogItem[]> {
+  return listAllPipelinePages(
+    '/pipelines',
+    fetcher,
+    isPipelineCatalogItem,
+    'Tapstate returned an invalid Pipeline list.',
+  )
 }
 
 export async function getPipelineStatus(

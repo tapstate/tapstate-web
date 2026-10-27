@@ -18,6 +18,7 @@ function isObservationUnavailable(error: unknown) {
 
 const stateDotStatus: Record<PipelineCatalogState, StatusDotStatus> = {
   DRAFT: 'disabled',
+  NOT_STARTED: 'normal',
   NEW: 'normal',
   STARTING: 'normal',
   RUNNING: 'success',
@@ -140,6 +141,7 @@ export function PipelineMonitoringPage({
                   hour: '2-digit',
                   minute: '2-digit',
                   second: '2-digit',
+                  timeZoneName: 'short',
                 }).format(lastUpdated),
               })}
           </p>

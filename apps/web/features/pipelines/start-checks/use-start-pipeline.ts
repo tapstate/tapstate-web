@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { ApiFetcher } from '@/service/source-client'
@@ -27,6 +27,11 @@ export type PipelineStartOutcome =
   | { status: 'started'; result: PipelineStartResult }
   | { status: 'cancelled' }
 
+export type PipelineStarter = (
+  pipelineId: string,
+  returnFocus?: RefObject<HTMLElement | null>,
+) => Promise<PipelineStartOutcome>
+
 /** What stays in front of the person after a start until they dismiss it. */
 export interface PipelineStartNotice {
   id: number
@@ -43,6 +48,8 @@ export interface PipelineStartNotice {
 /** The questions in front of the person while a start waits for their answers. */
 export interface StartChecksSession {
   pipelineId: string
+  /** The caller's stable control, which may remount while the start is pending. */
+  returnFocus?: RefObject<HTMLElement | null>
   /** Changes whenever a new report is shown, so answers are taken afresh for it. */
   version: number
   report: StartCheckReport
@@ -53,6 +60,7 @@ export interface StartChecksSession {
   /** The definition moved while the person was answering, so the checks were run again. */
   changedWhileConfirming: boolean
   submitting: boolean
+  recheckFailed?: boolean
 }
 
 export interface StartChecksDialogState {
@@ -60,6 +68,7 @@ export interface StartChecksDialogState {
   session: StartChecksSession | null
   onConfirm: (decisions: StartDecision[]) => void
   onCancel: () => void
+  onRecheck?: () => void
 }
 
 export interface StartPipelineOptions {
@@ -127,7 +136,7 @@ export function useStartPipeline({ apiFetch, onDefinitionChanged }: StartPipelin
   apiFetchRef.current = apiFetch
   onDefinitionChangedRef.current = onDefinitionChanged
 
-  const showSession = useCallback((next: StartChecksSession) => {
+  const showSession = useCallback((next: StartChecksSession | null) => {
     sessionRef.current = next
     setSession(next)
   }, [])
@@ -139,10 +148,12 @@ export function useStartPipeline({ apiFetch, onDefinitionChanged }: StartPipelin
       report: StartCheckReport,
       previous: readonly StartDecision[],
       changedWhileConfirming: boolean,
+      returnFocus?: RefObject<HTMLElement | null>,
     ) => {
       const carried = carryDecisions(previous, report)
       showSession({
         pipelineId,
+        returnFocus,
         version: (sessionRef.current?.version ?? 0) + 1,
         report,
         decisions: carried.kept,
@@ -262,7 +273,12 @@ export function useStartPipeline({ apiFetch, onDefinitionChanged }: StartPipelin
   )
 
   const startPipeline = useCallback(
-    async (pipelineId: string): Promise<PipelineStartOutcome> => {
+    async (
+      pipelineId: string,
+      returnFocus?: RefObject<HTMLElement | null>,
+    ): Promise<PipelineStartOutcome> => {
+      // A new request must not inherit the previous dialog's settled UI state.
+      if (!pendingRef.current) showSession(null)
       let result: PipelineStartResult
       try {
         result = await runPipeline(pipelineId, apiFetchRef.current)
@@ -272,12 +288,12 @@ export function useStartPipeline({ apiFetch, onDefinitionChanged }: StartPipelin
         pendingRef.current?.resolve({ status: 'cancelled' })
         return new Promise<PipelineStartOutcome>((resolve, reject) => {
           pendingRef.current = { resolve, reject }
-          ask(pipelineId, report, [], false)
+          ask(pipelineId, report, [], false, returnFocus)
         })
       }
       return started(pipelineId, result)
     },
-    [ask, started],
+    [ask, showSession, started],
   )
 
   const answer = useCallback(
@@ -293,7 +309,7 @@ export function useStartPipeline({ apiFetch, onDefinitionChanged }: StartPipelin
         await noteRefusedChanges(pipelineId, error)
         const nextReport = refusalReport(error)
         if (nextReport) {
-          ask(pipelineId, nextReport, decisions, false)
+          ask(pipelineId, nextReport, decisions, false, current.returnFocus)
           return
         }
         if (!isVersionConflict(error)) {
@@ -307,7 +323,7 @@ export function useStartPipeline({ apiFetch, onDefinitionChanged }: StartPipelin
           settle({ error: refreshError })
           return
         }
-        ask(pipelineId, fresh, decisions, true)
+        ask(pipelineId, fresh, decisions, true, current.returnFocus)
         return
       }
       setOpen(false)
@@ -326,6 +342,29 @@ export function useStartPipeline({ apiFetch, onDefinitionChanged }: StartPipelin
     [answer, showSession],
   )
 
+  const onRecheck = useCallback(() => {
+    const current = sessionRef.current
+    if (!current || current.submitting || !pendingRef.current) return
+    showSession({ ...current, submitting: true, recheckFailed: false })
+    void (async () => {
+      try {
+        const report = await getStartChecks(current.pipelineId, 'start', apiFetchRef.current)
+        if (!pendingRef.current || sessionRef.current?.version !== current.version) return
+        // A recheck never starts a pipeline or carries answers across a new report.
+        ask(
+          current.pipelineId,
+          report,
+          [],
+          report.contentHash !== current.report.contentHash,
+          current.returnFocus,
+        )
+      } catch {
+        if (!pendingRef.current || sessionRef.current?.version !== current.version) return
+        showSession({ ...current, submitting: false, recheckFailed: true })
+      }
+    })()
+  }, [ask, showSession])
+
   const onCancel = useCallback(() => {
     if (sessionRef.current?.submitting) return
     settle({ outcome: { status: 'cancelled' } })
@@ -335,6 +374,6 @@ export function useStartPipeline({ apiFetch, onDefinitionChanged }: StartPipelin
     setNotices((current) => current.filter((notice) => notice.id !== id))
   }, [])
 
-  const dialog: StartChecksDialogState = { open, session, onConfirm, onCancel }
+  const dialog: StartChecksDialogState = { open, session, onConfirm, onCancel, onRecheck }
   return { startPipeline, dialog, notices, dismissNotice }
 }

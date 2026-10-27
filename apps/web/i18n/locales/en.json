@@ -1,5 +1,10 @@
 {
   "app": {
+    "help": {
+      "openMenu": "Help",
+      "documentation": "Documentation",
+      "contactSupport": "Contact support"
+    },
     "brand": "Tapstate",
     "primaryNavigation": "Primary navigation",
     "previewMode": "AI Studio migration preview",
@@ -12,7 +17,9 @@
     "notifications": "View notifications",
     "logout": "Sign out",
     "user": {
+      "accountMenu": "Account menu",
       "avatar": "User avatar",
+      "avatarFor": "User avatar for {{name}}",
       "initial": "U"
     },
     "secondaryNavigation": "Secondary navigation",
@@ -22,6 +29,8 @@
       "organizationLoading": "Loading organization…",
       "organizationUnavailable": "Organization unavailable",
       "clusterLoading": "Loading cluster…",
+      "clusterReady": "Cluster ready",
+      "clusterConnected": "Cluster console connected",
       "clusterUnavailable": "Cluster unavailable",
       "region": "AWS {{region}}",
       "regionUnavailable": "Region unavailable"
@@ -174,10 +183,30 @@
       "description": "Results are based on the current Source configuration.",
       "action": "Test connection",
       "testing": "Testing connection",
+      "checkingPipeline": "Checking pipeline activity",
       "notTested": "Not tested",
       "statusUnavailable": "Status unavailable",
       "passed": "Connection test passed",
       "failed": "Connection test failed",
+      "pipeline": {
+        "RUNNING": "Connected · pipeline running",
+        "STARTING": "Pipeline is connecting",
+        "RESUMING": "Pipeline is resuming",
+        "PAUSED": "Used by a paused pipeline",
+        "STOPPED": "Used by a stopped pipeline",
+        "COMPLETED": "Used by a completed pipeline"
+      },
+      "cdcReadiness": {
+        "title": "Before starting CDC",
+        "manualCheck": "The connection test does not check these table-level requirements.",
+        "mysql": "Confirm binary logging uses row-based events and retains enough history to cover expected source outages.",
+        "rdsMysql": "Set RDS binlog retention for expected outages; RDS for MySQL defaults to no binary-log retention.",
+        "postgres": "Confirm wal_level is logical, a publication covers selected tables, replication slots are available, and retained WAL has enough disk capacity.",
+        "oracle": "Enable ARCHIVELOG and minimal supplemental logging; add required key or table logging for the selected tables.",
+        "sqlserver": "Enable CDC for the database and selected tables, and keep SQL Server Agent running for capture jobs.",
+        "mongodb": "Use a replica set or sharded cluster. Enable collection pre-images when the pipeline requires full before-images.",
+        "db2": "Enable DATA CAPTURE CHANGES on each table selected for CDC."
+      },
       "reenterSecrets": "Re-enter configured secrets before testing this draft.",
       "status": {
         "passed": "Passed",
@@ -209,7 +238,7 @@
     },
     "empty": {
       "title": "No sources yet",
-      "body": "Add a connector-backed source to make live data available to Tapstate.",
+      "body": "Connect a data source to make live data available to Tapstate.",
       "sampleDescription": "Explore with a sample source before connecting your own data."
     },
     "columns": {
@@ -246,9 +275,13 @@
       "connectionOnly": "Connection only",
       "endpointUnavailable": "Endpoint not exposed",
       "selectorUnavailable": "Selector details unavailable",
+      "selectorExactTable": "Exact table",
+      "openTable": "Open",
+      "openTableNamed": "Open table {{name}}",
       "noConfiguration": "This source has no visible non-secret configuration.",
       "secretConfigured": "Configured",
-      "secretConfiguredCount": "{{count}} configured secrets",
+      "secretConfiguredCount_one": "{{count}} configured secret",
+      "secretConfiguredCount_other": "{{count}} configured secrets",
       "noTables": "No table selectors are configured for this source.",
       "unnamedTable": "Unnamed selector",
       "srs": "Shared-record settings",
@@ -463,7 +496,7 @@
     "allPipelines": "All Pipelines",
     "explorer": "Explorer",
     "states": {
-      "empty": "No pipelines have been stored in this workspace.",
+      "empty": "No pipelines yet. Create one to start moving data.",
       "error": "We couldn't load stored pipelines.",
       "loading": "Loading stored pipelines."
     },
@@ -476,19 +509,19 @@
       "refreshPaused": "Auto-refresh paused",
       "refresh": "Refresh pipelines",
       "refreshAria": "Refresh pipeline list",
-      "pauseRefresh": "Pause updates",
+      "pauseRefresh": "Pause auto-refresh",
       "pauseRefreshAria": "Pause automatic pipeline refresh",
-      "resumeRefresh": "Resume updates",
+      "resumeRefresh": "Resume auto-refresh",
       "resumeRefreshAria": "Resume automatic pipeline refresh"
     },
     "createMenu": {
       "title": "Creation mode",
       "wizard": "Pipeline builder",
-      "wizardDescription": "Build a pipeline step by step",
+      "wizardDescription": "Use the guided flow for a straightforward source-to-target copy.",
       "sql": "Build with DuckDB SQL",
       "sqlDescription": "Write SQL to transform data",
       "dag": "Build with DAG Designer",
-      "dagDescription": "Visual node-based editor",
+      "dagDescription": "Use the canvas to arrange sources, transforms, and destinations.",
       "ai": "Build with AI",
       "aiDescription": "Generate pipeline from prompt"
     },
@@ -503,7 +536,7 @@
       "identityTitle": "Name your pipeline",
       "identityHint": "Pipeline IDs are stable handles used by the API and runtime.",
       "idLabel": "Pipeline ID",
-      "idPlaceholder": "orders_to_warehouse",
+      "idPlaceholder": "orders_to_store",
       "idHint": "Use a stable ID with letters, numbers, hyphens, or underscores. It cannot be changed later.",
       "idInvalid": "Use 1–64 letters, numbers, hyphens, or underscores.",
       "descriptionLabel": "Description",
@@ -538,6 +571,7 @@
     "actions": {
       "collapseNode": "Collapse {{name}}",
       "expandNode": "Expand {{name}}",
+      "viewPipeline": "View {{id}} details",
       "editPipeline": "Edit {{id}}",
       "edit": "Edit",
       "copyPipeline": "Copy pipeline ID",
@@ -561,8 +595,14 @@
       "dismissFeedback": "Dismiss lifecycle error"
     },
     "startChecks": {
+      "descriptionUnavailable": "A start check could not finish. Recheck to get an updated result; the pipeline has not been started.",
+      "temporarilyUnavailable": "This check could not finish. No configuration change has been confirmed as necessary.",
+      "recheck": "Recheck",
+      "rechecking": "Rechecking…",
+      "recheckFailed": "Could not refresh the checks. Try again.",
+      "details": "Technical details",
       "title": "Start checks for {{id}}",
-      "descriptionBlocked": "Something stops this start. Resolve it, then start the Pipeline again.",
+      "descriptionBlocked": "This pipeline cannot start yet. Review and fix the checks below, then try again.",
       "descriptionConfirm": "Choose how to handle each question, then start.",
       "descriptionReady": "Review the results, then start.",
       "changedWhileConfirming": "{{id}} changed while you were confirming. Its checks were run again, so review them before starting.",
@@ -614,6 +654,13 @@
       "resourceName": "Resource name",
       "status": "Status",
       "type": "Type",
+      "sources": "Sources",
+      "target": "Destination",
+      "lag": "Lag",
+      "lagSeconds": "{{value}} s",
+      "lastError": "Last error",
+      "targetTables_one": "{{count}} table",
+      "targetTables_other": "{{count}} tables",
       "version": "Version",
       "draftRevision": "Draft · r{{revision}}"
     },
@@ -1169,9 +1216,9 @@
           "lastRefreshed": "Last refreshed {{time}}",
           "refresh": "Refresh",
           "refreshAria": "Refresh logs",
-          "pause": "Pause updates",
+          "pause": "Pause auto-refresh",
           "pauseAria": "Pause automatic log refresh",
-          "resume": "Resume updates",
+          "resume": "Resume auto-refresh",
           "resumeAria": "Resume automatic log refresh",
           "search": "Search this log tail",
           "allLevels": "All levels",
@@ -1228,9 +1275,9 @@
           "lastRefreshed": "Last refreshed {{time}}",
           "refresh": "Refresh",
           "refreshAria": "Refresh monitoring",
-          "pause": "Pause updates",
+          "pause": "Pause auto-refresh",
           "pauseAria": "Pause automatic monitoring refresh",
-          "resume": "Resume updates",
+          "resume": "Resume auto-refresh",
           "resumeAria": "Resume automatic monitoring refresh",
           "noMetricsTitle": "No metrics available",
           "noMetricsBody": "This Pipeline has not reported any numeric metrics yet.",
@@ -1284,6 +1331,7 @@
         },
         "states": {
           "DRAFT": "Draft",
+          "NOT_STARTED": "Not started",
           "NEW": "New",
           "STARTING": "Starting",
           "RUNNING": "Running",
@@ -1709,6 +1757,9 @@
       "generating": "Validating metadata and generating a proposal…",
       "connecting": "Connecting to your AI provider…",
       "review": "Review proposed pipeline changes",
+      "changeSummary": "Change summary",
+      "dslDiff": "DSL changes",
+      "needsInput": "The proposed configuration needs more information or correction. Continue the conversation to refine it.",
       "diffTitle": "Proposed changes",
       "noProposal": "No complete proposal yet. Ask the assistant to propose a change.",
       "editProposal": "Edit proposed configuration (JSON)",
@@ -1835,6 +1886,24 @@
         "key-representation-unsupported": "The target key type cannot be verified to preserve source identifiers without loss. Use compatible key columns or an explicit mapping."
       }
     }
+  },
+  "pipelineDetails": {
+    "backToPipelines": "Pipelines",
+    "edit": "Edit pipeline",
+    "logs": "Logs",
+    "loading": "Loading pipeline details…",
+    "notFound": "Pipeline {{id}} is not available.",
+    "error": "Pipeline details could not be loaded.",
+    "observedAt": "Last observed {{time}}",
+    "lastError": "Last runtime error",
+    "sources": "Sources",
+    "destinations": "Destinations",
+    "transforms": "Transforms",
+    "noSources": "No source connections are recorded.",
+    "noDestinations": "No destinations are recorded.",
+    "noTransforms": "No transforms are configured.",
+    "tableCount_one": "{{count}} table",
+    "tableCount_other": "{{count}} tables"
   },
   "views": {
     "title": "Views",
@@ -2098,6 +2167,27 @@
         "close": "Close"
       }
     },
+    "addSourcesDialog": {
+      "title": "Add data sources",
+      "description": "Connect the databases your pipelines will read from. Available connectors depend on this Cluster.",
+      "orConnect": "Or connect a source",
+      "connect": "Connect a source",
+      "connectAction": "Connect",
+      "connected": "Connected: {{sources}}",
+      "done": "Done",
+      "connector": {
+        "relational": "Relational database",
+        "document": "Document database",
+        "database": "Database"
+      },
+      "sample": {
+        "title": "Sample order data",
+        "tag": "Recommended",
+        "description": "{{names}} contains order data. Preview a document before adding the sources.",
+        "view": "View samples",
+        "choose": "Choose samples"
+      }
+    },
     "sources": {
       "title": "Sources",
       "metric_one": "{{count}} source",
@@ -2118,6 +2208,16 @@
       "running": "Running",
       "idle": "Idle",
       "error": "Error",
+      "health": {
+        "running_one": "{{count}} running",
+        "running_other": "{{count}} running",
+        "idle_one": "{{count}} idle",
+        "idle_other": "{{count}} idle",
+        "blocked_one": "{{count}} blocked",
+        "blocked_other": "{{count}} blocked",
+        "failed_one": "{{count}} failed",
+        "failed_other": "{{count}} failed"
+      },
       "open": "Pipelines →",
       "none": "No pipeline yet.",
       "build": "Build your first pipeline",
@@ -2146,6 +2246,8 @@
       "title": "Needs attention",
       "clear": "All clear. No failed pipelines or stale views.",
       "pipelineFailed": "Failed pipeline",
+      "pipelineBlocked": "Pipeline start blocked",
+      "pipelineUnavailable": "Pipeline status unavailable",
       "viewStale": "Stale view",
       "lastApplied_one": "last change applied {{count}} min ago",
       "lastApplied_other": "last change applied {{count}} min ago",
@@ -2153,6 +2255,7 @@
       "pipelineIs": {
         "running": "its pipeline {{pipeline}} is running",
         "idle": "its pipeline {{pipeline}} is stopped",
+        "blocked": "its pipeline {{pipeline}} could not start",
         "error": "its pipeline {{pipeline}} has failed",
         "unknown": "maintained by {{pipeline}}"
       },
@@ -2201,7 +2304,7 @@
     "cloud": {
       "name": "Atlas state store",
       "type": "MongoDB Atlas",
-      "access": "The single Atlas destination for this organization. Connection details are managed by Tapstate."
+      "access": "You supplied this Atlas URI during setup. Credentials are hidden on this page."
     },
     "states": {
       "loading": "Loading state stores…",

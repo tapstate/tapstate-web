@@ -1225,6 +1225,61 @@ describe('WizardBuilder publish flow', () => {
     )
   })
 
+  it.each([
+    ['COMPLETE', 'Close', 'dock'],
+    ['UNAVAILABLE', 'Escape', 'workbench'],
+  ])(
+    'returns the wizard start button to idle after closing a refused %s start with %s',
+    async (evaluation, dismissal, entry) => {
+      wizardRendering.real = entry === 'workbench'
+      runPipeline.mockRejectedValueOnce(
+        startRefusal({
+          ...answerable,
+          outcome: 'BLOCKED',
+          findings: [{ ...answerable.findings[0]!, behavior: 'BLOCK', evaluation, actions: [] }],
+        }),
+      )
+      container = document.createElement('div')
+      document.body.append(container)
+      root = createRoot(container)
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      await act(async () => {
+        root?.render(
+          <QueryClientProvider client={queryClient}>
+            <WizardBuilder pipelineId={initialDraft.pipelineId} draft={initialDraft} etag='"1"' />
+          </QueryClientProvider>,
+        )
+      })
+      const start = () =>
+        [
+          ...(container?.querySelectorAll<HTMLButtonElement>(
+            entry === 'workbench'
+              ? '[data-testid="wizard-workbench-header"] button'
+              : '[data-workflow-header] button',
+          ) ?? []),
+        ].find((button) => button.textContent?.trim() === 'Save & start')
+      await vi.waitFor(() => expect(start()?.disabled).toBe(false))
+      await act(async () => start()?.click())
+      await vi.waitFor(() => expect(startChecksDialog()).not.toBeNull())
+      vi.spyOn(queryClient, 'invalidateQueries').mockImplementation(() => new Promise(() => {}))
+      expect(dialogButton('Close')).toBeDefined()
+      await act(async () => {
+        if (dismissal === 'Close') dialogButton('Close')?.click()
+        else
+          startChecksDialog()?.dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+          )
+      })
+      await vi.waitFor(() => expect(startChecksDialog()).toBeNull())
+      await vi.waitFor(() => {
+        expect(start()?.disabled).toBe(false)
+        expect(start()?.getAttribute('aria-busy')).not.toBe('true')
+      })
+      await vi.waitFor(() => expect(document.activeElement).toBe(start()))
+      expect(runPipeline).toHaveBeenCalledOnce()
+    },
+  )
+
   it('asks start checks in the shared dialog and saves on the draft the answer rewrote', async () => {
     const warning = answerable.findings.find(({ behavior }) => behavior === 'WARN')!
     const publishedDraft = {

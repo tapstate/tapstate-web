@@ -152,6 +152,15 @@
     padding: 0 var(--app-shell-sidebar-content-inset);
   }
 
+  .app-sidebar__cloud-email {
+    min-width: 0;
+    padding-left: 38px;
+    color: var(--app-text-muted);
+    font-size: 10px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+
   .app-sidebar__cloud-organization {
     display: flex;
     min-width: 0;
@@ -604,6 +613,10 @@
     .app-sidebar__cloud-identity {
       grid-template-columns: minmax(0, 1fr) minmax(150px, auto);
       align-items: center;
+    }
+
+    .app-sidebar__cloud-email {
+      grid-column: 1 / -1;
     }
 
     .app-sidebar__link {
