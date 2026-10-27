@@ -33,8 +33,7 @@ export function startCheckItem(finding: StartCheckFinding, t: TFunction): CheckI
         ? []
         : [
             finding.subject.kind,
-            finding.check,
-            finding.evaluation,
+            ...(behavior === 'BLOCK' ? [] : [finding.check, finding.evaluation]),
             ...(isKnownBehavior(finding) ? [] : [finding.behavior]),
           ],
     message:

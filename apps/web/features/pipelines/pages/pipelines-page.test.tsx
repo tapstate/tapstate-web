@@ -636,6 +636,34 @@ describe('PipelinesPage', () => {
     )
   })
 
+  it.each(['COMPLETE', 'UNAVAILABLE'])(
+    'clears the pending list action after closing a refused %s start',
+    async (evaluation) => {
+      runPipeline.mockRejectedValueOnce(
+        startRefusal({
+          ...answerable,
+          outcome: 'BLOCKED',
+          findings: [{ ...answerable.findings[0]!, behavior: 'BLOCK', evaluation, actions: [] }],
+        }),
+      )
+      const queryClient = await renderPage()
+      const trigger = () =>
+        document.querySelector<HTMLButtonElement>(
+          '[aria-label="Pipeline lifecycle actions for new_import"]',
+        )
+      await vi.waitFor(() => expect(trigger()).not.toBeNull())
+      await act(async () => trigger()?.click())
+      await act(async () => elementWithText('[role="menuitem"]', 'Start')?.click())
+      await vi.waitFor(() => expect(startChecksDialog()).not.toBeNull())
+      vi.spyOn(queryClient, 'invalidateQueries').mockImplementation(() => new Promise(() => {}))
+      expect(dialogButton('Close')).toBeDefined()
+      await act(async () => dialogButton('Close')?.click())
+      await vi.waitFor(() => expect(startChecksDialog()).toBeNull())
+      await vi.waitFor(() => expect(trigger()?.disabled).toBe(false))
+      expect(runPipeline).toHaveBeenCalledOnce()
+    },
+  )
+
   it('asks start checks in the shared dialog and re-sends the answers with the report hash', async () => {
     const warning = answerable.findings.find(({ behavior }) => behavior === 'WARN')!
     runPipeline.mockRejectedValueOnce(startRefusal(answerable)).mockResolvedValueOnce({

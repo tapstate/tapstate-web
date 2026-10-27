@@ -468,7 +468,12 @@ export function WizardBuilder({
         setStartPhase('starting')
         let alreadyRunning = false
         try {
-          await starter.startPipeline(pipelineId)
+          const outcome = await starter.startPipeline(pipelineId)
+          if (outcome.status === 'cancelled') {
+            // The dialog has settled; background refresh must not hold the Run button.
+            void queryClient.invalidateQueries({ queryKey: ['pipelines'] }).catch(() => undefined)
+            return
+          }
         } catch (cause) {
           // Do not auto-stop an active run: that can interrupt ingestion and requires a
           // separate state-retention decision. Explain that publish succeeded but restart did not.
