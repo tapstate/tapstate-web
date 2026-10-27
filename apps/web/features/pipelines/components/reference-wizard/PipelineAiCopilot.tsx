@@ -191,6 +191,10 @@ export function PipelineAiCopilot({
   const [streamErrorCode, setStreamErrorCode] = useState('')
   const [canceled, setCanceled] = useState(false)
   const reviewedCandidate = useRef('')
+  const failedCandidate = useRef<{
+    candidate: PipelineJsonObject
+    diagnostics: AssistantValidationDiagnostic[]
+  } | null>(null)
   const streamCompleted = useRef(false)
   const applyingRef = useRef(false)
   const sendingRef = useRef(false)
@@ -243,7 +247,15 @@ export function PipelineAiCopilot({
                   })
                   .join(''),
               }))
-              .filter((message) => message.text.trim().length > 0),
+              .filter((message) => message.text.trim().length > 0)
+              .map((message, index, all) =>
+                index === all.length - 1 && message.role === 'user' && failedCandidate.current
+                  ? {
+                      ...message,
+                      text: `${message.text}\n\nRejected edited proposal: ${JSON.stringify(failedCandidate.current.candidate)}\nValidation findings: ${JSON.stringify(failedCandidate.current.diagnostics)}`,
+                    }
+                  : message,
+              ),
           },
         }),
       }),
@@ -273,6 +285,7 @@ export function PipelineAiCopilot({
           setValidationDiagnostics(readAssistantValidationDiagnostics(part.data.diagnostics))
       }
       if (part.type === 'data-proposal' && isAssistantProposal(part.data)) {
+        failedCandidate.current = null
         reviewedCandidate.current = JSON.stringify(part.data.candidateWizard)
         setProposal(part.data)
         setCandidateText(JSON.stringify(part.data.candidateWizard, null, 2))
@@ -421,6 +434,7 @@ export function PipelineAiCopilot({
         const diagnostics = readAssistantValidationDiagnostics(
           isRecord(validated.validation) ? validated.validation.diagnostics : undefined,
         )
+        failedCandidate.current = { candidate, diagnostics }
         setValidationDiagnostics(diagnostics)
         setReviewError(
           t(
@@ -558,6 +572,9 @@ export function PipelineAiCopilot({
                 setProposal(null)
                 setComplete(false)
                 setReviewError('')
+                failedCandidate.current = null
+                setValidationDiagnostics([])
+                setProgress('connecting')
                 setCanceled(false)
                 setStreamErrorCode('')
               },

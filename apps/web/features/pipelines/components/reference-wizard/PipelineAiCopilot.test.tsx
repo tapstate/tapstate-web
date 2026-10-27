@@ -165,6 +165,35 @@ describe('Pipeline Builder assistant', () => {
     expect(JSON.stringify(request.messages)).toContain('Use PostgreSQL')
   })
 
+  it('clears validation findings when the conversation is reset', async () => {
+    useAuthStore.setState({
+      apiFetch: vi.fn().mockResolvedValue(
+        stream([
+          { type: 'start', messageId: 'bad' },
+          { type: 'text-start', id: 't' },
+          { type: 'text-delta', id: 't', delta: 'Clarify' },
+          { type: 'text-end', id: 't' },
+          {
+            type: 'data-status',
+            data: {
+              state: 'needs-input',
+              diagnostics: [
+                { code: 'pipeline-draft.invalid', params: { reason: 'Choose source' } },
+              ],
+            },
+          },
+          { type: 'finish', finishReason: 'stop' },
+        ]),
+      ),
+    })
+    await mount()
+    await generate()
+    await vi.waitFor(() => expect(container.textContent).toContain('Choose source'))
+    await act(async () => button('Clear conversation').click())
+    expect(container.textContent).not.toContain('Choose source')
+    expect(container.textContent).not.toContain('needs more information')
+  })
+
   it('shows proposal actions in chat and displays the DSL changes for review', async () => {
     const dslProposal = {
       ...proposal,
@@ -592,6 +621,25 @@ describe('Pipeline Builder assistant', () => {
     expect(container.textContent).toContain('transforms[0].expr')
     expect(container.textContent).not.toContain('private expression text')
     expect(context.onApply).not.toHaveBeenCalled()
+    apiFetch.mockResolvedValueOnce(response())
+    const prompt = container.querySelector<HTMLTextAreaElement>(
+      '[aria-label="Pipeline assistant prompt"]',
+    )!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
+        prompt,
+        'Fix that expression',
+      )
+      prompt.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await act(async () =>
+      container.querySelector<HTMLButtonElement>('[aria-label="Send"]')!.click(),
+    )
+    await vi.waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(3))
+    const followup = JSON.parse(String(apiFetch.mock.calls[2][1].body))
+    expect(JSON.stringify(followup.messages)).toContain('dsl.illegal-expression')
+    expect(JSON.stringify(followup.messages)).toContain('customers')
+    expect(JSON.stringify(followup.messages)).not.toContain('private expression text')
   })
   it('requires review of a newly computed diff after the candidate is edited', async () => {
     const edited = { ...candidate, destinationTable: 'edited_docs' }
