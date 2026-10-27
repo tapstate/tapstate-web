@@ -104,7 +104,7 @@ afterEach(() => {
 })
 
 describe('whole-site storage boundary', () => {
-  async function startPendingCloudSetup() {
+  async function startPendingCloudSetup(contextResponse?: Promise<Response>) {
     useAuthStore.setState({ profile: 'cloud' })
     const setup = {
       snapshot: state({
@@ -125,14 +125,17 @@ describe('whole-site storage boundary', () => {
     }
     fetcher.mockImplementation(async (url, init) => {
       if (String(url) === '/api/cluster/context')
-        return Response.json({
-          organizationId: 'org',
-          clusterId: 'cluster',
-          organizationName: 'Organization',
-          clusterName: 'Cluster',
-          region: 'region',
-          clusterState: 'DEGRADED',
-        })
+        return (
+          contextResponse ??
+          Response.json({
+            organizationId: 'org',
+            clusterId: 'cluster',
+            organizationName: 'Organization',
+            clusterName: 'Cluster',
+            region: 'region',
+            clusterState: 'DEGRADED',
+          })
+        )
       if (String(url) === '/auth/storage-entry')
         return Response.json({ mode: 'CLOUD', management: false, entry: setup.entry })
       if (String(url) === '/api/storage/status')
@@ -168,6 +171,45 @@ describe('whole-site storage boundary', () => {
     await click('Save storage settings')
     return setup
   }
+
+  it.each([true, false])(
+    'retains passed checks while Cloud context is pending without submitting before validation (valid=%s)',
+    async (valid) => {
+      let resolveContext!: (response: Response) => void
+      await startPendingCloudSetup(
+        new Promise((resolve) => {
+          resolveContext = resolve
+        }),
+      )
+      for (const name of ['Durable cache', 'Application data']) {
+        expect(healthCard(name).textContent).toContain('Connection checks passed')
+        expect(healthCard(name).querySelector('time')).not.toBeNull()
+      }
+      expect(
+        fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit'),
+      ).toHaveLength(0)
+      await act(async () =>
+        resolveContext(
+          valid
+            ? Response.json({
+                organizationId: 'org',
+                clusterId: 'cluster',
+                organizationName: 'Organization',
+                clusterName: 'Cluster',
+                region: 'region',
+                clusterState: 'DEGRADED',
+              })
+            : Response.json({}, { status: 503 }),
+        ),
+      )
+      await settle()
+      expect(
+        fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit'),
+      ).toHaveLength(valid ? 1 : 0)
+      if (!valid)
+        expect(healthCard('Durable cache').textContent).not.toContain('Connection checks passed')
+    },
+  )
 
   function initializing(overrides: Partial<StorageSnapshot> = {}): StorageSnapshot {
     return state({

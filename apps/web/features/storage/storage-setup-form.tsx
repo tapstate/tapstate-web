@@ -177,14 +177,14 @@ export function StorageSetupForm({
         if (!(['CONFIG', 'CACHE', 'MASTER'] as const).every(fresh) || !valid) return
         void submission.run(
           async (isCurrent) => {
-            await beforeSubmit?.()
-            if (!isCurrent()) throw new DOMException('Request superseded', 'AbortError')
             // Retain only display evidence, never credentials or reusable submission proofs.
             onSubmitted?.({
               CONFIG: proofs.CONFIG!.checkedAt,
               CACHE: proofs.CACHE!.checkedAt,
               MASTER: proofs.MASTER!.checkedAt,
             })
+            await beforeSubmit?.()
+            if (!isCurrent()) throw new DOMException('Request superseded', 'AbortError')
             return storageRequest<{ setupPhase: string }>(fetcher, 'storage.setup.commit', {
               ...scope,
               candidate,
