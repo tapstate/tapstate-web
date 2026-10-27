@@ -2,6 +2,14 @@
   "notFound": { "message": "此页面不可用。", "back": "返回概览" },
   "app": {
     "help": { "openMenu": "帮助", "documentation": "文档", "contactSupport": "联系客服" },
+    "account": {
+      "openMenu": "账户",
+      "settings": "设置",
+      "appearance": "外观",
+      "themeLight": "浅色",
+      "themeDark": "深色",
+      "logOut": "退出登录"
+    },
     "brand": "Tapstate Cloud",
     "console": "Cloud 控制台",
     "organization": "组织",
