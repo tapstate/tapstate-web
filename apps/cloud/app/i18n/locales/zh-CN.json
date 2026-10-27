@@ -118,6 +118,8 @@
     "organizationNameRequired": "请输入组织名称。",
     "requestCodeFirst": "请先获取邮箱验证码。",
     "securityNote": "会话由安全的 HttpOnly Cookie 保护。",
+    "legalAgreement": "我已阅读并同意 <a class=\"underline hover:no-underline\" href=\"{{eula}}\" target=\"_blank\" rel=\"noopener noreferrer\">《服务条款》</a>、<a class=\"underline hover:no-underline\" href=\"{{privacy}}\" target=\"_blank\" rel=\"noopener noreferrer\">《隐私政策》</a>、<a class=\"underline hover:no-underline\" href=\"{{subscription}}\" target=\"_blank\" rel=\"noopener noreferrer\">《订阅政策》</a> 和 <a class=\"underline hover:no-underline\" href=\"{{dpa}}\" target=\"_blank\" rel=\"noopener noreferrer\">《数据处理附录》</a>。",
+    "legalRequired": "请先同意以上法律文档才能注册。",
     "footer": "© 2026 Tapstate Systems Inc.",
     "showcase": {
       "headlinePrimary": "一次定义业务视图。",
@@ -539,5 +541,18 @@
     "settings": { "title": "设置", "description": "管理组织和账户偏好。" },
     "notConnectedTitle": "Cloud 服务尚未接通",
     "notConnectedDescription": "此页面属于受保护路由。完成登录和 API 接入后，才会显示 Cloud 数据。"
+  },
+  "footer": {
+    "legalLinks": {
+      "eula": "服务条款",
+      "privacy": "隐私政策",
+      "subscription": "订阅政策",
+      "dpa": "数据处理附录"
+    },
+    "company": "TAPDATA HONG KONG LIMITED",
+    "address": "#557, 5/F, Building 19W, 19 Science Park West Avenue, Hong Kong SAR",
+    "supportEmail": "support@tapstate.com",
+    "contact": "联系我们",
+    "support": "技术支持"
   }
 }

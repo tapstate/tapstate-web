@@ -21,6 +21,14 @@ import { InteractiveCustomer360Showcase } from './interactive-customer-360-showc
 
 type AuthMode = 'login' | 'register'
 
+const CURRENT_LEGAL_VERSION = 'legal-v1.0-2026-10-27'
+const LEGAL_DOCS = {
+  eula: 'https://docs.tapstate.com/legal/eula',
+  privacy: 'https://docs.tapstate.com/privacy',
+  subscription: 'https://docs.tapstate.com/subscription-policy',
+  dpa: 'https://docs.tapstate.com/data-processing-addendum',
+} as const
+
 const emailCodeCooldownSeconds = 60
 
 interface AuthPageProps {
@@ -124,6 +132,7 @@ export function AuthPage({
   const [isSendingCode, setIsSendingCode] = useState(false)
   const [isStartingOAuth, setIsStartingOAuth] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [agreedLegal, setAgreedLegal] = useState(false)
   const [oauthCompleting, setOauthCompleting] = useState(false)
   const oauthHandled = useRef(false)
   const emailParts = email.trim().split('@')
@@ -198,6 +207,10 @@ export function AuthPage({
       setError('auth.errors.organizationNameRequired')
       return
     }
+    if (mode === 'register' && !agreedLegal) {
+      setError('auth.legalRequired')
+      return
+    }
     setError(null)
     setIsSubmitting(true)
 
@@ -223,6 +236,7 @@ export function AuthPage({
           password,
           displayName: displayName.trim(),
           organizationName: organizationName.trim(),
+          agreedLegalVersion: CURRENT_LEGAL_VERSION,
         })
       }
       await onAuthenticated(user)
@@ -289,6 +303,7 @@ export function AuthPage({
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode)
     setError(null)
+    setAgreedLegal(false)
   }
 
   const applyInvitationLink = (event: FormEvent<HTMLFormElement>) => {
@@ -589,6 +604,29 @@ export function AuthPage({
                 </InputGroupAddon>
               </InputGroup>
             </AuthField>
+          )}
+
+          {mode === 'register' && (
+            <label className="flex items-start gap-2 cursor-pointer text-[11px] text-neutral-500 dark:text-neutral-400">
+              <input
+                type="checkbox"
+                checked={agreedLegal}
+                onChange={(e) => setAgreedLegal(e.target.checked)}
+                className="mt-0.5 h-3.5 w-3.5 rounded border-neutral-300 text-[#111827] focus:ring-[#111827] dark:border-neutral-600 dark:bg-neutral-800 dark:text-white"
+                required
+              />
+              <span
+                className="leading-snug"
+                dangerouslySetInnerHTML={{
+                  __html: t('auth.legalAgreement', {
+                    eula: LEGAL_DOCS.eula,
+                    privacy: LEGAL_DOCS.privacy,
+                    subscription: LEGAL_DOCS.subscription,
+                    dpa: LEGAL_DOCS.dpa,
+                  }),
+                }}
+              />
+            </label>
           )}
 
           {(mode === 'login' || verificationSent) && (
