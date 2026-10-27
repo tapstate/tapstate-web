@@ -437,6 +437,21 @@ describe('whole-site storage boundary', () => {
     }
   })
 
+  it('shows the passed cache connection while the authenticated runtime is still starting', async () => {
+    const setup = await startPendingCloudSetup()
+    setup.snapshot = initializing({
+      businessPhase: 'AUTH_READY',
+      stateVersion: 11,
+      health: { CONFIG: 'AVAILABLE', CACHE: 'AUTH_READY', MASTER: 'UNKNOWN' },
+    })
+    await click('Refresh status')
+    const cache = healthCard('Durable cache')
+    expect(cache.textContent).toContain('Connection checks passed')
+    expect(cache.querySelector('time')?.dateTime).toBe('2026-10-27T00:00:00Z')
+    expect(cache.textContent).toContain('Runtime preparation is still in progress')
+    expect(cache.textContent).not.toContain('Sign-in ready; business not ready')
+  })
+
   it.each([
     { operationId: 'another-setup' },
     { setupGeneration: 2 },

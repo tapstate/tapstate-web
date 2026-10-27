@@ -166,7 +166,8 @@ export function StorageHealthPanel({
       <dl className="grid gap-3 sm:grid-cols-3">
         {(['CONFIG', 'CACHE', 'MASTER'] as const).map((layer) => {
           const setupCheckedAt =
-            snapshot.health[layer] === 'UNKNOWN' &&
+            (snapshot.health[layer] === 'UNKNOWN' ||
+              (layer === 'CACHE' && snapshot.health[layer] === 'AUTH_READY')) &&
             (layer !== 'MASTER' || !verificationStatus || verificationStatus === 'UNKNOWN')
               ? setupChecks?.[layer]
               : undefined
