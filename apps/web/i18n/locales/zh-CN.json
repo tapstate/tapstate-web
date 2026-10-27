@@ -13,6 +13,7 @@
     "notifications": "查看通知",
     "logout": "退出登录",
     "user": {
+      "accountMenu": "账户菜单",
       "avatar": "用户头像",
       "avatarFor": "{{name}} 的用户头像",
       "initial": "U"

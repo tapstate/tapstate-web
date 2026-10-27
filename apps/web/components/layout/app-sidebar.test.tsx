@@ -81,6 +81,14 @@ afterEach(() => {
 })
 
 describe('AppSidebar', () => {
+  it('keeps the organization return link in cloud mode', async () => {
+    await renderSidebar('cloud')
+    const link = container.querySelector<HTMLAnchorElement>(
+      'a[aria-label="Return to Organization in Tapstate Cloud"]',
+    )
+    expect(link?.href).toContain('/?organizationId=org')
+  })
+
   it.each(['local', 'cloud'] as const)(
     'hides Explorations and preserves the primary navigation order for the %s profile',
     async (profile) => {
@@ -93,6 +101,7 @@ describe('AppSidebar', () => {
         ),
       ).toEqual(['/overview', '/sources', '/pipelines', '/views'])
       expect(container.querySelector('a[href="/explorations"]')).toBeNull()
+      expect(container.querySelector('a[href="/settings"]')).toBeNull()
     },
   )
 })
