@@ -339,7 +339,7 @@ function PipelineTableRow({
   artifact?: PipelineView
   lagSeconds?: number
   apiFetch: ApiFetcher
-  startPipeline: (pipelineId: string) => Promise<PipelineStartOutcome>
+  startPipeline: PipelineStarter
   onMutationError: (pipelineId: string, action: PipelineLifecycleAction, error?: unknown) => void
   onMutationStart: () => void
 }) {
