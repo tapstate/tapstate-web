@@ -607,7 +607,7 @@ export function AuthPage({
           )}
 
           {mode === 'register' && (
-            <label className="flex items-start gap-2 cursor-pointer text-[11px] text-neutral-500 dark:text-neutral-400">
+            <label className="flex cursor-pointer items-start gap-2 text-[11px] text-neutral-500 dark:text-neutral-400">
               <input
                 type="checkbox"
                 checked={agreedLegal}

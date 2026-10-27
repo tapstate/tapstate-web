@@ -23,7 +23,6 @@ import type { Cluster, Organization } from '../service/cloud-api'
 import type { UserProfile } from '../types'
 
 import { AppFooter } from '../components/layout/app-footer'
-
 import {
   cancelPendingClusterEntries,
   useClusterEntry,
@@ -317,9 +316,7 @@ export function CloudConsoleShell({
       </aside>
 
       <main className="main-surface relative flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="flex-1 overflow-auto">
-          {children}
-        </div>
+        <div className="flex-1 overflow-auto">{children}</div>
         <AppFooter />
       </main>
       <TawkFeedbackWidget />

@@ -14,7 +14,9 @@ export function AppFooter() {
   return (
     <footer className="flex items-center justify-between gap-4 border-t border-black/[0.06] px-6 py-3 text-[11px] text-neutral-500 dark:border-white/[0.08] dark:text-neutral-400">
       <div className="flex items-center gap-4">
-        <span>© {year} {t('footer.company')}</span>
+        <span>
+          © {year} {t('footer.company')}
+        </span>
         <span className="hidden sm:inline">{t('footer.address')}</span>
       </div>
 
