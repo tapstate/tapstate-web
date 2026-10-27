@@ -77,6 +77,15 @@ async function submitForm() {
   })
 }
 
+async function checkLegalCheckbox() {
+  const checkbox = host?.querySelector<HTMLInputElement>('input[type="checkbox"]')
+  if (checkbox) {
+    await act(async () => {
+      checkbox.click()
+    })
+  }
+}
+
 beforeEach(async () => {
   await i18n.changeLanguage('en')
 })
@@ -153,6 +162,7 @@ describe('Cloud invitation authentication', () => {
     await clickButton('Email me a verification code')
     await act(async () => changeInput('#auth-code', '123456'))
     await act(async () => changeInput('#auth-password', 'correct-horse-battery'))
+    await checkLegalCheckbox()
     await submitForm()
 
     expect(props.onRequestCode).toHaveBeenCalledWith('member@example.com', 'invite-token')
@@ -163,6 +173,7 @@ describe('Cloud invitation authentication', () => {
       password: 'correct-horse-battery',
       displayName: 'Member',
       organizationName: '',
+      agreedLegalVersion: expect.any(String),
     })
     expect(props.onAuthenticated).toHaveBeenCalledWith(user)
   })
@@ -189,6 +200,7 @@ describe('Cloud invitation authentication', () => {
     await clickButton('Email me a verification code')
     await act(async () => changeInput('#auth-code', '123456'))
     await act(async () => changeInput('#auth-password', 'correct-horse-battery'))
+    await checkLegalCheckbox()
     await submitForm()
 
     expect(props.onRequestCode).toHaveBeenCalledWith('member@example.com', null)
@@ -198,6 +210,7 @@ describe('Cloud invitation authentication', () => {
       password: 'correct-horse-battery',
       displayName: 'Member',
       organizationName: 'Member Workspace',
+      agreedLegalVersion: expect.any(String),
     })
     expect(props.onAuthenticated).toHaveBeenCalledWith(user)
   })
