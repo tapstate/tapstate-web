@@ -1225,9 +1225,13 @@ describe('WizardBuilder publish flow', () => {
     )
   })
 
-  it.each(['COMPLETE', 'UNAVAILABLE'])(
-    'returns the wizard start button to idle after closing a refused %s start',
-    async (evaluation) => {
+  it.each([
+    ['COMPLETE', 'Close', 'dock'],
+    ['UNAVAILABLE', 'Escape', 'workbench'],
+  ])(
+    'returns the wizard start button to idle after closing a refused %s start with %s',
+    async (evaluation, dismissal, entry) => {
+      wizardRendering.real = entry === 'workbench'
       runPipeline.mockRejectedValueOnce(
         startRefusal({
           ...answerable,
@@ -1248,20 +1252,30 @@ describe('WizardBuilder publish flow', () => {
       })
       const start = () =>
         [
-          ...(container?.querySelectorAll<HTMLButtonElement>('[data-workflow-header] button') ??
-            []),
+          ...(container?.querySelectorAll<HTMLButtonElement>(
+            entry === 'workbench'
+              ? '[data-testid="wizard-workbench-header"] button'
+              : '[data-workflow-header] button',
+          ) ?? []),
         ].find((button) => button.textContent?.trim() === 'Save & start')
       await vi.waitFor(() => expect(start()?.disabled).toBe(false))
       await act(async () => start()?.click())
       await vi.waitFor(() => expect(startChecksDialog()).not.toBeNull())
       vi.spyOn(queryClient, 'invalidateQueries').mockImplementation(() => new Promise(() => {}))
       expect(dialogButton('Close')).toBeDefined()
-      await act(async () => dialogButton('Close')?.click())
+      await act(async () => {
+        if (dismissal === 'Close') dialogButton('Close')?.click()
+        else
+          startChecksDialog()?.dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+          )
+      })
       await vi.waitFor(() => expect(startChecksDialog()).toBeNull())
       await vi.waitFor(() => {
         expect(start()?.disabled).toBe(false)
         expect(start()?.getAttribute('aria-busy')).not.toBe('true')
       })
+      await vi.waitFor(() => expect(document.activeElement).toBe(start()))
       expect(runPipeline).toHaveBeenCalledOnce()
     },
   )

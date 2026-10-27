@@ -1022,6 +1022,7 @@ function PipelineOrchestrationPage({
   useEffect(() => {
     if (!autosave.hasPendingChanges) setIsDirty(false)
   }, [autosave.hasPendingChanges])
+  const runButtonRef = useRef<HTMLButtonElement>(null)
   const starter = useStartPipeline({
     apiFetch,
     // An answer that rewrote the definition also moved the stored draft; editing on without
@@ -1030,7 +1031,7 @@ function PipelineOrchestrationPage({
       queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId] }),
   })
   const run = useMutation({
-    mutationFn: () => starter.startPipeline(pipelineId),
+    mutationFn: () => starter.startPipeline(pipelineId, runButtonRef),
   })
   const wizardDocument =
     pipelineDraft.data?.mode === 'wizard' && pipelineDraft.data.draft && pipelineDraft.data.etag
@@ -1449,7 +1450,7 @@ function PipelineOrchestrationPage({
   }
 
   async function handleRun() {
-    if (isReadOnly) return
+    if (isReadOnly || run.isPending) return
     try {
       const saved = isDirty ? await handleSave() : await autosave.saveLatest()
       if (isDirty && !saved) return
@@ -1594,7 +1595,8 @@ function PipelineOrchestrationPage({
               selectedNodeId: selection?.id,
               isSaving: autosave.isSaving,
               isReadOnly,
-              isRunning: run.isPending && !starter.dialog.open,
+              isRunning: run.isPending && starter.dialog.session === null,
+              runButtonRef,
               stopAction,
               onSave: () => void handleSave(),
               onRun: () => void handleRun(),
