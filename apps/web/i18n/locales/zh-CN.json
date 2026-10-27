@@ -117,7 +117,10 @@
     },
     "session": {
       "expired": "会话已过期，请重新登录。",
-      "logoutFailed": "Cloud 退出未完成，请重试。"
+      "logoutFailed": "Cloud 退出未完成，请重试。",
+      "unavailable": "暂时无法验证会话，请检查连接后重试。",
+      "browserUnsupported": "当前浏览器无法安全地同步多标签页登录，请使用最新版本的浏览器。",
+      "serverUpgradeRequired": "当前服务端尚不支持浏览器会话，请升级服务端后重试。"
     }
   },
   "state": {

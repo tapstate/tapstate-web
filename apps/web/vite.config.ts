@@ -77,8 +77,13 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/auth': {
           target: proxyTarget,
-          changeOrigin: true,
-          configure: (proxy) => rewriteLocalOrigin(proxy, proxyOrigin),
+          changeOrigin: build.profile === 'cloud',
+          ...(build.profile === 'cloud'
+            ? {
+                configure: (proxy: Parameters<NonNullable<ProxyOptions['configure']>>[0]) =>
+                  rewriteLocalOrigin(proxy, proxyOrigin),
+              }
+            : {}),
         },
         '/api': {
           target: proxyTarget,
