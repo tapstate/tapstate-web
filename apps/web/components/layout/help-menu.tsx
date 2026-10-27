@@ -50,7 +50,7 @@ export function HelpMenu() {
       >
         <DropdownMenuGroup className="p-1">
           <DropdownMenuLinkItem
-            href="https://tapstate.dev/docs"
+            href="https://tapstate.dev/"
             target="_blank"
             rel="noopener noreferrer"
             className="mx-0 h-8 gap-1 px-3 py-1"

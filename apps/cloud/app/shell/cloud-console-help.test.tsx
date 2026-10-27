@@ -56,7 +56,7 @@ it('provides documentation and opens support from the Cloud sidebar', async () =
     const help = host.querySelector<HTMLButtonElement>('aside button[aria-label="Help"]')!
     expect(help).not.toBeNull()
     await act(async () => help.click())
-    expect(document.querySelector('a[href="https://tapstate.dev/docs"]')).not.toBeNull()
+    expect(document.querySelector('a[href="https://tapstate.dev/"]')).not.toBeNull()
     const support = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((item) =>
       item.textContent?.includes('Contact support'),
     )!

@@ -50,7 +50,7 @@ it('opens documentation or support from the sidebar Help menu', async () => {
   const help = host.querySelector<HTMLButtonElement>('button[aria-label="Help"]')
   expect(help).not.toBeNull()
   await act(async () => help?.click())
-  expect(document.querySelector('a[href="https://tapstate.dev/docs"]')).not.toBeNull()
+  expect(document.querySelector('a[href="https://tapstate.dev/"]')).not.toBeNull()
   const support = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((item) =>
     item.textContent?.includes('Contact support'),
   )
