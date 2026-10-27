@@ -1,13 +1,15 @@
 import type { ReactNode } from 'react'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { I18nextProvider } from 'react-i18next'
 
 import { i18n } from '@/i18n'
+import { useAuthStore } from '@/stores/auth-store'
 
 export function Providers({ children }: { children: ReactNode }) {
-  const [queryClient] = useState(
+  const session = useAuthStore((state) => state.sessionRevision)
+  const queryClient = useMemo(
     () =>
       new QueryClient({
         defaultOptions: {
@@ -17,6 +19,14 @@ export function Providers({ children }: { children: ReactNode }) {
           },
         },
       }),
+    [session],
+  )
+  useEffect(
+    () => () => {
+      void queryClient.cancelQueries()
+      queryClient.clear()
+    },
+    [queryClient],
   )
 
   return (

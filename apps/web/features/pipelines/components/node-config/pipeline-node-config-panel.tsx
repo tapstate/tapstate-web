@@ -24,7 +24,11 @@ import type { PipelineCanvasSelection } from '../canvas/pipeline-canvas-types'
 import type { PipelineSourceTableKind } from '../node-library/pipeline-node-library-types'
 import type { PipelineTransformConfigurationPatch } from '../transform/types'
 
-import { sourceTableSelections } from '../../model/pipeline-node-model'
+import {
+  PIPELINE_ON_FULL_LOAD_POLICIES,
+  isPipelineOnFullLoad,
+  sourceTableSelections,
+} from '../../model/pipeline-node-model'
 import { PipelineNodeIcon } from '../canvas/pipeline-node-icon'
 import { TransformEditor } from '../transform/transform-editor'
 import {
@@ -110,6 +114,7 @@ function localizedDataSchema(
           sourceId: t('pipelines.workspace.config.targetSource'),
           table: t('pipelines.workspace.config.targetTable'),
           writeMode: t('pipelines.workspace.config.writeMode'),
+          onFullLoad: t('pipelines.workspace.config.onFullLoad'),
         }
   const schema = createPipelineDataNodeSchema(kind, {
     labels,
@@ -129,7 +134,19 @@ function localizedDataSchema(
               { label: t('pipelines.workspace.transform.append'), value: 'append' },
             ],
           }
-        : property,
+        : name === 'onFullLoad'
+          ? {
+              ...property,
+              'x-component-props': {
+                ...(property['x-component-props'] as Record<string, unknown> | undefined),
+                placeholder: t('pipelines.workspace.config.onFullLoadPlaceholder'),
+              },
+              enum: PIPELINE_ON_FULL_LOAD_POLICIES.map((policy) => ({
+                label: t(`pipelines.workspace.config.onFullLoadOptions.${policy}`),
+                value: policy,
+              })),
+            }
+          : property,
     ]),
   )
   const localizedProperties =
@@ -672,7 +689,57 @@ function dataNodeValues(
         }
       : {}),
     writeMode: configuration.kind === 'target' ? configuration.writeMode : undefined,
+    onFullLoad: configuration.onFullLoad,
   }
+}
+
+function writeModeLabel(value: string | undefined, t: (key: string) => string) {
+  if (value === undefined) return t('pipelines.workspace.config.writeModeDefault')
+  if (value === 'upsert' || value === 'append') return t(`pipelines.workspace.transform.${value}`)
+  return value
+}
+
+function onFullLoadLabel(value: string | undefined, t: (key: string) => string) {
+  if (value === undefined) return t('pipelines.workspace.config.onFullLoadPlaceholder')
+  return isPipelineOnFullLoad(value)
+    ? t(`pipelines.workspace.config.onFullLoadOptions.${value}`)
+    : value
+}
+
+/** A view's write settings, shown as the Pipeline declares them; views are not edited here. */
+function ViewWriteSettings({
+  configuration,
+}: {
+  configuration: Extract<PipelineNodeConfiguration, { kind: 'view' }>
+}) {
+  const { t } = useTranslation()
+  const settings = [
+    {
+      name: 'writeMode',
+      label: t('pipelines.workspace.config.writeMode'),
+      value: writeModeLabel(configuration.writeMode, t),
+    },
+    {
+      name: 'onFullLoad',
+      label: t('pipelines.workspace.config.onFullLoad'),
+      value: onFullLoadLabel(configuration.onFullLoad, t),
+    },
+  ]
+  return (
+    <dl className="grid gap-3 px-4 pt-4" data-pipeline-view-write-settings>
+      {settings.map((setting) => (
+        <div key={setting.name} className="grid gap-1">
+          <dt className="text-xs font-medium text-[var(--pipeline-text-muted)]">{setting.label}</dt>
+          <dd
+            className="text-[13px] text-[var(--pipeline-text)]"
+            data-pipeline-view-setting={setting.name}
+          >
+            {setting.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  )
 }
 
 function DataNodeForm({
@@ -871,9 +938,12 @@ export function PipelineNodeConfigPanel({
             />
           ) : null}
           {configuration?.kind === 'view' ? (
-            <div className="pipeline-node-config__empty">
-              {t('pipelines.workspace.config.viewReadOnly')}
-            </div>
+            <>
+              <ViewWriteSettings configuration={configuration} />
+              <div className="pipeline-node-config__empty">
+                {t('pipelines.workspace.config.viewReadOnly')}
+              </div>
+            </>
           ) : null}
           {!configuration ? (
             <div className="pipeline-node-config__empty">

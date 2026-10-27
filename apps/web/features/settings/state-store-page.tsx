@@ -3,18 +3,48 @@ import { HardDrive } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
-import { listSources } from '@/service/source-client'
-import { stateStoreSource } from '@/service/state-store-source'
+import { ConfigurationTransfer } from '@/features/storage/configuration-transfer'
+import { useStorage } from '@/features/storage/storage-context'
+import { StorageRecovery } from '@/features/storage/storage-recovery'
+import { StorageError, StorageHealthPanel } from '@/features/storage/storage-ui'
+import { useStorageAction } from '@/features/storage/use-storage-action'
+import { getSource, listSources, testConnection } from '@/service/source-client'
+import { stateStoreDatabase, stateStoreSource } from '@/service/state-store-source'
+import { StorageClientError } from '@/service/storage-client'
 import { useAuthStore } from '@/stores/auth-store'
 import { getDeploymentProfile } from '@/utils/deployment-profile'
 
-/** Settings, State stores: one deployment-managed destination, never a data source. */
+/** Settings show the system-owned default Source used for application data. */
 export function StateStorePage() {
   const { t } = useTranslation()
+  const { snapshot, refresh } = useStorage()
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const sourcesQuery = useQuery({ queryKey: ['sources'], queryFn: () => listSources(apiFetch) })
   const profile = getDeploymentProfile()
   const managed = stateStoreSource(sourcesQuery.data ?? [], profile)
+  const database = managed ? stateStoreDatabase(managed) : null
+  const verification = useStorageAction()
+  const canVerify = Boolean(managed && snapshot?.allowedActions.includes('connection.test'))
+  function refreshStatus() {
+    void verification.run(
+      async (isCurrent) => {
+        try {
+          if (canVerify && managed) {
+            const { source } = await getSource(managed.id, apiFetch)
+            if (!isCurrent()) return
+            if (!stateStoreSource([source], profile)) throw new StorageClientError('stale', 409)
+            await testConnection(
+              { id: source.id, connectorId: source.connector, settings: source.config },
+              apiFetch,
+            )
+          }
+        } finally {
+          if (isCurrent()) await refresh()
+        }
+      },
+      () => {},
+    )
+  }
 
   return (
     <section className="settings-page">
@@ -31,33 +61,29 @@ export function StateStorePage() {
           >
             {t('stateStorePage.sections.stateStore')}
           </span>
-          {/* Listed so the page reads as the approved design does; not in this release. */}
-          <span
-            className="settings-sections__item settings-sections__item--disabled"
-            aria-disabled="true"
-          >
-            {t('stateStorePage.sections.members')}
-          </span>
-          <span
-            className="settings-sections__item settings-sections__item--disabled"
-            aria-disabled="true"
-          >
-            {t('stateStorePage.sections.apiKeys')}
-          </span>
         </nav>
         <div className="settings-page__body">
+          {snapshot && (
+            <StorageHealthPanel
+              snapshot={snapshot}
+              checkingApplicationData={verification.busy && canVerify}
+              unverifiedApplicationData={Boolean(verification.error)}
+            />
+          )}
+          <div>
+            <Button variant="outline" disabled={verification.busy} onClick={refreshStatus}>
+              {t(
+                verification.busy && canVerify
+                  ? 'storage.verification.CHECKING'
+                  : 'storage.refresh',
+              )}
+            </Button>
+          </div>
+          {Boolean(verification.error) && <StorageError error={verification.error} />}
           <div className="settings-page__section-header">
             <h2 className="text-foreground text-[15px] font-semibold">
               {t('stateStorePage.title')}
             </h2>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-[12px]">
-                {t('stateStorePage.addLimit')}
-              </span>
-              <Button type="button" variant="outline" size="sm" disabled>
-                {t('stateStorePage.add')}
-              </Button>
-            </div>
           </div>
           <p className="text-muted-foreground text-[13px]">{t('stateStorePage.intro')}</p>
           {sourcesQuery.isLoading ? (
@@ -101,22 +127,12 @@ export function StateStorePage() {
                       )}
                     </dd>
                   </div>
-                  <div>
-                    <dt>{t('stateStorePage.fields.location')}</dt>
-                    <dd>
-                      {typeof managed.config.database === 'string'
-                        ? managed.config.database
-                        : t('overview.notReported')}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>{t('stateStorePage.fields.checks')}</dt>
-                    <dd>{t('overview.notReported')}</dd>
-                  </div>
-                  <div>
-                    <dt>{t('stateStorePage.fields.usage')}</dt>
-                    <dd>{t('overview.notReported')}</dd>
-                  </div>
+                  {database !== null && (
+                    <div>
+                      <dt>{t('stateStorePage.fields.location')}</dt>
+                      <dd>{database}</dd>
+                    </div>
+                  )}
                   <div>
                     <dt>{t('stateStorePage.fields.access')}</dt>
                     <dd>
@@ -128,23 +144,13 @@ export function StateStorePage() {
                     </dd>
                   </div>
                 </dl>
-                <div className="settings-store__actions">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled
-                    title={t('stateStorePage.managed.deleteReason')}
-                  >
-                    {t('stateStorePage.delete')}
-                  </Button>
-                  <span className="text-muted-foreground text-[12px]">
-                    {t('stateStorePage.managed.deleteReason')}
-                  </span>
-                </div>
               </li>
             </ul>
           )}
+          {snapshot?.allowedActions.includes('configuration.import.status') && (
+            <ConfigurationTransfer defaultSourceId={managed?.id} />
+          )}
+          {snapshot?.allowedActions.includes('storage.recovery.plan') && <StorageRecovery />}
         </div>
       </div>
     </section>

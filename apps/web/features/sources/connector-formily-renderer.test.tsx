@@ -3,14 +3,18 @@ import type { ISchema } from '@formily/json-schema'
 
 import { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { ConnectorConfigField } from '@/service/source-client'
 
 import { formilyAntdPrefixCls, formilyAntdTheme } from '@/components/formily/formily-antd-provider'
 
 import { ConnectorFormily } from './connector-formily'
-import { connectorSpecConnectionSchema } from './connector-spec-formily-schema'
+import {
+  connectorSpecConfigFields,
+  connectorSpecConnectionSchema,
+} from './connector-spec-formily-schema'
+import { createInitialConfig } from './source-form'
 
 class ResizeObserverMock {
   observe() {}
@@ -107,6 +111,7 @@ afterEach(async () => {
   container?.remove()
   root = undefined
   container = undefined
+  vi.restoreAllMocks()
 })
 
 function fieldControl(label: string) {
@@ -252,6 +257,348 @@ describe('ConnectorFormily', () => {
 
     expect(fieldControl('Spec host')).toBeInstanceOf(HTMLInputElement)
     expect(container.textContent).not.toContain('Host')
+  })
+
+  it('renders tag-gated TLS and SSH fields and reads certificate files as base64', async () => {
+    const specText = JSON.stringify({
+      properties: { tags: ['ssl', 'ssh'] },
+      configOptions: {
+        connection: { type: 'object', properties: { host: { type: 'string' } } },
+      },
+    })
+    const fields = connectorSpecConfigFields(specText, [], 'en')
+    const changes: Array<Record<string, unknown>> = []
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+
+    await act(async () => {
+      root?.render(
+        <ConnectorFormily
+          fields={fields}
+          schema={connectorSpecConnectionSchema(specText, 'en')}
+          initialValues={createInitialConfig(fields)}
+          resetKey="tagged-tls-ssh"
+          onValuesChange={(values) => changes.push(values)}
+        />,
+      )
+    })
+
+    expect(container.textContent).toContain('TLS settings')
+    expect(container.textContent).toContain('SSH tunnel')
+    expect(container.querySelector('[aria-label="SSH host"]')).not.toBeNull()
+
+    const tlsToggle = fieldControl('Use TLS')
+    expect(tlsToggle?.getAttribute('aria-checked')).toBe('false')
+    const tlsFieldSelectors = [
+      'input[type="file"][aria-label="CA certificate"]',
+      'input[type="file"][aria-label="Client certificate"]',
+      'input[type="file"][aria-label="Client key"]',
+      'input[aria-label="Client key password"]',
+    ]
+    expect(tlsFieldSelectors.map((selector) => container!.querySelector(selector))).toEqual([
+      null,
+      null,
+      null,
+      null,
+    ])
+
+    await act(async () => {
+      tlsToggle?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(
+      tlsFieldSelectors.map((selector) => container!.querySelector(selector) !== null),
+    ).toEqual([true, true, true, true])
+    const input = container.querySelector<HTMLInputElement>(
+      'input[type="file"][aria-label="CA certificate"]',
+    )
+    expect(input).not.toBeNull()
+    const file = new File(['cert'], 'ca.pem', { type: 'application/x-pem-file' })
+    Object.defineProperty(input, 'files', { configurable: true, value: [file] })
+    await act(async () => {
+      input?.dispatchEvent(new Event('change', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 30))
+    })
+
+    expect(changes.at(-1)).toMatchObject({
+      sslCa: 'Y2VydA==',
+      sslCAFile: 'ca.pem',
+    })
+
+    await act(async () => {
+      tlsToggle?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    expect(tlsFieldSelectors.map((selector) => container!.querySelector(selector))).toEqual([
+      null,
+      null,
+      null,
+      null,
+    ])
+  })
+
+  it('emits the companion filename when replacing a configured private key', async () => {
+    const specText = JSON.stringify({
+      properties: { tags: ['ssl'] },
+      configOptions: { connection: { type: 'object', properties: {} } },
+    })
+    const fields = connectorSpecConfigFields(specText, [], 'en')
+    const changes: Array<Record<string, unknown>> = []
+    const secretChanges: Array<{ name: string; action: string; value: string }> = []
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+
+    await act(async () => {
+      root?.render(
+        <ConnectorFormily
+          fields={fields}
+          schema={connectorSpecConnectionSchema(specText, 'en')}
+          initialValues={{ ...createInitialConfig(fields), sslKeyFile: 'old-client.key' }}
+          resetKey="configured-key-filename"
+          configuredSecrets={['sslKey']}
+          secretDrafts={{ sslKey: { action: 'replace', value: '' } }}
+          onValuesChange={(values) => changes.push(values)}
+          onSecretChange={(name, draft) => secretChanges.push({ name, ...draft })}
+        />,
+      )
+    })
+
+    await act(async () => {
+      fieldControl('Use TLS')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    const input = container.querySelector<HTMLInputElement>(
+      'input[type="file"][aria-label="Client key"]',
+    )
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [new File(['private-key'], 'new-client.key')],
+    })
+    await act(async () => {
+      input?.dispatchEvent(new Event('change', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 30))
+    })
+
+    expect(secretChanges).toEqual([
+      { name: 'sslKey', action: 'replace', value: 'cHJpdmF0ZS1rZXk=' },
+    ])
+    expect(changes.at(-1)).toMatchObject({ sslKeyFile: 'new-client.key' })
+  })
+
+  it('does not let a pending key upload override a later clear action', async () => {
+    const pendingReaders: FileReader[] = []
+    vi.spyOn(FileReader.prototype, 'readAsDataURL').mockImplementation(function (this: FileReader) {
+      pendingReaders.push(this)
+    })
+    const specText = JSON.stringify({
+      properties: { tags: ['ssl'] },
+      configOptions: { connection: { type: 'object', properties: {} } },
+    })
+    const fields = connectorSpecConfigFields(specText, [], 'en')
+    const secretChanges: Array<{ name: string; action: string; value: string }> = []
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+
+    await act(async () => {
+      root?.render(
+        <ConnectorFormily
+          fields={fields}
+          schema={connectorSpecConnectionSchema(specText, 'en')}
+          resetKey="configured-key-pending-read"
+          initialValues={createInitialConfig(fields)}
+          configuredSecrets={['sslKey']}
+          secretDrafts={{ sslKey: { action: 'replace', value: '' } }}
+          onSecretChange={(name, draft) => secretChanges.push({ name, ...draft })}
+        />,
+      )
+    })
+
+    await act(async () => {
+      fieldControl('Use TLS')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    const input = container.querySelector<HTMLInputElement>(
+      'input[type="file"][aria-label="Client key"]',
+    )
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [new File(['private-key'], 'client.key')],
+    })
+    await act(async () => {
+      input?.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    expect(pendingReaders).toHaveLength(1)
+
+    await act(async () => {
+      const clearButton = [
+        ...(container?.querySelectorAll<HTMLButtonElement>('button') ?? []),
+      ].find((button) => button.textContent?.includes('Clear secret'))
+      clearButton?.click()
+    })
+    expect(secretChanges).toEqual([{ name: 'sslKey', action: 'clear', value: '' }])
+
+    await act(async () => {
+      const reader = pendingReaders[0]
+      if (reader) {
+        Object.defineProperty(reader, 'result', {
+          configurable: true,
+          value: 'data:application/octet-stream;base64,cHJpdmF0ZS1rZXk=',
+        })
+        reader.dispatchEvent(new ProgressEvent('load'))
+      }
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(secretChanges).toEqual([{ name: 'sslKey', action: 'clear', value: '' }])
+  })
+
+  it('reads text files as text and rejects files over the declared size limit', async () => {
+    const fileFields: ConnectorConfigField[] = [
+      {
+        name: 'notes',
+        type: 'string',
+        label: 'Notes file',
+        required: false,
+        defaultValue: null,
+        secret: false,
+        options: [],
+        visibleWhen: null,
+      },
+      {
+        name: 'notesFile',
+        type: 'string',
+        label: 'Notes file name',
+        required: false,
+        defaultValue: null,
+        secret: false,
+        options: [],
+        visibleWhen: null,
+      },
+    ]
+    const changes: Array<Record<string, unknown>> = []
+    const schema = {
+      type: 'object',
+      properties: {
+        notes: {
+          type: 'string',
+          title: 'Notes file',
+          'x-decorator': 'FormItem',
+          'x-component': 'TextFileReader',
+          'x-component-props': { accept: 'text/*', maxFileSize: 1 },
+          fileNameField: 'notesFile',
+        },
+      },
+    } as ISchema
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+
+    await act(async () => {
+      root?.render(
+        <ConnectorFormily
+          fields={fileFields}
+          schema={schema}
+          resetKey="text-file-reader"
+          initialValues={{ notes: '', notesFile: '' }}
+          onValuesChange={(values) => changes.push(values)}
+        />,
+      )
+    })
+
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')
+    expect(input?.accept).toBe('text/*')
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [new File(['x'.repeat(1025)], 'too-big.txt')],
+    })
+    await act(async () => {
+      input?.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    expect(container.textContent).toContain('Choose a file smaller than 1 KB.')
+
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [new File(['hello'], 'notes.txt', { type: 'text/plain' })],
+    })
+    await act(async () => {
+      input?.dispatchEvent(new Event('change', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 30))
+    })
+
+    expect(changes.at(-1)).toMatchObject({ notes: 'hello', notesFile: 'notes.txt' })
+  })
+
+  it('keeps the previous file value when FileReader reports a read failure', async () => {
+    vi.spyOn(FileReader.prototype, 'readAsText').mockImplementation(function (this: FileReader) {
+      queueMicrotask(() => this.dispatchEvent(new ProgressEvent('error')))
+    })
+    const fileFields: ConnectorConfigField[] = [
+      {
+        name: 'notes',
+        type: 'string',
+        label: 'Notes file',
+        required: false,
+        defaultValue: null,
+        secret: false,
+        options: [],
+        visibleWhen: null,
+      },
+      {
+        name: 'notesFile',
+        type: 'string',
+        label: 'Notes file name',
+        required: false,
+        defaultValue: null,
+        secret: false,
+        options: [],
+        visibleWhen: null,
+      },
+    ]
+    const changes: Array<Record<string, unknown>> = []
+    container = document.createElement('div')
+    document.body.append(container)
+    root = createRoot(container)
+
+    await act(async () => {
+      root?.render(
+        <ConnectorFormily
+          fields={fileFields}
+          schema={
+            {
+              type: 'object',
+              properties: {
+                notes: {
+                  type: 'string',
+                  title: 'Notes file',
+                  'x-decorator': 'FormItem',
+                  'x-component': 'TextFileReader',
+                  fileNameField: 'notesFile',
+                },
+              },
+            } as ISchema
+          }
+          resetKey="text-file-reader-error"
+          initialValues={{ notes: 'saved contents', notesFile: 'saved.txt' }}
+          onValuesChange={(values) => changes.push(values)}
+        />,
+      )
+    })
+
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [new File(['replacement'], 'replacement.txt', { type: 'text/plain' })],
+    })
+    await act(async () => {
+      input?.dispatchEvent(new Event('change', { bubbles: true }))
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(container.textContent).toContain('The file could not be read. Try another file.')
+    expect(container.textContent).toContain('File ready')
+    expect(changes).toEqual([])
   })
 
   it('uses the AntD Password renderer for unconfigured catalog secrets in raw specs', async () => {

@@ -6,7 +6,6 @@ import {
   getPipelineDraft,
   previewPipelineDraft,
   publishPipelineDraft,
-  runPipeline,
   streamPipelinePreview,
   updatePipelineDraft,
   PipelineClientError,
@@ -53,6 +52,9 @@ import {
 import { getDeploymentProfile } from '../model/deployment-profile'
 import { targetSources } from '../model/pipeline-target-connectors'
 import { sourceScopedTableNames } from '../model/source-table-scope'
+import { PipelineStartNotices } from '../start-checks/pipeline-start-notice'
+import { StartChecksDialog } from '../start-checks/start-checks-dialog'
+import { useStartPipeline } from '../start-checks/use-start-pipeline'
 import { PipelineWorkflowHeader } from '../workflow-app/components/pipeline-workflow-header'
 
 export function WizardBuilder({
@@ -181,6 +183,7 @@ export function WizardBuilder({
   >('idle')
   const [livePreviewError, setLivePreviewError] = useState('')
   const editorReadOnly = readOnly || (busy && action === 'start')
+  const recoveryRequired = lifecycleStatus === 'RECOVERY_REQUIRED'
   const currentDraft = useRef(draft)
   const currentEtag = useRef(etag)
   const pending = useRef<Promise<void> | null>(null)
@@ -375,6 +378,21 @@ export function WizardBuilder({
     },
     [persist],
   )
+  /**
+   * An answer that rewrote the definition also moved the stored draft. Take the server's draft as
+   * the saved state, so the next save neither conflicts nor writes the old setting back.
+   */
+  const reloadDraft = useCallback(async () => {
+    const reloaded = await getPipelineDraft(pipelineId, apiFetch)
+    currentDraft.current = reloaded.draft
+    currentEtag.current = reloaded.etag
+    savedFingerprint.current = JSON.stringify(reloaded.draft.wizard)
+    setWizard(reloaded.draft.wizard)
+    queryClient.setQueryData(['pipelines', pipelineId, 'draft'], { mode: 'wizard', ...reloaded })
+    queryClient.setQueryData(['pipelines', pipelineId, 'draft-status'], reloaded)
+    await queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId], exact: true })
+  }, [apiFetch, pipelineId, queryClient])
+  const starter = useStartPipeline({ apiFetch, onDefinitionChanged: reloadDraft })
   useEffect(() => {
     if (readOnly) {
       onRegisterBasicInfoSaver?.(null)
@@ -416,7 +434,7 @@ export function WizardBuilder({
     [destination?.id, deploymentProfile, editorReadOnly, guidedPreset],
   )
   async function savePipeline(start: boolean) {
-    if (busy || readOnly) return
+    if (busy || readOnly || (start && recoveryRequired)) return
     setBusy(true)
     setAction(start ? 'start' : 'save')
     setStartPhase(start ? 'saving' : null)
@@ -446,7 +464,7 @@ export function WizardBuilder({
         setStartPhase('starting')
         let alreadyRunning = false
         try {
-          await runPipeline(pipelineId, apiFetch)
+          await starter.startPipeline(pipelineId)
         } catch (cause) {
           // Do not auto-stop an active run: that can interrupt ingestion and requires a
           // separate state-retention decision. Explain that publish succeeded but restart did not.
@@ -643,6 +661,7 @@ export function WizardBuilder({
               onApplyPreset={applyCustomer360Preset}
               onAddFormula={addCustomerLifetimeValue}
               onSaveDraft={() => void savePipeline(false)}
+              launchDisabled={recoveryRequired || readOnly || busy}
               onLaunch={() => void savePipeline(true)}
             />
           )}
@@ -655,7 +674,7 @@ export function WizardBuilder({
             key={builderRevision}
             showWorkbenchHeader={!guidedPreset}
             onInspectPlan={inspectDsl}
-            onStart={() => void savePipeline(true)}
+            onStart={recoveryRequired ? undefined : () => void savePipeline(true)}
             startBusy={busy}
             actionError={error}
             catalog={catalog}
@@ -766,6 +785,11 @@ export function WizardBuilder({
             livePreview={livePreview}
             livePreviewStatus={livePreviewStatus}
             livePreviewError={livePreviewError}
+            notices={
+              starter.notices.length > 0 ? (
+                <PipelineStartNotices notices={starter.notices} onDismiss={starter.dismissNotice} />
+              ) : undefined
+            }
             footer={
               <div className="mt-5 flex flex-wrap items-center justify-end gap-3 text-[11px]">
                 {error && (
@@ -787,6 +811,7 @@ export function WizardBuilder({
               </div>
             }
           />
+          <StartChecksDialog {...starter.dialog} />
         </div>
       </section>
     </div>

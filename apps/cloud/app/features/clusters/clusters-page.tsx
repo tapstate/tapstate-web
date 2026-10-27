@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { cloudApi, type Cluster } from '../../service/cloud-api'
 import { useCloudAppState } from '../../state/cloud-app-state'
+import { canEnterCluster } from './cluster-entry-state'
 import { useClusterEntry } from './use-cluster-entry'
 
 function statusLabel(status: string) {
@@ -192,7 +193,7 @@ export function ClustersPage() {
                   <button
                     className="text-left enabled:cursor-pointer enabled:hover:underline disabled:cursor-default"
                     disabled={
-                      cluster.state !== 'READY' || enteringId !== null || !activeOrganization
+                      !canEnterCluster(cluster.state) || enteringId !== null || !activeOrganization
                     }
                     onClick={() => {
                       if (activeOrganization) void enterCluster(cluster, activeOrganization.id)

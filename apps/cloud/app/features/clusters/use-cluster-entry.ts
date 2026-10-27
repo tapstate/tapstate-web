@@ -5,6 +5,7 @@ import type { Cluster } from '../../service/cloud-api'
 
 import { CloudApiError, cloudApi } from '../../service/cloud-api'
 import { isAllowedCloudClusterHostname } from './cluster-entry-host'
+import { canEnterCluster } from './cluster-entry-state'
 
 const activeEntryCancellations = new Set<() => void>()
 
@@ -31,7 +32,7 @@ export function useClusterEntry() {
   }, [cancelCurrentEntry])
 
   const enterCluster = async (cluster: Cluster, orgId: string) => {
-    if (enteringId || cluster.state !== 'READY') return
+    if (enteringId || !canEnterCluster(cluster.state)) return
     const currentRequestId = ++requestId.current
     setEnteringId(cluster.id)
     setEntryError(null)
@@ -39,8 +40,8 @@ export function useClusterEntry() {
     try {
       const latestCluster = await cloudApi.cluster(orgId, cluster.id)
       if (currentRequestId !== requestId.current) return
-      if (latestCluster.state !== 'READY') {
-        throw new CloudApiError('This Cluster is no longer ready to open.', 409)
+      if (!canEnterCluster(latestCluster.state)) {
+        throw new CloudApiError('This Cluster is no longer available to open.', 409)
       }
 
       const { baseUri, exchangeCode, success } = await cloudApi.resolveCluster(cluster.id, orgId)

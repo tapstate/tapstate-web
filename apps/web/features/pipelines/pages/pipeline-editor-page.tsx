@@ -49,7 +49,6 @@ import {
   listPipelines,
   previewPipelineDraft,
   publishPipelineDraft,
-  runPipeline,
   updatePipelineDraft,
   type PipelineLayout,
   PipelineClientError,
@@ -106,6 +105,9 @@ import { pipelineNodeConnectors } from '../model/pipeline-node-connectors'
 import { sourceTableSelections } from '../model/pipeline-node-model'
 import { targetSources } from '../model/pipeline-target-connectors'
 import { PipelineMonitoringPage } from '../monitoring/pipeline-monitoring-page'
+import { PipelineStartNotices } from '../start-checks/pipeline-start-notice'
+import { StartChecksDialog } from '../start-checks/start-checks-dialog'
+import { useStartPipeline } from '../start-checks/use-start-pipeline'
 import { PipelineWorkflowWithInnerContext } from '../workflow-app'
 import { PipelineWorkflow } from '../workflow-app/components/pipeline-workflow'
 import { WizardBuilder } from './wizard-builder'
@@ -878,8 +880,15 @@ function PipelineOrchestrationPage({
   useEffect(() => {
     if (!autosave.hasPendingChanges) setIsDirty(false)
   }, [autosave.hasPendingChanges])
+  const starter = useStartPipeline({
+    apiFetch,
+    // An answer that rewrote the definition also moved the stored draft; editing on without
+    // reloading it would conflict on the next save or write the old setting back.
+    onDefinitionChanged: () =>
+      queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId] }),
+  })
   const run = useMutation({
-    mutationFn: () => runPipeline(pipelineId, apiFetch),
+    mutationFn: () => starter.startPipeline(pipelineId),
   })
   const wizardDocument =
     pipelineDraft.data?.mode === 'wizard' && pipelineDraft.data.draft && pipelineDraft.data.etag
@@ -888,20 +897,25 @@ function PipelineOrchestrationPage({
   const isWizard = wizardDocument !== null
   const wizardReadOnly =
     isReadOnly || (isWizard && (runtimeObservationPending || runtimeObservationError))
-  const stopAction = isReadOnly ? (
-    <PipelineLifecycleMenu
-      pipelineId={pipelineId}
-      status={runtimeStatus}
-      apiFetch={apiFetch}
-      contentHash="published"
-      presentation="stop-button"
-      onMutationError={(_action, cause) =>
-        pushActionError(
-          cause instanceof Error ? cause.message : t('pipelines.lifecycle.stopFailed'),
-        )
-      }
-    />
-  ) : undefined
+  const stopAction =
+    lifecycleStatus === 'RECOVERY_REQUIRED' ? (
+      <Button asChild variant="outline">
+        <Link to="/settings">{t('storage.recovery.reviewRequired')}</Link>
+      </Button>
+    ) : isReadOnly ? (
+      <PipelineLifecycleMenu
+        pipelineId={pipelineId}
+        status={runtimeStatus}
+        apiFetch={apiFetch}
+        contentHash="published"
+        presentation="stop-button"
+        onMutationError={(_action, cause) =>
+          pushActionError(
+            cause instanceof Error ? cause.message : t('pipelines.lifecycle.stopFailed'),
+          )
+        }
+      />
+    ) : undefined
   const saveBasicInfo = useCallback(
     async (basicInfo: PipelineDraftBasicInfo) => {
       if (isReadOnly) throw new Error(t('pipelines.workspace.readOnly.editorStatus'))
@@ -1179,7 +1193,7 @@ function PipelineOrchestrationPage({
   }
 
   async function handleRun() {
-    if (isReadOnly) return
+    if (isReadOnly || lifecycleStatus === 'RECOVERY_REQUIRED') return
     try {
       const saved = isDirty ? await handleSave() : await autosave.saveLatest()
       if (isDirty && !saved) return
@@ -1332,10 +1346,17 @@ function PipelineOrchestrationPage({
         ) : null}
       </section>
 
+      <StartChecksDialog {...starter.dialog} />
       {(diagnostics.length > 0 ||
         actionErrors.length > 0 ||
+        starter.notices.length > 0 ||
         (!isWizard && (runtimeObservationPending || runtimeObservationError))) && (
         <div className="pipeline-canvas__alerts" aria-live="assertive">
+          <PipelineStartNotices
+            notices={starter.notices}
+            onDismiss={starter.dismissNotice}
+            placement="floating"
+          />
           {!isWizard && runtimeObservationPending && (
             <div className="pipeline-workflow-feedback" role="status">
               <LoaderCircle className="size-4 shrink-0 animate-spin" aria-hidden="true" />

@@ -26,10 +26,11 @@ import { cn } from '@/lib/utils'
 import {
   deletePipelineDraft,
   getPipelineDraft,
-  runPipeline,
   stopPipeline,
   type PipelineCatalogState,
 } from '@/service/pipelines/pipeline-client'
+
+import type { PipelineStartOutcome } from '../start-checks/use-start-pipeline'
 
 export type PipelineLifecycleAction = 'start' | 'stop'
 
@@ -50,6 +51,7 @@ export function PipelineLifecycleMenu({
   apiFetch,
   contentHash,
   presentation = 'list',
+  startPipeline,
   onMutationError,
   onMutationStart,
 }: {
@@ -58,6 +60,8 @@ export function PipelineLifecycleMenu({
   apiFetch: ApiFetcher
   contentHash: string | null
   presentation?: 'list' | 'stop-button'
+  /** The host's shared start flow; without it the menu offers no start. */
+  startPipeline?: (pipelineId: string) => Promise<PipelineStartOutcome>
   onMutationError?: (action: PipelineLifecycleAction, error?: unknown) => void
   onMutationStart?: () => void
 }) {
@@ -65,12 +69,14 @@ export function PipelineLifecycleMenu({
   const queryClient = useQueryClient()
   const [pendingAction, setPendingAction] = useState<PipelineLifecycleAction | null>(null)
   const [stopDialogOpen, setStopDialogOpen] = useState(false)
+  const [clearOnly, setClearOnly] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deletePending, setDeletePending] = useState(false)
   const [deleteError, setDeleteError] = useState(false)
   const isDraft = contentHash === null
   const action = !isDraft && status ? lifecycleActionByState[status] : undefined
-  const resolvedAction = action
+  const resolvedAction = action === 'start' && !startPipeline ? undefined : action
+  const canClearState = !isDraft && (status === 'STOPPED' || status === 'COMPLETED')
 
   const pending = pendingAction !== null || deletePending
 
@@ -85,7 +91,8 @@ export function PipelineLifecycleMenu({
 
     try {
       if (nextAction === 'start') {
-        await runPipeline(pipelineId, apiFetch)
+        // Start checks may stop the start to ask; the shared flow resolves once it is answered.
+        await startPipeline?.(pipelineId)
       } else {
         await stopPipeline(pipelineId, purgeState, apiFetch)
       }
@@ -142,9 +149,10 @@ export function PipelineLifecycleMenu({
   const editHref = `/pipelines/${encodeURIComponent(pipelineId)}/edit`
   const ActionIcon = resolvedAction === 'start' ? Play : Square
 
-  function requestAction(nextAction: PipelineLifecycleAction) {
+  function requestAction(nextAction: PipelineLifecycleAction, onlyClear = false) {
     if (nextAction === 'stop') {
       onMutationStart?.()
+      setClearOnly(onlyClear)
       setStopDialogOpen(true)
       return
     }
@@ -186,6 +194,16 @@ export function PipelineLifecycleMenu({
               >
                 <ActionIcon aria-hidden="true" />
                 {actionLabel}
+              </DropdownMenuItem>
+            ) : null}
+            {canClearState ? (
+              <DropdownMenuItem
+                disabled={pending}
+                variant="destructive"
+                onClick={() => requestAction('stop', true)}
+              >
+                <Square aria-hidden="true" />
+                {t('pipelines.lifecycle.clearState')}
               </DropdownMenuItem>
             ) : null}
             <DropdownMenuItem onClick={() => window.location.assign(editHref)}>
@@ -289,9 +307,22 @@ export function PipelineLifecycleMenu({
         >
           <DialogHeader>
             <DialogTitle className="[overflow-wrap:anywhere] break-words">
-              {t('pipelines.lifecycle.confirmStopTitle', { id: pipelineId })}
+              {t(
+                clearOnly
+                  ? 'pipelines.lifecycle.confirmClearTitle'
+                  : 'pipelines.lifecycle.confirmStopTitle',
+                {
+                  id: pipelineId,
+                },
+              )}
             </DialogTitle>
-            <DialogDescription>{t('pipelines.lifecycle.confirmStopBody')}</DialogDescription>
+            <DialogDescription>
+              {t(
+                clearOnly
+                  ? 'pipelines.lifecycle.confirmClearBody'
+                  : 'pipelines.lifecycle.confirmStopBody',
+              )}
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col sm:flex-col [&>button]:w-full [&>button]:min-w-0 [&>button]:whitespace-normal">
             <Button
@@ -303,16 +334,18 @@ export function PipelineLifecycleMenu({
             >
               {t('pipelines.lifecycle.cancel')}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={pending}
-              className="px-3 text-[13px]"
-              onClick={() => void execute('stop', false)}
-            >
-              {pendingAction === 'stop' && <LoaderCircle className="animate-spin" />}
-              {t('pipelines.lifecycle.confirmStopKeepState')}
-            </Button>
+            {!clearOnly && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pending}
+                className="px-3 text-[13px]"
+                onClick={() => void execute('stop', false)}
+              >
+                {pendingAction === 'stop' && <LoaderCircle className="animate-spin" />}
+                {t('pipelines.lifecycle.confirmStopKeepState')}
+              </Button>
+            )}
             <Button
               type="button"
               variant="destructive"
@@ -321,7 +354,11 @@ export function PipelineLifecycleMenu({
               onClick={() => void execute('stop', true)}
             >
               {pendingAction === 'stop' && <LoaderCircle className="animate-spin" />}
-              {t('pipelines.lifecycle.confirmStopClearState')}
+              {t(
+                clearOnly
+                  ? 'pipelines.lifecycle.clearState'
+                  : 'pipelines.lifecycle.confirmStopClearState',
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

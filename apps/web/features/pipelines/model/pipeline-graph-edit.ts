@@ -16,6 +16,7 @@ import type {
 
 import { normalizePipelineDag } from '../components/canvas/pipeline-graph'
 import {
+  isPipelineOnFullLoad,
   pipelineNodeConfigurations,
   sourceTableSelections,
   type PipelineSourceTableSelection,
@@ -560,6 +561,10 @@ function mergeConfiguration(
         tableMappings?.[0]?.targetTable ?? stringValue(change.values.table, configuration.table),
       ...(Array.isArray(change.values.tableMappings) ? { tableMappings } : {}),
       writeMode: stringValue(change.values.writeMode, configuration.writeMode),
+      // Only a policy the person picked is written; a target that never chose one keeps saying nothing.
+      ...(isPipelineOnFullLoad(change.values.onFullLoad)
+        ? { onFullLoad: change.values.onFullLoad }
+        : {}),
     }
   }
   if (configuration.kind === 'transform') {
@@ -850,6 +855,8 @@ export function buildPipelineMutation(draft: PipelineGraphDraft): PipelineMutati
           draft.configurations,
         ),
         ...viewConfig.body,
+        ...(viewConfig.writeMode ? { writeMode: viewConfig.writeMode } : {}),
+        ...(viewConfig.onFullLoad ? { onFullLoad: viewConfig.onFullLoad } : {}),
       }
     : (draft.pipeline.view ?? null)
   const existingSync = Array.isArray(draft.pipeline.serve?.sync) ? draft.pipeline.serve.sync : []
@@ -892,6 +899,7 @@ export function buildPipelineMutation(draft: PipelineGraphDraft): PipelineMutati
         id: existingId,
         source: config.sourceId,
         writeMode: config.writeMode,
+        ...(config.onFullLoad ? { onFullLoad: config.onFullLoad } : {}),
         ...(rename === undefined ? { rename: undefined } : { rename }),
       }
     })

@@ -20,10 +20,12 @@ import { useState } from 'react'
 import type { Cluster, Organization } from '../service/cloud-api'
 import type { UserProfile } from '../types'
 
+import { canEnterCluster } from '../features/clusters/cluster-entry-state'
 import {
   cancelPendingClusterEntries,
   useClusterEntry,
 } from '../features/clusters/use-cluster-entry'
+import { TawkFeedbackWidget } from '../features/feedback/tawk-feedback-widget'
 import { CloudApiError, cloudApi } from '../service/cloud-api'
 import { useCloudAppState } from '../state/cloud-app-state'
 
@@ -198,7 +200,7 @@ export function CloudConsoleShell({
               disabled={enteringId !== null}
               key={cluster.id}
               onClick={() => {
-                if (cluster.state === 'READY' && currentOrganization) {
+                if (canEnterCluster(cluster.state) && currentOrganization) {
                   void enterCluster(cluster, currentOrganization.id)
                 } else {
                   void navigate({
@@ -297,6 +299,7 @@ export function CloudConsoleShell({
       <main className="main-surface relative flex min-w-0 flex-1 flex-col overflow-hidden">
         {children}
       </main>
+      <TawkFeedbackWidget />
     </div>
   )
 }

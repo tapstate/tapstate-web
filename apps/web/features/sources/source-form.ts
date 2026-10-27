@@ -7,6 +7,27 @@ export interface SourceConfigResult {
   errors: Record<string, 'required' | 'number' | 'array'>
 }
 
+export type FormConnectorConfigField = ConnectorConfigField & { clearable?: boolean }
+
+function getPath(value: unknown, path: string) {
+  return path.split('.').reduce<unknown>((current, segment) => {
+    if (typeof current !== 'object' || current === null || Array.isArray(current)) return undefined
+    return (current as Record<string, unknown>)[segment]
+  }, value)
+}
+
+function setPath(target: Record<string, JsonValue>, path: string, value: JsonValue) {
+  const segments = path.split('.')
+  let current = target
+  for (const segment of segments.slice(0, -1)) {
+    const child = current[segment]
+    if (typeof child !== 'object' || child === null || Array.isArray(child)) current[segment] = {}
+    current = current[segment] as Record<string, JsonValue>
+  }
+  const last = segments.at(-1)
+  if (last) current[last] = value
+}
+
 function parseBoolean(value: string) {
   return value.trim().toLowerCase() === 'true'
 }
@@ -37,14 +58,29 @@ function defaultValue(field: ConnectorConfigField): JsonValue | undefined {
   }
 }
 
-export function createInitialConfig(fields: readonly ConnectorConfigField[]): SourceConfigState {
-  return Object.fromEntries(fields.map((field) => [field.name, defaultValue(field)]))
+export function createInitialConfig(
+  fields: readonly FormConnectorConfigField[],
+): SourceConfigState {
+  const config: Record<string, JsonValue | undefined> = {}
+  for (const field of fields) {
+    const value = defaultValue(field)
+    const segments = field.name.split('.')
+    let current = config as Record<string, unknown>
+    for (const segment of segments.slice(0, -1)) {
+      const child = current[segment]
+      if (typeof child !== 'object' || child === null || Array.isArray(child)) current[segment] = {}
+      current = current[segment] as Record<string, unknown>
+    }
+    const last = segments.at(-1)
+    if (last) current[last] = value
+  }
+  return config
 }
 
 export function isFieldVisible(field: ConnectorConfigField, config: SourceConfigState) {
   if (field.visibleWhen === null) return true
 
-  const value = config[field.visibleWhen.controllingField]
+  const value = getPath(config, field.visibleWhen.controllingField)
   return field.visibleWhen.equalsAnyOf.includes(String(value ?? ''))
 }
 
@@ -53,7 +89,7 @@ function isEmpty(value: JsonValue | undefined) {
 }
 
 export function buildSourceConfig(
-  fields: readonly ConnectorConfigField[],
+  fields: readonly FormConnectorConfigField[],
   state: SourceConfigState,
   retainedRequiredFields: readonly string[] = [],
 ): SourceConfigResult {
@@ -64,8 +100,9 @@ export function buildSourceConfig(
   for (const field of fields) {
     if (!isFieldVisible(field, state)) continue
 
-    const value = state[field.name]
+    const value = getPath(state, field.name) as JsonValue | undefined
     if (isEmpty(value)) {
+      if (field.clearable && value === null && !field.secret) setPath(config, field.name, null)
       if (field.required && !retainedRequiredFieldNames.has(field.name))
         errors[field.name] = 'required'
       continue
@@ -77,13 +114,13 @@ export function buildSourceConfig(
         errors[field.name] = 'number'
         continue
       }
-      config[field.name] = numberValue
+      setPath(config, field.name, numberValue)
       continue
     }
 
     if (field.type === 'array') {
       if (Array.isArray(value)) {
-        config[field.name] = value
+        setPath(config, field.name, value)
         continue
       }
       const parsed = typeof value === 'string' ? parseArray(value) : value
@@ -91,16 +128,16 @@ export function buildSourceConfig(
         errors[field.name] = 'array'
         continue
       }
-      config[field.name] = parsed
+      setPath(config, field.name, parsed)
       continue
     }
 
     if (field.type === 'boolean') {
-      config[field.name] = typeof value === 'boolean' ? value : parseBoolean(String(value))
+      setPath(config, field.name, typeof value === 'boolean' ? value : parseBoolean(String(value)))
       continue
     }
 
-    config[field.name] = String(value)
+    setPath(config, field.name, String(value))
   }
 
   return { config, errors }

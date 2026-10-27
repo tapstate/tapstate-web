@@ -79,7 +79,7 @@ import { OverviewPage, type SourceFormSlot } from './overview-page'
 function source(id: string, connector = 'postgres'): SourceView {
   return {
     id,
-    metadata: null,
+    metadata: id === 'views' ? { labels: { store: 'true' } } : null,
     connector,
     config: {},
     configuredSecrets: [],
@@ -456,6 +456,33 @@ describe('OverviewPage', () => {
     )
     expect(row?.querySelector('a')?.getAttribute('href')).toBe('/views/$viewId')
     expect(container.textContent).toContain('1 view')
+  })
+
+  it('does not claim an existing replica has never applied a change when its application time is missing', async () => {
+    listSources.mockResolvedValue([source('views', 'mongodb'), source('orders')])
+    listPipelines.mockResolvedValue([pipeline('b_sync', 'RUNNING')])
+    listViews.mockResolvedValue({
+      available: true,
+      views: [
+        {
+          id: 'views/loans',
+          kind: 'replica',
+          location: { storeId: 'views', database: null, collection: 'loans' },
+          pipelineId: 'b_sync',
+          status: { state: 'stale', staleSeconds: 0 },
+          documents: 3,
+          sizeBytes: 108,
+          lastAppliedAt: null,
+        },
+      ],
+    })
+    await render()
+    await settle()
+    const row = container.querySelector('.overview-attention__item')
+    expect(row?.textContent).toContain(
+      'Last applied time is not reported; its pipeline b_sync is running',
+    )
+    expect(row?.textContent).not.toContain('no change applied yet')
   })
 
   it('offers the sample sources when the deployment has them, and tags them once added', async () => {
