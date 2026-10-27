@@ -28,11 +28,13 @@ export function useClusterEntry() {
     activeEntryCancellations.add(cancelCurrentEntry)
     return () => {
       activeEntryCancellations.delete(cancelCurrentEntry)
+      cancelCurrentEntry()
     }
   }, [cancelCurrentEntry])
 
   const enterCluster = async (cluster: Cluster, orgId: string) => {
     if (enteringId || !canEnterCluster(cluster.state)) return
+    for (const cancel of activeEntryCancellations) if (cancel !== cancelCurrentEntry) cancel()
     const currentRequestId = ++requestId.current
     setEnteringId(cluster.id)
     setEntryError(null)
@@ -69,7 +71,10 @@ export function useClusterEntry() {
     } catch (error) {
       if (currentRequestId !== requestId.current) return
       if (error instanceof CloudApiError && error.status === 401) {
-        await navigate({ to: '/auth' })
+        await navigate({
+          to: '/auth',
+          search: { organizationId: orgId, enterClusterId: cluster.id },
+        })
         return
       }
       setEntryError(
@@ -79,5 +84,5 @@ export function useClusterEntry() {
     }
   }
 
-  return { enterCluster, enteringId, entryError }
+  return { enterCluster, enteringId, entryError, cancelEntry: cancelCurrentEntry }
 }

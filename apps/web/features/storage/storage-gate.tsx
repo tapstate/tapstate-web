@@ -12,7 +12,13 @@ import {
 import { useAuthStore } from '@/stores/auth-store'
 import { replaceWithCloudConsole } from '@/utils/cloud-console'
 
+import {
+  CloudSetupContinuationProvider,
+  cloudSetupContinuationUrl,
+  useCloudSetupContinuation,
+} from './cloud-setup-continuation'
 import { ConfigurationTransfer } from './configuration-transfer'
+import { InitializationMilestones } from './initialization-milestones'
 import { StorageProvider, useStorage } from './storage-context'
 import { StorageRecovery } from './storage-recovery'
 import { StorageSetupForm } from './storage-setup-form'
@@ -28,9 +34,11 @@ import { useStorageAction } from './use-storage-action'
 export function StorageBoundary({ children }: { children: ReactNode }) {
   const session = useAuthStore((state) => state.sessionRevision)
   return (
-    <StorageProvider key={session}>
-      <StorageGate>{children}</StorageGate>
-    </StorageProvider>
+    <CloudSetupContinuationProvider>
+      <StorageProvider key={session}>
+        <StorageGate>{children}</StorageGate>
+      </StorageProvider>
+    </CloudSetupContinuationProvider>
   )
 }
 
@@ -40,6 +48,7 @@ export function StorageGate({ children }: { children: ReactNode }) {
   const {
     entry,
     snapshot,
+    lastKnownSnapshot,
     loading,
     error,
     refresh,
@@ -53,6 +62,48 @@ export function StorageGate({ children }: { children: ReactNode }) {
   const authenticated = useAuthStore((state) => state.isAuthenticated)
   const cloudProfile = useAuthStore((state) => state.profile === 'cloud')
   const setupSubmission = useStorageAction('setup')
+  const continuation = useCloudSetupContinuation()
+  const [continuing, setContinuing] = useState(false)
+  useEffect(() => {
+    if (!authenticated || !snapshot) return
+    if (
+      snapshot.mode === 'CLOUD' &&
+      snapshot.businessPhase !== 'READY' &&
+      snapshot.initializationProgress?.state === 'RUNNING'
+    ) {
+      void continuation.prepare(snapshot).catch(() => {})
+    } else if (
+      !setupSubmission.busy &&
+      (snapshot.businessPhase === 'READY' ||
+        snapshot.initializationProgress?.state === 'FAILED' ||
+        (continuation.intent && continuation.intent.scope !== setupOperationScope(snapshot)))
+    ) {
+      continuation.discard()
+    }
+  }, [
+    authenticated,
+    snapshot,
+    setupSubmission.busy,
+    continuation.prepare,
+    continuation.discard,
+    continuation.intent,
+  ])
+  useEffect(() => {
+    const intent = continuation.intent
+    if (
+      !authenticated &&
+      intent &&
+      session === intent.session + 1 &&
+      !error &&
+      entry?.mode === 'CLOUD' &&
+      !entry.management &&
+      ['LOGIN', 'SETUP_REQUIRED'].includes(entry.entry)
+    ) {
+      setContinuing(true)
+      continuation.discard()
+      replaceWithCloudConsole(cloudSetupContinuationUrl(intent))
+    }
+  }, [authenticated, session, entry, error, continuation.intent, continuation.discard])
   const [submittedChecks, setSubmittedChecks] = useState<{
     scope: string
     checkedAt: Record<StorageLayer, string>
@@ -72,6 +123,23 @@ export function StorageGate({ children }: { children: ReactNode }) {
     setSetupPending(setupSubmission.busy)
     return () => setSetupPending(false)
   }, [setSetupPending, setupSubmission.busy])
+  if (continuing)
+    return (
+      <StorageFrame>
+        <h1 role="status">
+          <StorageIndicator tone="working">
+            {t('storage.initialization.connecting')}
+          </StorageIndicator>
+        </h1>
+        <Button
+          variant="outline"
+          className="min-h-11 sm:min-h-8"
+          onClick={() => replaceWithCloudConsole()}
+        >
+          {t('storage.initialization.backToCloud')}
+        </Button>
+      </StorageFrame>
+    )
   if (loading)
     return (
       <StorageFrame>
@@ -84,6 +152,13 @@ export function StorageGate({ children }: { children: ReactNode }) {
     return (
       <StorageFrame>
         <StorageError error={error} />
+        {authenticated &&
+          lastKnownSnapshot?.mode === 'CLOUD' &&
+          lastKnownSnapshot.initializationProgress?.state === 'RUNNING' &&
+          (error instanceof TypeError ||
+            (error instanceof StorageClientError && error.status >= 500)) && (
+            <InitializationMilestones progress={lastKnownSnapshot.initializationProgress} stale />
+          )}
         {autoRefreshing && (
           <p role="status" className="text-muted-foreground text-sm">
             {t('storage.autoRetry')}
@@ -120,11 +195,18 @@ export function StorageGate({ children }: { children: ReactNode }) {
     )
   if (snapshot) {
     if (snapshot.businessPhase === 'READY' && !entry.management) return children
-    const showSetup = setupSubmission.busy
-      ? ['NOT_CONFIGURED', 'PREPARING', 'AUTH_READY', 'RECOVERING'].includes(snapshot.businessPhase)
-      : snapshot.setupPhase !== 'COMPLETE' &&
-        snapshot.allowedActions.includes('storage.setup.commit') &&
-        !snapshot.allowedActions.includes('storage.recovery.plan')
+    const progress = snapshot.mode === 'CLOUD' ? snapshot.initializationProgress : undefined
+    const showMilestones = progress && ['RUNNING', 'FAILED'].includes(progress.state)
+    const showSetup =
+      progress?.state === 'RUNNING'
+        ? false
+        : setupSubmission.busy
+          ? ['NOT_CONFIGURED', 'PREPARING', 'AUTH_READY', 'RECOVERING'].includes(
+              snapshot.businessPhase,
+            )
+          : snapshot.setupPhase !== 'COMPLETE' &&
+            snapshot.allowedActions.includes('storage.setup.commit') &&
+            !snapshot.allowedActions.includes('storage.recovery.plan')
     return (
       <StorageFrame>
         <div
@@ -136,20 +218,31 @@ export function StorageGate({ children }: { children: ReactNode }) {
           className="space-y-6"
         >
           <h1 className="text-xl font-semibold">{t('storage.title')}</h1>
+          {showMilestones && <InitializationMilestones progress={progress} />}
           <StorageHealthPanel
             snapshot={snapshot}
+            showPhaseSummary={!showMilestones}
             autoRefreshing={autoRefreshing && !setupSubmission.busy}
             setupChecks={
-              submittedChecks?.scope === setupScope &&
-              ['NOT_CONFIGURED', 'PREPARING', 'AUTH_READY'].includes(snapshot.businessPhase) &&
-              (setupSubmission.busy || snapshot.businessPhase !== 'NOT_CONFIGURED')
-                ? submittedChecks.checkedAt
-                : undefined
+              progress
+                ? progress.state === 'RUNNING'
+                  ? Object.fromEntries(
+                      progress.connectionChecks.map((check) => [check.layer, check.checkedAt]),
+                    )
+                  : undefined
+                : submittedChecks?.scope === setupScope &&
+                    ['NOT_CONFIGURED', 'PREPARING', 'AUTH_READY'].includes(
+                      snapshot.businessPhase,
+                    ) &&
+                    (setupSubmission.busy || snapshot.businessPhase !== 'NOT_CONFIGURED')
+                  ? submittedChecks.checkedAt
+                  : undefined
             }
           />
           {showSetup && (
             <StorageSetupForm
               submission={setupSubmission}
+              beforeSubmit={() => continuation.prepare(snapshot)}
               onSubmitted={(checkedAt) => setSubmittedChecks({ scope: setupScope, checkedAt })}
               onTestsInvalidated={() => setSubmittedChecks(undefined)}
             />

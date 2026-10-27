@@ -18,6 +18,13 @@
     "status": "当前没有有效会话",
     "signInAction": "登录"
   },
+  "clusterEntry": {
+    "title": "正在进入你的 Cluster",
+    "continuing": "正在通过原 Cloud 登录接续…",
+    "unavailable": "当前无法进入这个 Cluster，请返回控制台查看状态。",
+    "retry": "重试",
+    "back": "返回控制台"
+  },
   "auth": {
     "headerNote": "Cloud 集群访问",
     "eyebrow": "TAPSTATE CLOUD",

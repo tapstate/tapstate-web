@@ -1,5 +1,27 @@
 export type StorageLayer = 'CONFIG' | 'CACHE' | 'MASTER'
 export type StorageHealth = 'UNKNOWN' | 'AVAILABLE' | 'UNAVAILABLE' | 'AUTH_READY'
+export const INITIALIZATION_STAGES = [
+  'SAVE_SETTINGS',
+  'PREPARE_STORAGE',
+  'START_RUNTIME',
+  'PUBLISH_READY',
+] as const
+export interface InitializationProgress {
+  operationId: string
+  generation: number
+  attemptId: string
+  state: 'RUNNING' | 'COMPLETE' | 'FAILED'
+  observedAt: string
+  elapsedMillis: number
+  restored: boolean
+  milestones: {
+    id: (typeof INITIALIZATION_STAGES)[number]
+    state: 'PENDING' | 'RUNNING' | 'COMPLETE' | 'FAILED'
+    elapsedMillis: number | null
+    errorCode: string | null
+  }[]
+  connectionChecks: { layer: StorageLayer; checkedAt: string }[]
+}
 export interface ApplicationDataVerification {
   status: 'UNKNOWN' | 'CHECKING' | 'PASSED' | 'FAILED' | 'EXPIRED'
   checkedAt: string | null
@@ -30,6 +52,7 @@ export interface StorageSnapshot {
   allowedActions: string[]
   restartRequired: boolean
   applicationDataVerification?: ApplicationDataVerification
+  initializationProgress?: InitializationProgress
 }
 export interface StorageConnection {
   kind: 'MONGODB' | 'ATLAS'
@@ -197,6 +220,60 @@ export function validateSnapshot(value: StorageSnapshot): StorageSnapshot {
     )
       throw new StorageClientError('protocol', 200)
   }
+  const progress = value.initializationProgress
+  if (progress !== undefined) {
+    const duration = (n: unknown) => Number.isSafeInteger(n) && (n as number) >= 0
+    if (
+      !progress ||
+      progress.operationId !== value.operationId ||
+      progress.generation !== value.setupGeneration ||
+      typeof progress.attemptId !== 'string' ||
+      !progress.attemptId ||
+      progress.attemptId.length > 128 ||
+      !['RUNNING', 'COMPLETE', 'FAILED'].includes(progress.state) ||
+      typeof progress.observedAt !== 'string' ||
+      !Number.isFinite(Date.parse(progress.observedAt)) ||
+      !duration(progress.elapsedMillis) ||
+      typeof progress.restored !== 'boolean' ||
+      !Array.isArray(progress.milestones) ||
+      progress.milestones.length !== INITIALIZATION_STAGES.length ||
+      progress.milestones.some(
+        (step, index) =>
+          !step ||
+          step.id !== INITIALIZATION_STAGES[index] ||
+          !['PENDING', 'RUNNING', 'COMPLETE', 'FAILED'].includes(step.state) ||
+          (step.elapsedMillis !== null && !duration(step.elapsedMillis)) ||
+          (step.state === 'RUNNING' && step.elapsedMillis === null) ||
+          (step.state === 'PENDING' && step.elapsedMillis !== null) ||
+          (step.errorCode !== null &&
+            (typeof step.errorCode !== 'string' || !/^[a-z]+\.[a-z-]+$/.test(step.errorCode))),
+      ) ||
+      !Array.isArray(progress.connectionChecks) ||
+      progress.connectionChecks.length > 3 ||
+      new Set(progress.connectionChecks.map((check) => check?.layer)).size !==
+        progress.connectionChecks.length ||
+      progress.connectionChecks.some(
+        (check) =>
+          !check ||
+          !['CONFIG', 'CACHE', 'MASTER'].includes(check.layer) ||
+          typeof check.checkedAt !== 'string' ||
+          !Number.isFinite(Date.parse(check.checkedAt)),
+      )
+    )
+      throw new StorageClientError('protocol', 200)
+    const running = progress.milestones.filter((step) => step.state === 'RUNNING').length
+    const failed = progress.milestones.filter((step) => step.state === 'FAILED').length
+    const completed = progress.milestones.filter((step) => step.state === 'COMPLETE').length
+    if (
+      running > 1 ||
+      failed > 1 ||
+      progress.milestones.slice(completed).some((step) => step.state === 'COMPLETE') ||
+      (progress.state === 'COMPLETE' && completed !== progress.milestones.length) ||
+      (progress.state === 'FAILED' && (failed !== 1 || running !== 0)) ||
+      (progress.state === 'RUNNING' && (failed !== 0 || completed === progress.milestones.length))
+    )
+      throw new StorageClientError('protocol', 200)
+  }
   return value
 }
 
@@ -230,6 +307,18 @@ export function acceptSnapshot(
 ): StorageSnapshot {
   validateSnapshot(value)
   if (!previous) return value
+  const oldProgress = previous.initializationProgress
+  const nextProgress = value.initializationProgress
+  if (
+    oldProgress &&
+    nextProgress &&
+    oldProgress.attemptId === nextProgress.attemptId &&
+    (nextProgress.elapsedMillis < oldProgress.elapsedMillis ||
+      nextProgress.milestones.filter((step) => step.state === 'COMPLETE').length <
+        oldProgress.milestones.filter((step) => step.state === 'COMPLETE').length ||
+      (oldProgress.state === 'COMPLETE' && nextProgress.state !== 'COMPLETE'))
+  )
+    throw new StorageClientError('stale', 409)
   if (
     previous.clusterId !== value.clusterId ||
     previous.mode !== value.mode ||

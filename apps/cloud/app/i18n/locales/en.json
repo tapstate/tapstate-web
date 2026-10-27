@@ -18,6 +18,13 @@
     "status": "No active session",
     "signInAction": "Sign in"
   },
+  "clusterEntry": {
+    "title": "Opening your Cluster",
+    "continuing": "Continuing through Cloud sign-in…",
+    "unavailable": "This Cluster is not available to open. Return to the console to check its status.",
+    "retry": "Try again",
+    "back": "Back to console"
+  },
   "auth": {
     "headerNote": "Cloud cluster access",
     "eyebrow": "TAPSTATE CLOUD",

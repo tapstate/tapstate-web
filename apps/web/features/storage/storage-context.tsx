@@ -25,6 +25,7 @@ export interface StorageEntry {
 interface StorageState {
   entry?: StorageEntry
   snapshot?: StorageSnapshot
+  lastKnownSnapshot?: StorageSnapshot
   loading: boolean
   error: unknown
   refresh: (configurationChanged?: boolean) => Promise<void>
@@ -87,6 +88,8 @@ export function StorageProvider({ children }: { children: ReactNode }) {
         : auth.isAuthenticated
       : Boolean(authorization.secret) || auth.isAuthenticated
     if (!authorized) return false
+    const latest = snapshot ?? previous.current
+    if (latest?.initializationProgress?.state === 'FAILED') return false
     if (
       entry &&
       (['RESTART_REQUIRED', 'FIRST_ADMIN_REQUIRED', 'UNAVAILABLE'].includes(entry.entry) ||
@@ -94,12 +97,15 @@ export function StorageProvider({ children }: { children: ReactNode }) {
     )
       return false
     if (failure && !temporaryFailure) return false
-    const phase = (snapshot ?? previous.current)?.businessPhase
+    const phase = latest?.businessPhase
     const transitioning = ['PREPARING', 'RECOVERING', 'AUTH_READY'].includes(phase ?? '')
+    const pendingInitialSave =
+      phase === 'NOT_CONFIGURED' &&
+      (setupPending || latest?.initializationProgress?.state === 'RUNNING')
     // A known intervention or terminal phase wins over an outstanding write or failed read.
-    if (phase && !transitioning && !(setupPending && phase === 'NOT_CONFIGURED')) return false
+    if (phase && !transitioning && !pendingInitialSave) return false
     if (temporaryFailure) return 10000
-    if (!setupPending && !transitioning) return false
+    if (!setupPending && !transitioning && !pendingInitialSave) return false
     return 3000
   }
   const query = useQuery<{ entry: StorageEntry; snapshot?: StorageSnapshot; failure?: unknown }>({
@@ -183,6 +189,7 @@ export function StorageProvider({ children }: { children: ReactNode }) {
       value={{
         entry: query.data?.entry,
         snapshot: query.data?.snapshot,
+        lastKnownSnapshot: previous.current,
         loading: query.isPending,
         error: query.error ?? query.data?.failure,
         fetcher,

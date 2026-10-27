@@ -12,6 +12,11 @@ import { ConfigurationTransfer } from './configuration-transfer'
 import { StorageBoundary } from './storage-gate'
 
 const route = vi.hoisted(() => ({ pathname: '/overview' }))
+const cloudNavigation = vi.hoisted(() => ({ redirect: vi.fn() }))
+vi.mock('@/utils/cloud-console', () => ({
+  cloudConsoleUrl: 'https://dev.cloud.tapstate.com/',
+  replaceWithCloudConsole: cloudNavigation.redirect,
+}))
 vi.mock('@tanstack/react-router', () => ({
   useRouterState: ({
     select,
@@ -72,6 +77,7 @@ async function input(element: HTMLInputElement, value: string) {
   })
 }
 beforeEach(() => {
+  cloudNavigation.redirect.mockClear()
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
@@ -118,6 +124,15 @@ describe('whole-site storage boundary', () => {
       },
     }
     fetcher.mockImplementation(async (url, init) => {
+      if (String(url) === '/api/cluster/context')
+        return Response.json({
+          organizationId: 'org',
+          clusterId: 'cluster',
+          organizationName: 'Organization',
+          clusterName: 'Cluster',
+          region: 'region',
+          clusterState: 'DEGRADED',
+        })
       if (String(url) === '/auth/storage-entry')
         return Response.json({ mode: 'CLOUD', management: false, entry: setup.entry })
       if (String(url) === '/api/storage/status')
@@ -153,6 +168,168 @@ describe('whole-site storage boundary', () => {
     await click('Save storage settings')
     return setup
   }
+
+  function initializing(overrides: Partial<StorageSnapshot> = {}): StorageSnapshot {
+    return state({
+      mode: 'CLOUD',
+      setupPhase: 'STORAGE_BOUND',
+      businessPhase: 'PREPARING',
+      health: { CONFIG: 'AVAILABLE', CACHE: 'UNKNOWN', MASTER: 'UNKNOWN' },
+      allowedActions: ['storage.status', 'storage.setup.commit'],
+      initializationProgress: {
+        operationId: 'setup',
+        generation: 1,
+        attemptId: 'attempt-one',
+        state: 'RUNNING',
+        observedAt: new Date().toISOString(),
+        elapsedMillis: 6000,
+        restored: false,
+        milestones: [
+          { id: 'SAVE_SETTINGS', state: 'COMPLETE', elapsedMillis: 2000, errorCode: null },
+          { id: 'PREPARE_STORAGE', state: 'RUNNING', elapsedMillis: 4000, errorCode: null },
+          { id: 'START_RUNTIME', state: 'PENDING', elapsedMillis: null, errorCode: null },
+          { id: 'PUBLISH_READY', state: 'PENDING', elapsedMillis: null, errorCode: null },
+        ],
+        connectionChecks: ['CONFIG', 'CACHE', 'MASTER'].map((layer) => ({
+          layer: layer as 'CONFIG' | 'CACHE' | 'MASTER',
+          checkedAt: '2026-10-27T00:00:00Z',
+        })),
+      },
+      ...overrides,
+    })
+  }
+
+  it('restores server milestones after closing the pending page without submitting again', async () => {
+    vi.useFakeTimers()
+    const setup = await startPendingCloudSetup()
+    setup.snapshot = initializing({ stateVersion: 11 })
+    await click('Refresh status')
+    expect(container.textContent).toContain('1 of 4 steps completed')
+    expect(container.querySelector('[aria-current="step"]')?.textContent).toContain(
+      'Prepare runtime storage',
+    )
+    await act(async () => root.unmount())
+    client.clear()
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    root = createRoot(container)
+    await render()
+    expect(container.textContent).toContain('1 of 4 steps completed')
+    expect(container.textContent).toContain('0:06')
+    expect(container.querySelector('input[type="password"]')).toBeNull()
+    expect(container.querySelector('button[type="submit"]')).toBeNull()
+    expect(healthCard('Durable cache').textContent).toContain('Connection checks passed')
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')).toHaveLength(
+      1,
+    )
+    setup.snapshot = state({ mode: 'CLOUD', stateVersion: 12 })
+    await act(async () => vi.advanceTimersByTimeAsync(3100))
+    expect(container.querySelector('[data-testid="business"]')).not.toBeNull()
+    await act(async () => setup.complete(Response.json({ setupPhase: 'COMPLETE' })))
+    await settle()
+    expect(useAuthStore.getState().isAuthenticated).toBe(true)
+    expect(cloudNavigation.redirect).not.toHaveBeenCalled()
+  })
+
+  it('keeps polling after reopening while the first save has not published its binding', async () => {
+    vi.useFakeTimers()
+    const setup = await startPendingCloudSetup()
+    const progress = initializing().initializationProgress!
+    progress.milestones = progress.milestones.map((step, index) => ({
+      ...step,
+      state: index === 0 ? 'RUNNING' : 'PENDING',
+      elapsedMillis: index === 0 ? 6000 : null,
+    }))
+    setup.snapshot = initializing({
+      setupPhase: 'CONFIG_PREPARED',
+      businessPhase: 'NOT_CONFIGURED',
+      bindingVersion: 0,
+      authGeneration: 0,
+      stateVersion: 11,
+      initializationProgress: progress,
+    })
+    await click('Refresh status')
+    await act(async () => root.unmount())
+    client.clear()
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    root = createRoot(container)
+    await render()
+    expect(container.textContent).toContain('0 of 4 steps completed')
+    const reads = fetcher.mock.calls.filter(([url]) => url === '/api/storage/status').length
+    setup.snapshot = initializing({ stateVersion: 12 })
+    await act(async () => vi.advanceTimersByTimeAsync(3100))
+    expect(
+      fetcher.mock.calls.filter(([url]) => url === '/api/storage/status').length,
+    ).toBeGreaterThan(reads)
+    expect(container.textContent).toContain('1 of 4 steps completed')
+    setup.snapshot = state({ mode: 'CLOUD', stateVersion: 13 })
+    await act(async () => vi.advanceTimersByTimeAsync(3100))
+    expect(container.querySelector('[data-testid="business"]')).not.toBeNull()
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')).toHaveLength(
+      1,
+    )
+  })
+
+  it('uses an original Cloud handoff once after temporary-session retirement, never on a storage outage', async () => {
+    vi.useFakeTimers()
+    const setup = await startPendingCloudSetup()
+    setup.snapshot = initializing({ stateVersion: 11 })
+    await click('Refresh status')
+    setup.entry = 'UNAVAILABLE'
+    await act(async () => useAuthStore.getState().clear())
+    await settle()
+    expect(cloudNavigation.redirect).not.toHaveBeenCalled()
+    const statuses = fetcher.mock.calls.filter(([url]) => url === '/api/storage/status').length
+    setup.entry = 'LOGIN'
+    await act(async () => vi.advanceTimersByTimeAsync(10100))
+    expect(cloudNavigation.redirect).toHaveBeenCalledExactlyOnceWith(
+      'https://dev.cloud.tapstate.com/?organizationId=org&enterClusterId=cluster',
+    )
+    await act(async () => vi.advanceTimersByTimeAsync(30000))
+    expect(cloudNavigation.redirect).toHaveBeenCalledTimes(1)
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/status')).toHaveLength(
+      statuses,
+    )
+  })
+
+  it('shows the last confirmed milestones during a transient read failure without admitting business', async () => {
+    const setup = await startPendingCloudSetup()
+    setup.snapshot = initializing({ stateVersion: 11 })
+    await click('Refresh status')
+    setup.statusFailure = true
+    await click('Refresh status')
+    expect(container.textContent).toContain('The last confirmed state is shown')
+    expect(container.textContent).toContain('1 of 4 steps completed')
+    expect(container.querySelector('[role="alert"]')).not.toBeNull()
+    expect(container.querySelector('[data-testid="business"]')).toBeNull()
+  })
+
+  it('shows failed server work and retains explicit continuation instead of an endless waiting form', async () => {
+    vi.useFakeTimers()
+    const setup = await startPendingCloudSetup()
+    const snapshot = initializing({ stateVersion: 11 })
+    snapshot.initializationProgress!.state = 'FAILED'
+    snapshot.initializationProgress!.milestones[1] = {
+      id: 'PREPARE_STORAGE',
+      state: 'FAILED',
+      elapsedMillis: 4000,
+      errorCode: 'control.storage-unavailable',
+    }
+    setup.snapshot = snapshot
+    await click('Refresh status')
+    await act(async () =>
+      setup.complete(Response.json({ code: 'control.storage-unavailable' }, { status: 503 })),
+    )
+    await settle()
+    expect(container.textContent).toContain('Failed — action required')
+    expect(container.textContent).toContain('Continue saved storage setup')
+    expect(container.querySelector('button[type="submit"]')).not.toBeNull()
+    const requests = fetcher.mock.calls.length
+    await act(async () => vi.advanceTimersByTimeAsync(20000))
+    expect(fetcher.mock.calls).toHaveLength(requests)
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')).toHaveLength(
+      1,
+    )
+  })
 
   function healthCard(name: string) {
     const card = [...container.querySelectorAll('dl > div')].find(
@@ -572,7 +749,7 @@ describe('whole-site storage boundary', () => {
     await act(async () => setup.complete(Response.json({ setupPhase: 'COMPLETE' })))
     await settle()
     expect(useAuthStore.getState().isAuthenticated).toBe(false)
-    expect(container.textContent).toContain('Sign in to continue')
+    expect(container.textContent).toContain('Continuing to your cluster')
     expect(container.querySelector('[data-testid="business"]')).toBeNull()
     setup.snapshot = state({ mode: 'CLOUD', stateVersion: 12 })
     await act(async () => useAuthStore.setState({ isAuthenticated: true, sessionRevision: 2 }))
@@ -642,7 +819,7 @@ describe('whole-site storage boundary', () => {
       await act(async () => setup.complete(Response.json({ setupPhase: 'COMPLETE' })))
       await settle()
       expect(useAuthStore.getState().isAuthenticated).toBe(false)
-      expect(container.textContent).toContain('Sign in to continue')
+      expect(container.textContent).toContain('Continuing to your cluster')
       expect(
         fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit'),
       ).toHaveLength(1)

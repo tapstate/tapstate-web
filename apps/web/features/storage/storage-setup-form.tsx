@@ -21,10 +21,12 @@ export function StorageSetupForm({
   submission: owner,
   onSubmitted,
   onTestsInvalidated,
+  beforeSubmit,
 }: {
   submission?: ReturnType<typeof useStorageAction>
   onSubmitted?: (checkedAt: Record<StorageLayer, string>) => void
   onTestsInvalidated?: () => void
+  beforeSubmit?: () => Promise<void>
 } = {}) {
   const { t } = useTranslation()
   const { snapshot, fetcher, refresh, authorize } = useStorage()
@@ -174,7 +176,9 @@ export function StorageSetupForm({
         event.preventDefault()
         if (!(['CONFIG', 'CACHE', 'MASTER'] as const).every(fresh) || !valid) return
         void submission.run(
-          async () => {
+          async (isCurrent) => {
+            await beforeSubmit?.()
+            if (!isCurrent()) throw new DOMException('Request superseded', 'AbortError')
             // Retain only display evidence, never credentials or reusable submission proofs.
             onSubmitted?.({
               CONFIG: proofs.CONFIG!.checkedAt,

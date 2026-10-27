@@ -26,6 +26,66 @@ export function snapshot(overrides: Partial<StorageSnapshot> = {}): StorageSnaps
   }
 }
 describe('storage wire and snapshot admission', () => {
+  const initialization = (): NonNullable<StorageSnapshot['initializationProgress']> => ({
+    operationId: 'setup-a',
+    generation: 1,
+    attemptId: 'attempt-1',
+    state: 'RUNNING',
+    observedAt: '2026-10-27T00:00:00Z',
+    elapsedMillis: 6000,
+    restored: true,
+    milestones: [
+      { id: 'SAVE_SETTINGS', state: 'COMPLETE', elapsedMillis: null, errorCode: null },
+      { id: 'PREPARE_STORAGE', state: 'COMPLETE', elapsedMillis: null, errorCode: null },
+      { id: 'START_RUNTIME', state: 'RUNNING', elapsedMillis: 6000, errorCode: null },
+      { id: 'PUBLISH_READY', state: 'PENDING', elapsedMillis: null, errorCode: null },
+    ],
+    connectionChecks: [],
+  })
+  it('accepts unknown historical timings but refuses mismatched and regressing initialization evidence', () => {
+    const before = snapshot({ initializationProgress: initialization() })
+    expect(acceptSnapshot(undefined, before)).toBe(before)
+    for (const changed of [{ operationId: 'other' }, { generation: 2 }, { elapsedMillis: -1 }])
+      expect(() =>
+        acceptSnapshot(
+          undefined,
+          snapshot({ initializationProgress: { ...initialization(), ...changed } }),
+        ),
+      ).toThrow(StorageClientError)
+    expect(() =>
+      acceptSnapshot(
+        before,
+        snapshot({ initializationProgress: { ...initialization(), elapsedMillis: 5000 } }),
+      ),
+    ).toThrow(StorageClientError)
+    expect(
+      acceptSnapshot(
+        before,
+        snapshot({
+          initializationProgress: {
+            ...initialization(),
+            attemptId: 'new-process',
+            elapsedMillis: 0,
+          },
+        }),
+      ).initializationProgress?.restored,
+    ).toBe(true)
+  })
+  it('does not accept a fabricated completed count or duplicate connection-check layer', () => {
+    const wrong = initialization()
+    wrong.milestones[3] = { ...wrong.milestones[3], state: 'COMPLETE' }
+    expect(() => acceptSnapshot(undefined, snapshot({ initializationProgress: wrong }))).toThrow(
+      StorageClientError,
+    )
+    const duplicated = initialization()
+    duplicated.connectionChecks = [
+      { layer: 'CACHE', checkedAt: duplicated.observedAt },
+      { layer: 'CACHE', checkedAt: duplicated.observedAt },
+    ]
+    expect(() =>
+      acceptSnapshot(undefined, snapshot({ initializationProgress: duplicated })),
+    ).toThrow(StorageClientError)
+  })
   it('retains the real report time and accepts a newer failure at the same configuration version', () => {
     const verification = {
       status: 'PASSED' as const,

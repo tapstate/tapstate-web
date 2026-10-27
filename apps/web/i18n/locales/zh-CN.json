@@ -2009,6 +2009,32 @@
     "working": "正在处理…",
     "test": "测试连接",
     "testPassed": "连接检查通过",
+    "initialization": {
+      "title": "正在初始化 Cluster",
+      "completed": "已完成 {{completed}} / {{total}} 项",
+      "totalElapsed": "总耗时",
+      "steps": "初始化步骤",
+      "unknownDuration": "耗时未知",
+      "stale": "暂时无法刷新进度，当前展示最后确认的状态。",
+      "runtimeHelp": "正在准备数据连接器并核验所需资源。数据库连接较慢时，这一步可能耗时较长。",
+      "restored": "已从保存的配置恢复此前完成的步骤，之前的耗时无法获取。",
+      "canLeave": "可以关闭此页面，关闭不会取消初始化。之后从 Cloud 重新进入这个 Cluster 即可查看进度。",
+      "backToCloud": "返回 Cloud",
+      "connecting": "正在接续到你的 Cluster…",
+      "stage": {
+        "SAVE_SETTINGS": "保存存储配置",
+        "PREPARE_STORAGE": "准备运行数据库",
+        "START_RUNTIME": "初始化运行服务与数据连接器",
+        "PUBLISH_READY": "完成初始化"
+      },
+      "state": {
+        "PENDING": "等待中",
+        "RUNNING": "进行中",
+        "LAST_RUNNING": "最后确认时正在进行",
+        "COMPLETE": "已完成",
+        "FAILED": "失败，需要处理"
+      }
+    },
     "setupCheckRetained": "运行环境仍在准备中。这是保存前已完成的连接测试结果。",
     "testRequired": "需要测试连接",
     "showUri": "显示连接串",

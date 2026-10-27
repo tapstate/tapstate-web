@@ -115,12 +115,14 @@ export function StorageHealthPanel({
   unverifiedApplicationData = false,
   autoRefreshing = false,
   setupChecks,
+  showPhaseSummary = true,
 }: {
   snapshot: StorageSnapshot
   checkingApplicationData?: boolean
   unverifiedApplicationData?: boolean
   autoRefreshing?: boolean
   setupChecks?: Partial<Record<StorageLayer, string>>
+  showPhaseSummary?: boolean
 }) {
   const { t, i18n } = useTranslation()
   const verification = snapshot.applicationDataVerification
@@ -142,23 +144,25 @@ export function StorageHealthPanel({
         : verification?.status
   return (
     <section className="space-y-4" aria-label={t('storage.healthTitle')}>
-      <div className="border-border rounded-lg border p-4">
-        <h2 className="font-medium" role={autoRefreshing ? 'status' : undefined}>
-          {autoRefreshing ? (
-            <StorageIndicator tone="working">
-              {t(`storage.phase.${snapshot.businessPhase}`)}
-            </StorageIndicator>
-          ) : (
-            t(`storage.phase.${snapshot.businessPhase}`)
+      {showPhaseSummary && (
+        <div className="border-border rounded-lg border p-4">
+          <h2 className="font-medium" role={autoRefreshing ? 'status' : undefined}>
+            {autoRefreshing ? (
+              <StorageIndicator tone="working">
+                {t(`storage.phase.${snapshot.businessPhase}`)}
+              </StorageIndicator>
+            ) : (
+              t(`storage.phase.${snapshot.businessPhase}`)
+            )}
+          </h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {t(`storage.phaseHelp.${snapshot.businessPhase}`)}
+          </p>
+          {autoRefreshing && (
+            <p className="text-muted-foreground mt-2 text-sm">{t('storage.autoRefresh')}</p>
           )}
-        </h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          {t(`storage.phaseHelp.${snapshot.businessPhase}`)}
-        </p>
-        {autoRefreshing && (
-          <p className="text-muted-foreground mt-2 text-sm">{t('storage.autoRefresh')}</p>
-        )}
-      </div>
+        </div>
+      )}
       <dl className="grid gap-3 sm:grid-cols-3">
         {(['CONFIG', 'CACHE', 'MASTER'] as const).map((layer) => {
           const setupCheckedAt =

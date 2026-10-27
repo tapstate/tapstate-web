@@ -2009,6 +2009,32 @@
     "working": "Working…",
     "test": "Test connection",
     "testPassed": "Connection checks passed",
+    "initialization": {
+      "title": "Initializing your cluster",
+      "completed": "{{completed}} of {{total}} steps completed",
+      "totalElapsed": "Total elapsed",
+      "steps": "Initialization steps",
+      "unknownDuration": "Time unavailable",
+      "stale": "Progress could not be refreshed. The last confirmed state is shown.",
+      "runtimeHelp": "Preparing data connectors and checking required resources. A slow database connection can extend this step.",
+      "restored": "Earlier completed steps were restored from saved configuration. Their previous durations are unavailable.",
+      "canLeave": "You can close this page. Closing it does not cancel initialization. Reopen this Cluster from Cloud to see its progress.",
+      "backToCloud": "Back to Cloud",
+      "connecting": "Continuing to your cluster…",
+      "stage": {
+        "SAVE_SETTINGS": "Save storage settings",
+        "PREPARE_STORAGE": "Prepare runtime storage",
+        "START_RUNTIME": "Start services and data connectors",
+        "PUBLISH_READY": "Finish initialization"
+      },
+      "state": {
+        "PENDING": "Waiting",
+        "RUNNING": "In progress",
+        "LAST_RUNNING": "Last confirmed in progress",
+        "COMPLETE": "Completed",
+        "FAILED": "Failed — action required"
+      }
+    },
     "setupCheckRetained": "Runtime preparation is still in progress. This is the connection test completed before saving.",
     "testRequired": "Connection test required",
     "showUri": "Show connection URI",

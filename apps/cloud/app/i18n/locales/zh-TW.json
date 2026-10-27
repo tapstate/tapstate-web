@@ -18,6 +18,13 @@
     "status": "目前沒有有效工作階段",
     "signInAction": "登入"
   },
+  "clusterEntry": {
+    "title": "正在進入你的 Cluster",
+    "continuing": "正在透過原 Cloud 登入接續…",
+    "unavailable": "目前無法進入這個 Cluster，請返回控制台查看狀態。",
+    "retry": "重試",
+    "back": "返回控制台"
+  },
   "auth": {
     "headerNote": "Cloud 叢集存取",
     "eyebrow": "TAPSTATE CLOUD",
