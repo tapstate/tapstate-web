@@ -10,18 +10,15 @@ import {
   CreditCard,
   Home,
   Inbox,
-  LogOut,
-  Moon,
   Search,
   Server,
-  Settings,
-  Sun,
 } from 'lucide-react'
 import { useState } from 'react'
 
 import type { Cluster, Organization } from '../service/cloud-api'
 import type { UserProfile } from '../types'
 
+import { AccountMenu } from '../features/account/account-menu'
 import {
   cancelPendingClusterEntries,
   useClusterEntry,
@@ -73,12 +70,10 @@ export function CloudConsoleShell({
     activeOrganization,
     clusters: stateClusters,
     darkMode,
-    setDarkMode,
     setActiveOrganization,
     clearIdentity,
   } = useCloudAppState()
   const [showOrganizationMenu, setShowOrganizationMenu] = useState(false)
-  const [showUserMenu, setShowUserMenu] = useState(false)
   const [search, setSearch] = useState('')
   const { enterCluster, enteringId, entryError } = useClusterEntry()
 
@@ -87,8 +82,6 @@ export function CloudConsoleShell({
   const visibleClusters = currentClusters
     .filter((cluster) => cluster.name.toLowerCase().includes(search.toLowerCase()))
     .slice(0, 3)
-  const displayName = user.displayName?.trim() || user.email.split('@')[0]
-  const initials = displayName.slice(0, 1).toUpperCase()
   const canManageAlertPolicies =
     !currentOrganization?.ownerEmail ||
     currentOrganization.ownerEmail.toLowerCase() === user.email.toLowerCase()
@@ -246,72 +239,18 @@ export function CloudConsoleShell({
           )}
         </div>
 
-        <div className="shrink-0 space-y-1 border-t border-black/[0.05] px-1 pt-2 dark:border-white/[0.05]">
-          <Link
-            activeProps={{
-              className:
-                'flex h-8.5 w-full items-center gap-2.5 rounded-lg bg-white px-3 text-left text-xs font-medium text-neutral-900 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_1px_rgba(0,0,0,0.03)] dark:bg-[#25272a] dark:text-white',
-            }}
-            className="flex h-8.5 w-full items-center gap-2.5 rounded-lg px-3 text-left text-xs font-normal text-neutral-600 transition-all duration-150 hover:bg-black/[0.04] hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-white/[0.05] dark:hover:text-white"
-            search={{ organizationId: currentOrganization?.id }}
-            to="/settings"
-          >
-            <Settings className="h-4 w-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
-            <span>Settings</span>
-          </Link>
-
-          <div className="relative mt-1 flex items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]">
-            <button
-              className="flex min-w-0 flex-1 items-center gap-2 text-left"
-              onClick={() => setShowUserMenu((open) => !open)}
-              type="button"
-            >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-[10px] font-bold text-white dark:bg-white dark:text-neutral-900">
-                {initials}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-xs font-medium text-neutral-900 dark:text-white">
-                  {displayName}
-                </span>
-                <span className="block truncate text-[10px] text-neutral-400">{user.email}</span>
-              </span>
-            </button>
-            <HelpMenu />
-            <button
-              aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-              className="ml-1 shrink-0 rounded p-1 text-neutral-400 transition-colors hover:text-neutral-700 dark:hover:text-neutral-200"
-              onClick={() => setDarkMode(!darkMode)}
-              title="Toggle theme"
-              type="button"
-            >
-              {darkMode ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-            </button>
-
-            {showUserMenu && (
-              <>
-                <button
-                  aria-label="Close account menu"
-                  className="fixed inset-0 z-40 cursor-default"
-                  onClick={() => setShowUserMenu(false)}
-                  type="button"
-                />
-                <div className="absolute right-0 bottom-12 left-0 z-50 space-y-2 rounded-xl border border-black/[0.08] bg-white p-2 text-xs shadow-lg dark:border-white/[0.08] dark:bg-[#202124]">
-                  <div className="truncate px-1.5 py-1 font-mono text-[11px] text-neutral-500 dark:text-neutral-400">
-                    {user.email}
-                  </div>
-                  <div className="border-t border-black/[0.06] pt-1 dark:border-white/[0.06]">
-                    <button
-                      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-neutral-700 transition-colors hover:bg-black/[0.04] hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-white/[0.05] dark:hover:text-white"
-                      onClick={() => void signOut()}
-                      type="button"
-                    >
-                      <LogOut className="h-3.5 w-3.5" />
-                      <span>Sign Out</span>
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
+        <div className="shrink-0 border-t border-black/[0.05] pt-2 dark:border-white/[0.05]">
+          <div className="flex items-center justify-between">
+            <div className="flex min-w-0 items-center gap-1 overflow-hidden">
+              <AccountMenu
+                onLogout={signOut}
+                organizationId={currentOrganization?.id}
+                user={user}
+              />
+            </div>
+            <div className="flex shrink-0 items-center justify-center rounded-full p-1">
+              <HelpMenu />
+            </div>
           </div>
         </div>
       </aside>

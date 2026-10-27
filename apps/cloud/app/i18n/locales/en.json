@@ -6,6 +6,14 @@
       "documentation": "Documentation",
       "contactSupport": "Contact support"
     },
+    "account": {
+      "openMenu": "Account",
+      "settings": "Settings",
+      "appearance": "Appearance",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "logOut": "Log out"
+    },
     "brand": "Tapstate Cloud",
     "console": "Cloud Console",
     "organization": "ORGANIZATION",
