@@ -646,6 +646,57 @@ describe('PipelinesPage', () => {
     )
   })
 
+  it.each([
+    ['COMPLETE', 'Close', 'menu'],
+    ['UNAVAILABLE', 'Escape', 'more'],
+    ['UNAVAILABLE', 'Close', 'direct'],
+  ])(
+    'clears the pending list action after closing a refused %s start with %s',
+    async (evaluation, dismissal, entry) => {
+      runPipeline.mockRejectedValueOnce(
+        startRefusal({
+          ...answerable,
+          outcome: 'BLOCKED',
+          findings: [{ ...answerable.findings[0]!, behavior: 'BLOCK', evaluation, actions: [] }],
+        }),
+      )
+      const queryClient = await renderPage()
+      const trigger = () =>
+        document.querySelector<HTMLButtonElement>(
+          `[aria-label="${entry === 'direct' ? 'Start pipeline new_import' : entry === 'more' ? 'More actions for new_import' : 'Pipeline lifecycle actions for new_import'}"]`,
+        )
+      await vi.waitFor(() => expect(trigger()).not.toBeNull())
+      await act(async () => trigger()?.click())
+      if (entry !== 'direct') {
+        await act(async () => elementWithText('[role="menuitem"]', 'Start')?.click())
+      }
+      await vi.waitFor(() => expect(startChecksDialog()).not.toBeNull())
+      vi.spyOn(queryClient, 'invalidateQueries').mockImplementation(() => new Promise(() => {}))
+      expect(dialogButton('Close')).toBeDefined()
+      if (entry === 'direct') {
+        await act(async () => trigger()?.click())
+        expect(runPipeline).toHaveBeenCalledOnce()
+      }
+      await act(async () => {
+        if (dismissal === 'Close') dialogButton('Close')?.click()
+        else
+          startChecksDialog()?.dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+          )
+      })
+      await vi.waitFor(() => expect(startChecksDialog()).toBeNull())
+      await vi.waitFor(() => expect(trigger()?.disabled).toBe(false))
+      await vi.waitFor(() =>
+        expect(document.activeElement).toBe(
+          entry === 'direct'
+            ? trigger()
+            : document.querySelector('[aria-label="More actions for new_import"]'),
+        ),
+      )
+      expect(runPipeline).toHaveBeenCalledOnce()
+    },
+  )
+
   it('asks start checks in the shared dialog and re-sends the answers with the report hash', async () => {
     const warning = answerable.findings.find(({ behavior }) => behavior === 'WARN')!
     runPipeline.mockRejectedValueOnce(startRefusal(answerable)).mockResolvedValueOnce({

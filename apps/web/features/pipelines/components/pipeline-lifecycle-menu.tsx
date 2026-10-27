@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Button as SharedUIButton } from '@tapstate-web/ui/button'
 import { Copy, LoaderCircle, MoreHorizontal, Pencil, Play, Square, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { ApiFetcher } from '@/service/source-client'
@@ -31,7 +31,7 @@ import {
   type PipelineCatalogState,
 } from '@/service/pipelines/pipeline-client'
 
-import type { PipelineStartOutcome } from '../start-checks/use-start-pipeline'
+import type { PipelineStarter } from '../start-checks/use-start-pipeline'
 
 export type PipelineLifecycleAction = 'start' | 'stop'
 
@@ -62,12 +62,15 @@ export function PipelineLifecycleMenu({
   contentHash: string | null
   presentation?: 'list' | 'stop-button'
   /** The host's shared start flow; without it the menu offers no start. */
-  startPipeline?: (pipelineId: string) => Promise<PipelineStartOutcome>
+  startPipeline?: PipelineStarter
   onMutationError?: (action: PipelineLifecycleAction, error?: unknown) => void
   onMutationStart?: () => void
 }) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const moreTriggerRef = useRef<HTMLButtonElement>(null)
+  const actionButtonRef = useRef<HTMLButtonElement>(null)
+  const actionInFlight = useRef(false)
   const [pendingAction, setPendingAction] = useState<PipelineLifecycleAction | null>(null)
   const [stopDialogOpen, setStopDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -84,14 +87,25 @@ export function PipelineLifecycleMenu({
     await queryClient.invalidateQueries({ queryKey: ['pipelines'] })
   }
 
-  async function execute(nextAction: PipelineLifecycleAction, purgeState = false) {
+  async function execute(
+    nextAction: PipelineLifecycleAction,
+    purgeState = false,
+    returnFocus?: RefObject<HTMLElement | null>,
+  ) {
+    if (actionInFlight.current) return
+    actionInFlight.current = true
     setPendingAction(nextAction)
     onMutationStart?.()
 
     try {
       if (nextAction === 'start') {
         // Start checks may stop the start to ask; the shared flow resolves once it is answered.
-        await startPipeline?.(pipelineId)
+        const outcome = await startPipeline?.(pipelineId, returnFocus)
+        if (outcome?.status === 'cancelled') {
+          // Refresh stale projections without keeping a refused start busy.
+          void refreshProjections().catch(() => undefined)
+          return
+        }
       } else {
         await stopPipeline(pipelineId, purgeState, apiFetch)
       }
@@ -105,6 +119,7 @@ export function PipelineLifecycleMenu({
       await refreshProjections().catch(() => undefined)
       onMutationError?.(nextAction, error)
     } finally {
+      actionInFlight.current = false
       setPendingAction(null)
     }
   }
@@ -148,23 +163,32 @@ export function PipelineLifecycleMenu({
   const editHref = `/pipelines/${encodeURIComponent(pipelineId)}/edit`
   const ActionIcon = resolvedAction === 'start' ? Play : Square
 
-  function requestAction(nextAction: PipelineLifecycleAction) {
+  function requestAction(
+    nextAction: PipelineLifecycleAction,
+    returnFocus?: RefObject<HTMLElement | null>,
+  ) {
     if (nextAction === 'stop') {
       onMutationStart?.()
       setStopDialogOpen(true)
       return
     }
-    void execute(nextAction)
+    void execute(nextAction, false, returnFocus)
   }
 
-  function LifecycleDropdown({
+  function renderLifecycleDropdown({
+    triggerRef,
     triggerClassName,
     triggerLabel = actionAriaLabel,
-  }: { triggerClassName?: string; triggerLabel?: string } = {}) {
+  }: {
+    triggerRef?: RefObject<HTMLButtonElement | null>
+    triggerClassName?: string
+    triggerLabel?: string
+  }) {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
+            ref={triggerRef}
             type="button"
             variant="ghost"
             size="icon-sm"
@@ -188,7 +212,10 @@ export function PipelineLifecycleMenu({
               <DropdownMenuItem
                 disabled={pending}
                 variant={resolvedAction === 'stop' ? 'destructive' : 'default'}
-                onClick={() => requestAction(resolvedAction)}
+                onClick={() => {
+                  // Row focus exposes the inline menu; the default trigger becomes transparent.
+                  requestAction(resolvedAction, moreTriggerRef)
+                }}
               >
                 <ActionIcon className="size-4 shrink-0" aria-hidden="true" />
                 {actionLabel}
@@ -242,22 +269,24 @@ export function PipelineLifecycleMenu({
       ) : (
         <div className="pipeline-list__lifecycle-menu">
           <div className="pipeline-list__actions-default pointer-events-auto flex items-center justify-end opacity-100 transition-opacity duration-200 group-focus-within:pointer-events-none group-focus-within:opacity-0 group-hover:pointer-events-none group-hover:opacity-0">
-            <LifecycleDropdown />
+            {renderLifecycleDropdown({})}
           </div>
           <div className="pipeline-list__actions-hover pointer-events-none absolute top-1/2 right-4 z-10 flex -translate-y-1/2 items-center overflow-hidden border border-gray-200 bg-white opacity-0 transition-opacity duration-200 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
             {resolvedAction && (
               <button
+                ref={actionButtonRef}
                 type="button"
                 className={cn(
-                  'pipeline-list__action-button border-r border-gray-200 px-2.5 py-1.5 text-gray-500 transition-colors hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60',
+                  'pipeline-list__action-button border-r border-gray-200 px-2.5 py-1.5 text-gray-500 transition-colors hover:bg-gray-50 aria-disabled:cursor-wait aria-disabled:opacity-60',
                   resolvedAction === 'start'
                     ? 'text-emerald-600 hover:text-emerald-700'
                     : 'text-amber-600 hover:text-amber-700',
                 )}
                 aria-label={actionButtonLabel ?? undefined}
                 title={actionButtonLabel ?? undefined}
-                disabled={pending}
-                onClick={() => requestAction(resolvedAction)}
+                disabled={pending && resolvedAction !== 'start'}
+                aria-disabled={pending || undefined}
+                onClick={() => requestAction(resolvedAction, actionButtonRef)}
               >
                 {pending ? (
                   <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
@@ -274,10 +303,12 @@ export function PipelineLifecycleMenu({
             >
               <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
             </a>
-            <LifecycleDropdown
-              triggerLabel={t('pipelines.actions.morePipeline', { id: pipelineId })}
-              triggerClassName="pipeline-list__action-button h-auto w-auto rounded-none border-0 px-2.5 py-1.5 transition-colors hover:bg-gray-50 hover:text-gray-900"
-            />
+            {renderLifecycleDropdown({
+              triggerRef: moreTriggerRef,
+              triggerLabel: t('pipelines.actions.morePipeline', { id: pipelineId }),
+              triggerClassName:
+                'pipeline-list__action-button h-auto w-auto rounded-none border-0 px-2.5 py-1.5 transition-colors hover:bg-gray-50 hover:text-gray-900',
+            })}
           </div>
         </div>
       )}

@@ -31,7 +31,7 @@ import {
 import { PipelineStatusBadge } from '../components/pipeline-status-badge'
 import { PipelineStartNotices } from '../start-checks/pipeline-start-notice'
 import { StartChecksDialog } from '../start-checks/start-checks-dialog'
-import { useStartPipeline, type PipelineStartOutcome } from '../start-checks/use-start-pipeline'
+import { useStartPipeline, type PipelineStarter } from '../start-checks/use-start-pipeline'
 
 export function PipelinesPage() {
   const { i18n, t } = useTranslation()
@@ -276,7 +276,7 @@ function PipelineTable({
   artifactsById: Map<string, PipelineView>
   lagByPipeline: Map<string, number>
   apiFetch: ApiFetcher
-  startPipeline: (pipelineId: string) => Promise<PipelineStartOutcome>
+  startPipeline: PipelineStarter
   onMutationError: (pipelineId: string, action: PipelineLifecycleAction, error?: unknown) => void
   onMutationStart: () => void
 }) {

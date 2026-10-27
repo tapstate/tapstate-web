@@ -19,6 +19,8 @@ import { getCurrentUser } from '@/service/current-user-client'
 import { useAuthStore } from '@/stores/auth-store'
 import { cloudConsoleUrl, replaceWithCloudConsole } from '@/utils/cloud-console'
 
+import { HelpMenu } from './help-menu'
+
 const footerIconButtonClassName =
   'size-7 rounded-full border border-components-card-border bg-components-card-bg p-0 text-text-tertiary shadow-xs transition-colors hover:bg-components-card-bg-alt hover:text-ui-brand-blue-inverted data-popup-open:bg-components-card-bg-alt data-popup-open:text-ui-brand-blue-inverted'
 
@@ -74,6 +76,7 @@ export function AppHeader({ cloudUserEmail }: { cloudUserEmail?: string | null }
   return (
     <header className="app-sidebar__footer">
       <div className="app-sidebar__actions">
+        <HelpMenu />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <IconButton

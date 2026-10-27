@@ -1,5 +1,10 @@
 {
   "app": {
+    "help": {
+      "openMenu": "Help",
+      "documentation": "Documentation",
+      "contactSupport": "Contact support"
+    },
     "brand": "Tapstate",
     "primaryNavigation": "Primary navigation",
     "previewMode": "AI Studio migration preview",

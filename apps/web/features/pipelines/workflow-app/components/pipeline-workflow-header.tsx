@@ -1,4 +1,4 @@
-import type { MouseEvent, ReactNode } from 'react'
+import type { MouseEvent, ReactNode, Ref } from 'react'
 
 import { Link } from '@tanstack/react-router'
 import { Button } from '@tapstate-web/ui/button'
@@ -22,6 +22,7 @@ export interface PipelineWorkflowHeaderProps {
   runLabel?: string
   runPendingLabel?: string
   runButtonId?: string
+  runButtonRef?: Ref<HTMLButtonElement>
   runButtonActiveGuide?: boolean
   dockStatus?: ReactNode
   draftUpdatedAt?: string | null
@@ -78,6 +79,7 @@ export function PipelineWorkflowHeader({
   runLabel,
   runPendingLabel,
   runButtonId,
+  runButtonRef,
   runButtonActiveGuide,
   dockStatus,
   draftUpdatedAt,
@@ -100,6 +102,7 @@ export function PipelineWorkflowHeader({
         {stopAction ??
           (!isReadOnly && (
             <button
+              ref={runButtonRef}
               id={runButtonId}
               data-guide-active={runButtonActiveGuide || undefined}
               type="button"
@@ -182,6 +185,7 @@ export function PipelineWorkflowHeader({
       {stopAction ??
         (!isReadOnly && (
           <Button
+            ref={runButtonRef}
             id={runButtonId}
             type="button"
             variant="primary"

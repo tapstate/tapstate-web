@@ -1,6 +1,7 @@
 {
   "notFound": { "message": "此页面不可用。", "back": "返回概览" },
   "app": {
+    "help": { "openMenu": "帮助", "documentation": "文档", "contactSupport": "联系客服" },
     "brand": "Tapstate Cloud",
     "console": "Cloud 控制台",
     "organization": "组织",

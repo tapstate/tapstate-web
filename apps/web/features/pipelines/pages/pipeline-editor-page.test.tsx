@@ -547,6 +547,7 @@ async function renderPage(section: 'orchestrate' | 'logs' | 'monitoring' = 'orch
       </QueryClientProvider>,
     )
   })
+  return queryClient
 }
 
 beforeEach(() => {
@@ -762,7 +763,13 @@ describe('PipelineEditorPage', () => {
     expect(getPipelineStatus).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function))
   })
 
-  it('keeps draft monitoring out of runtime status and metrics APIs', async () => {
+  it('checks draft lifecycle without querying runtime metrics', async () => {
+    getPipelineStatus.mockResolvedValue({
+      pipelineId: 'orders_to_warehouse',
+      state: 'NOT_STARTED',
+      displayState: 'NOT_STARTED',
+      hasArtifact: false,
+    })
     getPipelineDraft.mockResolvedValue({
       draft: {
         pipelineId: 'orders_to_warehouse',
@@ -785,8 +792,10 @@ describe('PipelineEditorPage', () => {
 
     await renderPage('monitoring')
 
+    await vi.waitFor(() =>
+      expect(getPipelineStatus).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function)),
+    )
     await vi.waitFor(() => expect(container?.textContent).toContain('This Pipeline is a draft'))
-    expect(getPipelineStatus).not.toHaveBeenCalled()
     expect(getPipelineMetrics).not.toHaveBeenCalled()
   })
 
@@ -1163,10 +1172,12 @@ describe('PipelineEditorPage', () => {
       hasArtifact: true,
     })
     await renderPage()
-    await vi.waitFor(() => expect(getPipelineStatus).toHaveBeenCalled())
-    expect(document.querySelector('[data-testid="pipeline-status"]')?.textContent).toContain(
-      'Starting',
-    )
+    await vi.waitFor(() => {
+      expect(getPipelineStatus).toHaveBeenCalled()
+      expect(document.querySelector('[data-testid="pipeline-status"]')?.textContent).toContain(
+        'Starting',
+      )
+    })
     expect(listPipelines).not.toHaveBeenCalled()
   })
 
@@ -1580,6 +1591,41 @@ describe('PipelineEditorPage', () => {
     expect(offered()).toEqual(['mysql_feynman', 'mongo_out', 'atlas_out', 'mongo_archive'])
   })
 
+  it.each([
+    ['COMPLETE', 'Close'],
+    ['UNAVAILABLE', 'Escape'],
+  ])(
+    'returns the DAG Run button to idle after closing a refused %s start with %s',
+    async (evaluation, dismissal) => {
+      runPipeline.mockRejectedValueOnce(
+        startRefusal({
+          ...answerable,
+          outcome: 'BLOCKED',
+          findings: [{ ...answerable.findings[0]!, behavior: 'BLOCK', evaluation, actions: [] }],
+        }),
+      )
+      await renderPage()
+      await editAndRun()
+      expect(dialogButton('Close')).toBeDefined()
+      await act(async () => {
+        if (dismissal === 'Close') dialogButton('Close')?.click()
+        else
+          startChecksDialog()?.dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+          )
+      })
+      await vi.waitFor(() => expect(startChecksDialog()).toBeNull())
+      await vi.waitFor(() => {
+        const run = elementWithText('button', 'Run') as HTMLButtonElement | undefined
+        expect(run).toBeDefined()
+        expect(run?.disabled).toBe(false)
+        expect(run?.getAttribute('aria-busy')).not.toBe('true')
+      })
+      await vi.waitFor(() => expect(document.activeElement).toBe(elementWithText('button', 'Run')))
+      expect(runPipeline).toHaveBeenCalledOnce()
+    },
+  )
+
   it('asks start checks in the shared dialog before a DAG start and keeps its warnings', async () => {
     const warning = answerable.findings.find(({ behavior }) => behavior === 'WARN')!
     runPipeline.mockRejectedValueOnce(startRefusal(answerable)).mockResolvedValueOnce({
@@ -1639,6 +1685,43 @@ describe('PipelineEditorPage', () => {
         ?.click(),
     )
     expect(canvasNotice()).toBeNull()
+  })
+
+  it('does not start again while an accepted confirmation is refreshing its definition', async () => {
+    runPipeline.mockRejectedValueOnce(startRefusal(answerable)).mockResolvedValueOnce({
+      pipelineId: 'orders_to_warehouse',
+      startChecks: { ...answerable, outcome: 'READY', findings: [] },
+      decisionsApplied: [definitionChange],
+      staleDecisions: [],
+    })
+    const queryClient = await renderPage()
+    await editAndRun()
+    getPipelineDraft.mockResolvedValue({ draft: draftAfterStartChange, etag: '"4"' })
+    let release!: () => void
+    vi.spyOn(queryClient, 'invalidateQueries').mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve
+        }),
+    )
+    await answerStartChecks()
+    await vi.waitFor(() => expect(release).toBeDefined())
+    await vi.waitFor(() => expect(startChecksDialog()).toBeNull())
+    try {
+      const publications = publishPipelineDraft.mock.calls.length
+      const runButton = elementWithText('button', 'Run') as HTMLButtonElement
+      expect(runButton).toBeDefined()
+      expect(runButton.disabled).toBe(false)
+      await act(async () => new Promise((resolve) => setTimeout(resolve, 100)))
+      await act(async () => {
+        runButton.click()
+        await new Promise((resolve) => setTimeout(resolve, 100))
+      })
+      expect(publishPipelineDraft).toHaveBeenCalledTimes(publications)
+      expect(runPipeline).toHaveBeenCalledTimes(2)
+    } finally {
+      await act(async () => release())
+    }
   })
 
   it('reloads the draft after a start answer rewrote the definition and saves on top of it', async () => {

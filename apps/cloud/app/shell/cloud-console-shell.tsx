@@ -27,6 +27,7 @@ import {
   cancelPendingClusterEntries,
   useClusterEntry,
 } from '../features/clusters/use-cluster-entry'
+import { HelpMenu } from '../features/feedback/help-menu'
 import { TawkFeedbackWidget } from '../features/feedback/tawk-feedback-widget'
 import { CloudApiError, cloudApi } from '../service/cloud-api'
 import { useCloudAppState } from '../state/cloud-app-state'
@@ -313,6 +314,7 @@ export function CloudConsoleShell({
                 <span className="block truncate text-[10px] text-neutral-400">{user.email}</span>
               </span>
             </button>
+            <HelpMenu />
             <button
               aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
               className="ml-1 shrink-0 rounded p-1 text-neutral-400 transition-colors hover:text-neutral-700 dark:hover:text-neutral-200"

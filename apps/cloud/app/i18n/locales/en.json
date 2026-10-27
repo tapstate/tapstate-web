@@ -1,6 +1,11 @@
 {
   "notFound": { "message": "This page is not available.", "back": "Back to Overview" },
   "app": {
+    "help": {
+      "openMenu": "Help",
+      "documentation": "Documentation",
+      "contactSupport": "Contact support"
+    },
     "brand": "Tapstate Cloud",
     "console": "Cloud Console",
     "organization": "ORGANIZATION",
