@@ -1,6 +1,7 @@
 {
   "notFound": { "message": "此頁面無法使用。", "back": "返回總覽" },
   "app": {
+    "help": { "openMenu": "說明", "documentation": "文件", "contactSupport": "聯絡客服" },
     "brand": "Tapstate Cloud",
     "console": "Cloud 主控台",
     "organization": "組織",

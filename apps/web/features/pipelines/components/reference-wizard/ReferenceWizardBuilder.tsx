@@ -40,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useTawkSupportOpen } from '@/features/feedback/tawk-feedback-widget'
 import { cn } from '@/lib/utils'
 
 import type { DeploymentProfile } from '../../model/deployment-profile'
@@ -295,6 +296,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
 }) => {
   const { t } = useTranslation()
   const [assistantOpen, setAssistantOpen] = React.useState(true)
+  const supportOpen = useTawkSupportOpen()
   const [rightPanelTab, setRightPanelTab] = React.useState<'copilot' | 'preview'>(
     assistant && !readOnly ? 'copilot' : 'preview',
   )
@@ -3278,7 +3280,7 @@ export const ReferenceWizardBuilder: React.FC<WizardBuilderProps> = ({
           data-guide-active={(assistant && activeGuideTarget === 'step-preview-panel') || undefined}
           className={cn(
             assistant ? 'wizard-reference-sidebar' : 'contents',
-            assistant && (assistantOpen ? 'flex' : 'hidden'),
+            assistant && (assistantOpen && !supportOpen ? 'flex' : 'hidden'),
           )}
         >
           {assistant && (

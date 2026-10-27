@@ -3,7 +3,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 
 import * as tawkFeedbackClient from '../../service/tawk-feedback-client'
-import { TawkFeedbackWidget } from './tawk-feedback-widget'
+import { openTawkSupport, TawkFeedbackWidget } from './tawk-feedback-widget'
 
 vi.mock('@/utils/deployment-profile', () => ({ deploymentProfile: 'cloud' }))
 
@@ -47,6 +47,35 @@ describe('TawkFeedbackWidget', () => {
     expect(
       (document.getElementById('tapstate-tawk-feedback-widget') as HTMLScriptElement).src,
     ).toBe('https://embed.tawk.to/6ad811f9c0b97c34b365a428/1k5e0ceht')
+  })
+
+  it('keeps the support launcher hidden before the user asks for help', async () => {
+    await act(async () => root.render(<TawkFeedbackWidget />))
+    await act(async () => window.Tawk_API?.onLoad?.())
+
+    expect(window.Tawk_API?.hideWidget).toHaveBeenCalled()
+    expect(window.Tawk_API?.showWidget).not.toHaveBeenCalled()
+  })
+
+  it('hides the launcher again when the support chat is minimized', async () => {
+    await act(async () => root.render(<TawkFeedbackWidget />))
+    const api = window.Tawk_API as typeof window.Tawk_API & { onChatMinimized?: () => void }
+    await act(async () => api?.onChatMinimized?.())
+
+    expect(window.Tawk_API?.hideWidget).toHaveBeenCalled()
+  })
+
+  it('opens the hosted support page when the widget script is unavailable', async () => {
+    await act(async () => root.render(<TawkFeedbackWidget />))
+    const open = vi.spyOn(window, 'open').mockReturnValue(null)
+
+    openTawkSupport()
+
+    expect(open).toHaveBeenCalledWith(
+      'https://tawk.to/chat/6ad811f9c0b97c34b365a428/1k5e0ceht',
+      '_blank',
+      'noopener,noreferrer',
+    )
   })
 
   it('sends only a random event ID and Property ID after an offline form callback', async () => {
