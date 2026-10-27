@@ -91,7 +91,12 @@ export function PipelineLifecycleMenu({
     try {
       if (nextAction === 'start') {
         // Start checks may stop the start to ask; the shared flow resolves once it is answered.
-        await startPipeline?.(pipelineId)
+        const outcome = await startPipeline?.(pipelineId)
+        if (outcome?.status === 'cancelled') {
+          // Refresh stale projections without keeping a refused start busy.
+          void refreshProjections().catch(() => undefined)
+          return
+        }
       } else {
         await stopPipeline(pipelineId, purgeState, apiFetch)
       }

@@ -762,7 +762,13 @@ describe('PipelineEditorPage', () => {
     expect(getPipelineStatus).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function))
   })
 
-  it('keeps draft monitoring out of runtime status and metrics APIs', async () => {
+  it('checks draft lifecycle without querying runtime metrics', async () => {
+    getPipelineStatus.mockResolvedValue({
+      pipelineId: 'orders_to_warehouse',
+      state: 'NOT_STARTED',
+      displayState: 'NOT_STARTED',
+      hasArtifact: false,
+    })
     getPipelineDraft.mockResolvedValue({
       draft: {
         pipelineId: 'orders_to_warehouse',
@@ -785,8 +791,10 @@ describe('PipelineEditorPage', () => {
 
     await renderPage('monitoring')
 
+    await vi.waitFor(() =>
+      expect(getPipelineStatus).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function)),
+    )
     await vi.waitFor(() => expect(container?.textContent).toContain('This Pipeline is a draft'))
-    expect(getPipelineStatus).not.toHaveBeenCalled()
     expect(getPipelineMetrics).not.toHaveBeenCalled()
   })
 
@@ -1163,10 +1171,12 @@ describe('PipelineEditorPage', () => {
       hasArtifact: true,
     })
     await renderPage()
-    await vi.waitFor(() => expect(getPipelineStatus).toHaveBeenCalled())
-    expect(document.querySelector('[data-testid="pipeline-status"]')?.textContent).toContain(
-      'Starting',
-    )
+    await vi.waitFor(() => {
+      expect(getPipelineStatus).toHaveBeenCalled()
+      expect(document.querySelector('[data-testid="pipeline-status"]')?.textContent).toContain(
+        'Starting',
+      )
+    })
     expect(listPipelines).not.toHaveBeenCalled()
   })
 
@@ -1579,6 +1589,31 @@ describe('PipelineEditorPage', () => {
     })
     expect(offered()).toEqual(['mysql_feynman', 'mongo_out', 'atlas_out', 'mongo_archive'])
   })
+
+  it.each(['COMPLETE', 'UNAVAILABLE'])(
+    'returns the DAG Run button to idle after closing a refused %s start',
+    async (evaluation) => {
+      runPipeline.mockRejectedValueOnce(
+        startRefusal({
+          ...answerable,
+          outcome: 'BLOCKED',
+          findings: [{ ...answerable.findings[0]!, behavior: 'BLOCK', evaluation, actions: [] }],
+        }),
+      )
+      await renderPage()
+      await editAndRun()
+      expect(dialogButton('Close')).toBeDefined()
+      await act(async () => dialogButton('Close')?.click())
+      await vi.waitFor(() => expect(startChecksDialog()).toBeNull())
+      await vi.waitFor(() => {
+        const run = elementWithText('button', 'Run') as HTMLButtonElement | undefined
+        expect(run).toBeDefined()
+        expect(run?.disabled).toBe(false)
+        expect(run?.getAttribute('aria-busy')).not.toBe('true')
+      })
+      expect(runPipeline).toHaveBeenCalledOnce()
+    },
+  )
 
   it('asks start checks in the shared dialog before a DAG start and keeps its warnings', async () => {
     const warning = answerable.findings.find(({ behavior }) => behavior === 'WARN')!

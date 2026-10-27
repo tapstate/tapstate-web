@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { CheckList, type CheckGroup } from '@/components/checks/check-list'
 import {
   AlertDialog,
+  AlertDialogBody,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -20,6 +21,7 @@ import {
   canStart,
   choicesFrom,
   decisionLine,
+  findingBehavior,
   groupFindings,
   startBlocked,
   startDecisions,
@@ -27,7 +29,7 @@ import {
 } from './start-check-model'
 import { StartCheckPlan } from './start-check-plan'
 
-const plainText = 'text-muted-foreground font-mono text-[11px] leading-relaxed break-words'
+const plainText = 'text-muted-foreground font-mono text-[11px] leading-relaxed wrap-anywhere'
 
 /** Holds the answers being picked; a new report remounts it so answers are taken afresh. */
 function StartChecksBody({
@@ -48,6 +50,12 @@ function StartChecksBody({
   const findings = groupFindings(report)
   const blocked = startBlocked(report)
   const unavailable = report.findings.filter((finding) => finding.evaluation === 'UNAVAILABLE')
+  const allBlockingChecksUnavailable =
+    findings.block.length > 0 &&
+    findings.block.every((finding) => finding.evaluation === 'UNAVAILABLE')
+  const diagnostics = report.findings.filter(
+    (finding) => findingBehavior(finding) === 'BLOCK' || finding.evaluation === 'UNAVAILABLE',
+  )
   const groups: CheckGroup[] = [
     {
       id: 'block',
@@ -68,7 +76,7 @@ function StartChecksBody({
     },
   ]
   const description = blocked
-    ? unavailable.length > 0
+    ? allBlockingChecksUnavailable
       ? 'pipelines.startChecks.descriptionUnavailable'
       : 'pipelines.startChecks.descriptionBlocked'
     : findings.confirm.length > 0
@@ -83,7 +91,10 @@ function StartChecksBody({
       </AlertDialogHeader>
 
       {/* Only the findings scroll, so the question stays titled and Cancel / Start stay in reach. */}
-      <div className="-mx-4 grid min-h-0 flex-1 gap-4 overflow-y-auto px-4" data-start-checks-body>
+      <AlertDialogBody
+        className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-4 overflow-y-auto [&_[data-check-list]_*]:wrap-anywhere"
+        data-start-checks-body
+      >
         {session.changedWhileConfirming ? (
           <p
             role="alert"
@@ -150,12 +161,12 @@ function StartChecksBody({
         {session.recheckFailed ? (
           <p role="alert">{t('pipelines.startChecks.recheckFailed')}</p>
         ) : null}
-        {unavailable.length > 0 ? (
-          <details>
+        {diagnostics.length > 0 ? (
+          <details className="min-w-0">
             <summary className="text-muted-foreground cursor-pointer text-[13px]">
               {t('pipelines.startChecks.details')}
             </summary>
-            {unavailable.map((finding) => (
+            {diagnostics.map((finding) => (
               <p key={finding.key} className={plainText}>
                 {finding.check} · {finding.evaluation} · {finding.message}
               </p>
@@ -163,7 +174,7 @@ function StartChecksBody({
           </details>
         ) : null}
         {report.plan.length > 0 ? <StartCheckPlan plan={report.plan} /> : null}
-      </div>
+      </AlertDialogBody>
 
       <AlertDialogFooter>
         {blocked ? (
@@ -223,8 +234,8 @@ function StartChecksBody({
 }
 
 /**
- * Asks the start-check questions a start stopped on. A blocked start offers only Close; otherwise
- * Start stays disabled until every question has an answer.
+ * Asks the start-check questions a start stopped on. Unavailable checks can be rechecked; otherwise
+ * a blocked start can only be closed. Start stays disabled until every question has an answer.
  */
 export function StartChecksDialog({
   open,
@@ -241,7 +252,7 @@ export function StartChecksDialog({
       }}
     >
       <AlertDialogContent
-        className="flex max-h-[calc(100dvh-2rem)] flex-col sm:max-w-[560px]"
+        className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-[560px]"
         data-testid="start-checks-dialog"
       >
         {session ? (
