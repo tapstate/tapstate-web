@@ -21,7 +21,7 @@ import { InteractiveCustomer360Showcase } from './interactive-customer-360-showc
 
 type AuthMode = 'login' | 'register'
 
-const CURRENT_LEGAL_VERSION = 'legal-v1.0-2026-10-27'
+const CURRENT_LEGAL_VERSION = import.meta.env.VITE_LEGAL_VERSION ?? 'legal-v1.0-2026-10-27'
 const LEGAL_DOCS = {
   eula: 'https://docs.tapstate.com/legal/eula',
   privacy: 'https://docs.tapstate.com/privacy',
