@@ -44,7 +44,7 @@ export function StorageSetupForm({
   >({})
   const [showUri, setShowUri] = useState(false)
   const [testingLayer, setTestingLayer] = useState<StorageLayer | null>(null)
-  const [failedLayer, setFailedLayer] = useState<StorageLayer | null>(null)
+  const [failedLayers, setFailedLayers] = useState<Partial<Record<StorageLayer, unknown>>>({})
   const [now, setNow] = useState(Date.now)
   const uriId = useId()
   const version = useRef(0)
@@ -67,7 +67,7 @@ export function StorageSetupForm({
     version.current += 1
     setProofs({})
     setTestingLayer(null)
-    setFailedLayer(null)
+    setFailedLayers({})
   }, [testingScope])
   useEffect(() => {
     const future = Object.values(proofs)
@@ -86,7 +86,7 @@ export function StorageSetupForm({
     setForm((current) => ({ ...current, [key]: value }))
     setProofs({})
     setTestingLayer(null)
-    setFailedLayer(null)
+    setFailedLayers({})
     action.reset()
     submission.reset()
   }
@@ -103,45 +103,36 @@ export function StorageSetupForm({
   const fresh = (layer: StorageLayer) =>
     Boolean(proofs[layer] && Date.parse(proofs[layer]!.expiresAt) > Date.now())
   const tested = (['CONFIG', 'CACHE', 'MASTER'] as const).every(fresh)
-  function testLayer(layer: StorageLayer) {
+  function testAllLayers() {
     onTestsInvalidated?.()
     const selectedVersion = version.current
-    let attempted = layer
-    setFailedLayer(null)
+    setProofs({})
+    setFailedLayers({})
     void action.run(
       async (isCurrent) => {
-        const check = async (next: StorageLayer) => {
+        for (const next of ['CONFIG', 'CACHE', 'MASTER'] as const) {
           if (!isCurrent() || version.current !== selectedVersion) return
-          attempted = next
           setTestingLayer(next)
-          setProofs((current) => {
-            const retained = { ...current }
-            delete retained[next]
-            return retained
-          })
-          const result = await storageRequest<StorageTest>(fetcher, 'storage.test', {
-            ...scope,
-            candidate,
-            layer: next,
-          })
-          if (isCurrent() && version.current === selectedVersion) {
-            setProofs((current) => ({
-              ...current,
-              [next]: { ...result, checkedAt: new Date().toISOString() },
-            }))
+          try {
+            const result = await storageRequest<StorageTest>(fetcher, 'storage.test', {
+              ...scope,
+              candidate,
+              layer: next,
+            })
+            if (isCurrent() && version.current === selectedVersion) {
+              setProofs((current) => ({
+                ...current,
+                [next]: { ...result, checkedAt: new Date().toISOString() },
+              }))
+            }
+          } catch (failure) {
+            if (!isCurrent() || version.current !== selectedVersion) return
+            setFailedLayers((current) => ({ ...current, [next]: failure }))
           }
         }
-        // Cloud owns CONFIG. Its existing server-issued proof is acquired with the customer's check.
-        if (mode === 'CLOUD' && !fresh('CONFIG')) await check('CONFIG')
-        await check(layer)
       },
       () => setTestingLayer(null),
-      () => {
-        if (version.current === selectedVersion) {
-          setFailedLayer(attempted)
-          setTestingLayer(null)
-        }
-      },
+      () => setTestingLayer(null),
     )
   }
   if (submission.busy) {
@@ -313,23 +304,12 @@ export function StorageSetupForm({
                     />
                   )}
                 </label>
-                {!(layer === 'CONFIG' && mode === 'CLOUD') && (
-                  <Button
-                    className="min-h-11 sm:min-h-8"
-                    type="button"
-                    variant="outline"
-                    disabled={!valid}
-                    onClick={() => testLayer(layer)}
-                  >
-                    {t('storage.test')}
-                  </Button>
-                )}
                 <p aria-live="polite" className="text-muted-foreground text-xs">
                   <StorageIndicator
                     tone={
                       testingLayer === layer
                         ? 'working'
-                        : failedLayer === layer
+                        : layer in failedLayers
                           ? 'error'
                           : fresh(layer)
                             ? 'success'
@@ -341,7 +321,7 @@ export function StorageSetupForm({
                     {t(
                       testingLayer === layer
                         ? 'storage.testWorking'
-                        : failedLayer === layer
+                        : layer in failedLayers
                           ? 'storage.testFailed'
                           : fresh(layer)
                             ? 'storage.testPassed'
@@ -353,6 +333,7 @@ export function StorageSetupForm({
                     )}
                   </StorageIndicator>
                 </p>
+                {layer in failedLayers && <StorageError error={failedLayers[layer]} />}
               </div>
             )
           })}
@@ -379,6 +360,15 @@ export function StorageSetupForm({
             </label>
           ))}
         </details>
+        <Button
+          className="min-h-11 sm:min-h-8"
+          type="button"
+          variant="outline"
+          disabled={!valid}
+          onClick={testAllLayers}
+        >
+          {t(action.busy ? 'storage.testWorking' : 'storage.test')}
+        </Button>
       </fieldset>
       {Boolean(action.error) && <StorageError error={action.error} />}
       {Boolean(submission.error) && <StorageError error={submission.error} />}
