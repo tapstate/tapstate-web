@@ -65,6 +65,32 @@ describe('stateless installation navigation reconnect', () => {
     expect(await response.text()).toContain('Restarting Tapstate')
     expect(fetcher).not.toHaveBeenCalled()
   })
+  it('returns to live milestones as soon as the recovering backend can report progress', async () => {
+    const response = await worker(vi.fn().mockRejectedValue(new TypeError('offline')))('/overview')!
+    const html = await response.text()
+    const script = html.match(/<script[^>]*>([\s\S]*?)<\/script>/)![1]
+    const redirect = vi.fn()
+    vm.runInNewContext(script, {
+      Date,
+      document: { getElementById: () => ({ hidden: true, textContent: '', onclick: undefined }) },
+      fetch: vi
+        .fn()
+        .mockResolvedValue({
+          ok: true,
+          json: async () => ({
+            mode: 'OP',
+            management: true,
+            entry: 'UNAVAILABLE',
+            initializationProgress: { state: 'RUNNING' },
+          }),
+        }),
+      AbortSignal,
+      location: { replace: redirect },
+      setTimeout: vi.fn(),
+      clearTimeout: vi.fn(),
+    })
+    await vi.waitFor(() => expect(redirect).toHaveBeenCalledWith('/overview'))
+  })
   it('does not intercept or retry API reads or writes', () => {
     const fetcher = vi.fn()
     expect(worker(fetcher)('/api/storage/setup/commit', 'same-origin')).toBeUndefined()
