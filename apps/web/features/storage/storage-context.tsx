@@ -40,6 +40,8 @@ interface StorageState {
   session: number
   authorityRevision: number
   setSetupPending: (pending: boolean) => void
+  setOpRestartExpected: (pending: boolean) => void
+  opRestartExpected: boolean
   autoRefreshing: boolean
 }
 const Context = createContext<StorageState | null>(null)
@@ -54,7 +56,9 @@ export function StorageProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [authorization, setAuthorization] = useState({ secret: '', revision: 0, purpose: 'SETUP' })
   const [setupPending, setSetupPending] = useState(false)
+  const [opRestartExpected, setOpRestartExpected] = useState(false)
   const previous = useRef<StorageSnapshot | undefined>(undefined)
+  const previousEntry = useRef<StorageEntry | undefined>(undefined)
   const queryKey = useMemo(
     () => ['storage', window.location.origin, auth.sessionRevision, authorization.revision],
     [auth.sessionRevision, authorization.revision],
@@ -77,6 +81,13 @@ export function StorageProvider({ children }: { children: ReactNode }) {
     const temporaryFailure =
       failure instanceof TypeError ||
       (failure instanceof StorageClientError && failure.status >= 500)
+    if (
+      opRestartExpected &&
+      (!failure || temporaryFailure) &&
+      entry?.initializationProgress?.state !== 'FAILED' &&
+      !['FIRST_ADMIN_REQUIRED', 'LOGIN'].includes(entry?.entry ?? '')
+    )
+      return 2000
     // Only rediscover the public entry after the temporary Cloud session is retired.
     // The query function still refuses protected status reads without a current session.
     if (
@@ -92,7 +103,7 @@ export function StorageProvider({ children }: { children: ReactNode }) {
       (entry.initializationProgress?.state === 'RUNNING' ||
         (entry.entry === 'RESTART_REQUIRED' && entry.initializationProgress?.state === 'COMPLETE'))
     )
-      return temporaryFailure ? 10000 : 3000
+      return 2000
     const authorized = entry
       ? entry.management
         ? Boolean(authorization.secret) || entry.automaticAuthorization === true
@@ -160,6 +171,7 @@ export function StorageProvider({ children }: { children: ReactNode }) {
         throw new DOMException('Request superseded', 'AbortError')
       if (entry.mode !== (auth.profile === 'cloud' ? 'CLOUD' : 'OP'))
         throw new StorageClientError('protocol', 200)
+      previousEntry.current = entry
       if (
         entry.management
           ? (!authorization.secret && !entry.automaticAuthorization) ||
@@ -187,6 +199,16 @@ export function StorageProvider({ children }: { children: ReactNode }) {
       }
     },
   })
+  useEffect(() => {
+    const entry = query.data?.entry
+    const failure = query.error ?? query.data?.failure
+    if (
+      entry?.initializationProgress?.state === 'FAILED' ||
+      (entry && ['FIRST_ADMIN_REQUIRED', 'LOGIN'].includes(entry.entry)) ||
+      (failure instanceof StorageClientError && failure.status < 500)
+    )
+      setOpRestartExpected(false)
+  }, [query.data, query.error])
   useEffect(
     () => () => {
       void queryClient.cancelQueries({ queryKey })
@@ -207,7 +229,7 @@ export function StorageProvider({ children }: { children: ReactNode }) {
   return (
     <Context.Provider
       value={{
-        entry: query.data?.entry,
+        entry: query.data?.entry ?? (opRestartExpected ? previousEntry.current : undefined),
         snapshot: query.data?.snapshot,
         lastKnownSnapshot: previous.current,
         loading: query.isPending,
@@ -224,6 +246,8 @@ export function StorageProvider({ children }: { children: ReactNode }) {
         session: auth.sessionRevision,
         authorityRevision: authorization.revision,
         setSetupPending,
+        setOpRestartExpected,
+        opRestartExpected,
         autoRefreshing: Boolean(
           pollInterval(query.data?.snapshot, query.error ?? query.data?.failure, query.data?.entry),
         ),

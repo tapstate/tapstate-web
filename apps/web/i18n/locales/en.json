@@ -2043,7 +2043,8 @@
         "START_RUNTIME": "Restart and register data connectors",
         "PUBLISH_READY": "Ready to create the first administrator"
       },
-      "opCanLeave": "You can close this page and return to this installation address. Saved settings are retained. After the automatic restart, use the new first-administrator credential from the installation capability file."
+      "opCanLeave": "You can close this page and return to this installation address. Saved settings are retained. After the automatic restart, use the new first-administrator credential from the installation capability file.",
+      "restarting": "Restarting the service. Reconnecting automatically…"
     },
     "setupCheckRetained": "Runtime preparation is still in progress. This is the connection test completed before saving.",
     "testRequired": "Connection test required",
