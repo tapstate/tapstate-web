@@ -608,7 +608,7 @@
     "loading": "正在加载工单…",
     "loadingDetails": "正在加载工单详情…",
     "emptyTitle": "还没有工单",
-    "emptyDescription": "需要 Cloud 账户、控制台、Cluster 或数据集成方面的帮助时，可在上方提交工单。",
+    "emptyDescription": "需要 Cloud 账户、控制台、集群或数据集成方面的帮助时，可以创建工单。",
     "pageCount": "第 {{current}} 页，共 {{total}} 页 · {{count}} 张工单",
     "previous": "上一页",
     "next": "下一页",

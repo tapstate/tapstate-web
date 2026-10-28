@@ -608,7 +608,7 @@
     "loading": "正在載入工單…",
     "loadingDetails": "正在載入工單詳細資料…",
     "emptyTitle": "目前沒有工單",
-    "emptyDescription": "需要 Cloud 帳戶、主控台、Cluster 或資料整合方面的協助時，可在上方提交工單。",
+    "emptyDescription": "需要 Cloud 帳戶、主控台、叢集或資料整合方面的協助時，可以建立工單。",
     "pageCount": "第 {{current}} 頁，共 {{total}} 頁 · {{count}} 張工單",
     "previous": "上一頁",
     "next": "下一頁",

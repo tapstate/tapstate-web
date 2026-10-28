@@ -608,7 +608,7 @@
     "loading": "Loading tickets…",
     "loadingDetails": "Loading ticket details…",
     "emptyTitle": "No tickets yet",
-    "emptyDescription": "Submit a ticket above when you need help with your Cloud account, Console, Cluster, or data integration.",
+    "emptyDescription": "Create a ticket when you need help with your Cloud account, Console, Cluster, or data integration.",
     "pageCount": "Page {{current}} of {{total}} · {{count}} tickets",
     "previous": "Previous",
     "next": "Next",

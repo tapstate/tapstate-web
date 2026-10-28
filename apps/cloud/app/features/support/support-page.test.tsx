@@ -152,7 +152,7 @@ describe('Support page email verification errors', () => {
       'A support specialist will provide the first human response within 1 business day.',
     )
     expect(host?.textContent).toContain('No tickets yet')
-    expect(host?.textContent).toContain('Submit a ticket above')
+    expect(host?.textContent).toContain('Create a ticket when you need help')
   })
 
   it('explains that a support account cannot be resolved without exposing Jira details', async () => {

@@ -1,6 +1,15 @@
 import type { TFunction } from 'i18next'
 
-import { ArrowLeft, ArrowRight, LifeBuoy, RefreshCw, Send, TicketCheck } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  LifeBuoy,
+  Plus,
+  RefreshCw,
+  Send,
+  TicketCheck,
+  X,
+} from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -72,6 +81,7 @@ export function SupportPage() {
   const [listError, setListError] = useState<string | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
   const [summary, setSummary] = useState('')
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -243,9 +253,14 @@ export function SupportPage() {
         </div>
       </header>
 
-      <div className="mx-auto grid w-full max-w-[1440px] min-w-0 flex-1 content-start gap-5 p-4 sm:p-6 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)]">
+      <div
+        className={`mx-auto grid w-full max-w-[1440px] min-w-0 flex-1 content-start gap-5 p-4 sm:p-6 ${creating ? 'xl:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)]' : 'xl:grid-cols-[minmax(0,1fr)]'}`}
+      >
         <section className="contents" aria-labelledby="support-create-heading">
-          <div className="order-2 min-w-0 space-y-3 xl:col-start-2 xl:row-start-1">
+          <div
+            className="order-2 min-w-0 space-y-3 xl:col-start-2 xl:row-start-1"
+            hidden={!creating}
+          >
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2
@@ -317,7 +332,7 @@ export function SupportPage() {
           </div>
 
           <section className="order-1 min-w-0" aria-labelledby="support-list-heading">
-            <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2
                   id="support-list-heading"
@@ -329,18 +344,33 @@ export function SupportPage() {
                   {t('support.listDescription')}
                 </p>
               </div>
-              <button
-                aria-label={t('support.refresh')}
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--muted-foreground)] transition-colors hover:bg-[var(--app-background)] hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current active:scale-[0.96] disabled:opacity-60"
-                disabled={listLoading}
-                onClick={() => void refreshTickets()}
-                type="button"
-              >
-                <RefreshCw
-                  aria-hidden="true"
-                  className={`h-4 w-4 ${listLoading ? 'animate-spin' : ''}`}
-                />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  aria-expanded={creating}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+                  onClick={() => setCreating((value) => !value)}
+                  type="button"
+                >
+                  {creating ? (
+                    <X aria-hidden="true" className="h-4 w-4" />
+                  ) : (
+                    <Plus aria-hidden="true" className="h-4 w-4" />
+                  )}
+                  {creating ? t('support.cancel') : t('support.createTitle')}
+                </button>
+                <button
+                  aria-label={t('support.refresh')}
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--muted-foreground)] transition-colors hover:bg-[var(--app-background)] hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current active:scale-[0.96] disabled:opacity-60"
+                  disabled={listLoading}
+                  onClick={() => void refreshTickets()}
+                  type="button"
+                >
+                  <RefreshCw
+                    aria-hidden="true"
+                    className={`h-4 w-4 ${listLoading ? 'animate-spin' : ''}`}
+                  />
+                </button>
+              </div>
             </div>
 
             <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
@@ -415,7 +445,7 @@ export function SupportPage() {
                   </div>
                 </>
               ) : (
-                <div className="flex min-h-40 flex-col items-center justify-center px-5 py-8 text-center">
+                <div className="flex min-h-64 flex-col items-center justify-center px-5 py-10 text-center">
                   <TicketCheck
                     aria-hidden="true"
                     className="mb-3 h-6 w-6 text-[var(--muted-foreground)]"
@@ -526,11 +556,12 @@ export function SupportPage() {
                       {t('support.closeTicket')}
                     </button>
                   ))}
-                {!selected.canClose && (
-                  <p className="text-xs text-[var(--muted-foreground)]">
-                    {t('support.closeUnavailable')}
-                  </p>
-                )}
+                {!selected.canClose &&
+                  !['done', 'complete'].includes(selected.statusCategory.toLowerCase()) && (
+                    <p className="text-xs text-[var(--muted-foreground)]">
+                      {t('support.closeUnavailable')}
+                    </p>
+                  )}
               </div>
             ) : (
               <div className="flex min-h-48 flex-col items-center justify-center px-5 py-8 text-center">
