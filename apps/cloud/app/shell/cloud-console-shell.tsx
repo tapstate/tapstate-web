@@ -131,9 +131,13 @@ export function CloudConsoleShell({
               activeOptions={{ exact }}
               activeProps={{
                 className:
-                  'flex h-8.5 w-full items-center gap-2.5 rounded-lg bg-white px-3 text-left text-xs font-medium text-neutral-900 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_1px_rgba(0,0,0,0.03)] dark:bg-[#25272a] dark:text-white',
+                  'bg-white font-medium text-neutral-900 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_1px_rgba(0,0,0,0.03)] hover:bg-white dark:bg-[#25272a] dark:text-white dark:hover:bg-[#25272a]',
               }}
-              className="flex h-8.5 w-full items-center gap-2.5 rounded-lg px-3 text-left text-xs font-normal text-neutral-600 transition-all duration-150 hover:bg-black/[0.04] hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-white/[0.05] dark:hover:text-white"
+              className="flex h-8.5 w-full items-center gap-2.5 rounded-lg px-3 text-left text-xs transition-all duration-150"
+              inactiveProps={{
+                className:
+                  'font-normal text-neutral-600 hover:bg-black/[0.04] hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-white/[0.05] dark:hover:text-white',
+              }}
               key={path}
               search={{ organizationId: currentOrganization?.id }}
               to={path}

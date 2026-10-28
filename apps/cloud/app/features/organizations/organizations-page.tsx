@@ -117,7 +117,7 @@ export function OrganizationsPage({ embedded = false }: { embedded?: boolean } =
       {!embedded && (
         <header className="border-divider-subtle flex shrink-0 items-center justify-between border-b px-6 py-4">
           <div>
-            <h1 className="title-xl-semi-bold text-text-primary">
+            <h1 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
               {t('sections.organizations.title')}
             </h1>
             <p className="body-sm-regular text-text-tertiary mt-1">
