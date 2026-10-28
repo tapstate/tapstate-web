@@ -12,6 +12,7 @@ type Choice = { value?: string | number; disabled?: boolean; children?: ReactNod
 type Change = { target: { value: string; selectedOptions: { value: string }[] } }
 type Props = {
   children: ReactNode
+  className?: string
   value?: string | number | readonly string[]
   multiple?: boolean
   disabled?: boolean
@@ -23,6 +24,7 @@ type Props = {
 /** Keeps the alert form's typed choices on the shared, keyboard-accessible primitive. */
 export function AlertSelect({
   children,
+  className = 'w-full',
   value,
   multiple,
   disabled,
@@ -40,7 +42,7 @@ export function AlertSelect({
   }))
   const content = (
     <>
-      <SelectTrigger {...label} className="w-full">
+      <SelectTrigger {...label} className={className}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

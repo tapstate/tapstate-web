@@ -181,7 +181,8 @@ export function HealthSummary() {
               ? t('alerts.degraded')
               : t('alerts.detectorRunning')}
       </span>
-      <small>{t('alerts.coverageNote')}</small>
+      <small title={t('alerts.coverageNote')}>{t('alerts.coverageShort')}</small>
+      <span className="alert-health-link">{t('alerts.viewHealthDetails')}</span>
     </Link>
   )
 }

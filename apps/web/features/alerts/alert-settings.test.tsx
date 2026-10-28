@@ -324,14 +324,13 @@ describe('current receiver candidate', () => {
     await render()
     await click('Create')
     await input('Name', 'Scope switch')
-    const all = [...container.querySelectorAll('label')]
-      .find((l) => l.textContent?.includes('All current resources'))!
-      .querySelector('input')!
-    await act(async () => all.click())
-    await settle()
-    await choose(container.querySelectorAll<HTMLElement>('[role="combobox"]')[2], 'orders')
-    await act(async () => all.click())
-    await settle()
+    const mode = container.querySelector<HTMLElement>('[aria-label="Resource scope"]')!
+    await choose(mode, 'Selected resources')
+    await choose(
+      container.querySelector<HTMLElement>('[aria-label="Selected resources"]')!,
+      'orders',
+    )
+    await choose(mode, 'All current resources')
     await click('Save and activate')
     const sent = requests().find((r) => r.path.endsWith('/configuration/save'))!
     expect(sent.body.form.allResources).toBe(true)
@@ -458,8 +457,21 @@ describe('current receiver candidate', () => {
       return fallback(url, init)
     })
     await render()
-    await click('Subscription routes')
-    await click('Edit')
+    await click('Silence & inhibition')
+    await click('Configure inhibition')
+    const enabled = [...container.querySelectorAll('label')]
+      .find((label) => label.textContent?.includes('Enable this relation'))!
+      .querySelector<HTMLInputElement>('input')!
+    await act(async () => enabled.click())
+    await settle()
+    expect(saved).toBe(0)
+    await act(async () => enabled.click())
+    await settle()
+    const save = [...container.querySelectorAll('button')].find(
+      (b) => b.textContent === 'Save and activate',
+    )!
+    expect(save.disabled).toBe(true)
+    expect(container.querySelectorAll('.alert-inhibition-edge')).toHaveLength(2)
     const select = [...container.querySelectorAll('label')]
       .find((l) => l.querySelector('span')?.textContent?.startsWith('Dependent alert type'))!
       .querySelector<HTMLElement>('[role="combobox"]')!
@@ -528,7 +540,11 @@ it('edits inhibition from its own page while preserving hidden route bindings', 
       (l) => l.querySelector('span')?.textContent === 'Name',
     ),
   ).toBe(false)
-  await click('Remove this inhibition')
+  const enabled = [...container.querySelectorAll('label')]
+    .find((label) => label.textContent?.includes('Enable this relation'))!
+    .querySelector<HTMLInputElement>('input')!
+  await act(async () => enabled.click())
+  await settle()
   await click('Save and activate')
   const sent = requests().find((r) => r.path.endsWith('/configuration/save'))!.body.form
   expect(sent.inhibition).toEqual([])

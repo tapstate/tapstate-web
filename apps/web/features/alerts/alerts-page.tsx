@@ -144,64 +144,57 @@ function AlertsContent() {
           <h1>{t('alerts.center')}</h1>
           <p>{t('alerts.automatic')}</p>
         </div>
-        <Link to="/settings/alerts">{t('alerts.configuration')}</Link>
+        <Link to="/settings/alerts" className="alert-table-action">
+          {t('alerts.configuration')}
+        </Link>
       </header>
-      <div className="alert-page-actions">
-        <div className="alert-segment" role="tablist" aria-label={t('alerts.center')}>
-          {(['active', 'history'] as const).map((v) => (
-            <button
-              role="tab"
-              aria-selected={v === view}
-              key={v}
-              onClick={() => update({ view: v, key: undefined, delivery: undefined })}
-            >
-              {t(`alerts.${v}`)}
-              {v === view && page.data?.pages[0]?.total !== undefined && (
-                <span>{page.data.pages[0].total}</span>
-              )}
-            </button>
-          ))}
-        </div>
-        <button
-          className="alert-table-action"
-          onClick={() =>
-            update({
-              view: 'deliveries',
-              key: undefined,
-              delivery: undefined,
-              alarm: undefined,
-              alarmEpisode: undefined,
-            })
-          }
-        >
-          {t('alerts.deliveries')}
-        </button>
-      </div>
       {view !== 'deliveries' && (
-        <div className="alert-filters">
-          <label className="alert-search-label">
-            <input
-              aria-label={t('alerts.search')}
-              placeholder={t('alerts.search')}
-              value={search.q ?? ''}
-              maxLength={128}
-              onChange={(e) => update({ q: e.target.value || undefined, key: undefined })}
-            />
-          </label>
-          <label>
-            {t('alerts.filterSeverity')}
-            <AlertSelect
-              value={search.severity ?? ''}
-              onChange={(e) => update({ severity: e.target.value || undefined, key: undefined })}
-            >
-              <option value="">{t('alerts.allSeverities')}</option>
-              {['CRITICAL', 'MAJOR', 'MINOR', 'WARNING'].map((v) => (
-                <option key={v} value={v}>
-                  {t(`alerts.severity.${v}`)}
-                </option>
-              ))}
-            </AlertSelect>
-          </label>
+        <div className="alert-center-toolbar">
+          {' '}
+          {!search.delivery && (
+            <div className="alert-page-actions">
+              <div className="alert-segment" role="tablist" aria-label={t('alerts.center')}>
+                {(['active', 'history'] as const).map((v) => (
+                  <button
+                    role="tab"
+                    aria-selected={v === view}
+                    key={v}
+                    onClick={() => update({ view: v, key: undefined, delivery: undefined })}
+                  >
+                    {t(`alerts.${v}`)}
+                    {v === view && page.data?.pages[0]?.total !== undefined && (
+                      <span>{page.data.pages[0].total}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="alert-filters">
+            <label className="alert-search-label">
+              <input
+                aria-label={t('alerts.search')}
+                placeholder={t('alerts.search')}
+                value={search.q ?? ''}
+                maxLength={128}
+                onChange={(e) => update({ q: e.target.value || undefined, key: undefined })}
+              />
+            </label>
+            <label>
+              {t('alerts.filterSeverity')}
+              <AlertSelect
+                value={search.severity ?? ''}
+                onChange={(e) => update({ severity: e.target.value || undefined, key: undefined })}
+              >
+                <option value="">{t('alerts.allSeverities')}</option>
+                {['CRITICAL', 'MAJOR', 'MINOR', 'WARNING'].map((v) => (
+                  <option key={v} value={v}>
+                    {t(`alerts.severity.${v}`)}
+                  </option>
+                ))}
+              </AlertSelect>
+            </label>
+          </div>
         </div>
       )}
       {view === 'history' && (
@@ -221,7 +214,15 @@ function AlertsContent() {
           </label>
         </div>
       )}
-      {view === 'deliveries' && (
+      {view === 'deliveries' && !search.delivery && (
+        <div className="alerts-toolbar">
+          <h2>{t('alerts.deliveries')}</h2>
+          <Button variant="ghost" onClick={() => update({ view: 'active', delivery: undefined })}>
+            {t('alerts.backToAlerts')}
+          </Button>
+        </div>
+      )}
+      {view === 'deliveries' && !search.delivery && (
         <div className="alert-filters">
           <label>
             {t('alerts.channel')}
@@ -263,65 +264,66 @@ function AlertsContent() {
       )}
       <div
         className={
-          view === 'deliveries' && !search.delivery
+          view === 'deliveries'
             ? 'alert-center-layout alert-center-layout--single'
             : 'alert-center-layout'
         }
       >
-        <div className="alert-panel">
-          {page.isError && <p role="alert">{t('alerts.unavailable')}</p>}
-          {page.isPending && <p>{t('alerts.loading')}</p>}
-          {!page.isPending && !page.isError && !rows.length && (
-            <p>{t(view === 'active' ? 'alerts.emptyActive' : 'alerts.emptyHistory')}</p>
-          )}
-          {page.data?.pages.some((p) => p.isolated) && (
-            <p className="alert-warning">{t('alerts.isolated')}</p>
-          )}
-          {view === 'deliveries' ? (
-            <DeliveryTable
-              rows={rows.filter((r): r is DeliveryRow => 'channel' in r)}
-              onOpen={(r) => update({ delivery: r.id })}
-            />
-          ) : (
-            rows
-              .filter((r): r is AlarmRow => !('channel' in r))
-              .map((row) => (
-                <button
-                  key={`${row.key}-${row.episode}`}
-                  className={`alert-alarm-row ${search.key === row.key && search.episode === row.episode ? 'alert-alarm-row--selected' : ''}`}
-                  onClick={() => update({ key: row.key, episode: row.episode })}
-                >
-                  <span className="alert-row-heading">
-                    <Severity value={row.severity} />
-                    <strong>{t(`alerts.types.${row.typeId}`)}</strong>
-                    <span className="alert-state">{t(`alerts.status.${row.status}`)}</span>
-                  </span>
-                  <span className="alert-row-resource">
-                    {row.resource.kind} / {row.resource.id}
-                  </span>
-                  <span className="alert-row-meta">
-                    {view === 'active' ? (
-                      <AlertDuration from={row.firedAt} />
-                    ) : (
-                      <Time value={row.recoveredAt ?? row.endedAt} />
-                    )}
-                    {row.quality && row.quality !== 'VALID' && (
-                      <span>{t('alerts.unknownObservation')}</span>
-                    )}
-                  </span>
-                </button>
-              ))
-          )}
-          {page.hasNextPage && (
-            <Button
-              variant="outline"
-              disabled={page.isFetchingNextPage}
-              onClick={() => void page.fetchNextPage()}
-            >
-              {t('alerts.more')}
-            </Button>
-          )}
-        </div>
+        {!search.delivery && (
+          <div className="alert-panel">
+            {page.isError && <p role="alert">{t('alerts.unavailable')}</p>}
+            {page.isPending && <p>{t('alerts.loading')}</p>}
+            {!page.isPending && !page.isError && !rows.length && (
+              <p>{t(view === 'active' ? 'alerts.emptyActive' : 'alerts.emptyHistory')}</p>
+            )}
+            {page.data?.pages.some((p) => p.isolated) && (
+              <p className="alert-warning">{t('alerts.isolated')}</p>
+            )}
+            {view === 'deliveries' ? (
+              <DeliveryTable
+                rows={rows.filter((r): r is DeliveryRow => 'channel' in r)}
+                onOpen={(r) => update({ delivery: r.id })}
+              />
+            ) : (
+              rows
+                .filter((r): r is AlarmRow => !('channel' in r))
+                .map((row) => (
+                  <button
+                    key={`${row.key}-${row.episode}`}
+                    className={`alert-alarm-row ${search.key === row.key && search.episode === row.episode ? 'alert-alarm-row--selected' : ''}`}
+                    onClick={() => update({ key: row.key, episode: row.episode })}
+                  >
+                    <span className="alert-row-heading">
+                      <Severity value={row.severity} />
+                      <span className="alert-row-age">
+                        {view === 'active' ? (
+                          <AlertDuration from={row.firedAt} />
+                        ) : (
+                          <Time value={row.recoveredAt ?? row.endedAt} />
+                        )}
+                      </span>
+                    </span>
+                    <strong className="alert-row-title">{t(`alerts.types.${row.typeId}`)}</strong>
+                    <span className="alert-row-resource">
+                      {row.resource.id}
+                      {row.quality && row.quality !== 'VALID' && (
+                        <span className="alert-state">{t('alerts.observationInterrupted')}</span>
+                      )}
+                    </span>
+                  </button>
+                ))
+            )}
+            {page.hasNextPage && (
+              <Button
+                variant="outline"
+                disabled={page.isFetchingNextPage}
+                onClick={() => void page.fetchNextPage()}
+              >
+                {t('alerts.more')}
+              </Button>
+            )}
+          </div>
+        )}
         {view !== 'deliveries' && !search.key && (
           <aside className="alert-panel alert-select-detail">{t('alerts.selectAlert')}</aside>
         )}
@@ -330,17 +332,26 @@ function AlertsContent() {
             {detail.isError && <p role="alert">{t('alerts.unavailable')}</p>}
             {detail.data && (
               <>
-                <Severity value={detail.data.severity} />
+                <div className="alert-detail-state">
+                  <Severity value={detail.data.severity} />
+                  <span className="alert-state">{t(`alerts.status.${detail.data.status}`)}</span>
+                </div>
                 <h2>{t(`alerts.types.${detail.data.typeId}`)}</h2>
                 <p>{detail.data.resource.id}</p>
-                <p>{t(`alerts.status.${detail.data.status}`)}</p>
                 {detail.data.quality && detail.data.quality !== 'VALID' && (
                   <p className="alert-warning">{t('alerts.unknownObservation')}</p>
                 )}
-                <dl>
+                <dl className="alert-kv">
                   <dt>{t('alerts.occurred')}</dt>
                   <dd>
                     <Time value={detail.data.firedAt} />
+                  </dd>
+                  <dt>{t('alerts.duration')}</dt>
+                  <dd>
+                    <AlertDuration
+                      from={detail.data.firedAt}
+                      to={detail.data.recoveredAt ?? detail.data.endedAt}
+                    />
                   </dd>
                   <dt>{t('alerts.observed')}</dt>
                   <dd>
@@ -352,36 +363,41 @@ function AlertsContent() {
                   </dd>
                 </dl>
                 {detail.data.endReason && <p>{t(`alerts.endReasons.${detail.data.endReason}`)}</p>}
-                <h3>{t('alerts.basis')}</h3>
+                <h3>
+                  {t(
+                    detail.data.status === 'RECOVERED' ? 'alerts.recoveryReason' : 'alerts.reason',
+                  )}
+                </h3>
                 <p>
                   {detail.data.status === 'RECOVERED'
                     ? detail.data.recovery
-                    : detail.data.condition}
+                    : (detail.data.diagnostics?.text?.split('\n')[0] ?? detail.data.condition)}
                 </p>
-                <p>
-                  {t('alerts.duration')}: {detail.data.durationSeconds ?? '—'}
-                </p>
-                {detail.data.thresholds ? (
+                <h3>{t('alerts.troubleshooting')}</h3>
+                <p>{detail.data.guidance}</p>
+                <details className="alert-decision-details">
+                  <summary>{t('alerts.basis')}</summary>
+                  {detail.data.thresholds ? (
+                    <dl>
+                      {Object.entries(detail.data.thresholds).map(([k, v]) => (
+                        <div key={k}>
+                          <dt>{t(`alerts.parameters.${k}`, { defaultValue: k })} (s)</dt>
+                          <dd>{v}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  ) : (
+                    <p>{t('alerts.originalParametersUnavailable')}</p>
+                  )}
                   <dl>
-                    {Object.entries(detail.data.thresholds).map(([k, v]) => (
+                    {Object.entries(detail.data.basis ?? {}).map(([k, v]) => (
                       <div key={k}>
-                        <dt>{t(`alerts.parameters.${k}`, { defaultValue: k })} (s)</dt>
-                        <dd>{v}</dd>
+                        <dt>{t(`alerts.basisFields.${k}`, { defaultValue: k })}</dt>
+                        <dd>{v == null ? '—' : String(v)}</dd>
                       </div>
                     ))}
                   </dl>
-                ) : (
-                  <p>{t('alerts.originalParametersUnavailable')}</p>
-                )}
-                <p>{detail.data.guidance}</p>
-                <dl>
-                  {Object.entries(detail.data.basis ?? {}).map(([k, v]) => (
-                    <div key={k}>
-                      <dt>{t(`alerts.basisFields.${k}`, { defaultValue: k })}</dt>
-                      <dd>{v == null ? '—' : String(v)}</dd>
-                    </div>
-                  ))}
-                </dl>
+                </details>
                 {detail.data.diagnostics?.text ? (
                   <details>
                     <summary>{t('alerts.stack')}</summary>
@@ -456,7 +472,16 @@ function AlertsContent() {
                   <summary>{t('alerts.technical')}</summary>
                   <code>{delivery.data.id}</code>
                 </details>
-                <ol>
+                <dl className="alert-kv">
+                  <dt>{t('alerts.occurred')}</dt>
+                  <dd>
+                    <Time value={delivery.data.createdAt} />
+                  </dd>
+                  <dt>{t('alerts.attemptLimit')}</dt>
+                  <dd>{delivery.data.attempts}</dd>
+                </dl>
+                <h3>{t('alerts.recentSending')}</h3>
+                <ol className="alert-timeline">
                   {delivery.data.attemptHistory?.map((a) => (
                     <li key={a.number}>
                       {a.number} ·{' '}
@@ -472,6 +497,9 @@ function AlertsContent() {
                       </small>
                     </li>
                   ))}
+                  <li>
+                    {t('alerts.notificationCreated')} · <Time value={delivery.data.createdAt} />
+                  </li>
                 </ol>
                 {onPrem && delivery.data.canRetry && (
                   <>

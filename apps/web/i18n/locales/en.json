@@ -2549,6 +2549,49 @@
       "DEADLINE": "Attempt deadline",
       "CAPACITY": "Capacity admission"
     },
-    "configureInhibition": "Configure inhibition"
+    "configureInhibition": "Configure inhibition",
+    "recoveryReason": "Recovery evidence",
+    "troubleshooting": "Troubleshooting",
+    "recentSending": "Recent sending records",
+    "notificationCreated": "Notification created",
+    "observationInterrupted": "Observation interrupted",
+    "coverageShort": "Connected detectors only",
+    "viewHealthDetails": "View details →",
+    "backToAlerts": "Back to alerts",
+    "matchingScope": "Matching scope",
+    "inhibitionScope": "Current Cluster · currently proven resource dependencies",
+    "inhibitionLifecycle": "While the root cause remains active, pause notifications for the related resources. Their alerts remain evaluated and visible. After recovery, notifications follow the dependent resource’s current state.",
+    "enableInhibition": "Enable this relation",
+    "disabledInhibitionNote": "Only enabled relations are stored. Disabling removes them from the route; the current draft is kept here until you leave.",
+    "routeConditions": "Route conditions, targets and frequency",
+    "previewKinds": {
+      "FAULT": "Fault",
+      "REMINDER": "Reminder",
+      "RECOVERY": "Recovery",
+      "RECOVERY_SUMMARY": "Recovery summary"
+    },
+    "previewFormats": {
+      "html": "Email HTML",
+      "text": "Email plain text",
+      "webhook": "Webhook JSON"
+    },
+    "editorTitles": {
+      "RULE": {
+        "edit": "Edit alert rule",
+        "create": "New alert rule"
+      },
+      "RECEIVER": {
+        "edit": "Configure receiver",
+        "create": "New receiver"
+      },
+      "SUBSCRIPTION": {
+        "edit": "Notification content & preview",
+        "create": "New subscription route"
+      },
+      "SILENCE": {
+        "edit": "Edit silence window",
+        "create": "New silence window"
+      }
+    }
   }
 }

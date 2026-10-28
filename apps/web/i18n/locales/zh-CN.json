@@ -2549,6 +2549,49 @@
       "DEADLINE": "尝试时限",
       "CAPACITY": "并发准入"
     },
-    "configureInhibition": "配置抑制关系"
+    "configureInhibition": "配置抑制关系",
+    "recoveryReason": "恢复依据",
+    "troubleshooting": "排查建议",
+    "recentSending": "最近发送记录",
+    "notificationCreated": "通知已创建",
+    "observationInterrupted": "观测中断",
+    "coverageShort": "仅已接入检测项",
+    "viewHealthDetails": "查看详情 →",
+    "backToAlerts": "返回告警列表",
+    "matchingScope": "匹配范围",
+    "inhibitionScope": "当前 Cluster · 已核实的资源依赖关系",
+    "inhibitionLifecycle": "根因告警持续期间，暂停关联资源的通知；其告警仍正常检测并显示。根因恢复后，按依赖资源当前状态恢复通知。",
+    "enableInhibition": "启用该关系",
+    "disabledInhibitionNote": "仅保存启用的关系。停用会从路由移除；当前草稿保留到离开本页。",
+    "routeConditions": "路由条件、通知目标与频率",
+    "previewKinds": {
+      "FAULT": "故障",
+      "REMINDER": "提醒",
+      "RECOVERY": "恢复",
+      "RECOVERY_SUMMARY": "恢复摘要"
+    },
+    "previewFormats": {
+      "html": "Email HTML",
+      "text": "Email 纯文本",
+      "webhook": "Webhook JSON"
+    },
+    "editorTitles": {
+      "RULE": {
+        "edit": "编辑告警规则",
+        "create": "新建告警规则"
+      },
+      "RECEIVER": {
+        "edit": "配置接收端",
+        "create": "新增接收端"
+      },
+      "SUBSCRIPTION": {
+        "edit": "通知内容与预览",
+        "create": "新建订阅路由"
+      },
+      "SILENCE": {
+        "edit": "编辑静默窗口",
+        "create": "新建静默窗口"
+      }
+    }
   }
 }
