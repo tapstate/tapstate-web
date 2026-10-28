@@ -2061,7 +2061,11 @@
     },
     "footnote": "状态综合了 pipeline 的状态与视图落后于源的程度。视图是构建出的文档；副本是一张表的镜像。",
     "browseCollections": "浏览集合",
-    "createView": "创建视图"
+    "createView": "创建视图",
+    "outputs": {
+      "unresolved": "输出位置尚未解析",
+      "help": "请发现源端结构或检查管道的输出配置。其他已解析的输出仍会正常显示。"
+    }
   },
   "notFound": {
     "back": "返回工作区",

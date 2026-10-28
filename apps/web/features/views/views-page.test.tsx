@@ -55,6 +55,43 @@ afterEach(() => {
 })
 
 describe('ViewsPage', () => {
+  it('shows unresolved pipelines without presenting them as an empty collection list', async () => {
+    listViews.mockResolvedValue({
+      available: true,
+      views: [],
+      unresolved: [
+        {
+          pipelineId: 'orders-pipeline',
+          code: 'actuation.source-schema-not-discovered',
+          params: { source: 'orders' },
+        },
+      ],
+    })
+    page = await renderPage(<ViewsPage />)
+    expect(page.container.textContent).toContain('Output location not yet resolved')
+    expect(page.container.textContent).toContain('orders-pipeline')
+    expect(page.container.textContent).toContain('actuation.source-schema-not-discovered')
+    expect(page.container.textContent).not.toContain('No views yet')
+    expect(page.container.querySelector('table')).toBeNull()
+  })
+
+  it('keeps known outputs beside an unresolved pipeline', async () => {
+    listViews.mockResolvedValue({
+      available: true,
+      views: [viewEntry('orders', 'replica', 'healthy', { state: 'not-loaded' })],
+      unresolved: [
+        {
+          pipelineId: 'unresolved-pipeline',
+          code: 'actuation.source-schema-not-discovered',
+          params: {},
+        },
+      ],
+    })
+    page = await renderPage(<ViewsPage />)
+    expect(page.container.querySelector('table')).not.toBeNull()
+    expect(page.container.textContent).toContain('unresolved-pipeline')
+  })
+
   it('shows a loading state, then an error with a retry', async () => {
     listViews.mockReturnValue(new Promise(() => undefined))
     page = await renderPage(<ViewsPage />)

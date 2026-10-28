@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { ArrowRight, Database, GitMerge, HardDrive, Layers, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import type { ViewSummary } from '@/service/view-client'
+import type { UnresolvedOutput, ViewSummary } from '@/service/view-client'
 
 import { ResourceListHeader } from '@/components/resource-list-header'
 import { Badge } from '@/components/ui/badge'
@@ -52,13 +52,44 @@ export function ViewsPage() {
           </p>
         ) : !result.available ? (
           <ViewsExplainer notice={t('views.states.notReported')} />
-        ) : result.views.length === 0 ? (
-          <ViewsExplainer notice={null} />
         ) : (
-          <ViewsList views={result.views} />
+          <>
+            <UnresolvedOutputs outputs={result.unresolved ?? []} />
+            {result.views.length > 0 ? (
+              <ViewsList views={result.views} />
+            ) : !result.unresolved?.length ? (
+              <ViewsExplainer notice={null} />
+            ) : null}
+          </>
         )}
       </div>
     </section>
+  )
+}
+
+function UnresolvedOutputs({ outputs }: { outputs: UnresolvedOutput[] }) {
+  const { t } = useTranslation()
+  if (!outputs.length) return null
+  return (
+    <div className="views-page__state" role="status">
+      <p>{t('views.outputs.unresolved')}</p>
+      <p>{t('views.outputs.help')}</p>
+      <ul>
+        {outputs.map((output) => (
+          <li key={output.pipelineId} className="break-words">
+            <Link
+              to="/pipelines/$pipelineId"
+              params={{ pipelineId: output.pipelineId }}
+              className="views-link"
+            >
+              {output.pipelineId}
+            </Link>
+            {' · '}
+            {output.code}
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 

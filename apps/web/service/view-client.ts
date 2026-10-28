@@ -38,7 +38,15 @@ export interface ViewSummary {
  * The view list, or a note that this server does not offer one yet. A server without the read
  * answers 404 or 405; that is an expected state of an older server, not an error.
  */
-export type ViewListResult = { available: true; views: ViewSummary[] } | { available: false }
+export interface UnresolvedOutput {
+  pipelineId: string
+  code: string
+  params: Record<string, unknown>
+}
+
+export type ViewListResult =
+  | { available: true; views: ViewSummary[]; unresolved?: UnresolvedOutput[] }
+  | { available: false }
 
 export class ViewClientError extends Error {
   readonly status: number | null
@@ -68,7 +76,25 @@ export async function listViews(fetcher: ApiFetcher = fetch): Promise<ViewListRe
   }
   if (!isRecord(payload) || !Array.isArray(payload.items) || !payload.items.every(isViewSummary))
     throw new ViewClientError('the view list response is malformed', response.status)
-  return { available: true, views: payload.items }
+  if (
+    payload.unresolved !== undefined &&
+    (!Array.isArray(payload.unresolved) || !payload.unresolved.every(isUnresolvedOutput))
+  )
+    throw new ViewClientError('the output diagnostics response is malformed', response.status)
+  return {
+    available: true,
+    views: payload.items,
+    ...(payload.unresolved === undefined ? {} : { unresolved: payload.unresolved }),
+  }
+}
+
+export function isUnresolvedOutput(value: unknown): value is UnresolvedOutput {
+  return (
+    isRecord(value) &&
+    typeof value.pipelineId === 'string' &&
+    typeof value.code === 'string' &&
+    isRecord(value.params)
+  )
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

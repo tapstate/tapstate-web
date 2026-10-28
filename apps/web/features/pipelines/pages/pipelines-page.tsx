@@ -400,12 +400,12 @@ function PipelineTableRow({
 }) {
   const { i18n, t } = useTranslation()
   const sources = artifact?.sources?.map((source) => source.id).join(', ')
-  const targets = artifact?.dag.nodes
-    .filter((node) => node.type === 'target')
-    .map((node) => {
-      return node.tableRefs?.length ? node.tableRefs.join(', ') : node.label
-    })
-    .join(', ')
+  const targets = artifact?.outputTargets
+    ? [
+        ...new Set(artifact.outputTargets.outputs.map((output) => output.table)),
+        ...(artifact.outputTargets.unresolved.length ? [t('views.outputs.unresolved')] : []),
+      ].join(', ')
+    : undefined
   const modeLabel = pipeline.mode
     ? t(`pipelines.createMenu.${pipeline.mode}`)
     : t('pipelines.type.pipeline')

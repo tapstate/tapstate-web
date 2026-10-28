@@ -2065,7 +2065,11 @@
     },
     "footnote": "Status combines the pipeline's state with how far the view is behind its sources. A View is a built document; a Replica is a mirrored copy of one table.",
     "browseCollections": "Browse collections",
-    "createView": "Create view"
+    "createView": "Create view",
+    "outputs": {
+      "unresolved": "Output location not yet resolved",
+      "help": "Discover the source schema or review the pipeline output configuration. Other resolved outputs remain listed."
+    }
   },
   "notFound": {
     "back": "Back to workspace",
