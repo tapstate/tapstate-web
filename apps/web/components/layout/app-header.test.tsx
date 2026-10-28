@@ -142,3 +142,21 @@ it('loads the cloud account from the authenticated current-user endpoint', async
   )
   await vi.waitFor(() => expect(host.textContent).toContain('alice'))
 })
+
+it('keeps the Cloud workspace email when an older server has no current-user endpoint', async () => {
+  auth.apiFetch.mockResolvedValue(new Response(null, { status: 404 }))
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  await act(async () => {
+    root.render(
+      <QueryClientProvider client={queryClient}>
+        <AppHeader cloudUserEmail="legacy@example.com" />
+      </QueryClientProvider>,
+    )
+  })
+  await vi.waitFor(() =>
+    expect(auth.apiFetch).toHaveBeenCalledWith('/auth/me', { cache: 'no-store' }),
+  )
+  expect(host.querySelector<HTMLButtonElement>('button[aria-label="Account menu"]')?.title).toBe(
+    'legacy@example.com',
+  )
+})
