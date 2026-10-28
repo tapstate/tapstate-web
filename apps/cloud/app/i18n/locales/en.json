@@ -8,6 +8,7 @@
     },
     "account": {
       "openMenu": "Account",
+      "profile": "Profile",
       "settings": "Settings",
       "appearance": "Appearance",
       "themeLight": "Light",

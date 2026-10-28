@@ -186,14 +186,11 @@ export function AccountMenu({ user, organizationId, onLogout, compact = false }:
             onClick={() => {
               void navigate({
                 to: '/settings',
-                search: { organizationId: organizationId ?? undefined },
+                search: { organizationId: organizationId ?? undefined, tab: 'account' },
               })
             }}
           >
-            <MenuItemContent
-              iconClassName="i-ri-equalizer-2-line"
-              label={t('app.account.settings')}
-            />
+            <MenuItemContent iconClassName="i-ri-user-line" label={t('app.account.profile')} />
           </DropdownMenuItem>
           <AppearanceSubmenu />
         </DropdownMenuGroup>
