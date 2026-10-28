@@ -20,7 +20,7 @@ import { AccountMenu } from './account-menu'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
-it('renders user pill trigger and opens account popup with settings, appearance, and logout', async () => {
+it('renders user pill trigger and opens account popup with profile, appearance, and logout', async () => {
   const host = document.createElement('div')
   document.body.append(host)
   const root = createRoot(host)
@@ -51,21 +51,21 @@ it('renders user pill trigger and opens account popup with settings, appearance,
 
     // Check user card content
     expect(document.body.textContent).toContain('alex@tapstate.com')
-    expect(document.body.textContent).toContain('Settings')
+    expect(document.body.textContent).toContain('Profile')
     expect(document.body.textContent).toContain('Appearance')
     expect(document.body.textContent).toContain('Log out')
 
-    // Click Settings
-    const settingsItem = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
-      (item) => item.textContent?.includes('Settings'),
+    // Click Profile
+    const profileItem = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+      (item) => item.textContent?.includes('Profile'),
     )!
-    expect(settingsItem).toBeDefined()
+    expect(profileItem).toBeDefined()
     await act(async () => {
-      settingsItem.click()
+      profileItem.click()
     })
     expect(mockNavigate).toHaveBeenCalledWith({
       to: '/settings',
-      search: { organizationId: 'org-123' },
+      search: { organizationId: 'org-123', tab: 'account' },
     })
 
     // Open menu again to test logout

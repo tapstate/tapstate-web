@@ -6,9 +6,18 @@ import { createRoot } from 'react-dom/client'
 import { expect, it, vi } from 'vitest'
 
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ children, ...props }: { children: ReactNode } & HTMLAttributes<HTMLAnchorElement>) => (
-    <a {...props}>{children}</a>
-  ),
+  Link: ({
+    activeOptions: _activeOptions,
+    activeProps: _activeProps,
+    children,
+    inactiveProps: _inactiveProps,
+    ...props
+  }: {
+    activeOptions?: unknown
+    activeProps?: unknown
+    children: ReactNode
+    inactiveProps?: unknown
+  } & HTMLAttributes<HTMLAnchorElement>) => <a {...props}>{children}</a>,
   useNavigate: () => vi.fn(),
   useRouterState: ({ select }: { select: (state: { location: { pathname: string } }) => string }) =>
     select({ location: { pathname: '/' } }),

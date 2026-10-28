@@ -8,6 +8,7 @@
     },
     "account": {
       "openMenu": "Account",
+      "profile": "Profile",
       "settings": "Settings",
       "appearance": "Appearance",
       "themeLight": "Light",
@@ -235,6 +236,8 @@
     }
   },
   "settings": {
+    "tabAccount": "Account",
+    "tabOrganization": "Organization & team",
     "linkedIdentitiesTitle": "Sign-in methods",
     "linkedIdentitiesDescription": "Link Google or GitHub after reauthenticating your Cloud account. Matching email addresses are never linked automatically.",
     "provider": {
@@ -455,9 +458,10 @@
     }
   },
   "events": {
-    "title": "Events & alerts",
+    "title": "Alerts",
     "subtitle": "Key events and alert delivery for {{organization}}.",
     "organizationFallback": "your organization",
+    "tabEvents": "Events",
     "tabPolicies": "Alert policies",
     "tabDeliveries": "Delivery history",
     "policySubtitle": "Email alert rules for {{organization}}.",
@@ -551,13 +555,17 @@
       "title": "Clusters",
       "description": "Review cluster status and open an authorized Cluster Console."
     },
+    "alerts": {
+      "title": "Alerts",
+      "description": "Monitor platform events, alert policies, and notification deliveries."
+    },
     "organizations": {
       "title": "Organization",
       "description": "Manage organization membership and access."
     },
     "billing": {
       "cancelWarning": "This will cancel the subscription, terminate its cluster, and remove its resources. This cannot be undone.",
-      "title": "Usage & billing",
+      "title": "Plans & billing",
       "description": "Review usage for the current organization."
     },
     "settings": {

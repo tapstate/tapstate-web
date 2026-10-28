@@ -126,7 +126,9 @@ export function ClustersPage() {
     <div className="flex h-full flex-1 flex-col overflow-hidden">
       <header className="border-divider-subtle flex shrink-0 items-center justify-between gap-4 border-b px-6 py-4">
         <div>
-          <h1 className="title-xl-semi-bold text-text-primary">{t('sections.clusters.title')}</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
+            {t('sections.clusters.title')}
+          </h1>
           <p className="body-sm-regular text-text-tertiary mt-1">{t('clusterList.description')}</p>
         </div>
 

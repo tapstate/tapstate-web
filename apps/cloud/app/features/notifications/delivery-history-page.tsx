@@ -31,7 +31,7 @@ function formatTime(value?: string | null) {
 
 const PAGE_SIZE = 20
 
-export function DeliveryHistoryPage() {
+export function DeliveryHistoryPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useTranslation()
   const { activeOrganization } = useCloudAppState()
   const organizationId = activeOrganization?.id
@@ -78,19 +78,29 @@ export function DeliveryHistoryPage() {
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-y-auto">
-      <header className="flex shrink-0 items-center justify-between border-b border-black/[0.05] px-6 py-4 dark:border-white/[0.05]">
-        <div>
-          <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
-            <Inbox className="h-5 w-5 text-neutral-400" />
-            {t('events.tabDeliveries')}
-          </h1>
-          <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+      {!embedded ? (
+        <header className="flex shrink-0 items-center justify-between border-b border-black/[0.05] px-6 py-4 dark:border-white/[0.05]">
+          <div>
+            <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
+              <Inbox className="h-5 w-5 text-neutral-400" />
+              {t('events.tabDeliveries')}
+            </h1>
+            <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+              {t('events.deliverySubtitle', {
+                organization: activeOrganization?.name ?? t('events.organizationFallback'),
+              })}
+            </p>
+          </div>
+        </header>
+      ) : (
+        <div className="flex shrink-0 items-center justify-between px-6 pt-4 pb-1">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">
             {t('events.deliverySubtitle', {
               organization: activeOrganization?.name ?? t('events.organizationFallback'),
             })}
           </p>
         </div>
-      </header>
+      )}
 
       <div className="p-6">
         {isLoading ? (

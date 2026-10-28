@@ -1,5 +1,10 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
-import { OrganizationsPage } from '../features/organizations/organizations-page'
-
-export const Route = createFileRoute('/_console/organizations')({ component: OrganizationsPage })
+export const Route = createFileRoute('/_console/organizations')({
+  beforeLoad: () => {
+    throw redirect({
+      to: '/settings',
+      search: (prev) => ({ organizationId: prev.organizationId, tab: 'organization' }),
+    })
+  },
+})
