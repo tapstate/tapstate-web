@@ -13,6 +13,7 @@ vi.mock('@tanstack/react-router', async (original) => ({
   ...(await original<typeof import('@tanstack/react-router')>()),
   redirect: (options: unknown) => ({ redirect: options }),
   useNavigate: () => mocks.navigate,
+  Outlet: () => null,
 }))
 vi.mock('../../service/cloud-api', async (original) => {
   const actual = await original<typeof import('../../service/cloud-api')>()
@@ -27,7 +28,21 @@ vi.mock('../../service/cloud-api', async (original) => {
   }
 })
 vi.mock('../../state/cloud-app-state', () => ({
-  useCloudAppState: () => ({ darkMode: false, setDarkMode: vi.fn(), setIdentity: mocks.identity }),
+  useCloudAppState: () => ({
+    darkMode: false,
+    setDarkMode: vi.fn(),
+    setIdentity: mocks.identity,
+    activeOrganization: { id: 'org-b' },
+    setClusters: vi.fn(),
+  }),
+}))
+vi.mock('../../shell/cloud-console-shell', () => ({
+  CloudConsoleShell: ({ children }: { children: import('react').ReactNode }) => (
+    <div>{children}</div>
+  ),
+}))
+vi.mock('./automatic-cluster-entry', () => ({
+  AutomaticClusterEntry: () => <div>Continuing entry</div>,
 }))
 vi.mock('../auth/auth-page', () => ({
   AuthPage: ({ onAuthenticated }: { onAuthenticated: (user: unknown) => Promise<void> }) => (
@@ -58,9 +73,70 @@ beforeEach(() => {
   ])
   mocks.clusters.mockResolvedValue([{ id: 'cluster-b', orgId: 'org-b', state: 'DEGRADED' }])
 })
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.useRealTimers()
+})
 
 describe('Cloud initialization return routing', () => {
+  it('preserves the target when the mounted Console session expires during entry', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(ConsoleRoute, 'useSearch').mockReturnValue(intent)
+    vi.spyOn(ConsoleRoute, 'useLoaderData').mockReturnValue({
+      session: { email: 'tester@example.invalid' },
+      organizations: [{ id: 'org-b', name: 'B' }],
+      clusters: [{ id: 'cluster-b', orgId: 'org-b', state: 'DEGRADED' }],
+    } as never)
+    mocks.clusters.mockRejectedValue(new CloudApiError('Expired', 401))
+    const host = document.createElement('div')
+    document.body.append(host)
+    const root = createRoot(host)
+    const Console = ConsoleRoute.options.component as ComponentType
+    try {
+      await act(async () => root.render(<Console />))
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10010)
+      })
+      expect(mocks.navigate).toHaveBeenCalledExactlyOnceWith({ to: '/auth', search: intent })
+    } finally {
+      await act(async () => root.unmount())
+      host.remove()
+    }
+  })
+
+  it('ignores a late poll failure after leaving the automatic entry target', async () => {
+    vi.useFakeTimers()
+    const search = vi.spyOn(ConsoleRoute, 'useSearch').mockReturnValue(intent)
+    vi.spyOn(ConsoleRoute, 'useLoaderData').mockReturnValue({
+      session: { email: 'tester@example.invalid' },
+      organizations: [{ id: 'org-b', name: 'B' }],
+      clusters: [{ id: 'cluster-b', orgId: 'org-b', state: 'DEGRADED' }],
+    } as never)
+    let fail!: (reason: unknown) => void
+    mocks.clusters.mockImplementation(
+      () =>
+        new Promise((_resolve, reject) => {
+          fail = reject
+        }),
+    )
+    const host = document.createElement('div')
+    document.body.append(host)
+    const root = createRoot(host)
+    const Console = ConsoleRoute.options.component as ComponentType
+    try {
+      await act(async () => root.render(<Console />))
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10010)
+      })
+      search.mockReturnValue({})
+      await act(async () => root.render(<Console />))
+      await act(async () => fail(new CloudApiError('Expired', 401)))
+      expect(mocks.navigate).not.toHaveBeenCalled()
+    } finally {
+      await act(async () => root.unmount())
+      host.remove()
+    }
+  })
   it('selects the requested authorized organization rather than the first organization', async () => {
     await load(intent)
     expect(mocks.clusters).toHaveBeenCalledExactlyOnceWith('org-b')

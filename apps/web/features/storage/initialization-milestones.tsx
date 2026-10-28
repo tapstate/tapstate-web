@@ -20,16 +20,19 @@ function duration(value: number) {
 export function InitializationMilestones({
   progress,
   stale = false,
+  waitingForSignIn = false,
 }: {
   progress: InitializationProgress
   stale?: boolean
+  waitingForSignIn?: boolean
 }) {
   const { t } = useTranslation()
   const [now, setNow] = useState(() => performance.now())
   const sample = useRef({ progress, receivedAt: now })
   if (sample.current.progress !== progress)
     sample.current = { progress, receivedAt: performance.now() }
-  const running = progress.state === 'RUNNING' && !stale
+  const frozen = stale || waitingForSignIn
+  const running = progress.state === 'RUNNING' && !frozen
   useEffect(() => {
     if (!running) return
     const timer = window.setInterval(() => setNow(performance.now()), 1000)
@@ -59,9 +62,13 @@ export function InitializationMilestones({
           </span>
         </div>
       </div>
-      {stale && (
+      {frozen && (
         <p role="status" className="text-foreground mt-3 text-sm">
-          {t('storage.initialization.stale')}
+          {t(
+            waitingForSignIn
+              ? 'storage.initialization.updatingSession'
+              : 'storage.initialization.stale',
+          )}
         </p>
       )}
       <ol className="mt-5" aria-label={t('storage.initialization.steps')}>
@@ -89,7 +96,7 @@ export function InitializationMilestones({
               )}
               <Icon
                 aria-hidden="true"
-                className={`relative mt-0.5 size-5 shrink-0 ${step.state === 'COMPLETE' ? 'text-success' : step.state === 'FAILED' ? 'text-destructive' : active ? 'text-primary' : 'text-muted-foreground'} ${active && !stale ? 'animate-spin motion-reduce:animate-none' : ''}`}
+                className={`relative mt-0.5 size-5 shrink-0 ${step.state === 'COMPLETE' ? 'text-success' : step.state === 'FAILED' ? 'text-destructive' : active ? 'text-primary' : 'text-muted-foreground'} ${active && !frozen ? 'animate-spin motion-reduce:animate-none' : ''}`}
               />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -112,7 +119,7 @@ export function InitializationMilestones({
                   role={step.state === 'FAILED' ? 'alert' : undefined}
                 >
                   {t(
-                    `storage.initialization.state.${stale && active ? 'LAST_RUNNING' : step.state}`,
+                    `storage.initialization.state.${frozen && active ? 'LAST_RUNNING' : step.state}`,
                   )}
                 </p>
                 {active && step.id === 'START_RUNTIME' && (

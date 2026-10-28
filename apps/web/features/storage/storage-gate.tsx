@@ -7,6 +7,7 @@ import {
   setupOperationScope,
   snapshotScope,
   StorageClientError,
+  type InitializationProgress,
   type StorageLayer,
 } from '@/service/storage-client'
 import { useAuthStore } from '@/stores/auth-store'
@@ -64,6 +65,7 @@ export function StorageGate({ children }: { children: ReactNode }) {
   const setupSubmission = useStorageAction('setup')
   const continuation = useCloudSetupContinuation()
   const [continuing, setContinuing] = useState(false)
+  const [handoffProgress, setHandoffProgress] = useState<InitializationProgress>()
   useEffect(() => {
     if (!authenticated || !snapshot) return
     if (
@@ -93,6 +95,7 @@ export function StorageGate({ children }: { children: ReactNode }) {
     if (
       !authenticated &&
       intent &&
+      intent.armed &&
       session === intent.session + 1 &&
       !error &&
       entry?.mode === 'CLOUD' &&
@@ -100,6 +103,7 @@ export function StorageGate({ children }: { children: ReactNode }) {
       ['LOGIN', 'SETUP_REQUIRED'].includes(entry.entry)
     ) {
       setContinuing(true)
+      setHandoffProgress(intent.progress)
       continuation.discard()
       replaceWithCloudConsole(cloudSetupContinuationUrl(intent))
     }
@@ -123,7 +127,16 @@ export function StorageGate({ children }: { children: ReactNode }) {
     setSetupPending(setupSubmission.busy)
     return () => setSetupPending(false)
   }, [setSetupPending, setupSubmission.busy])
-  if (continuing)
+  const pendingHandoff =
+    !authenticated && continuation.intent?.armed && session === continuation.intent.session + 1
+      ? continuation.intent
+      : undefined
+  const awaitingEntry =
+    pendingHandoff &&
+    (loading ||
+      (!error && entry?.mode === 'CLOUD' && !entry.management && entry.entry === 'UNAVAILABLE'))
+  const continuingProgress = pendingHandoff?.progress ?? handoffProgress
+  if (continuing || awaitingEntry)
     return (
       <StorageFrame>
         <h1 role="status">
@@ -131,13 +144,18 @@ export function StorageGate({ children }: { children: ReactNode }) {
             {t('storage.initialization.connecting')}
           </StorageIndicator>
         </h1>
-        <Button
-          variant="outline"
-          className="min-h-11 sm:min-h-8"
-          onClick={() => replaceWithCloudConsole()}
-        >
-          {t('storage.initialization.backToCloud')}
-        </Button>
+        {continuingProgress && (
+          <InitializationMilestones progress={continuingProgress} waitingForSignIn />
+        )}
+        {!continuingProgress && (
+          <Button
+            variant="outline"
+            className="min-h-11 sm:min-h-8"
+            onClick={() => replaceWithCloudConsole()}
+          >
+            {t('storage.initialization.backToCloud')}
+          </Button>
+        )}
       </StorageFrame>
     )
   if (loading)
@@ -152,12 +170,19 @@ export function StorageGate({ children }: { children: ReactNode }) {
     return (
       <StorageFrame>
         <StorageError error={error} />
-        {authenticated &&
-          lastKnownSnapshot?.mode === 'CLOUD' &&
-          lastKnownSnapshot.initializationProgress?.state === 'RUNNING' &&
+        {(authenticated ? lastKnownSnapshot?.initializationProgress : pendingHandoff?.progress)
+          ?.state === 'RUNNING' &&
           (error instanceof TypeError ||
             (error instanceof StorageClientError && error.status >= 500)) && (
-            <InitializationMilestones progress={lastKnownSnapshot.initializationProgress} stale />
+            <InitializationMilestones
+              progress={
+                (authenticated
+                  ? lastKnownSnapshot?.initializationProgress
+                  : pendingHandoff?.progress)!
+              }
+              stale
+              waitingForSignIn={Boolean(pendingHandoff)}
+            />
           )}
         {autoRefreshing && (
           <p role="status" className="text-muted-foreground text-sm">
@@ -172,7 +197,12 @@ export function StorageGate({ children }: { children: ReactNode }) {
             {t('storage.reauthorize')}
           </Button>
         )}
-        {!authenticated && <LoginAction cloud={entry ? entry.mode === 'CLOUD' : cloudProfile} />}
+        {!authenticated && (
+          <LoginAction
+            cloud={entry ? entry.mode === 'CLOUD' : cloudProfile}
+            cloudTarget={pendingHandoff ? cloudSetupContinuationUrl(pendingHandoff) : undefined}
+          />
+        )}
       </StorageFrame>
     )
   if (!entry)
@@ -243,13 +273,23 @@ export function StorageGate({ children }: { children: ReactNode }) {
             <StorageSetupForm
               submission={setupSubmission}
               beforeSubmit={() => continuation.prepare(snapshot)}
+              onCompleted={() => continuation.confirm(snapshot)}
               onSubmitted={(checkedAt) => setSubmittedChecks({ scope: setupScope, checkedAt })}
               onTestsInvalidated={() => setSubmittedChecks(undefined)}
             />
           )}
-          {!showSetup && Boolean(setupSubmission.error) && (
-            <StorageError error={setupSubmission.error} />
-          )}
+          {!showSetup &&
+            Boolean(setupSubmission.error) &&
+            (progress?.state === 'RUNNING' &&
+            (setupSubmission.error instanceof TypeError ||
+              (setupSubmission.error instanceof StorageClientError &&
+                setupSubmission.error.status >= 500)) ? (
+              <p role="status" className="text-muted-foreground text-sm">
+                {t('storage.setupResultPending')}
+              </p>
+            ) : (
+              <StorageError error={setupSubmission.error} />
+            ))}
           {snapshot.allowedActions.includes('first-admin') && <FirstAdminForm />}
           {snapshot.allowedActions.includes('storage.recovery.plan') && <StorageRecovery />}
           {snapshot.allowedActions.includes('configuration.import.status') && (
@@ -330,10 +370,10 @@ export function StorageGate({ children }: { children: ReactNode }) {
   )
 }
 
-function LoginAction({ cloud }: { cloud: boolean }) {
+function LoginAction({ cloud, cloudTarget }: { cloud: boolean; cloudTarget?: string }) {
   const { t } = useTranslation()
   return cloud ? (
-    <Button className="min-h-11 sm:min-h-8" onClick={() => replaceWithCloudConsole()}>
+    <Button className="min-h-11 sm:min-h-8" onClick={() => replaceWithCloudConsole(cloudTarget)}>
       {t('storage.cloudLogin')}
     </Button>
   ) : (

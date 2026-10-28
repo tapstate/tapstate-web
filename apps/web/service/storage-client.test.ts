@@ -26,6 +26,16 @@ export function snapshot(overrides: Partial<StorageSnapshot> = {}): StorageSnaps
   }
 }
 describe('storage wire and snapshot admission', () => {
+  it('classifies a non-JSON gateway timeout as an unavailable response', async () => {
+    const fetcher = vi.fn<typeof fetch>(
+      async () => new Response('<html>Gateway timeout</html>', { status: 504 }),
+    )
+    await expect(storageRequest(fetcher, 'storage.setup.commit', {})).rejects.toMatchObject({
+      code: 'unavailable',
+      status: 504,
+    })
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
   const initialization = (): NonNullable<StorageSnapshot['initializationProgress']> => ({
     operationId: 'setup-a',
     generation: 1,

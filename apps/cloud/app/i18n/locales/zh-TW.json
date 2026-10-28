@@ -1,5 +1,6 @@
 {
   "app": {
+    "loading": "正在載入 Cloud…",
     "brand": "Tapstate Cloud",
     "console": "Cloud 主控台",
     "organization": "組織",

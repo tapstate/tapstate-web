@@ -22,11 +22,13 @@ export function StorageSetupForm({
   onSubmitted,
   onTestsInvalidated,
   beforeSubmit,
+  onCompleted,
 }: {
   submission?: ReturnType<typeof useStorageAction>
   onSubmitted?: (checkedAt: Record<StorageLayer, string>) => void
   onTestsInvalidated?: () => void
   beforeSubmit?: () => Promise<void>
+  onCompleted?: () => void
 } = {}) {
   const { t } = useTranslation()
   const { snapshot, fetcher, refresh, authorize } = useStorage()
@@ -186,6 +188,7 @@ export function StorageSetupForm({
           },
           async (result) => {
             if (result.setupPhase === 'COMPLETE') {
+              onCompleted?.()
               if (mounted.current) {
                 setForm((current) => ({ ...current, uri: '', configCaPem: '', cacheCaPem: '' }))
                 setProofs({})

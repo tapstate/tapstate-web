@@ -1,11 +1,23 @@
 import { createFileRoute, Outlet, redirect, useNavigate } from '@tanstack/react-router'
+import { Loader2 } from 'lucide-react'
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { AutomaticClusterEntry } from '../features/clusters/automatic-cluster-entry'
 import { clusterEntrySearch } from '../features/clusters/cluster-entry-intent'
 import { CloudApiError, cloudApi } from '../service/cloud-api'
 import { CloudConsoleShell } from '../shell/cloud-console-shell'
 import { useCloudAppState } from '../state/cloud-app-state'
+
+function ConsolePending() {
+  const { t } = useTranslation()
+  return (
+    <div className="mx-auto flex max-w-xl items-center gap-2 p-6" role="status">
+      <Loader2 aria-hidden="true" className="size-5 animate-spin motion-reduce:animate-none" />
+      {t('app.loading')}
+    </div>
+  )
+}
 
 function ConsoleLayout() {
   const navigate = useNavigate()
@@ -29,7 +41,7 @@ function ConsoleLayout() {
         })
         .catch((error) => {
           if (active && error instanceof CloudApiError && error.status === 401) {
-            void navigate({ to: '/auth' })
+            void navigate({ to: '/auth', search: { organizationId, enterClusterId } })
           }
         })
     }, 10000)
@@ -37,7 +49,7 @@ function ConsoleLayout() {
       active = false
       window.clearInterval(timer)
     }
-  }, [activeOrganization?.id, navigate, setClusters])
+  }, [activeOrganization?.id, organizationId, enterClusterId, navigate, setClusters])
 
   return (
     <CloudConsoleShell
@@ -97,4 +109,7 @@ export const Route = createFileRoute('/_console')({
     }
   },
   component: ConsoleLayout,
+  pendingComponent: ConsolePending,
+  pendingMs: 0,
+  pendingMinMs: 0,
 })

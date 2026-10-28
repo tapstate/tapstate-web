@@ -345,6 +345,148 @@ describe('whole-site storage boundary', () => {
     expect(container.querySelector('[data-testid="business"]')).toBeNull()
   })
 
+  it('keeps tracking the original running setup after a gateway timeout without showing refusal', async () => {
+    const setup = await startPendingCloudSetup()
+    setup.snapshot = initializing({ stateVersion: 11 })
+    await click('Refresh status')
+    await act(async () =>
+      setup.complete(new Response('<html>Gateway timeout</html>', { status: 504 })),
+    )
+    await settle()
+    expect(container.textContent).toContain('1 of 4 steps completed')
+    expect(container.textContent).toContain('Initialization is still running')
+    expect(container.textContent).not.toContain('The request was refused')
+    expect(container.querySelector('[role="alert"]')).toBeNull()
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')).toHaveLength(
+      1,
+    )
+    expect(container.querySelector('button[type="submit"]')).toBeNull()
+    setup.snapshot = initializing({ stateVersion: 12 })
+    setup.snapshot.initializationProgress!.state = 'FAILED'
+    setup.snapshot.initializationProgress!.milestones[1] = {
+      id: 'PREPARE_STORAGE',
+      state: 'FAILED',
+      elapsedMillis: 4000,
+      errorCode: 'control.storage-unavailable',
+    }
+    await click('Refresh status')
+    expect(container.textContent).toContain('Failed — action required')
+    expect(container.textContent).not.toContain('Initialization is still running')
+    expect(container.querySelector('[role="alert"]')).not.toBeNull()
+  })
+
+  it('shows an unconfirmed proxy response when no running operation has been observed', async () => {
+    const setup = await startPendingCloudSetup()
+    await act(async () =>
+      setup.complete(new Response('<html>Gateway timeout</html>', { status: 504 })),
+    )
+    await settle()
+    expect(container.textContent).toContain('The server response could not be confirmed')
+    expect(container.textContent).not.toContain('Initialization is still running')
+    expect(container.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(true)
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')).toHaveLength(
+      1,
+    )
+  })
+
+  it.each([400, 403, 409])('keeps a genuine setup refusal visible (%s)', async (status) => {
+    const setup = await startPendingCloudSetup()
+    setup.snapshot = initializing({ stateVersion: 11 })
+    await click('Refresh status')
+    await act(async () =>
+      setup.complete(Response.json({ code: 'control.storage-tests-required' }, { status })),
+    )
+    await settle()
+    expect(container.querySelector('[role="alert"]')).not.toBeNull()
+    expect(container.textContent).not.toContain('Initialization is still running')
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')).toHaveLength(
+      1,
+    )
+  })
+
+  it('does not redirect a refused setup that has no accepted server operation', async () => {
+    const setup = await startPendingCloudSetup()
+    await act(async () =>
+      setup.complete(Response.json({ code: 'control.storage-tests-required' }, { status: 400 })),
+    )
+    await settle()
+    setup.entry = 'LOGIN'
+    await act(async () => useAuthStore.getState().clear())
+    await settle()
+    expect(cloudNavigation.redirect).not.toHaveBeenCalled()
+    expect(container.textContent).toContain('Sign in to continue')
+  })
+
+  it('retains the last setup milestones while rediscovering the entry after session retirement', async () => {
+    const setup = await startPendingCloudSetup()
+    setup.snapshot = initializing({ stateVersion: 11 })
+    await click('Refresh status')
+    let finishEntry!: (response: Response) => void
+    const original = fetcher.getMockImplementation()!
+    fetcher.mockImplementation(async (url, init) =>
+      String(url) === '/auth/storage-entry' && !useAuthStore.getState().isAuthenticated
+        ? new Promise<Response>((resolve) => {
+            finishEntry = resolve
+          })
+        : original(url, init),
+    )
+    await act(async () => useAuthStore.getState().clear())
+    await settle()
+    expect(container.textContent).toContain('Continuing to your cluster')
+    expect(container.textContent).toContain('1 of 4 steps completed')
+    expect(container.textContent).not.toContain('Checking storage')
+    expect(cloudNavigation.redirect).not.toHaveBeenCalled()
+    await act(async () =>
+      finishEntry(Response.json({ mode: 'CLOUD', management: false, entry: 'LOGIN' })),
+    )
+    await settle()
+    expect(cloudNavigation.redirect).toHaveBeenCalledExactlyOnceWith(
+      'https://dev.cloud.tapstate.com/?organizationId=org&enterClusterId=cluster',
+    )
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')).toHaveLength(
+      1,
+    )
+  })
+
+  it.each(['automatic retry', 'manual return'])(
+    'retains continuation progress during an entry outage and preserves the target on %s',
+    async (recovery) => {
+      vi.useFakeTimers()
+      const setup = await startPendingCloudSetup()
+      setup.snapshot = initializing({ stateVersion: 11 })
+      await click('Refresh status')
+      const original = fetcher.getMockImplementation()!
+      let outage = true
+      fetcher.mockImplementation(async (url, init) =>
+        String(url) === '/auth/storage-entry' && !useAuthStore.getState().isAuthenticated
+          ? outage
+            ? Response.json({ code: 'control.storage-unavailable' }, { status: 503 })
+            : Response.json({ mode: 'CLOUD', management: false, entry: 'LOGIN' })
+          : original(url, init),
+      )
+      await act(async () => useAuthStore.getState().clear())
+      await settle()
+      expect(container.textContent).toContain('1 of 4 steps completed')
+      expect(container.textContent).toContain('Updating sign-in')
+      expect(container.querySelector('[role="alert"]')).not.toBeNull()
+      expect(cloudNavigation.redirect).not.toHaveBeenCalled()
+      const statuses = fetcher.mock.calls.filter(([url]) => url === '/api/storage/status').length
+      if (recovery === 'automatic retry') {
+        outage = false
+        await act(async () => vi.advanceTimersByTimeAsync(10100))
+      } else await click('Return to Cloud sign-in')
+      expect(cloudNavigation.redirect).toHaveBeenCalledExactlyOnceWith(
+        'https://dev.cloud.tapstate.com/?organizationId=org&enterClusterId=cluster',
+      )
+      expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/status')).toHaveLength(
+        statuses,
+      )
+      expect(
+        fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit'),
+      ).toHaveLength(1)
+    },
+  )
+
   it('shows failed server work and retains explicit continuation instead of an endless waiting form', async () => {
     vi.useFakeTimers()
     const setup = await startPendingCloudSetup()

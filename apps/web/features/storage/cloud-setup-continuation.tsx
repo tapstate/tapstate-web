@@ -7,6 +7,7 @@ import {
 import {
   setupOperationScope,
   StorageClientError,
+  type InitializationProgress,
   type StorageSnapshot,
 } from '@/service/storage-client'
 import { useAuthStore } from '@/stores/auth-store'
@@ -17,13 +18,20 @@ interface Continuation {
   scope: string
   organizationId: string
   clusterId: string
+  armed: boolean
+  progress?: InitializationProgress
 }
 interface ContinuationState {
   intent?: Continuation
   prepare: (snapshot: StorageSnapshot) => Promise<void>
+  confirm: (snapshot: StorageSnapshot) => void
   discard: () => void
 }
-const Context = createContext<ContinuationState>({ prepare: async () => {}, discard: () => {} })
+const Context = createContext<ContinuationState>({
+  prepare: async () => {},
+  confirm: () => {},
+  discard: () => {},
+})
 export const useCloudSetupContinuation = () => useContext(Context)
 
 export function cloudSetupContinuationUrl(
@@ -89,9 +97,30 @@ export function CloudSetupContinuationProvider({ children }: { children: ReactNo
       scope: setupOperationScope(snapshot),
       organizationId: verified.organizationId,
       clusterId: verified.clusterId,
+      armed: snapshot.initializationProgress?.state === 'RUNNING',
+      progress:
+        snapshot.initializationProgress?.state === 'RUNNING'
+          ? snapshot.initializationProgress
+          : undefined,
     }
+    setIntent((previous) => {
+      if (previous?.session !== next.session || previous.scope !== next.scope) return next
+      const armed = previous.armed || next.armed
+      const progress = next.progress ?? previous.progress
+      return previous.armed === armed && previous.progress === progress
+        ? previous
+        : { ...next, armed, progress }
+    })
+  }, [])
+  const confirm = useCallback((snapshot: StorageSnapshot) => {
+    const auth = useAuthStore.getState()
+    if (auth.profile !== 'cloud' || !auth.isAuthenticated) return
     setIntent((previous) =>
-      previous?.session === next.session && previous.scope === next.scope ? previous : next,
+      previous?.session === auth.sessionRevision &&
+      previous.scope === setupOperationScope(snapshot) &&
+      !previous.armed
+        ? { ...previous, armed: true }
+        : previous,
     )
   }, [])
   const discard = useCallback(() => {
@@ -99,5 +128,7 @@ export function CloudSetupContinuationProvider({ children }: { children: ReactNo
     selectedScope.current = ''
     setIntent(undefined)
   }, [])
-  return <Context.Provider value={{ intent, prepare, discard }}>{children}</Context.Provider>
+  return (
+    <Context.Provider value={{ intent, prepare, confirm, discard }}>{children}</Context.Provider>
+  )
 }

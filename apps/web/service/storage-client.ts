@@ -138,7 +138,10 @@ export async function storageRequest<T>(
   try {
     result = await response.json()
   } catch {
-    throw new StorageClientError('protocol', response.status)
+    throw new StorageClientError(
+      response.status >= 500 ? 'unavailable' : 'protocol',
+      response.status,
+    )
   }
   if (signal?.aborted) throw new DOMException('Request superseded', 'AbortError')
   if (!response.ok) {

@@ -87,15 +87,17 @@ export function StorageError({ error }: { error: unknown }) {
   const kind =
     connectionKind ??
     (error instanceof StorageClientError
-      ? error.status === 401
-        ? 'authentication'
-        : error.status === 409
-          ? 'conflict'
-          : error.status === 403
-            ? 'permission'
-            : error.status === 503
-              ? 'dependency'
-              : 'request'
+      ? error.code === 'unavailable' && error.status >= 500
+        ? 'responseUnavailable'
+        : error.status === 401
+          ? 'authentication'
+          : error.status === 409
+            ? 'conflict'
+            : error.status === 403
+              ? 'permission'
+              : error.status === 503
+                ? 'dependency'
+                : 'request'
       : 'network')
   return (
     <div
