@@ -2319,7 +2319,10 @@
       "loading": "Loading version…",
       "unavailable": "Unavailable",
       "license": "Apache License 2.0",
-      "releaseNotes": "Release notes"
+      "releaseNotes": "Release notes",
+      "copyright": "© 2026 TAPDATA HONG KONG LIMITED, Contributors.",
+      "privacyPolicy": "Privacy Policy",
+      "termsOfService": "Terms of Service"
     },
     "sectionsLabel": "Settings sections",
     "sections": {

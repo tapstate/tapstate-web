@@ -2315,7 +2315,10 @@
       "loading": "正在載入版本…",
       "unavailable": "暫時無法使用",
       "license": "Apache 2.0 授權",
-      "releaseNotes": "版本說明"
+      "releaseNotes": "版本說明",
+      "copyright": "© 2026 TAPDATA HONG KONG LIMITED, Contributors.",
+      "privacyPolicy": "隱私政策",
+      "termsOfService": "服務條款"
     },
     "sectionsLabel": "設定分區",
     "sections": {

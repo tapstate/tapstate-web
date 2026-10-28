@@ -173,4 +173,32 @@ describe('StateStorePage', () => {
     expect(container.textContent).not.toContain('Usage')
     expect(container.textContent).not.toContain('Delete')
   })
+
+  it('renders about section with version, copyright, and legal links', async () => {
+    mockState.listSources.mockResolvedValue([])
+    mockState.apiFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ version: '0.6.0' }),
+    })
+
+    await render()
+
+    const aboutTab = [
+      ...container.querySelectorAll<HTMLButtonElement>('.settings-sections__item'),
+    ].find((item) => item.textContent === 'About')
+    expect(aboutTab).toBeDefined()
+    await act(async () => {
+      aboutTab?.click()
+    })
+
+    expect(container.querySelector('.settings-about__copyright')?.textContent).toContain(
+      'TAPDATA HONG KONG LIMITED',
+    )
+    const links = [...container.querySelectorAll('.settings-about__legal-links a')]
+    expect(links).toHaveLength(2)
+    expect(links[0].textContent).toBe('Privacy Policy')
+    expect(links[0].getAttribute('href')).toBe('https://docs.tapstate.com/privacy')
+    expect(links[1].textContent).toBe('Terms of Service')
+    expect(links[1].getAttribute('href')).toBe('https://docs.tapstate.com/legal/eula')
+  })
 })
