@@ -588,7 +588,7 @@
     "switchToLightMode": "Switch to light mode",
     "switchToDarkMode": "Switch to dark mode",
     "signOut": "Sign out",
-    "title": "Support tickets",
+    "title": "Support",
     "scope": "Submit requests about your Cloud account, Console access, Cluster operation, and data integration.",
     "responseTarget": "A support specialist will provide the first human response within 1 business day.",
     "createTitle": "Create a ticket",
