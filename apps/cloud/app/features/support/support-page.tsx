@@ -1,15 +1,14 @@
 import type { TFunction } from 'i18next'
 
 import {
-  ArrowLeft,
-  ArrowRight,
-  LifeBuoy,
-  Plus,
-  RefreshCw,
-  Send,
-  TicketCheck,
-  X,
-} from 'lucide-react'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogCloseButton,
+} from '@tapstate-web/ui/dialog'
+import { ArrowLeft, ArrowRight, LifeBuoy, Plus, RefreshCw, Send, TicketCheck } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -176,6 +175,7 @@ export function SupportPage() {
       setSummary('')
       setDescription('')
       setSubmitSuccess(true)
+      setCreating(false)
       setPageIndex(0)
       await loadTickets(0)
       await selectTicket(created.id)
@@ -253,83 +253,77 @@ export function SupportPage() {
         </div>
       </header>
 
-      <div
-        className={`mx-auto grid w-full max-w-[1440px] min-w-0 flex-1 content-start gap-5 p-4 sm:p-6 ${creating ? 'xl:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)]' : 'xl:grid-cols-[minmax(0,1fr)]'}`}
-      >
-        <section className="contents" aria-labelledby="support-create-heading">
-          <div
-            className="order-2 min-w-0 space-y-3 xl:col-start-2 xl:row-start-1"
-            hidden={!creating}
+      <div className="mx-auto grid w-full max-w-[1440px] min-w-0 flex-1 content-start gap-5 p-4 sm:p-6">
+        <section className="contents">
+          <Dialog
+            open={creating}
+            onOpenChange={(open) => {
+              if (!submitting) setCreating(open)
+            }}
           >
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2
-                  id="support-create-heading"
-                  className="text-sm font-semibold text-[var(--foreground)]"
-                >
-                  {t('support.createTitle')}
-                </h2>
-                <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-                  {t('support.createDescription')}
-                </p>
-              </div>
-            </div>
-            <form
-              className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5"
-              onSubmit={submitTicket}
-            >
-              <label className="block space-y-1.5">
-                <span className="text-sm font-medium text-[var(--foreground)]">
-                  {t('support.summaryLabel')}
-                </span>
-                <input
-                  autoComplete="off"
-                  className="min-h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--app-background)] px-3 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
-                  maxLength={255}
-                  onChange={(event) => setSummary(event.target.value)}
-                  placeholder={t('support.summaryPlaceholder')}
-                  required
-                  value={summary}
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-sm font-medium text-[var(--foreground)]">
-                  {t('support.descriptionLabel')}
-                </span>
-                <textarea
-                  className="min-h-32 w-full resize-y rounded-lg border border-[var(--border)] bg-[var(--app-background)] px-3 py-2.5 text-sm leading-relaxed text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
-                  maxLength={10000}
-                  onChange={(event) => setDescription(event.target.value)}
-                  placeholder={t('support.descriptionPlaceholder')}
-                  required
-                  value={description}
-                />
-              </label>
-              {submitSuccess && (
-                <p className="text-sm text-emerald-700 dark:text-emerald-300" role="status">
-                  {t('support.submitSuccess')}
-                </p>
-              )}
-              {submitError && (
-                <div className="text-destructive space-y-2 text-sm" role="alert">
-                  <p>{submitError}</p>
-                  {submitUncertain && (
-                    <p className="font-medium">{t('support.uncertainGuidance')}</p>
-                  )}
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle id="support-create-heading">{t('support.createTitle')}</DialogTitle>
+                <DialogDescription>{t('support.createDescription')}</DialogDescription>
+                <DialogCloseButton aria-label={t('support.cancel')} disabled={submitting} />
+              </DialogHeader>
+              <form className="space-y-4 px-6 pb-6" onSubmit={submitTicket}>
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium text-[var(--foreground)]">
+                    {t('support.summaryLabel')}
+                  </span>
+                  <input
+                    autoComplete="off"
+                    className="min-h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--app-background)] px-3 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+                    maxLength={255}
+                    onChange={(event) => setSummary(event.target.value)}
+                    placeholder={t('support.summaryPlaceholder')}
+                    required
+                    value={summary}
+                  />
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium text-[var(--foreground)]">
+                    {t('support.descriptionLabel')}
+                  </span>
+                  <textarea
+                    className="min-h-32 w-full resize-y rounded-lg border border-[var(--border)] bg-[var(--app-background)] px-3 py-2.5 text-sm leading-relaxed text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+                    maxLength={10000}
+                    onChange={(event) => setDescription(event.target.value)}
+                    placeholder={t('support.descriptionPlaceholder')}
+                    required
+                    value={description}
+                  />
+                </label>
+                {submitError && (
+                  <div className="text-destructive space-y-2 text-sm" role="alert">
+                    <p>{submitError}</p>
+                    {submitUncertain && (
+                      <p className="font-medium">{t('support.uncertainGuidance')}</p>
+                    )}
+                  </div>
+                )}
+                <div className="flex justify-end gap-2">
+                  <button
+                    className="min-h-10 rounded-lg border border-[var(--border)] px-4 text-sm text-[var(--foreground)] hover:bg-[var(--app-background)] disabled:opacity-60"
+                    disabled={submitting}
+                    onClick={() => setCreating(false)}
+                    type="button"
+                  >
+                    {t('support.cancel')}
+                  </button>
+                  <button
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+                    disabled={submitting || !summary.trim() || !description.trim()}
+                    type="submit"
+                  >
+                    <Send aria-hidden="true" className="h-4 w-4" />
+                    {submitting ? t('support.submitting') : t('support.submit')}
+                  </button>
                 </div>
-              )}
-              <div className="flex justify-end">
-                <button
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
-                  disabled={submitting || !summary.trim() || !description.trim()}
-                  type="submit"
-                >
-                  <Send aria-hidden="true" className="h-4 w-4" />
-                  {submitting ? t('support.submitting') : t('support.submit')}
-                </button>
-              </div>
-            </form>
-          </div>
+              </form>
+            </DialogContent>
+          </Dialog>
 
           <section className="order-1 min-w-0" aria-labelledby="support-list-heading">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -346,17 +340,16 @@ export function SupportPage() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  aria-expanded={creating}
+                  aria-haspopup="dialog"
                   className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
-                  onClick={() => setCreating((value) => !value)}
+                  onClick={() => {
+                    setSubmitSuccess(false)
+                    setCreating(true)
+                  }}
                   type="button"
                 >
-                  {creating ? (
-                    <X aria-hidden="true" className="h-4 w-4" />
-                  ) : (
-                    <Plus aria-hidden="true" className="h-4 w-4" />
-                  )}
-                  {creating ? t('support.cancel') : t('support.createTitle')}
+                  <Plus aria-hidden="true" className="h-4 w-4" />
+                  {t('support.createTitle')}
                 </button>
                 <button
                   aria-label={t('support.refresh')}
@@ -373,6 +366,11 @@ export function SupportPage() {
               </div>
             </div>
 
+            {submitSuccess && (
+              <p className="mb-3 text-sm text-emerald-700 dark:text-emerald-300" role="status">
+                {t('support.submitSuccess')}
+              </p>
+            )}
             <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
               {listLoading ? (
                 <div aria-live="polite" className="space-y-3 p-4">

@@ -62,9 +62,15 @@ function setValue(element: HTMLInputElement | HTMLTextAreaElement, value: string
 }
 
 async function submitTicket(summaryText: string, descriptionText: string) {
-  const summary = host?.querySelector<HTMLInputElement>('input')
-  const description = host?.querySelector<HTMLTextAreaElement>('textarea')
-  const form = host?.querySelector('form')
+  await act(async () => {
+    const trigger = Array.from(host?.querySelectorAll('button') ?? []).find(
+      (button) => button.getAttribute('aria-haspopup') === 'dialog',
+    )
+    trigger?.click()
+  })
+  const summary = document.querySelector<HTMLInputElement>('[role=dialog] input')
+  const description = document.querySelector<HTMLTextAreaElement>('[role=dialog] textarea')
+  const form = document.querySelector('[role=dialog] form')
   expect(summary).toBeDefined()
   expect(description).toBeDefined()
   expect(form).toBeDefined()
@@ -133,7 +139,7 @@ describe('Support page email verification errors', () => {
       )
 
       await vi.waitFor(() =>
-        expect(host?.querySelector('[role="alert"]')?.textContent).toContain(expectedMessage),
+        expect(document.querySelector('[role="alert"]')?.textContent).toContain(expectedMessage),
       )
       expect(createTicket).toHaveBeenCalledWith({
         summary: 'Email verification',
@@ -164,7 +170,7 @@ describe('Support page email verification errors', () => {
     await submitTicket('Support request', 'The cluster cannot connect to the source.')
 
     await vi.waitFor(() =>
-      expect(host?.querySelector('[role="alert"]')?.textContent).toContain(
+      expect(document.querySelector('[role="alert"]')?.textContent).toContain(
         'Your verified Cloud email could not be linked to one support customer.',
       ),
     )
@@ -180,11 +186,13 @@ describe('Support page email verification errors', () => {
     await submitTicket('Support request', 'The cluster cannot connect to the source.')
 
     await vi.waitFor(() =>
-      expect(host?.querySelector('[role="alert"]')?.textContent).toContain(
+      expect(document.querySelector('[role="alert"]')?.textContent).toContain(
         'Cloud could not confirm whether the ticket was created.',
       ),
     )
-    expect(host?.textContent).toContain('Check My tickets before submitting again.')
+    expect(document.querySelector('[role=dialog]')?.textContent).toContain(
+      'Check My tickets before submitting again.',
+    )
   })
 
   it('creates a ticket, refreshes My tickets, and loads the Jira details', async () => {
@@ -273,7 +281,7 @@ describe('Support page email verification errors', () => {
     await clickButtonWithText('Confirm close')
 
     await vi.waitFor(() =>
-      expect(host?.querySelector('[role="alert"]')?.textContent).toContain(
+      expect(document.querySelector('[role="alert"]')?.textContent).toContain(
         'This ticket cannot be closed in its current Jira workflow.',
       ),
     )
@@ -287,7 +295,7 @@ describe('Support page email verification errors', () => {
     await renderPage()
 
     await vi.waitFor(() =>
-      expect(host?.querySelector('[role="alert"]')?.textContent).toContain(
+      expect(document.querySelector('[role="alert"]')?.textContent).toContain(
         'The support ticket service is temporarily unavailable.',
       ),
     )
