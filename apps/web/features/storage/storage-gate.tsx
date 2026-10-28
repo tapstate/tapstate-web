@@ -136,6 +136,22 @@ export function StorageGate({ children }: { children: ReactNode }) {
     (loading ||
       (!error && entry?.mode === 'CLOUD' && !entry.management && entry.entry === 'UNAVAILABLE'))
   const continuingProgress = pendingHandoff?.progress ?? handoffProgress
+  if (
+    entry?.management &&
+    entry.mode === 'OP' &&
+    entry.initializationProgress &&
+    entry.initializationProgress.state === 'RUNNING'
+  )
+    return (
+      <StorageFrame>
+        <InitializationMilestones
+          progress={entry.initializationProgress}
+          mode="OP"
+          stale={Boolean(error)}
+        />
+        {Boolean(error) && <StorageError error={error} />}
+      </StorageFrame>
+    )
   if (continuing || awaitingEntry)
     return (
       <StorageFrame>
@@ -227,7 +243,9 @@ export function StorageGate({ children }: { children: ReactNode }) {
     )
   if (snapshot) {
     if (snapshot.businessPhase === 'READY' && !entry.management) return children
-    const progress = snapshot.mode === 'CLOUD' ? snapshot.initializationProgress : undefined
+    const progress =
+      snapshot.initializationProgress ??
+      (snapshot.mode === 'OP' ? entry.initializationProgress : undefined)
     const showMilestones = progress && ['RUNNING', 'FAILED'].includes(progress.state)
     const showSetup =
       progress?.state === 'RUNNING'
@@ -250,7 +268,7 @@ export function StorageGate({ children }: { children: ReactNode }) {
           className="space-y-6"
         >
           <h1 className="text-xl font-semibold">{t('storage.title')}</h1>
-          {showMilestones && <InitializationMilestones progress={progress} />}
+          {showMilestones && <InitializationMilestones progress={progress} mode={snapshot.mode} />}
           <StorageHealthPanel
             snapshot={snapshot}
             showPhaseSummary={!showMilestones}

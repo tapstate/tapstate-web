@@ -259,6 +259,25 @@ describe('whole-site storage boundary', () => {
     })
   }
 
+  it('restores OP restart milestones without an installation secret or protected status read', async () => {
+    useAuthStore.setState({ isAuthenticated: false })
+    const progress = initializing().initializationProgress!
+    fetcher.mockImplementation(async () =>
+      Response.json({
+        mode: 'OP',
+        management: true,
+        entry: 'UNAVAILABLE',
+        initializationProgress: progress,
+      }),
+    )
+    await render()
+    expect(container.textContent).toContain('1 of 4 steps completed')
+    expect(container.textContent).toContain('Restart and register data connectors')
+    expect(container.textContent).not.toContain('Return to Cloud')
+    expect(fetcher.mock.calls.every(([url]) => String(url) === '/auth/storage-entry')).toBe(true)
+    expect(container.querySelector('input')).toBeNull()
+  })
+
   it('restores server milestones after closing the pending page without submitting again', async () => {
     vi.useFakeTimers()
     const setup = await startPendingCloudSetup()

@@ -2036,7 +2036,14 @@
         "LAST_RUNNING": "Last confirmed in progress",
         "COMPLETE": "Completed",
         "FAILED": "Failed — action required"
-      }
+      },
+      "opStage": {
+        "SAVE_SETTINGS": "Save database settings",
+        "PREPARE_STORAGE": "Prepare configuration and runtime storage",
+        "START_RUNTIME": "Restart and register data connectors",
+        "PUBLISH_READY": "Ready to create the first administrator"
+      },
+      "opCanLeave": "You can close this page and return to this installation address. Saved settings are retained. After the automatic restart, use the new first-administrator credential from the installation capability file."
     },
     "setupCheckRetained": "Runtime preparation is still in progress. This is the connection test completed before saving.",
     "testRequired": "Connection test required",

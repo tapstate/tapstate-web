@@ -2036,7 +2036,14 @@
         "LAST_RUNNING": "最后确认时正在进行",
         "COMPLETE": "已完成",
         "FAILED": "失败，需要处理"
-      }
+      },
+      "opStage": {
+        "SAVE_SETTINGS": "保存数据库配置",
+        "PREPARE_STORAGE": "准备配置与运行存储",
+        "START_RUNTIME": "自动重启并注册数据连接器",
+        "PUBLISH_READY": "准备创建首个管理员"
+      },
+      "opCanLeave": "可以关闭页面，之后从此安装地址重新进入。已保存的配置会保留；自动重启后，使用安装凭证文件中的新首管凭证继续。"
     },
     "setupCheckRetained": "运行环境仍在准备中。这是保存前已完成的连接测试结果。",
     "testRequired": "需要测试连接",
