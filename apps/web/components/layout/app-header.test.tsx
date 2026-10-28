@@ -6,9 +6,14 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn() }))
 vi.mock('@/utils/deployment-profile', () => ({ deploymentProfile: 'cloud' }))
+const auth = vi.hoisted(() => ({
+  profile: 'cloud',
+  logout: async () => {},
+  isAuthenticated: true,
+  apiFetch: vi.fn(),
+}))
 vi.mock('@/stores/auth-store', () => ({
-  useAuthStore: <T,>(selector: (state: { profile: string; logout: () => Promise<void> }) => T) =>
-    selector({ profile: 'cloud', logout: async () => {} }),
+  useAuthStore: <T,>(selector: (state: typeof auth) => T) => selector(auth),
 }))
 
 import { TawkFeedbackWidget } from '@/features/feedback/tawk-feedback-widget'
@@ -23,6 +28,7 @@ const hideWidget = vi.fn()
 const maximize = vi.fn()
 
 beforeEach(() => {
+  auth.profile = 'cloud'
   host = document.createElement('div')
   document.body.append(host)
   root = createRoot(host)
@@ -62,10 +68,17 @@ it('opens documentation or support from the sidebar Help menu', async () => {
 
 it('opens the account menu with the cloud identity and sign out action', async () => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  queryClient.setQueryData(['current-user'], {
+    mode: 'cloud',
+    principal: 'cloud-user-id',
+    username: null,
+    email: 'alice@example.com',
+    scopes: ['read'],
+  })
   await act(async () =>
     root.render(
       <QueryClientProvider client={queryClient}>
-        <AppHeader cloudUserEmail="alice@example.com" />
+        <AppHeader />
       </QueryClientProvider>,
     ),
   )
@@ -80,4 +93,52 @@ it('opens the account menu with the cloud identity and sign out action', async (
       item.textContent?.includes('Sign out'),
     ),
   ).toBe(true)
+})
+
+it('uses the on-prem username when no email is available', async () => {
+  auth.profile = 'on-prem'
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  queryClient.setQueryData(['current-user'], {
+    mode: 'on-prem',
+    principal: 'operator',
+    username: 'operator',
+    email: null,
+    scopes: ['read'],
+  })
+  await act(async () =>
+    root.render(
+      <QueryClientProvider client={queryClient}>
+        <AppHeader />
+      </QueryClientProvider>,
+    ),
+  )
+  expect(
+    host.querySelector<HTMLButtonElement>('button[aria-label="Account menu"]')?.textContent,
+  ).toContain('operator')
+})
+
+it('loads the cloud account from the authenticated current-user endpoint', async () => {
+  auth.apiFetch.mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        mode: 'cloud',
+        principal: 'cloud-user-id',
+        username: null,
+        email: 'alice@example.com',
+        scopes: ['read'],
+      }),
+    ),
+  )
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  await act(async () => {
+    root.render(
+      <QueryClientProvider client={queryClient}>
+        <AppHeader />
+      </QueryClientProvider>,
+    )
+  })
+  await vi.waitFor(() =>
+    expect(auth.apiFetch).toHaveBeenCalledWith('/auth/me', { cache: 'no-store' }),
+  )
+  await vi.waitFor(() => expect(host.textContent).toContain('alice'))
 })
