@@ -10,6 +10,7 @@ import {
   DialogCloseButton,
 } from '@tapstate-web/ui/dialog'
 import { Field, FieldLabel } from '@tapstate-web/ui/field'
+import { IconButton } from '@tapstate-web/ui/icon-button'
 import { Input } from '@tapstate-web/ui/input'
 import { Textarea } from '@tapstate-web/ui/textarea'
 import { ArrowLeft, ArrowRight, Plus, RefreshCw, Send, TicketCheck } from 'lucide-react'
@@ -240,12 +241,12 @@ export function SupportPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto">
-      <header className="flex shrink-0 items-start gap-3 border-b border-[var(--border-subtle)] px-5 py-5 sm:px-8">
+      <header className="border-divider-subtle flex shrink-0 items-center justify-between gap-4 border-b px-6 py-4">
         <div className="min-w-0">
-          <h1 className="text-lg font-semibold tracking-tight text-[var(--foreground)] sm:text-xl">
+          <h1 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
             {t('support.title')}
           </h1>
-          <p className="mt-1 max-w-3xl text-sm leading-relaxed text-[var(--muted-foreground)]">
+          <p className="body-sm-regular text-text-tertiary mt-1">
             {t('support.scope')} {t('support.responseTarget')}
           </p>
         </div>
@@ -335,6 +336,19 @@ export function SupportPage() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <IconButton
+                  variant="secondary"
+                  size="xl"
+                  aria-label={t('support.refresh')}
+                  disabled={listLoading}
+                  onClick={() => void refreshTickets()}
+                  type="button"
+                >
+                  <RefreshCw
+                    aria-hidden="true"
+                    className={`h-4 w-4 ${listLoading ? 'animate-spin' : ''}`}
+                  />
+                </IconButton>
                 <Button
                   aria-haspopup="dialog"
                   variant="primary"
@@ -348,18 +362,6 @@ export function SupportPage() {
                   <Plus aria-hidden="true" className="size-3.5" />
                   {t('support.createTitle')}
                 </Button>
-                <button
-                  aria-label={t('support.refresh')}
-                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--muted-foreground)] transition-colors hover:bg-[var(--app-background)] hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current active:scale-[0.96] disabled:opacity-60"
-                  disabled={listLoading}
-                  onClick={() => void refreshTickets()}
-                  type="button"
-                >
-                  <RefreshCw
-                    aria-hidden="true"
-                    className={`h-4 w-4 ${listLoading ? 'animate-spin' : ''}`}
-                  />
-                </button>
               </div>
             </div>
 
