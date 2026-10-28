@@ -1,7 +1,17 @@
 import type { ReactNode } from 'react'
 
 import { Link, useNavigate } from '@tanstack/react-router'
-import { BellRing, ChevronRight, CreditCard, Home, LifeBuoy, Server, Settings } from 'lucide-react'
+import Badge from '@tapstate-web/ui/badge'
+import {
+  BellRing,
+  Building2,
+  ChevronRight,
+  CreditCard,
+  Home,
+  LifeBuoy,
+  Server,
+  Settings,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import type { Cluster, Organization } from '../service/cloud-api'
@@ -73,7 +83,7 @@ export function CloudConsoleShell({
       <aside className="flex h-full w-[240px] shrink-0 flex-col px-2 py-3 text-neutral-800 dark:text-neutral-200">
         <div className="mb-3 px-2 py-1">
           <Link
-            className="flex h-8 items-center gap-2.5 rounded-lg transition-opacity hover:opacity-85"
+            className="inline-flex items-center gap-2 rounded-lg transition-opacity hover:opacity-85"
             search={{ organizationId: currentOrganization?.id }}
             to="/"
           >
@@ -87,19 +97,32 @@ export function CloudConsoleShell({
               className="hidden w-[120px] shrink-0 dark:block"
               src="/tapstate-lockup-dark.svg"
             />
+            <Badge
+              as="span"
+              uppercase={false}
+              className="bg-state-accent-hover text-text-accent border-transparent"
+            >
+              {t('support.organizationBadge')}
+            </Badge>
           </Link>
         </div>
 
-        <div className="mx-2 mb-4 min-w-0 rounded-xl border border-black/[0.06] bg-white/70 px-3 py-2.5 dark:border-white/[0.08] dark:bg-white/[0.04]">
-          <p className="text-xs text-neutral-500 dark:text-neutral-400">
-            {t('support.organization')}
-          </p>
-          <p
-            className="mt-0.5 truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100"
+        <div
+          className="mx-1 mb-4 flex min-w-0 items-center gap-1.5 rounded-xl border border-white bg-[#fcfcfd] p-1.5 pr-3 shadow-[0_1px_2px_0_rgb(16_24_40_/_5%)] dark:border-white/[0.03] dark:bg-[#222225]"
+          aria-label={`${t('support.organization')}: ${currentOrganization?.name ?? t('events.organizationFallback')}`}
+        >
+          <span
+            className="grid size-6 shrink-0 place-items-center rounded-lg bg-slate-500/[0.08] text-neutral-500 dark:text-neutral-400"
+            aria-hidden="true"
+          >
+            <Building2 className="size-4" />
+          </span>
+          <span
+            className="min-w-0 truncate text-[13px] font-semibold text-neutral-900 dark:text-neutral-100"
             title={currentOrganization?.name}
           >
             {currentOrganization?.name ?? t('events.organizationFallback')}
-          </p>
+          </span>
         </div>
 
         <div className="flex-1 space-y-1 overflow-y-auto px-1">

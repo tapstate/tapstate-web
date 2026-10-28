@@ -640,6 +640,7 @@
       "closeUnavailable": "This ticket cannot be closed in its current Jira workflow. Refresh the details and try again. {{opId}}",
       "notFound": "This ticket could not be found. Refresh My tickets to see the latest list. {{opId}}",
       "submissionUncertain": "Cloud could not confirm whether the ticket was created. Check My tickets before submitting again. {{opId}}"
-    }
+    },
+    "organizationBadge": "Org"
   }
 }

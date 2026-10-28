@@ -640,6 +640,7 @@
       "closeUnavailable": "目前 Jira 工作流程無法關閉此工單。請重新整理詳細資料後重試。{{opId}}",
       "notFound": "找不到此工單。請重新整理「我的工單」查看最新清單。{{opId}}",
       "submissionUncertain": "Cloud 無法確認工單是否建立成功。請先檢查「我的工單」，再提交新要求。{{opId}}"
-    }
+    },
+    "organizationBadge": "組織"
   }
 }
