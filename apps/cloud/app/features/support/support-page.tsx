@@ -225,8 +225,8 @@ export function SupportPage() {
   )
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto">
-      <header className="flex shrink-0 items-start gap-3 border-b border-[var(--border-subtle)] px-5 py-4 sm:px-6">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto bg-[var(--app-background)]">
+      <header className="flex shrink-0 items-start gap-3 border-b border-[var(--border-subtle)] bg-[var(--surface)] px-5 py-5 sm:px-8">
         <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--app-background)] text-[var(--foreground)]">
           <LifeBuoy aria-hidden="true" className="h-5 w-5" />
         </span>
@@ -243,9 +243,9 @@ export function SupportPage() {
         </div>
       </header>
 
-      <div className="grid min-w-0 flex-1 content-start gap-5 p-4 sm:p-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)]">
-        <section className="min-w-0 space-y-5" aria-labelledby="support-create-heading">
-          <div className="space-y-3">
+      <div className="mx-auto grid w-full max-w-[1440px] min-w-0 flex-1 content-start gap-5 p-4 sm:p-6 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)]">
+        <section className="contents" aria-labelledby="support-create-heading">
+          <div className="order-2 min-w-0 space-y-3 xl:col-start-2 xl:row-start-1">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2
@@ -316,7 +316,7 @@ export function SupportPage() {
             </form>
           </div>
 
-          <section className="min-w-0" aria-labelledby="support-list-heading">
+          <section className="order-1 min-w-0" aria-labelledby="support-list-heading">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <h2
@@ -368,7 +368,7 @@ export function SupportPage() {
                               {ticket.summary}
                             </span>
                             <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--muted-foreground)]">
-                              <span className="font-mono">{ticket.jiraKey}</span>
+                              <span className="font-medium tabular-nums">{ticket.jiraKey}</span>
                               <span aria-hidden="true">·</span>
                               <span>{formatDate(ticket.createdAt, i18n.language)}</span>
                             </span>
@@ -432,7 +432,10 @@ export function SupportPage() {
           </section>
         </section>
 
-        <aside className="min-w-0" aria-labelledby="support-detail-heading">
+        <aside
+          className={`order-3 min-w-0 xl:col-start-1 ${selectedId || detailLoading || detailError ? 'block' : 'hidden'}`}
+          aria-labelledby="support-detail-heading"
+        >
           <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
             <div className="border-b border-[var(--border-subtle)] px-4 py-3 sm:px-5">
               <h2
@@ -454,7 +457,7 @@ export function SupportPage() {
               <div className="space-y-4 p-4 sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-mono text-xs text-[var(--muted-foreground)]">
+                    <p className="text-xs font-medium text-[var(--muted-foreground)] tabular-nums">
                       {selected.jiraKey}
                     </p>
                     <h3 className="mt-1 text-base font-semibold break-words text-[var(--foreground)]">
