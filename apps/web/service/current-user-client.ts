@@ -13,7 +13,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export async function getCurrentUser(fetcher: ApiFetcher = fetch): Promise<CurrentUserView> {
-  const response = await fetcher('/auth/me', { cache: 'no-store' })
+  const response = await fetcher('/api/auth/me', { cache: 'no-store' })
   if (!response.ok) throw new Error('Current user could not be loaded.')
 
   let payload: unknown

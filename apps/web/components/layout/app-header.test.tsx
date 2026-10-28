@@ -138,7 +138,7 @@ it('loads the cloud account from the authenticated current-user endpoint', async
     )
   })
   await vi.waitFor(() =>
-    expect(auth.apiFetch).toHaveBeenCalledWith('/auth/me', { cache: 'no-store' }),
+    expect(auth.apiFetch).toHaveBeenCalledWith('/api/auth/me', { cache: 'no-store' }),
   )
   await vi.waitFor(() => expect(host.textContent).toContain('alice'))
 })
@@ -154,7 +154,7 @@ it('keeps the Cloud workspace email when an older server has no current-user end
     )
   })
   await vi.waitFor(() =>
-    expect(auth.apiFetch).toHaveBeenCalledWith('/auth/me', { cache: 'no-store' }),
+    expect(auth.apiFetch).toHaveBeenCalledWith('/api/auth/me', { cache: 'no-store' }),
   )
   expect(host.querySelector<HTMLButtonElement>('button[aria-label="Account menu"]')?.title).toBe(
     'legacy@example.com',
