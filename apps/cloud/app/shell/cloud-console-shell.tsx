@@ -100,9 +100,9 @@ export function CloudConsoleShell({
             <Badge
               as="span"
               uppercase={false}
-              className="bg-state-accent-hover text-text-accent border-transparent"
+              className="org-glass-tag rounded-lg border-transparent"
             >
-              {t('support.organizationBadge')}
+              <span>{t('support.organizationBadge')}</span>
             </Badge>
           </Link>
         </div>
