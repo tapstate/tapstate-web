@@ -35,13 +35,16 @@ export function AppHeader({ cloudUserEmail }: { cloudUserEmail?: string | null }
   const currentUserQuery = useQuery({
     queryKey: ['current-user'],
     queryFn: () => getCurrentUser(apiFetch),
-    enabled: hasSession && authProfile === 'on-prem',
+    enabled: hasSession,
     retry: false,
     staleTime: 5 * 60 * 1000,
   })
-  const principal = currentUserQuery.data?.principal.trim()
-  const userLabel = authProfile === 'cloud' ? cloudUserEmail?.trim() || undefined : principal
-  const displayName = authProfile === 'cloud' ? userLabel?.split('@')[0] : userLabel
+  const username = currentUserQuery.data?.username?.trim() || undefined
+  const email = currentUserQuery.data?.email?.trim() || undefined
+  const legacyLabel =
+    authProfile === 'cloud' ? cloudUserEmail?.trim() : currentUserQuery.data?.principal.trim()
+  const userLabel = email || username || legacyLabel || undefined
+  const displayName = username && username !== email ? username : userLabel?.split('@')[0]
   const userInitial = displayName?.slice(0, 1).toUpperCase() || t('app.user.initial')
 
   useEffect(
