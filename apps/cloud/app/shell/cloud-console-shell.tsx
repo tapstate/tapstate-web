@@ -92,7 +92,7 @@ export function CloudConsoleShell({
         <div className="flex-1 space-y-1 overflow-y-auto px-1">
           {visibleNavigation.map(({ exact, icon: Icon, label, path }) => (
             <Link
-              activeOptions={{ exact }}
+              activeOptions={{ exact, includeSearch: false }}
               activeProps={{
                 className:
                   'bg-white font-medium text-neutral-900 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_1px_rgba(0,0,0,0.03)] hover:bg-white dark:bg-[#25272a] dark:text-white dark:hover:bg-[#25272a]',
