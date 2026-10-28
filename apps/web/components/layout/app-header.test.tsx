@@ -117,6 +117,28 @@ it('uses the on-prem username when no email is available', async () => {
   ).toContain('operator')
 })
 
+it('shows the signed-in on-prem email in the account menu', async () => {
+  auth.profile = 'on-prem'
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  queryClient.setQueryData(['current-user'], {
+    mode: 'on-prem',
+    principal: 'alice@example.com',
+    username: 'alice@example.com',
+    email: 'alice@example.com',
+    scopes: ['read'],
+  })
+  await act(async () =>
+    root.render(
+      <QueryClientProvider client={queryClient}>
+        <AppHeader />
+      </QueryClientProvider>,
+    ),
+  )
+  const account = host.querySelector<HTMLButtonElement>('button[aria-label="Account menu"]')
+  await act(async () => account?.click())
+  expect(document.body.textContent).toContain('alice@example.com')
+})
+
 it('loads the cloud account from the authenticated current-user endpoint', async () => {
   auth.apiFetch.mockResolvedValue(
     new Response(
