@@ -225,8 +225,8 @@ export function SupportPage() {
   )
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto bg-[var(--app-background)]">
-      <header className="flex shrink-0 items-start gap-3 border-b border-[var(--border-subtle)] bg-[var(--surface)] px-5 py-5 sm:px-8">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto">
+      <header className="flex shrink-0 items-start gap-3 border-b border-[var(--border-subtle)] px-5 py-5 sm:px-8">
         <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--app-background)] text-[var(--foreground)]">
           <LifeBuoy aria-hidden="true" className="h-5 w-5" />
         </span>
