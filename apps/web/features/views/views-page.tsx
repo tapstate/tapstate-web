@@ -70,22 +70,24 @@ export function ViewsPage() {
 function UnresolvedOutputs({ outputs }: { outputs: UnresolvedOutput[] }) {
   const { t } = useTranslation()
   if (!outputs.length) return null
+  const byPipeline = new Map<string, Set<string>>()
+  for (const output of outputs) {
+    const codes = byPipeline.get(output.pipelineId) ?? new Set<string>()
+    codes.add(output.code)
+    byPipeline.set(output.pipelineId, codes)
+  }
   return (
     <div className="views-page__state" role="status">
       <p>{t('views.outputs.unresolved')}</p>
       <p>{t('views.outputs.help')}</p>
       <ul>
-        {outputs.map((output) => (
-          <li key={output.pipelineId} className="break-words">
-            <Link
-              to="/pipelines/$pipelineId"
-              params={{ pipelineId: output.pipelineId }}
-              className="views-link"
-            >
-              {output.pipelineId}
+        {[...byPipeline].map(([pipelineId, codes]) => (
+          <li key={pipelineId} className="break-words">
+            <Link to="/pipelines/$pipelineId" params={{ pipelineId }} className="views-link">
+              {pipelineId}
             </Link>
             {' · '}
-            {output.code}
+            {[...codes].join(' · ')}
           </li>
         ))}
       </ul>

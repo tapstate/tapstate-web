@@ -1,6 +1,5 @@
 import '@/i18n/index'
-import type { ReactNode } from 'react'
-
+import { act, type ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { renderPage, sourceEntry, viewEntry } from './views-test-support'
@@ -55,6 +54,35 @@ afterEach(() => {
 })
 
 describe('ViewsPage', () => {
+  it('removes every recovered diagnostic when one pipeline had multiple errors', async () => {
+    const diagnostic = (pipelineId: string, code: string) => ({ pipelineId, code, params: {} })
+    const q = diagnostic('q', 'q-error')
+    listViews.mockResolvedValue({
+      available: true,
+      views: [],
+      unresolved: [diagnostic('p', 'view-error'), diagnostic('p', 'sync-error'), q],
+    })
+    page = await renderPage(<ViewsPage />)
+    expect(page.container.textContent).toContain('view-error')
+    expect(page.container.textContent).toContain('sync-error')
+
+    await act(async () => {
+      page!.client.setQueryData(['views'], { available: true, views: [], unresolved: [q] })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(page.container.textContent).not.toContain('view-error')
+    expect(page.container.textContent).not.toContain('sync-error')
+    expect(page.container.querySelectorAll('.views-page__state li')).toHaveLength(1)
+    expect(page.container.textContent).toContain('q-error')
+
+    await act(async () => {
+      page!.client.setQueryData(['views'], { available: true, views: [], unresolved: [] })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(page.container.textContent).not.toContain('q-error')
+    expect(page.container.textContent).toContain('No views yet')
+  })
+
   it('shows unresolved pipelines without presenting them as an empty collection list', async () => {
     listViews.mockResolvedValue({
       available: true,
