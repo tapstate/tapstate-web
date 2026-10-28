@@ -88,6 +88,7 @@
     color-scheme: light;
 
     --radius: 0.625rem;
+    --z-overlay-popover: 50;
     --app-shell-canvas: #eff0f1;
     --app-shell-background:
       radial-gradient(circle at 10% 5%, rgb(255 255 255 / 80%), transparent 30%),

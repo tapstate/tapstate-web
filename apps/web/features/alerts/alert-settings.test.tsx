@@ -67,6 +67,22 @@ async function input(label: string, value: string) {
   })
   await settle()
 }
+async function choose(trigger: HTMLElement, text: string) {
+  await act(async () => trigger.click())
+  await settle()
+  const option = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find((o) =>
+    o.textContent?.includes(text),
+  )
+  expect(option, text).toBeTruthy()
+  await act(async () => option!.click())
+  await settle()
+  await act(async () =>
+    document.activeElement?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+    ),
+  )
+  await settle()
+}
 async function render() {
   await act(async () =>
     root.render(
@@ -145,6 +161,44 @@ async function receiver() {
   await input('From address', 'alerts@example.test')
 }
 describe('current receiver candidate', () => {
+  it('tests the chosen current recipient and invalidates results when the target changes', async () => {
+    await receiver()
+    const recipients = [...container.querySelectorAll('label')]
+      .find((l) => l.querySelector('span')?.textContent === 'Recipients (one per line)')!
+      .querySelector('textarea')!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
+        recipients,
+        'first@example.test\nSecond@EXAMPLE.TEST',
+      )
+      recipients.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await settle()
+    const target = container.querySelector<HTMLButtonElement>('[aria-label="Test recipient"]')
+    expect(target).not.toBeNull()
+    await act(async () => target!.click())
+    await settle()
+    const option = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find((el) =>
+      el.textContent?.includes('Second@EXAMPLE.TEST'),
+    )!
+    expect(option).toBeTruthy()
+    await act(async () => option.click())
+    await settle()
+    await click('Send test message')
+    expect(requests().find((r) => r.path.endsWith('/test'))!.body.target).toBe(
+      'Second@EXAMPLE.TEST',
+    )
+    expect(container.textContent).toContain('Test accepted, not saved')
+    await act(async () => target!.click())
+    await settle()
+    const first = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find((el) =>
+      el.textContent?.includes('first@example.test'),
+    )!
+    await act(async () => first.click())
+    await settle()
+    expect(container.textContent).not.toContain('Test accepted, not saved')
+    expect(requests().filter((r) => r.path.endsWith('/test'))).toHaveLength(1)
+  }, 15000)
   it('tests current unsaved form without saving and invalidates its accepted result on edit', async () => {
     await receiver()
     await click('Send test message')
@@ -275,12 +329,7 @@ describe('current receiver candidate', () => {
       .querySelector('input')!
     await act(async () => all.click())
     await settle()
-    const select = container.querySelector('select[multiple]')! as HTMLSelectElement
-    await act(async () => {
-      select.options[0].selected = true
-      select.dispatchEvent(new Event('change', { bubbles: true }))
-    })
-    await settle()
+    await choose(container.querySelectorAll<HTMLElement>('[role="combobox"]')[2], 'orders')
     await act(async () => all.click())
     await settle()
     await click('Save and activate')
@@ -339,12 +388,8 @@ describe('current receiver candidate', () => {
     await click('Edit')
     const select = [...container.querySelectorAll('label')]
       .find((l) => l.querySelector('span')?.textContent === 'Receivers')!
-      .querySelector('select')!
-    await act(async () => {
-      ;[...select.options].find((o) => o.value === 'visible')!.selected = true
-      select.dispatchEvent(new Event('change', { bubbles: true }))
-    })
-    await settle()
+      .querySelector<HTMLElement>('[role="combobox"]')!
+    await choose(select, 'Visible receiver')
     await click('Save and activate')
     const sent = requests().find((r) => r.path.endsWith('/configuration/save'))!
     expect(sent.body.form.channels[0].receivers).toEqual(
@@ -417,12 +462,8 @@ describe('current receiver candidate', () => {
     await click('Edit')
     const select = [...container.querySelectorAll('label')]
       .find((l) => l.querySelector('span')?.textContent?.startsWith('Dependent alert type'))!
-      .querySelector('select')!
-    await act(async () => {
-      select.value = 'cluster.node-unavailable'
-      select.dispatchEvent(new Event('change', { bubbles: true }))
-    })
-    await settle()
+      .querySelector<HTMLElement>('[role="combobox"]')!
+    await choose(select, 'Cluster node unavailable')
     await click('Save and activate')
     const sent = requests().find((r) => r.path.endsWith('/configuration/save'))!
     expect(sent.body.form.inhibition).toHaveLength(2)

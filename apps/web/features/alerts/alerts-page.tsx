@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import { alertCall, type AlarmRow, type AlertPage, type DeliveryRow } from '@/service/alert-client'
 import { useAuthStore } from '@/stores/auth-store'
 
-import { Severity, Time } from './alert-shared'
+import { AlertSelect } from './alert-select'
+import { AlertDuration, Severity, Time } from './alert-shared'
 
 export interface AlertSearch {
   view?: 'active' | 'history' | 'deliveries'
@@ -87,6 +88,7 @@ function AlertsContent() {
     enabled: Boolean(search.key),
     queryFn: ({ signal }) =>
       alertCall<AlarmRow>(apiFetch, 'detail', { key: search.key, episode: search.episode }, signal),
+    refetchInterval: 5000,
   })
   const delivery = useQuery({
     queryKey: ['alerts', 'delivery', search.delivery],
@@ -187,8 +189,8 @@ function AlertsContent() {
             />
           </label>
           <label>
-            {t('alerts.severityLabel')}
-            <select
+            {t('alerts.filterSeverity')}
+            <AlertSelect
               value={search.severity ?? ''}
               onChange={(e) => update({ severity: e.target.value || undefined, key: undefined })}
             >
@@ -198,7 +200,7 @@ function AlertsContent() {
                   {t(`alerts.severity.${v}`)}
                 </option>
               ))}
-            </select>
+            </AlertSelect>
           </label>
         </div>
       )}
@@ -206,7 +208,7 @@ function AlertsContent() {
         <div className="alert-filters">
           <label>
             {t('alerts.endReason')}
-            <select
+            <AlertSelect
               value={search.endReason ?? 'RECOVERED'}
               onChange={(e) => update({ endReason: e.target.value, key: undefined })}
             >
@@ -215,7 +217,7 @@ function AlertsContent() {
                   {t(`alerts.endReasons.${v}`)}
                 </option>
               ))}
-            </select>
+            </AlertSelect>
           </label>
         </div>
       )}
@@ -223,7 +225,7 @@ function AlertsContent() {
         <div className="alert-filters">
           <label>
             {t('alerts.channel')}
-            <select
+            <AlertSelect
               value={search.channel ?? ''}
               onChange={(e) =>
                 update({ channel: e.target.value || undefined, delivery: undefined })
@@ -233,11 +235,11 @@ function AlertsContent() {
               {(managed ? ['cloud-sdk'] : onPrem ? ['email', 'webhook'] : []).map((c) => (
                 <option key={c}>{c}</option>
               ))}
-            </select>
+            </AlertSelect>
           </label>
           <label>
             {t('alerts.result')}
-            <select
+            <AlertSelect
               value={search.result ?? ''}
               onChange={(e) => update({ result: e.target.value || undefined, delivery: undefined })}
             >
@@ -255,7 +257,7 @@ function AlertsContent() {
                   {t(`alerts.results.${v}`)}
                 </option>
               ))}
-            </select>
+            </AlertSelect>
           </label>
         </div>
       )}
@@ -298,7 +300,11 @@ function AlertsContent() {
                     {row.resource.kind} / {row.resource.id}
                   </span>
                   <span className="alert-row-meta">
-                    <Time value={row.recoveredAt ?? row.endedAt ?? row.firedAt} />
+                    {view === 'active' ? (
+                      <AlertDuration from={row.firedAt} />
+                    ) : (
+                      <Time value={row.recoveredAt ?? row.endedAt} />
+                    )}
                     {row.quality && row.quality !== 'VALID' && (
                       <span>{t('alerts.unknownObservation')}</span>
                     )}
@@ -325,8 +331,8 @@ function AlertsContent() {
             {detail.data && (
               <>
                 <Severity value={detail.data.severity} />
-                <h2>{detail.data.resource.id}</h2>
-                <p>{t(`alerts.types.${detail.data.typeId}`)}</p>
+                <h2>{t(`alerts.types.${detail.data.typeId}`)}</h2>
+                <p>{detail.data.resource.id}</p>
                 <p>{t(`alerts.status.${detail.data.status}`)}</p>
                 {detail.data.quality && detail.data.quality !== 'VALID' && (
                   <p className="alert-warning">{t('alerts.unknownObservation')}</p>
@@ -421,7 +427,10 @@ function AlertsContent() {
             {delivery.isError && <p role="alert">{t('alerts.unavailable')}</p>}
             {delivery.data && (
               <>
-                <h2>{t('alerts.deliveryDetail')}</h2>
+                <h2>{delivery.data.title ?? t('alerts.deliveryDetail')}</h2>
+                <p>
+                  {t('alerts.target')}: {delivery.data.target ?? '—'}
+                </p>
                 <p>
                   {delivery.data.channel} ·{' '}
                   {t(`alerts.results.${delivery.data.displayState}`, {
@@ -524,6 +533,9 @@ function DeliveryTable({
               <td>
                 <strong>{r.title ?? t('alerts.contentExpired')}</strong>
                 <small>{r.resources?.join(', ')}</small>
+                <small>
+                  {t('alerts.target')}: {r.target ?? '—'}
+                </small>
                 <small>
                   <Time value={r.createdAt} />
                 </small>

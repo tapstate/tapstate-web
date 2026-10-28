@@ -8,8 +8,18 @@ import { useAuthStore } from '@/stores/auth-store'
 
 import { AlertBell } from './alert-shared'
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ to, children, className }: { to: string; children: ReactNode; className?: string }) => (
-    <a href={to} className={className}>
+  Link: ({
+    to,
+    children,
+    className,
+    search,
+  }: {
+    to: string
+    children: ReactNode
+    className?: string
+    search?: object
+  }) => (
+    <a data-search={JSON.stringify(search)} href={to} className={className}>
       {children}
     </a>
   ),
@@ -63,24 +73,30 @@ it('focus followed by click opens once, limits preview to five, and Escape close
   const trigger = node.querySelector('button')!
   await act(async () => {
     trigger.focus()
-    trigger.click()
   })
   expect(trigger.getAttribute('aria-expanded')).toBe('true')
-  expect(node.querySelectorAll('.alert-preview-row')).toHaveLength(5)
+  await act(async () => trigger.click())
+  expect(trigger.getAttribute('aria-expanded')).toBe('true')
+  expect(document.querySelectorAll('.alert-preview-row')).toHaveLength(5)
   expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body)).limit).toBe(5)
   await act(async () =>
     trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })),
   )
-  expect(node.querySelector('[role="dialog"]')).toBeNull()
+  await settle()
+  expect(document.querySelector('[role="dialog"]')).toBeNull()
+  expect(document.activeElement).toBe(trigger)
 })
 it('zero activity hides the badge and provides history without claiming whole-system health', async () => {
   fetcher.mockResolvedValue(Response.json({ rows: [], total: 0 }))
   await render()
   await act(async () => node.querySelector('button')!.click())
   expect(node.querySelector('.alert-count')).toBeNull()
-  expect(node.textContent).toContain('No active alerts')
-  expect(node.textContent).toContain('View alert center and history')
-  expect(node.textContent).not.toContain('healthy')
+  expect(document.body.textContent).toContain('No active alerts')
+  expect(document.body.textContent).toContain('View alert center and history')
+  expect(document.body.textContent).not.toContain('healthy')
+  expect(document.querySelector('a')?.getAttribute('data-search')).toBe(
+    JSON.stringify({ view: 'history' }),
+  )
 })
 it('a failed refresh does not keep advertising the old active count', async () => {
   await render()
@@ -92,6 +108,27 @@ it('a failed refresh does not keep advertising the old active count', async () =
   await settle()
   expect(node.querySelector('.alert-count')).toBeNull()
   await act(async () => node.querySelector('button')!.click())
-  expect(node.textContent).toContain('Unable to load current alert data')
-  expect(node.textContent).not.toContain('No active alerts')
+  expect(document.body.textContent).toContain('Unable to load current alert data')
+  expect(document.body.textContent).not.toContain('No active alerts')
+})
+it('opens on a later focus after closing while the trigger itself already has focus', async () => {
+  await render()
+  const trigger = node.querySelector('button')!
+  await act(async () => trigger.focus())
+  await settle()
+  await act(async () => {
+    trigger.focus()
+    trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+  })
+  await settle()
+  const outside = document.createElement('button')
+  document.body.append(outside)
+  try {
+    await act(async () => outside.focus())
+    await act(async () => trigger.focus())
+    await settle()
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
+  } finally {
+    outside.remove()
+  }
 })

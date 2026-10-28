@@ -2314,10 +2314,10 @@
     "encryption": "Required encryption",
     "from": "From address",
     "to": "Recipients (one per line)",
-    "singleTestTarget": "A test sends only to the first current recipient.",
+    "singleTestTarget": "Choose one current recipient for this test.",
     "endpoint": "HTTPS endpoint",
     "endpointStored": "Stored endpoint at {{origin}}",
-    "endpointPrivate": "The full URL is private and is never returned. Re-enter it to replace or test an unauthenticated endpoint.",
+    "endpointPrivate": "The full URL is private and is never returned. Keep original private material to test the saved endpoint, or re-enter it to replace it.",
     "authentication": "Authentication",
     "username": "Username",
     "principal": "Authentication identity",
@@ -2519,6 +2519,17 @@
     "selectedReceiverPending": "Selected receiver (not loaded yet): {{id}}",
     "selectType": "Select alert type",
     "removeEdge": "Remove this inhibition",
-    "addEdge": "Add inhibition rule"
+    "addEdge": "Add inhibition rule",
+    "testRecipient": "Test recipient",
+    "envelopeFrom": "Envelope From",
+    "envelopeFromShared": "Uses the same address as From.",
+    "filterSeverity": "Severity",
+    "viewAll": "View all alerts",
+    "elapsedSeconds": "{{count}} sec",
+    "elapsedMinutes": "{{count}} min",
+    "evaluationLag": "Alert evaluation delay",
+    "notMeasured": "Not measured",
+    "deliveryAttention": "Notifications needing attention",
+    "silenceDescription": "Name / reason"
   }
 }

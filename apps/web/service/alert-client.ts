@@ -29,6 +29,7 @@ export interface DeliveryRow {
   etag: string
   channel: string
   outcome: string
+  target?: string | null
   title?: string | null
   resources?: string[]
   createdAt?: string

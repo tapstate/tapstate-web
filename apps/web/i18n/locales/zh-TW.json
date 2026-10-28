@@ -2314,10 +2314,10 @@
     "encryption": "加密方式",
     "from": "發件地址",
     "to": "收件地址（每行一項）",
-    "singleTestTarget": "測試只發送至當前第一個收件地址。",
+    "singleTestTarget": "一次只測試目前填寫的一個地址。",
     "endpoint": "HTTPS 地址",
     "endpointStored": "已保存于 {{origin}} 的地址",
-    "endpointPrivate": "完整 URL 屬于私有材料，不會回顯；替換或測試無認證地址時需重新輸入。",
+    "endpointPrivate": "完整 URL 屬於私有材料，不會回顯；保留原材料可測試已儲存地址，替換時重新輸入。",
     "authentication": "認證方式",
     "username": "用戶名",
     "principal": "認證身份",
@@ -2519,6 +2519,17 @@
     "selectedReceiverPending": "已選接收端（尚未載入）：{{id}}",
     "selectType": "選擇告警類型",
     "removeEdge": "移除此抑制關係",
-    "addEdge": "新增抑制規則"
+    "addEdge": "新增抑制規則",
+    "testRecipient": "測試收件人",
+    "envelopeFrom": "Envelope From",
+    "envelopeFromShared": "與 From 使用同一地址。",
+    "filterSeverity": "嚴重級別",
+    "viewAll": "查看全部告警",
+    "elapsedSeconds": "{{count}} 秒",
+    "elapsedMinutes": "{{count}} 分鐘",
+    "evaluationLag": "告警檢測延遲",
+    "notMeasured": "尚未測量",
+    "deliveryAttention": "待關注通知",
+    "silenceDescription": "名稱 / 原因"
   }
 }

@@ -7,6 +7,13 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   alertCall,
   AlertClientError,
   emptyMessages,
@@ -20,6 +27,7 @@ import {
 } from '@/service/alert-client'
 import { useAuthStore } from '@/stores/auth-store'
 
+import { AlertSelect } from './alert-select'
 import { Severity, Time } from './alert-shared'
 import './alerts.css'
 
@@ -91,6 +99,11 @@ function SettingsContent() {
       ),
     getNextPageParam: (p) => p.nextCursor ?? undefined,
   })
+  const [chosenTestTarget, setChosenTestTarget] = useState('')
+  const testTargets = [...new Set(form?.transport?.recipients ?? [])]
+  const testTarget = testTargets.includes(chosenTestTarget)
+    ? chosenTestTarget
+    : (testTargets[0] ?? '')
   const [test, setTest] = useState<{
     commandId: string
     candidateId: string
@@ -211,6 +224,7 @@ function SettingsContent() {
     setMatchCandidate(null)
     setNotice('')
     setError(false)
+    setChosenTestTarget('')
     setForm(next)
     setBaseline(JSON.stringify(next))
   }
@@ -292,7 +306,7 @@ function SettingsContent() {
         form,
         existingId: form.etag ? form.id : undefined,
         etag: form.etag,
-        target: form.transport?.recipients?.[0],
+        target: testTarget,
       })
       if (mounted.current && serial.current === stamp) {
         if (accepted.candidateId !== candidateId) {
@@ -577,7 +591,7 @@ function SettingsContent() {
                 {kind === 'RULE' && (
                   <>
                     <Field label={t('alerts.type')}>
-                      <select
+                      <AlertSelect
                         value={form.typeId}
                         onChange={(e) => {
                           const type = catalog.data!.types.find((v) => v.id === e.target.value)!
@@ -597,7 +611,7 @@ function SettingsContent() {
                             {!v.inputAvailable ? ` · ${t('alerts.inputUnavailable')}` : ''}
                           </option>
                         ))}
-                      </select>
+                      </AlertSelect>
                     </Field>
                     <div className="alert-note alert-note--info">
                       <strong>{t('alerts.trigger')}</strong>{' '}
@@ -615,7 +629,7 @@ function SettingsContent() {
                       />
                     </Field>
                     <Field label={t('alerts.severityLabel')}>
-                      <select
+                      <AlertSelect
                         value={form.severity}
                         onChange={(e) => update({ severity: e.target.value })}
                       >
@@ -624,7 +638,7 @@ function SettingsContent() {
                             {t(`alerts.severity.${v}`)}
                           </option>
                         ))}
-                      </select>
+                      </AlertSelect>
                     </Field>
                     <div className="alert-effective-level">
                       <span>{t('alerts.effectiveSeverity')}</span>
@@ -698,7 +712,7 @@ function SettingsContent() {
                 )}
                 {kind === 'SILENCE' && (
                   <>
-                    <Field label={t('alerts.reason')}>
+                    <Field label={t('alerts.silenceDescription')}>
                       <textarea
                         required
                         maxLength={1024}
@@ -743,7 +757,7 @@ function SettingsContent() {
                 )}
                 {(kind === 'SILENCE' || kind === 'SUBSCRIPTION') && (
                   <Field label={t('alerts.matchTypes')}>
-                    <select
+                    <AlertSelect
                       multiple
                       value={form.typeIds ?? []}
                       onChange={(e) =>
@@ -755,14 +769,14 @@ function SettingsContent() {
                           {t(`alerts.types.${v.id}`)}
                         </option>
                       ))}
-                    </select>
+                    </AlertSelect>
                     <small>{t('alerts.emptyMeansAll')}</small>
                   </Field>
                 )}
                 {kind === 'SUBSCRIPTION' && (
                   <>
                     <Field label={t('alerts.matchSeverities')}>
-                      <select
+                      <AlertSelect
                         multiple
                         value={form.severities ?? []}
                         onChange={(e) =>
@@ -772,10 +786,10 @@ function SettingsContent() {
                         {['CRITICAL', 'MAJOR', 'MINOR', 'WARNING'].map((v) => (
                           <option key={v}>{v}</option>
                         ))}
-                      </select>
+                      </AlertSelect>
                     </Field>
                     <Field label={t('alerts.groupBy')}>
-                      <select
+                      <AlertSelect
                         multiple
                         value={form.groupBy ?? []}
                         onChange={(e) =>
@@ -785,7 +799,7 @@ function SettingsContent() {
                         {['RESOURCE', 'TYPE', 'RULE'].map((v) => (
                           <option key={v}>{v}</option>
                         ))}
-                      </select>
+                      </AlertSelect>
                     </Field>
                     {(
                       [
@@ -828,7 +842,7 @@ function SettingsContent() {
                           {channel && (
                             <>
                               <Field label={t('alerts.receivers')}>
-                                <select
+                                <AlertSelect
                                   multiple
                                   value={channel.receivers}
                                   onChange={(e) =>
@@ -866,7 +880,7 @@ function SettingsContent() {
                                         {r.name}
                                       </option>
                                     ))}
-                                </select>
+                                </AlertSelect>
                               </Field>
                               <details>
                                 <summary>{t('alerts.customText')}</summary>
@@ -915,7 +929,7 @@ function SettingsContent() {
                     />
                     <section className="alert-message-preview">
                       <h3>{t('alerts.preview')}</h3>
-                      <select
+                      <AlertSelect
                         aria-label={t('alerts.previewKind')}
                         value={previewKind}
                         onChange={(e) => {
@@ -927,8 +941,8 @@ function SettingsContent() {
                         {['FAULT', 'REMINDER', 'RECOVERY', 'RECOVERY_SUMMARY'].map((v) => (
                           <option key={v}>{v}</option>
                         ))}
-                      </select>
-                      <select
+                      </AlertSelect>
+                      <AlertSelect
                         aria-label={t('alerts.previewFormat')}
                         value={previewFormat}
                         onChange={(e) => {
@@ -946,7 +960,7 @@ function SettingsContent() {
                           .map((v) => (
                             <option key={v}>{v}</option>
                           ))}
-                      </select>
+                      </AlertSelect>
                       <Button type="button" variant="outline" onClick={() => void renderPreview()}>
                         {t('alerts.renderPreview')}
                       </Button>
@@ -1059,7 +1073,7 @@ function SettingsContent() {
                     </Field>
                     <h3>{t('alerts.syntheticRuleExample')}</h3>
                     <p className="alert-note">{t('alerts.syntheticRuleNote')}</p>
-                    <select
+                    <AlertSelect
                       aria-label={t('alerts.ruleSample')}
                       value={ruleSample}
                       onChange={(e) => {
@@ -1073,7 +1087,7 @@ function SettingsContent() {
                           {t(`alerts.ruleSamples.${v}`)}
                         </option>
                       ))}
-                    </select>
+                    </AlertSelect>
                     <Button type="button" variant="outline" onClick={() => void previewRule()}>
                       {t('alerts.evaluateExample')}
                     </Button>
@@ -1095,6 +1109,32 @@ function SettingsContent() {
               {kind === 'RECEIVER' && (
                 <div className="alert-test-panel">
                   <p>{t('alerts.testFixed')}</p>
+                  {form.transport?.channelType === 'email' && testTargets.length > 0 && (
+                    <Field label={t('alerts.testRecipient')}>
+                      <Select
+                        disabled={busy}
+                        value={testTarget}
+                        onValueChange={(value) => {
+                          serial.current++
+                          setChosenTestTarget(value ?? '')
+                          setTest(null)
+                          setNotice('')
+                        }}
+                      >
+                        <SelectTrigger aria-label={t('alerts.testRecipient')}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {testTargets.map((target) => (
+                            <SelectItem key={target} value={target}>
+                              {target}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <small>{t('alerts.singleTestTarget')}</small>
+                    </Field>
+                  )}
                   <Button
                     type="button"
                     variant="outline"
@@ -1104,7 +1144,14 @@ function SettingsContent() {
                     {t('alerts.sendTest')}
                   </Button>
                   {test && (
-                    <p role="status">
+                    <p
+                      role="status"
+                      data-outcome={
+                        result.data?.current === false
+                          ? 'UNKNOWN'
+                          : (testResult?.outcome ?? test.admission)
+                      }
+                    >
                       {result.data?.current === false
                         ? t('alerts.testResultMismatch')
                         : test.admission === 'SUBMITTING'
@@ -1229,7 +1276,7 @@ function ReceiverFields({
   return (
     <>
       <Field label={t('alerts.channel')}>
-        <select
+        <AlertSelect
           value={transport.channelType}
           disabled={Boolean(form.etag)}
           onChange={(e) =>
@@ -1256,7 +1303,7 @@ function ReceiverFields({
         >
           <option value="email">Email</option>
           <option value="webhook">Webhook</option>
-        </select>
+        </AlertSelect>
       </Field>
       {transport.channelType === 'email' ? (
         <>
@@ -1277,13 +1324,13 @@ function ReceiverFields({
             />
           </Field>
           <Field label={t('alerts.encryption')}>
-            <select
+            <AlertSelect
               value={transport.encryption}
               onChange={(e) => patch({ encryption: e.target.value })}
             >
               <option value="IMPLICIT_TLS">TLS</option>
               <option value="STARTTLS_REQUIRED">STARTTLS</option>
-            </select>
+            </AlertSelect>
           </Field>
           <Field label={t('alerts.from')}>
             <input
@@ -1292,6 +1339,10 @@ function ReceiverFields({
               value={transport.from ?? ''}
               onChange={(e) => patch({ from: e.target.value })}
             />
+          </Field>
+          <Field label={t('alerts.envelopeFrom')}>
+            <input type="email" readOnly value={transport.from ?? ''} />
+            <small>{t('alerts.envelopeFromShared')}</small>
           </Field>
           <Field label={t('alerts.to')}>
             <textarea
@@ -1318,7 +1369,7 @@ function ReceiverFields({
         </Field>
       )}
       <Field label={t('alerts.authentication')}>
-        <select
+        <AlertSelect
           value={transport.authentication}
           onChange={(e) =>
             patch({
@@ -1333,7 +1384,7 @@ function ReceiverFields({
           ).map((v) => (
             <option key={v}>{v}</option>
           ))}
-        </select>
+        </AlertSelect>
       </Field>
       {transport.authentication !== 'NONE' &&
         (transport.channelType === 'email' ? (
@@ -1354,10 +1405,10 @@ function ReceiverFields({
           </Field>
         ))}
       <Field label={t('alerts.trust')}>
-        <select value={transport.trust} onChange={(e) => patch({ trust: e.target.value })}>
+        <AlertSelect value={transport.trust} onChange={(e) => patch({ trust: e.target.value })}>
           <option value="SYSTEM">{t('alerts.systemTrust')}</option>
           <option value="PRIVATE_CA">{t('alerts.privateTrust')}</option>
-        </select>
+        </AlertSelect>
       </Field>
       {form.etag && (
         <label className="alert-check">
@@ -1448,7 +1499,7 @@ function ResourcePicker({
   )
   return (
     <Field label={t('alerts.resourceSelection')}>
-      <select
+      <AlertSelect
         aria-label={t('alerts.resourceKind')}
         value={kind}
         onChange={(e) => setKind(e.target.value)}
@@ -1458,8 +1509,8 @@ function ResourcePicker({
           .map((k) => (
             <option key={k}>{k}</option>
           ))}
-      </select>
-      <select
+      </AlertSelect>
+      <AlertSelect
         multiple
         value={selected.map((r) => JSON.stringify(r))}
         onChange={(e) =>
@@ -1475,7 +1526,7 @@ function ResourcePicker({
             {r.kind} / {r.id}
           </option>
         ))}
-      </select>
+      </AlertSelect>
       {query.isError && <small role="alert">{t('alerts.unavailable')}</small>}
       {query.hasNextPage && (
         <Button type="button" variant="outline" onClick={() => void query.fetchNextPage()}>
@@ -1516,7 +1567,7 @@ function ConfigTable({
           <tr>
             {columns.map((c) => (
               <th scope="col" key={c}>
-                {t(`alerts.${c}`)}
+                {t(c === 'reason' ? 'alerts.silenceDescription' : `alerts.${c}`)}
               </th>
             ))}
           </tr>
@@ -1691,7 +1742,7 @@ function InhibitionEditor({
       {edges.map((edge, index) => (
         <div className="alert-inhibition-edge" key={index}>
           <Field label={`${t('alerts.inhibition')} ${index + 1}`}>
-            <select
+            <AlertSelect
               value={edge.rootType}
               onChange={(e) =>
                 change(index, {
@@ -1709,10 +1760,10 @@ function InhibitionEditor({
                   {t(`alerts.types.${v.id}`, { defaultValue: v.id })}
                 </option>
               ))}
-            </select>
+            </AlertSelect>
           </Field>
           <Field label={`${t('alerts.dependentType')} ${index + 1}`}>
-            <select
+            <AlertSelect
               value={edge.dependentType}
               onChange={(e) => change(index, { dependentType: e.target.value })}
             >
@@ -1727,7 +1778,7 @@ function InhibitionEditor({
                     {t(`alerts.types.${v.id}`, { defaultValue: v.id })}
                   </option>
                 ))}
-            </select>
+            </AlertSelect>
           </Field>
           <Button
             type="button"
