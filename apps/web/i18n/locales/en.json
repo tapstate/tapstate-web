@@ -497,6 +497,7 @@
     "explorer": "Explorer",
     "states": {
       "empty": "No pipelines yet. Create one to start moving data.",
+      "createDescription": "Choose a builder and connect your data.",
       "error": "We couldn't load stored pipelines.",
       "loading": "Loading stored pipelines."
     },

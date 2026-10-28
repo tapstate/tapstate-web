@@ -2,7 +2,7 @@
 export function safeLoginReturn(value: unknown): string {
   if (
     typeof value !== 'string' ||
-    !/^\/(overview|sources|pipelines|views|settings|explorations)(?:[/?#]|$)/.test(value) ||
+    !/^\/(overview|sources|pipelines|views|settings)(?:[/?#]|$)/.test(value) ||
     value.includes('\\') ||
     Array.from(value).some((character) => character.charCodeAt(0) <= 32)
   )

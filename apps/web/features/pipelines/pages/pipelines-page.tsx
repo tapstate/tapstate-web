@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useSearch } from '@tanstack/react-router'
+import FilterEmptyState from '@tapstate-web/ui/filter-empty-state'
+import { FirstEmptyActionCard } from '@tapstate-web/ui/first-empty-action-card'
 import { GitMerge, Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -196,16 +198,19 @@ export function PipelinesPage() {
                 }
               />
             ) : pipelines.length === 0 ? (
-              <PipelineListState
+              <PipelineFirstEmptyState
                 message={t('pipelines.states.empty')}
-                action={
-                  <Button type="button" onClick={() => setIsCreationDialogOpen(true)}>
-                    {t('pipelines.create')}
-                  </Button>
-                }
+                createLabel={t('pipelines.create')}
+                createDescription={t('pipelines.states.createDescription')}
+                onCreate={() => setIsCreationDialogOpen(true)}
               />
             ) : filteredPipelines.length === 0 ? (
-              <PipelineListState message={t('pipelines.list.noResults')} />
+              <div className="relative min-h-107.5" role="status">
+                <FilterEmptyState
+                  title={t('pipelines.list.noResults')}
+                  icon={<Search className="text-text-tertiary size-6" aria-hidden="true" />}
+                />
+              </div>
             ) : (
               <PipelineTable
                 pipelines={filteredPipelines}
@@ -242,6 +247,56 @@ export function PipelinesPage() {
         />
       )}
     </section>
+  )
+}
+
+function PipelineFirstEmptyState({
+  message,
+  createLabel,
+  createDescription,
+  onCreate,
+}: {
+  message: string
+  createLabel: string
+  createDescription: string
+  onCreate: () => void
+}) {
+  return (
+    <div className="relative min-h-107.5 overflow-hidden">
+      <div
+        className="pointer-events-none absolute inset-x-0 inset-y-2 grid grid-cols-[repeat(auto-fill,minmax(min(100%,288px),1fr))] grid-rows-4 gap-3"
+        aria-hidden="true"
+      >
+        {Array.from({ length: 16 }, (_, index) => (
+          <div key={index} className="bg-background-default-lighter rounded-xl opacity-75" />
+        ))}
+      </div>
+      <div className="from-background-body/0 to-background-body pointer-events-none absolute inset-0 bg-linear-to-b" />
+      <section
+        className="absolute inset-0 flex items-center justify-center overflow-hidden p-2"
+        aria-labelledby="pipelines-first-empty-title"
+      >
+        <div className="flex w-full max-w-130 flex-col items-center gap-6">
+          <div className="flex flex-col items-center gap-3">
+            <div className="border-divider-regular bg-components-card-bg flex size-14 items-center justify-center overflow-hidden rounded-xl border border-dashed p-1 backdrop-blur-md">
+              <GitMerge className="text-text-tertiary size-6" aria-hidden="true" />
+            </div>
+            <h2
+              id="pipelines-first-empty-title"
+              className="system-sm-regular text-text-tertiary text-center"
+            >
+              {message}
+            </h2>
+          </div>
+          <FirstEmptyActionCard
+            title={createLabel}
+            description={createDescription}
+            icon={<Plus className="size-4" aria-hidden="true" />}
+            onClick={onCreate}
+          />
+        </div>
+      </section>
+    </div>
   )
 }
 

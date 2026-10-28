@@ -7,13 +7,14 @@ type DataAttributes = {
 
 type FilterEmptyStateProps = {
   title: ReactNode
+  icon?: ReactNode
   className?: string
   contentDataAttributes?: DataAttributes
 }
 
 const CARD_COUNT = 16
 
-const FilterEmptyState = ({ title, className, contentDataAttributes }: FilterEmptyStateProps) => {
+const FilterEmptyState = ({ title, icon, className, contentDataAttributes }: FilterEmptyStateProps) => {
   return (
     <div
       className={cn(
@@ -29,10 +30,10 @@ const FilterEmptyState = ({ title, className, contentDataAttributes }: FilterEmp
         <div {...contentDataAttributes} className="flex flex-col items-center justify-center gap-3">
           <div className="flex size-14 items-center justify-center rounded-lg">
             <div className="flex size-full min-w-px items-center justify-center overflow-hidden rounded-xl border border-dashed border-divider-regular bg-components-card-bg p-1">
-              <span aria-hidden className="i-ri-robot-2-line size-6 text-text-tertiary" />
+              {icon ?? <span aria-hidden className="i-ri-robot-2-line size-6 text-text-tertiary" />}
             </div>
           </div>
-          <p className="system-sm-regular whitespace-nowrap text-text-tertiary">{title}</p>
+          <p className="system-sm-regular text-center text-text-tertiary">{title}</p>
         </div>
       </div>
     </div>

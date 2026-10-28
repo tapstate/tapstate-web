@@ -1222,7 +1222,7 @@ function AllSourcesView({
         {sources.length === 0 ? (
           <div className="relative min-h-130 overflow-hidden">
             <div
-              className="pointer-events-none absolute inset-x-0 inset-y-2 grid grid-cols-[repeat(auto-fill,minmax(296px,1fr))] grid-rows-4 gap-3"
+              className="pointer-events-none absolute inset-x-0 inset-y-2 grid grid-cols-[repeat(auto-fill,minmax(min(100%,288px),1fr))] grid-rows-4 gap-2.5"
               aria-hidden="true"
             >
               {Array.from({ length: 16 }, (_, index) => (
@@ -1242,7 +1242,7 @@ function AllSourcesView({
                   <div className="text-center">
                     <h2
                       id="sources-first-empty-title"
-                      className="system-sm-medium text-text-primary"
+                      className="system-sm-regular text-text-tertiary max-w-130 whitespace-pre-line"
                     >
                       {t('sources.empty.title')}
                     </h2>
