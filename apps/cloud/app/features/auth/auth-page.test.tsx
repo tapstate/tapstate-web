@@ -313,7 +313,7 @@ describe('Cloud invitation authentication', () => {
     )
   })
 
-  it('renders terms of service and privacy policy links at the bottom', async () => {
+  it('renders terms of service and privacy policy links at the bottom without underline', async () => {
     await renderPage()
 
     const eulaLink = host?.querySelector<HTMLAnchorElement>(
@@ -327,5 +327,11 @@ describe('Cloud invitation authentication', () => {
     expect(privacyLink).not.toBeNull()
     expect(eulaLink?.textContent).toBe('Terms of Service')
     expect(privacyLink?.textContent).toBe('Privacy Policy')
+    expect(eulaLink?.className).toContain('text-text-primary')
+    expect(eulaLink?.className).toContain('font-semibold')
+    expect(eulaLink?.className).not.toContain('underline')
+    expect(privacyLink?.className).toContain('text-text-primary')
+    expect(privacyLink?.className).toContain('font-semibold')
+    expect(privacyLink?.className).not.toContain('underline')
   })
 })

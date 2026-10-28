@@ -234,7 +234,8 @@
 }
 
 .settings-page .settings-about__legal-links a:hover {
-  text-decoration: underline;
+  color: var(--color-primary-700, #175cd3);
+  text-decoration: none;
 }
 
 .settings-page .settings-about__divider {

@@ -653,7 +653,7 @@ export function AuthPage({
             components={{
               eulaLink: (
                 <a
-                  className="text-text-secondary hover:text-text-primary underline underline-offset-2"
+                  className="text-text-primary hover:text-text-secondary font-semibold transition-colors"
                   href={LEGAL_DOCS.eula}
                   rel="noopener noreferrer"
                   target="_blank"
@@ -661,7 +661,7 @@ export function AuthPage({
               ),
               privacyLink: (
                 <a
-                  className="text-text-secondary hover:text-text-primary underline underline-offset-2"
+                  className="text-text-primary hover:text-text-secondary font-semibold transition-colors"
                   href={LEGAL_DOCS.privacy}
                   rel="noopener noreferrer"
                   target="_blank"
