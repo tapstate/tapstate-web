@@ -2016,6 +2016,7 @@
       "totalElapsed": "Total elapsed",
       "steps": "Initialization steps",
       "unknownDuration": "Time unavailable",
+      "loadingCluster": "Loading your Cluster…",
       "updatingSession": "Updating sign-in. Initialization continues; the last confirmed progress is shown.",
       "stale": "Progress could not be refreshed. The last confirmed state is shown.",
       "runtimeHelp": "Preparing data connectors and checking required resources. A slow database connection can extend this step.",

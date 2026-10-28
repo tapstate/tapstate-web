@@ -22,13 +22,15 @@ export function StorageSetupForm({
   onSubmitted,
   onTestsInvalidated,
   beforeSubmit,
-  onCompleted,
+  onDispatched,
+  onRefused,
 }: {
   submission?: ReturnType<typeof useStorageAction>
   onSubmitted?: (checkedAt: Record<StorageLayer, string>) => void
   onTestsInvalidated?: () => void
   beforeSubmit?: () => Promise<void>
-  onCompleted?: () => void
+  onDispatched?: () => void
+  onRefused?: (failure: unknown) => void
 } = {}) {
   const { t } = useTranslation()
   const { snapshot, fetcher, refresh, authorize } = useStorage()
@@ -178,17 +180,22 @@ export function StorageSetupForm({
             })
             await beforeSubmit?.()
             if (!isCurrent()) throw new DOMException('Request superseded', 'AbortError')
-            return storageRequest<{ setupPhase: string }>(fetcher, 'storage.setup.commit', {
-              ...scope,
-              candidate,
-              testStamps: Object.fromEntries(
-                Object.entries(proofs).map(([layer, proof]) => [layer, proof.testStamp]),
-              ),
-            })
+            const response = storageRequest<{ setupPhase: string }>(
+              fetcher,
+              'storage.setup.commit',
+              {
+                ...scope,
+                candidate,
+                testStamps: Object.fromEntries(
+                  Object.entries(proofs).map(([layer, proof]) => [layer, proof.testStamp]),
+                ),
+              },
+            )
+            onDispatched?.()
+            return response
           },
           async (result) => {
             if (result.setupPhase === 'COMPLETE') {
-              onCompleted?.()
               if (mounted.current) {
                 setForm((current) => ({ ...current, uri: '', configCaPem: '', cacheCaPem: '' }))
                 setProofs({})
@@ -199,7 +206,8 @@ export function StorageSetupForm({
             }
             await refresh()
           },
-          () => {
+          (failure) => {
+            onRefused?.(failure)
             if (mounted.current) setProofs({})
           },
         )

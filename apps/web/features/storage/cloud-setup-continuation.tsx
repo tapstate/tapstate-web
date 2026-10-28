@@ -24,12 +24,14 @@ interface Continuation {
 interface ContinuationState {
   intent?: Continuation
   prepare: (snapshot: StorageSnapshot) => Promise<void>
-  confirm: (snapshot: StorageSnapshot) => void
+  submitted: (snapshot: StorageSnapshot) => void
+  refused: (snapshot: StorageSnapshot, failure: unknown) => void
   discard: () => void
 }
 const Context = createContext<ContinuationState>({
   prepare: async () => {},
-  confirm: () => {},
+  submitted: () => {},
+  refused: () => {},
   discard: () => {},
 })
 export const useCloudSetupContinuation = () => useContext(Context)
@@ -112,7 +114,8 @@ export function CloudSetupContinuationProvider({ children }: { children: ReactNo
         : { ...next, armed, progress }
     })
   }, [])
-  const confirm = useCallback((snapshot: StorageSnapshot) => {
+  // Dispatch retains the user's original navigation intent, never proof that the write succeeded.
+  const submitted = useCallback((snapshot: StorageSnapshot) => {
     const auth = useAuthStore.getState()
     if (auth.profile !== 'cloud' || !auth.isAuthenticated) return
     setIntent((previous) =>
@@ -123,12 +126,31 @@ export function CloudSetupContinuationProvider({ children }: { children: ReactNo
         : previous,
     )
   }, [])
+  const refused = useCallback((snapshot: StorageSnapshot, failure: unknown) => {
+    if (
+      !(failure instanceof StorageClientError) ||
+      failure.status < 400 ||
+      failure.status >= 500 ||
+      failure.status === 401
+    )
+      return
+    const auth = useAuthStore.getState()
+    setIntent((previous) =>
+      previous?.session === auth.sessionRevision &&
+      previous.scope === setupOperationScope(snapshot) &&
+      !previous.progress
+        ? undefined
+        : previous,
+    )
+  }, [])
   const discard = useCallback(() => {
     continuationRevision.current += 1
     selectedScope.current = ''
     setIntent(undefined)
   }, [])
   return (
-    <Context.Provider value={{ intent, prepare, confirm, discard }}>{children}</Context.Provider>
+    <Context.Provider value={{ intent, prepare, submitted, refused, discard }}>
+      {children}
+    </Context.Provider>
   )
 }

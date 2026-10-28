@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { StorageSnapshot } from '@/service/storage-client'
 
-import { useAuthStore } from '@/stores/auth-store'
+import { createAuthStore, useAuthStore } from '@/stores/auth-store'
 
 import { ConfigurationTransfer } from './configuration-transfer'
 import { StorageBoundary } from './storage-gate'
@@ -104,6 +104,24 @@ afterEach(() => {
 })
 
 describe('whole-site storage boundary', () => {
+  it('labels the protected Cloud read while waiting for authoritative storage state', async () => {
+    useAuthStore.setState({ profile: 'cloud' })
+    let finish!: (response: Response) => void
+    fetcher.mockImplementation(async (url) =>
+      String(url) === '/auth/storage-entry'
+        ? Response.json({ mode: 'CLOUD', management: false, entry: 'LOGIN' })
+        : new Promise<Response>((resolve) => {
+            finish = resolve
+          }),
+    )
+    await render()
+    expect(container.textContent).toContain('Loading your Cluster')
+    expect(container.textContent).not.toContain('Checking storage')
+    expect(container.querySelector('[data-testid="business"]')).toBeNull()
+    await act(async () => finish(Response.json(state({ mode: 'CLOUD' }))))
+    await settle()
+    expect(container.querySelector('[data-testid="business"]')).not.toBeNull()
+  })
   async function startPendingCloudSetup(contextResponse?: Promise<Response>) {
     useAuthStore.setState({ profile: 'cloud' })
     const setup = {
@@ -415,6 +433,85 @@ describe('whole-site storage boundary', () => {
     await settle()
     expect(cloudNavigation.redirect).not.toHaveBeenCalled()
     expect(container.textContent).toContain('Sign in to continue')
+  })
+
+  it('continues an explicitly dispatched setup when authentication publishes before the first progress poll', async () => {
+    const setup = await startPendingCloudSetup()
+    setup.entry = 'LOGIN'
+    const statuses = fetcher.mock.calls.filter(([url]) => url === '/api/storage/status').length
+    await act(async () => useAuthStore.getState().clear())
+    await settle()
+    expect(cloudNavigation.redirect).toHaveBeenCalledExactlyOnceWith(
+      'https://dev.cloud.tapstate.com/?organizationId=org&enterClusterId=cluster',
+    )
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/status')).toHaveLength(
+      statuses,
+    )
+    await act(async () => setup.complete(Response.json({ setupPhase: 'COMPLETE' })))
+    await settle()
+    expect(cloudNavigation.redirect).toHaveBeenCalledTimes(1)
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')).toHaveLength(
+      1,
+    )
+  })
+
+  it('handles the real HTTP 401 adapter during a pending setup without replaying the write', async () => {
+    const authentication = createAuthStore({
+      profile: 'cloud',
+      storage: null,
+      fetcher: (...args) => fetcher(...args),
+    })
+    const unsubscribe = authentication.subscribe((value) =>
+      useAuthStore.setState({
+        isAuthenticated: value.isAuthenticated,
+        sessionRevision: value.sessionRevision,
+      }),
+    )
+    useAuthStore.setState({ apiFetch: authentication.getState().apiFetch })
+    try {
+      const setup = await startPendingCloudSetup()
+      setup.entry = 'LOGIN'
+      const original = fetcher.getMockImplementation()!
+      fetcher.mockImplementation(async (url, init) =>
+        String(url) === '/api/storage/status'
+          ? Response.json({ code: 'control.unauthenticated' }, { status: 401 })
+          : original(url, init),
+      )
+      await click('Refresh status')
+      await settle()
+      expect(authentication.getState().isAuthenticated).toBe(false)
+      expect(cloudNavigation.redirect).toHaveBeenCalledExactlyOnceWith(
+        'https://dev.cloud.tapstate.com/?organizationId=org&enterClusterId=cluster',
+      )
+      await act(async () => setup.complete(Response.json({ setupPhase: 'COMPLETE' })))
+      await settle()
+      expect(cloudNavigation.redirect).toHaveBeenCalledTimes(1)
+      expect(
+        fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit'),
+      ).toHaveLength(1)
+    } finally {
+      unsubscribe()
+    }
+  })
+
+  it('retains independently observed running work after a refused response', async () => {
+    const setup = await startPendingCloudSetup()
+    setup.snapshot = initializing({ stateVersion: 11 })
+    await click('Refresh status')
+    await act(async () =>
+      setup.complete(Response.json({ code: 'control.conflict' }, { status: 409 })),
+    )
+    await settle()
+    expect(container.querySelector('[role="alert"]')).not.toBeNull()
+    setup.entry = 'LOGIN'
+    await act(async () => useAuthStore.getState().clear())
+    await settle()
+    expect(cloudNavigation.redirect).toHaveBeenCalledExactlyOnceWith(
+      'https://dev.cloud.tapstate.com/?organizationId=org&enterClusterId=cluster',
+    )
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')).toHaveLength(
+      1,
+    )
   })
 
   it('retains the last setup milestones while rediscovering the entry after session retirement', async () => {

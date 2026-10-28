@@ -2016,6 +2016,7 @@
       "totalElapsed": "总耗时",
       "steps": "初始化步骤",
       "unknownDuration": "耗时未知",
+      "loadingCluster": "正在加载你的 Cluster…",
       "updatingSession": "正在更新登录会话。初始化会继续进行，当前显示最近确认的进度。",
       "stale": "暂时无法刷新进度，当前展示最后确认的状态。",
       "runtimeHelp": "正在准备数据连接器并核验所需资源。数据库连接较慢时，这一步可能耗时较长。",

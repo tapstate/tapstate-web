@@ -162,7 +162,9 @@ export function StorageGate({ children }: { children: ReactNode }) {
     return (
       <StorageFrame>
         <p role="status">
-          <StorageIndicator tone="working">{t('storage.loading')}</StorageIndicator>
+          <StorageIndicator tone="working">
+            {t(cloudProfile ? 'storage.initialization.loadingCluster' : 'storage.loading')}
+          </StorageIndicator>
         </p>
       </StorageFrame>
     )
@@ -273,7 +275,8 @@ export function StorageGate({ children }: { children: ReactNode }) {
             <StorageSetupForm
               submission={setupSubmission}
               beforeSubmit={() => continuation.prepare(snapshot)}
-              onCompleted={() => continuation.confirm(snapshot)}
+              onDispatched={() => continuation.submitted(snapshot)}
+              onRefused={(failure) => continuation.refused(snapshot, failure)}
               onSubmitted={(checkedAt) => setSubmittedChecks({ scope: setupScope, checkedAt })}
               onTestsInvalidated={() => setSubmittedChecks(undefined)}
             />

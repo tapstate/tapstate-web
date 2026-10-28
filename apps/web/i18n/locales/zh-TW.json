@@ -2016,6 +2016,7 @@
       "totalElapsed": "總耗時",
       "steps": "初始化步驟",
       "unknownDuration": "耗時未知",
+      "loadingCluster": "正在載入你的 Cluster…",
       "updatingSession": "正在更新登入工作階段。初始化會繼續進行，目前顯示最近確認的進度。",
       "stale": "暫時無法重新整理進度，目前顯示最後確認的狀態。",
       "runtimeHelp": "正在準備資料連接器並核驗所需資源。資料庫連接較慢時，這一步可能耗時較長。",
