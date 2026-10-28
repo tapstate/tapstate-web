@@ -77,15 +77,16 @@ export function CloudConsoleShell({
             search={{ organizationId: currentOrganization?.id }}
             to="/"
           >
-            <img alt="Tapstate" className="h-5 w-5 shrink-0 dark:hidden" src="/tapstate-mark.svg" />
             <img
               alt="Tapstate"
-              className="hidden h-5 w-5 shrink-0 dark:block"
-              src="/tapstate-mark-light.svg"
+              className="w-[120px] shrink-0 dark:hidden"
+              src="/tapstate-lockup-light.svg"
             />
-            <span className="text-[13px] font-[650] text-neutral-900 dark:text-white">
-              Tapstate
-            </span>
+            <img
+              alt="Tapstate"
+              className="hidden w-[120px] shrink-0 dark:block"
+              src="/tapstate-lockup-dark.svg"
+            />
           </Link>
         </div>
 
