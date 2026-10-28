@@ -19,10 +19,12 @@ function duration(value: number) {
 
 export function InitializationMilestones({
   progress,
+  mode = 'CLOUD',
   stale = false,
   waitingForSignIn = false,
 }: {
   progress: InitializationProgress
+  mode?: 'OP' | 'CLOUD'
   stale?: boolean
   waitingForSignIn?: boolean
 }) {
@@ -101,7 +103,7 @@ export function InitializationMilestones({
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                   <h3 className={`text-sm ${active ? 'font-semibold' : 'font-medium'}`}>
-                    {t(`storage.initialization.stage.${step.id}`)}
+                    {t(`storage.initialization.${mode === 'OP' ? 'opStage' : 'stage'}.${step.id}`)}
                   </h3>
                   <span
                     className="text-muted-foreground shrink-0 font-mono text-sm tabular-nums"
@@ -139,14 +141,20 @@ export function InitializationMilestones({
         <p className="text-muted-foreground mt-4 text-xs">{t('storage.initialization.restored')}</p>
       )}
       <div className="border-border mt-5 border-t pt-4">
-        <p className="text-muted-foreground text-sm">{t('storage.initialization.canLeave')}</p>
-        <Button
-          className="mt-3 min-h-11 sm:min-h-8"
-          variant="outline"
-          onClick={() => replaceWithCloudConsole()}
-        >
-          {t('storage.initialization.backToCloud')}
-        </Button>
+        <p className="text-muted-foreground text-sm">
+          {t(
+            mode === 'OP' ? 'storage.initialization.opCanLeave' : 'storage.initialization.canLeave',
+          )}
+        </p>
+        {mode === 'CLOUD' && (
+          <Button
+            className="mt-3 min-h-11 sm:min-h-8"
+            variant="outline"
+            onClick={() => replaceWithCloudConsole()}
+          >
+            {t('storage.initialization.backToCloud')}
+          </Button>
+        )}
       </div>
     </section>
   )

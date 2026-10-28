@@ -2036,7 +2036,14 @@
         "LAST_RUNNING": "Last confirmed in progress",
         "COMPLETE": "Completed",
         "FAILED": "Failed — action required"
-      }
+      },
+      "opStage": {
+        "SAVE_SETTINGS": "Save database settings",
+        "PREPARE_STORAGE": "Prepare configuration and runtime storage",
+        "START_RUNTIME": "Restart and register data connectors",
+        "PUBLISH_READY": "Ready to create the first administrator"
+      },
+      "opCanLeave": "You can close this page and return to this installation address. Saved settings are retained. After the automatic restart, use the new first-administrator credential from the installation capability file."
     },
     "setupCheckRetained": "Runtime preparation is still in progress. This is the connection test completed before saving.",
     "testRequired": "Connection test required",
@@ -2157,7 +2164,7 @@
       "NOT_CONFIGURED": "Test and save the databases before using the cluster.",
       "PREPARING": "The original setup is being prepared. Saved database settings stay in place.",
       "RESTART_REQUIRED": "Storage is saved. Restart through the installation command, then authorize first-administrator creation.",
-      "FIRST_ADMIN_REQUIRED": "Use the current first-administrator credential on the management channel.",
+      "FIRST_ADMIN_REQUIRED": "Set a username and password for the first administrator.",
       "AUTH_READY": "Authentication is available. Business services are still waiting for storage admission.",
       "READY": "Runtime storage is admitted. Each layer below reports its own verification state.",
       "UNAVAILABLE": "Restore the original storage and check again. Do not replace the binding or repeat installation.",

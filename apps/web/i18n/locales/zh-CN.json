@@ -2036,7 +2036,14 @@
         "LAST_RUNNING": "最后确认时正在进行",
         "COMPLETE": "已完成",
         "FAILED": "失败，需要处理"
-      }
+      },
+      "opStage": {
+        "SAVE_SETTINGS": "保存数据库配置",
+        "PREPARE_STORAGE": "准备配置与运行存储",
+        "START_RUNTIME": "自动重启并注册数据连接器",
+        "PUBLISH_READY": "准备创建首个管理员"
+      },
+      "opCanLeave": "可以关闭页面，之后从此安装地址重新进入。已保存的配置会保留；自动重启后，使用安装凭证文件中的新首管凭证继续。"
     },
     "setupCheckRetained": "运行环境仍在准备中。这是保存前已完成的连接测试结果。",
     "testRequired": "需要测试连接",
@@ -2157,7 +2164,7 @@
       "NOT_CONFIGURED": "使用集群前需完成数据库测试与保存。",
       "PREPARING": "正在继续原设置，已保存的数据库配置会保留。",
       "RESTART_REQUIRED": "存储设置已保存。请通过安装流程受控重启，再授权创建首管。",
-      "FIRST_ADMIN_REQUIRED": "请在管理通道使用当前首管凭证。",
+      "FIRST_ADMIN_REQUIRED": "设置首个管理员的用户名和密码。",
       "AUTH_READY": "鉴权可用，业务服务仍在等待存储准入。",
       "READY": "运行存储已准入；下方分别显示各层核验状态。",
       "UNAVAILABLE": "请恢复原存储后再次检查，不要替换绑定或重复安装。",

@@ -11,6 +11,8 @@ import {
 
 import {
   acceptSnapshot,
+  validateInitializationProgress,
+  type InitializationProgress,
   storageRequest,
   type StorageSnapshot,
   StorageClientError,
@@ -18,8 +20,10 @@ import {
 import { useAuthStore } from '@/stores/auth-store'
 
 export interface StorageEntry {
+  initializationProgress?: InitializationProgress
   mode: 'OP' | 'CLOUD'
   management: boolean
+  automaticAuthorization?: boolean
   entry: 'LOGIN' | 'SETUP_REQUIRED' | 'RESTART_REQUIRED' | 'FIRST_ADMIN_REQUIRED' | 'UNAVAILABLE'
 }
 interface StorageState {
@@ -47,7 +51,7 @@ export function useStorage() {
 export function StorageProvider({ children }: { children: ReactNode }) {
   const auth = useAuthStore()
   const queryClient = useQueryClient()
-  const [authorization, setAuthorization] = useState({ secret: '', revision: 0 })
+  const [authorization, setAuthorization] = useState({ secret: '', revision: 0, purpose: 'SETUP' })
   const [setupPending, setSetupPending] = useState(false)
   const previous = useRef<StorageSnapshot | undefined>(undefined)
   const queryKey = useMemo(
@@ -82,9 +86,15 @@ export function StorageProvider({ children }: { children: ReactNode }) {
       (temporaryFailure || (!failure && entry?.entry === 'UNAVAILABLE'))
     )
       return 10000
+    if (
+      entry?.management &&
+      (entry.initializationProgress?.state === 'RUNNING' ||
+        (entry.entry === 'RESTART_REQUIRED' && entry.initializationProgress?.state === 'COMPLETE'))
+    )
+      return temporaryFailure ? 10000 : 3000
     const authorized = entry
       ? entry.management
-        ? Boolean(authorization.secret)
+        ? Boolean(authorization.secret) || entry.automaticAuthorization === true
         : auth.isAuthenticated
       : Boolean(authorization.secret) || auth.isAuthenticated
     if (!authorized) return false
@@ -141,13 +151,22 @@ export function StorageProvider({ children }: { children: ReactNode }) {
         ].includes(entry.entry)
       )
         throw new StorageClientError('protocol', 200)
+      if (entry.initializationProgress !== undefined) {
+        if (!entry.management || entry.mode !== 'OP') throw new StorageClientError('protocol', 200)
+        validateInitializationProgress(entry.initializationProgress)
+      }
       if (signal.aborted || useAuthStore.getState().sessionRevision !== auth.sessionRevision)
         throw new DOMException('Request superseded', 'AbortError')
       if (entry.mode !== (auth.profile === 'cloud' ? 'CLOUD' : 'OP'))
         throw new StorageClientError('protocol', 200)
       if (
         entry.management
-          ? !authorization.secret || ['LOGIN', 'RESTART_REQUIRED'].includes(entry.entry)
+          ? (!authorization.secret && !entry.automaticAuthorization) ||
+            ['LOGIN', 'RESTART_REQUIRED'].includes(entry.entry) ||
+            entry.initializationProgress?.state === 'RUNNING' ||
+            (entry.entry === 'FIRST_ADMIN_REQUIRED' &&
+              authorization.purpose === 'SETUP' &&
+              !entry.automaticAuthorization)
           : !auth.isAuthenticated
       )
         return { entry, snapshot: undefined, failure: undefined }
@@ -194,7 +213,13 @@ export function StorageProvider({ children }: { children: ReactNode }) {
         error: query.error ?? query.data?.failure,
         fetcher,
         refresh,
-        authorized: Boolean(authorization.secret),
+        authorized:
+          query.data?.entry.automaticAuthorization === true ||
+          (Boolean(authorization.secret) &&
+            !(
+              query.data?.entry.entry === 'FIRST_ADMIN_REQUIRED' &&
+              authorization.purpose === 'SETUP'
+            )),
         session: auth.sessionRevision,
         authorityRevision: authorization.revision,
         setSetupPending,
@@ -203,7 +228,11 @@ export function StorageProvider({ children }: { children: ReactNode }) {
         ),
         authorize: (secret) => {
           previous.current = undefined
-          setAuthorization((current) => ({ secret, revision: current.revision + 1 }))
+          setAuthorization((current) => ({
+            secret,
+            revision: current.revision + 1,
+            purpose: query.data?.entry.entry === 'FIRST_ADMIN_REQUIRED' ? 'FIRST_ADMIN' : 'SETUP',
+          }))
         },
       }}
     >

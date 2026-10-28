@@ -104,6 +104,32 @@ afterEach(() => {
 })
 
 describe('whole-site storage boundary', () => {
+  it('opens storage setup directly when the dedicated OP listener supplies local installation authority', async () => {
+    useAuthStore.setState({ isAuthenticated: false })
+    fetcher.mockImplementation(async (url) =>
+      String(url) === '/auth/storage-entry'
+        ? Response.json({
+            mode: 'OP',
+            management: true,
+            entry: 'SETUP_REQUIRED',
+            automaticAuthorization: true,
+          })
+        : Response.json(
+            state({
+              setupPhase: 'LOCAL_SETUP',
+              bindingVersion: 0,
+              authGeneration: 0,
+              businessPhase: 'NOT_CONFIGURED',
+              allowedActions: ['storage.test', 'storage.setup.commit'],
+            }),
+          ),
+    )
+    await render()
+    expect(container.textContent).toContain('Set up cluster storage')
+    expect(container.textContent).not.toContain('Continue as the installation administrator')
+    expect(container.textContent).not.toContain('Installation credential')
+  })
+
   it('labels the protected Cloud read while waiting for authoritative storage state', async () => {
     useAuthStore.setState({ profile: 'cloud' })
     let finish!: (response: Response) => void
@@ -258,6 +284,25 @@ describe('whole-site storage boundary', () => {
       ...overrides,
     })
   }
+
+  it('restores OP restart milestones without an installation secret or protected status read', async () => {
+    useAuthStore.setState({ isAuthenticated: false })
+    const progress = initializing().initializationProgress!
+    fetcher.mockImplementation(async () =>
+      Response.json({
+        mode: 'OP',
+        management: true,
+        entry: 'UNAVAILABLE',
+        initializationProgress: progress,
+      }),
+    )
+    await render()
+    expect(container.textContent).toContain('1 of 4 steps completed')
+    expect(container.textContent).toContain('Restart and register data connectors')
+    expect(container.textContent).not.toContain('Return to Cloud')
+    expect(fetcher.mock.calls.every(([url]) => String(url) === '/auth/storage-entry')).toBe(true)
+    expect(container.querySelector('input')).toBeNull()
+  })
 
   it('restores server milestones after closing the pending page without submitting again', async () => {
     vi.useFakeTimers()
