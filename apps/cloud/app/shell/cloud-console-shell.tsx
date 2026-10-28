@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { Link, useNavigate } from '@tanstack/react-router'
-import { BellRing, ChevronRight, CreditCard, Home, Search, Server, Settings } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { BellRing, ChevronRight, CreditCard, Home, Server, Settings } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import type { Cluster, Organization } from '../service/cloud-api'
@@ -26,12 +25,6 @@ const navigation = [
   { label: 'Settings', path: '/settings', icon: Settings, exact: false },
 ] as const
 
-function searchShortcutLabel() {
-  const applePlatform =
-    typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform)
-  return applePlatform ? '⌘K' : 'Ctrl+K'
-}
-
 interface CloudConsoleShellProps {
   children: ReactNode
   organization: Organization | null
@@ -53,28 +46,13 @@ export function CloudConsoleShell({
     darkMode,
     clearIdentity,
   } = useCloudAppState()
-  const [search, setSearch] = useState('')
-  const searchInputRef = useRef<HTMLInputElement>(null)
   const { enterCluster, enteringId, entryError } = useClusterEntry()
 
   const currentOrganization = activeOrganization ?? organization
   const { t } = useTranslation()
   const currentClusters = activeOrganization ? stateClusters : loaderClusters
-  const visibleClusters = currentClusters
-    .filter((cluster) => cluster.name.toLowerCase().includes(search.toLowerCase()))
-    .slice(0, 3)
+  const visibleClusters = currentClusters.slice(0, 3)
   const visibleNavigation = navigation
-
-  useEffect(() => {
-    function focusClusterSearch(event: KeyboardEvent) {
-      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') return
-      event.preventDefault()
-      searchInputRef.current?.focus()
-    }
-
-    window.addEventListener('keydown', focusClusterSearch)
-    return () => window.removeEventListener('keydown', focusClusterSearch)
-  }, [])
 
   const signOut = async () => {
     cancelPendingClusterEntries()
@@ -108,21 +86,6 @@ export function CloudConsoleShell({
               Tapstate Cloud
             </span>
           </Link>
-        </div>
-
-        <div className="mb-3 px-1">
-          <label className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-neutral-500 transition-colors hover:bg-black/[0.04] dark:text-neutral-400 dark:hover:bg-white/[0.05]">
-            <Search className="h-3.5 w-3.5 shrink-0" />
-            <input
-              ref={searchInputRef}
-              aria-label="Search clusters"
-              className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-neutral-500"
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search"
-              value={search}
-            />
-            <span className="font-mono text-[10px] opacity-60">{searchShortcutLabel()}</span>
-          </label>
         </div>
 
         <div className="flex-1 space-y-1 overflow-y-auto px-1">
