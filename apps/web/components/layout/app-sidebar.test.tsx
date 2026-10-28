@@ -91,7 +91,7 @@ describe('AppSidebar', () => {
         [...(navigation?.querySelectorAll<HTMLAnchorElement>('a') ?? [])].map((link) =>
           link.getAttribute('href'),
         ),
-      ).toEqual(['/overview', '/sources', '/pipelines', '/views'])
+      ).toEqual(['/overview', '/health', '/sources', '/pipelines', '/views'])
       expect(container.querySelector('a[href="/explorations"]')).toBeNull()
     },
   )

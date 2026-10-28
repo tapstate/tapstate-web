@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 
+import { AlertTopbar } from '@/features/alerts/alert-shared'
 import { AskTapstate } from '@/features/ask-tapstate/ask-tapstate'
 import { TawkFeedbackWidget } from '@/features/feedback/tawk-feedback-widget'
 import { deploymentProfile } from '@/utils/deployment-profile'
@@ -12,6 +13,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <AppSidebar />
 
       <main className="app-shell__main">
+        <AlertTopbar />
         <div className="app-shell__content">{children}</div>
       </main>
 

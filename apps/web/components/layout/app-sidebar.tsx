@@ -3,8 +3,10 @@ import type { ComponentType, SVGProps } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useRouterState } from '@tanstack/react-router'
 import {
+  Activity,
   ArrowLeft,
   Building2,
+  ChevronDown,
   Database,
   GitMerge,
   LayoutDashboard,
@@ -12,6 +14,7 @@ import {
   Table2,
   Terminal,
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
@@ -29,6 +32,7 @@ interface NavigationItem {
 
 const navigation: NavigationItem[] = [
   { labelKey: 'nav.overview', to: '/overview', icon: LayoutDashboard },
+  { labelKey: 'alerts.systemHealth', to: '/health', icon: Activity },
   { labelKey: 'nav.sources', to: '/sources', icon: Database },
   { labelKey: 'nav.pipelines', to: '/pipelines', icon: GitMerge },
   { labelKey: 'nav.views', to: '/views', icon: Table2 },
@@ -42,6 +46,10 @@ const footerNavigation: NavigationItem[] = [
 export function AppSidebar() {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const { t } = useTranslation()
+  const [settingsExpanded, setSettingsExpanded] = useState(pathname.startsWith('/settings'))
+  useEffect(() => {
+    if (pathname.startsWith('/settings')) setSettingsExpanded(true)
+  }, [pathname])
   const profile = useAuthStore((state) => state.profile)
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const cloudContext = useQuery({
@@ -136,7 +144,30 @@ export function AppSidebar() {
         aria-label={t('app.secondaryNavigation')}
       >
         {footerNavigation.map((item) => (
-          <SidebarLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
+          <div key={item.to} className="app-sidebar__settings">
+            <div className="app-sidebar__settings-parent">
+              <SidebarLink item={item} active={pathname.startsWith(item.to)} />
+              <button
+                aria-label={t('alerts.settingsSections')}
+                aria-expanded={settingsExpanded}
+                onClick={() => setSettingsExpanded((v) => !v)}
+              >
+                <ChevronDown className={settingsExpanded ? 'h-3 w-3' : 'h-3 w-3 -rotate-90'} />
+              </button>
+            </div>
+            {settingsExpanded && (
+              <Link
+                className={
+                  pathname === '/settings/alerts'
+                    ? 'app-sidebar__settings-child app-sidebar__settings-child--active'
+                    : 'app-sidebar__settings-child'
+                }
+                to="/settings/alerts"
+              >
+                {t('alerts.configuration')}
+              </Link>
+            )}
+          </div>
         ))}
       </nav>
 

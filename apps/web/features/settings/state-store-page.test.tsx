@@ -1,4 +1,9 @@
 import '@/i18n/index'
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ to, children }: { to: string; children: import('react').ReactNode }) => (
+    <a href={to}>{children}</a>
+  ),
+}))
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'

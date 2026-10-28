@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
 import { ArrowRight, Sparkles } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next'
 import type { DataSourceMeta } from '@/features/pipelines/components/reference-wizard/ReferenceWizardBuilder'
 
 import { Button } from '@/components/ui/button'
+import { HealthSummary } from '@/features/alerts/alert-shared'
 import { PipelineCreationDialog } from '@/features/pipelines/components/create/pipeline-creation-dialog'
 import {
   createCustomer360Wizard,
@@ -397,6 +398,7 @@ function OverviewContent({
 }: OverviewContentProps) {
   return (
     <>
+      <HealthSummary />
       <OverviewTopology
         overview={overview}
         connectors={connectors}
@@ -418,7 +420,6 @@ function OverviewContent({
         />
       </OverviewTopology>
       <OverviewRuntimeMetrics overview={overview} />
-      <OverviewAttention items={overview.attention} />
     </>
   )
 }
@@ -650,83 +651,5 @@ function OverviewMilestoneDock({
         </div>
       </div>
     </section>
-  )
-}
-
-function OverviewAttention({ items }: { items: OverviewModel['attention'] }) {
-  const { t } = useTranslation()
-  if (items.length === 0) return null
-
-  return (
-    <section className="overview-attention" aria-labelledby="overview-attention-title">
-      <h2 id="overview-attention-title" className="text-foreground text-[13px] font-semibold">
-        {t('overview.attention.title')}
-      </h2>
-      <ul className="overview-attention__list">
-        {items.map((item) => (
-          <OverviewAttentionRow key={attentionKey(item)} item={item} />
-        ))}
-      </ul>
-    </section>
-  )
-}
-
-function attentionKey(item: OverviewModel['attention'][number]) {
-  return item.kind === 'pipelineFailed' ? `pipeline-${item.pipelineId}` : `view-${item.viewId}`
-}
-
-function OverviewAttentionRow({ item }: { item: OverviewModel['attention'][number] }) {
-  const { t } = useTranslation()
-  if (item.kind === 'pipelineFailed') {
-    return (
-      <li className="overview-attention__item">
-        <span
-          className="overview-attention__dot overview-attention__dot--error"
-          aria-hidden="true"
-        />
-        <span className="overview-attention__kind">{t('overview.attention.pipelineFailed')}</span>
-        <span className="text-foreground font-medium">{item.pipelineId}</span>
-        {item.code && <code className="text-muted-foreground text-[12px]">{item.code}</code>}
-        <Link
-          to="/pipelines/$pipelineId/edit/monitoring"
-          params={{ pipelineId: item.pipelineId }}
-          className="overview-link overview-attention__open"
-        >
-          {t('overview.attention.openPipeline')}
-        </Link>
-      </li>
-    )
-  }
-
-  const minutes =
-    item.lastAppliedAt === null
-      ? null
-      : Math.max(0, Math.floor((Date.now() - item.lastAppliedAt) / 60000))
-  return (
-    <li className="overview-attention__item">
-      <span
-        className="overview-attention__dot overview-attention__dot--warning"
-        aria-hidden="true"
-      />
-      <span className="overview-attention__kind">{t('overview.attention.viewStale')}</span>
-      <span className="text-foreground font-medium">{item.collection}</span>
-      <span className="text-muted-foreground">
-        {[
-          minutes === null
-            ? t('overview.attention.lastAppliedUnknown')
-            : t('overview.attention.lastApplied', { count: minutes }),
-          t(`overview.attention.pipelineIs.${item.pipelineHealth ?? 'unknown'}`, {
-            pipeline: item.pipelineId,
-          }),
-        ].join('; ')}
-      </span>
-      <Link
-        to="/views/$viewId"
-        params={{ viewId: item.viewId }}
-        className="overview-link overview-attention__open"
-      >
-        {t('overview.attention.openView')}
-      </Link>
-    </li>
   )
 }

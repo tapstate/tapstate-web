@@ -15,13 +15,16 @@ import { Route as PipelineEditorRouteImport } from './routes/_pipeline-editor'
 import { Route as InstallationRouteImport } from './routes/installation'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SignedOutRouteImport } from './routes/signed-out'
+import { Route as AuthenticatedAlertsRouteImport } from './routes/_authenticated.alerts'
 import { Route as AuthenticatedDestinationsRouteImport } from './routes/_authenticated.destinations'
 import { Route as AuthenticatedExplorationsRouteImport } from './routes/_authenticated.explorations'
+import { Route as AuthenticatedHealthRouteImport } from './routes/_authenticated.health'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated.overview'
 import { Route as AuthenticatedPipelinesRouteImport } from './routes/_authenticated.pipelines'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated.settings'
 import { Route as AuthenticatedSourcesRouteImport } from './routes/_authenticated.sources'
 import { Route as AuthenticatedViewsRouteImport } from './routes/_authenticated.views'
+import { Route as AuthenticatedSettingsAlertsRouteImport } from './routes/_authenticated.settings.alerts'
 import { Route as AuthenticatedSourcesIndexRouteImport } from './routes/_authenticated.sources.index'
 import { Route as AuthenticatedSourcesSourceIdRouteImport } from './routes/_authenticated.sources.$sourceId'
 import { Route as AuthenticatedViewsIndexRouteImport } from './routes/_authenticated.views.index'
@@ -63,6 +66,11 @@ const SignedOutRoute = SignedOutRouteImport.update({
   path: '/signed-out',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAlertsRoute = AuthenticatedAlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedDestinationsRoute =
   AuthenticatedDestinationsRouteImport.update({
     id: '/destinations',
@@ -75,6 +83,11 @@ const AuthenticatedExplorationsRoute =
     path: '/explorations',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedHealthRoute = AuthenticatedHealthRouteImport.update({
+  id: '/health',
+  path: '/health',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedOverviewRoute = AuthenticatedOverviewRouteImport.update({
   id: '/overview',
   path: '/overview',
@@ -100,6 +113,12 @@ const AuthenticatedViewsRoute = AuthenticatedViewsRouteImport.update({
   path: '/views',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedSettingsAlertsRoute =
+  AuthenticatedSettingsAlertsRouteImport.update({
+    id: '/alerts',
+    path: '/alerts',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const AuthenticatedSourcesIndexRoute =
   AuthenticatedSourcesIndexRouteImport.update({
     id: '/',
@@ -187,13 +206,16 @@ export interface FileRoutesByFullPath {
   '/installation': typeof InstallationRoute
   '/login': typeof LoginRoute
   '/signed-out': typeof SignedOutRoute
+  '/alerts': typeof AuthenticatedAlertsRoute
   '/destinations': typeof AuthenticatedDestinationsRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
+  '/health': typeof AuthenticatedHealthRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
-  '/settings': typeof AuthenticatedSettingsRoute
+  '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/sources': typeof AuthenticatedSourcesRouteWithChildren
   '/views': typeof AuthenticatedViewsRouteWithChildren
+  '/settings/alerts': typeof AuthenticatedSettingsAlertsRoute
   '/sources/$sourceId': typeof AuthenticatedSourcesSourceIdRouteWithChildren
   '/views/$viewId': typeof AuthenticatedViewsViewIdRoute
   '/views/collections': typeof AuthenticatedViewsCollectionsRoute
@@ -212,11 +234,14 @@ export interface FileRoutesByTo {
   '/installation': typeof InstallationRoute
   '/login': typeof LoginRoute
   '/signed-out': typeof SignedOutRoute
+  '/alerts': typeof AuthenticatedAlertsRoute
   '/destinations': typeof AuthenticatedDestinationsRoute
   '/explorations': typeof AuthenticatedExplorationsRoute
+  '/health': typeof AuthenticatedHealthRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/pipelines': typeof AuthenticatedPipelinesRoute
-  '/settings': typeof AuthenticatedSettingsRoute
+  '/settings': typeof AuthenticatedSettingsRouteWithChildren
+  '/settings/alerts': typeof AuthenticatedSettingsAlertsRoute
   '/views/$viewId': typeof AuthenticatedViewsViewIdRoute
   '/views/collections': typeof AuthenticatedViewsCollectionsRoute
   '/sources': typeof AuthenticatedSourcesIndexRoute
@@ -236,13 +261,16 @@ export interface FileRoutesById {
   '/installation': typeof InstallationRoute
   '/login': typeof LoginRoute
   '/signed-out': typeof SignedOutRoute
+  '/_authenticated/alerts': typeof AuthenticatedAlertsRoute
   '/_authenticated/destinations': typeof AuthenticatedDestinationsRoute
   '/_authenticated/explorations': typeof AuthenticatedExplorationsRoute
+  '/_authenticated/health': typeof AuthenticatedHealthRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
   '/_authenticated/pipelines': typeof AuthenticatedPipelinesRoute
-  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/_authenticated/sources': typeof AuthenticatedSourcesRouteWithChildren
   '/_authenticated/views': typeof AuthenticatedViewsRouteWithChildren
+  '/_authenticated/settings/alerts': typeof AuthenticatedSettingsAlertsRoute
   '/_authenticated/sources/$sourceId': typeof AuthenticatedSourcesSourceIdRouteWithChildren
   '/_authenticated/views/$viewId': typeof AuthenticatedViewsViewIdRoute
   '/_authenticated/views/collections': typeof AuthenticatedViewsCollectionsRoute
@@ -263,13 +291,16 @@ export interface FileRouteTypes {
     | '/installation'
     | '/login'
     | '/signed-out'
+    | '/alerts'
     | '/destinations'
     | '/explorations'
+    | '/health'
     | '/overview'
     | '/pipelines'
     | '/settings'
     | '/sources'
     | '/views'
+    | '/settings/alerts'
     | '/sources/$sourceId'
     | '/views/$viewId'
     | '/views/collections'
@@ -288,11 +319,14 @@ export interface FileRouteTypes {
     | '/installation'
     | '/login'
     | '/signed-out'
+    | '/alerts'
     | '/destinations'
     | '/explorations'
+    | '/health'
     | '/overview'
     | '/pipelines'
     | '/settings'
+    | '/settings/alerts'
     | '/views/$viewId'
     | '/views/collections'
     | '/sources'
@@ -311,13 +345,16 @@ export interface FileRouteTypes {
     | '/installation'
     | '/login'
     | '/signed-out'
+    | '/_authenticated/alerts'
     | '/_authenticated/destinations'
     | '/_authenticated/explorations'
+    | '/_authenticated/health'
     | '/_authenticated/overview'
     | '/_authenticated/pipelines'
     | '/_authenticated/settings'
     | '/_authenticated/sources'
     | '/_authenticated/views'
+    | '/_authenticated/settings/alerts'
     | '/_authenticated/sources/$sourceId'
     | '/_authenticated/views/$viewId'
     | '/_authenticated/views/collections'
@@ -385,6 +422,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignedOutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/alerts': {
+      id: '/_authenticated/alerts'
+      path: '/alerts'
+      fullPath: '/alerts'
+      preLoaderRoute: typeof AuthenticatedAlertsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/destinations': {
       id: '/_authenticated/destinations'
       path: '/destinations'
@@ -397,6 +441,13 @@ declare module '@tanstack/react-router' {
       path: '/explorations'
       fullPath: '/explorations'
       preLoaderRoute: typeof AuthenticatedExplorationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/health': {
+      id: '/_authenticated/health'
+      path: '/health'
+      fullPath: '/health'
+      preLoaderRoute: typeof AuthenticatedHealthRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/overview': {
@@ -433,6 +484,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/views'
       preLoaderRoute: typeof AuthenticatedViewsRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/settings/alerts': {
+      id: '/_authenticated/settings/alerts'
+      path: '/alerts'
+      fullPath: '/settings/alerts'
+      preLoaderRoute: typeof AuthenticatedSettingsAlertsRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
     }
     '/_authenticated/sources/': {
       id: '/_authenticated/sources/'
@@ -521,6 +579,19 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedSettingsRouteChildren {
+  AuthenticatedSettingsAlertsRoute: typeof AuthenticatedSettingsAlertsRoute
+}
+
+const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
+  AuthenticatedSettingsAlertsRoute: AuthenticatedSettingsAlertsRoute,
+}
+
+const AuthenticatedSettingsRouteWithChildren =
+  AuthenticatedSettingsRoute._addFileChildren(
+    AuthenticatedSettingsRouteChildren,
+  )
+
 interface AuthenticatedSourcesSourceIdRouteChildren {
   AuthenticatedSourcesSourceIdTableNameRoute: typeof AuthenticatedSourcesSourceIdTableNameRoute
   AuthenticatedSourcesSourceIdIndexRoute: typeof AuthenticatedSourcesSourceIdIndexRoute
@@ -569,21 +640,25 @@ const AuthenticatedViewsRouteWithChildren =
   AuthenticatedViewsRoute._addFileChildren(AuthenticatedViewsRouteChildren)
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedAlertsRoute: typeof AuthenticatedAlertsRoute
   AuthenticatedDestinationsRoute: typeof AuthenticatedDestinationsRoute
   AuthenticatedExplorationsRoute: typeof AuthenticatedExplorationsRoute
+  AuthenticatedHealthRoute: typeof AuthenticatedHealthRoute
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
   AuthenticatedPipelinesRoute: typeof AuthenticatedPipelinesRoute
-  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
   AuthenticatedSourcesRoute: typeof AuthenticatedSourcesRouteWithChildren
   AuthenticatedViewsRoute: typeof AuthenticatedViewsRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAlertsRoute: AuthenticatedAlertsRoute,
   AuthenticatedDestinationsRoute: AuthenticatedDestinationsRoute,
   AuthenticatedExplorationsRoute: AuthenticatedExplorationsRoute,
+  AuthenticatedHealthRoute: AuthenticatedHealthRoute,
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
   AuthenticatedPipelinesRoute: AuthenticatedPipelinesRoute,
-  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
   AuthenticatedSourcesRoute: AuthenticatedSourcesRouteWithChildren,
   AuthenticatedViewsRoute: AuthenticatedViewsRouteWithChildren,
 }

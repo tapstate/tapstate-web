@@ -252,9 +252,8 @@ describe('OverviewPage', () => {
     expect(container.querySelector('.overview-page__chip')).toBeNull()
     expect(container.textContent).toContain('2 connected sources')
     expect(container.textContent).toContain('2 pipelines')
-    const failed = container.querySelector('.overview-attention__item')
-    expect(failed?.textContent).toContain('Failed pipeline')
-    expect(failed?.textContent).toContain('b_sync')
+    expect(container.querySelector('.overview-attention')).toBeNull()
+    expect(container.querySelector('.alert-health-summary')).not.toBeNull()
     expect(container.textContent).toContain('Tapstate state store')
     expect(container.querySelector('.overview-block__step')).toBeNull()
   })
@@ -448,13 +447,7 @@ describe('OverviewPage', () => {
     await render()
     await settle()
 
-    const row = container.querySelector('.overview-attention__item')
-    expect(row?.textContent).toContain('Stale view')
-    expect(row?.textContent).toContain('loans')
-    expect(row?.textContent).toContain(
-      'last change applied 12 min ago; its pipeline b_sync is stopped',
-    )
-    expect(row?.querySelector('a')?.getAttribute('href')).toBe('/views/$viewId')
+    expect(container.querySelector('.overview-attention')).toBeNull()
     expect(container.textContent).toContain('1 view')
   })
 
@@ -478,11 +471,8 @@ describe('OverviewPage', () => {
     })
     await render()
     await settle()
-    const row = container.querySelector('.overview-attention__item')
-    expect(row?.textContent).toContain(
-      'Last applied time is not reported; its pipeline b_sync is running',
-    )
-    expect(row?.textContent).not.toContain('no change applied yet')
+    expect(container.querySelector('.overview-attention')).toBeNull()
+    expect(container.textContent).not.toContain('no change applied yet')
   })
 
   it('offers the sample sources when the deployment has them, and tags them once added', async () => {
