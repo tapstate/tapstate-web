@@ -16,7 +16,6 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as SignedOutRouteImport } from './routes/signed-out'
 import { Route as UiKitRouteImport } from './routes/ui-kit'
 import { Route as AuthenticatedDestinationsRouteImport } from './routes/_authenticated.destinations'
-import { Route as AuthenticatedExplorationsRouteImport } from './routes/_authenticated.explorations'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated.overview'
 import { Route as AuthenticatedPipelinesRouteImport } from './routes/_authenticated.pipelines'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated.settings'
@@ -68,12 +67,6 @@ const AuthenticatedDestinationsRoute =
   AuthenticatedDestinationsRouteImport.update({
     id: '/destinations',
     path: '/destinations',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedExplorationsRoute =
-  AuthenticatedExplorationsRouteImport.update({
-    id: '/explorations',
-    path: '/explorations',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedOverviewRoute = AuthenticatedOverviewRouteImport.update({
@@ -195,7 +188,6 @@ export interface FileRoutesByFullPath {
   '/signed-out': typeof SignedOutRoute
   '/ui-kit': typeof UiKitRoute
   '/destinations': typeof AuthenticatedDestinationsRoute
-  '/explorations': typeof AuthenticatedExplorationsRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/pipelines': typeof AuthenticatedPipelinesRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
@@ -221,7 +213,6 @@ export interface FileRoutesByTo {
   '/signed-out': typeof SignedOutRoute
   '/ui-kit': typeof UiKitRoute
   '/destinations': typeof AuthenticatedDestinationsRoute
-  '/explorations': typeof AuthenticatedExplorationsRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/pipelines/$pipelineId': typeof AuthenticatedPipelinesPipelineIdRoute
@@ -245,7 +236,6 @@ export interface FileRoutesById {
   '/signed-out': typeof SignedOutRoute
   '/ui-kit': typeof UiKitRoute
   '/_authenticated/destinations': typeof AuthenticatedDestinationsRoute
-  '/_authenticated/explorations': typeof AuthenticatedExplorationsRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
   '/_authenticated/pipelines': typeof AuthenticatedPipelinesRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
@@ -273,7 +263,6 @@ export interface FileRouteTypes {
     | '/signed-out'
     | '/ui-kit'
     | '/destinations'
-    | '/explorations'
     | '/overview'
     | '/pipelines'
     | '/settings'
@@ -299,7 +288,6 @@ export interface FileRouteTypes {
     | '/signed-out'
     | '/ui-kit'
     | '/destinations'
-    | '/explorations'
     | '/overview'
     | '/settings'
     | '/pipelines/$pipelineId'
@@ -322,7 +310,6 @@ export interface FileRouteTypes {
     | '/signed-out'
     | '/ui-kit'
     | '/_authenticated/destinations'
-    | '/_authenticated/explorations'
     | '/_authenticated/overview'
     | '/_authenticated/pipelines'
     | '/_authenticated/settings'
@@ -401,13 +388,6 @@ declare module '@tanstack/react-router' {
       path: '/destinations'
       fullPath: '/destinations'
       preLoaderRoute: typeof AuthenticatedDestinationsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/explorations': {
-      id: '/_authenticated/explorations'
-      path: '/explorations'
-      fullPath: '/explorations'
-      preLoaderRoute: typeof AuthenticatedExplorationsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/overview': {
@@ -605,7 +585,6 @@ const AuthenticatedViewsRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedDestinationsRoute: typeof AuthenticatedDestinationsRoute
-  AuthenticatedExplorationsRoute: typeof AuthenticatedExplorationsRoute
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
   AuthenticatedPipelinesRoute: typeof AuthenticatedPipelinesRouteWithChildren
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
@@ -615,7 +594,6 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDestinationsRoute: AuthenticatedDestinationsRoute,
-  AuthenticatedExplorationsRoute: AuthenticatedExplorationsRoute,
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
   AuthenticatedPipelinesRoute: AuthenticatedPipelinesRouteWithChildren,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
