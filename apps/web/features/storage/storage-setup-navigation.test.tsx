@@ -104,6 +104,32 @@ afterEach(() => {
 })
 
 describe('whole-site storage boundary', () => {
+  it('opens storage setup directly when the dedicated OP listener supplies local installation authority', async () => {
+    useAuthStore.setState({ isAuthenticated: false })
+    fetcher.mockImplementation(async (url) =>
+      String(url) === '/auth/storage-entry'
+        ? Response.json({
+            mode: 'OP',
+            management: true,
+            entry: 'SETUP_REQUIRED',
+            automaticAuthorization: true,
+          })
+        : Response.json(
+            state({
+              setupPhase: 'LOCAL_SETUP',
+              bindingVersion: 0,
+              authGeneration: 0,
+              businessPhase: 'NOT_CONFIGURED',
+              allowedActions: ['storage.test', 'storage.setup.commit'],
+            }),
+          ),
+    )
+    await render()
+    expect(container.textContent).toContain('Set up cluster storage')
+    expect(container.textContent).not.toContain('Continue as the installation administrator')
+    expect(container.textContent).not.toContain('Installation credential')
+  })
+
   it('labels the protected Cloud read while waiting for authoritative storage state', async () => {
     useAuthStore.setState({ profile: 'cloud' })
     let finish!: (response: Response) => void

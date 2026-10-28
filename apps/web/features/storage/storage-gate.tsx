@@ -325,7 +325,7 @@ export function StorageGate({ children }: { children: ReactNode }) {
               {t('storage.refresh')}
             </Button>
           )}
-          {entry.management && (
+          {entry.management && !entry.automaticAuthorization && (
             <Button className="min-h-11 sm:min-h-8" variant="ghost" onClick={() => authorize('')}>
               {t('storage.reauthorize')}
             </Button>
