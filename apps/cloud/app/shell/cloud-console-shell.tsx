@@ -73,18 +73,18 @@ export function CloudConsoleShell({
       <aside className="flex h-full w-[240px] shrink-0 flex-col px-2 py-3 text-neutral-800 dark:text-neutral-200">
         <div className="mb-3 px-2 py-1">
           <Link
-            className="flex items-center gap-2.5 rounded-lg transition-opacity hover:opacity-85"
+            className="flex h-8 items-center gap-2.5 rounded-lg transition-opacity hover:opacity-85"
             search={{ organizationId: currentOrganization?.id }}
             to="/"
           >
-            <img alt="Tapstate" className="h-6 w-6 shrink-0 dark:hidden" src="/tapstate-mark.svg" />
+            <img alt="Tapstate" className="h-5 w-5 shrink-0 dark:hidden" src="/tapstate-mark.svg" />
             <img
               alt="Tapstate"
-              className="hidden h-6 w-6 shrink-0 dark:block"
+              className="hidden h-5 w-5 shrink-0 dark:block"
               src="/tapstate-mark-light.svg"
             />
-            <span className="text-sm font-semibold tracking-tight text-neutral-900 dark:text-white">
-              Tapstate Cloud
+            <span className="text-[13px] font-[650] text-neutral-900 dark:text-white">
+              Tapstate
             </span>
           </Link>
         </div>
