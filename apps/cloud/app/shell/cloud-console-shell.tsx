@@ -90,6 +90,18 @@ export function CloudConsoleShell({
           </Link>
         </div>
 
+        <div className="mx-2 mb-4 min-w-0 rounded-xl border border-black/[0.06] bg-white/70 px-3 py-2.5 dark:border-white/[0.08] dark:bg-white/[0.04]">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            {t('support.organization')}
+          </p>
+          <p
+            className="mt-0.5 truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100"
+            title={currentOrganization?.name}
+          >
+            {currentOrganization?.name ?? t('events.organizationFallback')}
+          </p>
+        </div>
+
         <div className="flex-1 space-y-1 overflow-y-auto px-1">
           {visibleNavigation.map(({ exact, icon: Icon, label, path }) => (
             <Link
