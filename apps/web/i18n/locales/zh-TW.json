@@ -493,6 +493,7 @@
     "explorer": "資源樹",
     "states": {
       "empty": "尚無 Pipeline。建立一條即可開始處理資料。",
+      "createDescription": "選擇建立方式並連接資料。",
       "error": "無法載入已儲存的流水線。",
       "loading": "正在載入已儲存的流水線。"
     },
