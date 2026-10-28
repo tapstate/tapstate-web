@@ -85,7 +85,11 @@ export function StorageProvider({ children }: { children: ReactNode }) {
       (temporaryFailure || (!failure && entry?.entry === 'UNAVAILABLE'))
     )
       return 10000
-    if (entry?.management && entry.initializationProgress?.state === 'RUNNING')
+    if (
+      entry?.management &&
+      (entry.initializationProgress?.state === 'RUNNING' ||
+        (entry.entry === 'RESTART_REQUIRED' && entry.initializationProgress?.state === 'COMPLETE'))
+    )
       return temporaryFailure ? 10000 : 3000
     const authorized = entry
       ? entry.management
