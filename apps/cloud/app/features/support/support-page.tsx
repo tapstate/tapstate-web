@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next'
 
+import { Button } from '@tapstate-web/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -8,6 +9,8 @@ import {
   DialogDescription,
   DialogCloseButton,
 } from '@tapstate-web/ui/dialog'
+import { Input } from '@tapstate-web/ui/input'
+import { Textarea } from '@tapstate-web/ui/textarea'
 import { ArrowLeft, ArrowRight, LifeBuoy, Plus, RefreshCw, Send, TicketCheck } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -272,9 +275,9 @@ export function SupportPage() {
                   <span className="text-sm font-medium text-[var(--foreground)]">
                     {t('support.summaryLabel')}
                   </span>
-                  <input
+                  <Input
                     autoComplete="off"
-                    className="min-h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--app-background)] px-3 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+                    className="min-h-10 w-full"
                     maxLength={255}
                     onChange={(event) => setSummary(event.target.value)}
                     placeholder={t('support.summaryPlaceholder')}
@@ -286,10 +289,10 @@ export function SupportPage() {
                   <span className="text-sm font-medium text-[var(--foreground)]">
                     {t('support.descriptionLabel')}
                   </span>
-                  <textarea
-                    className="min-h-32 w-full resize-y rounded-lg border border-[var(--border)] bg-[var(--app-background)] px-3 py-2.5 text-sm leading-relaxed text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+                  <Textarea
+                    className="min-h-32 w-full resize-y"
                     maxLength={10000}
-                    onChange={(event) => setDescription(event.target.value)}
+                    onValueChange={setDescription}
                     placeholder={t('support.descriptionPlaceholder')}
                     required
                     value={description}
@@ -304,22 +307,24 @@ export function SupportPage() {
                   </div>
                 )}
                 <div className="flex justify-end gap-2">
-                  <button
-                    className="min-h-10 rounded-lg border border-[var(--border)] px-4 text-sm text-[var(--foreground)] hover:bg-[var(--app-background)] disabled:opacity-60"
+                  <Button
+                    variant="secondary"
+                    size="large"
                     disabled={submitting}
                     onClick={() => setCreating(false)}
                     type="button"
                   >
                     {t('support.cancel')}
-                  </button>
-                  <button
-                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="large"
                     disabled={submitting || !summary.trim() || !description.trim()}
                     type="submit"
                   >
                     <Send aria-hidden="true" className="h-4 w-4" />
                     {submitting ? t('support.submitting') : t('support.submit')}
-                  </button>
+                  </Button>
                 </div>
               </form>
             </DialogContent>
