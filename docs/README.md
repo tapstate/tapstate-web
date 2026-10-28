@@ -14,6 +14,7 @@ docs/
 │   ├── design-system.md             tokens and shared component contract
 │   ├── overlay-conventions.md       overlay behavior and focus rules
 │   ├── tech-stack.md                technical choices and engineering gates
+│   ├── local-cloud-preview.md       local frontend proxy to explicit Cloud and Cluster origins
 │   └── ui/                          source atlas, foundations, page/component/token catalogs and review procedure
 ```
 

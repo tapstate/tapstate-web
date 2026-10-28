@@ -44,9 +44,10 @@ import {
   Table as TableIcon,
   Trash2,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import type { PipelineCatalogState } from '@/service/pipelines/pipeline-client'
 import type {
   ConnectorSummary,
   SourceEnvelope,
@@ -62,6 +63,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useOptionalToast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
+import { listPipelineArtifacts } from '@/service/pipelines/pipeline-client'
 import {
   isSampleSource,
   loadSampleSources,
@@ -212,7 +214,7 @@ export function SourcesPage({
   }
 
   function selectorDescription(table: SourceTableView) {
-    if (table.type === 'literal' && table.name) return table.name
+    if (table.type === 'literal' && table.name) return t('sources.details.selectorExactTable')
     if (table.pattern) return table.pattern
     if (table.filter) return table.filter
     if (table.pk?.length) return table.pk.join(', ')
@@ -257,6 +259,12 @@ export function SourcesPage({
     queryKey: ['connectors'],
     queryFn: () => listConnectors(apiFetch),
   })
+  const pipelineArtifactsQuery = useQuery({
+    queryKey: ['pipeline-artifacts'],
+    queryFn: () => listPipelineArtifacts(apiFetch),
+    staleTime: 15_000,
+    retry: false,
+  })
   const editingSourceQuery = useQuery({
     queryKey: ['source', editingSourceId],
     enabled: editingSourceId !== null,
@@ -270,6 +278,23 @@ export function SourcesPage({
   const sources = (sourcesQuery.data ?? [])
     .filter(isDataSource)
     .map((source) => toSource(source, connectorsById.get(source.connector)))
+  const pipelineStateBySource = useMemo(() => {
+    const states = new Map<string, PipelineCatalogState>()
+    for (const pipeline of pipelineArtifactsQuery.data ?? []) {
+      const state = pipeline.status?.state
+      if (!state) continue
+      for (const source of pipeline.sources ?? []) {
+        const existing = states.get(source.id)
+        if (existing === 'RUNNING') continue
+        if (state === 'RUNNING' || state === 'STARTING' || state === 'RESUMING') {
+          states.set(source.id, state)
+        } else if (!existing && ['PAUSED', 'STOPPED', 'COMPLETED'].includes(state)) {
+          states.set(source.id, state)
+        }
+      }
+    }
+    return states
+  }, [pipelineArtifactsQuery.data])
   const sourceSearchQuery = searchText.trim().toLowerCase()
   const filteredSources = sourceSearchQuery
     ? sources.filter(
@@ -483,12 +508,12 @@ export function SourcesPage({
   return (
     <section className="flex h-full w-full flex-col overflow-hidden bg-white">
       <ResourceListHeader title={t('sources.title')}>
-        {samplesAvailable && (
+        {(sourcesQuery.data === undefined || sources.length > 0) && samplesAvailable && (
           <Button type="button" variant="ghost" onClick={() => setSampleDialogOpen(true)}>
             {t('overview.addSources.sample.action')}
           </Button>
         )}
-        {(sourcesQuery.data ?? []).some(isSampleSource) && (
+        {sources.some((source) => isSampleSource(source.raw)) && (
           <Button
             type="button"
             variant="ghost"
@@ -507,10 +532,12 @@ export function SourcesPage({
             {t('sources.allSources')}
           </Button>
         )}
-        <Button type="button" onClick={() => setCreateOpen(true)}>
-          <Plus className="size-3.5" aria-hidden="true" />
-          {t('sources.actions.create')}
-        </Button>
+        {(sourcesQuery.data === undefined || sources.length > 0) && (
+          <Button type="button" onClick={() => setCreateOpen(true)}>
+            <Plus className="size-3.5" aria-hidden="true" />
+            {t('sources.actions.create')}
+          </Button>
+        )}
       </ResourceListHeader>
       {sampleRemoveError && (
         <div
@@ -730,8 +757,12 @@ export function SourcesPage({
                     <span className="text-[12px] text-gray-500">
                       {t('sources.schema.discoveredAt', {
                         date: new Intl.DateTimeFormat(undefined, {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          timeZoneName: 'short',
                         }).format(new Date(sourceSchemaQuery.data.discoveredAt)),
                       })}
                     </span>
@@ -810,11 +841,7 @@ export function SourcesPage({
                     ]}
                   >
                     {visibleTables.map((table) => (
-                      <tr
-                        key={table.id}
-                        className="group cursor-pointer transition-colors hover:bg-gray-50/70"
-                        onClick={() => selectTable(table)}
-                      >
+                      <tr key={table.id} className="group transition-colors hover:bg-gray-50/70">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <TableIcon
@@ -829,10 +856,17 @@ export function SourcesPage({
                           {table.selector}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <ChevronRight
-                            className="inline-block h-4 w-4 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100"
-                            aria-hidden="true"
-                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-text-secondary"
+                            aria-label={t('sources.details.openTableNamed', { name: table.name })}
+                            onClick={() => selectTable(table)}
+                          >
+                            {t('sources.details.openTable')}
+                            <ChevronRight className="size-3.5" aria-hidden="true" />
+                          </Button>
                         </td>
                       </tr>
                     ))}
@@ -882,6 +916,9 @@ export function SourcesPage({
             <AllSourcesView
               sources={sources}
               filteredSources={filteredSources}
+              pipelineStateBySource={pipelineStateBySource}
+              pipelineStatusLoading={pipelineArtifactsQuery.isPending}
+              pipelineStatusUnavailable={pipelineArtifactsQuery.isError}
               onCreate={() => setCreateOpen(true)}
               onSample={() => setSampleDialogOpen(true)}
               samplesAvailable={samplesAvailable}
@@ -1154,6 +1191,9 @@ function TableSchemaView({
 function AllSourcesView({
   sources,
   filteredSources,
+  pipelineStateBySource,
+  pipelineStatusLoading,
+  pipelineStatusUnavailable,
   onCreate,
   onSample,
   samplesAvailable,
@@ -1164,6 +1204,9 @@ function AllSourcesView({
 }: {
   sources: Source[]
   filteredSources: Source[]
+  pipelineStateBySource: Map<string, PipelineCatalogState>
+  pipelineStatusLoading: boolean
+  pipelineStatusUnavailable: boolean
   onCreate: () => void
   onSample: () => void
   samplesAvailable: boolean
@@ -1179,7 +1222,7 @@ function AllSourcesView({
         {sources.length === 0 ? (
           <div className="relative min-h-130 overflow-hidden">
             <div
-              className="pointer-events-none absolute inset-x-0 inset-y-2 grid grid-cols-[repeat(auto-fill,minmax(296px,1fr))] grid-rows-4 gap-3"
+              className="pointer-events-none absolute inset-x-0 inset-y-2 grid grid-cols-[repeat(auto-fill,minmax(min(100%,288px),1fr))] grid-rows-4 gap-2.5"
               aria-hidden="true"
             >
               {Array.from({ length: 16 }, (_, index) => (
@@ -1199,7 +1242,7 @@ function AllSourcesView({
                   <div className="text-center">
                     <h2
                       id="sources-first-empty-title"
-                      className="system-sm-medium text-text-primary"
+                      className="system-sm-regular text-text-tertiary max-w-130 whitespace-pre-line"
                     >
                       {t('sources.empty.title')}
                     </h2>
@@ -1249,6 +1292,9 @@ function AllSourcesView({
                 <SourceListRow
                   key={source.id}
                   source={source}
+                  pipelineState={pipelineStateBySource.get(source.id) ?? null}
+                  pipelineStatusLoading={pipelineStatusLoading}
+                  pipelineStatusUnavailable={pipelineStatusUnavailable}
                   onSelect={onSelect}
                   onTest={onTest}
                   testingSourceId={testingSourceId}
@@ -1265,12 +1311,18 @@ function AllSourcesView({
 
 function SourceListRow({
   source,
+  pipelineState,
+  pipelineStatusLoading,
+  pipelineStatusUnavailable,
   onSelect,
   onTest,
   testingSourceId,
   autoDiscoveryAttempted,
 }: {
   source: Source
+  pipelineState: PipelineCatalogState | null
+  pipelineStatusLoading: boolean
+  pipelineStatusUnavailable: boolean
   onSelect: (source: Source) => void
   onTest: (source: Source) => void
   testingSourceId: string | null
@@ -1318,15 +1370,22 @@ function SourceListRow({
   ])
 
   const testing = testingSourceId === source.id || testQuery.isPending
+  const pipelineStatus = pipelineState ? t(`sources.test.pipeline.${pipelineState}`) : null
   const testStatus = testing
     ? t('sources.test.testing')
-    : testQuery.data?.outcome === 'PASSED'
-      ? t('sources.test.status.passed')
-      : testQuery.data?.outcome === 'FAILED'
-        ? t('sources.test.status.failed')
-        : testQuery.error instanceof SourceClientError && testQuery.error.status === 404
-          ? t('sources.test.notTested')
-          : t('sources.test.statusUnavailable')
+    : pipelineStatus
+      ? pipelineStatus
+      : testQuery.data?.outcome === 'PASSED'
+        ? t('sources.test.status.passed')
+        : testQuery.data?.outcome === 'FAILED'
+          ? t('sources.test.status.failed')
+          : testQuery.error instanceof SourceClientError && testQuery.error.status === 404
+            ? pipelineStatusLoading
+              ? t('sources.test.checkingPipeline')
+              : pipelineStatusUnavailable
+                ? t('sources.test.statusUnavailable')
+                : t('sources.test.notTested')
+            : t('sources.test.statusUnavailable')
   const tableStatus = schemaQuery.data
     ? t('sources.tablesCount', { count: schemaQuery.data.tables.length })
     : discovering || schemaQuery.isPending
@@ -1385,13 +1444,19 @@ function SourceListRow({
           <StatusDot
             className="size-1 rounded-full"
             status={
-              testQuery.data?.outcome === 'PASSED'
+              pipelineState === 'RUNNING'
                 ? 'success'
-                : testQuery.data?.outcome === 'FAILED'
-                  ? 'error'
-                  : testing
-                    ? 'normal'
-                    : 'disabled'
+                : pipelineState === 'STARTING' || pipelineState === 'RESUMING'
+                  ? 'normal'
+                  : pipelineState !== null
+                    ? 'disabled'
+                    : testQuery.data?.outcome === 'PASSED'
+                      ? 'success'
+                      : testQuery.data?.outcome === 'FAILED'
+                        ? 'error'
+                        : testing
+                          ? 'normal'
+                          : 'disabled'
             }
           />
           {testStatus}

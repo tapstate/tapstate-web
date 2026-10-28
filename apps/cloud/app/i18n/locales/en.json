@@ -1,6 +1,20 @@
 {
   "notFound": { "message": "This page is not available.", "back": "Back to Overview" },
   "app": {
+    "help": {
+      "openMenu": "Help",
+      "documentation": "Documentation",
+      "contactSupport": "Contact support"
+    },
+    "account": {
+      "openMenu": "Account",
+      "profile": "Profile",
+      "settings": "Settings",
+      "appearance": "Appearance",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "logOut": "Log out"
+    },
     "brand": "Tapstate Cloud",
     "console": "Cloud Console",
     "organization": "ORGANIZATION",
@@ -224,6 +238,8 @@
     }
   },
   "settings": {
+    "tabAccount": "Account",
+    "tabOrganization": "Organization & team",
     "linkedIdentitiesTitle": "Sign-in methods",
     "linkedIdentitiesDescription": "Link Google or GitHub after reauthenticating your Cloud account. Matching email addresses are never linked automatically.",
     "provider": {
@@ -253,7 +269,7 @@
     "newClusterLabel": "Cluster name",
     "clusterNamePlaceholder": "acme-data-2",
     "clusterNameHint": "Use English letters and numbers, separated by hyphens.",
-    "regionLabel": "Open region",
+    "regionLabel": "Region",
     "openRegions": "Available cloud regions",
     "available": "Available",
     "loadingRegions": "Loading available regions…",
@@ -264,7 +280,7 @@
     "regionReadonly": "The region cannot be changed after cluster creation.",
     "regionDefault": "Region default",
     "planLabel": "Instance plan",
-    "planHint": "Choose a plan before continuing to secure payment.",
+    "planHint": "Select a plan to continue to payment.",
     "loadingPlans": "Loading plans…",
     "plansError": "Plans and prices could not be loaded.",
     "noPlans": "No plans are available right now.",
@@ -336,6 +352,11 @@
     "cancelSubscriptionError": "Cancellation could not be confirmed. Review the deployment status before changing settings.",
     "cancelStatusError": "Could not refresh the current deployment status. The cancellation request was not sent; try again.",
     "footnote": "Cluster provisioning runs in the background. The console will show the status returned by Cloud."
+  },
+  "clusters": {
+    "egress": {
+      "sourceAllowlistHint": "Stable · use this IP in source allowlists. Reopen the Cluster console to refresh source setup."
+    }
   },
   "billing": {
     "title": "Plans & billing",
@@ -439,9 +460,10 @@
     }
   },
   "events": {
-    "title": "Events & alerts",
+    "title": "Alerts",
     "subtitle": "Key events and alert delivery for {{organization}}.",
     "organizationFallback": "your organization",
+    "tabEvents": "Events",
     "tabPolicies": "Alert policies",
     "tabDeliveries": "Delivery history",
     "policySubtitle": "Email alert rules for {{organization}}.",
@@ -535,13 +557,17 @@
       "title": "Clusters",
       "description": "Review cluster status and open an authorized Cluster Console."
     },
+    "alerts": {
+      "title": "Alerts",
+      "description": "Monitor platform events, alert policies, and notification deliveries."
+    },
     "organizations": {
       "title": "Organization",
       "description": "Manage organization membership and access."
     },
     "billing": {
       "cancelWarning": "This will cancel the subscription, terminate its cluster, and remove its resources. This cannot be undone.",
-      "title": "Usage & billing",
+      "title": "Plans & billing",
       "description": "Review usage for the current organization."
     },
     "settings": {

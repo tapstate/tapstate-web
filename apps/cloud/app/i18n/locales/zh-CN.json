@@ -1,6 +1,16 @@
 {
   "notFound": { "message": "此页面不可用。", "back": "返回概览" },
   "app": {
+    "help": { "openMenu": "帮助", "documentation": "文档", "contactSupport": "联系客服" },
+    "account": {
+      "openMenu": "账户",
+      "profile": "个人资料",
+      "settings": "设置",
+      "appearance": "外观",
+      "themeLight": "浅色",
+      "themeDark": "深色",
+      "logOut": "退出登录"
+    },
     "brand": "Tapstate Cloud",
     "console": "Cloud 控制台",
     "organization": "组织",
@@ -224,6 +234,8 @@
     }
   },
   "settings": {
+    "tabAccount": "个人账户",
+    "tabOrganization": "组织与团队",
     "linkedIdentitiesTitle": "登录方式",
     "linkedIdentitiesDescription": "重新验证 Cloud 账户后即可关联 Google 或 GitHub。邮箱相同不会触发自动关联。",
     "provider": {
@@ -253,7 +265,7 @@
     "newClusterLabel": "集群名称",
     "clusterNamePlaceholder": "acme-data-2",
     "clusterNameHint": "请使用英文字母和数字，并以连字符分隔。",
-    "regionLabel": "开放区域",
+    "regionLabel": "区域",
     "openRegions": "可用云区域",
     "available": "可用",
     "loadingRegions": "正在加载可用区域…",
@@ -264,7 +276,7 @@
     "regionReadonly": "集群创建后不能更改区域。",
     "regionDefault": "区域默认配置",
     "planLabel": "实例规格",
-    "planHint": "选择规格后继续前往安全支付。",
+    "planHint": "选择规格后继续付款。",
     "loadingPlans": "正在加载规格…",
     "plansError": "规格与价格加载失败。",
     "noPlans": "当前没有可用的规格。",
@@ -336,6 +348,11 @@
     "cancelSubscriptionError": "无法确认订阅取消结果。请先查看当前部署状态，再修改设置。",
     "cancelStatusError": "无法刷新当前部署状态，尚未发送取消请求；请重试。",
     "footnote": "集群会在后台创建。控制台将显示 Cloud 返回的实际状态。"
+  },
+  "clusters": {
+    "egress": {
+      "sourceAllowlistHint": "地址已稳定 · 可用于数据源访问白名单。重新打开 Cluster Console 后，数据源设置会显示此地址。"
+    }
   },
   "billing": {
     "title": "套餐与账单",
@@ -439,9 +456,10 @@
     }
   },
   "events": {
-    "title": "事件与告警",
+    "title": "告警",
     "subtitle": "{{organization}} 的关键事件与告警投递。",
     "organizationFallback": "你的组织",
+    "tabEvents": "事件",
     "tabPolicies": "告警策略",
     "tabDeliveries": "投递历史",
     "policySubtitle": "{{organization}} 的邮件告警规则。",
@@ -532,10 +550,14 @@
       "title": "集群",
       "description": "查看集群状态并打开获准访问的 Cluster Console。"
     },
+    "alerts": {
+      "title": "告警",
+      "description": "监控关键事件、告警策略与通知投递。"
+    },
     "organizations": { "title": "组织", "description": "管理组织成员和访问权限。" },
     "billing": {
       "cancelWarning": "取消后将终止对应 Cluster 并清理其资源，此操作无法撤销。",
-      "title": "用量与账单",
+      "title": "套餐与账单",
       "description": "查看当前组织的资源用量。"
     },
     "settings": { "title": "设置", "description": "管理组织和账户偏好。" },

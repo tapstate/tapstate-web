@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as ConsoleIndexRouteImport } from './routes/_console.index'
 import { Route as ConsoleAlertPoliciesRouteImport } from './routes/_console.alert-policies'
+import { Route as ConsoleAlertsRouteImport } from './routes/_console.alerts'
 import { Route as ConsoleBillingRouteImport } from './routes/_console.billing'
 import { Route as ConsoleClustersRouteImport } from './routes/_console.clusters'
 import { Route as ConsoleDeliveriesRouteImport } from './routes/_console.deliveries'
@@ -45,6 +46,11 @@ const ConsoleIndexRoute = ConsoleIndexRouteImport.update({
 const ConsoleAlertPoliciesRoute = ConsoleAlertPoliciesRouteImport.update({
   id: '/alert-policies',
   path: '/alert-policies',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsoleAlertsRoute = ConsoleAlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
   getParentRoute: () => ConsoleRoute,
 } as any)
 const ConsoleBillingRoute = ConsoleBillingRouteImport.update({
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
   '/alert-policies': typeof ConsoleAlertPoliciesRoute
+  '/alerts': typeof ConsoleAlertsRoute
   '/billing': typeof ConsoleBillingRoute
   '/clusters': typeof ConsoleClustersRoute
   '/deliveries': typeof ConsoleDeliveriesRoute
@@ -106,6 +113,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
   '/alert-policies': typeof ConsoleAlertPoliciesRoute
+  '/alerts': typeof ConsoleAlertsRoute
   '/billing': typeof ConsoleBillingRoute
   '/clusters': typeof ConsoleClustersRoute
   '/deliveries': typeof ConsoleDeliveriesRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
   '/_console/alert-policies': typeof ConsoleAlertPoliciesRoute
+  '/_console/alerts': typeof ConsoleAlertsRoute
   '/_console/billing': typeof ConsoleBillingRoute
   '/_console/clusters': typeof ConsoleClustersRoute
   '/_console/deliveries': typeof ConsoleDeliveriesRoute
@@ -139,6 +148,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/onboarding'
     | '/alert-policies'
+    | '/alerts'
     | '/billing'
     | '/clusters'
     | '/deliveries'
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/onboarding'
     | '/alert-policies'
+    | '/alerts'
     | '/billing'
     | '/clusters'
     | '/deliveries'
@@ -167,6 +178,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/onboarding'
     | '/_console/alert-policies'
+    | '/_console/alerts'
     | '/_console/billing'
     | '/_console/clusters'
     | '/_console/deliveries'
@@ -219,6 +231,13 @@ declare module '@tanstack/react-router' {
       path: '/alert-policies'
       fullPath: '/alert-policies'
       preLoaderRoute: typeof ConsoleAlertPoliciesRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/alerts': {
+      id: '/_console/alerts'
+      path: '/alerts'
+      fullPath: '/alerts'
+      preLoaderRoute: typeof ConsoleAlertsRouteImport
       parentRoute: typeof ConsoleRoute
     }
     '/_console/billing': {
@@ -282,6 +301,7 @@ declare module '@tanstack/react-router' {
 
 interface ConsoleRouteChildren {
   ConsoleAlertPoliciesRoute: typeof ConsoleAlertPoliciesRoute
+  ConsoleAlertsRoute: typeof ConsoleAlertsRoute
   ConsoleBillingRoute: typeof ConsoleBillingRoute
   ConsoleClustersRoute: typeof ConsoleClustersRoute
   ConsoleDeliveriesRoute: typeof ConsoleDeliveriesRoute
@@ -295,6 +315,7 @@ interface ConsoleRouteChildren {
 
 const ConsoleRouteChildren: ConsoleRouteChildren = {
   ConsoleAlertPoliciesRoute: ConsoleAlertPoliciesRoute,
+  ConsoleAlertsRoute: ConsoleAlertsRoute,
   ConsoleBillingRoute: ConsoleBillingRoute,
   ConsoleClustersRoute: ConsoleClustersRoute,
   ConsoleDeliveriesRoute: ConsoleDeliveriesRoute,

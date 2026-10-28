@@ -1,5 +1,10 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
-import { AlertPolicyPage } from '../features/notifications/alert-policy-page'
-
-export const Route = createFileRoute('/_console/alert-policies')({ component: AlertPolicyPage })
+export const Route = createFileRoute('/_console/alert-policies')({
+  beforeLoad: () => {
+    throw redirect({
+      to: '/alerts',
+      search: (prev) => ({ organizationId: prev.organizationId, tab: 'policies' }),
+    })
+  },
+})

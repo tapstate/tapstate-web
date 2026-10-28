@@ -23,6 +23,17 @@ function checkDetail(check: ConnectionTestCheck) {
   return check.message ?? check.reason ?? check.solution ?? null
 }
 
+const cdcReadinessItems: Record<string, string> = {
+  mysql: 'sources.test.cdcReadiness.mysql',
+  'aws-rds-mysql': 'sources.test.cdcReadiness.rdsMysql',
+  postgres: 'sources.test.cdcReadiness.postgres',
+  oracle: 'sources.test.cdcReadiness.oracle',
+  sqlserver: 'sources.test.cdcReadiness.sqlserver',
+  db2: 'sources.test.cdcReadiness.db2',
+  mongodb: 'sources.test.cdcReadiness.mongodb',
+  'mongodb-atlas': 'sources.test.cdcReadiness.mongodb',
+}
+
 function CheckResultRow({ check }: { check: ConnectionTestCheck }) {
   const { t } = useTranslation()
   const dotStatus =
@@ -121,6 +132,7 @@ export function ConnectionTestResult({ report, error }: ConnectionTestResultProp
   if (!report) return null
 
   const passed = report.outcome === 'PASSED'
+  const cdcReadinessKey = cdcReadinessItems[report.connectorId]
   return (
     <div className="grid gap-4">
       <section className="flex items-start gap-3" role="status" aria-live="polite">
@@ -142,6 +154,19 @@ export function ConnectionTestResult({ report, error }: ConnectionTestResultProp
             <CheckResultRow key={`${check.name}:${check.status}`} check={check} />
           ))}
         </ul>
+      )}
+      {passed && cdcReadinessKey && (
+        <section className="bg-background-section-burn grid gap-2 rounded-lg p-4">
+          <h3 className="system-sm-medium text-text-primary">
+            {t('sources.test.cdcReadiness.title')}
+          </h3>
+          <p className="system-xs-regular text-text-secondary">
+            {t('sources.test.cdcReadiness.manualCheck')}
+          </p>
+          <ul className="system-xs-regular text-text-secondary list-disc space-y-1 pl-5">
+            <li>{t(cdcReadinessKey)}</li>
+          </ul>
+        </section>
       )}
     </div>
   )

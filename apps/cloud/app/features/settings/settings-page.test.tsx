@@ -3,15 +3,24 @@ import { createRoot, type Root } from 'react-dom/client'
 import { I18nextProvider } from 'react-i18next'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { identities, reauthenticateIdentity, oauthStart, useCloudAppState } = vi.hoisted(() => ({
-  identities: vi.fn(),
-  reauthenticateIdentity: vi.fn(),
-  oauthStart: vi.fn(),
-  useCloudAppState: vi.fn(),
-}))
+const { identities, reauthenticateIdentity, oauthStart, invitations, useCloudAppState } =
+  vi.hoisted(() => ({
+    identities: vi.fn(),
+    reauthenticateIdentity: vi.fn(),
+    oauthStart: vi.fn(),
+    invitations: vi.fn().mockResolvedValue([]),
+    useCloudAppState: vi.fn(),
+  }))
 
 vi.mock('../../service/cloud-api', () => ({
-  cloudApi: { identities, reauthenticateIdentity, oauthStart },
+  cloudApi: { identities, reauthenticateIdentity, oauthStart, invitations },
+  CloudApiError: class extends Error {
+    status: number
+    constructor(status: number, message: string) {
+      super(message)
+      this.status = status
+    }
+  },
 }))
 
 vi.mock('../../state/cloud-app-state', () => ({ useCloudAppState }))
@@ -46,7 +55,13 @@ async function renderPage() {
 beforeEach(async () => {
   await i18n.changeLanguage('en')
   useCloudAppState.mockReturnValue({
-    activeOrganization: { id: 'org-1', name: 'Acme', slug: 'acme' },
+    activeOrganization: {
+      id: 'org-1',
+      name: 'Acme',
+      slug: 'acme',
+      ownerEmail: 'member@example.com',
+    },
+    organizations: [{ id: 'org-1', name: 'Acme', slug: 'acme', ownerEmail: 'member@example.com' }],
     user: { id: 'user-1', email: 'member@example.com', displayName: 'Member' },
   })
   identities.mockResolvedValue([
@@ -99,5 +114,33 @@ describe('Cloud linked identity settings', () => {
     expect(reauthenticateIdentity).toHaveBeenCalledWith('')
     expect(oauthStart).toHaveBeenCalledWith('github', 'link')
     expect(host?.querySelector('[role="alert"]')?.textContent).toContain('Could not start linking')
+  })
+
+  it('switches to organization tab and displays organization details and invitations', async () => {
+    const onTabChange = vi.fn()
+    host = document.createElement('div')
+    document.body.append(host)
+    root = createRoot(host)
+    await act(async () => {
+      root?.render(
+        <I18nextProvider i18n={i18n}>
+          <SettingsPage initialTab="account" onTabChange={onTabChange} />
+        </I18nextProvider>,
+      )
+    })
+
+    const orgTab = Array.from(host?.querySelectorAll<HTMLButtonElement>('[role="tab"]') ?? []).find(
+      (btn) => btn.textContent?.includes('Organization'),
+    )
+    expect(orgTab).toBeDefined()
+
+    await act(async () => {
+      orgTab?.click()
+    })
+
+    expect(onTabChange).toHaveBeenCalledWith('organization')
+    expect(host?.textContent).toContain('Acme')
+    expect(host?.textContent).toContain('acme')
+    expect(host?.textContent).toContain('Organization invitations')
   })
 })

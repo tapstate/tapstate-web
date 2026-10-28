@@ -2,15 +2,7 @@ import type { ComponentType, SVGProps } from 'react'
 
 import { useQuery } from '@tanstack/react-query'
 import { Link, useRouterState } from '@tanstack/react-router'
-import {
-  ArrowLeft,
-  Building2,
-  Database,
-  GitMerge,
-  LayoutDashboard,
-  Settings,
-  Table2,
-} from 'lucide-react'
+import { ArrowLeft, Building2, Database, GitMerge, LayoutDashboard, Table2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
@@ -31,11 +23,6 @@ const navigation: NavigationItem[] = [
   { labelKey: 'nav.sources', to: '/sources', icon: Database },
   { labelKey: 'nav.pipelines', to: '/pipelines', icon: GitMerge },
   { labelKey: 'nav.views', to: '/views', icon: Table2 },
-]
-
-/** Kept apart from the places above, at the foot of the sidebar. */
-const footerNavigation: NavigationItem[] = [
-  { labelKey: 'nav.settings', to: '/settings', icon: Settings },
 ]
 
 export function AppSidebar() {
@@ -93,13 +80,21 @@ export function AppSidebar() {
             <span
               className={cn(
                 'app-sidebar__cloud-cluster-status',
-                cloudContext.data?.clusterState === 'READY' &&
+                (cloudContext.data?.clusterState === 'READY' ||
+                  (cloudContext.isSuccess && cloudContext.data?.clusterState === null)) &&
                   'app-sidebar__cloud-cluster-status--ready',
                 cloudContext.data?.clusterState === 'DEGRADED' &&
                   'app-sidebar__cloud-cluster-status--degraded',
               )}
               aria-hidden="true"
             />
+            <span className="sr-only">
+              {cloudContext.data?.clusterState === 'READY'
+                ? t('app.cloudIdentity.clusterReady')
+                : cloudContext.isSuccess && cloudContext.data.clusterState === null
+                  ? t('app.cloudIdentity.clusterConnected')
+                  : t('app.cloudIdentity.clusterUnavailable')}
+            </span>
             <span className="app-sidebar__cloud-cluster-copy">
               <span className="app-sidebar__cloud-cluster-name">
                 {cloudContext.data?.clusterName ??
@@ -131,16 +126,7 @@ export function AppSidebar() {
         ))}
       </nav>
 
-      <nav
-        className="app-sidebar__nav app-sidebar__nav--footer"
-        aria-label={t('app.secondaryNavigation')}
-      >
-        {footerNavigation.map((item) => (
-          <SidebarLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
-        ))}
-      </nav>
-
-      <AppHeader />
+      <AppHeader cloudUserEmail={profile === 'cloud' ? cloudContext.data?.userEmail : null} />
     </aside>
   )
 }

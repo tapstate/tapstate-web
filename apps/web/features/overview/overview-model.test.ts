@@ -102,7 +102,7 @@ describe('buildOverview', () => {
       ],
     )
 
-    expect(overview.pipelines).toEqual({ running: 1, idle: 2, error: 1, total: 4 })
+    expect(overview.pipelines).toEqual({ running: 1, idle: 2, blocked: 0, error: 1, total: 4 })
     expect(overview.attention).toEqual([
       { kind: 'pipelineFailed', pipelineId: 'a_sync', code: 'runtime.connector-failed' },
     ])

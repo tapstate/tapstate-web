@@ -2,6 +2,7 @@ import type * as React from 'react'
 
 import {
   AlertDialog as SourceAlertDialog,
+  AlertDialogBody as SourceAlertDialogBody,
   AlertDialogContent as SourceAlertDialogContent,
   AlertDialogDescription as SourceAlertDialogDescription,
   AlertDialogFooter as SourceAlertDialogFooter,
@@ -22,6 +23,10 @@ function AlertDialogContent(props: React.ComponentProps<typeof SourceAlertDialog
   return <SourceAlertDialogContent data-slot="alert-dialog-content" {...props} />
 }
 
+function AlertDialogBody(props: React.ComponentProps<typeof SourceAlertDialogBody>) {
+  return <SourceAlertDialogBody data-slot="alert-dialog-body" {...props} />
+}
+
 function AlertDialogHeader(props: React.ComponentProps<typeof SourceAlertDialogHeader>) {
   return <SourceAlertDialogHeader data-slot="alert-dialog-header" {...props} />
 }
@@ -40,6 +45,7 @@ function AlertDialogDescription(props: React.ComponentProps<typeof SourceAlertDi
 
 export {
   AlertDialog,
+  AlertDialogBody,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,

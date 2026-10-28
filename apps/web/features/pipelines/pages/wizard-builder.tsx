@@ -1,5 +1,13 @@
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -396,7 +404,10 @@ export function WizardBuilder({
     queryClient.setQueryData(['pipelines', pipelineId, 'draft-status'], reloaded)
     await queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId], exact: true })
   }, [apiFetch, pipelineId, queryClient])
+  const runButtonRef = useRef<HTMLButtonElement>(null)
+  const workbenchRunButtonRef = useRef<HTMLButtonElement>(null)
   const starter = useStartPipeline({ apiFetch, onDefinitionChanged: reloadDraft })
+  const actionsBusy = busy && !(action === 'start' && starter.dialog.session !== null)
   useEffect(() => {
     if (readOnly) {
       onRegisterBasicInfoSaver?.(null)
@@ -437,7 +448,10 @@ export function WizardBuilder({
     },
     [destination?.id, deploymentProfile, editorReadOnly, guidedPreset],
   )
-  async function savePipeline(start: boolean) {
+  async function savePipeline(
+    start: boolean,
+    returnFocus: RefObject<HTMLElement | null> = runButtonRef,
+  ) {
     if (busy || readOnly) return
     setBusy(true)
     setAction(start ? 'start' : 'save')
@@ -468,7 +482,12 @@ export function WizardBuilder({
         setStartPhase('starting')
         let alreadyRunning = false
         try {
-          await starter.startPipeline(pipelineId)
+          const outcome = await starter.startPipeline(pipelineId, returnFocus)
+          if (outcome.status === 'cancelled') {
+            // The dialog has settled; background refresh must not hold the Run button.
+            void queryClient.invalidateQueries({ queryKey: ['pipelines'] }).catch(() => undefined)
+            return
+          }
         } catch (cause) {
           // Do not auto-stop an active run: that can interrupt ingestion and requires a
           // separate state-retention decision. Explain that publish succeeded but restart did not.
@@ -723,8 +742,10 @@ export function WizardBuilder({
             }
             showWorkbenchHeader={!guidedPreset}
             onInspectPlan={inspectDsl}
-            onStart={() => void savePipeline(true)}
-            startBusy={busy}
+            onStart={() => void savePipeline(true, workbenchRunButtonRef)}
+            startButtonRef={workbenchRunButtonRef}
+            startReadOnly={readOnly}
+            startBusy={actionsBusy}
             actionError={error}
             catalog={catalog}
             destinationCatalog={destinationCatalog}
@@ -776,6 +797,7 @@ export function WizardBuilder({
               <PipelineWorkflowHeader
                 placement="sticky"
                 runButtonId="step-publish-action"
+                runButtonRef={runButtonRef}
                 runButtonActiveGuide={guidedPreset && guideOpen && guideStep === 4}
                 dockStatus={
                   <div className="wizard-reference-action-dock__status min-w-0 flex-1 text-[11px] text-[var(--pipeline-text-muted)]">
@@ -813,8 +835,8 @@ export function WizardBuilder({
                 stopAction={stopAction}
                 isDirty={isDirty}
                 isSaving={busy && action === 'save'}
-                isRunning={busy && action === 'start'}
-                isBusy={busy}
+                isRunning={actionsBusy && action === 'start'}
+                isBusy={actionsBusy}
                 isReadOnly={readOnly}
                 canSave
                 saveLabel={t('wizard.savePipeline')}
