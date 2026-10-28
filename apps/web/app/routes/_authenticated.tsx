@@ -1,6 +1,5 @@
 import { createFileRoute, Outlet, useLocation } from '@tanstack/react-router'
 import { useRef } from 'react'
-import { useTranslation } from 'react-i18next'
 
 import { AppShell } from '@/components/layout/app-shell'
 import { LoginRedirect, SessionRecovery } from '@/features/auth/session-recovery'
@@ -14,7 +13,6 @@ export const Route = createFileRoute('/_authenticated')({
 })
 
 function AuthenticatedRouteComponent() {
-  const { t } = useTranslation()
   const location = useLocation()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const returnTo = useRef(location.href)
@@ -30,7 +28,6 @@ function AuthenticatedRouteComponent() {
   return (
     <AppShell>
       <Outlet key={epoch} />
-      <span className="sr-only">{t('sources.states.loading')}</span>
     </AppShell>
   )
 }
