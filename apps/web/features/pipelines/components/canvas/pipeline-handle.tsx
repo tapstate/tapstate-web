@@ -1,5 +1,4 @@
 import { Handle, Position } from '@xyflow/react'
-import { Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
@@ -40,8 +39,9 @@ export function PipelineHandle({
       position={isInput ? Position.Left : Position.Right}
       isConnectable={isConnectable}
       className={cn(
-        'pipeline-canvas__handle group/handle nodrag nopan absolute z-[1] m-0 size-4! transform-none! cursor-crosshair rounded-none! border-none! bg-transparent! p-0 outline-hidden! transition-all duration-150 ease-[cubic-bezier(0.4,0,0.2,1)] hover:scale-125',
-        'after:absolute after:top-1 after:h-2 after:w-0.5 after:bg-[var(--pipeline-handle-accent)] after:opacity-0 after:content-[""]',
+        'pipeline-canvas__handle group/handle nodrag nopan absolute z-1 m-0 size-4! transform-none! cursor-crosshair rounded-none! border-none! bg-transparent! p-0 outline-hidden!',
+        'before:absolute before:-inset-1 before:content-[""]',
+        'after:bg-workflow-link-line-handle after:absolute after:top-1 after:h-2 after:w-0.5 after:opacity-0 after:content-[""]',
         isInput
           ? 'pipeline-canvas__handle--input top-4! -left-[9px]! translate-y-0! after:left-1.5'
           : 'pipeline-canvas__handle--output top-4! -right-[9px]! translate-y-0! after:right-1.5',
@@ -69,30 +69,39 @@ export function PipelineHandle({
       {canOpenBlockSelector && (
         <button
           type="button"
-          tabIndex={-1}
+          tabIndex={0}
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            const bounds = event.currentTarget.getBoundingClientRect()
+            onRequestAdd?.(direction, {
+              x: event.clientX || bounds.left + bounds.width / 2,
+              y: event.clientY || bounds.top + bounds.height / 2,
+            })
+          }}
           className={cn(
-            'pointer-events-none absolute top-0 left-0 z-10 grid size-4 place-items-center rounded-full border-0 bg-[var(--pipeline-handle-accent)] p-0 text-white opacity-0 shadow-sm transition-[opacity,transform,background-color] duration-150 ease-out group-hover:scale-100 group-hover:opacity-100 group-hover/handle:scale-100 group-hover/handle:opacity-100',
-            nodeSelected && 'scale-100 opacity-100',
+            'bg-util-colors-blue-brand-blue-brand-500 focus-visible:ring-components-input-border-hover pointer-events-none absolute top-0 left-0 z-10 grid size-4 place-items-center rounded-full border-0 p-0 text-white opacity-0 shadow-xs transition-opacity duration-150 group-hover:opacity-100 group-hover/handle:opacity-100 focus-visible:opacity-100 focus-visible:ring-2',
+            nodeSelected && 'opacity-100',
           )}
           aria-label={t('pipelines.workspace.nodeSelector.addNode')}
           data-handle-add="true"
         >
-          <Plus className="size-2.5" aria-hidden="true" />
+          <span className="i-ri-add-line size-2.5" aria-hidden="true" />
         </button>
       )}
       {canOpenBlockSelector && (
         <div
-          className="border-pipeline-panel-border bg-pipeline-tooltip-bg pointer-events-none absolute -top-1 left-1/2 hidden -translate-x-1/2 -translate-y-full rounded-lg border-[0.5px] p-1.5 text-[11px] leading-4 text-[var(--pipeline-text-muted)] shadow-lg group-hover/handle:block"
+          className="border-components-panel-border bg-components-tooltip-bg pointer-events-none absolute -top-1 left-1/2 hidden -translate-x-1/2 -translate-y-full rounded-lg border-[0.5px] p-1.5 shadow-lg group-hover/handle:block"
           data-pipeline-handle-tooltip="true"
         >
-          <div className="whitespace-nowrap">
-            <span className="font-medium text-[var(--pipeline-text)]">
+          <div className="text-text-tertiary system-xs-regular whitespace-nowrap">
+            <span className="text-text-secondary system-xs-medium">
               {t('pipelines.workspace.handles.click')}
             </span>{' '}
             {t('pipelines.workspace.handles.clickDescription')}
           </div>
-          <div className="whitespace-nowrap">
-            <span className="font-medium text-[var(--pipeline-text)]">
+          <div className="text-text-tertiary system-xs-regular whitespace-nowrap">
+            <span className="text-text-secondary system-xs-medium">
               {t('pipelines.workspace.handles.drag')}
             </span>{' '}
             {t('pipelines.workspace.handles.dragDescription')}

@@ -31,12 +31,14 @@ function fallbackIcon({ nodeType, detail }: Pick<CanvasNodeData, 'nodeType' | 'd
   return <WandSparkles className="size-4" aria-hidden="true" />
 }
 
-function nodeTone(nodeType: string) {
+function nodeTone(nodeType: string, detail: string | null) {
   if (nodeType === 'source') return 'pipeline-canvas__node-kind--source'
   if (nodeType === 'target') return 'pipeline-canvas__node-kind--target'
   if (nodeType === 'view') return 'pipeline-canvas__node-kind--view'
   if (nodeType === 'serve') return 'pipeline-canvas__node-kind--serve'
-  return 'pipeline-canvas__node-kind--transform'
+  return ['filter', 'join', 'union', 'nest'].includes(detail ?? '')
+    ? 'pipeline-canvas__node-kind--logic'
+    : 'pipeline-canvas__node-kind--transform'
 }
 
 /** Renders a connector image with the same layered glass treatment as the node surface. */
@@ -59,8 +61,8 @@ export function PipelineNodeIcon({
       ) : (
         <span
           className={cn(
-            'pipeline-canvas__node-kind flex size-6 shrink-0 items-center justify-center rounded-lg',
-            nodeTone(data.nodeType),
+            'pipeline-canvas__node-kind flex size-6 shrink-0 items-center justify-center rounded-lg shadow-md',
+            nodeTone(data.nodeType, data.detail),
           )}
         >
           {fallbackIcon(data)}

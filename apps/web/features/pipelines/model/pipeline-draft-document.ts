@@ -11,7 +11,12 @@ import type {
 import type { PipelineGraphDraft } from './pipeline-graph-edit'
 import type { PipelineNodeConfiguration } from './pipeline-node-model'
 
-import { sourceTableSelections } from './pipeline-node-model'
+import {
+  onFullLoadValue,
+  sourceTableSelections,
+  viewWriteSettings,
+  writeModeValue,
+} from './pipeline-node-model'
 
 const DEFAULT_VIEWPORT = { x: 0, y: 0, zoom: 1 }
 
@@ -162,6 +167,7 @@ function draftNode(
         connectorId: configuration.connectorId,
         writeMode: configuration.writeMode,
         ...(configuration.tableMappings ? { tableMappings: configuration.tableMappings } : {}),
+        ...(configuration.onFullLoad ? { onFullLoad: configuration.onFullLoad } : {}),
       },
       metadata,
     }
@@ -170,7 +176,11 @@ function draftNode(
     return {
       id: node.id,
       type: 'view',
-      config: configuration.body,
+      config: {
+        ...configuration.body,
+        ...(configuration.writeMode ? { writeMode: configuration.writeMode } : {}),
+        ...(configuration.onFullLoad ? { onFullLoad: configuration.onFullLoad } : {}),
+      },
       metadata: { ...metadata, editorKind: 'view', viewId: configuration.viewId },
     }
   }
@@ -213,16 +223,18 @@ function editorConfiguration(
     }
   }
   if (kind === 'target') {
+    const onFullLoad = onFullLoadValue(node.config.onFullLoad ?? node.config.on_full_load)
     return {
       kind,
       nodeId: node.id,
       sourceId: node.sourceId ?? '',
       table: node.table ?? '',
       connectorId: text(node.config.connectorId),
-      writeMode: text(node.config.writeMode) ?? 'upsert',
+      writeMode: writeModeValue(node.config.writeMode) ?? 'upsert',
       ...(tableMappings(node.config.tableMappings)
         ? { tableMappings: tableMappings(node.config.tableMappings) }
         : {}),
+      ...(onFullLoad ? { onFullLoad } : {}),
     }
   }
   if (kind === 'view') {
@@ -231,7 +243,7 @@ function editorConfiguration(
       nodeId: node.id,
       viewId: text(node.metadata.viewId) ?? node.id,
       from: null,
-      body: node.config,
+      ...viewWriteSettings(node.config),
     }
   }
   const { from, options, ...body } = node.config

@@ -10,7 +10,7 @@ import { isDataSource, stateStoreSource } from '@/service/state-store-source'
 export const SETUP_STEP_ORDER = ['stateStore', 'sources', 'pipeline'] as const
 export type SetupStepId = (typeof SETUP_STEP_ORDER)[number]
 
-export type PipelineHealth = 'running' | 'idle' | 'error'
+export type PipelineHealth = 'running' | 'idle' | 'blocked' | 'error'
 
 export interface OverviewSourceItem {
   id: string
@@ -20,6 +20,8 @@ export interface OverviewSourceItem {
 
 export type OverviewAttentionItem =
   | { kind: 'pipelineFailed'; pipelineId: string; code: string | null }
+  | { kind: 'pipelineBlocked'; pipelineId: string; code: string | null }
+  | { kind: 'pipelineUnavailable'; pipelineId: string }
   | {
       kind: 'viewStale'
       viewId: string
@@ -64,10 +66,15 @@ export interface OverviewModel {
 /** How many sources the diagram names before it only counts the rest. */
 export const SOURCE_PREVIEW_LIMIT = 3
 
-/** Idle covers every state in which the pipeline is not moving data and has not failed. */
-export function pipelineHealth(state: PipelineCatalogState | undefined): PipelineHealth {
+/** Idle covers pipelines without a current runtime issue or active movement. */
+export function pipelineHealth(
+  state: PipelineCatalogState | undefined,
+  failureCode?: string | null,
+): PipelineHealth {
   if (state === 'RUNNING' || state === 'STARTING' || state === 'RESUMING') return 'running'
+  if (failureCode?.startsWith('start-check.')) return 'blocked'
   if (state === 'FAILED') return 'error'
+  if (state === 'UNAVAILABLE' || failureCode) return 'error'
   return 'idle'
 }
 
@@ -91,18 +98,23 @@ export function buildOverview(
     }))
     .sort((left, right) => left.id.localeCompare(right.id))
 
-  const counts: Record<PipelineHealth, number> = { running: 0, idle: 0, error: 0 }
+  const counts: Record<PipelineHealth, number> = { running: 0, idle: 0, blocked: 0, error: 0 }
   const attention: OverviewAttentionItem[] = []
   const healthById = new Map<string, PipelineHealth>()
   for (const pipeline of [...pipelines].sort((left, right) => left.id.localeCompare(right.id))) {
-    const health = pipelineHealth(pipeline.status?.state)
+    const failureCode = pipeline.status?.failure?.code ?? null
+    const health = pipelineHealth(pipeline.status?.state, failureCode)
     healthById.set(pipeline.id, health)
     counts[health] += 1
-    if (health === 'error') {
+    if (health === 'blocked') {
+      attention.push({ kind: 'pipelineBlocked', pipelineId: pipeline.id, code: failureCode })
+    } else if (pipeline.status?.state === 'UNAVAILABLE') {
+      attention.push({ kind: 'pipelineUnavailable', pipelineId: pipeline.id })
+    } else if (health === 'error') {
       attention.push({
         kind: 'pipelineFailed',
         pipelineId: pipeline.id,
-        code: pipeline.status?.failure?.code ?? null,
+        code: failureCode,
       })
     }
   }

@@ -1,6 +1,16 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": [],
+  "ignorePatterns": [
+    "packages/ui/src/**",
+    "docs/engineering/ui/source-atlas.json",
+    "docs/engineering/ui/token-catalog.json",
+    "docs/engineering/ui/page-evidence.json",
+    "docs/engineering/ui/component-evidence.json",
+    "docs/engineering/ui/source-coverage.md",
+    "docs/engineering/ui/token-reference.md",
+    "docs/engineering/ui/typography-reference.md",
+    "apps/web/features/pipelines/start-checks/__fixtures__/*.json"
+  ],
   "semi": false,
   "singleQuote": true,
   "sortImports": {

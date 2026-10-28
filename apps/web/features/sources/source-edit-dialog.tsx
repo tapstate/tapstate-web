@@ -32,11 +32,13 @@ import { ConnectionTestResultDialog } from './connection-test-result'
 import { ConnectorFormily, type SecretDraft } from './connector-formily'
 import {
   connectorSpecConnectionSchema,
+  connectorSpecConfigFields,
   connectorSpecInitialValues,
   normalizeConnectorConfigFields,
   normalizeConnectorConfigValues,
 } from './connector-spec-formily-schema'
 import { buildSourceConfig, createInitialConfig, type SourceConfigState } from './source-form'
+import { SourceReadModeControl } from './source-read-mode-control'
 import { TableSelectionEditor } from './table-selection-editor'
 
 interface SourceEditDialogProps {
@@ -98,6 +100,44 @@ export function serializeSourceSrs(srs: EditableSrs): SourceSrs | null {
   }
 }
 
+function setConfigPath(target: Record<string, JsonValue>, path: string, value: JsonValue) {
+  const segments = path.split('.')
+  let current = target
+  for (const segment of segments.slice(0, -1)) {
+    const child = current[segment]
+    if (child === null || typeof child !== 'object' || Array.isArray(child)) current[segment] = {}
+    current = current[segment] as Record<string, JsonValue>
+  }
+  const last = segments.at(-1)
+  if (last) current[last] = value
+}
+
+function mergeConfig(
+  current: Record<string, JsonValue>,
+  updates: Record<string, JsonValue>,
+): Record<string, JsonValue> {
+  const result = { ...current }
+  for (const [name, value] of Object.entries(updates)) {
+    const existing = result[name]
+    if (
+      value !== null &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      existing !== null &&
+      typeof existing === 'object' &&
+      !Array.isArray(existing)
+    ) {
+      result[name] = mergeConfig(
+        existing as Record<string, JsonValue>,
+        value as Record<string, JsonValue>,
+      )
+    } else {
+      result[name] = value
+    }
+  }
+  return result
+}
+
 export function buildSourceEditConfig(
   fields: ConnectorDetail['config'],
   config: SourceConfigState,
@@ -107,11 +147,15 @@ export function buildSourceEditConfig(
   const secretValues: Record<string, JsonValue> = {}
   for (const [name, draft] of Object.entries(secretDrafts)) {
     if (draft.action === 'clear') clearSecrets.push(name)
-    if (draft.action === 'replace' && draft.value) secretValues[name] = draft.value
+    if (draft.action === 'replace' && draft.value) setConfigPath(secretValues, name, draft.value)
   }
 
   return {
-    ...buildSourceConfig(fields, { ...config, ...secretValues }, retainedSecretNames(secretDrafts)),
+    ...buildSourceConfig(
+      fields,
+      mergeConfig(config as Record<string, JsonValue>, secretValues),
+      retainedSecretNames(secretDrafts),
+    ),
     clearSecrets,
   }
 }
@@ -126,8 +170,8 @@ export function buildSourceTestSettings(
   currentConfig: Record<string, JsonValue>,
   sourceConfigValues: ReturnType<typeof buildSourceEditConfig>,
 ) {
-  const settings = { ...currentConfig, ...sourceConfigValues.config }
-  for (const name of sourceConfigValues.clearSecrets) delete settings[name]
+  const settings = mergeConfig(currentConfig, sourceConfigValues.config)
+  for (const name of sourceConfigValues.clearSecrets) setConfigPath(settings, name, null)
   return settings
 }
 
@@ -170,6 +214,7 @@ export function SourceEditDialog({
   const [refreshing, setRefreshing] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [testing, setTesting] = useState(false)
+  const [pendingFileReads, setPendingFileReads] = useState(false)
   const [testReport, setTestReport] = useState<ConnectionTestReport | null>(null)
   const [testError, setTestError] = useState<unknown>(null)
 
@@ -188,6 +233,7 @@ export function SourceEditDialog({
   }
 
   function reset(nextSource: SourceView, nextEtag: string) {
+    setPendingFileReads(false)
     setCurrentSource(nextSource)
     setCurrentEtag(nextEtag)
     setConfig(sourceConfig(nextSource))
@@ -225,7 +271,10 @@ export function SourceEditDialog({
         }
 
         try {
-          const normalizedFields = normalizeConnectorConfigFields(detail.id, detail.config)
+          const normalizedFields = normalizeConnectorConfigFields(
+            detail.id,
+            connectorSpecConfigFields(detail.spec.text, detail.config, currentLocale),
+          )
           const nextSchema = connectorSpecConnectionSchema(
             detail.spec.text,
             currentLocale,
@@ -260,6 +309,7 @@ export function SourceEditDialog({
   }, [apiFetch, currentLocale, etag, open, source, t])
 
   async function refreshLatest(replaceDraft: boolean) {
+    if (pendingFileReads) return
     setRefreshing(true)
     try {
       const latest = await getSource(currentSource.id, apiFetch)
@@ -278,6 +328,7 @@ export function SourceEditDialog({
   }
 
   async function submit() {
+    if (pendingFileReads) return
     if (!connector || !schema) return
 
     setRequestError('')
@@ -309,7 +360,7 @@ export function SourceEditDialog({
         {
           id: currentSource.id,
           connector: currentSource.connector,
-          config: { ...currentSource.config, ...sourceConfigValues.config },
+          config: mergeConfig(currentSource.config, sourceConfigValues.config),
           metadata: metadataValue,
           mode: mode || undefined,
           tables,
@@ -333,6 +384,7 @@ export function SourceEditDialog({
   }
 
   async function runConnectionTest() {
+    if (pendingFileReads) return
     if (!connector || !schema) return
 
     setTestError(null)
@@ -369,11 +421,13 @@ export function SourceEditDialog({
   return (
     <Dialog
       open={open}
-      onOpenChange={(nextOpen) => (!submitting && !testing ? onOpenChange(nextOpen) : undefined)}
+      onOpenChange={(nextOpen) =>
+        !submitting && !testing && !pendingFileReads ? onOpenChange(nextOpen) : undefined
+      }
     >
       <DialogContent
-        closeDisabled={submitting || testing}
-        closeLabel={t('ask.actions.close')}
+        closeDisabled={submitting || testing || pendingFileReads}
+        closeLabel={t('common.close')}
         className="bg-background border-border flex h-[90vh] max-h-[800px] w-full max-w-[1100px] flex-col gap-0 overflow-hidden rounded-2xl border p-0 shadow-2xl ring-0 sm:max-w-[1100px]"
       >
         <DialogHeader className="border-border bg-background flex h-14 shrink-0 flex-row items-center border-b px-6 pr-12">
@@ -401,7 +455,7 @@ export function SourceEditDialog({
                         variant="outline"
                         size="sm"
                         type="button"
-                        disabled={refreshing || testing}
+                        disabled={refreshing || testing || pendingFileReads}
                         onClick={() => void refreshLatest(true)}
                       >
                         <RefreshCw className={refreshing ? 'animate-spin' : undefined} />
@@ -411,7 +465,7 @@ export function SourceEditDialog({
                         variant="ghost"
                         size="sm"
                         type="button"
-                        disabled={refreshing || testing}
+                        disabled={refreshing || testing || pendingFileReads}
                         onClick={() => void refreshLatest(false)}
                       >
                         <RefreshCw className={refreshing ? 'animate-spin' : undefined} />
@@ -448,37 +502,17 @@ export function SourceEditDialog({
                         <span className="text-foreground text-[13px] font-medium">
                           {t('sources.edit.modeLabel')}
                         </span>
-                        <div
-                          className="border-border bg-muted inline-flex w-fit max-w-full gap-1 overflow-x-auto rounded-lg border p-1"
-                          role="group"
-                          aria-label={t('sources.edit.modeLabel')}
-                        >
-                          {connector.modes.map((item) => {
-                            const selected = mode === item
-                            return (
-                              <Button
-                                key={item}
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                aria-pressed={selected}
-                                disabled={submitting || testing}
-                                className={
-                                  selected
-                                    ? 'bg-background text-foreground hover:bg-background shadow-sm'
-                                    : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
-                                }
-                                onClick={() => {
-                                  setMode(item)
-                                  setTestReport(null)
-                                  setTestError(null)
-                                }}
-                              >
-                                {item}
-                              </Button>
-                            )
-                          })}
-                        </div>
+                        <SourceReadModeControl
+                          ariaLabel={t('sources.edit.modeLabel')}
+                          modes={connector.modes}
+                          value={mode}
+                          disabled={submitting || testing}
+                          onChange={(nextMode) => {
+                            setMode(nextMode)
+                            setTestReport(null)
+                            setTestError(null)
+                          }}
+                        />
                       </div>
                     )}
 
@@ -491,6 +525,7 @@ export function SourceEditDialog({
                       secretDrafts={secretDrafts}
                       errors={fieldErrors}
                       disabled={submitting || testing}
+                      onPendingFileReadsChange={setPendingFileReads}
                       onValuesChange={(values) => {
                         setConfig(values)
                         setTestReport(null)
@@ -518,7 +553,7 @@ export function SourceEditDialog({
                     disabled={submitting || testing}
                     aria-invalid={Boolean(fieldErrors.metadata)}
                     className="min-h-24 font-mono text-[12px]"
-                    onChange={(event) => setMetadata(event.target.value)}
+                    onValueChange={setMetadata}
                   />
                   {fieldErrors.metadata && (
                     <span className="text-destructive text-[12px] leading-relaxed">
@@ -612,7 +647,7 @@ export function SourceEditDialog({
                 <Button
                   variant="outline"
                   type="button"
-                  disabled={submitting || testing}
+                  disabled={submitting || testing || pendingFileReads}
                   onClick={() => onOpenChange(false)}
                 >
                   {t('sources.edit.cancel')}
@@ -620,7 +655,9 @@ export function SourceEditDialog({
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={submitting || testing || loading || !connector || !schema}
+                  disabled={
+                    submitting || testing || pendingFileReads || loading || !connector || !schema
+                  }
                   onClick={() => void runConnectionTest()}
                 >
                   {testing && <LoaderCircle className="size-3.5 animate-spin" />}
@@ -628,7 +665,9 @@ export function SourceEditDialog({
                 </Button>
                 <Button
                   type="button"
-                  disabled={submitting || testing || loading || !connector || !schema}
+                  disabled={
+                    submitting || testing || pendingFileReads || loading || !connector || !schema
+                  }
                   onClick={() => void submit()}
                 >
                   {submitting && <LoaderCircle className="size-3.5 animate-spin" />}

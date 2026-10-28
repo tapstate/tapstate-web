@@ -47,3 +47,9 @@ export const pipelineCreationModes: PipelineCreationModeDefinition[] = [
     available: false,
   },
 ]
+
+export const availablePipelineCreationModes = pipelineCreationModes.filter((mode) => mode.available)
+
+export function normalizePipelineCreationMode(mode: PipelineCreationMode): PipelineCreationMode {
+  return availablePipelineCreationModes.some((candidate) => candidate.value === mode) ? mode : 'dag'
+}

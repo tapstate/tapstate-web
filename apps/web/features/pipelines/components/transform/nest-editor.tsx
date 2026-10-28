@@ -1,9 +1,8 @@
+import { Button } from '@tapstate-web/ui/button'
+import { Input } from '@tapstate-web/ui/input'
 import { Boxes, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 
 import { TransformEditorShell } from './transform-editor-shell'
 import { TransformSelect } from './transform-select'
@@ -111,7 +110,7 @@ function optionalInteger(value: string) {
   return { valid: true, value: Number(trimmed) }
 }
 
-export function NestEditor({ config, onChange }: TransformEditorProps) {
+export function NestEditor({ config, onChange, upstreamInputs }: TransformEditorProps) {
   const { t } = useTranslation()
   const [draft, setDraft] = useState(() => initialDraft(config.body))
   const configurationKey = JSON.stringify(config.body)
@@ -153,19 +152,40 @@ export function NestEditor({ config, onChange }: TransformEditorProps) {
 
   return (
     <TransformEditorShell
-      from={config.from}
+      from={upstreamInputs ?? config.from}
       icon={Boxes}
       title={t('pipelines.workspace.transform.nest.title')}
     >
       <div className="pipeline-transform__section-heading">
         {t('pipelines.workspace.transform.root')}
       </div>
-      <Input
-        aria-label={t('pipelines.workspace.transform.rootStream')}
-        value={draft.rootFrom}
-        placeholder={t('pipelines.workspace.transform.rootStream')}
-        onChange={(event) => update({ ...draft, rootFrom: event.target.value })}
-      />
+      {upstreamInputs === undefined ? (
+        <Input
+          aria-label={t('pipelines.workspace.transform.rootStream')}
+          value={draft.rootFrom}
+          placeholder={t('pipelines.workspace.transform.rootStream')}
+          onChange={(event) => update({ ...draft, rootFrom: event.target.value })}
+        />
+      ) : upstreamInputs.length > 0 ? (
+        <TransformSelect
+          label={t('pipelines.workspace.transform.rootStream')}
+          value={draft.rootFrom}
+          options={[
+            ...upstreamInputs.map((input) => ({ value: input, label: input })),
+            ...(draft.rootFrom && !upstreamInputs.includes(draft.rootFrom)
+              ? [{ value: draft.rootFrom, label: draft.rootFrom }]
+              : []),
+          ]}
+          onChange={(rootFrom) => update({ ...draft, rootFrom })}
+        />
+      ) : (
+        <Input
+          aria-label={t('pipelines.workspace.transform.rootStream')}
+          value={draft.rootFrom}
+          disabled
+          placeholder={t('pipelines.workspace.transform.noUpstreamInputs')}
+        />
+      )}
       <Input
         aria-label={t('pipelines.workspace.transform.rootKey')}
         value={draft.rootKey}
@@ -198,19 +218,47 @@ export function NestEditor({ config, onChange }: TransformEditorProps) {
       <div className="pipeline-transform__mapping-list">
         {draft.embeds.map((embed, index) => (
           <div key={index + '-' + embed.from} className="pipeline-transform__nest-embed">
-            <Input
-              aria-label={t('pipelines.workspace.transform.childStream')}
-              value={embed.from}
-              placeholder={t('pipelines.workspace.transform.childStream')}
-              onChange={(event) =>
-                update({
-                  ...draft,
-                  embeds: draft.embeds.map((item, itemIndex) =>
-                    itemIndex === index ? { ...item, from: event.target.value } : item,
-                  ),
-                })
-              }
-            />
+            {upstreamInputs === undefined ? (
+              <Input
+                aria-label={t('pipelines.workspace.transform.childStream')}
+                value={embed.from}
+                placeholder={t('pipelines.workspace.transform.childStream')}
+                onChange={(event) =>
+                  update({
+                    ...draft,
+                    embeds: draft.embeds.map((item, itemIndex) =>
+                      itemIndex === index ? { ...item, from: event.target.value } : item,
+                    ),
+                  })
+                }
+              />
+            ) : upstreamInputs.length > 0 ? (
+              <TransformSelect
+                label={t('pipelines.workspace.transform.childStream')}
+                value={embed.from}
+                options={[
+                  ...upstreamInputs.map((input) => ({ value: input, label: input })),
+                  ...(embed.from && !upstreamInputs.includes(embed.from)
+                    ? [{ value: embed.from, label: embed.from }]
+                    : []),
+                ]}
+                onChange={(from) =>
+                  update({
+                    ...draft,
+                    embeds: draft.embeds.map((item, itemIndex) =>
+                      itemIndex === index ? { ...item, from } : item,
+                    ),
+                  })
+                }
+              />
+            ) : (
+              <Input
+                aria-label={t('pipelines.workspace.transform.childStream')}
+                value={embed.from}
+                disabled
+                placeholder={t('pipelines.workspace.transform.noUpstreamInputs')}
+              />
+            )}
             <Input
               aria-label={t('pipelines.workspace.transform.keyMapping')}
               value={embed.on}
@@ -271,7 +319,8 @@ export function NestEditor({ config, onChange }: TransformEditorProps) {
             <Button
               type="button"
               variant="ghost"
-              size="icon-sm"
+              size="small"
+              className="size-6 p-0"
               aria-label={t('pipelines.workspace.transform.removeEmbed')}
               onClick={() =>
                 update({
@@ -287,8 +336,8 @@ export function NestEditor({ config, onChange }: TransformEditorProps) {
       </div>
       <Button
         type="button"
-        variant="outline"
-        size="sm"
+        variant="secondary"
+        size="small"
         className="w-fit gap-1.5"
         onClick={() =>
           update({

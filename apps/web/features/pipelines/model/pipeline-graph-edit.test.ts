@@ -9,6 +9,7 @@ import {
   createPipelineGraphDraft,
   removePipelineNode,
   updatePipelineNodeConfiguration,
+  type PipelineGraphDraft,
   validatePipelineGraph,
 } from './pipeline-graph-edit'
 
@@ -35,6 +36,85 @@ const view = {
 } satisfies PipelineView
 
 describe('pipeline graph edit model', () => {
+  it('exposes graph-derived inputs for a fan-in transform in edge order', async () => {
+    const draft = createPipelineGraphDraft({
+      ...view,
+      transforms: [{ id: 'combined', type: 'union', from: null }],
+      serve: null,
+      dag: {
+        nodes: [
+          { id: 'source:mysql:orders', type: 'source', label: 'orders', detail: 'mysql' },
+          { id: 'source:mongo:returns', type: 'source', label: 'returns', detail: 'mongo' },
+          { id: 'transform:combined', type: 'transform', label: 'combined', detail: 'union' },
+        ],
+        edges: [
+          {
+            id: 'orders->combined',
+            source: 'source:mysql:orders',
+            target: 'transform:combined',
+            label: null,
+          },
+          {
+            id: 'returns->combined',
+            source: 'source:mongo:returns',
+            target: 'transform:combined',
+            label: null,
+          },
+        ],
+      },
+    })
+    const graphEdit = await import('./pipeline-graph-edit')
+    expect('upstreamPipelineReferences' in graphEdit).toBe(true)
+    const readInputs = (
+      graphEdit as unknown as {
+        upstreamPipelineReferences: (draft: PipelineGraphDraft, nodeId: string) => string[]
+      }
+    ).upstreamPipelineReferences
+
+    expect(readInputs(draft, 'transform:combined')).toEqual(['mysql.orders', 'mongo.returns'])
+  })
+
+  it('preserves Join aliases from the transform from mapping when graph inputs are derived', () => {
+    const joinView = {
+      ...view,
+      transforms: [
+        {
+          id: 'joined',
+          type: 'join',
+          from: { orders: 'mysql.orders', returns: 'mongo.returns' },
+          body: { engine: 'builtin', sql: 'select *' },
+        },
+      ],
+      dag: {
+        nodes: [
+          { id: 'source:mysql:orders', type: 'source', label: 'orders', detail: 'mysql' },
+          { id: 'source:mongo:returns', type: 'source', label: 'returns', detail: 'mongo' },
+          { id: 'transform:joined', type: 'transform', label: 'joined', detail: 'join' },
+        ],
+        edges: [
+          {
+            id: 'orders->joined',
+            source: 'source:mysql:orders',
+            target: 'transform:joined',
+            label: null,
+          },
+          {
+            id: 'returns->joined',
+            source: 'source:mongo:returns',
+            target: 'transform:joined',
+            label: null,
+          },
+        ],
+      },
+    } satisfies PipelineView
+    const draft = createPipelineGraphDraft(joinView)
+
+    expect(buildPipelineMutation(draft).transforms?.[0]?.from).toEqual({
+      orders: 'mysql.orders',
+      returns: 'mongo.returns',
+    })
+  })
+
   it('validates an existing local Cloud MongoDB sink without widening release targets', () => {
     const draft = createPipelineGraphDraft(view)
     const catalog = [{ id: 'mongodb', sink: true }] as unknown as Parameters<

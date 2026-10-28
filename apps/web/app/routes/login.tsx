@@ -6,14 +6,19 @@ import { useTranslation } from 'react-i18next'
 import type { AppLocale } from '@/i18n'
 
 import { Button } from '@/components/ui/button'
+import { safeLoginReturn } from '@/features/auth/login-return'
+import { SessionRecovery } from '@/features/auth/session-recovery'
 import { SUPPORTED_LOCALES } from '@/i18n'
 import { cn } from '@/lib/utils'
-import { AuthClientError, login } from '@/service/auth-client'
+import { AuthClientError } from '@/service/auth-client'
 import { useAuthStore } from '@/stores/auth-store'
 import { replaceWithCloudConsole } from '@/utils/cloud-console'
 import { deploymentProfile } from '@/utils/deployment-profile'
 
 export const Route = createFileRoute('/login')({
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
+    redirect: safeLoginReturn(search.redirect),
+  }),
   component: LoginRouteComponent,
 })
 
@@ -43,9 +48,11 @@ function CloudLoginRouteComponent() {
 
 function OnPremLoginRouteComponent() {
   const navigate = useNavigate()
+  const redirect = safeLoginReturn(Route.useSearch().redirect)
   const { t, i18n } = useTranslation()
-  const setToken = useAuthStore((state) => state.setToken)
+  const login = useAuthStore((state) => state.login)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const status = useAuthStore((state) => state.status)
   const [visibleLines, setVisibleLines] = useState<TerminalLine[]>([])
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -72,8 +79,8 @@ function OnPremLoginRouteComponent() {
   )
 
   useEffect(() => {
-    if (isAuthenticated) void navigate({ replace: true, to: '/overview' })
-  }, [isAuthenticated, navigate])
+    if (isAuthenticated) void navigate({ replace: true, to: redirect })
+  }, [isAuthenticated, navigate, redirect])
 
   useEffect(() => {
     setVisibleLines([])
@@ -113,6 +120,8 @@ function OnPremLoginRouteComponent() {
 
   function errorMessage(error: unknown) {
     if (!(error instanceof AuthClientError)) return t('auth.login.errors.unknown')
+    if (error.kind === 'browser') return t('auth.session.browserUnsupported')
+    if (error.status === 404 || error.status === 405) return t('auth.session.serverUpgradeRequired')
     if (error.kind === 'network') return t('auth.login.errors.network')
     if (error.kind === 'protocol') return t('auth.login.errors.protocol')
     return error.code === 'control.auth-failed'
@@ -127,9 +136,7 @@ function OnPremLoginRouteComponent() {
 
     setIsSubmitting(true)
     try {
-      const result = await login({ username: username.trim(), password })
-      setToken(result.token)
-      void navigate({ replace: true, to: '/overview' })
+      await login({ username: username.trim(), password })
     } catch (error) {
       setFormError(errorMessage(error))
     } finally {
@@ -138,6 +145,9 @@ function OnPremLoginRouteComponent() {
   }
 
   const canSubmit = username.trim().length > 0 && password.length > 0 && !isSubmitting
+
+  if ((status === 'checking' && !isSubmitting) || status === 'unavailable')
+    return <SessionRecovery />
 
   return (
     <main
@@ -186,11 +196,7 @@ function OnPremLoginRouteComponent() {
           <div className="relative z-10">
             <div className="mb-10 flex items-center gap-2">
               <div className="flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-[4px] bg-gray-900">
-                  <span className="text-[11px] leading-none font-bold text-white select-none">
-                    {t('app.brand').slice(0, 1)}
-                  </span>
-                </div>
+                <img alt="" className="h-6 w-6" src="/tapstate-mark.svg" />
                 <span className="text-[15px] font-medium tracking-tight">{t('app.brand')}</span>
               </div>
             </div>

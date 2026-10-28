@@ -1,5 +1,23 @@
 {
+  "notFound": {
+    "message": "此页面不可用。",
+    "back": "返回概览"
+  },
   "app": {
+    "help": {
+      "openMenu": "帮助",
+      "documentation": "文档",
+      "contactSupport": "联系客服"
+    },
+    "account": {
+      "openMenu": "账户",
+      "profile": "个人资料",
+      "settings": "设置",
+      "appearance": "外观",
+      "themeLight": "浅色",
+      "themeDark": "深色",
+      "logOut": "退出登录"
+    },
     "brand": "Tapstate Cloud",
     "console": "Cloud 控制台",
     "organization": "组织",
@@ -11,6 +29,54 @@
     "signedOut": "未登录",
     "toggleTheme": "切换主题"
   },
+  "common": {
+    "close": "关闭",
+    "searchClusters": "搜索集群",
+    "searchOrganizations": "搜索组织"
+  },
+  "organizationList": {
+    "current": "当前组织：",
+    "currentBadge": "当前",
+    "count_one": "{{count}} 个组织",
+    "count_other": "{{count}} 个组织",
+    "clearSearch": "清除组织搜索",
+    "name": "组织",
+    "slug": "标识",
+    "status": "状态",
+    "owner": "所有者",
+    "active": "活跃",
+    "suspended": "已暂停",
+    "noOrganizations": "此账户暂无可用组织。",
+    "noMatches": "没有匹配搜索条件的组织。"
+  },
+  "clusterList": {
+    "description": "管理不同 AWS 区域中的 Tapstate 集群。",
+    "provision": "创建集群",
+    "provisionDescription": "创建第一个 Cloud 集群。",
+    "total": "总计：",
+    "count_one": "{{count}} 个集群",
+    "count_other": "{{count}} 个集群",
+    "clearSearch": "清除集群搜索",
+    "name": "集群名称",
+    "status": "状态",
+    "runtimeVersion": "运行版本",
+    "runtimeVersionNotReported": "未上报",
+    "region": "区域",
+    "plan": "套餐",
+    "created": "创建时间",
+    "noClusters": "还没有集群。",
+    "noMatches": "没有匹配搜索条件的集群。",
+    "states": {
+      "PROVISIONING_PENDING": "等待创建",
+      "PROVISIONING": "创建中",
+      "READY": "就绪",
+      "PROVISIONING_FAILED": "创建失败",
+      "DEGRADED": "性能下降",
+      "DRAINING": "排空中",
+      "DRAINED": "已排空",
+      "TERMINATED": "已终止"
+    }
+  },
   "access": {
     "eyebrow": "安全云集群",
     "title": "请先登录",
@@ -21,11 +87,22 @@
   "auth": {
     "headerNote": "Cloud 集群访问",
     "eyebrow": "TAPSTATE CLOUD",
-    "loginTitle": "登录集群",
-    "registerTitle": "创建账户",
+    "loginTitle": "登录 Tapstate Cloud",
+    "registerTitle": "创建 Tapstate 账户",
     "loginDescription": "使用邮箱和密码访问你的组织。",
-    "registerDescription": "创建账户并设置你的第一个 Cloud 组织。",
+    "registerDescription": "用试用码创建组织，或接受团队邀请。",
+    "registerDescriptionOpen": "创建账户和组织，并验证邮箱以继续。",
+    "registerDescriptionChecking": "选择一种方式创建账户。",
+    "registrationPolicyLoading": "正在检查注册方式…",
+    "registrationPolicyUnavailable": "无法加载注册方式。请重试，或使用邀请链接继续。",
+    "retryRegistrationPolicy": "重试",
+    "invitationNotice": "此码只能使用一次，并会在七天后过期。",
+    "changeCode": "更换码",
+    "invitationLinkLabel": "试用码或邀请链接",
+    "invitationLinkPlaceholder": "粘贴试用码或链接",
+    "useInvitation": "继续",
     "nameLabel": "姓名",
+    "organizationNameLabel": "组织名称",
     "namePlaceholder": "你的姓名",
     "emailLabel": "工作邮箱",
     "emailPlaceholder": "name@company.com",
@@ -41,13 +118,22 @@
     "continueWithGitHub": "继续使用 GitHub",
     "signUpWithGoogle": "使用 Google 注册",
     "signUpWithGitHub": "使用 GitHub 注册",
-    "oauthComingSoon": "Google 和 GitHub 登录即将推出。",
     "or": "或者",
     "working": "请稍候",
-    "noAccount": "还没有 Tapstate Cloud 账户？",
-    "haveAccount": "已经有账户？",
-    "goRegister": "创建账户",
+    "noAccount": "还没有账户？",
+    "haveAccount": "还没有 Tapstate Cloud 账户？",
+    "haveInviteAccount": "已经有账户？",
+    "goRegister": "注册",
     "goLogin": "登录",
+    "sendCode": "发送邮箱验证码",
+    "resendCode": "重新发送验证码",
+    "resendCodeIn": "{{count}} 秒后可重新发送",
+    "sendingCode": "正在发送验证码…",
+    "codeLabel": "邮箱验证码",
+    "codeSentTo": "验证码已发送至 {{email}}，十分钟后过期。",
+    "invitationRequiredForRegistration": "早期试用期间，请输入试用码或组织邀请来创建账户。",
+    "organizationNameRequired": "请输入组织名称。",
+    "requestCodeFirst": "请先获取邮箱验证码。",
     "securityNote": "会话由安全的 HttpOnly Cookie 保护。",
     "footer": "© 2026 Tapstate Systems Inc.",
     "showcase": {
@@ -97,8 +183,81 @@
       "generic": "请求未能完成。请检查填写内容后重试。",
       "network": "暂时无法连接 Cloud 服务，请稍后重试。",
       "invalidCredentials": "邮箱或密码不正确。",
-      "emailExists": "此邮箱已注册，请直接登录。"
+      "emailExists": "此邮箱已注册，请直接登录。",
+      "invitationRequired": "请输入试用码或组织邀请以创建账户。",
+      "invitationRequiredAfterOAuth": "身份验证已通过。请输入试用码或组织邀请，然后继续使用 Google 或 GitHub。",
+      "organizationNameRequired": "请输入组织名称。",
+      "invitationInvalid": "邀请链接无效。",
+      "invitationExpired": "邀请已过期，请向组织所有者索取新的链接。",
+      "invitationRevoked": "此邀请已被撤销。",
+      "invitationConsumed": "此邀请已被使用。",
+      "invitationEmailMismatch": "此邀请发给了另一个邮箱地址。",
+      "codeInvalid": "无法接受此验证码，请检查后重试。",
+      "codeExpired": "验证码已过期，请重新获取。",
+      "codeAttemptsExceeded": "错误次数过多，请获取新的验证码。",
+      "codeRateLimited": "验证码请求次数过多，请稍后重试。",
+      "codeCooldown": "请等待一分钟后再获取验证码。",
+      "emailUnavailable": "暂时无法发送邮件，请稍后重试。",
+      "providerUnavailable": "此登录服务尚未配置。",
+      "providerEmailUnverified": "请先在身份服务提供商处验证邮箱。",
+      "providerError": "身份服务提供商未能完成登录。",
+      "oauthCancelled": "登录已取消，你可以重试。",
+      "accountLinkRequired": "请先登录现有账户，再到设置中关联此登录方式。",
+      "identityConflict": "此身份已关联到另一个账户。",
+      "reauthenticationRequired": "请重新登录后再关联身份。"
     }
+  },
+  "organizations": {
+    "invitationsTitle": "组织邀请",
+    "invitationsDescription": "创建一次性邀请链接。收到链接的人可以在过期前使用一次。",
+    "inviteEmailPlaceholder": "受邀人邮箱（可选）",
+    "createInvite": "创建邀请",
+    "creatingInvite": "正在创建…",
+    "inviteCreatedNotice": "请立即复制此链接。邀请令牌只显示一次。",
+    "inviteLink": "邀请链接",
+    "copyInvite": "复制链接",
+    "copied": "已复制",
+    "invitedEmail": "邮箱",
+    "inviteExpires": "过期时间",
+    "inviteStatus": "状态",
+    "inviteActions": "操作",
+    "anyEmail": "不限邮箱",
+    "loadingInvites": "正在加载邀请…",
+    "noInvites": "暂无邀请。",
+    "revokingInvite": "正在撤销…",
+    "revokeInvite": "撤销",
+    "inviteLoadError": "无法加载邀请。",
+    "inviteCreateError": "无法创建邀请。",
+    "inviteRevokeError": "无法撤销邀请。",
+    "ownerOnly": "只有组织所有者可以管理邀请。",
+    "copyError": "无法复制链接，请手动选择并复制。",
+    "status": {
+      "active": "有效",
+      "revoked": "已撤销",
+      "consumed": "已使用",
+      "expired": "已过期"
+    }
+  },
+  "settings": {
+    "tabAccount": "个人账户",
+    "tabOrganization": "组织与团队",
+    "linkedIdentitiesTitle": "登录方式",
+    "linkedIdentitiesDescription": "重新验证 Cloud 账户后即可关联 Google 或 GitHub。邮箱相同不会触发自动关联。",
+    "provider": {
+      "google": "Google",
+      "github": "GitHub"
+    },
+    "loadingIdentities": "正在加载已关联身份…",
+    "identityLinked": "已关联：{{email}}",
+    "identityNotLinked": "尚未关联",
+    "linkIdentity": "关联账户",
+    "linkingIdentity": "正在打开身份服务…",
+    "reauthenticationPasswordLabel": "当前密码（近期登录后可留空）",
+    "reauthenticationPasswordPlaceholder": "输入当前密码",
+    "reauthenticationHint": "没有密码的账户请在五分钟内重新登录，然后开始关联。",
+    "identityLoadError": "无法加载已关联身份。",
+    "reauthenticationError": "关联身份前请先重新验证 Cloud 账户。",
+    "identityLinkStartError": "无法开始关联此登录方式，请重试。"
   },
   "onboarding": {
     "eyebrow": "首次设置",
@@ -109,9 +268,9 @@
     "organizationPlaceholder": "示例数据平台",
     "slugHint": "请使用英文字母和数字，以便创建唯一的组织地址。",
     "newClusterLabel": "集群名称",
-    "clusterNamePlaceholder": "acme-stream-2",
+    "clusterNamePlaceholder": "acme-data-2",
     "clusterNameHint": "请使用英文字母和数字，并以连字符分隔。",
-    "regionLabel": "开放区域",
+    "regionLabel": "区域",
     "openRegions": "可用云区域",
     "available": "可用",
     "loadingRegions": "正在加载可用区域…",
@@ -121,6 +280,14 @@
     "clusterLabel": "首个集群",
     "regionReadonly": "集群创建后不能更改区域。",
     "regionDefault": "区域默认配置",
+    "planLabel": "实例规格",
+    "planHint": "选择规格后继续付款。",
+    "loadingPlans": "正在加载规格…",
+    "plansError": "规格与价格加载失败。",
+    "noPlans": "当前没有可用的规格。",
+    "continueToPayment": "继续前往安全支付",
+    "startingCheckout": "正在打开安全支付…",
+    "checkoutError": "订阅未能启动，请检查网络后重试。",
     "clusterPreviewEmpty": "输入组织名称后自动生成",
     "clusterPendingNote": "提交后将开始集群供给。",
     "createAction": "创建组织和集群",
@@ -161,6 +328,7 @@
     "resourceStateLabel": "资源状态",
     "openingCluster": "正在打开集群控制台…",
     "openCluster": "打开集群控制台",
+    "viewSubscriptions": "查看订阅",
     "failedTitle": "供给已中断",
     "failedBadge": "部署已停止",
     "failedDescription": "Cloud 报告集群供给失败。",
@@ -185,6 +353,230 @@
     "cancelSubscriptionError": "无法确认订阅取消结果。请先查看当前部署状态，再修改设置。",
     "cancelStatusError": "无法刷新当前部署状态，尚未发送取消请求；请重试。",
     "footnote": "集群会在后台创建。控制台将显示 Cloud 返回的实际状态。"
+  },
+  "clusters": {
+    "egress": {
+      "sourceAllowlistHint": "地址已稳定 · 可用于数据源访问白名单。重新打开 Cluster Console 后，数据源设置会显示此地址。"
+    }
+  },
+  "billing": {
+    "title": "套餐与账单",
+    "subtitle": "管理 {{organization}} 的订阅。",
+    "organizationFallback": "当前组织",
+    "loading": "正在加载套餐…",
+    "loadError": "套餐加载失败。",
+    "retry": "重试",
+    "noPlans": "当前没有可购买的套餐。",
+    "plansLabel": "可选套餐",
+    "specLine": "{{cpu}} 核 · {{memory}} GB 内存 · {{storage}} GB 托管存储",
+    "perMonth": "/ 月",
+    "trialBadge": "{{count}} 天免费试用",
+    "noTrial": "无试用",
+    "trialChargeNote": "试用期 {{count}} 天结束前不会扣费。",
+    "noTrialChargeNote": "订阅后立即收取首月费用。",
+    "planDescription": "面向生产数据管道的全托管 Tapstate 集群。",
+    "checkoutNote": "支付、3D Secure 与账单信息均在 Stripe 安全支付页完成。",
+    "consent": "我授权 Tapstate Cloud 就本订阅扣款，并在每个计费周期结束时自动续费，直至我取消订阅。",
+    "selectedSummary": "{{plan}} · {{price}} / 月",
+    "selectPrompt": "请选择一个套餐继续。",
+    "subscribeAction": "前往安全支付",
+    "subscribing": "正在打开 Stripe Checkout…",
+    "ownerOnly": "仅组织所有者可以变更订阅。",
+    "pendingNotice": "上一笔结账仍在等待支付。重新发起结账将替换该记录。",
+    "planUnknown": "套餐信息暂不可用",
+    "priceLine": "{{price}} / 月",
+    "refresh": "刷新",
+    "provisioning": "正在开通实例",
+    "autoRenew": "自动续费",
+    "autoRenewOn": "已开启",
+    "autoRenewOff": "已关闭",
+    "periodLabel": "当前周期",
+    "clusterLabel": "集群",
+    "subscriptionIdLabel": "订阅",
+    "resourcesReady": "全部资源已就绪。",
+    "cancelPendingNote": "自动续费已关闭，实例可使用至 {{date}}。",
+    "pastDueNote": "最近一次扣款失败。请在 Stripe 更新支付方式以保留订阅。",
+    "awaitingPaymentNote": "尚未完成结账。请在 Stripe 完成支付以激活订阅。",
+    "choosePlan": "选择套餐",
+    "cancelAction": "取消订阅",
+    "cancelTitle": "确认取消订阅？",
+    "cancelPlanLine": "{{plan}}",
+    "cancelBody": "订阅将于 {{date}} 结束。到期后实例会被释放，所有数据将被删除。",
+    "cancelWarning": "取消只停止自动续费，实例在当前周期结束前仍可使用。",
+    "cancelKeep": "保留订阅",
+    "cancelConfirm": "确认取消",
+    "cancelling": "正在取消…",
+    "errors": {
+      "network": "无法连接 Cloud 服务，请稍后重试。",
+      "specNotFound": "该套餐已不可用，请选择其他套餐。",
+      "pricingNotConfigured": "该套餐尚未配置价格，请选择其他套餐或联系支持。",
+      "alreadyActive": "该组织已有进行中的订阅，请查看其状态。",
+      "pendingPayment": "支付仍在处理中，请完成支付后再开通实例。",
+      "notActive": "订阅未生效，无法执行该操作。",
+      "cannotCancel": "当前状态的订阅无法取消。",
+      "orgLimitReached": "该账号已达到组织数量上限。",
+      "generic": "请求未能完成，请重试。",
+      "cancelFailed": "取消未能完成，请重试。"
+    },
+    "status": {
+      "TRIAL": "试用中",
+      "ACTIVE": "生效中",
+      "PENDING_CANCEL": "待取消",
+      "PENDING_PAYMENT": "待支付",
+      "PAST_DUE": "支付失败",
+      "CANCELLED": "已结束",
+      "UNKNOWN": "未知状态"
+    },
+    "period": {
+      "trialEnds": "试用将于 {{date}} 结束",
+      "nextBilled": "下次扣费 {{date}}",
+      "ends": "将于 {{date}} 结束",
+      "pastDue": "支付失败",
+      "awaitingPayment": "等待支付",
+      "ended": "已结束"
+    },
+    "success": {
+      "title": "结账完成",
+      "subtitle": "正在激活订阅并创建实例。",
+      "stepPayment": "支付已确认",
+      "stepProvisioning": "正在开通实例（{{percent}}%）",
+      "stepReady": "实例已就绪",
+      "provisioningNote": "正在创建集群 {{cluster}}，可能需要几分钟。",
+      "provisioningNotePending": "正在准备实例，可能需要几分钟。",
+      "resolving": "正在向 Stripe 确认支付…",
+      "awaitingPayment": "等待 Stripe 确认支付…",
+      "readyNote": "集群 {{cluster}} 已就绪。",
+      "readyNoteGeneric": "实例已就绪。",
+      "openClusters": "打开集群",
+      "viewSubscription": "查看订阅",
+      "ended": "订阅在激活前已结束，请重新选择套餐。",
+      "unavailable": "该订阅当前无法开通实例，请查看订阅状态。",
+      "error": "无法确认本次结账。请刷新订阅状态或联系支持。"
+    },
+    "cancelled": {
+      "title": "支付已取消",
+      "subtitle": "本次未产生任何扣费。",
+      "body": "你可以返回套餐页重新发起结账。",
+      "back": "返回套餐"
+    }
+  },
+  "events": {
+    "title": "告警",
+    "subtitle": "{{organization}} 的关键事件与告警投递。",
+    "organizationFallback": "你的组织",
+    "tabEvents": "事件",
+    "tabPolicies": "告警策略",
+    "tabDeliveries": "投递历史",
+    "policySubtitle": "{{organization}} 的邮件告警规则。",
+    "deliverySubtitle": "{{organization}} 的通知投递记录。",
+    "loading": "加载中…",
+    "loadError": "无法加载此视图。",
+    "retry": "刷新",
+    "empty": "暂无内容。",
+    "filterType": "事件类型",
+    "filterTypePlaceholder": "全部事件类型",
+    "filterSeverity": "严重级",
+    "allSeverities": "全部严重级",
+    "severity": {
+      "INFO": "信息",
+      "WARNING": "警告",
+      "CRITICAL": "严重"
+    },
+    "columns": {
+      "time": "时间",
+      "type": "类型",
+      "severity": "严重级",
+      "subject": "主题",
+      "actor": "操作者",
+      "source": "来源",
+      "recipient": "接收人",
+      "status": "状态",
+      "attempts": "尝试次数",
+      "lastError": "最后错误",
+      "recipients": "接收人",
+      "cooldown": "冷却",
+      "quietHours": "静默时段",
+      "enabled": "启用"
+    },
+    "status": {
+      "PENDING": "待发送",
+      "SENDING": "发送中",
+      "SENT": "已发送",
+      "FAILED": "失败",
+      "DEAD": "已终止",
+      "SUPPRESSED": "已抑制"
+    },
+    "actions": {
+      "create": "新建策略",
+      "save": "保存",
+      "edit": "编辑",
+      "delete": "删除",
+      "close": "关闭"
+    },
+    "policyForm": {
+      "name": "名称",
+      "namePlaceholder": "关键 Pipeline 告警",
+      "eventTypes": "事件类型（逗号分隔）",
+      "eventTypesHint": "使用 * 匹配全部事件，或使用 pipeline.* 这样的前缀",
+      "minSeverity": "最低严重级",
+      "recipients": "接收人（逗号分隔的邮箱，可包含组织外地址）",
+      "cooldown": "冷却时间（秒）",
+      "quietStart": "静默开始（HH:mm）",
+      "quietEnd": "静默结束（HH:mm）",
+      "timezone": "时区",
+      "enabled": "启用"
+    },
+    "validation": {
+      "name": "名称不能为空。",
+      "recipients": "至少需要一个接收人。",
+      "quietHours": "静默开始与结束需同时填写，格式为 HH:mm。"
+    },
+    "pagination": {
+      "previous": "上一页",
+      "next": "下一页",
+      "page": "第 {{page}} 页",
+      "pageOf": "第 {{page}} / {{pages}} 页"
+    },
+    "detailTitle": "事件详情",
+    "detail": {
+      "id": "事件 ID"
+    },
+    "payload": "载荷",
+    "noPayload": "未记录载荷。",
+    "adminOnly": "只有组织管理员可以管理告警策略。",
+    "deleteConfirm": "删除此告警策略？",
+    "errors": {
+      "generic": "请求无法完成。"
+    }
+  },
+  "sections": {
+    "overview": {
+      "title": "概览",
+      "description": "查看 Cloud 组织和托管集群摘要。"
+    },
+    "clusters": {
+      "title": "集群",
+      "description": "查看集群状态并打开获准访问的 Cluster Console。"
+    },
+    "alerts": {
+      "title": "告警",
+      "description": "监控关键事件、告警策略与通知投递。"
+    },
+    "organizations": {
+      "title": "组织",
+      "description": "管理组织成员和访问权限。"
+    },
+    "billing": {
+      "cancelWarning": "取消后将终止对应 Cluster 并清理其资源，此操作无法撤销。",
+      "title": "套餐与账单",
+      "description": "查看当前组织的资源用量。"
+    },
+    "settings": {
+      "title": "设置",
+      "description": "管理组织和账户偏好。"
+    },
+    "notConnectedTitle": "Cloud 服务尚未接通",
+    "notConnectedDescription": "此页面属于受保护路由。完成登录和 API 接入后，才会显示 Cloud 数据。"
   },
   "support": {
     "nav": "支持工单",
@@ -249,21 +641,5 @@
       "notFound": "找不到此工单。请刷新“我的工单”查看最新列表。{{opId}}",
       "submissionUncertain": "Cloud 无法确认工单是否创建成功。请先检查“我的工单”，再提交新请求。{{opId}}"
     }
-  },
-  "sections": {
-    "overview": { "title": "概览", "description": "查看 Cloud 组织和托管集群摘要。" },
-    "clusters": {
-      "title": "集群",
-      "description": "查看集群状态并打开获准访问的 Cluster Console。"
-    },
-    "organizations": { "title": "组织", "description": "管理组织成员和访问权限。" },
-    "billing": {
-      "cancelWarning": "取消后将终止对应 Cluster 并清理其资源，此操作无法撤销。",
-      "title": "用量与账单",
-      "description": "查看当前组织的资源用量。"
-    },
-    "settings": { "title": "设置", "description": "管理组织和账户偏好。" },
-    "notConnectedTitle": "Cloud 服务尚未接通",
-    "notConnectedDescription": "此页面属于受保护路由。完成登录和 API 接入后，才会显示 Cloud 数据。"
   }
 }

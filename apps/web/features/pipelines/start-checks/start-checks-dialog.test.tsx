@@ -1,0 +1,294 @@
+import '@/i18n/index'
+import { act } from 'react'
+import { createRoot, type Root } from 'react-dom/client'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+import type { StartCheckReport } from '@/service/pipelines/pipeline-client'
+import type { ApiFetcher } from '@/service/source-client'
+
+import { getStartChecks } from '@/service/pipelines/pipeline-client'
+
+import type { StartChecksSession } from './use-start-pipeline'
+
+import fixture from './__fixtures__/client-fixture-v1.json'
+import { canStart, startBlocked, startDecisions } from './start-check-model'
+import { StartChecksDialog } from './start-checks-dialog'
+
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
+
+const answerable: StartCheckReport = fixture.answerable
+const unknownBehavior: StartCheckReport = fixture.unknownBehavior
+const unknownOutcome: StartCheckReport = fixture.unknownOutcome
+
+let root: Root | undefined
+let container: HTMLDivElement | undefined
+
+afterEach(async () => {
+  await act(async () => root?.unmount())
+  container?.remove()
+  root = undefined
+  container = undefined
+})
+
+function session(report: StartCheckReport): StartChecksSession {
+  return {
+    pipelineId: report.pipelineId,
+    version: 1,
+    report,
+    decisions: [],
+    staleDecisions: [],
+    changedWhileConfirming: false,
+    submitting: false,
+  }
+}
+
+async function renderDialog(report: StartCheckReport) {
+  const onConfirm = vi.fn()
+  const onCancel = vi.fn()
+  const onRecheck = vi.fn()
+  container = document.createElement('div')
+  document.body.append(container)
+  root = createRoot(container)
+  await act(async () => {
+    root?.render(
+      <StartChecksDialog
+        open
+        session={session(report)}
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+        onRecheck={onRecheck}
+      />,
+    )
+  })
+  return { onConfirm, onCancel, onRecheck }
+}
+
+function dialog() {
+  return document.querySelector<HTMLElement>('[data-testid="start-checks-dialog"]')
+}
+
+function button(text: string) {
+  return [...(dialog()?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find(
+    (candidate) => candidate.textContent?.trim() === text,
+  )
+}
+
+function radio(finding: string, action: string) {
+  return dialog()?.querySelector<HTMLElement>(
+    `[data-check-item="${finding}"] [data-check-choice="${action}"] [role="radio"]`,
+  )
+}
+
+describe('Start-check client fixture', () => {
+  it('is the version these tests were written against', () => {
+    expect(fixture.fixtureVersion).toBe(1)
+  })
+
+  it('passes every report through the client unchanged, unknown values included', async () => {
+    for (const report of [answerable, unknownBehavior, unknownOutcome]) {
+      const fetcher: ApiFetcher = async () =>
+        new Response(JSON.stringify(report), { headers: { 'Content-Type': 'application/json' } })
+      await expect(getStartChecks(report.pipelineId, 'start', fetcher)).resolves.toEqual(report)
+    }
+  })
+
+  it('renders every finding as written, with the values this client does not know as text', async () => {
+    await renderDialog(answerable)
+
+    expect(dialog()?.getAttribute('role')).toBe('alertdialog')
+    const text = () => dialog()?.textContent ?? ''
+    for (const finding of answerable.findings.filter(({ behavior }) => behavior !== 'PASS')) {
+      expect(text()).toContain(finding.message)
+      expect(text()).toContain(finding.subject.label)
+      expect(text()).toContain(finding.subject.kind)
+      expect(text()).toContain(finding.check)
+      expect(text()).toContain(finding.evaluation)
+      for (const action of finding.actions) {
+        expect(text()).toContain(action.message)
+        expect(text()).toContain(action.kind)
+      }
+    }
+    for (const entry of answerable.plan) {
+      expect(text()).toContain(entry.load)
+      expect(text()).toContain(`${entry.target.connection} / ${entry.target.table}`)
+    }
+
+    const passed = answerable.findings.find(({ behavior }) => behavior === 'PASS')!
+    expect(text()).not.toContain(passed.message)
+    await act(async () => button('Show passed checks (1)')?.click())
+    expect(text()).toContain(passed.message)
+
+    const warning = dialog()?.querySelector('[data-check-item="source-retention/src_pg"]')
+    expect(warning?.querySelector('[data-check-tone-label="warning"]')?.textContent).toBe('Warning')
+    expect(warning?.querySelector('svg')).not.toBeNull()
+    expect(dialog()?.querySelector('button[aria-label*="Close"]')).toBeNull()
+  })
+
+  it('offers a safe recheck for an unavailable blocking check and folds its internals into details', async () => {
+    const finding = {
+      ...answerable.findings[0]!,
+      behavior: 'BLOCK',
+      evaluation: 'UNAVAILABLE',
+      actions: [],
+      message: 'Internal target check did not answer during remaining 714 ms wait',
+    }
+    const report = { ...answerable, outcome: 'BLOCKED', findings: [finding] }
+    const { onRecheck, onConfirm } = await renderDialog(report)
+    expect(button('Recheck')).toBeDefined()
+    expect(dialog()?.querySelector('details')?.textContent).toContain('714 ms')
+    expect(dialog()?.querySelector('details')?.hasAttribute('open')).toBe(false)
+    await act(async () => button('Recheck')?.click())
+    expect(onRecheck).toHaveBeenCalledOnce()
+    expect(onConfirm).not.toHaveBeenCalled()
+    expect(button('Start')).toBeUndefined()
+  })
+
+  it('keeps completed blocking check diagnostics behind a closed details disclosure', async () => {
+    const finding = {
+      key: 'unwind-target-identity/views/lead/lead/orders',
+      check: 'unwind-target-identity',
+      subject: {
+        kind: 'TARGET',
+        id: 'views/lead/lead/orders',
+        element: 'lead',
+        label: 'lead on views from orders',
+      },
+      behavior: 'BLOCK',
+      evaluation: 'COMPLETE',
+      code: 'start-check.target-identity-refused',
+      params: {
+        target: 'lead',
+        stream: 'orders',
+        connection: 'views',
+        field: '_id',
+        preserved: 'original_id',
+        key: '_id, _index',
+        reason: 'target-key-conflict',
+        identityStatus: 'refused',
+      },
+      message:
+        "Target 'lead' on 'views' cannot safely preserve '_id' as 'original_id': target-key-conflict.",
+      actions: [],
+    }
+    const report: StartCheckReport = {
+      ...answerable,
+      outcome: 'BLOCKED',
+      plan: [],
+      findings: [finding],
+    }
+    await renderDialog(report)
+
+    const content = dialog()!
+    expect(content.getAttribute('role')).toBe('alertdialog')
+    expect(content.textContent).toContain(finding.message)
+    expect(button('Close')).toBeDefined()
+    expect(button('Start')).toBeUndefined()
+
+    const details = content.querySelector('details')
+    expect(
+      details,
+      'Completed blocking checks must also offer collapsed diagnostic details',
+    ).not.toBeNull()
+    expect(details?.hasAttribute('open')).toBe(false)
+    expect(details?.textContent).toContain(finding.check)
+    expect(details?.textContent).toContain(finding.evaluation)
+
+    const primaryContent = content.cloneNode(true) as HTMLElement
+    primaryContent.querySelectorAll('details').forEach((disclosure) => disclosure.remove())
+    expect(primaryContent.textContent).toContain(finding.message)
+    expect(primaryContent.textContent).not.toContain(finding.check)
+    expect(primaryContent.textContent).not.toContain(finding.evaluation)
+  })
+
+  it('keeps a confirmed blocker distinct from an unavailable warning', async () => {
+    const blocker = {
+      ...answerable.findings[0]!,
+      behavior: 'BLOCK',
+      evaluation: 'COMPLETE',
+      message: 'The target identity conflicts with the configured fields.',
+      actions: [],
+    }
+    const warning = {
+      ...answerable.findings[2]!,
+      behavior: 'WARN',
+      evaluation: 'UNAVAILABLE',
+      message: 'A warning check did not answer during the remaining 714 ms wait.',
+      actions: [],
+    }
+    await renderDialog({ ...answerable, outcome: 'BLOCKED', findings: [blocker, warning] })
+    expect(dialog()?.textContent).toContain('This pipeline cannot start yet.')
+    expect(dialog()?.textContent).toContain(blocker.message)
+    expect(button('Recheck')).toBeDefined()
+    expect(button('Start')).toBeUndefined()
+    const details = dialog()?.querySelector('details')
+    expect(details?.hasAttribute('open')).toBe(false)
+    expect(details?.textContent).toContain(warning.message)
+  })
+
+  it('previews what a destructive answer changes and styles it from its flag', async () => {
+    await renderDialog(answerable)
+
+    const clear = dialog()?.querySelector(
+      '[data-check-item="target-not-empty/views/lead"] [data-check-choice="clear"]',
+    )
+    expect(clear?.getAttribute('data-destructive')).toBe('true')
+    expect(clear?.querySelector('[data-check-choice-preview]')?.textContent).toContain(
+      'lead: on_full_load append → clear',
+    )
+    expect(
+      dialog()
+        ?.querySelector(
+          '[data-check-item="target-not-empty/views/lead"] [data-check-choice="keep"]',
+        )
+        ?.getAttribute('data-destructive'),
+    ).toBeNull()
+  })
+
+  it('starts only once every question is answered, sending exactly the pairs the report names', async () => {
+    const { onConfirm } = await renderDialog(answerable)
+
+    expect(button('Cancel')).toBeDefined()
+    expect(button('Start')?.disabled).toBe(true)
+    await act(async () => radio('target-not-empty/views/lead', 'clear')?.click())
+    expect(radio('target-not-empty/views/lead', 'clear')?.getAttribute('aria-checked')).toBe('true')
+    expect(button('Start')?.disabled).toBe(true)
+    await act(async () => radio('derived-schema-drift/join_orders', 'accept')?.click())
+    expect(button('Start')?.disabled).toBe(false)
+
+    await act(async () => button('Start')?.click())
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+    expect(onConfirm).toHaveBeenCalledWith([
+      { finding: 'target-not-empty/views/lead', action: 'clear' },
+      { finding: 'derived-schema-drift/join_orders', action: 'accept' },
+    ])
+  })
+
+  it('treats a behavior it does not know as refusing the start', async () => {
+    expect(startBlocked(unknownBehavior)).toBe(true)
+    expect(canStart(unknownBehavior, {})).toBe(false)
+    const { onCancel, onConfirm } = await renderDialog(unknownBehavior)
+
+    const finding = dialog()?.querySelector('[data-check-item="source-quarantine/src_pg"]')
+    expect(finding?.querySelector('[data-check-tone-label="blocking"]')?.textContent).toBe(
+      'Blocked',
+    )
+    expect(finding?.textContent).toContain('QUARANTINE')
+    expect(finding?.textContent).toContain('src_pg is quarantined until an operator releases it.')
+    expect(button('Start')).toBeUndefined()
+    expect(button('Cancel')).toBeUndefined()
+
+    await act(async () => button('Close')?.click())
+    expect(onCancel).toHaveBeenCalledTimes(1)
+    expect(onConfirm).not.toHaveBeenCalled()
+  })
+
+  it('treats an outcome it does not know as refusing the start', async () => {
+    expect(startBlocked(unknownOutcome)).toBe(true)
+    expect(startDecisions(unknownOutcome, {})).toEqual([])
+    await renderDialog(unknownOutcome)
+
+    expect(dialog()?.textContent).toContain('This pipeline cannot start yet.')
+    expect(button('Start')).toBeUndefined()
+    expect(button('Close')).toBeDefined()
+  })
+})

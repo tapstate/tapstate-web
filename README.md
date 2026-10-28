@@ -21,8 +21,10 @@ tapstate-web/
 │   ├── product/
 │   │   └── information-architecture.md    顶层 IA / 菜单设计
 │   └── engineering/
-│   │   ├── design-system.md               shadcn 对齐的设计系统规范
-│   │   └── tech-stack.md                  技术栈登记 + 未决雷达
+│   │   ├── DESIGN.md                      UI 视觉与组件规范
+│   │   ├── design-system.md               共享 token 与组件契约
+│   │   ├── tech-stack.md                  技术栈登记 + 未决雷达
+│   │   └── ui/                            完整页面/组件/token 研究与执行手册
 ├── AGENTS.md                          Codex / agent 项目规则
 ├── CLAUDE.md                          Claude Code 项目入口
 ├── .agents/                           Codex repo-scoped skills
@@ -38,7 +40,7 @@ tapstate-web/
 │       ├── stores/                        Zustand stores
 │       ├── styles/                        main.css / tailwind.css / app.css
 │       └── utils/
-├── packages/                          共享包预留（ui / shared / design-tokens）
+├── packages/                          shared component and form packages
 ├── .vscode/                           i18n Ally 配置（Cursor 预览国际化）
 ├── tsconfig.base.json                 strict + noImplicitAny
 └── pnpm-workspace.yaml
@@ -69,6 +71,7 @@ pnpm lint         # oxlint diagnostics + repo-wide format check
 - TanStack Router 负责 SPA 路由；路由源码按 File Routes 形态维护在 `apps/web/app/routes/`，由 `@tanstack/router-plugin` 生成 `apps/web/app/routeTree.gen.ts`。
 - Cloud Console 在 `apps/cloud` 独立构建；使用同一套 File Routes / Oxlint / OXC / i18next 基线，业务路由在认证接通前默认拒绝访问。
 - 当前仍按 SPA / client-first 落地；不引入 SSR、Server Actions、API Routes 或 BFF。
+- 本地 Cloud / Cluster 联调使用 [仓库启动器](docs/engineering/local-cloud-preview.md)，每次显式输入远端 origin。
 
 依赖版本以各 `package.json` 的 `^` 范围为准；lockfile 以实际 install 为准。
 
@@ -79,7 +82,7 @@ pnpm lint         # oxlint diagnostics + repo-wide format check
 - Codex 读取 `AGENTS.md`。
 - Claude Code 读取 `CLAUDE.md`，并通过 `@AGENTS.md` 导入同一套规则。
 - 项目处于早期阶段，默认直接按范围实现；较大改动在聊天、issue 或 PR 中记录范围、风险与验证结果。
-- UI 改动必须遵循 `UI_DESIGN_GUIDELINES.md` 和 `docs/engineering/design-system.md`。
+- UI 改动必须遵循 `UI_DESIGN_GUIDELINES.md`、`docs/engineering/DESIGN.md` 和 `docs/engineering/design-system.md`。
 
 ## 国际化（i18n）
 
@@ -106,10 +109,11 @@ pnpm lint         # oxlint diagnostics + repo-wide format check
 
 ### 样式基线
 
-- shadcn 对齐的整体设计规范见 `docs/engineering/design-system.md`；新增 UI 先按 token、组件状态、Radix 可访问语义和工作台密度规则执行。
-- 表单控件、按钮和 Select trigger 默认圆角按 shadcn `rounded-lg` / `var(--radius)` / `10px` 落地。
-- `apps/web/styles/main.css` 只做入口汇总；Tailwind、应用语义样式拆到独立文件。
-- Tailwind CSS 优先用于布局和局部样式表达，项目显式使用 `@layer theme, base, components, utilities;`。
-- shadcn 组件是代码资产，不是黑盒依赖；需要沉淀时放进 `apps/web/components/ui/`，先保持 API、状态和 a11y 行为稳定。
-- Select / Dropdown / Menu 使用 `apps/web/components/ui/*` 的 shadcn-compatible primitives，不在业务页使用原生 `<select>` 或手写 floating dropdown。
-- `text-[13px]` 这类 utility 应该能覆盖 `@layer base` 默认字号；如果没有生效，先检查是否被未分层 CSS 或更具体选择器覆盖。
+- 产品内 UI 规范见 `docs/engineering/DESIGN.md`，共享变量和组件 API 见 `docs/engineering/design-system.md`。
+- Web 和 Cloud 直接使用 `@tapstate-web/ui/<component>` 公共子路径；包内 `src/` 保持组件源目录结构。Base UI 承担底层交互；应用适配器只处理 Formily、i18n 和路由等应用行为。
+- `apps/web/styles/main.css` 和 `apps/cloud/app/styles/main.css` 汇总各自样式入口；组件样式和内容 token 以 `packages/ui` 为准。
+- Tailwind CSS v4 使用 CSS-first token，并显式声明 `@layer theme, base, components, utilities;`。
+- `.app-shell`、`.app-shell__main`、Cloud `.main-surface` 及其主题行为由各应用维护，UI 组件不得重设外层布局和表面。
+- Select / Dropdown / Menu 使用共享 primitive，不在业务页使用原生 `<select>` 或手写 floating dropdown。
+
+UI 规范、组件导出或研究目录变更运行 `pnpm ui:docs:check`。完整源码研究通过 `docs/engineering/ui/README.md` 按任务加载，静态覆盖不能代替页面渲染与交互验收。

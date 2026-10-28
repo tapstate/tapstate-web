@@ -1,5 +1,23 @@
 {
+  "notFound": {
+    "message": "此頁面無法使用。",
+    "back": "返回總覽"
+  },
   "app": {
+    "help": {
+      "openMenu": "說明",
+      "documentation": "文件",
+      "contactSupport": "聯絡客服"
+    },
+    "account": {
+      "openMenu": "帳戶",
+      "profile": "個人資料",
+      "settings": "設定",
+      "appearance": "外觀",
+      "themeLight": "淺色",
+      "themeDark": "深色",
+      "logOut": "登出"
+    },
     "brand": "Tapstate Cloud",
     "console": "Cloud 主控台",
     "organization": "組織",
@@ -11,6 +29,54 @@
     "signedOut": "未登入",
     "toggleTheme": "切換主題"
   },
+  "common": {
+    "close": "關閉",
+    "searchClusters": "搜尋叢集",
+    "searchOrganizations": "搜尋組織"
+  },
+  "organizationList": {
+    "current": "目前組織：",
+    "currentBadge": "目前",
+    "count_one": "{{count}} 個組織",
+    "count_other": "{{count}} 個組織",
+    "clearSearch": "清除組織搜尋",
+    "name": "組織",
+    "slug": "識別名稱",
+    "status": "狀態",
+    "owner": "擁有者",
+    "active": "運作中",
+    "suspended": "已暫停",
+    "noOrganizations": "此帳戶目前沒有可用的組織。",
+    "noMatches": "沒有符合搜尋條件的組織。"
+  },
+  "clusterList": {
+    "description": "管理不同 AWS 區域中的 Tapstate 叢集。",
+    "provision": "建立叢集",
+    "provisionDescription": "建立第一個 Cloud 叢集。",
+    "total": "總計：",
+    "count_one": "{{count}} 個叢集",
+    "count_other": "{{count}} 個叢集",
+    "clearSearch": "清除叢集搜尋",
+    "name": "叢集名稱",
+    "status": "狀態",
+    "runtimeVersion": "執行階段版本",
+    "runtimeVersionNotReported": "未回報",
+    "region": "區域",
+    "plan": "方案",
+    "created": "建立時間",
+    "noClusters": "尚無叢集。",
+    "noMatches": "沒有符合搜尋條件的叢集。",
+    "states": {
+      "PROVISIONING_PENDING": "等待建立",
+      "PROVISIONING": "建立中",
+      "READY": "就緒",
+      "PROVISIONING_FAILED": "建立失敗",
+      "DEGRADED": "效能下降",
+      "DRAINING": "排空中",
+      "DRAINED": "已排空",
+      "TERMINATED": "已終止"
+    }
+  },
   "access": {
     "eyebrow": "安全雲端叢集",
     "title": "請先登入",
@@ -21,11 +87,22 @@
   "auth": {
     "headerNote": "Cloud 叢集存取",
     "eyebrow": "TAPSTATE CLOUD",
-    "loginTitle": "登入叢集",
-    "registerTitle": "建立帳戶",
+    "loginTitle": "登入 Tapstate Cloud",
+    "registerTitle": "建立 Tapstate 帳戶",
     "loginDescription": "使用電子郵件和密碼存取你的組織。",
-    "registerDescription": "建立帳戶並設定你的第一個 Cloud 組織。",
+    "registerDescription": "使用試用碼建立組織，或接受團隊邀請。",
+    "registerDescriptionOpen": "建立帳戶和組織，並驗證電子郵件以繼續。",
+    "registerDescriptionChecking": "選擇一種方式建立帳戶。",
+    "registrationPolicyLoading": "正在檢查註冊方式…",
+    "registrationPolicyUnavailable": "無法載入註冊方式。請重試，或使用邀請連結繼續。",
+    "retryRegistrationPolicy": "重試",
+    "invitationNotice": "此碼只能使用一次，並會在七天後過期。",
+    "changeCode": "更換碼",
+    "invitationLinkLabel": "試用碼或邀請連結",
+    "invitationLinkPlaceholder": "貼上試用碼或連結",
+    "useInvitation": "繼續",
     "nameLabel": "姓名",
+    "organizationNameLabel": "組織名稱",
     "namePlaceholder": "你的姓名",
     "emailLabel": "工作電子郵件",
     "emailPlaceholder": "name@company.com",
@@ -41,13 +118,22 @@
     "continueWithGitHub": "繼續使用 GitHub",
     "signUpWithGoogle": "使用 Google 註冊",
     "signUpWithGitHub": "使用 GitHub 註冊",
-    "oauthComingSoon": "Google 和 GitHub 登入即將推出。",
     "or": "或",
     "working": "請稍候",
-    "noAccount": "還沒有 Tapstate Cloud 帳戶？",
-    "haveAccount": "已經有帳戶？",
-    "goRegister": "建立帳戶",
+    "noAccount": "還沒有帳戶？",
+    "haveAccount": "還沒有 Tapstate Cloud 帳戶？",
+    "haveInviteAccount": "已經有帳戶？",
+    "goRegister": "註冊",
     "goLogin": "登入",
+    "sendCode": "傳送電子郵件驗證碼",
+    "resendCode": "重新傳送驗證碼",
+    "resendCodeIn": "{{count}} 秒後可重新傳送",
+    "sendingCode": "正在傳送驗證碼…",
+    "codeLabel": "電子郵件驗證碼",
+    "codeSentTo": "驗證碼已傳送至 {{email}}，十分鐘後過期。",
+    "invitationRequiredForRegistration": "早期試用期間，請輸入試用碼或組織邀請來建立帳戶。",
+    "organizationNameRequired": "請輸入組織名稱。",
+    "requestCodeFirst": "請先取得電子郵件驗證碼。",
     "securityNote": "工作階段由安全的 HttpOnly Cookie 保護。",
     "footer": "© 2026 Tapstate Systems Inc.",
     "showcase": {
@@ -97,8 +183,81 @@
       "generic": "要求未能完成。請檢查填寫內容後再試一次。",
       "network": "暫時無法連線至 Cloud 服務，請稍後再試。",
       "invalidCredentials": "電子郵件或密碼不正確。",
-      "emailExists": "此電子郵件已註冊，請直接登入。"
+      "emailExists": "此電子郵件已註冊，請直接登入。",
+      "invitationRequired": "請輸入試用碼或組織邀請以建立帳戶。",
+      "invitationRequiredAfterOAuth": "身分驗證已通過。請輸入試用碼或組織邀請，然後繼續使用 Google 或 GitHub。",
+      "organizationNameRequired": "請輸入組織名稱。",
+      "invitationInvalid": "邀請連結無效。",
+      "invitationExpired": "邀請已過期，請向組織擁有者索取新的連結。",
+      "invitationRevoked": "此邀請已撤銷。",
+      "invitationConsumed": "此邀請已使用。",
+      "invitationEmailMismatch": "此邀請發給了另一個電子郵件地址。",
+      "codeInvalid": "無法接受此驗證碼，請檢查後重試。",
+      "codeExpired": "驗證碼已過期，請重新取得。",
+      "codeAttemptsExceeded": "錯誤次數過多，請取得新的驗證碼。",
+      "codeRateLimited": "驗證碼要求次數過多，請稍後再試。",
+      "codeCooldown": "請等待一分鐘後再取得驗證碼。",
+      "emailUnavailable": "暫時無法傳送郵件，請稍後再試。",
+      "providerUnavailable": "此登入服務尚未設定。",
+      "providerEmailUnverified": "請先在身分服務提供者驗證電子郵件。",
+      "providerError": "身分服務提供者無法完成登入。",
+      "oauthCancelled": "登入已取消，你可以再試一次。",
+      "accountLinkRequired": "請先登入現有帳戶，再到設定中連結此登入方式。",
+      "identityConflict": "此身分已連結至另一個帳戶。",
+      "reauthenticationRequired": "請重新登入後再連結身分。"
     }
+  },
+  "organizations": {
+    "invitationsTitle": "組織邀請",
+    "invitationsDescription": "建立一次性邀請連結。收到連結的人可在過期前使用一次。",
+    "inviteEmailPlaceholder": "受邀者電子郵件（選填）",
+    "createInvite": "建立邀請",
+    "creatingInvite": "正在建立…",
+    "inviteCreatedNotice": "請立即複製此連結。邀請權杖只會顯示一次。",
+    "inviteLink": "邀請連結",
+    "copyInvite": "複製連結",
+    "copied": "已複製",
+    "invitedEmail": "電子郵件",
+    "inviteExpires": "到期時間",
+    "inviteStatus": "狀態",
+    "inviteActions": "操作",
+    "anyEmail": "不限電子郵件",
+    "loadingInvites": "正在載入邀請…",
+    "noInvites": "目前沒有邀請。",
+    "revokingInvite": "正在撤銷…",
+    "revokeInvite": "撤銷",
+    "inviteLoadError": "無法載入邀請。",
+    "inviteCreateError": "無法建立邀請。",
+    "inviteRevokeError": "無法撤銷邀請。",
+    "ownerOnly": "只有組織擁有者可以管理邀請。",
+    "copyError": "無法複製連結，請手動選取並複製。",
+    "status": {
+      "active": "有效",
+      "revoked": "已撤銷",
+      "consumed": "已使用",
+      "expired": "已過期"
+    }
+  },
+  "settings": {
+    "tabAccount": "個人帳戶",
+    "tabOrganization": "組織與團隊",
+    "linkedIdentitiesTitle": "登入方式",
+    "linkedIdentitiesDescription": "重新驗證 Cloud 帳戶後即可連結 Google 或 GitHub。電子郵件相同不會自動連結。",
+    "provider": {
+      "google": "Google",
+      "github": "GitHub"
+    },
+    "loadingIdentities": "正在載入已連結身分…",
+    "identityLinked": "已連結：{{email}}",
+    "identityNotLinked": "尚未連結",
+    "linkIdentity": "連結帳戶",
+    "linkingIdentity": "正在開啟身分服務…",
+    "reauthenticationPasswordLabel": "目前密碼（近期登入後可留空）",
+    "reauthenticationPasswordPlaceholder": "輸入目前密碼",
+    "reauthenticationHint": "沒有密碼的帳戶請在五分鐘內重新登入，然後開始連結。",
+    "identityLoadError": "無法載入已連結身分。",
+    "reauthenticationError": "連結身分前請先重新驗證 Cloud 帳戶。",
+    "identityLinkStartError": "無法開始連結此登入方式，請重試。"
   },
   "onboarding": {
     "eyebrow": "首次設定",
@@ -109,9 +268,9 @@
     "organizationPlaceholder": "範例資料平台",
     "slugHint": "請使用英文字母和數字，以便建立唯一的組織網址。",
     "newClusterLabel": "叢集名稱",
-    "clusterNamePlaceholder": "acme-stream-2",
+    "clusterNamePlaceholder": "acme-data-2",
     "clusterNameHint": "請使用英文字母和數字，並以連字號分隔。",
-    "regionLabel": "開放區域",
+    "regionLabel": "區域",
     "openRegions": "可用雲端區域",
     "available": "可用",
     "loadingRegions": "正在載入可用區域…",
@@ -121,6 +280,14 @@
     "clusterLabel": "第一個叢集",
     "regionReadonly": "叢集建立後不能變更區域。",
     "regionDefault": "區域預設組態",
+    "planLabel": "執行個體規格",
+    "planHint": "選擇規格後繼續付款。",
+    "loadingPlans": "正在載入規格…",
+    "plansError": "規格與價格載入失敗。",
+    "noPlans": "目前沒有可用的規格。",
+    "continueToPayment": "繼續前往安全付款",
+    "startingCheckout": "正在開啟安全付款…",
+    "checkoutError": "訂閱未能啟動，請檢查網路後重試。",
     "clusterPreviewEmpty": "輸入組織名稱後自動產生",
     "clusterPendingNote": "送出後將開始叢集供給。",
     "createAction": "建立組織和叢集",
@@ -161,6 +328,7 @@
     "resourceStateLabel": "資源狀態",
     "openingCluster": "正在開啟叢集主控台…",
     "openCluster": "開啟叢集主控台",
+    "viewSubscriptions": "查看訂閱",
     "failedTitle": "供給已中斷",
     "failedBadge": "部署已停止",
     "failedDescription": "Cloud 回報叢集供給失敗。",
@@ -185,6 +353,230 @@
     "cancelSubscriptionError": "無法確認訂閱取消結果。請先查看目前部署狀態，再修改設定。",
     "cancelStatusError": "無法重新整理目前部署狀態，尚未送出取消請求；請重試。",
     "footnote": "叢集會在背景建立。主控台將顯示 Cloud 傳回的實際狀態。"
+  },
+  "clusters": {
+    "egress": {
+      "sourceAllowlistHint": "位址已穩定 · 可用於資料來源存取白名單。重新開啟 Cluster Console 後，資料來源設定會顯示此位址。"
+    }
+  },
+  "billing": {
+    "title": "方案與帳單",
+    "subtitle": "管理 {{organization}} 的訂閱。",
+    "organizationFallback": "目前組織",
+    "loading": "正在載入方案…",
+    "loadError": "方案載入失敗。",
+    "retry": "重試",
+    "noPlans": "目前沒有可購買的方案。",
+    "plansLabel": "可選方案",
+    "specLine": "{{cpu}} 核 · {{memory}} GB 記憶體 · {{storage}} GB 託管儲存",
+    "perMonth": "/ 月",
+    "trialBadge": "{{count}} 天免費試用",
+    "noTrial": "無試用",
+    "trialChargeNote": "試用期 {{count}} 天結束前不會扣款。",
+    "noTrialChargeNote": "訂閱後立即收取首月費用。",
+    "planDescription": "面向生產資料管道的全託管 Tapstate 叢集。",
+    "checkoutNote": "付款、3D Secure 與帳單資訊均在 Stripe 安全付款頁完成。",
+    "consent": "我授權 Tapstate Cloud 就本訂閱扣款，並在每個計費週期結束時自動續訂，直到我取消訂閱。",
+    "selectedSummary": "{{plan}} · {{price}} / 月",
+    "selectPrompt": "請選擇一個方案繼續。",
+    "subscribeAction": "前往安全付款",
+    "subscribing": "正在開啟 Stripe Checkout…",
+    "ownerOnly": "僅組織擁有者可以變更訂閱。",
+    "pendingNotice": "上一筆結帳仍在等待付款。重新發起結帳將取代該記錄。",
+    "planUnknown": "方案資訊暫不可用",
+    "priceLine": "{{price}} / 月",
+    "refresh": "重新整理",
+    "provisioning": "正在開通執行個體",
+    "autoRenew": "自動續訂",
+    "autoRenewOn": "已開啟",
+    "autoRenewOff": "已關閉",
+    "periodLabel": "目前週期",
+    "clusterLabel": "叢集",
+    "subscriptionIdLabel": "訂閱",
+    "resourcesReady": "全部資源已就緒。",
+    "cancelPendingNote": "自動續訂已關閉，執行個體可使用至 {{date}}。",
+    "pastDueNote": "最近一次扣款失敗。請在 Stripe 更新付款方式以保留訂閱。",
+    "awaitingPaymentNote": "尚未完成結帳。請在 Stripe 完成付款以啟用訂閱。",
+    "choosePlan": "選擇方案",
+    "cancelAction": "取消訂閱",
+    "cancelTitle": "確認取消訂閱？",
+    "cancelPlanLine": "{{plan}}",
+    "cancelBody": "訂閱將於 {{date}} 結束。到期後執行個體會被釋放，所有資料將被刪除。",
+    "cancelWarning": "取消只會停止自動續訂，執行個體在目前週期結束前仍可使用。",
+    "cancelKeep": "保留訂閱",
+    "cancelConfirm": "確認取消",
+    "cancelling": "正在取消…",
+    "errors": {
+      "network": "無法連線 Cloud 服務，請稍後重試。",
+      "specNotFound": "此方案已不可用，請選擇其他方案。",
+      "pricingNotConfigured": "此方案尚未設定價格，請選擇其他方案或聯絡支援。",
+      "alreadyActive": "此組織已有進行中的訂閱，請查看其狀態。",
+      "pendingPayment": "付款仍在處理中，請完成付款後再開通執行個體。",
+      "notActive": "訂閱未生效，無法執行此操作。",
+      "cannotCancel": "目前狀態的訂閱無法取消。",
+      "orgLimitReached": "此帳號已達到組織數量上限。",
+      "generic": "請求未能完成，請重試。",
+      "cancelFailed": "取消未能完成，請重試。"
+    },
+    "status": {
+      "TRIAL": "試用中",
+      "ACTIVE": "生效中",
+      "PENDING_CANCEL": "待取消",
+      "PENDING_PAYMENT": "待付款",
+      "PAST_DUE": "付款失敗",
+      "CANCELLED": "已結束",
+      "UNKNOWN": "未知狀態"
+    },
+    "period": {
+      "trialEnds": "試用將於 {{date}} 結束",
+      "nextBilled": "下次扣款 {{date}}",
+      "ends": "將於 {{date}} 結束",
+      "pastDue": "付款失敗",
+      "awaitingPayment": "等待付款",
+      "ended": "已結束"
+    },
+    "success": {
+      "title": "結帳完成",
+      "subtitle": "正在啟用訂閱並建立執行個體。",
+      "stepPayment": "付款已確認",
+      "stepProvisioning": "正在開通執行個體（{{percent}}%）",
+      "stepReady": "執行個體已就緒",
+      "provisioningNote": "正在建立叢集 {{cluster}}，可能需要幾分鐘。",
+      "provisioningNotePending": "正在準備執行個體，可能需要幾分鐘。",
+      "resolving": "正在向 Stripe 確認付款…",
+      "awaitingPayment": "等待 Stripe 確認付款…",
+      "readyNote": "叢集 {{cluster}} 已就緒。",
+      "readyNoteGeneric": "執行個體已就緒。",
+      "openClusters": "開啟叢集",
+      "viewSubscription": "查看訂閱",
+      "ended": "訂閱在啟用前已結束，請重新選擇方案。",
+      "unavailable": "此訂閱目前無法開通執行個體，請查看訂閱狀態。",
+      "error": "無法確認本次結帳。請重新整理訂閱狀態或聯絡支援。"
+    },
+    "cancelled": {
+      "title": "付款已取消",
+      "subtitle": "本次未產生任何扣款。",
+      "body": "你可以返回方案頁重新發起結帳。",
+      "back": "返回方案"
+    }
+  },
+  "events": {
+    "title": "告警",
+    "subtitle": "{{organization}} 的關鍵事件與告警投遞。",
+    "organizationFallback": "你的組織",
+    "tabEvents": "事件",
+    "tabPolicies": "告警策略",
+    "tabDeliveries": "投遞歷史",
+    "policySubtitle": "{{organization}} 的郵件告警規則。",
+    "deliverySubtitle": "{{organization}} 的通知投遞記錄。",
+    "loading": "載入中…",
+    "loadError": "無法載入此檢視。",
+    "retry": "重新整理",
+    "empty": "尚無內容。",
+    "filterType": "事件類型",
+    "filterTypePlaceholder": "全部事件類型",
+    "filterSeverity": "嚴重級",
+    "allSeverities": "全部嚴重級",
+    "severity": {
+      "INFO": "資訊",
+      "WARNING": "警告",
+      "CRITICAL": "嚴重"
+    },
+    "columns": {
+      "time": "時間",
+      "type": "類型",
+      "severity": "嚴重級",
+      "subject": "主旨",
+      "actor": "操作者",
+      "source": "來源",
+      "recipient": "收件人",
+      "status": "狀態",
+      "attempts": "嘗試次數",
+      "lastError": "最後錯誤",
+      "recipients": "收件人",
+      "cooldown": "冷卻",
+      "quietHours": "靜默時段",
+      "enabled": "啟用"
+    },
+    "status": {
+      "PENDING": "待傳送",
+      "SENDING": "傳送中",
+      "SENT": "已傳送",
+      "FAILED": "失敗",
+      "DEAD": "已終止",
+      "SUPPRESSED": "已抑制"
+    },
+    "actions": {
+      "create": "新增策略",
+      "save": "儲存",
+      "edit": "編輯",
+      "delete": "刪除",
+      "close": "關閉"
+    },
+    "policyForm": {
+      "name": "名稱",
+      "namePlaceholder": "關鍵 Pipeline 告警",
+      "eventTypes": "事件類型（逗號分隔）",
+      "eventTypesHint": "使用 * 比對全部事件，或使用 pipeline.* 這樣的前綴",
+      "minSeverity": "最低嚴重級",
+      "recipients": "收件人（逗號分隔的電子郵件，可包含組織外地址）",
+      "cooldown": "冷卻時間（秒）",
+      "quietStart": "靜默開始（HH:mm）",
+      "quietEnd": "靜默結束（HH:mm）",
+      "timezone": "時區",
+      "enabled": "啟用"
+    },
+    "validation": {
+      "name": "名稱不能為空。",
+      "recipients": "至少需要一位收件人。",
+      "quietHours": "靜默開始與結束需同時填寫，格式為 HH:mm。"
+    },
+    "pagination": {
+      "previous": "上一頁",
+      "next": "下一頁",
+      "page": "第 {{page}} 頁",
+      "pageOf": "第 {{page}} / {{pages}} 頁"
+    },
+    "detailTitle": "事件詳情",
+    "detail": {
+      "id": "事件 ID"
+    },
+    "payload": "承載資料",
+    "noPayload": "未記錄承載資料。",
+    "adminOnly": "只有組織管理員可以管理告警策略。",
+    "deleteConfirm": "刪除此告警策略？",
+    "errors": {
+      "generic": "請求無法完成。"
+    }
+  },
+  "sections": {
+    "overview": {
+      "title": "總覽",
+      "description": "查看 Cloud 組織和代管叢集摘要。"
+    },
+    "clusters": {
+      "title": "叢集",
+      "description": "查看叢集狀態並開啟獲准存取的 Cluster Console。"
+    },
+    "alerts": {
+      "title": "告警",
+      "description": "監視關鍵事件、告警策略與通知投遞。"
+    },
+    "organizations": {
+      "title": "組織",
+      "description": "管理組織成員和存取權限。"
+    },
+    "billing": {
+      "cancelWarning": "取消後將終止對應 Cluster 並清理其資源，此操作無法復原。",
+      "title": "方案與帳單",
+      "description": "查看目前組織的資源用量。"
+    },
+    "settings": {
+      "title": "設定",
+      "description": "管理組織和帳戶偏好設定。"
+    },
+    "notConnectedTitle": "Cloud 服務尚未接通",
+    "notConnectedDescription": "此頁面屬於受保護路由。完成登入和 API 接線後，才會顯示 Cloud 資料。"
   },
   "support": {
     "nav": "支援工單",
@@ -249,21 +641,5 @@
       "notFound": "找不到此工單。請重新整理「我的工單」查看最新清單。{{opId}}",
       "submissionUncertain": "Cloud 無法確認工單是否建立成功。請先檢查「我的工單」，再提交新要求。{{opId}}"
     }
-  },
-  "sections": {
-    "overview": { "title": "總覽", "description": "查看 Cloud 組織和代管叢集摘要。" },
-    "clusters": {
-      "title": "叢集",
-      "description": "查看叢集狀態並開啟獲准存取的 Cluster Console。"
-    },
-    "organizations": { "title": "組織", "description": "管理組織成員和存取權限。" },
-    "billing": {
-      "cancelWarning": "取消後將終止對應 Cluster 並清理其資源，此操作無法復原。",
-      "title": "用量與帳單",
-      "description": "查看目前組織的資源用量。"
-    },
-    "settings": { "title": "設定", "description": "管理組織和帳戶偏好設定。" },
-    "notConnectedTitle": "Cloud 服務尚未接通",
-    "notConnectedDescription": "此頁面屬於受保護路由。完成登入和 API 接線後，才會顯示 Cloud 資料。"
   }
 }

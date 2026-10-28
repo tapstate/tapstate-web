@@ -31,6 +31,8 @@ jobs:
         run: pnpm typecheck
       - name: lint
         run: pnpm lint
+      - name: verify UI documentation and source coverage
+        run: pnpm ui:docs:check
       - name: verify translations
         run: pnpm --filter web i18n:check
       - name: verify Cloud translations

@@ -1,11 +1,8 @@
-import { createFileRoute } from '@tanstack/react-router'
-
-import { PipelinesPage } from '@/features/pipelines/pages/pipelines-page'
+import { createFileRoute, Outlet } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/_authenticated/pipelines')({
-  component: PipelinesRouteComponent,
+  // Lets other pages open the pipeline creation flow directly.
+  validateSearch: (search: Record<string, unknown>): { create?: true } =>
+    search.create === true || search.create === 'true' ? { create: true } : {},
+  component: () => <Outlet />,
 })
-
-function PipelinesRouteComponent() {
-  return <PipelinesPage />
-}

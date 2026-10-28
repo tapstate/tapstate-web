@@ -7,12 +7,22 @@ import {
   type Organization,
   type Subscription,
 } from '../../service/cloud-api'
+import { newClientRequestId, rememberCheckoutAttempt } from '../billing/checkout-attempt'
 
 export interface OnboardingWorkspace {
   organization: Organization
   subscription: Subscription
   cluster: Cluster
 }
+
+export interface OnboardingCheckout {
+  checkoutUrl: string
+  organization: Organization
+  specKey: string
+  subscriptionId: string
+}
+
+export type OnboardingStart = OnboardingWorkspace | OnboardingCheckout
 
 function subscriptionClusterId(subscription: Subscription) {
   return (
@@ -48,26 +58,28 @@ async function findExistingWorkspace(
 }
 
 export function suggestedClusterName(organization: Organization, clusters: Cluster[]) {
-  const base = `${organization.slug}-stream`.slice(0, 100)
+  const base = organization.slug.slice(0, 100)
   const names = new Set(clusters.map((cluster) => cluster.name.toLowerCase()))
   if (!names.has(base.toLowerCase())) return base
 
   for (let suffix = 2; suffix < 1000; suffix += 1) {
-    const candidate = `${organization.slug}-stream-${suffix}`.slice(0, 100)
+    const candidate = `${organization.slug}-${suffix}`.slice(0, 100)
     if (!names.has(candidate.toLowerCase())) return candidate
   }
 
-  return `${organization.slug.slice(0, 88)}-stream-${Date.now().toString(36)}`
+  return `${organization.slug.slice(0, 88)}-${Date.now().toString(36)}`
 }
 
 export async function loadOnboardingWorkspace(
   organizationId: string,
   subscriptionId: string,
 ): Promise<OnboardingWorkspace> {
-  const [organization, subscription] = await Promise.all([
-    cloudApi.organization(organizationId),
+  const [organizations, subscription] = await Promise.all([
+    cloudApi.organizations(),
     cloudApi.subscriptionById(organizationId, subscriptionId),
   ])
+  const organization = organizations.find((item) => item.id === organizationId)
+  if (!organization) throw new CloudApiError('Organization not found.', 404)
   const clusterId = subscriptionClusterId(subscription)
   if (!clusterId) {
     throw new CloudApiError('Subscription exists, but its Cluster record is not visible yet.', 202)
@@ -132,40 +144,36 @@ async function findOrCreateOrganization(input: OnboardingInput) {
   return organization
 }
 
-export async function createOnboardingWorkspace(
+export async function startOnboardingSubscription(
   input: OnboardingInput,
   existingOrganization?: Organization | null,
   onOrganizationResolved?: (organization: Organization) => void,
-): Promise<OnboardingWorkspace> {
+): Promise<OnboardingStart> {
   const organization = existingOrganization ?? (await findOrCreateOrganization(input))
   onOrganizationResolved?.(organization)
   const existing = await findExistingWorkspace(organization, input)
   if (existing) return existing
 
+  const clientRequestId = newClientRequestId()
   try {
-    const subscription = await cloudApi.createSubscription(organization.id, {
+    const session = await cloudApi.createCheckout(organization.id, {
+      specKey: input.specKey,
+      clientRequestId,
+    })
+    rememberCheckoutAttempt({
+      orgId: organization.id,
+      subscriptionId: session.subscriptionId,
+      specKey: input.specKey,
+      clientRequestId,
+      startedAt: new Date().toISOString(),
       region: input.region.code,
       clusterName: input.clusterName,
-      specKey: input.region.defaultSpecKey,
     })
-    const clusterId = subscriptionClusterId(subscription)
-    const cluster = clusterId
-      ? await cloudApi.cluster(organization.id, clusterId)
-      : (await cloudApi.clusters(organization.id)).find(
-          (item) => item.region === input.region.code && item.name === input.clusterName,
-        )
-
-    if (!cluster) {
-      throw new CloudApiError(
-        'Subscription was created, but its Cluster record is not visible yet.',
-        202,
-      )
-    }
-
     return {
+      checkoutUrl: session.checkoutUrl,
       organization,
-      subscription: { ...subscription, clusterId: subscription.clusterId ?? cluster.id },
-      cluster,
+      specKey: input.specKey,
+      subscriptionId: session.subscriptionId,
     }
   } catch (error) {
     if (!(error instanceof CloudApiError) || error.status !== 409) throw error

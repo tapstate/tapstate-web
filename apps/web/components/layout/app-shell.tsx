@@ -1,7 +1,5 @@
 import type { ReactNode } from 'react'
 
-import { AskTapstate } from '@/features/ask-tapstate/ask-tapstate'
-
 import { AppSidebar } from './app-sidebar'
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -12,8 +10,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="app-shell__main">
         <div className="app-shell__content">{children}</div>
       </main>
-
-      <AskTapstate />
     </div>
   )
 }

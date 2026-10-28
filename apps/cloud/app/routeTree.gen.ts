@@ -13,11 +13,17 @@ import { Route as ConsoleRouteImport } from './routes/_console'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as ConsoleIndexRouteImport } from './routes/_console.index'
+import { Route as ConsoleAlertPoliciesRouteImport } from './routes/_console.alert-policies'
+import { Route as ConsoleAlertsRouteImport } from './routes/_console.alerts'
 import { Route as ConsoleBillingRouteImport } from './routes/_console.billing'
 import { Route as ConsoleClustersRouteImport } from './routes/_console.clusters'
+import { Route as ConsoleDeliveriesRouteImport } from './routes/_console.deliveries'
+import { Route as ConsoleEventsRouteImport } from './routes/_console.events'
 import { Route as ConsoleOrganizationsRouteImport } from './routes/_console.organizations'
 import { Route as ConsoleSettingsRouteImport } from './routes/_console.settings'
 import { Route as ConsoleSupportRouteImport } from './routes/_console.support'
+import { Route as ConsoleCheckoutCancelRouteImport } from './routes/_console.checkout.cancel'
+import { Route as ConsoleCheckoutSuccessRouteImport } from './routes/_console.checkout.success'
 
 const ConsoleRoute = ConsoleRouteImport.update({
   id: '/_console',
@@ -38,6 +44,16 @@ const ConsoleIndexRoute = ConsoleIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ConsoleRoute,
 } as any)
+const ConsoleAlertPoliciesRoute = ConsoleAlertPoliciesRouteImport.update({
+  id: '/alert-policies',
+  path: '/alert-policies',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsoleAlertsRoute = ConsoleAlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
+  getParentRoute: () => ConsoleRoute,
+} as any)
 const ConsoleBillingRoute = ConsoleBillingRouteImport.update({
   id: '/billing',
   path: '/billing',
@@ -46,6 +62,16 @@ const ConsoleBillingRoute = ConsoleBillingRouteImport.update({
 const ConsoleClustersRoute = ConsoleClustersRouteImport.update({
   id: '/clusters',
   path: '/clusters',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsoleDeliveriesRoute = ConsoleDeliveriesRouteImport.update({
+  id: '/deliveries',
+  path: '/deliveries',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsoleEventsRoute = ConsoleEventsRouteImport.update({
+  id: '/events',
+  path: '/events',
   getParentRoute: () => ConsoleRoute,
 } as any)
 const ConsoleOrganizationsRoute = ConsoleOrganizationsRouteImport.update({
@@ -63,38 +89,66 @@ const ConsoleSupportRoute = ConsoleSupportRouteImport.update({
   path: '/support',
   getParentRoute: () => ConsoleRoute,
 } as any)
+const ConsoleCheckoutCancelRoute = ConsoleCheckoutCancelRouteImport.update({
+  id: '/checkout/cancel',
+  path: '/checkout/cancel',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsoleCheckoutSuccessRoute = ConsoleCheckoutSuccessRouteImport.update({
+  id: '/checkout/success',
+  path: '/checkout/success',
+  getParentRoute: () => ConsoleRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof ConsoleIndexRoute
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/alert-policies': typeof ConsoleAlertPoliciesRoute
+  '/alerts': typeof ConsoleAlertsRoute
   '/billing': typeof ConsoleBillingRoute
   '/clusters': typeof ConsoleClustersRoute
+  '/deliveries': typeof ConsoleDeliveriesRoute
+  '/events': typeof ConsoleEventsRoute
   '/organizations': typeof ConsoleOrganizationsRoute
   '/settings': typeof ConsoleSettingsRoute
   '/support': typeof ConsoleSupportRoute
+  '/checkout/cancel': typeof ConsoleCheckoutCancelRoute
+  '/checkout/success': typeof ConsoleCheckoutSuccessRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/alert-policies': typeof ConsoleAlertPoliciesRoute
+  '/alerts': typeof ConsoleAlertsRoute
   '/billing': typeof ConsoleBillingRoute
   '/clusters': typeof ConsoleClustersRoute
+  '/deliveries': typeof ConsoleDeliveriesRoute
+  '/events': typeof ConsoleEventsRoute
   '/organizations': typeof ConsoleOrganizationsRoute
   '/settings': typeof ConsoleSettingsRoute
   '/support': typeof ConsoleSupportRoute
   '/': typeof ConsoleIndexRoute
+  '/checkout/cancel': typeof ConsoleCheckoutCancelRoute
+  '/checkout/success': typeof ConsoleCheckoutSuccessRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_console': typeof ConsoleRouteWithChildren
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/_console/alert-policies': typeof ConsoleAlertPoliciesRoute
+  '/_console/alerts': typeof ConsoleAlertsRoute
   '/_console/billing': typeof ConsoleBillingRoute
   '/_console/clusters': typeof ConsoleClustersRoute
+  '/_console/deliveries': typeof ConsoleDeliveriesRoute
+  '/_console/events': typeof ConsoleEventsRoute
   '/_console/organizations': typeof ConsoleOrganizationsRoute
   '/_console/settings': typeof ConsoleSettingsRoute
   '/_console/support': typeof ConsoleSupportRoute
   '/_console/': typeof ConsoleIndexRoute
+  '/_console/checkout/cancel': typeof ConsoleCheckoutCancelRoute
+  '/_console/checkout/success': typeof ConsoleCheckoutSuccessRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -102,32 +156,50 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/onboarding'
+    | '/alert-policies'
+    | '/alerts'
     | '/billing'
     | '/clusters'
+    | '/deliveries'
+    | '/events'
     | '/organizations'
     | '/settings'
     | '/support'
+    | '/checkout/cancel'
+    | '/checkout/success'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
     | '/onboarding'
+    | '/alert-policies'
+    | '/alerts'
     | '/billing'
     | '/clusters'
+    | '/deliveries'
+    | '/events'
     | '/organizations'
     | '/settings'
     | '/support'
     | '/'
+    | '/checkout/cancel'
+    | '/checkout/success'
   id:
     | '__root__'
     | '/_console'
     | '/auth'
     | '/onboarding'
+    | '/_console/alert-policies'
+    | '/_console/alerts'
     | '/_console/billing'
     | '/_console/clusters'
+    | '/_console/deliveries'
+    | '/_console/events'
     | '/_console/organizations'
     | '/_console/settings'
     | '/_console/support'
     | '/_console/'
+    | '/_console/checkout/cancel'
+    | '/_console/checkout/success'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -166,6 +238,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleIndexRouteImport
       parentRoute: typeof ConsoleRoute
     }
+    '/_console/alert-policies': {
+      id: '/_console/alert-policies'
+      path: '/alert-policies'
+      fullPath: '/alert-policies'
+      preLoaderRoute: typeof ConsoleAlertPoliciesRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/alerts': {
+      id: '/_console/alerts'
+      path: '/alerts'
+      fullPath: '/alerts'
+      preLoaderRoute: typeof ConsoleAlertsRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
     '/_console/billing': {
       id: '/_console/billing'
       path: '/billing'
@@ -178,6 +264,20 @@ declare module '@tanstack/react-router' {
       path: '/clusters'
       fullPath: '/clusters'
       preLoaderRoute: typeof ConsoleClustersRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/deliveries': {
+      id: '/_console/deliveries'
+      path: '/deliveries'
+      fullPath: '/deliveries'
+      preLoaderRoute: typeof ConsoleDeliveriesRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/events': {
+      id: '/_console/events'
+      path: '/events'
+      fullPath: '/events'
+      preLoaderRoute: typeof ConsoleEventsRouteImport
       parentRoute: typeof ConsoleRoute
     }
     '/_console/organizations': {
@@ -201,25 +301,51 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleSupportRouteImport
       parentRoute: typeof ConsoleRoute
     }
+    '/_console/checkout/cancel': {
+      id: '/_console/checkout/cancel'
+      path: '/checkout/cancel'
+      fullPath: '/checkout/cancel'
+      preLoaderRoute: typeof ConsoleCheckoutCancelRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/checkout/success': {
+      id: '/_console/checkout/success'
+      path: '/checkout/success'
+      fullPath: '/checkout/success'
+      preLoaderRoute: typeof ConsoleCheckoutSuccessRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
   }
 }
 
 interface ConsoleRouteChildren {
+  ConsoleAlertPoliciesRoute: typeof ConsoleAlertPoliciesRoute
+  ConsoleAlertsRoute: typeof ConsoleAlertsRoute
   ConsoleBillingRoute: typeof ConsoleBillingRoute
   ConsoleClustersRoute: typeof ConsoleClustersRoute
+  ConsoleDeliveriesRoute: typeof ConsoleDeliveriesRoute
+  ConsoleEventsRoute: typeof ConsoleEventsRoute
   ConsoleOrganizationsRoute: typeof ConsoleOrganizationsRoute
   ConsoleSettingsRoute: typeof ConsoleSettingsRoute
   ConsoleSupportRoute: typeof ConsoleSupportRoute
   ConsoleIndexRoute: typeof ConsoleIndexRoute
+  ConsoleCheckoutCancelRoute: typeof ConsoleCheckoutCancelRoute
+  ConsoleCheckoutSuccessRoute: typeof ConsoleCheckoutSuccessRoute
 }
 
 const ConsoleRouteChildren: ConsoleRouteChildren = {
+  ConsoleAlertPoliciesRoute: ConsoleAlertPoliciesRoute,
+  ConsoleAlertsRoute: ConsoleAlertsRoute,
   ConsoleBillingRoute: ConsoleBillingRoute,
   ConsoleClustersRoute: ConsoleClustersRoute,
+  ConsoleDeliveriesRoute: ConsoleDeliveriesRoute,
+  ConsoleEventsRoute: ConsoleEventsRoute,
   ConsoleOrganizationsRoute: ConsoleOrganizationsRoute,
   ConsoleSettingsRoute: ConsoleSettingsRoute,
   ConsoleSupportRoute: ConsoleSupportRoute,
   ConsoleIndexRoute: ConsoleIndexRoute,
+  ConsoleCheckoutCancelRoute: ConsoleCheckoutCancelRoute,
+  ConsoleCheckoutSuccessRoute: ConsoleCheckoutSuccessRoute,
 }
 
 const ConsoleRouteWithChildren =

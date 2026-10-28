@@ -29,6 +29,39 @@ export interface Organization {
   status?: 'ACTIVE' | 'SUSPENDED' | string
 }
 
+export interface OrganizationInvitation {
+  id: string
+  orgId: string
+  invitedEmail?: string | null
+  createdAt: string
+  expiresAt: string
+  status: 'active' | 'revoked' | 'consumed' | 'expired'
+}
+
+export interface CreatedOrganizationInvitation {
+  invitation: OrganizationInvitation
+  token: string
+}
+
+export interface LinkedIdentity {
+  provider: 'google' | 'github'
+  email?: string | null
+  linkedAt: string
+}
+
+export interface EmailRegistrationInput {
+  email: string
+  invitationToken?: string
+  code: string
+  password: string
+  displayName?: string
+  organizationName?: string
+}
+
+export interface RegistrationPolicy {
+  trialCodeRequired: boolean
+}
+
 export interface Region {
   code: string
   name: string
@@ -75,14 +108,58 @@ export interface Cluster {
   lastHeartbeatAt?: string | null
   createdAt?: string
   readyAt?: string | null
+  runtimeVersion?: string | null
+}
+
+export interface Spec {
+  key: string
+  displayName: string
+  cpuCores: number
+  memoryGb: number
+  trialDays: number
+  mdbSizeGb: number
+  currency: string
+  unitPriceCents: number
+  stripePriceId: string
+  paymentMethod: string
+}
+
+export interface CheckoutSession {
+  subscriptionId: string
+  status: string
+  checkoutUrl: string
+}
+
+export interface CreateCheckoutInput {
+  specKey: string
+  clientRequestId: string
+}
+
+export interface FinalizeProvisioningInput {
+  region: string
+  clusterName: string
+}
+
+export interface DeploymentProgressSummary {
+  overallStatus: string
+  percent: number
 }
 
 export interface Subscription {
   id: string
   orgId: string
-  status: 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELLED' | string
+  status:
+    | 'PENDING_PAYMENT'
+    | 'TRIAL'
+    | 'ACTIVE'
+    | 'PAST_DUE'
+    | 'PENDING_CANCEL'
+    | 'CANCELLED'
+    | string
   provisioningAllowed: boolean
   resourceState?: 'PROVISIONING' | 'READY' | string | null
+  installProgress?: DeploymentProgressSummary | null
+  uninstallProgress?: DeploymentProgressSummary | null
   resourcesReadyAt?: string | null
   clusterId?: string | null
   mdbAllocationId?: string | null
@@ -114,6 +191,102 @@ export interface DeploymentProgress {
     status: 'PENDING' | 'RUNNING' | 'RETRYING' | 'SUCCEEDED' | 'FAILED' | 'SKIPPED'
     message?: string | null
   }>
+}
+
+export type EventSeverity = 'INFO' | 'WARNING' | 'CRITICAL'
+
+export interface PlatformEvent {
+  id: string
+  orgId?: string | null
+  source: string
+  type: string
+  severity: EventSeverity
+  subject: string
+  actor?: string | null
+  occurredAt: string
+  dedupeKey: string
+  schemaVersion: number
+  payload?: Record<string, unknown> | null
+  createdAt?: string
+}
+
+export interface EventPage {
+  items: PlatformEvent[]
+  nextCursor?: string | null
+}
+
+export interface EventFilters {
+  type?: string
+  severity?: EventSeverity | ''
+  from?: string
+  to?: string
+  limit?: number
+  cursor?: string
+}
+
+export interface AlertPolicy {
+  id: string
+  name: string
+  enabled: boolean
+  eventTypes: string[]
+  minSeverity: EventSeverity
+  recipients: string[]
+  channel: string
+  cooldownSeconds: number
+  quietHoursStart?: string | null
+  quietHoursEnd?: string | null
+  timezone: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface AlertPolicyInput {
+  name: string
+  enabled: boolean
+  eventTypes: string[]
+  minSeverity: EventSeverity
+  recipients: string[]
+  channel: 'EMAIL'
+  cooldownSeconds: number
+  quietHoursStart?: string | null
+  quietHoursEnd?: string | null
+  timezone: string
+}
+
+export interface AlertRecord {
+  id: string
+  orgId?: string | null
+  policyId?: string | null
+  policyName?: string | null
+  eventId?: string | null
+  eventType: string
+  severity: EventSeverity
+  subject: string
+  actor?: string | null
+  status: 'PENDING' | 'SUPPRESSED'
+  createdAt?: string
+}
+
+export interface NotificationDelivery {
+  id: string
+  orgId?: string | null
+  alertId?: string | null
+  channel: string
+  recipient: string
+  subject: string
+  status: 'PENDING' | 'SENDING' | 'SENT' | 'FAILED' | 'DEAD'
+  attempts: number
+  lastError?: string | null
+  nextAttemptAt?: string | null
+  createdAt?: string
+  sentAt?: string | null
+}
+
+export interface NotificationDeliveryPage {
+  items: NotificationDelivery[]
+  page: number
+  size: number
+  total: number
 }
 
 export interface RegisterInput {
@@ -242,14 +415,68 @@ function jsonBody(body: unknown): Pick<RequestInit, 'body' | 'method'> {
 }
 
 const post: Pick<RequestInit, 'method'> = { method: 'POST' }
+const putJson = (body: unknown): Pick<RequestInit, 'method' | 'body'> => ({
+  method: 'PUT',
+  body: JSON.stringify(body),
+})
+const deleteRequest: Pick<RequestInit, 'method'> = { method: 'DELETE' }
 const apiPrefix = '/v1/api'
 
 export const cloudApi = {
-  register: (input: RegisterInput) =>
-    request<RegisteredUser>(`${apiPrefix}/auth/register`, jsonBody(input)),
   login: (input: LoginInput) => request<LoginResult>(`${apiPrefix}/auth/login`, jsonBody(input)),
+  registrationPolicy: () => request<RegistrationPolicy>(`${apiPrefix}/auth/registration-policy`),
+  requestEmailCode: (email: string, invitationToken: string | null) =>
+    request<void>(
+      `${apiPrefix}/auth/email/code`,
+      jsonBody({ email, ...(invitationToken ? { invitationToken } : {}) }),
+    ),
+  registerWithEmailCode: (input: EmailRegistrationInput) =>
+    request<LoginResult>(`${apiPrefix}/auth/email/register`, jsonBody(input)),
+  accessType: (code: string) =>
+    request<{ type: 'trial' | 'organization' }>(`${apiPrefix}/auth/access`, jsonBody({ code })),
+  acceptInvitation: (invitationToken: string, organizationName?: string) =>
+    request<LoginResult>(
+      `${apiPrefix}/auth/invitations/accept`,
+      jsonBody({ invitationToken, organizationName }),
+    ),
+  oauthStart: async (
+    provider: 'google' | 'github',
+    flow: 'login' | 'signup' | 'link',
+    invitationToken?: string,
+    organizationName?: string,
+  ) => {
+    const result = await request<{ authorizationUrl: string }>(
+      `${apiPrefix}/auth/oauth/${provider}/start`,
+      jsonBody({ flow, invitationToken: invitationToken ?? null, organizationName }),
+    )
+    const authorizationBase = cloudApiOrigin || window.location.origin
+    return new URL(result.authorizationUrl, authorizationBase).toString()
+  },
+  identities: async () =>
+    asList<LinkedIdentity>(await request<unknown>(`${apiPrefix}/auth/identities`)),
+  reauthenticateIdentity: (password: string) =>
+    request<void>(`${apiPrefix}/auth/identities/reauthenticate`, jsonBody({ password })),
+  invitations: async (orgId: string) =>
+    asList<OrganizationInvitation>(
+      await request<unknown>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/invitations`),
+    ),
+  createInvitation: (orgId: string, email?: string) =>
+    request<CreatedOrganizationInvitation>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/invitations`,
+      jsonBody({ email: email?.trim() || null }),
+    ),
+  revokeInvitation: (orgId: string, invitationId: string) =>
+    request<OrganizationInvitation>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/invitations/${encodeURIComponent(invitationId)}`,
+      { method: 'DELETE' },
+    ),
   logout: () => request<unknown>(`${apiPrefix}/auth/logout`, post),
   me: () => request<LoginResult>(`${apiPrefix}/auth/me`),
+  notifyTawkOfflineSubmission: (eventId: string, propertyId: string) =>
+    request<{ queued: boolean }>(`${apiPrefix}/feedback/tawk/offline-submissions`, {
+      ...jsonBody({ eventId, propertyId }),
+      keepalive: true,
+    }),
   organizations: async () => asList<Organization>(await request<unknown>(`${apiPrefix}/orgs`)),
   createOrganization: (input: CreateOrganizationInput) =>
     request<Organization>(`${apiPrefix}/orgs`, jsonBody(input)),
@@ -257,6 +484,7 @@ export const cloudApi = {
     request<Organization>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}`),
   regions: async () => asList<Region>(await request<unknown>(`${apiPrefix}/regions`)),
   region: (code: string) => request<Region>(`${apiPrefix}/regions/${encodeURIComponent(code)}`),
+  specs: async () => asList<Spec>(await request<unknown>(`${apiPrefix}/specs`)),
   clusters: async (orgId: string) =>
     asList<Cluster>(
       await request<unknown>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/clusters`),
@@ -268,6 +496,16 @@ export const cloudApi = {
   createSubscription: (orgId: string, input: CreateSubscriptionInput) =>
     request<Subscription>(
       `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions`,
+      jsonBody(input),
+    ),
+  createCheckout: (orgId: string, input: CreateCheckoutInput) =>
+    request<CheckoutSession>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions/checkout`,
+      jsonBody(input),
+    ),
+  finalizeProvisioning: (orgId: string, subscriptionId: string, input: FinalizeProvisioningInput) =>
+    request<Subscription>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions/${encodeURIComponent(subscriptionId)}/finalize-provisioning`,
       jsonBody(input),
     ),
   subscriptions: async (orgId: string) =>
@@ -324,6 +562,57 @@ export const cloudApi = {
     request<CloudTicket>(`${apiPrefix}/tickets/${encodeURIComponent(cloudTicketId)}`),
   closeTicket: (cloudTicketId: string) =>
     request<CloudTicket>(`${apiPrefix}/tickets/${encodeURIComponent(cloudTicketId)}/close`, post),
+  cancelAtPeriodEnd: (orgId: string, subscriptionId: string) =>
+    request<Subscription>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions/${encodeURIComponent(subscriptionId)}/cancel-at-period-end`,
+      post,
+    ),
+  events: (orgId: string, filters: EventFilters = {}) => {
+    const query = new URLSearchParams()
+    if (filters.type) query.set('type', filters.type)
+    if (filters.severity) query.set('severity', filters.severity)
+    if (filters.from) query.set('from', filters.from)
+    if (filters.to) query.set('to', filters.to)
+    if (filters.limit) query.set('limit', String(filters.limit))
+    if (filters.cursor) query.set('cursor', filters.cursor)
+    const suffix = query.toString() ? `?${query.toString()}` : ''
+    return request<EventPage>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/events${suffix}`)
+  },
+  event: (orgId: string, eventId: string) =>
+    request<PlatformEvent>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/events/${encodeURIComponent(eventId)}`,
+    ),
+  eventTypes: (orgId: string, q?: string) => {
+    const suffix = q ? `?q=${encodeURIComponent(q)}` : ''
+    return request<string[]>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/events/types${suffix}`)
+  },
+  alerts: async (orgId: string) =>
+    asList<AlertRecord>(
+      await request<unknown>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/alerts`),
+    ),
+  alertPolicies: async (orgId: string) =>
+    asList<AlertPolicy>(
+      await request<unknown>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}/alert-policies`),
+    ),
+  createAlertPolicy: (orgId: string, input: AlertPolicyInput) =>
+    request<AlertPolicy>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/alert-policies`,
+      jsonBody(input),
+    ),
+  updateAlertPolicy: (orgId: string, policyId: string, input: AlertPolicyInput) =>
+    request<AlertPolicy>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/alert-policies/${encodeURIComponent(policyId)}`,
+      putJson(input),
+    ),
+  deleteAlertPolicy: (orgId: string, policyId: string) =>
+    request<unknown>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/alert-policies/${encodeURIComponent(policyId)}`,
+      deleteRequest,
+    ),
+  deliveries: (orgId: string, page = 0, size = 20) =>
+    request<NotificationDeliveryPage>(
+      `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/deliveries?page=${page}&size=${size}`,
+    ),
   resolveCluster: async (clusterId: string, orgId: string) => {
     const query = new URLSearchParams({ orgId })
     const result = await request<unknown>(

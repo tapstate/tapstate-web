@@ -1,11 +1,14 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import FilterEmptyState from '@tapstate-web/ui/filter-empty-state'
+import { Spinner } from '@tapstate-web/ui/spinner'
+import { StatusDot, type StatusDotStatus } from '@tapstate-web/ui/status-dot'
 import { useTranslation } from 'react-i18next'
 
 import { PipelineClientError, type PipelineCatalogState } from '@/service/pipelines/pipeline-client'
 
-import { PipelineRefreshControls } from '../components/pipeline-refresh-controls'
+import { PipelineRefreshButton } from '../components/pipeline-refresh-controls'
 import { PipelineMetricChart } from './pipeline-metric-chart'
+import styles from './pipeline-monitoring-page.module.css'
 import { usePipelineMonitoringQueries } from './pipeline-monitoring-queries'
 import { PipelineReadSurface } from './pipeline-read-surface'
 
@@ -13,8 +16,20 @@ function isObservationUnavailable(error: unknown) {
   return error instanceof PipelineClientError && error.status === 404
 }
 
-function stateTone(state: PipelineCatalogState) {
-  return state.toLowerCase()
+const stateDotStatus: Record<PipelineCatalogState, StatusDotStatus> = {
+  DRAFT: 'disabled',
+  NOT_STARTED: 'normal',
+  NEW: 'normal',
+  STARTING: 'normal',
+  RUNNING: 'success',
+  PAUSING: 'warning',
+  PAUSED: 'warning',
+  RESUMING: 'normal',
+  STOPPING: 'warning',
+  STOPPED: 'disabled',
+  COMPLETED: 'success',
+  FAILED: 'error',
+  UNAVAILABLE: 'disabled',
 }
 
 export function PipelineMonitoringPage({
@@ -26,8 +41,7 @@ export function PipelineMonitoringPage({
 }) {
   const { i18n, t } = useTranslation()
   const queryClient = useQueryClient()
-  const [autoRefresh, setAutoRefresh] = useState(true)
-  const { status, metrics } = usePipelineMonitoringQueries(pipelineId, autoRefresh, hasArtifact)
+  const { status, metrics } = usePipelineMonitoringQueries(pipelineId, hasArtifact)
   const isLoading = status.isLoading || metrics.isLoading
   const error = status.error ?? metrics.error
   const hasError = status.isError || metrics.isError
@@ -45,30 +59,39 @@ export function PipelineMonitoringPage({
   const refreshLabels = {
     refresh: t('pipelines.workspace.runtime.monitoring.refresh'),
     refreshAria: t('pipelines.workspace.runtime.monitoring.refreshAria'),
-    active: t('pipelines.workspace.runtime.monitoring.active'),
-    paused: t('pipelines.workspace.runtime.monitoring.paused'),
-    pause: t('pipelines.workspace.runtime.monitoring.pause'),
-    pauseAria: t('pipelines.workspace.runtime.monitoring.pauseAria'),
-    resume: t('pipelines.workspace.runtime.monitoring.resume'),
-    resumeAria: t('pipelines.workspace.runtime.monitoring.resumeAria'),
   }
 
   if (!hasArtifact) {
     return (
-      <section className="pipeline-monitoring__state mt-6" aria-live="polite">
-        <h2 className="pipeline-monitoring__state-title">
-          {t('pipelines.workspace.runtime.monitoring.draftTitle')}
-        </h2>
-        <p className="pipeline-monitoring__state-description">
-          {t('pipelines.workspace.runtime.monitoring.draftBody')}
-        </p>
+      <section className={`${styles.page} ${styles.emptyState} mt-6`} role="status">
+        <FilterEmptyState
+          className="[&_p]:max-w-full [&>div:last-child>div]:max-w-full"
+          title={
+            <span className="block max-w-100 text-center whitespace-normal">
+              <span className="system-sm-semibold text-text-secondary block">
+                {t('pipelines.workspace.runtime.monitoring.draftTitle')}
+              </span>
+              <span className="mt-2 block">
+                {t('pipelines.workspace.runtime.monitoring.draftBody')}
+              </span>
+            </span>
+          }
+        />
       </section>
     )
   }
 
   if (isLoading) {
     return (
-      <div className="pipeline-monitoring__state mt-6" role="status">
+      <div
+        className={`${styles.page} ${styles.loadingState} pipeline-monitoring__state mt-6`}
+        role="status"
+        aria-busy="true"
+      >
+        <Spinner
+          aria-label={t('pipelines.workspace.runtime.monitoring.loading')}
+          className="text-text-accent"
+        />
         {t('pipelines.workspace.runtime.monitoring.loading')}
       </div>
     )
@@ -77,7 +100,7 @@ export function PipelineMonitoringPage({
   if (hasError) {
     const unavailable = isObservationUnavailable(error)
     return (
-      <section className="pipeline-monitoring__state mt-6" aria-live="polite">
+      <section className={`${styles.page} pipeline-monitoring__state mt-6`} aria-live="polite">
         <h2 className="pipeline-monitoring__state-title">
           {t(
             unavailable
@@ -93,12 +116,11 @@ export function PipelineMonitoringPage({
           )}
         </p>
         <div className="mt-4">
-          <PipelineRefreshControls
-            autoRefresh={autoRefresh}
+          <PipelineRefreshButton
             isFetching={status.isFetching || metrics.isFetching}
+            label={refreshLabels.refresh}
+            ariaLabel={refreshLabels.refreshAria}
             onRefresh={refreshMonitoring}
-            onToggle={() => setAutoRefresh((current) => !current)}
-            labels={refreshLabels}
           />
         </div>
       </section>
@@ -106,33 +128,30 @@ export function PipelineMonitoringPage({
   }
 
   return (
-    <section className="pipeline-monitoring mt-6">
+    <section className={`${styles.page} pipeline-monitoring mt-6`}>
       <div className="pipeline-monitoring__toolbar">
         <div className="pipeline-monitoring__toolbar-heading">
           <p className="pipeline-monitoring__eyebrow">
             {t('pipelines.workspace.runtime.monitoring.snapshot')}
           </p>
           <p className="pipeline-monitoring__refresh-state" aria-live="polite">
-            {autoRefresh
-              ? t('pipelines.workspace.runtime.monitoring.active')
-              : t('pipelines.workspace.runtime.monitoring.paused')}
             {lastUpdated > 0 &&
-              ` · ${t('pipelines.workspace.runtime.monitoring.lastRefreshed', {
+              t('pipelines.workspace.runtime.monitoring.lastRefreshed', {
                 time: new Intl.DateTimeFormat(i18n.language, {
                   hour: '2-digit',
                   minute: '2-digit',
                   second: '2-digit',
+                  timeZoneName: 'short',
                 }).format(lastUpdated),
-              })}`}
+              })}
           </p>
         </div>
         <div className="pipeline-monitoring__actions">
-          <PipelineRefreshControls
-            autoRefresh={autoRefresh}
+          <PipelineRefreshButton
             isFetching={status.isFetching || metrics.isFetching}
+            label={refreshLabels.refresh}
+            ariaLabel={refreshLabels.refreshAria}
             onRefresh={refreshMonitoring}
-            onToggle={() => setAutoRefresh((current) => !current)}
-            labels={refreshLabels}
           />
         </div>
       </div>
@@ -145,11 +164,12 @@ export function PipelineMonitoringPage({
           <span className="pipeline-monitoring__summary-pipeline">{pipelineId}</span>
         </div>
         {status.data && (
-          <span
-            className="pipeline-monitoring__state-badge"
-            data-state={stateTone(status.data.state)}
-          >
-            <span className="pipeline-monitoring__state-dot" aria-hidden="true" />
+          <span className="system-xs-medium text-text-secondary inline-flex shrink-0 items-center gap-1.5">
+            <StatusDot
+              className="rounded-full"
+              size="small"
+              status={stateDotStatus[status.data.state]}
+            />
             {t(`pipelines.workspace.runtime.states.${status.data.state}`)}
           </span>
         )}

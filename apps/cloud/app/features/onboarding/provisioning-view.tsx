@@ -48,6 +48,7 @@ interface ProvisioningViewProps {
   onCancel: () => void
   onEdit: () => void
   onOpenCluster: () => void
+  onViewSubscriptions: () => void
 }
 
 function timeLabel(value: number) {
@@ -55,6 +56,7 @@ function timeLabel(value: number) {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
+    timeZoneName: 'short',
   })
 }
 
@@ -81,6 +83,7 @@ export function ProvisioningView({
   onCancel,
   onEdit,
   onOpenCluster,
+  onViewSubscriptions,
 }: ProvisioningViewProps) {
   const { t } = useTranslation()
   const [showUpdates, setShowUpdates] = useState(false)
@@ -406,21 +409,30 @@ export function ProvisioningView({
             {entryError}
           </div>
         )}
-        <button
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111827] text-[13.5px] font-semibold text-white shadow-xs transition-colors hover:bg-[#1f2937] active:scale-[0.99] disabled:cursor-wait disabled:opacity-50 dark:bg-white dark:text-[#111827] dark:hover:bg-neutral-100"
-          disabled={isOpeningCluster}
-          onClick={onOpenCluster}
-          type="button"
-        >
-          <span>
-            {isOpeningCluster ? t('onboarding.openingCluster') : t('onboarding.openCluster')}
-          </span>
-          {isOpeningCluster ? (
-            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <ArrowRight className="h-4 w-4" />
-          )}
-        </button>
+        <div className="flex items-end gap-5">
+          <button
+            className="shrink-0 text-[13.5px] leading-none font-medium text-emerald-600 transition-colors hover:text-emerald-700 hover:underline dark:text-emerald-400 dark:hover:text-emerald-300"
+            onClick={onViewSubscriptions}
+            type="button"
+          >
+            {t('onboarding.viewSubscriptions')}
+          </button>
+          <button
+            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-[#111827] text-[13.5px] font-semibold text-white shadow-xs transition-colors hover:bg-[#1f2937] active:scale-[0.99] disabled:cursor-wait disabled:opacity-50 dark:bg-white dark:text-[#111827] dark:hover:bg-neutral-100"
+            disabled={isOpeningCluster}
+            onClick={onOpenCluster}
+            type="button"
+          >
+            <span>
+              {isOpeningCluster ? t('onboarding.openingCluster') : t('onboarding.openCluster')}
+            </span>
+            {isOpeningCluster ? (
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <ArrowRight className="h-4 w-4" />
+            )}
+          </button>
+        </div>
       </div>
     )
   }

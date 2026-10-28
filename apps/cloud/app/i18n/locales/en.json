@@ -1,5 +1,23 @@
 {
+  "notFound": {
+    "message": "This page is not available.",
+    "back": "Back to Overview"
+  },
   "app": {
+    "help": {
+      "openMenu": "Help",
+      "documentation": "Documentation",
+      "contactSupport": "Contact support"
+    },
+    "account": {
+      "openMenu": "Account",
+      "profile": "Profile",
+      "settings": "Settings",
+      "appearance": "Appearance",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "logOut": "Log out"
+    },
     "brand": "Tapstate Cloud",
     "console": "Cloud Console",
     "organization": "ORGANIZATION",
@@ -11,6 +29,54 @@
     "signedOut": "Signed out",
     "toggleTheme": "Toggle theme"
   },
+  "common": {
+    "close": "Close",
+    "searchClusters": "Search clusters",
+    "searchOrganizations": "Search organizations"
+  },
+  "organizationList": {
+    "current": "Current organization:",
+    "currentBadge": "Current",
+    "count_one": "{{count}} organization",
+    "count_other": "{{count}} organizations",
+    "clearSearch": "Clear organization search",
+    "name": "Organization",
+    "slug": "Slug",
+    "status": "Status",
+    "owner": "Owner",
+    "active": "Active",
+    "suspended": "Suspended",
+    "noOrganizations": "No organizations are available for this account.",
+    "noMatches": "No organizations match your search."
+  },
+  "clusterList": {
+    "description": "Manage Tapstate clusters across AWS regions.",
+    "provision": "Provision Cluster",
+    "provisionDescription": "Create your first Cloud cluster.",
+    "total": "Total:",
+    "count_one": "{{count}} cluster",
+    "count_other": "{{count}} clusters",
+    "clearSearch": "Clear cluster search",
+    "name": "Cluster name",
+    "status": "Status",
+    "runtimeVersion": "Runtime version",
+    "runtimeVersionNotReported": "Not reported",
+    "region": "Region",
+    "plan": "Plan",
+    "created": "Created",
+    "noClusters": "No clusters yet.",
+    "noMatches": "No clusters match your search.",
+    "states": {
+      "PROVISIONING_PENDING": "Provisioning pending",
+      "PROVISIONING": "Provisioning",
+      "READY": "Ready",
+      "PROVISIONING_FAILED": "Provisioning failed",
+      "DEGRADED": "Degraded",
+      "DRAINING": "Draining",
+      "DRAINED": "Drained",
+      "TERMINATED": "Terminated"
+    }
+  },
   "access": {
     "eyebrow": "SECURE CLOUD CLUSTER",
     "title": "Sign in to continue",
@@ -21,11 +87,22 @@
   "auth": {
     "headerNote": "Cloud cluster access",
     "eyebrow": "TAPSTATE CLOUD",
-    "loginTitle": "Sign in to your cluster",
-    "registerTitle": "Create your account",
+    "loginTitle": "Sign in to Tapstate Cloud",
+    "registerTitle": "Create your Tapstate account",
     "loginDescription": "Use your email and password to access your organizations.",
-    "registerDescription": "Create an account to set up your first Cloud organization.",
+    "registerDescription": "Use a trial code to create an organization, or accept a team invitation.",
+    "registerDescriptionOpen": "Create your account and organization. Verify your email to continue.",
+    "registerDescriptionChecking": "Choose how you want to create your account.",
+    "registrationPolicyLoading": "Checking registration options…",
+    "registrationPolicyUnavailable": "Could not load registration options. Retry, or continue with an invitation.",
+    "retryRegistrationPolicy": "Retry",
+    "invitationNotice": "This code is single-use and expires after seven days.",
+    "changeCode": "Change code",
+    "invitationLinkLabel": "Trial code or invitation link",
+    "invitationLinkPlaceholder": "Paste a code or link",
+    "useInvitation": "Continue",
     "nameLabel": "Name",
+    "organizationNameLabel": "Organization name",
     "namePlaceholder": "Your name",
     "emailLabel": "Work email",
     "emailPlaceholder": "name@company.com",
@@ -41,13 +118,22 @@
     "continueWithGitHub": "Continue with GitHub",
     "signUpWithGoogle": "Sign up with Google",
     "signUpWithGitHub": "Sign up with GitHub",
-    "oauthComingSoon": "Google and GitHub sign-in are coming soon.",
     "or": "or",
     "working": "Please wait",
-    "noAccount": "New to Tapstate Cloud?",
-    "haveAccount": "Already have an account?",
-    "goRegister": "Create an account",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "New to Tapstate Cloud?",
+    "haveInviteAccount": "Already have an account?",
+    "goRegister": "Sign up",
     "goLogin": "Sign in",
+    "sendCode": "Email me a verification code",
+    "resendCode": "Send another code",
+    "resendCodeIn": "Send another code in {{count}} seconds",
+    "sendingCode": "Sending code…",
+    "codeLabel": "Email verification code",
+    "codeSentTo": "A code was sent to {{email}}. It expires in 10 minutes.",
+    "invitationRequiredForRegistration": "During early access, enter a trial code or an organization invitation to create an account.",
+    "organizationNameRequired": "Enter your organization name to continue.",
+    "requestCodeFirst": "Request an email code before continuing.",
     "securityNote": "Your session is protected by a secure, HttpOnly cookie.",
     "footer": "© 2026 Tapstate Systems Inc.",
     "showcase": {
@@ -97,8 +183,81 @@
       "generic": "We could not complete that request. Check your details and try again.",
       "network": "The Cloud service could not be reached. Try again shortly.",
       "invalidCredentials": "The email or password is incorrect.",
-      "emailExists": "An account with this email already exists. Sign in instead."
+      "emailExists": "An account with this email already exists. Sign in instead.",
+      "invitationRequired": "Enter a trial code or an organization invitation to create an account.",
+      "invitationRequiredAfterOAuth": "Your identity was verified. Enter a trial code or organization invitation below, then continue with Google or GitHub.",
+      "organizationNameRequired": "Enter your organization name to continue.",
+      "invitationInvalid": "This invitation link is not valid.",
+      "invitationExpired": "This invitation has expired. Ask the organization owner for a new link.",
+      "invitationRevoked": "This invitation has been revoked.",
+      "invitationConsumed": "This invitation has already been used.",
+      "invitationEmailMismatch": "This invitation was issued for a different email address.",
+      "codeInvalid": "This verification code could not be accepted. Check it and try again.",
+      "codeExpired": "That verification code has expired. Request a new one.",
+      "codeAttemptsExceeded": "Too many incorrect codes. Request a new code to continue.",
+      "codeRateLimited": "Too many code requests. Try again later.",
+      "codeCooldown": "Wait a minute before requesting another code.",
+      "emailUnavailable": "Email delivery is temporarily unavailable. Try again later.",
+      "providerUnavailable": "This sign-in provider is not configured yet.",
+      "providerEmailUnverified": "Verify your email with the provider before continuing.",
+      "providerError": "The identity provider could not complete sign-in.",
+      "oauthCancelled": "Sign-in was cancelled. You can try again.",
+      "accountLinkRequired": "Sign in to your existing account, then link this provider in Settings.",
+      "identityConflict": "This provider identity is already linked to another account.",
+      "reauthenticationRequired": "Sign in again before linking an identity."
     }
+  },
+  "organizations": {
+    "invitationsTitle": "Organization invitations",
+    "invitationsDescription": "Create a single-use link for a new member. Anyone with the link can use it once before it expires.",
+    "inviteEmailPlaceholder": "Invitee email (optional)",
+    "createInvite": "Create invitation",
+    "creatingInvite": "Creating…",
+    "inviteCreatedNotice": "Copy this link now. The invitation token is shown only once.",
+    "inviteLink": "Invitation link",
+    "copyInvite": "Copy link",
+    "copied": "Copied",
+    "invitedEmail": "Email",
+    "inviteExpires": "Expires",
+    "inviteStatus": "Status",
+    "inviteActions": "Actions",
+    "anyEmail": "Any email",
+    "loadingInvites": "Loading invitations…",
+    "noInvites": "No invitations yet.",
+    "revokingInvite": "Revoking…",
+    "revokeInvite": "Revoke",
+    "inviteLoadError": "Invitations could not be loaded.",
+    "inviteCreateError": "The invitation could not be created.",
+    "inviteRevokeError": "The invitation could not be revoked.",
+    "ownerOnly": "Only the organization owner can manage invitations.",
+    "copyError": "The link could not be copied. Select and copy it manually.",
+    "status": {
+      "active": "Active",
+      "revoked": "Revoked",
+      "consumed": "Used",
+      "expired": "Expired"
+    }
+  },
+  "settings": {
+    "tabAccount": "Account",
+    "tabOrganization": "Organization & team",
+    "linkedIdentitiesTitle": "Sign-in methods",
+    "linkedIdentitiesDescription": "Link Google or GitHub after reauthenticating your Cloud account. Matching email addresses are never linked automatically.",
+    "provider": {
+      "google": "Google",
+      "github": "GitHub"
+    },
+    "loadingIdentities": "Loading linked identities…",
+    "identityLinked": "Linked as {{email}}",
+    "identityNotLinked": "Not linked",
+    "linkIdentity": "Link account",
+    "linkingIdentity": "Opening provider…",
+    "reauthenticationPasswordLabel": "Current password (optional after recent sign-in)",
+    "reauthenticationPasswordPlaceholder": "Enter your current password",
+    "reauthenticationHint": "For accounts without a password, sign in again within five minutes, then start linking.",
+    "identityLoadError": "Linked identities could not be loaded.",
+    "reauthenticationError": "Reauthenticate with your Cloud account before linking.",
+    "identityLinkStartError": "Could not start linking this sign-in method. Try again."
   },
   "onboarding": {
     "eyebrow": "FIRST-TIME SETUP",
@@ -109,9 +268,9 @@
     "organizationPlaceholder": "Acme Data",
     "slugHint": "Use English letters and numbers so we can create a unique organization address.",
     "newClusterLabel": "Cluster name",
-    "clusterNamePlaceholder": "acme-stream-2",
+    "clusterNamePlaceholder": "acme-data-2",
     "clusterNameHint": "Use English letters and numbers, separated by hyphens.",
-    "regionLabel": "Open region",
+    "regionLabel": "Region",
     "openRegions": "Available cloud regions",
     "available": "Available",
     "loadingRegions": "Loading available regions…",
@@ -121,6 +280,14 @@
     "clusterLabel": "First cluster",
     "regionReadonly": "The region cannot be changed after cluster creation.",
     "regionDefault": "Region default",
+    "planLabel": "Instance plan",
+    "planHint": "Select a plan to continue to payment.",
+    "loadingPlans": "Loading plans…",
+    "plansError": "Plans and prices could not be loaded.",
+    "noPlans": "No plans are available right now.",
+    "continueToPayment": "Continue to secure payment",
+    "startingCheckout": "Opening secure payment…",
+    "checkoutError": "The subscription could not be started. Check your connection and try again.",
     "clusterPreviewEmpty": "Name it by entering an organization name",
     "clusterPendingNote": "Provisioning starts after you create the cluster.",
     "createAction": "Create organization and cluster",
@@ -161,6 +328,7 @@
     "resourceStateLabel": "Resource state",
     "openingCluster": "Opening Cluster Console…",
     "openCluster": "Open Cluster Console",
+    "viewSubscriptions": "View Subscriptions",
     "failedTitle": "Provisioning interrupted",
     "failedBadge": "Deployment stopped",
     "failedDescription": "Cloud reported that cluster provisioning failed.",
@@ -185,6 +353,230 @@
     "cancelSubscriptionError": "Cancellation could not be confirmed. Review the deployment status before changing settings.",
     "cancelStatusError": "Could not refresh the current deployment status. The cancellation request was not sent; try again.",
     "footnote": "Cluster provisioning runs in the background. The console will show the status returned by Cloud."
+  },
+  "clusters": {
+    "egress": {
+      "sourceAllowlistHint": "Stable · use this IP in source allowlists. Reopen the Cluster console to refresh source setup."
+    }
+  },
+  "billing": {
+    "title": "Plans & billing",
+    "subtitle": "Manage the subscription for {{organization}}.",
+    "organizationFallback": "your organization",
+    "loading": "Loading plans…",
+    "loadError": "Plans could not be loaded.",
+    "retry": "Retry",
+    "noPlans": "No plans are available for purchase right now.",
+    "plansLabel": "Available plans",
+    "specLine": "{{cpu}} vCPU · {{memory}} GB RAM · {{storage}} GB managed storage",
+    "perMonth": "/ month",
+    "trialBadge": "{{count}}-day free trial",
+    "noTrial": "No trial",
+    "trialChargeNote": "You will not be charged until your {{count}}-day trial ends.",
+    "noTrialChargeNote": "The first month is charged immediately.",
+    "planDescription": "Fully managed Tapstate cluster for production data pipelines.",
+    "checkoutNote": "Payment, 3-D Secure and billing details are completed on Stripe's secure checkout page.",
+    "consent": "I authorize Tapstate Cloud to charge my payment method for this subscription and automatically at the end of each billing period until I cancel.",
+    "selectedSummary": "{{plan}} · {{price}} / month",
+    "selectPrompt": "Select a plan to continue.",
+    "subscribeAction": "Continue to secure checkout",
+    "subscribing": "Opening Stripe Checkout…",
+    "ownerOnly": "Only the organization owner can change the subscription.",
+    "pendingNotice": "A previous checkout is still awaiting payment. Starting a new checkout replaces it.",
+    "planUnknown": "Plan details unavailable",
+    "priceLine": "{{price}} / month",
+    "refresh": "Refresh",
+    "provisioning": "Provisioning instance",
+    "autoRenew": "Auto-renew",
+    "autoRenewOn": "On",
+    "autoRenewOff": "Off",
+    "periodLabel": "Current period",
+    "clusterLabel": "Cluster",
+    "subscriptionIdLabel": "Subscription",
+    "resourcesReady": "All resources are ready.",
+    "cancelPendingNote": "Auto-renew is off. Your instance stays available until {{date}}.",
+    "pastDueNote": "The latest payment failed. Update your payment method in Stripe to keep the subscription.",
+    "awaitingPaymentNote": "Checkout has not been completed yet. Complete the payment on Stripe to activate the subscription.",
+    "choosePlan": "Choose a plan",
+    "cancelAction": "Cancel subscription",
+    "cancelTitle": "Cancel subscription?",
+    "cancelPlanLine": "{{plan}}",
+    "cancelBody": "Your subscription will end on {{date}}. Your instance will be released and all data will be deleted after that date.",
+    "cancelWarning": "Cancellation stops auto-renewal only. The instance stays usable until the period ends.",
+    "cancelKeep": "Keep subscription",
+    "cancelConfirm": "Yes, cancel",
+    "cancelling": "Cancelling…",
+    "errors": {
+      "network": "The Cloud service could not be reached. Try again shortly.",
+      "specNotFound": "This plan is no longer available. Choose another plan.",
+      "pricingNotConfigured": "This plan has no price configured yet. Choose another plan or contact support.",
+      "alreadyActive": "This organization already has a subscription in progress. Review its status instead.",
+      "pendingPayment": "Payment is still pending. Complete it before creating the instance.",
+      "notActive": "The subscription is not active, so this action cannot run.",
+      "cannotCancel": "This subscription cannot be cancelled in its current state.",
+      "orgLimitReached": "This account has reached its organization limit.",
+      "generic": "The request could not be completed. Try again.",
+      "cancelFailed": "Cancellation could not be completed. Try again."
+    },
+    "status": {
+      "TRIAL": "Trial active",
+      "ACTIVE": "Active",
+      "PENDING_CANCEL": "Pending cancellation",
+      "PENDING_PAYMENT": "Awaiting payment",
+      "PAST_DUE": "Payment failed",
+      "CANCELLED": "Ended",
+      "UNKNOWN": "Unknown"
+    },
+    "period": {
+      "trialEnds": "Trial ends on {{date}}",
+      "nextBilled": "Next billed on {{date}}",
+      "ends": "Ends on {{date}}",
+      "pastDue": "Payment failed",
+      "awaitingPayment": "Awaiting payment",
+      "ended": "Ended"
+    },
+    "success": {
+      "title": "Checkout complete",
+      "subtitle": "We are activating your subscription and creating the instance.",
+      "stepPayment": "Payment confirmed",
+      "stepProvisioning": "Provisioning instance ({{percent}}%)",
+      "stepReady": "Instance ready",
+      "provisioningNote": "Creating cluster {{cluster}}. This can take a few minutes.",
+      "provisioningNotePending": "Preparing your instance. This can take a few minutes.",
+      "resolving": "Confirming your payment with Stripe…",
+      "awaitingPayment": "Waiting for Stripe to confirm the payment…",
+      "readyNote": "Cluster {{cluster}} is ready.",
+      "readyNoteGeneric": "Your instance is ready.",
+      "openClusters": "Open Clusters",
+      "viewSubscription": "View subscription",
+      "ended": "This subscription ended before it could be activated. Choose a plan to start again.",
+      "unavailable": "The subscription is not in a state that can be provisioned. Review its status.",
+      "error": "We could not confirm the checkout. Refresh the subscription status or contact support."
+    },
+    "cancelled": {
+      "title": "Payment cancelled",
+      "subtitle": "No charge was made.",
+      "body": "You can return to the plan selection and start checkout again whenever you are ready.",
+      "back": "Back to plans"
+    }
+  },
+  "events": {
+    "title": "Alerts",
+    "subtitle": "Key events and alert delivery for {{organization}}.",
+    "organizationFallback": "your organization",
+    "tabEvents": "Events",
+    "tabPolicies": "Alert policies",
+    "tabDeliveries": "Delivery history",
+    "policySubtitle": "Email alert rules for {{organization}}.",
+    "deliverySubtitle": "Notification delivery attempts for {{organization}}.",
+    "loading": "Loading…",
+    "loadError": "Could not load this view.",
+    "retry": "Refresh",
+    "empty": "Nothing to show yet.",
+    "filterType": "Event type",
+    "filterTypePlaceholder": "All event types",
+    "filterSeverity": "Severity",
+    "allSeverities": "All severities",
+    "severity": {
+      "INFO": "Info",
+      "WARNING": "Warning",
+      "CRITICAL": "Critical"
+    },
+    "columns": {
+      "time": "Time",
+      "type": "Type",
+      "severity": "Severity",
+      "subject": "Subject",
+      "actor": "Actor",
+      "source": "Source",
+      "recipient": "Recipient",
+      "status": "Status",
+      "attempts": "Attempts",
+      "lastError": "Last error",
+      "recipients": "Recipients",
+      "cooldown": "Cooldown",
+      "quietHours": "Quiet hours",
+      "enabled": "Enabled"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "SENDING": "Sending",
+      "SENT": "Sent",
+      "FAILED": "Failed",
+      "DEAD": "Dead",
+      "SUPPRESSED": "Suppressed"
+    },
+    "actions": {
+      "create": "New policy",
+      "save": "Save",
+      "edit": "Edit",
+      "delete": "Delete",
+      "close": "Close"
+    },
+    "policyForm": {
+      "name": "Name",
+      "namePlaceholder": "Critical pipeline alerts",
+      "eventTypes": "Event types (comma separated)",
+      "eventTypesHint": "Use * for all events, or a prefix such as pipeline.*",
+      "minSeverity": "Minimum severity",
+      "recipients": "Recipients (comma separated emails, internal or external)",
+      "cooldown": "Cooldown (seconds)",
+      "quietStart": "Quiet hours start (HH:mm)",
+      "quietEnd": "Quiet hours end (HH:mm)",
+      "timezone": "Timezone",
+      "enabled": "Enabled"
+    },
+    "validation": {
+      "name": "Name is required.",
+      "recipients": "At least one recipient is required.",
+      "quietHours": "Set both quiet-hour fields in HH:mm format."
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {{page}}",
+      "pageOf": "Page {{page}} of {{pages}}"
+    },
+    "detailTitle": "Event detail",
+    "detail": {
+      "id": "Event ID"
+    },
+    "payload": "Payload",
+    "noPayload": "No payload recorded.",
+    "adminOnly": "Only an organization administrator can manage alert policies.",
+    "deleteConfirm": "Delete this alert policy?",
+    "errors": {
+      "generic": "The request could not be completed."
+    }
+  },
+  "sections": {
+    "overview": {
+      "title": "Overview",
+      "description": "A summary of your Cloud organization and managed clusters."
+    },
+    "clusters": {
+      "title": "Clusters",
+      "description": "Review cluster status and open an authorized Cluster Console."
+    },
+    "alerts": {
+      "title": "Alerts",
+      "description": "Monitor platform events, alert policies, and notification deliveries."
+    },
+    "organizations": {
+      "title": "Organization",
+      "description": "Manage organization membership and access."
+    },
+    "billing": {
+      "cancelWarning": "This will cancel the subscription, terminate its cluster, and remove its resources. This cannot be undone.",
+      "title": "Plans & billing",
+      "description": "Review usage for the current organization."
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "Manage organization and account preferences."
+    },
+    "notConnectedTitle": "Cloud services are not connected",
+    "notConnectedDescription": "This screen is a protected route. Cloud data will appear after sign-in and API integration are available."
   },
   "support": {
     "nav": "Support",
@@ -249,30 +641,5 @@
       "notFound": "This ticket could not be found. Refresh My tickets to see the latest list. {{opId}}",
       "submissionUncertain": "Cloud could not confirm whether the ticket was created. Check My tickets before submitting again. {{opId}}"
     }
-  },
-  "sections": {
-    "overview": {
-      "title": "Overview",
-      "description": "A summary of your Cloud organization and managed clusters."
-    },
-    "clusters": {
-      "title": "Clusters",
-      "description": "Review cluster status and open an authorized Cluster Console."
-    },
-    "organizations": {
-      "title": "Organization",
-      "description": "Manage organization membership and access."
-    },
-    "billing": {
-      "cancelWarning": "This will cancel the subscription, terminate its cluster, and remove its resources. This cannot be undone.",
-      "title": "Usage & billing",
-      "description": "Review usage for the current organization."
-    },
-    "settings": {
-      "title": "Settings",
-      "description": "Manage organization and account preferences."
-    },
-    "notConnectedTitle": "Cloud services are not connected",
-    "notConnectedDescription": "This screen is a protected route. Cloud data will appear after sign-in and API integration are available."
   }
 }

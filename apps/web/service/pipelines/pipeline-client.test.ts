@@ -12,6 +12,7 @@ import {
   getPipelineLogs,
   getPipelineMetrics,
   getPipelineStatus,
+  getStartChecks,
   listPipelines,
   listPipelineDrafts,
   previewPipelineDraft,
@@ -22,6 +23,7 @@ import {
   stopPipeline,
   updatePipelineDraft,
   updatePipeline,
+  type StartCheckReport,
 } from './pipeline-client'
 
 const pipeline = {
@@ -112,6 +114,52 @@ const draft = {
   updatedAt: '2026-09-21T00:01:00Z',
   updatedBy: 'user@example.com',
 } as const
+
+const startChecks: StartCheckReport = {
+  pipelineId: 'orders_to_warehouse',
+  intent: 'START',
+  contentHash: 'f'.repeat(64),
+  evaluatedAt: '2026-10-02T08:15:02.120Z',
+  outcome: 'NEEDS_CONFIRMATION',
+  plan: [
+    {
+      element: 'orders',
+      target: { connection: 'warehouse', table: 'orders' },
+      load: 'FULL_LOAD',
+      onFullLoad: 'append',
+    },
+  ],
+  findings: [
+    {
+      key: 'target-not-empty/warehouse/orders',
+      check: 'target-not-empty',
+      subject: { kind: 'TARGET', id: 'warehouse/orders', element: 'orders', label: 'orders' },
+      behavior: 'CONFIRM',
+      evaluation: 'COMPLETE',
+      code: 'start-check.target-not-empty',
+      params: { rows: 12 },
+      message: 'orders on warehouse already holds 12 rows.',
+      actions: [
+        {
+          id: 'clear',
+          kind: 'CHANGE_DEFINITION',
+          destructive: true,
+          code: 'start-check.clear-before-full-load',
+          message: 'Clear orders before the full load',
+          changes: [{ element: 'orders', field: 'on_full_load', from: 'append', to: 'clear' }],
+        },
+        {
+          id: 'keep',
+          kind: 'ACKNOWLEDGE',
+          destructive: false,
+          code: 'start-check.keep-existing-rows',
+          message: 'Keep the rows',
+          changes: [],
+        },
+      ],
+    },
+  ],
+}
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -311,6 +359,65 @@ describe('Pipeline client', () => {
     })
   })
 
+  it('retains an identity refusal before sampling and rejects unknown identity states', async () => {
+    for (const status of ['action-required', 'unknown-status']) {
+      const events = [
+        { kind: 'run.accepted', payload: { pipelineId: 'orders' } },
+        { kind: 'compile.completed', payload: { executionSpec: {}, contexts: [] } },
+        {
+          kind: 'identity.completed',
+          payload: {
+            targets: [
+              {
+                element: 'out',
+                connection: 'target',
+                table: 'orders',
+                stream: 'orders',
+                status,
+                reason: 'field-collision',
+                sourceField: '_id',
+                preservedField: '_unwind_source_id',
+                writeKey: ['_unwind_source_id', 'TAG_NO'],
+                generatedFields: [],
+              },
+            ],
+          },
+        },
+        {
+          kind: 'run.failed',
+          payload: { code: 'connector.target-identity-conflict', reason: 'field-collision' },
+        },
+      ]
+      const response = new Response(
+        events
+          .map((event, seq) =>
+            JSON.stringify({
+              runId: 'identity-run',
+              candidateHash: 'a'.repeat(64),
+              seq,
+              at: '2026-10-22T00:00:00Z',
+              ...event,
+            }),
+          )
+          .join('\n'),
+        { headers: { 'Content-Type': 'application/x-ndjson' } },
+      )
+      const result = streamPipelinePreview(
+        { pipelineId: 'orders', drafts: [{ content: 'candidate' }] },
+        fetcherFor(response),
+      )
+      if (status === 'action-required') {
+        await expect(result).resolves.toMatchObject({
+          identityPlans: [{ status: 'action-required', preservedField: '_unwind_source_id' }],
+          failure: { code: 'connector.target-identity-conflict' },
+          documents: [],
+        })
+      } else {
+        await expect(result).rejects.toMatchObject({ kind: 'protocol' })
+      }
+    }
+  })
+
   it('accepts both logical JSON and Mongo Extended JSON preview results', async () => {
     for (const format of ['logical-json', 'mongo-extended-json'] as const) {
       const runId = 'preview-run'
@@ -338,6 +445,7 @@ describe('Pipeline client', () => {
             complete: true,
             truncated: false,
             documents: [{ _id: { $oid: '64f0c0de0011223344556677' } }],
+            logicalDocuments: [{ _id: 'source-id', position: 0 }],
             rowCount: 1,
           },
         },
@@ -364,7 +472,11 @@ describe('Pipeline client', () => {
           { pipelineId: 'orders', drafts: [{ content: 'candidate' }] },
           fetcherFor(response),
         ),
-      ).resolves.toMatchObject({ format, rowCount: 1 })
+      ).resolves.toMatchObject({
+        format,
+        rowCount: 1,
+        logicalDocuments: [{ _id: 'source-id', position: 0 }],
+      })
     }
   })
 
@@ -537,5 +649,172 @@ describe('Pipeline client', () => {
     ).rejects.toMatchObject({
       kind: 'protocol',
     })
+  })
+
+  it('keeps the start checks a start refused with, beside the coded error', async () => {
+    await expect(
+      runPipeline(
+        'orders_to_warehouse',
+        fetcherFor(
+          jsonResponse(
+            {
+              code: 'lifecycle.start-needs-confirmation',
+              params: { pipeline: 'orders_to_warehouse', count: 1 },
+              message: 'Starting orders_to_warehouse needs an answer to 1 question.',
+              startChecks,
+            },
+            409,
+          ),
+        ),
+      ),
+    ).rejects.toMatchObject({
+      kind: 'server',
+      status: 409,
+      code: 'lifecycle.start-needs-confirmation',
+      params: { pipeline: 'orders_to_warehouse', count: 1 },
+      message: 'Starting orders_to_warehouse needs an answer to 1 question.',
+      startChecks,
+      decisionsApplied: [],
+    })
+  })
+
+  it('keeps what a conflicting start already changed and drops a malformed report', async () => {
+    const decisionsApplied = [
+      {
+        finding: 'target-not-empty/warehouse/orders',
+        action: 'clear',
+        kind: 'CHANGE_DEFINITION',
+        changes: [{ element: 'orders', field: 'on_full_load', from: 'append', to: 'clear' }],
+        contentHash: 'e'.repeat(64),
+      },
+    ]
+
+    await expect(
+      runPipeline(
+        'orders_to_warehouse',
+        fetcherFor(
+          jsonResponse(
+            {
+              code: 'pipeline.version-conflict',
+              params: { id: 'orders_to_warehouse' },
+              message: 'Pipeline orders_to_warehouse changed.',
+              decisionsApplied,
+            },
+            412,
+          ),
+        ),
+      ),
+    ).rejects.toMatchObject({
+      status: 412,
+      code: 'pipeline.version-conflict',
+      startChecks: null,
+      decisionsApplied,
+    })
+
+    await expect(
+      runPipeline(
+        'orders_to_warehouse',
+        fetcherFor(
+          jsonResponse(
+            {
+              code: 'lifecycle.start-blocked',
+              params: {},
+              message: 'Blocked.',
+              startChecks: { ...startChecks, findings: [{ key: 'only-a-key' }] },
+            },
+            409,
+          ),
+        ),
+      ),
+    ).rejects.toMatchObject({ status: 409, code: 'lifecycle.start-blocked', startChecks: null })
+  })
+
+  it('starts without a body until a start-check question is answered', async () => {
+    const plainRequests: Request[] = []
+    await expect(
+      runPipeline('orders_to_warehouse', fetcherFor(jsonResponse({}), plainRequests)),
+    ).resolves.toEqual({ startChecks: null, decisionsApplied: [], staleDecisions: [] })
+    expect(plainRequests[0]!.headers.get('If-Match')).toBeNull()
+    await expect(plainRequests[0]!.text()).resolves.toBe('')
+
+    const answeredRequests: Request[] = []
+    const result = await runPipeline(
+      'orders_to_warehouse',
+      fetcherFor(
+        jsonResponse({
+          pipelineId: 'orders_to_warehouse',
+          targetState: 'RUNNING',
+          revision: 'r2',
+          startChecks: { ...startChecks, outcome: 'READY' },
+          decisionsApplied: [
+            {
+              finding: 'target-not-empty/warehouse/orders',
+              action: 'clear',
+              kind: 'CHANGE_DEFINITION',
+              changes: [{ element: 'orders', field: 'on_full_load', from: 'append', to: 'clear' }],
+              contentHash: 'e'.repeat(64),
+            },
+          ],
+          staleDecisions: [{ finding: 'gone/finding', action: 'keep' }],
+        }),
+        answeredRequests,
+      ),
+      {
+        decisions: [{ finding: 'target-not-empty/warehouse/orders', action: 'clear' }],
+        ifMatch: `"${'f'.repeat(64)}"`,
+      },
+    )
+
+    expect(answeredRequests[0]!.method).toBe('POST')
+    expect(new URL(answeredRequests[0]!.url).pathname).toBe(
+      '/api/pipelines/orders_to_warehouse:start',
+    )
+    expect(answeredRequests[0]!.headers.get('If-Match')).toBe(`"${'f'.repeat(64)}"`)
+    await expect(answeredRequests[0]!.json()).resolves.toEqual({
+      decisions: [{ finding: 'target-not-empty/warehouse/orders', action: 'clear' }],
+    })
+    expect(result).toMatchObject({
+      pipelineId: 'orders_to_warehouse',
+      targetState: 'RUNNING',
+      startChecks: { outcome: 'READY' },
+      decisionsApplied: [{ action: 'clear', contentHash: 'e'.repeat(64) }],
+      staleDecisions: [{ finding: 'gone/finding', action: 'keep' }],
+    })
+  })
+
+  it('refuses to send start-check answers without the quoted report hash', async () => {
+    const requests: Request[] = []
+    await expect(
+      runPipeline('orders_to_warehouse', fetcherFor(jsonResponse({}), requests), {
+        decisions: [{ finding: 'target-not-empty/warehouse/orders', action: 'keep' }],
+      }),
+    ).rejects.toMatchObject({ status: 428, code: 'pipeline.precondition-required' })
+    await expect(
+      runPipeline('orders_to_warehouse', fetcherFor(jsonResponse({}), requests), {
+        decisions: [{ finding: 'target-not-empty/warehouse/orders', action: 'keep' }],
+        ifMatch: 'f'.repeat(64),
+      }),
+    ).rejects.toMatchObject({ status: 428 })
+    expect(requests).toHaveLength(0)
+  })
+
+  it('reads a start-check preview for the named intent', async () => {
+    const requests: Request[] = []
+    await expect(
+      getStartChecks('orders/warehouse', 'rerun', fetcherFor(jsonResponse(startChecks), requests)),
+    ).resolves.toEqual(startChecks)
+    expect(requests[0]!.method).toBe('GET')
+    expect(new URL(requests[0]!.url).pathname).toBe(
+      '/api/pipelines/orders%2Fwarehouse/start-checks',
+    )
+    expect(new URL(requests[0]!.url).searchParams.get('intent')).toBe('rerun')
+
+    await expect(
+      getStartChecks(
+        'orders_to_warehouse',
+        'start',
+        fetcherFor(jsonResponse({ ...startChecks, findings: null })),
+      ),
+    ).rejects.toMatchObject({ kind: 'protocol' })
   })
 })

@@ -154,14 +154,14 @@ function fieldInput(label: string) {
   return document.body.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)
 }
 
+function hasClasses(element: Element | null | undefined, ...classes: string[]) {
+  return Boolean(element && classes.every((className) => element.classList.contains(className)))
+}
+
 function changeInput(input: HTMLInputElement, value: string) {
   const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
   valueSetter?.call(input, value)
   input.dispatchEvent(new Event('input', { bubbles: true }))
-}
-
-function hasClasses(element: Element | null | undefined, ...classes: string[]) {
-  return Boolean(element && classes.every((className) => element.classList.contains(className)))
 }
 
 beforeEach(async () => {
@@ -356,60 +356,42 @@ describe('SourceCreateDialog', () => {
     })
 
     await vi.waitFor(() => expect(connectorCard()).toBeDefined())
-    expect(dialogContent()?.querySelector('[data-slot="dialog-title"]')?.textContent).toBe(
-      'Choose a connector',
-    )
+    const dialog = dialogContent()
+    const titleId = dialog?.getAttribute('aria-labelledby')
+    expect(dialog?.getAttribute('role')).toBe('dialog')
+    expect(titleId).toBeTruthy()
+    expect(document.getElementById(titleId ?? '')?.textContent).toBe('Choose a connector')
     expect(
       hasClasses(
-        dialogContent(),
-        'max-w-[1100px]',
-        'h-[90vh]',
-        'max-h-[800px]',
+        dialog,
+        'h-[min(560px,calc(100dvh-2rem))]',
+        'w-[min(760px,calc(100vw-2rem))]',
         'p-0',
         'flex',
         'flex-col',
       ),
     ).toBe(true)
+
+    const connectorGroup = dialog?.querySelector('[role="radiogroup"]')
+    expect(connectorGroup?.getAttribute('aria-label')).toBe('Choose a connector')
+    expect(connectorGroup?.querySelectorAll('[role="radio"]')).toHaveLength(2)
     expect(
       hasClasses(
-        dialogContent()?.querySelector('[role="list"]'),
-        'mx-auto',
-        'max-w-5xl',
+        connectorGroup,
         'grid',
+        'w-full',
         'grid-cols-1',
         'sm:grid-cols-2',
         'xl:grid-cols-3',
-        'gap-3',
       ),
     ).toBe(true)
+    expect(connectorCard()?.getAttribute('role')).toBe('radio')
+    expect(connectorSearchField()?.getAttribute('aria-label')).toBe('Search connectors')
+    expect(connectorSearchField()?.getAttribute('placeholder')).toBe('Search connectors')
     expect(
-      hasClasses(
-        dialogContent()?.querySelector('[role="list"]')?.parentElement?.parentElement,
-        'bg-gray-50/40',
-      ),
+      hasClasses(connectorSearchField()?.parentElement?.parentElement, 'w-full', 'max-w-[400px]'),
     ).toBe(true)
-    expect(connectorSearchField()).not.toBeNull()
-    expect(hasClasses(connectorSearchField()?.closest('label'), 'mx-auto', 'max-w-[460px]')).toBe(
-      true,
-    )
-    expect(
-      hasClasses(
-        connectorCard(),
-        'bg-background',
-        'h-16',
-        'rounded-xl',
-        'px-4',
-        'shadow-[0_1px_3px_rgba(0,0,0,0.04)]',
-        'transition-all',
-        'duration-300',
-        'hover:-translate-y-px',
-        'hover:shadow-[0_8px_20px_-4px_rgba(0,0,0,0.08)]',
-      ),
-    ).toBe(true)
-    expect(connectorCard()?.closest('[role="listitem"]')?.classList.contains('border')).toBe(false)
-    const connectorIcon = connectorCard()?.querySelector('.connector-icon')
-    expect(connectorIcon?.classList.contains('bg-muted')).toBe(false)
-    expect(connectorIcon?.classList.contains('border')).toBe(false)
+    expect(hasClasses(connectorCard()?.parentElement, 'group/radio-card', 'rounded-xl')).toBe(true)
     expect(document.body.textContent).not.toContain('Step 1')
     expect(document.body.textContent).not.toContain('Continue')
     expect(document.body.querySelector('[data-fallback="M"]')).toBeDefined()
@@ -435,13 +417,15 @@ describe('SourceCreateDialog', () => {
       hasClasses(dialogContent()?.querySelector('aside'), 'hidden', 'w-[360px]', 'xl:w-[420px]'),
     ).toBe(true)
 
-    const modeGroup = document.body.querySelector('[role="group"][aria-label="Read mode"]')
-    expect(hasClasses(modeGroup, 'inline-flex', 'bg-muted', 'border-border')).toBe(true)
+    const modeGroup = document.body.querySelector('[role="radiogroup"][aria-label="Read mode"]')
+    expect(hasClasses(modeGroup, 'inline-flex', 'bg-components-segmented-control-bg-normal')).toBe(
+      true,
+    )
     const cdcMode = [...(modeGroup?.querySelectorAll('button') ?? [])].find(
       (button) => button.textContent === 'cdc',
     )
     await act(async () => cdcMode?.click())
-    expect(cdcMode?.getAttribute('aria-pressed')).toBe('true')
+    expect(cdcMode?.getAttribute('aria-checked')).toBe('true')
 
     await act(async () => backButton()?.click())
     await vi.waitFor(() => {
@@ -467,9 +451,8 @@ describe('SourceCreateDialog', () => {
     })
 
     await vi.waitFor(() => expect(connectorSearchField()).not.toBeNull())
-    expect(hasClasses(connectorSearchField()?.closest('label'), 'mx-auto', 'max-w-[460px]')).toBe(
-      true,
-    )
+    expect(connectorSearchField()?.getAttribute('placeholder')).toBe('Search connectors')
+    expect(dialogContent()?.querySelectorAll('[role="radio"]')).toHaveLength(3)
   })
 
   it('does not fabricate a configuration form when the registered connector lacks spec text', async () => {
@@ -598,5 +581,94 @@ describe('SourceCreateDialog', () => {
       expect(document.body.textContent).toContain('Connection test passed')
       expect(document.body.textContent).toContain('Connected')
     })
+  })
+
+  it('blocks testing and saving while a selected TLS file is still being read', async () => {
+    const spec = JSON.parse(detail.spec.text ?? '{}')
+    spec.properties = { tags: ['ssl'] }
+    getConnector.mockResolvedValue({
+      ...detail,
+      spec: { ...detail.spec, text: JSON.stringify(spec) },
+    })
+
+    const pendingReaders: FileReader[] = []
+    const readAsDataURL = vi
+      .spyOn(FileReader.prototype, 'readAsDataURL')
+      .mockImplementation(function (this: FileReader) {
+        pendingReaders.push(this)
+      })
+
+    host = document.createElement('div')
+    document.body.append(host)
+    root = createRoot(host)
+
+    await act(async () => {
+      root?.render(
+        <SourceCreateDialog
+          open
+          onOpenChange={() => undefined}
+          onCreated={(_source: SourceView) => undefined}
+        />,
+      )
+    })
+    await vi.waitFor(() => expect(connectorCard()).toBeDefined())
+    await act(async () => connectorCard()?.click())
+    await vi.waitFor(() => expect(fieldInput('Spec host')).toBeDefined())
+
+    const tlsToggle = [...document.body.querySelectorAll<HTMLElement>('[class*="formily-item"]')]
+      .find((element) => element.querySelector('label')?.textContent?.trim() === 'Use TLS')
+      ?.querySelector('input, textarea, button')
+    expect(tlsToggle).not.toBeNull()
+    await act(async () => {
+      tlsToggle?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    const fileInput = document.body.querySelector<HTMLInputElement>(
+      'input[type="file"][aria-label="CA certificate"]',
+    )
+    expect(fileInput).not.toBeNull()
+    Object.defineProperty(fileInput, 'files', {
+      configurable: true,
+      value: [new File(['certificate'], 'ca.pem', { type: 'application/x-pem-file' })],
+    })
+    await act(async () => {
+      fileInput?.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    expect(pendingReaders).toHaveLength(1)
+
+    const testButton = [...document.body.querySelectorAll<HTMLButtonElement>('button')].find(
+      (button) => button.textContent?.trim() === 'Test connection',
+    )
+    const saveButton = [...document.body.querySelectorAll<HTMLButtonElement>('button')].find(
+      (button) => button.textContent?.trim() === 'Create source',
+    )
+    expect(testButton?.disabled).toBe(true)
+    expect(saveButton?.disabled).toBe(true)
+    await act(async () => {
+      testButton?.click()
+      saveButton?.click()
+    })
+    expect(testConnection).not.toHaveBeenCalled()
+
+    await act(async () => {
+      Object.defineProperty(pendingReaders[0], 'result', {
+        configurable: true,
+        value: 'data:application/x-pem-file;base64,Y2VydGlmaWNhdGU=',
+      })
+      pendingReaders[0]?.dispatchEvent(new ProgressEvent('load'))
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(
+      [...document.body.querySelectorAll<HTMLButtonElement>('button')].find(
+        (button) => button.textContent?.trim() === 'Test connection',
+      )?.disabled,
+    ).toBe(false)
+    expect(
+      [...document.body.querySelectorAll<HTMLButtonElement>('button')].find(
+        (button) => button.textContent?.trim() === 'Create source',
+      )?.disabled,
+    ).toBe(false)
+    readAsDataURL.mockRestore()
   })
 })

@@ -13,7 +13,7 @@ export type PipelineFormilySchema = ISchema & {
 export type PipelineDataNodeKind = 'source' | 'target'
 
 /** Fields that can be edited on a data node. Connector identity is projection metadata, not input. */
-export type PipelineDataNodeField = 'sourceId' | 'table' | 'writeMode'
+export type PipelineDataNodeField = 'sourceId' | 'table' | 'writeMode' | 'onFullLoad'
 
 export interface PipelineSchemaOption {
   label: string
@@ -41,11 +41,13 @@ const defaultLabels: Record<PipelineDataNodeKind, Record<PipelineDataNodeField, 
     sourceId: 'Source',
     table: 'Table',
     writeMode: 'Write mode',
+    onFullLoad: 'On full load',
   },
   target: {
     sourceId: 'Target source',
     table: 'Target table',
     writeMode: 'Write mode',
+    onFullLoad: 'On full load',
   },
 }
 
@@ -209,6 +211,20 @@ export function createPipelineDataNodeSchema(
         enum: [
           { label: 'Upsert', value: 'upsert' },
           { label: 'Append', value: 'append' },
+        ],
+        ...verticalItem,
+      },
+      // No default: a target that never picked a policy keeps saying nothing, and the server's
+      // default (keep existing rows) applies.
+      onFullLoad: {
+        type: 'string',
+        title: labels.onFullLoad,
+        'x-component': 'Select',
+        'x-component-props': { placeholder: 'Keep existing rows (default)' },
+        enum: [
+          { label: 'Keep existing rows', value: 'append' },
+          { label: 'Clear first', value: 'clear' },
+          { label: 'Refuse if not empty', value: 'fail' },
         ],
         ...verticalItem,
       },
