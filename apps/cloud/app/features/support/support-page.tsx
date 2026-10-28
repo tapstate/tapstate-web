@@ -246,10 +246,7 @@ export function SupportPage() {
             {t('support.title')}
           </h1>
           <p className="mt-1 max-w-3xl text-sm leading-relaxed text-[var(--muted-foreground)]">
-            {t('support.scope')}
-          </p>
-          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-            {t('support.responseTarget')}
+            {t('support.scope')} {t('support.responseTarget')}
           </p>
         </div>
       </header>
@@ -338,18 +335,19 @@ export function SupportPage() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <button
+                <Button
                   aria-haspopup="dialog"
-                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+                  variant="primary"
+                  size="medium"
                   onClick={() => {
                     setSubmitSuccess(false)
                     setCreating(true)
                   }}
                   type="button"
                 >
-                  <Plus aria-hidden="true" className="h-4 w-4" />
+                  <Plus aria-hidden="true" className="size-3.5" />
                   {t('support.createTitle')}
-                </button>
+                </Button>
                 <button
                   aria-label={t('support.refresh')}
                   className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--muted-foreground)] transition-colors hover:bg-[var(--app-background)] hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current active:scale-[0.96] disabled:opacity-60"

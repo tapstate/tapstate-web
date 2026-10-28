@@ -152,9 +152,7 @@ describe('Support page email verification errors', () => {
     await renderPage()
 
     expect(host?.textContent).toContain('Get help with Tapstate Cloud.')
-    expect(host?.textContent).toContain(
-      'A support specialist will provide the first human response within 1 business day.',
-    )
+    expect(host?.textContent).toContain('First response within 1 business day.')
     expect(host?.textContent).toContain('No tickets yet')
     expect(host?.textContent).toContain('Create a ticket when you need help')
   })
