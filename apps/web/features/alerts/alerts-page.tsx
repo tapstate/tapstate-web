@@ -346,7 +346,7 @@ function AlertsContent() {
                   <dd>
                     <Time value={detail.data.firedAt} />
                   </dd>
-                  <dt>{t('alerts.duration')}</dt>
+                  <dt>{t('alerts.elapsedDuration')}</dt>
                   <dd>
                     <AlertDuration
                       from={detail.data.firedAt}

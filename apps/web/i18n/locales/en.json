@@ -2592,6 +2592,7 @@
         "edit": "Edit silence window",
         "create": "New silence window"
       }
-    }
+    },
+    "elapsedDuration": "Duration"
   }
 }
