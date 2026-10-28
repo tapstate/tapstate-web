@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next'
 import { CloudApiError, cloudApi, type OrganizationInvitation } from '../../service/cloud-api'
 import { useCloudAppState } from '../../state/cloud-app-state'
 
-export function OrganizationsPage() {
+export function OrganizationsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useTranslation()
   const { activeOrganization, organizations, user } = useCloudAppState()
   const [searchQuery, setSearchQuery] = useState('')
@@ -114,16 +114,18 @@ export function OrganizationsPage() {
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden">
-      <header className="border-divider-subtle flex shrink-0 items-center justify-between border-b px-6 py-4">
-        <div>
-          <h1 className="title-xl-semi-bold text-text-primary">
-            {t('sections.organizations.title')}
-          </h1>
-          <p className="body-sm-regular text-text-tertiary mt-1">
-            {t('sections.organizations.description')}
-          </p>
-        </div>
-      </header>
+      {!embedded && (
+        <header className="border-divider-subtle flex shrink-0 items-center justify-between border-b px-6 py-4">
+          <div>
+            <h1 className="title-xl-semi-bold text-text-primary">
+              {t('sections.organizations.title')}
+            </h1>
+            <p className="body-sm-regular text-text-tertiary mt-1">
+              {t('sections.organizations.description')}
+            </p>
+          </div>
+        </header>
+      )}
 
       {canManageInvitations && activeOrganization && (
         <section

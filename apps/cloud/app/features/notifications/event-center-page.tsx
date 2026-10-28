@@ -30,7 +30,7 @@ function formatTime(value?: string | null) {
 
 const PAGE_SIZE = 20
 
-export function EventCenterPage() {
+export function EventCenterPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useTranslation()
   const { activeOrganization } = useCloudAppState()
   const organizationId = activeOrganization?.id
@@ -104,47 +104,61 @@ export function EventCenterPage() {
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-y-auto">
-      <header className="flex shrink-0 items-center justify-between border-b border-black/[0.05] px-6 py-4 dark:border-white/[0.05]">
-        <div>
-          <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
-            <Bell className="h-5 w-5 text-neutral-400" />
-            {t('events.title')}
-          </h1>
-          <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-            {t('events.subtitle', {
-              organization: activeOrganization?.name ?? t('events.organizationFallback'),
-            })}
-          </p>
-        </div>
-        <button
-          className="flex items-center gap-1.5 rounded-lg border border-black/[0.08] px-2.5 py-1.5 text-xs text-neutral-600 transition-colors hover:bg-black/[0.03] dark:border-white/[0.08] dark:text-neutral-300 dark:hover:bg-white/[0.04]"
-          onClick={() => void load()}
-          type="button"
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-          {t('events.retry')}
-        </button>
-      </header>
+      {!embedded && (
+        <header className="flex shrink-0 items-center justify-between border-b border-black/[0.05] px-6 py-4 dark:border-white/[0.05]">
+          <div>
+            <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
+              <Bell className="h-5 w-5 text-neutral-400" />
+              {t('events.title')}
+            </h1>
+            <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+              {t('events.subtitle', {
+                organization: activeOrganization?.name ?? t('events.organizationFallback'),
+              })}
+            </p>
+          </div>
+          <button
+            className="flex items-center gap-1.5 rounded-lg border border-black/[0.08] px-2.5 py-1.5 text-xs text-neutral-600 transition-colors hover:bg-black/[0.03] dark:border-white/[0.08] dark:text-neutral-300 dark:hover:bg-white/[0.04]"
+            onClick={() => void load()}
+            type="button"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            {t('events.retry')}
+          </button>
+        </header>
+      )}
 
-      <div className="flex flex-wrap items-center gap-2 px-6 py-3">
-        <input
-          aria-label={t('events.filterType')}
-          className="h-8 rounded-lg border border-black/[0.08] bg-transparent px-2.5 text-xs outline-none focus:border-neutral-400 dark:border-white/[0.1] dark:text-white"
-          onChange={(event) => setType(event.target.value)}
-          placeholder={t('events.filterTypePlaceholder')}
-          value={type}
-        />
-        <select
-          aria-label={t('events.filterSeverity')}
-          className="h-8 rounded-lg border border-black/[0.08] bg-transparent px-2 text-xs outline-none dark:border-white/[0.1] dark:text-white"
-          onChange={(event) => setSeverity(event.target.value as EventSeverity | '')}
-          value={severity}
-        >
-          <option value="">{t('events.allSeverities')}</option>
-          <option value="INFO">{t('events.severity.INFO')}</option>
-          <option value="WARNING">{t('events.severity.WARNING')}</option>
-          <option value="CRITICAL">{t('events.severity.CRITICAL')}</option>
-        </select>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-6 py-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            aria-label={t('events.filterType')}
+            className="h-8 rounded-lg border border-black/[0.08] bg-transparent px-2.5 text-xs outline-none focus:border-neutral-400 dark:border-white/[0.1] dark:text-white"
+            onChange={(event) => setType(event.target.value)}
+            placeholder={t('events.filterTypePlaceholder')}
+            value={type}
+          />
+          <select
+            aria-label={t('events.filterSeverity')}
+            className="h-8 rounded-lg border border-black/[0.08] bg-transparent px-2 text-xs outline-none dark:border-white/[0.1] dark:text-white"
+            onChange={(event) => setSeverity(event.target.value as EventSeverity | '')}
+            value={severity}
+          >
+            <option value="">{t('events.allSeverities')}</option>
+            <option value="INFO">{t('events.severity.INFO')}</option>
+            <option value="WARNING">{t('events.severity.WARNING')}</option>
+            <option value="CRITICAL">{t('events.severity.CRITICAL')}</option>
+          </select>
+        </div>
+        {embedded && (
+          <button
+            className="flex items-center gap-1.5 rounded-lg border border-black/[0.08] px-2.5 py-1.5 text-xs text-neutral-600 transition-colors hover:bg-black/[0.03] dark:border-white/[0.08] dark:text-neutral-300 dark:hover:bg-white/[0.04]"
+            onClick={() => void load()}
+            type="button"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            {t('events.retry')}
+          </button>
+        )}
       </div>
 
       <div className="min-h-0 flex-1 px-6 pb-6">

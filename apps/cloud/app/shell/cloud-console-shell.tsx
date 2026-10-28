@@ -1,16 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { Link, useNavigate } from '@tanstack/react-router'
-import {
-  BellRing,
-  Building2,
-  ChevronRight,
-  CreditCard,
-  Home,
-  Inbox,
-  Search,
-  Server,
-} from 'lucide-react'
+import { BellRing, ChevronRight, CreditCard, Home, Search, Server, Settings } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -29,12 +20,10 @@ import { useCloudAppState } from '../state/cloud-app-state'
 
 const navigation = [
   { label: 'Overview', path: '/', icon: Home, exact: true },
-  { label: 'Organization', path: '/organizations', icon: Building2, exact: false },
   { label: 'Clusters', path: '/clusters', icon: Server, exact: false },
-  { label: 'Events', path: '/events', icon: BellRing, exact: false },
-  { label: 'Alert policies', path: '/alert-policies', icon: BellRing, exact: false },
-  { label: 'Deliveries', path: '/deliveries', icon: Inbox, exact: false },
+  { label: 'Alerts', path: '/alerts', icon: BellRing, exact: false },
   { label: 'Billing', path: '/billing', icon: CreditCard, exact: false },
+  { label: 'Settings', path: '/settings', icon: Settings, exact: false },
 ] as const
 
 function searchShortcutLabel() {
@@ -74,12 +63,7 @@ export function CloudConsoleShell({
   const visibleClusters = currentClusters
     .filter((cluster) => cluster.name.toLowerCase().includes(search.toLowerCase()))
     .slice(0, 3)
-  const canManageAlertPolicies =
-    !currentOrganization?.ownerEmail ||
-    currentOrganization.ownerEmail.toLowerCase() === user.email.toLowerCase()
-  const visibleNavigation = navigation.filter(
-    (item) => item.path !== '/alert-policies' || canManageAlertPolicies,
-  )
+  const visibleNavigation = navigation
 
   useEffect(() => {
     function focusClusterSearch(event: KeyboardEvent) {
@@ -156,7 +140,17 @@ export function CloudConsoleShell({
             >
               <Icon className="h-4 w-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
               <span className="truncate">
-                {path === '/organizations' ? t('sections.organizations.title') : label}
+                {path === '/alerts'
+                  ? t('sections.alerts.title')
+                  : path === '/settings'
+                    ? t('sections.settings.title')
+                    : path === '/billing'
+                      ? t('sections.billing.title')
+                      : path === '/clusters'
+                        ? t('sections.clusters.title')
+                        : path === '/'
+                          ? t('sections.overview.title')
+                          : label}
               </span>
             </Link>
           ))}

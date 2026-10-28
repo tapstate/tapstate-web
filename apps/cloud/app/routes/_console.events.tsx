@@ -1,5 +1,10 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
-import { EventCenterPage } from '../features/notifications/event-center-page'
-
-export const Route = createFileRoute('/_console/events')({ component: EventCenterPage })
+export const Route = createFileRoute('/_console/events')({
+  beforeLoad: () => {
+    throw redirect({
+      to: '/alerts',
+      search: (prev) => ({ organizationId: prev.organizationId, tab: 'events' }),
+    })
+  },
+})

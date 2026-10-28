@@ -231,6 +231,8 @@
     }
   },
   "settings": {
+    "tabAccount": "个人账户",
+    "tabOrganization": "组织与团队",
     "linkedIdentitiesTitle": "登录方式",
     "linkedIdentitiesDescription": "重新验证 Cloud 账户后即可关联 Google 或 GitHub。邮箱相同不会触发自动关联。",
     "provider": {
@@ -451,9 +453,10 @@
     }
   },
   "events": {
-    "title": "事件与告警",
+    "title": "告警",
     "subtitle": "{{organization}} 的关键事件与告警投递。",
     "organizationFallback": "你的组织",
+    "tabEvents": "事件",
     "tabPolicies": "告警策略",
     "tabDeliveries": "投递历史",
     "policySubtitle": "{{organization}} 的邮件告警规则。",
@@ -543,6 +546,10 @@
     "clusters": {
       "title": "集群",
       "description": "查看集群状态并打开获准访问的 Cluster Console。"
+    },
+    "alerts": {
+      "title": "告警",
+      "description": "监控关键事件、告警策略与通知投递。"
     },
     "organizations": { "title": "组织", "description": "管理组织成员和访问权限。" },
     "billing": {

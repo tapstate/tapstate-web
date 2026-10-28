@@ -231,6 +231,8 @@
     }
   },
   "settings": {
+    "tabAccount": "個人帳戶",
+    "tabOrganization": "組織與團隊",
     "linkedIdentitiesTitle": "登入方式",
     "linkedIdentitiesDescription": "重新驗證 Cloud 帳戶後即可連結 Google 或 GitHub。電子郵件相同不會自動連結。",
     "provider": {
@@ -451,9 +453,10 @@
     }
   },
   "events": {
-    "title": "事件與告警",
+    "title": "告警",
     "subtitle": "{{organization}} 的關鍵事件與告警投遞。",
     "organizationFallback": "你的組織",
+    "tabEvents": "事件",
     "tabPolicies": "告警策略",
     "tabDeliveries": "投遞歷史",
     "policySubtitle": "{{organization}} 的郵件告警規則。",
@@ -543,6 +546,10 @@
     "clusters": {
       "title": "叢集",
       "description": "查看叢集狀態並開啟獲准存取的 Cluster Console。"
+    },
+    "alerts": {
+      "title": "告警",
+      "description": "監視關鍵事件、告警策略與通知投遞。"
     },
     "organizations": { "title": "組織", "description": "管理組織成員和存取權限。" },
     "billing": {
