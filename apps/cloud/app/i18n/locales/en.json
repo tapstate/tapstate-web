@@ -589,7 +589,7 @@
     "switchToDarkMode": "Switch to dark mode",
     "signOut": "Sign out",
     "title": "Support",
-    "scope": "Submit requests about your Cloud account, Console access, Cluster operation, and data integration.",
+    "scope": "Get help with Tapstate Cloud.",
     "responseTarget": "A support specialist will provide the first human response within 1 business day.",
     "createTitle": "Create a ticket",
     "createDescription": "Describe the issue and our support team will follow up by email.",

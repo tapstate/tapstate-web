@@ -151,9 +151,7 @@ describe('Support page email verification errors', () => {
   it('shows an empty state before the first ticket is submitted', async () => {
     await renderPage()
 
-    expect(host?.textContent).toContain(
-      'Submit requests about your Cloud account, Console access, Cluster operation, and data integration.',
-    )
+    expect(host?.textContent).toContain('Get help with Tapstate Cloud.')
     expect(host?.textContent).toContain(
       'A support specialist will provide the first human response within 1 business day.',
     )

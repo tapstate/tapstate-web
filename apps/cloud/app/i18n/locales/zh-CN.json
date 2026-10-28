@@ -589,7 +589,7 @@
     "switchToDarkMode": "切换到深色模式",
     "signOut": "退出登录",
     "title": "支持工单",
-    "scope": "提交有关 Cloud 账户、控制台访问、Cluster 运行和数据集成的问题。",
+    "scope": "获取 Tapstate Cloud 的帮助。",
     "responseTarget": "支持专员将在 1 个工作日内首次人工回复。",
     "createTitle": "创建工单",
     "createDescription": "描述遇到的问题，支持团队会通过邮件跟进。",

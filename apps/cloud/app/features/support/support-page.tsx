@@ -9,9 +9,10 @@ import {
   DialogDescription,
   DialogCloseButton,
 } from '@tapstate-web/ui/dialog'
+import { Field, FieldLabel } from '@tapstate-web/ui/field'
 import { Input } from '@tapstate-web/ui/input'
 import { Textarea } from '@tapstate-web/ui/textarea'
-import { ArrowLeft, ArrowRight, LifeBuoy, Plus, RefreshCw, Send, TicketCheck } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Plus, RefreshCw, Send, TicketCheck } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -240,9 +241,6 @@ export function SupportPage() {
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto">
       <header className="flex shrink-0 items-start gap-3 border-b border-[var(--border-subtle)] px-5 py-5 sm:px-8">
-        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--app-background)] text-[var(--foreground)]">
-          <LifeBuoy aria-hidden="true" className="h-5 w-5" />
-        </span>
         <div className="min-w-0">
           <h1 className="text-lg font-semibold tracking-tight text-[var(--foreground)] sm:text-xl">
             {t('support.title')}
@@ -271,24 +269,20 @@ export function SupportPage() {
                 <DialogCloseButton aria-label={t('support.cancel')} disabled={submitting} />
               </DialogHeader>
               <form className="space-y-4 px-6 pb-6" onSubmit={submitTicket}>
-                <label className="block space-y-1.5">
-                  <span className="text-sm font-medium text-[var(--foreground)]">
-                    {t('support.summaryLabel')}
-                  </span>
+                <Field name="summary">
+                  <FieldLabel>{t('support.summaryLabel')}</FieldLabel>
                   <Input
                     autoComplete="off"
-                    className="min-h-10 w-full"
+                    className="w-full"
                     maxLength={255}
                     onChange={(event) => setSummary(event.target.value)}
                     placeholder={t('support.summaryPlaceholder')}
                     required
                     value={summary}
                   />
-                </label>
-                <label className="block space-y-1.5">
-                  <span className="text-sm font-medium text-[var(--foreground)]">
-                    {t('support.descriptionLabel')}
-                  </span>
+                </Field>
+                <Field name="description">
+                  <FieldLabel>{t('support.descriptionLabel')}</FieldLabel>
                   <Textarea
                     className="min-h-32 w-full resize-y"
                     maxLength={10000}
@@ -297,7 +291,7 @@ export function SupportPage() {
                     required
                     value={description}
                   />
-                </label>
+                </Field>
                 {submitError && (
                   <div className="text-destructive space-y-2 text-sm" role="alert">
                     <p>{submitError}</p>
@@ -309,7 +303,7 @@ export function SupportPage() {
                 <div className="flex justify-end gap-2">
                   <Button
                     variant="secondary"
-                    size="large"
+                    size="medium"
                     disabled={submitting}
                     onClick={() => setCreating(false)}
                     type="button"
@@ -318,7 +312,7 @@ export function SupportPage() {
                   </Button>
                   <Button
                     variant="primary"
-                    size="large"
+                    size="medium"
                     disabled={submitting || !summary.trim() || !description.trim()}
                     type="submit"
                   >
