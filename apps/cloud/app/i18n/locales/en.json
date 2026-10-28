@@ -132,8 +132,8 @@
     "organizationNameRequired": "Enter your organization name to continue.",
     "requestCodeFirst": "Request an email code before continuing.",
     "securityNote": "Your session is protected by a secure, HttpOnly cookie.",
-    "legalAgreement": "I agree to the <a class=\"underline hover:no-underline\" href=\"{{eula}}\" target=\"_blank\" rel=\"noopener noreferrer\">Terms of Service</a>, <a class=\"underline hover:no-underline\" href=\"{{privacy}}\" target=\"_blank\" rel=\"noopener noreferrer\">Privacy Policy</a>, <a class=\"underline hover:no-underline\" href=\"{{subscription}}\" target=\"_blank\" rel=\"noopener noreferrer\">Subscription Policy</a>, and <a class=\"underline hover:no-underline\" href=\"{{dpa}}\" target=\"_blank\" rel=\"noopener noreferrer\">Data Processing Addendum</a>.",
-    "legalRequired": "You must agree to the legal documents to register.",
+    "legalNoticeSignup": "By signing up, you agree to our <eulaLink>Terms of Service</eulaLink> & <privacyLink>Privacy Policy</privacyLink>.",
+    "legalNoticeSignin": "By signing in, you agree to our <eulaLink>Terms of Service</eulaLink> & <privacyLink>Privacy Policy</privacyLink>.",
     "footer": "© 2026 Tapstate Systems Inc.",
     "showcase": {
       "headlinePrimary": "Define your business view once.",
@@ -576,18 +576,5 @@
     },
     "notConnectedTitle": "Cloud services are not connected",
     "notConnectedDescription": "This screen is a protected route. Cloud data will appear after sign-in and API integration are available."
-  },
-  "footer": {
-    "legalLinks": {
-      "eula": "Terms of Service",
-      "privacy": "Privacy Policy",
-      "subscription": "Subscription Policy",
-      "dpa": "Data Processing Addendum"
-    },
-    "company": "TAPDATA HONG KONG LIMITED",
-    "address": "#557, 5/F, Building 19W, 19 Science Park West Avenue, Hong Kong SAR",
-    "supportEmail": "support@tapdata.io",
-    "contact": "Contact",
-    "support": "Support"
   }
 }

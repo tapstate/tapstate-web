@@ -77,15 +77,6 @@ async function submitForm() {
   })
 }
 
-async function checkLegalCheckbox() {
-  const checkbox = host?.querySelector<HTMLInputElement>('input[type="checkbox"]')
-  if (checkbox) {
-    await act(async () => {
-      checkbox.click()
-    })
-  }
-}
-
 beforeEach(async () => {
   await i18n.changeLanguage('en')
 })
@@ -162,7 +153,6 @@ describe('Cloud invitation authentication', () => {
     await clickButton('Email me a verification code')
     await act(async () => changeInput('#auth-code', '123456'))
     await act(async () => changeInput('#auth-password', 'correct-horse-battery'))
-    await checkLegalCheckbox()
     await submitForm()
 
     expect(props.onRequestCode).toHaveBeenCalledWith('member@example.com', 'invite-token')
@@ -200,7 +190,6 @@ describe('Cloud invitation authentication', () => {
     await clickButton('Email me a verification code')
     await act(async () => changeInput('#auth-code', '123456'))
     await act(async () => changeInput('#auth-password', 'correct-horse-battery'))
-    await checkLegalCheckbox()
     await submitForm()
 
     expect(props.onRequestCode).toHaveBeenCalledWith('member@example.com', null)
@@ -322,5 +311,21 @@ describe('Cloud invitation authentication', () => {
     expect(authorizationUrl).toBe(
       new URL('/oauth2/authorization/google', cloudApiOrigin || window.location.origin).toString(),
     )
+  })
+
+  it('renders terms of service and privacy policy links at the bottom', async () => {
+    await renderPage()
+
+    const eulaLink = host?.querySelector<HTMLAnchorElement>(
+      'a[href="https://docs.tapstate.com/legal/eula"]',
+    )
+    const privacyLink = host?.querySelector<HTMLAnchorElement>(
+      'a[href="https://docs.tapstate.com/privacy"]',
+    )
+
+    expect(eulaLink).not.toBeNull()
+    expect(privacyLink).not.toBeNull()
+    expect(eulaLink?.textContent).toBe('Terms of Service')
+    expect(privacyLink?.textContent).toBe('Privacy Policy')
   })
 })

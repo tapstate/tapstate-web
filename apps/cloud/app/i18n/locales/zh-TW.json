@@ -128,8 +128,8 @@
     "organizationNameRequired": "請輸入組織名稱。",
     "requestCodeFirst": "請先取得電子郵件驗證碼。",
     "securityNote": "工作階段由安全的 HttpOnly Cookie 保護。",
-    "legalAgreement": "我已閱讀並同意 <a class=\"underline hover:no-underline\" href=\"{{eula}}\" target=\"_blank\" rel=\"noopener noreferrer\">《服務條款》</a>、<a class=\"underline hover:no-underline\" href=\"{{privacy}}\" target=\"_blank\" rel=\"noopener noreferrer\">《隱私政策》</a>、<a class=\"underline hover:no-underline\" href=\"{{subscription}}\" target=\"_blank\" rel=\"noopener noreferrer\">《訂閱政策》</a> 和 <a class=\"underline hover:no-underline\" href=\"{{dpa}}\" target=\"_blank\" rel=\"noopener noreferrer\">《資料處理附錄》</a>。",
-    "legalRequired": "請先同意以上法律文件才能註冊。",
+    "legalNoticeSignup": "註冊即表示您同意我們的 <eulaLink>服務條款</eulaLink> 與 <privacyLink>隱私政策</privacyLink>。",
+    "legalNoticeSignin": "登入即表示您同意我們的 <eulaLink>服務條款</eulaLink> 與 <privacyLink>隱私政策</privacyLink>。",
     "footer": "© 2026 Tapstate Systems Inc.",
     "showcase": {
       "headlinePrimary": "一次定義業務檢視。",
@@ -563,18 +563,5 @@
     "settings": { "title": "設定", "description": "管理組織和帳戶偏好設定。" },
     "notConnectedTitle": "Cloud 服務尚未接通",
     "notConnectedDescription": "此頁面屬於受保護路由。完成登入和 API 接線後，才會顯示 Cloud 資料。"
-  },
-  "footer": {
-    "legalLinks": {
-      "eula": "服務條款",
-      "privacy": "隱私政策",
-      "subscription": "訂閱政策",
-      "dpa": "資料處理附錄"
-    },
-    "company": "TAPDATA HONG KONG LIMITED",
-    "address": "#557, 5/F, Building 19W, 19 Science Park West Avenue, Hong Kong SAR",
-    "supportEmail": "support@tapdata.io",
-    "contact": "聯絡我們",
-    "support": "技術支援"
   }
 }
