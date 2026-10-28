@@ -483,3 +483,57 @@ describe('current receiver candidate', () => {
     expect(requests().some((r) => r.body.kind === 'RECEIVER')).toBe(false)
   })
 })
+it('edits inhibition from its own page while preserving hidden route bindings', async () => {
+  const routeForm = {
+    id: 'owned-route',
+    kind: 'SUBSCRIPTION',
+    etag: '4',
+    name: 'Existing route',
+    enabled: true,
+    resourceKinds: ['pipeline'],
+    allResources: true,
+    resources: [],
+    typeIds: [],
+    severities: [],
+    groupBy: ['RESOURCE'],
+    initialWaitSeconds: 30,
+    changeIntervalSeconds: 300,
+    repeatIntervalSeconds: 14400,
+    channels: [
+      {
+        channelType: 'email',
+        receivers: ['receiver-from-later-page'],
+        messages: { titlePrefix: 'Kept', titleSuffix: '', messageNote: '', footerText: '' },
+      },
+    ],
+    inhibition: [{ rootType: 'cluster.storage-unavailable', dependentType: 'pipeline.failed' }],
+  }
+  const fallback = fetcher.getMockImplementation()!
+  fetcher.mockImplementation(async (url, init) =>
+    String(url).endsWith('/configuration/list') &&
+    JSON.parse(String(init?.body)).kind === 'SUBSCRIPTION'
+      ? Response.json({ rows: [routeForm] })
+      : fallback(url, init),
+  )
+  await render()
+  await click('Silence & inhibition')
+  await click('Configure inhibition')
+  expect(container.querySelector('.alert-inhibition-editor')).not.toBeNull()
+  expect(container.querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe(
+    'Silence & inhibition',
+  )
+  expect(container.querySelector('.alert-message-preview')).toBeNull()
+  expect(
+    [...container.querySelectorAll('label')].some(
+      (l) => l.querySelector('span')?.textContent === 'Name',
+    ),
+  ).toBe(false)
+  await click('Remove this inhibition')
+  await click('Save and activate')
+  const sent = requests().find((r) => r.path.endsWith('/configuration/save'))!.body.form
+  expect(sent.inhibition).toEqual([])
+  expect(sent.channels).toEqual(routeForm.channels)
+  expect(sent.groupBy).toEqual(routeForm.groupBy)
+  expect(sent.name).toBe(routeForm.name)
+  expect(requests().some((r) => r.path.endsWith('/preview'))).toBe(false)
+})

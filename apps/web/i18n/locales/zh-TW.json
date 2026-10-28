@@ -2537,6 +2537,18 @@
     "evaluationLag": "告警檢測延遲",
     "notMeasured": "尚未測量",
     "deliveryAttention": "待關注通知",
-    "silenceDescription": "名稱 / 原因"
+    "silenceDescription": "名稱 / 原因",
+    "phases": {
+      "LOCAL": "本機準備",
+      "CONNECT": "連線",
+      "TLS": "TLS / 憑證驗證",
+      "AUTHENTICATION": "身分驗證",
+      "ENVELOPE": "收件人 / 請求標頭",
+      "BODY": "訊息本文",
+      "FINAL_RESPONSE": "最終回執",
+      "DEADLINE": "嘗試時限",
+      "CAPACITY": "並行准入"
+    },
+    "configureInhibition": "設定抑制關係"
   }
 }

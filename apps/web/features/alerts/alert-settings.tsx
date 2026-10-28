@@ -47,6 +47,7 @@ function SettingsContent() {
   const external = catalog.data?.deployment === 'ON_PREM'
   const [kind, setKind] = useState('RULE')
   const [form, setForm] = useState<AlertForm | null>(null)
+  const [editingInhibition, setEditingInhibition] = useState(false)
   const [baseline, setBaseline] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(false)
@@ -75,7 +76,7 @@ function SettingsContent() {
   })
   const receivers = useInfiniteQuery({
     queryKey: ['alerts', 'configuration', 'receivers-picker'],
-    enabled: external && kind === 'SUBSCRIPTION',
+    enabled: external && kind === 'SUBSCRIPTION' && !editingInhibition,
     initialPageParam: null as string | null,
     queryFn: ({ pageParam, signal }) =>
       alertCall<AlertPage<AlertForm>>(
@@ -188,7 +189,7 @@ function SettingsContent() {
     serial.current,
   ])
   useEffect(() => {
-    if (kind !== 'SUBSCRIPTION' || !form?.channels?.length) return
+    if (editingInhibition || kind !== 'SUBSCRIPTION' || !form?.channels?.length) return
     const wanted = previewFormat === 'webhook' ? 'webhook' : 'email'
     if (!form.channels.some((c) => c.channelType === wanted)) {
       setPreviewFormat(form.channels[0].channelType === 'webhook' ? 'webhook' : 'text')
@@ -225,6 +226,7 @@ function SettingsContent() {
     setNotice('')
     setError(false)
     setChosenTestTarget('')
+    if (next === null) setEditingInhibition(false)
     setForm(next)
     setBaseline(JSON.stringify(next))
   }
@@ -435,7 +437,7 @@ function SettingsContent() {
     leave(() => edit(next))
   }
   return (
-    <section className="alerts-page">
+    <section className="alerts-page" data-deployment={catalog.data?.deployment}>
       <header className="alerts-heading">
         <div>
           <p>
@@ -459,7 +461,7 @@ function SettingsContent() {
           <button
             key={v}
             role="tab"
-            aria-selected={kind === v}
+            aria-selected={(editingInhibition ? 'SILENCE' : kind) === v}
             onClick={() =>
               leave(() => {
                 edit(null)
@@ -527,21 +529,29 @@ function SettingsContent() {
                   {inhibitionRoutes.data?.pages
                     .flatMap((p) => p.rows)
                     .flatMap((r) =>
-                      (r.inhibition ?? []).map((edge) => (
+                      (r.inhibition?.length
+                        ? r.inhibition
+                        : [{ rootType: '', dependentType: '' }]
+                      ).map((edge) => (
                         <tr key={`${r.id}-${edge.rootType}-${edge.dependentType}`}>
                           <td>{r.name}</td>
-                          <td>{t(`alerts.types.${edge.rootType}`)}</td>
-                          <td>{t(`alerts.types.${edge.dependentType}`)}</td>
-                          <td>{t(r.enabled ? 'alerts.enabled' : 'alerts.disabled')}</td>
+                          <td>{edge.rootType ? t(`alerts.types.${edge.rootType}`) : '—'}</td>
+                          <td>
+                            {edge.dependentType ? t(`alerts.types.${edge.dependentType}`) : '—'}
+                          </td>
+                          <td>
+                            {t(r.enabled && edge.rootType ? 'alerts.enabled' : 'alerts.disabled')}
+                          </td>
                           <td>
                             <button
                               className="alert-table-action"
                               onClick={() => {
                                 setKind('SUBSCRIPTION')
+                                setEditingInhibition(true)
                                 edit(r)
                               }}
                             >
-                              {t('alerts.edit')}
+                              {t('alerts.configureInhibition')}
                             </button>
                           </td>
                         </tr>
@@ -561,648 +571,723 @@ function SettingsContent() {
         {form && (
           <>
             <div className="alert-editor-head">
-              <button className="alert-back" onClick={() => leave(() => edit(null))}>
+              <button
+                className="alert-back"
+                onClick={() =>
+                  leave(() => {
+                    edit(null)
+                    if (editingInhibition) setKind('SILENCE')
+                  })
+                }
+              >
                 <ArrowLeft aria-hidden="true" className="h-3.5 w-3.5" />
-                {t(`alerts.kinds.${kind}`)}
+                {t(`alerts.kinds.${editingInhibition ? 'SILENCE' : kind}`)}
               </button>
-              <h2>{t(form.etag ? 'alerts.editConfiguration' : 'alerts.newConfiguration')}</h2>
+              <h2>
+                {t(
+                  editingInhibition
+                    ? 'alerts.configureInhibition'
+                    : form.etag
+                      ? 'alerts.editConfiguration'
+                      : 'alerts.newConfiguration',
+                )}
+              </h2>
               <span className={`alert-state ${dirty ? 'alert-state--warning' : ''}`}>
                 {t(dirty ? 'alerts.dirty' : form.etag ? 'alerts.savedLabel' : 'alerts.notSaved')}
               </span>
             </div>
-            <form
-              className="alert-panel alert-editor"
-              onSubmit={(e) => {
-                e.preventDefault()
-                void save()
-              }}
-            >
-              <fieldset disabled={busy}>
-                {kind !== 'SILENCE' && (
-                  <Field label={t('alerts.name')}>
-                    <input
-                      required
-                      value={form.name ?? ''}
-                      maxLength={128}
-                      onChange={(e) => update({ name: e.target.value })}
-                    />
-                  </Field>
-                )}
-                {kind === 'RULE' && (
-                  <>
-                    <Field label={t('alerts.type')}>
-                      <AlertSelect
-                        value={form.typeId}
-                        onChange={(e) => {
-                          const type = catalog.data!.types.find((v) => v.id === e.target.value)!
-                          update({
-                            typeId: type.id,
-                            typeVersion: type.version,
-                            resourceKinds: type.resourceKinds,
-                            parameters: Object.fromEntries(
-                              type.parameters.map((p) => [p.name, p.defaultValue]),
-                            ),
-                          })
-                        }}
-                      >
-                        {catalog.data?.types.map((v) => (
-                          <option key={v.id} value={v.id}>
-                            {t(`alerts.types.${v.id}`)}
-                            {!v.inputAvailable ? ` · ${t('alerts.inputUnavailable')}` : ''}
-                          </option>
-                        ))}
-                      </AlertSelect>
-                    </Field>
-                    <div className="alert-note alert-note--info">
-                      <strong>{t('alerts.trigger')}</strong>{' '}
-                      {catalog.data?.types.find((v) => v.id === form.typeId)?.condition}
-                      <br />
-                      <strong>{t('alerts.recovered')}</strong>{' '}
-                      {catalog.data?.types.find((v) => v.id === form.typeId)?.recovery}
-                    </div>
-                    <Field label={t('alerts.typeDefault')}>
-                      <input
-                        readOnly
-                        value={
-                          catalog.data?.types.find((v) => v.id === form.typeId)?.severity ?? ''
-                        }
-                      />
-                    </Field>
-                    <Field label={t('alerts.severityLabel')}>
-                      <AlertSelect
-                        value={form.severity}
-                        onChange={(e) => update({ severity: e.target.value })}
-                      >
-                        {['DEFAULT', 'CRITICAL', 'MAJOR', 'MINOR', 'WARNING'].map((v) => (
-                          <option key={v} value={v}>
-                            {t(`alerts.severity.${v}`)}
-                          </option>
-                        ))}
-                      </AlertSelect>
-                    </Field>
-                    <div className="alert-effective-level">
-                      <span>{t('alerts.effectiveSeverity')}</span>
-                      <Severity
-                        value={
-                          form.severity && form.severity !== 'DEFAULT'
-                            ? form.severity
-                            : (catalog.data?.types.find((v) => v.id === form.typeId)?.severity ??
-                              'INDETERMINATE')
-                        }
-                      />
-                      <small>
-                        {t(
-                          form.severity && form.severity !== 'DEFAULT'
-                            ? 'alerts.ruleOverride'
-                            : 'alerts.followsDefault',
-                        )}
-                      </small>
-                    </div>
-                    {catalog.data?.types
-                      .find((v) => v.id === form.typeId)
-                      ?.parameters.map((p) => (
-                        <Field
-                          key={p.name}
-                          label={`${t(`alerts.parameters.${p.name}`)} (${p.unit})`}
-                        >
-                          <input
-                            type="number"
-                            min={p.minimum}
-                            max={p.maximum}
-                            step={1}
-                            required
-                            value={form.parameters?.[p.name] ?? p.defaultValue}
-                            onChange={(e) =>
-                              update({
-                                parameters: {
-                                  ...form.parameters,
-                                  [p.name]: Number(e.target.value),
-                                },
-                              })
-                            }
-                          />
-                        </Field>
-                      ))}
-                  </>
-                )}
-                {kind !== 'RECEIVER' && (
-                  <>
-                    <label className="alert-check">
-                      <input
-                        type="checkbox"
-                        checked={form.allResources ?? true}
-                        onChange={(e) =>
-                          update({
-                            allResources: e.target.checked,
-                            resources: e.target.checked ? [] : form.resources,
-                          })
-                        }
-                      />
-                      {t('alerts.allResources')}
-                    </label>
-                    {!form.allResources && <ResourcePicker form={form} update={update} />}
-                  </>
-                )}
-                {kind === 'RECEIVER' && (
-                  <ReceiverFields
-                    form={form}
-                    update={update}
-                    policies={catalog.data?.channelPolicies}
-                  />
-                )}
-                {kind === 'SILENCE' && (
-                  <>
-                    <Field label={t('alerts.silenceDescription')}>
-                      <textarea
-                        required
-                        maxLength={1024}
-                        value={form.reason ?? ''}
-                        onChange={(e) => update({ reason: e.target.value })}
-                      />
-                    </Field>
-                    <Field label={t('alerts.startsAt')}>
-                      <input
-                        required
-                        value={form.startsAt ?? ''}
-                        onChange={(e) => update({ startsAt: e.target.value })}
-                      />
-                    </Field>
-                    <Field label={t('alerts.duration')}>
-                      <input
-                        type="number"
-                        min={1}
-                        max={604800}
-                        value={form.durationSeconds}
-                        onChange={(e) => update({ durationSeconds: Number(e.target.value) })}
-                      />
-                    </Field>
-                    <Field label={t('alerts.period')}>
-                      <input
-                        type="number"
-                        min={1}
-                        max={31536000}
-                        value={form.periodSeconds ?? ''}
-                        onChange={(e) =>
-                          update({ periodSeconds: e.target.value ? Number(e.target.value) : null })
-                        }
-                      />
-                    </Field>
-                    <Field label={t('alerts.endsAt')}>
-                      <input
-                        value={form.endsAt ?? ''}
-                        onChange={(e) => update({ endsAt: e.target.value || null })}
-                      />
-                    </Field>
-                  </>
-                )}
-                {(kind === 'SILENCE' || kind === 'SUBSCRIPTION') && (
-                  <Field label={t('alerts.matchTypes')}>
-                    <AlertSelect
-                      multiple
-                      value={form.typeIds ?? []}
-                      onChange={(e) =>
-                        update({ typeIds: [...e.target.selectedOptions].map((o) => o.value) })
-                      }
-                    >
-                      {catalog.data?.types.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {t(`alerts.types.${v.id}`)}
-                        </option>
-                      ))}
-                    </AlertSelect>
-                    <small>{t('alerts.emptyMeansAll')}</small>
-                  </Field>
-                )}
-                {kind === 'SUBSCRIPTION' && (
-                  <>
-                    <Field label={t('alerts.matchSeverities')}>
-                      <AlertSelect
-                        multiple
-                        value={form.severities ?? []}
-                        onChange={(e) =>
-                          update({ severities: [...e.target.selectedOptions].map((o) => o.value) })
-                        }
-                      >
-                        {['CRITICAL', 'MAJOR', 'MINOR', 'WARNING'].map((v) => (
-                          <option key={v}>{v}</option>
-                        ))}
-                      </AlertSelect>
-                    </Field>
-                    <Field label={t('alerts.groupBy')}>
-                      <AlertSelect
-                        multiple
-                        value={form.groupBy ?? []}
-                        onChange={(e) =>
-                          update({ groupBy: [...e.target.selectedOptions].map((o) => o.value) })
-                        }
-                      >
-                        {['RESOURCE', 'TYPE', 'RULE'].map((v) => (
-                          <option key={v}>{v}</option>
-                        ))}
-                      </AlertSelect>
-                    </Field>
-                    {(
-                      [
-                        'initialWaitSeconds',
-                        'changeIntervalSeconds',
-                        'repeatIntervalSeconds',
-                      ] as const
-                    ).map((k) => (
-                      <Field key={k} label={t(`alerts.${k}`)}>
-                        <input
-                          type="number"
-                          min={k === 'initialWaitSeconds' ? 0 : 1}
-                          max={k === 'initialWaitSeconds' ? 3600 : 86400}
-                          value={form[k]}
-                          onChange={(e) => update({ [k]: Number(e.target.value) })}
-                        />
-                      </Field>
-                    ))}
-                    {['email', 'webhook'].map((channelType) => {
-                      const channel = form.channels?.find((c) => c.channelType === channelType)
-                      return (
-                        <section key={channelType}>
-                          <label className="alert-check">
-                            <input
-                              type="checkbox"
-                              checked={Boolean(channel)}
-                              onChange={(e) =>
-                                update({
-                                  channels: e.target.checked
-                                    ? [
-                                        ...(form.channels ?? []),
-                                        { channelType, receivers: [], messages: emptyMessages() },
-                                      ]
-                                    : form.channels?.filter((c) => c.channelType !== channelType),
-                                })
-                              }
-                            />
-                            {channelType}
-                          </label>
-                          {channel && (
-                            <>
-                              <Field label={t('alerts.receivers')}>
-                                <AlertSelect
-                                  multiple
-                                  value={channel.receivers}
-                                  onChange={(e) =>
-                                    update({
-                                      channels: form.channels?.map((c) =>
-                                        c.channelType === channelType
-                                          ? {
-                                              ...c,
-                                              receivers: [...e.target.selectedOptions].map(
-                                                (o) => o.value,
-                                              ),
-                                            }
-                                          : c,
-                                      ),
-                                    })
-                                  }
-                                >
-                                  {channel.receivers
-                                    .filter(
-                                      (id) =>
-                                        !receivers.data?.pages
-                                          .flatMap((p) => p.rows)
-                                          .some((r) => r.id === id),
-                                    )
-                                    .map((id) => (
-                                      <option key={id} value={id}>
-                                        {t('alerts.selectedReceiverPending', { id })}
-                                      </option>
-                                    ))}
-                                  {receivers.data?.pages
-                                    .flatMap((p) => p.rows)
-                                    .filter((r) => r.transport?.channelType === channelType)
-                                    .map((r) => (
-                                      <option key={r.id} value={r.id}>
-                                        {r.name}
-                                      </option>
-                                    ))}
-                                </AlertSelect>
-                              </Field>
-                              <details>
-                                <summary>{t('alerts.customText')}</summary>
-                                {(Object.keys(emptyMessages()) as (keyof Messages)[]).map((key) => (
-                                  <Field key={key} label={t(`alerts.messages.${key}`)}>
-                                    <textarea
-                                      maxLength={key.startsWith('title') ? 64 : 1024}
-                                      value={channel.messages[key]}
-                                      onChange={(e) =>
-                                        update({
-                                          channels: form.channels?.map((c) =>
-                                            c.channelType === channelType
-                                              ? {
-                                                  ...c,
-                                                  messages: {
-                                                    ...c.messages,
-                                                    [key]: e.target.value,
-                                                  },
-                                                }
-                                              : c,
-                                          ),
-                                        })
-                                      }
-                                    />
-                                  </Field>
-                                ))}
-                              </details>
-                            </>
-                          )}
-                        </section>
-                      )
-                    })}
-                    {receivers.hasNextPage && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => void receivers.fetchNextPage()}
-                      >
-                        {t('alerts.moreReceivers')}
-                      </Button>
-                    )}
-                    <InhibitionEditor
-                      form={form}
-                      update={update}
-                      types={catalog.data?.types ?? []}
-                    />
-                    <section className="alert-message-preview">
-                      <h3>{t('alerts.preview')}</h3>
-                      <AlertSelect
-                        aria-label={t('alerts.previewKind')}
-                        value={previewKind}
-                        onChange={(e) => {
-                          serial.current++
-                          setPreviewKind(e.target.value)
-                          setPreview(null)
-                        }}
-                      >
-                        {['FAULT', 'REMINDER', 'RECOVERY', 'RECOVERY_SUMMARY'].map((v) => (
-                          <option key={v}>{v}</option>
-                        ))}
-                      </AlertSelect>
-                      <AlertSelect
-                        aria-label={t('alerts.previewFormat')}
-                        value={previewFormat}
-                        onChange={(e) => {
-                          serial.current++
-                          setPreviewFormat(e.target.value)
-                          setPreview(null)
-                        }}
-                      >
-                        {['text', 'html', 'webhook']
-                          .filter((v) =>
-                            form.channels?.some(
-                              (c) => c.channelType === (v === 'webhook' ? 'webhook' : 'email'),
-                            ),
-                          )
-                          .map((v) => (
-                            <option key={v}>{v}</option>
-                          ))}
-                      </AlertSelect>
-                      <Button type="button" variant="outline" onClick={() => void renderPreview()}>
-                        {t('alerts.renderPreview')}
-                      </Button>
-                      {preview && (
-                        <>
-                          <p>{t('alerts.exampleOnly')}</p>
-                          <strong>{preview.subject}</strong>
-                          {previewFormat === 'html' ? (
-                            <iframe title={t('alerts.preview')} sandbox="" srcDoc={preview.html} />
-                          ) : (
-                            <pre className="alert-stack">
-                              {previewFormat === 'webhook' ? preview.webhook : preview.text}
-                            </pre>
-                          )}
-                        </>
-                      )}
-                    </section>
-                    <section className="alert-match-preview">
-                      <div className="alerts-toolbar">
-                        <div>
-                          <h3>{t('alerts.matchPreview')}</h3>
-                          <p>{t('alerts.matchPreviewNote')}</p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() =>
-                            setMatchCandidate({
-                              form: {
-                                resourceKinds: form.resourceKinds,
-                                allResources: form.allResources,
-                                resources: form.resources,
-                                typeIds: form.typeIds,
-                                severities: form.severities,
-                                inhibition: form.inhibition,
-                              },
-                              serial: serial.current,
-                            })
-                          }
-                        >
-                          {t('alerts.previewMatching')}
-                        </Button>
-                      </div>
-                      {matching.isError && <p role="alert">{t('alerts.unavailable')}</p>}
-                      {matchCandidate && matching.data && (
-                        <>
-                          <p>{t('alerts.matchCount', { count: matching.data.pages[0].total })}</p>
-                          <div className="alert-table-wrap">
-                            <table>
-                              <thead>
-                                <tr>
-                                  <th>{t('alerts.resourceScope')}</th>
-                                  <th>{t('alerts.type')}</th>
-                                  <th>{t('alerts.severityLabel')}</th>
-                                  <th>{t('alerts.notificationEligibility')}</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {matching.data.pages
-                                  .flatMap((p) => p.rows)
-                                  .map((r) => (
-                                    <tr key={r.key}>
-                                      <td>{r.resource.id}</td>
-                                      <td>{t(`alerts.types.${r.typeId}`)}</td>
-                                      <td>
-                                        <Severity value={r.severity} />
-                                      </td>
-                                      <td>
-                                        {t(
-                                          r.silenced
-                                            ? 'alerts.silenced'
-                                            : r.inhibited
-                                              ? 'alerts.inhibited'
-                                              : 'alerts.previewEligible',
-                                        )}
-                                      </td>
-                                    </tr>
-                                  ))}
-                              </tbody>
-                            </table>
-                          </div>
-                          {matching.hasNextPage && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => void matching.fetchNextPage()}
-                            >
-                              {t('alerts.more')}
-                            </Button>
-                          )}
-                        </>
-                      )}
-                    </section>
-                  </>
-                )}
-                {kind !== 'SILENCE' && (
-                  <label className="alert-check">
-                    <input
-                      type="checkbox"
-                      checked={form.enabled ?? true}
-                      onChange={(e) => update({ enabled: e.target.checked })}
-                    />
-                    {t('alerts.enabled')}
-                  </label>
-                )}
-                {kind === 'RULE' && (
-                  <section className="alert-rule-example">
-                    <Field label={t('alerts.missingDataBehavior')}>
-                      <input readOnly value={t('alerts.keepUnknown')} />
-                    </Field>
-                    <h3>{t('alerts.syntheticRuleExample')}</h3>
-                    <p className="alert-note">{t('alerts.syntheticRuleNote')}</p>
-                    <AlertSelect
-                      aria-label={t('alerts.ruleSample')}
-                      value={ruleSample}
-                      onChange={(e) => {
-                        serial.current++
-                        setRuleSample(e.target.value)
-                        setRuleResult(null)
-                      }}
-                    >
-                      {['BAD', 'GOOD', 'MISSING'].map((v) => (
-                        <option key={v} value={v}>
-                          {t(`alerts.ruleSamples.${v}`)}
-                        </option>
-                      ))}
-                    </AlertSelect>
-                    <Button type="button" variant="outline" onClick={() => void previewRule()}>
-                      {t('alerts.evaluateExample')}
-                    </Button>
-                    {ruleResult && (
-                      <div role="status" className="alert-note">
-                        <strong>{t(`alerts.exampleStates.${ruleResult.status}`)}</strong> ·{' '}
-                        {t(`alerts.exampleQuality.${ruleResult.quality}`, {
-                          defaultValue: ruleResult.quality,
-                        })}{' '}
-                        · <Severity value={ruleResult.severity} />
-                        <small>
-                          {t('alerts.virtualElapsed', { count: ruleResult.virtualElapsedSeconds })}
-                        </small>
-                      </div>
-                    )}
-                  </section>
-                )}
-              </fieldset>
-              {kind === 'RECEIVER' && (
-                <div className="alert-test-panel">
-                  <p>{t('alerts.testFixed')}</p>
-                  {form.transport?.channelType === 'email' && testTargets.length > 0 && (
-                    <Field label={t('alerts.testRecipient')}>
-                      <Select
-                        disabled={busy}
-                        value={testTarget}
-                        onValueChange={(value) => {
-                          serial.current++
-                          setChosenTestTarget(value ?? '')
-                          setTest(null)
-                          setNotice('')
-                        }}
-                      >
-                        <SelectTrigger aria-label={t('alerts.testRecipient')}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {testTargets.map((target) => (
-                            <SelectItem key={target} value={target}>
-                              {target}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <small>{t('alerts.singleTestTarget')}</small>
-                    </Field>
-                  )}
+            {editingInhibition ? (
+              <form
+                className="alert-panel alert-editor"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  void save()
+                }}
+              >
+                <p className="alert-note">
+                  {t('alerts.route')}: {form.name}
+                </p>
+                <fieldset disabled={busy}>
+                  <InhibitionEditor form={form} update={update} types={catalog.data?.types ?? []} />
+                </fieldset>
+                <div className="alert-actions">
+                  <Button type="submit" disabled={busy || !dirty}>
+                    {t('alerts.saveEffective')}
+                  </Button>
                   <Button
                     type="button"
                     variant="outline"
                     disabled={busy}
-                    onClick={() => void sendTest()}
-                  >
-                    {t('alerts.sendTest')}
-                  </Button>
-                  {test && (
-                    <p
-                      role="status"
-                      data-outcome={
-                        result.data?.current === false
-                          ? 'UNKNOWN'
-                          : (testResult?.outcome ?? test.admission)
-                      }
-                    >
-                      {result.data?.current === false
-                        ? t('alerts.testResultMismatch')
-                        : test.admission === 'SUBMITTING'
-                          ? t('alerts.testSubmitting')
-                          : testResult?.outcome === 'ACCEPTED'
-                            ? t(dirty ? 'alerts.testSuccessUnsaved' : 'alerts.testSuccessSaved')
-                            : testResult?.stopped
-                              ? t(
-                                  testResult.outcome === 'UNKNOWN'
-                                    ? 'alerts.testUnknown'
-                                    : 'alerts.testFailed',
-                                )
-                              : t(
-                                  test.admission === 'UNKNOWN'
-                                    ? 'alerts.testAdmissionUnknown'
-                                    : 'alerts.testQueued',
-                                )}
-                    </p>
-                  )}
-                  {result.isError && test && <p role="alert">{t('alerts.testQueryFailed')}</p>}
-                </div>
-              )}
-              <div className="alert-actions">
-                <Button type="submit" disabled={busy || !dirty}>
-                  {t('alerts.saveEffective')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => leave(() => edit(null))}
-                >
-                  {t('alerts.close')}
-                </Button>
-                {form.etag && kind === 'SILENCE' && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    disabled={busy}
                     onClick={() =>
                       leave(() => {
-                        void retire(form)
+                        edit(null)
+                        setKind('SILENCE')
                       })
                     }
                   >
-                    {t(kind === 'SILENCE' ? 'alerts.endSilence' : 'alerts.retire')}
+                    {t('alerts.close')}
                   </Button>
+                </div>
+              </form>
+            ) : (
+              <form
+                className="alert-panel alert-editor"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  void save()
+                }}
+              >
+                <fieldset disabled={busy}>
+                  {kind !== 'SILENCE' && (
+                    <Field label={t('alerts.name')}>
+                      <input
+                        required
+                        value={form.name ?? ''}
+                        maxLength={128}
+                        onChange={(e) => update({ name: e.target.value })}
+                      />
+                    </Field>
+                  )}
+                  {kind === 'RULE' && (
+                    <>
+                      <Field label={t('alerts.type')}>
+                        <AlertSelect
+                          value={form.typeId}
+                          onChange={(e) => {
+                            const type = catalog.data!.types.find((v) => v.id === e.target.value)!
+                            update({
+                              typeId: type.id,
+                              typeVersion: type.version,
+                              resourceKinds: type.resourceKinds,
+                              parameters: Object.fromEntries(
+                                type.parameters.map((p) => [p.name, p.defaultValue]),
+                              ),
+                            })
+                          }}
+                        >
+                          {catalog.data?.types.map((v) => (
+                            <option key={v.id} value={v.id}>
+                              {t(`alerts.types.${v.id}`)}
+                              {!v.inputAvailable ? ` · ${t('alerts.inputUnavailable')}` : ''}
+                            </option>
+                          ))}
+                        </AlertSelect>
+                      </Field>
+                      <div className="alert-note alert-note--info">
+                        <strong>{t('alerts.trigger')}</strong>{' '}
+                        {catalog.data?.types.find((v) => v.id === form.typeId)?.condition}
+                        <br />
+                        <strong>{t('alerts.recovered')}</strong>{' '}
+                        {catalog.data?.types.find((v) => v.id === form.typeId)?.recovery}
+                      </div>
+                      <Field label={t('alerts.typeDefault')}>
+                        <input
+                          readOnly
+                          value={
+                            catalog.data?.types.find((v) => v.id === form.typeId)?.severity ?? ''
+                          }
+                        />
+                      </Field>
+                      <Field label={t('alerts.severityLabel')}>
+                        <AlertSelect
+                          value={form.severity}
+                          onChange={(e) => update({ severity: e.target.value })}
+                        >
+                          {['DEFAULT', 'CRITICAL', 'MAJOR', 'MINOR', 'WARNING'].map((v) => (
+                            <option key={v} value={v}>
+                              {t(`alerts.severity.${v}`)}
+                            </option>
+                          ))}
+                        </AlertSelect>
+                      </Field>
+                      <div className="alert-effective-level">
+                        <span>{t('alerts.effectiveSeverity')}</span>
+                        <Severity
+                          value={
+                            form.severity && form.severity !== 'DEFAULT'
+                              ? form.severity
+                              : (catalog.data?.types.find((v) => v.id === form.typeId)?.severity ??
+                                'INDETERMINATE')
+                          }
+                        />
+                        <small>
+                          {t(
+                            form.severity && form.severity !== 'DEFAULT'
+                              ? 'alerts.ruleOverride'
+                              : 'alerts.followsDefault',
+                          )}
+                        </small>
+                      </div>
+                      {catalog.data?.types
+                        .find((v) => v.id === form.typeId)
+                        ?.parameters.map((p) => (
+                          <Field
+                            key={p.name}
+                            label={`${t(`alerts.parameters.${p.name}`)} (${p.unit})`}
+                          >
+                            <input
+                              type="number"
+                              min={p.minimum}
+                              max={p.maximum}
+                              step={1}
+                              required
+                              value={form.parameters?.[p.name] ?? p.defaultValue}
+                              onChange={(e) =>
+                                update({
+                                  parameters: {
+                                    ...form.parameters,
+                                    [p.name]: Number(e.target.value),
+                                  },
+                                })
+                              }
+                            />
+                          </Field>
+                        ))}
+                    </>
+                  )}
+                  {kind !== 'RECEIVER' && (
+                    <>
+                      <label className="alert-check">
+                        <input
+                          type="checkbox"
+                          checked={form.allResources ?? true}
+                          onChange={(e) =>
+                            update({
+                              allResources: e.target.checked,
+                              resources: e.target.checked ? [] : form.resources,
+                            })
+                          }
+                        />
+                        {t('alerts.allResources')}
+                      </label>
+                      {!form.allResources && <ResourcePicker form={form} update={update} />}
+                    </>
+                  )}
+                  {kind === 'RECEIVER' && (
+                    <ReceiverFields
+                      form={form}
+                      update={update}
+                      policies={catalog.data?.channelPolicies}
+                    />
+                  )}
+                  {kind === 'SILENCE' && (
+                    <>
+                      <Field label={t('alerts.silenceDescription')}>
+                        <textarea
+                          required
+                          maxLength={1024}
+                          value={form.reason ?? ''}
+                          onChange={(e) => update({ reason: e.target.value })}
+                        />
+                      </Field>
+                      <Field label={t('alerts.startsAt')}>
+                        <input
+                          required
+                          value={form.startsAt ?? ''}
+                          onChange={(e) => update({ startsAt: e.target.value })}
+                        />
+                      </Field>
+                      <Field label={t('alerts.duration')}>
+                        <input
+                          type="number"
+                          min={1}
+                          max={604800}
+                          value={form.durationSeconds}
+                          onChange={(e) => update({ durationSeconds: Number(e.target.value) })}
+                        />
+                      </Field>
+                      <Field label={t('alerts.period')}>
+                        <input
+                          type="number"
+                          min={1}
+                          max={31536000}
+                          value={form.periodSeconds ?? ''}
+                          onChange={(e) =>
+                            update({
+                              periodSeconds: e.target.value ? Number(e.target.value) : null,
+                            })
+                          }
+                        />
+                      </Field>
+                      <Field label={t('alerts.endsAt')}>
+                        <input
+                          value={form.endsAt ?? ''}
+                          onChange={(e) => update({ endsAt: e.target.value || null })}
+                        />
+                      </Field>
+                    </>
+                  )}
+                  {(kind === 'SILENCE' || kind === 'SUBSCRIPTION') && (
+                    <Field label={t('alerts.matchTypes')}>
+                      <AlertSelect
+                        multiple
+                        value={form.typeIds ?? []}
+                        onChange={(e) =>
+                          update({ typeIds: [...e.target.selectedOptions].map((o) => o.value) })
+                        }
+                      >
+                        {catalog.data?.types.map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {t(`alerts.types.${v.id}`)}
+                          </option>
+                        ))}
+                      </AlertSelect>
+                      <small>{t('alerts.emptyMeansAll')}</small>
+                    </Field>
+                  )}
+                  {kind === 'SUBSCRIPTION' && (
+                    <>
+                      <Field label={t('alerts.matchSeverities')}>
+                        <AlertSelect
+                          multiple
+                          value={form.severities ?? []}
+                          onChange={(e) =>
+                            update({
+                              severities: [...e.target.selectedOptions].map((o) => o.value),
+                            })
+                          }
+                        >
+                          {['CRITICAL', 'MAJOR', 'MINOR', 'WARNING'].map((v) => (
+                            <option key={v}>{v}</option>
+                          ))}
+                        </AlertSelect>
+                      </Field>
+                      <Field label={t('alerts.groupBy')}>
+                        <AlertSelect
+                          multiple
+                          value={form.groupBy ?? []}
+                          onChange={(e) =>
+                            update({ groupBy: [...e.target.selectedOptions].map((o) => o.value) })
+                          }
+                        >
+                          {['RESOURCE', 'TYPE', 'RULE'].map((v) => (
+                            <option key={v}>{v}</option>
+                          ))}
+                        </AlertSelect>
+                      </Field>
+                      {(
+                        [
+                          'initialWaitSeconds',
+                          'changeIntervalSeconds',
+                          'repeatIntervalSeconds',
+                        ] as const
+                      ).map((k) => (
+                        <Field key={k} label={t(`alerts.${k}`)}>
+                          <input
+                            type="number"
+                            min={k === 'initialWaitSeconds' ? 0 : 1}
+                            max={k === 'initialWaitSeconds' ? 3600 : 86400}
+                            value={form[k]}
+                            onChange={(e) => update({ [k]: Number(e.target.value) })}
+                          />
+                        </Field>
+                      ))}
+                      {['email', 'webhook'].map((channelType) => {
+                        const channel = form.channels?.find((c) => c.channelType === channelType)
+                        return (
+                          <section key={channelType}>
+                            <label className="alert-check">
+                              <input
+                                type="checkbox"
+                                checked={Boolean(channel)}
+                                onChange={(e) =>
+                                  update({
+                                    channels: e.target.checked
+                                      ? [
+                                          ...(form.channels ?? []),
+                                          { channelType, receivers: [], messages: emptyMessages() },
+                                        ]
+                                      : form.channels?.filter((c) => c.channelType !== channelType),
+                                  })
+                                }
+                              />
+                              {channelType}
+                            </label>
+                            {channel && (
+                              <>
+                                <Field label={t('alerts.receivers')}>
+                                  <AlertSelect
+                                    multiple
+                                    value={channel.receivers}
+                                    onChange={(e) =>
+                                      update({
+                                        channels: form.channels?.map((c) =>
+                                          c.channelType === channelType
+                                            ? {
+                                                ...c,
+                                                receivers: [...e.target.selectedOptions].map(
+                                                  (o) => o.value,
+                                                ),
+                                              }
+                                            : c,
+                                        ),
+                                      })
+                                    }
+                                  >
+                                    {channel.receivers
+                                      .filter(
+                                        (id) =>
+                                          !receivers.data?.pages
+                                            .flatMap((p) => p.rows)
+                                            .some((r) => r.id === id),
+                                      )
+                                      .map((id) => (
+                                        <option key={id} value={id}>
+                                          {t('alerts.selectedReceiverPending', { id })}
+                                        </option>
+                                      ))}
+                                    {receivers.data?.pages
+                                      .flatMap((p) => p.rows)
+                                      .filter((r) => r.transport?.channelType === channelType)
+                                      .map((r) => (
+                                        <option key={r.id} value={r.id}>
+                                          {r.name}
+                                        </option>
+                                      ))}
+                                  </AlertSelect>
+                                </Field>
+                                <details>
+                                  <summary>{t('alerts.customText')}</summary>
+                                  {(Object.keys(emptyMessages()) as (keyof Messages)[]).map(
+                                    (key) => (
+                                      <Field key={key} label={t(`alerts.messages.${key}`)}>
+                                        <textarea
+                                          maxLength={key.startsWith('title') ? 64 : 1024}
+                                          value={channel.messages[key]}
+                                          onChange={(e) =>
+                                            update({
+                                              channels: form.channels?.map((c) =>
+                                                c.channelType === channelType
+                                                  ? {
+                                                      ...c,
+                                                      messages: {
+                                                        ...c.messages,
+                                                        [key]: e.target.value,
+                                                      },
+                                                    }
+                                                  : c,
+                                              ),
+                                            })
+                                          }
+                                        />
+                                      </Field>
+                                    ),
+                                  )}
+                                </details>
+                              </>
+                            )}
+                          </section>
+                        )
+                      })}
+                      {receivers.hasNextPage && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => void receivers.fetchNextPage()}
+                        >
+                          {t('alerts.moreReceivers')}
+                        </Button>
+                      )}
+                      <InhibitionEditor
+                        form={form}
+                        update={update}
+                        types={catalog.data?.types ?? []}
+                      />
+                      <section className="alert-message-preview">
+                        <h3>{t('alerts.preview')}</h3>
+                        <AlertSelect
+                          aria-label={t('alerts.previewKind')}
+                          value={previewKind}
+                          onChange={(e) => {
+                            serial.current++
+                            setPreviewKind(e.target.value)
+                            setPreview(null)
+                          }}
+                        >
+                          {['FAULT', 'REMINDER', 'RECOVERY', 'RECOVERY_SUMMARY'].map((v) => (
+                            <option key={v}>{v}</option>
+                          ))}
+                        </AlertSelect>
+                        <AlertSelect
+                          aria-label={t('alerts.previewFormat')}
+                          value={previewFormat}
+                          onChange={(e) => {
+                            serial.current++
+                            setPreviewFormat(e.target.value)
+                            setPreview(null)
+                          }}
+                        >
+                          {['text', 'html', 'webhook']
+                            .filter((v) =>
+                              form.channels?.some(
+                                (c) => c.channelType === (v === 'webhook' ? 'webhook' : 'email'),
+                              ),
+                            )
+                            .map((v) => (
+                              <option key={v}>{v}</option>
+                            ))}
+                        </AlertSelect>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => void renderPreview()}
+                        >
+                          {t('alerts.renderPreview')}
+                        </Button>
+                        {preview && (
+                          <>
+                            <p>{t('alerts.exampleOnly')}</p>
+                            <strong>{preview.subject}</strong>
+                            {previewFormat === 'html' ? (
+                              <iframe
+                                title={t('alerts.preview')}
+                                sandbox=""
+                                srcDoc={preview.html}
+                              />
+                            ) : (
+                              <pre className="alert-stack">
+                                {previewFormat === 'webhook' ? preview.webhook : preview.text}
+                              </pre>
+                            )}
+                          </>
+                        )}
+                      </section>
+                      <section className="alert-match-preview">
+                        <div className="alerts-toolbar">
+                          <div>
+                            <h3>{t('alerts.matchPreview')}</h3>
+                            <p>{t('alerts.matchPreviewNote')}</p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() =>
+                              setMatchCandidate({
+                                form: {
+                                  resourceKinds: form.resourceKinds,
+                                  allResources: form.allResources,
+                                  resources: form.resources,
+                                  typeIds: form.typeIds,
+                                  severities: form.severities,
+                                  inhibition: form.inhibition,
+                                },
+                                serial: serial.current,
+                              })
+                            }
+                          >
+                            {t('alerts.previewMatching')}
+                          </Button>
+                        </div>
+                        {matching.isError && <p role="alert">{t('alerts.unavailable')}</p>}
+                        {matchCandidate && matching.data && (
+                          <>
+                            <p>{t('alerts.matchCount', { count: matching.data.pages[0].total })}</p>
+                            <div className="alert-table-wrap">
+                              <table>
+                                <thead>
+                                  <tr>
+                                    <th>{t('alerts.resourceScope')}</th>
+                                    <th>{t('alerts.type')}</th>
+                                    <th>{t('alerts.severityLabel')}</th>
+                                    <th>{t('alerts.notificationEligibility')}</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {matching.data.pages
+                                    .flatMap((p) => p.rows)
+                                    .map((r) => (
+                                      <tr key={r.key}>
+                                        <td>{r.resource.id}</td>
+                                        <td>{t(`alerts.types.${r.typeId}`)}</td>
+                                        <td>
+                                          <Severity value={r.severity} />
+                                        </td>
+                                        <td>
+                                          {t(
+                                            r.silenced
+                                              ? 'alerts.silenced'
+                                              : r.inhibited
+                                                ? 'alerts.inhibited'
+                                                : 'alerts.previewEligible',
+                                          )}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                </tbody>
+                              </table>
+                            </div>
+                            {matching.hasNextPage && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => void matching.fetchNextPage()}
+                              >
+                                {t('alerts.more')}
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </section>
+                    </>
+                  )}
+                  {kind !== 'SILENCE' && (
+                    <label className="alert-check">
+                      <input
+                        type="checkbox"
+                        checked={form.enabled ?? true}
+                        onChange={(e) => update({ enabled: e.target.checked })}
+                      />
+                      {t('alerts.enabled')}
+                    </label>
+                  )}
+                  {kind === 'RULE' && (
+                    <section className="alert-rule-example">
+                      <Field label={t('alerts.missingDataBehavior')}>
+                        <input readOnly value={t('alerts.keepUnknown')} />
+                      </Field>
+                      <h3>{t('alerts.syntheticRuleExample')}</h3>
+                      <p className="alert-note">{t('alerts.syntheticRuleNote')}</p>
+                      <AlertSelect
+                        aria-label={t('alerts.ruleSample')}
+                        value={ruleSample}
+                        onChange={(e) => {
+                          serial.current++
+                          setRuleSample(e.target.value)
+                          setRuleResult(null)
+                        }}
+                      >
+                        {['BAD', 'GOOD', 'MISSING'].map((v) => (
+                          <option key={v} value={v}>
+                            {t(`alerts.ruleSamples.${v}`)}
+                          </option>
+                        ))}
+                      </AlertSelect>
+                      <Button type="button" variant="outline" onClick={() => void previewRule()}>
+                        {t('alerts.evaluateExample')}
+                      </Button>
+                      {ruleResult && (
+                        <div role="status" className="alert-note">
+                          <strong>{t(`alerts.exampleStates.${ruleResult.status}`)}</strong> ·{' '}
+                          {t(`alerts.exampleQuality.${ruleResult.quality}`, {
+                            defaultValue: ruleResult.quality,
+                          })}{' '}
+                          · <Severity value={ruleResult.severity} />
+                          <small>
+                            {t('alerts.virtualElapsed', {
+                              count: ruleResult.virtualElapsedSeconds,
+                            })}
+                          </small>
+                        </div>
+                      )}
+                    </section>
+                  )}
+                </fieldset>
+                {kind === 'RECEIVER' && (
+                  <div className="alert-test-panel">
+                    <p>{t('alerts.testFixed')}</p>
+                    {form.transport?.channelType === 'email' && testTargets.length > 0 && (
+                      <Field label={t('alerts.testRecipient')}>
+                        <Select
+                          disabled={busy}
+                          value={testTarget}
+                          onValueChange={(value) => {
+                            serial.current++
+                            setChosenTestTarget(value ?? '')
+                            setTest(null)
+                            setNotice('')
+                          }}
+                        >
+                          <SelectTrigger aria-label={t('alerts.testRecipient')}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {testTargets.map((target) => (
+                              <SelectItem key={target} value={target}>
+                                {target}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <small>{t('alerts.singleTestTarget')}</small>
+                      </Field>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => void sendTest()}
+                    >
+                      {t('alerts.sendTest')}
+                    </Button>
+                    {test && (
+                      <p
+                        role="status"
+                        data-outcome={
+                          result.data?.current === false
+                            ? 'UNKNOWN'
+                            : (testResult?.outcome ?? test.admission)
+                        }
+                      >
+                        {result.data?.current === false
+                          ? t('alerts.testResultMismatch')
+                          : test.admission === 'SUBMITTING'
+                            ? t('alerts.testSubmitting')
+                            : testResult?.outcome === 'ACCEPTED'
+                              ? t(dirty ? 'alerts.testSuccessUnsaved' : 'alerts.testSuccessSaved')
+                              : testResult?.stopped
+                                ? t(
+                                    testResult.outcome === 'UNKNOWN'
+                                      ? 'alerts.testUnknown'
+                                      : 'alerts.testFailed',
+                                  )
+                                : t(
+                                    test.admission === 'UNKNOWN'
+                                      ? 'alerts.testAdmissionUnknown'
+                                      : 'alerts.testQueued',
+                                  )}
+                      </p>
+                    )}
+                    {result.isError && test && <p role="alert">{t('alerts.testQueryFailed')}</p>}
+                  </div>
                 )}
-              </div>
-              {kind === 'SILENCE' && <p>{t('alerts.silenceNote')}</p>}
-            </form>
+                {testResult?.diagnostic && (
+                  <p className="alert-note">
+                    {t(`alerts.phases.${testResult.diagnostic.phase}`, {
+                      defaultValue: testResult.diagnostic.phase,
+                    })}
+                    {testResult.diagnostic.status ? ` · ${testResult.diagnostic.status}` : ''}
+                  </p>
+                )}
+                <div className="alert-actions">
+                  <Button type="submit" disabled={busy || !dirty}>
+                    {t('alerts.saveEffective')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => leave(() => edit(null))}
+                  >
+                    {t('alerts.close')}
+                  </Button>
+                  {form.etag && kind === 'SILENCE' && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={busy}
+                      onClick={() =>
+                        leave(() => {
+                          void retire(form)
+                        })
+                      }
+                    >
+                      {t(kind === 'SILENCE' ? 'alerts.endSilence' : 'alerts.retire')}
+                    </Button>
+                  )}
+                </div>
+                {kind === 'SILENCE' && <p>{t('alerts.silenceNote')}</p>}
+              </form>
+            )}
           </>
         )}
       </div>

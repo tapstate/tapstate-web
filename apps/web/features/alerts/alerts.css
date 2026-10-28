@@ -1,5 +1,8 @@
 @layer components {
   .alerts-page {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
     padding: calc(var(--spacing) * 6) calc(var(--spacing) * 6);
     max-width: none;
     margin: auto;
@@ -246,6 +249,9 @@
     border-bottom: 1px solid var(--border);
     min-height: 52px;
     font-size: 12px;
+  }
+  .alerts-page[data-deployment='CLOUD_MANAGED'] .alert-editor .alert-actions {
+    padding-inline-end: calc(var(--spacing) * 20);
   }
   .alert-test-panel {
     background: var(--card);
@@ -627,6 +633,10 @@
     color: var(--muted-foreground);
     font-size: 11px;
     margin-top: calc(var(--spacing) * 2);
+  }
+  .alert-row-meta > :first-child {
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .alert-center-layout > .alert-panel:first-child:has(.alert-alarm-row) {
     padding: 0;

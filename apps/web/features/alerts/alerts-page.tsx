@@ -432,15 +432,14 @@ function AlertsContent() {
                   {t('alerts.target')}: {delivery.data.target ?? '—'}
                 </p>
                 <p>
-                  {delivery.data.channel} ·{' '}
-                  {t(`alerts.results.${delivery.data.displayState}`, {
-                    defaultValue: delivery.data.displayState,
-                  })}
+                  {delivery.data.channel} · <DeliveryResult value={delivery.data} />
                 </p>
                 <p>
                   {delivery.data.source === 'sdk-event-center'
                     ? t('alerts.cloudAccepted')
-                    : t('alerts.acceptanceBoundary')}
+                    : localPlaceholder(delivery.data)
+                      ? t('alerts.placeholder')
+                      : t('alerts.acceptanceBoundary')}
                 </p>
                 {delivery.data.eventId && (
                   <p>
@@ -460,7 +459,17 @@ function AlertsContent() {
                 <ol>
                   {delivery.data.attemptHistory?.map((a) => (
                     <li key={a.number}>
-                      {a.number} · {t(`alerts.results.${a.outcome}`)} · <Time value={a.endedAt} />
+                      {a.number} ·{' '}
+                      {t(
+                        localPlaceholder(delivery.data!) && a.outcome === 'ACCEPTED'
+                          ? 'alerts.placeholder'
+                          : `alerts.results.${a.outcome}`,
+                      )}{' '}
+                      · <Time value={a.endedAt} />
+                      <small>
+                        {a.phase && t(`alerts.phases.${a.phase}`, { defaultValue: a.phase })}
+                        {a.status ? ` · ${a.status}` : ''}
+                      </small>
                     </li>
                   ))}
                 </ol>
@@ -482,7 +491,7 @@ function AlertsContent() {
         )}
       </div>
       <Dialog open={confirmRetry} onOpenChange={setConfirmRetry}>
-        <DialogContent>
+        <DialogContent showCloseButton={false}>
           <DialogTitle>{t('alerts.retry')}</DialogTitle>
           <DialogDescription>{t('alerts.retryRisk')}</DialogDescription>
           <p>
@@ -549,7 +558,7 @@ function DeliveryTable({
               </td>
               <td>
                 <span className="alert-state">
-                  {t(`alerts.results.${r.displayState}`, { defaultValue: r.displayState })}
+                  <DeliveryResult value={r} />
                 </span>
                 {r.source === 'sdk-event-center' && <small>{t('alerts.cloudAccepted')}</small>}
               </td>
@@ -567,5 +576,23 @@ function DeliveryTable({
         </tbody>
       </table>
     </div>
+  )
+}
+
+function localPlaceholder(value: DeliveryRow) {
+  return (
+    value.channel === 'cloud-sdk' &&
+    value.outcome === 'ACCEPTED' &&
+    value.source !== 'sdk-event-center'
+  )
+}
+function DeliveryResult({ value }: { value: DeliveryRow }) {
+  const { t } = useTranslation()
+  return (
+    <>
+      {t(localPlaceholder(value) ? 'alerts.placeholder' : `alerts.results.${value.displayState}`, {
+        defaultValue: value.displayState,
+      })}
+    </>
   )
 }

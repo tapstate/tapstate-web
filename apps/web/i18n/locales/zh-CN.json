@@ -2537,6 +2537,18 @@
     "evaluationLag": "告警检测延迟",
     "notMeasured": "尚未测量",
     "deliveryAttention": "待关注通知",
-    "silenceDescription": "名称 / 原因"
+    "silenceDescription": "名称 / 原因",
+    "phases": {
+      "LOCAL": "本地准备",
+      "CONNECT": "连接",
+      "TLS": "TLS / 证书校验",
+      "AUTHENTICATION": "身份认证",
+      "ENVELOPE": "收件人 / 请求头",
+      "BODY": "消息正文",
+      "FINAL_RESPONSE": "最终回执",
+      "DEADLINE": "尝试时限",
+      "CAPACITY": "并发准入"
+    },
+    "configureInhibition": "配置抑制关系"
   }
 }

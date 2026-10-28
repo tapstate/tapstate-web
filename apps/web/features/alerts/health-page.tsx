@@ -15,19 +15,28 @@ export function HealthPage() {
     queryFn: ({ signal }) => alertCall<Health>(apiFetch, 'health', {}, signal),
     refetchInterval: 10000,
   })
+  if (query.isPending)
+    return (
+      <section className="alerts-page">
+        <header className="alerts-heading">
+          <h1>{t('alerts.systemHealth')}</h1>
+        </header>
+        <p role="status">{t('alerts.loading')}</p>
+      </section>
+    )
   const health = query.data
   const degraded = !health || health.degraded || health.closed || query.isError
   const checks = [
     {
       id: 'observations',
-      state: 'partialCoverage',
+      state: query.isError ? 'unavailable' : 'partialCoverage',
       detail:
         health?.coverage.map((c) => t(`alerts.types.${c}`)).join(', ') ?? t('alerts.unavailable'),
       to: '/alerts',
     },
     {
       id: 'evaluation',
-      state: degraded ? 'degraded' : 'detectorRunning',
+      state: query.isError ? 'unavailable' : degraded ? 'degraded' : 'detectorRunning',
       detail:
         (health?.code ?? t('alerts.evaluationNote')) +
         ` · ${t('alerts.currentProcess')}: ${t('alerts.queuedInputs')} ${health?.queuedInputs ?? '—'}, ${t('alerts.rejected')} ${health?.rejected ?? '—'}`,

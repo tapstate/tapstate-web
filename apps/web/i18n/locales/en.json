@@ -2537,6 +2537,18 @@
     "evaluationLag": "Alert evaluation delay",
     "notMeasured": "Not measured",
     "deliveryAttention": "Notifications needing attention",
-    "silenceDescription": "Name / reason"
+    "silenceDescription": "Name / reason",
+    "phases": {
+      "LOCAL": "Local preparation",
+      "CONNECT": "Connection",
+      "TLS": "TLS / certificate verification",
+      "AUTHENTICATION": "Authentication",
+      "ENVELOPE": "Recipient / request envelope",
+      "BODY": "Message body",
+      "FINAL_RESPONSE": "Final response",
+      "DEADLINE": "Attempt deadline",
+      "CAPACITY": "Capacity admission"
+    },
+    "configureInhibition": "Configure inhibition"
   }
 }

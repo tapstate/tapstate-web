@@ -41,7 +41,14 @@ export interface DeliveryRow {
   attempts: number
   source?: string
   eventId?: string
-  attemptHistory?: { number: number; outcome: string; endedAt?: string }[]
+  diagnostic?: { phase: string; action: string; status: number } | null
+  attemptHistory?: {
+    number: number
+    outcome: string
+    endedAt?: string
+    phase?: string
+    status?: number
+  }[]
 }
 export interface AlertPage<T> {
   rows: T[]
