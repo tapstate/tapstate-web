@@ -146,74 +146,30 @@
   }
 
   .app-sidebar__cloud-identity {
-    display: grid;
     flex: none;
-    gap: 10px;
-    padding: 0 var(--app-shell-sidebar-content-inset);
-  }
-
-  .app-sidebar__cloud-email {
-    min-width: 0;
-    padding-left: 38px;
-    color: var(--app-text-muted);
-    font-size: 10px;
-    line-height: 1.4;
-    overflow-wrap: anywhere;
+    overflow: hidden;
+    margin: 12px var(--app-shell-sidebar-content-inset) 0;
+    border: 1px solid rgb(100 116 139 / 13%);
+    border-radius: 12px;
+    background: var(--app-surface);
   }
 
   .app-sidebar__cloud-organization {
     display: flex;
     min-width: 0;
-    height: 32px;
     align-items: center;
-    gap: 10px;
-    border-radius: 8px;
-    padding: 0 4px;
-    margin: 0 -4px;
-    text-decoration: none;
-  }
-
-  .app-sidebar__cloud-organization[href]:hover,
-  .app-sidebar__cloud-organization[href]:focus-visible {
-    background: rgb(100 116 139 / 8%);
-  }
-
-  .app-sidebar__cloud-organization[href]:focus-visible {
-    outline: 2px solid var(--brand-primary);
-    outline-offset: 2px;
-  }
-
-  .app-sidebar__cloud-organization--disabled {
-    cursor: default;
-  }
-
-  .app-sidebar__cloud-return-icon {
-    width: 14px;
-    height: 14px;
-    flex: 0 0 auto;
-    margin-left: auto;
-    color: var(--app-text-muted);
-    opacity: 0;
-  }
-
-  .app-sidebar__cloud-organization[href]:hover .app-sidebar__cloud-return-icon,
-  .app-sidebar__cloud-organization[href]:focus-visible .app-sidebar__cloud-return-icon {
-    opacity: 1;
-  }
-
-  .app-sidebar__cloud-organization[href]:active {
-    transform: translateY(1px);
+    gap: 6px;
+    padding: 6px 12px 6px 6px;
   }
 
   .app-sidebar__cloud-organization-icon {
     display: grid;
     width: 24px;
     height: 24px;
-    flex: 0 0 auto;
+    flex: none;
     place-items: center;
-    border: 1px solid rgb(100 116 139 / 14%);
-    border-radius: 7px;
-    background: rgb(255 255 255 / 82%);
+    border-radius: 8px;
+    background: rgb(100 116 139 / 8%);
     color: var(--brand-primary);
   }
 
@@ -221,7 +177,7 @@
     overflow: hidden;
     color: var(--app-text);
     font-size: 13px;
-    font-weight: 650;
+    font-weight: 600;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -231,22 +187,32 @@
     min-width: 0;
     align-items: flex-start;
     gap: 9px;
-    border: 1px solid rgb(100 116 139 / 13%);
-    border-radius: 10px;
-    padding: 8px 9px;
-    background: rgb(255 255 255 / 54%);
-    position: relative;
-    margin-left: 12px;
+    padding: 4px 12px 10px 14px;
   }
 
-  .app-sidebar__cloud-cluster::before {
-    position: absolute;
-    top: -11px;
-    left: 11px;
-    width: 1px;
-    height: 10px;
-    background: rgb(100 116 139 / 20%);
-    content: '';
+  .app-sidebar__cloud-return {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-top: 1px solid rgb(100 116 139 / 10%);
+    color: var(--brand-primary);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .app-sidebar__cloud-return[href]:hover {
+    background: rgb(100 116 139 / 8%);
+  }
+
+  .app-sidebar__cloud-return[href]:focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: -2px;
+  }
+
+  .app-sidebar__cloud-return[aria-disabled='true'] {
+    color: var(--app-text-muted);
   }
 
   .app-sidebar__cloud-cluster-status {
@@ -611,12 +577,7 @@
     }
 
     .app-sidebar__cloud-identity {
-      grid-template-columns: minmax(0, 1fr) minmax(150px, auto);
-      align-items: center;
-    }
-
-    .app-sidebar__cloud-email {
-      grid-column: 1 / -1;
+      margin: 0;
     }
 
     .app-sidebar__link {

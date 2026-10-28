@@ -87,6 +87,23 @@ describe('AppSidebar', () => {
       'a[aria-label="Return to Organization in Tapstate Cloud"]',
     )
     expect(link?.href).toContain('/?organizationId=org')
+    expect(link?.textContent).toContain('Back to Cloud Console')
+    expect(container.querySelector('.app-sidebar__cloud-organization a')).toBeNull()
+  })
+
+  it('keeps the return action unavailable when organization context cannot be loaded', async () => {
+    mockState.loadCloudWorkspaceContext.mockResolvedValue({
+      clusterName: null,
+      clusterState: null,
+      organizationId: null,
+      organizationName: null,
+      region: null,
+    })
+    await renderSidebar('cloud')
+
+    const link = container.querySelector<HTMLAnchorElement>('.app-sidebar__cloud-return')
+    expect(link?.getAttribute('href')).toBeNull()
+    expect(link?.getAttribute('aria-disabled')).toBe('true')
   })
 
   it.each(['local', 'cloud'] as const)(

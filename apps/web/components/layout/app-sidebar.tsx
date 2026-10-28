@@ -46,22 +46,16 @@ export function AppSidebar() {
 
   return (
     <aside className="app-sidebar bg-transparent">
-      {profile === 'cloud' ? (
-        <div className="app-sidebar__cloud-identity mt-2" aria-label={t('app.cloudIdentity.label')}>
-          <a
-            className={cn(
-              'app-sidebar__cloud-organization',
-              !organizationUrl && 'app-sidebar__cloud-organization--disabled',
-            )}
-            href={organizationUrl ?? undefined}
-            aria-label={t('app.cloudIdentity.returnToOrganization', {
-              organization: cloudContext.data?.organizationName ?? '',
-            })}
-            aria-disabled={!organizationUrl}
-            onClick={(event) => {
-              if (!organizationUrl) event.preventDefault()
-            }}
-          >
+      <div className="app-sidebar__brand mt-2">
+        <div className="app-sidebar__mark" aria-hidden="true">
+          <img alt="" className="h-5 w-5 dark:hidden" src="/tapstate-mark.svg" />
+          <img alt="" className="hidden h-5 w-5 dark:block" src="/tapstate-mark-light.svg" />
+        </div>
+        <span className="app-sidebar__title">{t('app.brand')}</span>
+      </div>
+      {profile === 'cloud' && (
+        <div className="app-sidebar__cloud-identity" aria-label={t('app.cloudIdentity.label')}>
+          <div className="app-sidebar__cloud-organization">
             <span className="app-sidebar__cloud-organization-icon" aria-hidden="true">
               <Building2 className="h-4 w-4" />
             </span>
@@ -74,8 +68,7 @@ export function AppSidebar() {
                   ? t('app.cloudIdentity.organizationLoading')
                   : t('app.cloudIdentity.organizationUnavailable'))}
             </span>
-            <ArrowLeft className="app-sidebar__cloud-return-icon" aria-hidden="true" />
-          </a>
+          </div>
           <div className="app-sidebar__cloud-cluster" aria-live="polite">
             <span
               className={cn(
@@ -109,14 +102,20 @@ export function AppSidebar() {
               </span>
             </span>
           </div>
-        </div>
-      ) : (
-        <div className="app-sidebar__brand mt-2">
-          <div className="app-sidebar__mark" aria-hidden="true">
-            <img alt="" className="h-5 w-5 dark:hidden" src="/tapstate-mark.svg" />
-            <img alt="" className="hidden h-5 w-5 dark:block" src="/tapstate-mark-light.svg" />
-          </div>
-          <span className="app-sidebar__title">{t('app.brand')}</span>
+          <a
+            className="app-sidebar__cloud-return"
+            href={organizationUrl ?? undefined}
+            aria-label={t('app.cloudIdentity.returnToOrganization', {
+              organization: cloudContext.data?.organizationName ?? '',
+            })}
+            aria-disabled={!organizationUrl}
+            onClick={(event) => {
+              if (!organizationUrl) event.preventDefault()
+            }}
+          >
+            <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>{t('app.cloudIdentity.backToCloudConsole')}</span>
+          </a>
         </div>
       )}
 
