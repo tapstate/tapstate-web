@@ -24,6 +24,7 @@ export interface StorageEntry {
   mode: 'OP' | 'CLOUD'
   management: boolean
   automaticAuthorization?: boolean
+  normalLoginUrl?: string
   entry: 'LOGIN' | 'SETUP_REQUIRED' | 'RESTART_REQUIRED' | 'FIRST_ADMIN_REQUIRED' | 'UNAVAILABLE'
 }
 interface StorageState {

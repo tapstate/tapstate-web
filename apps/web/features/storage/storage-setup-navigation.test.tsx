@@ -13,6 +13,11 @@ import { StorageBoundary } from './storage-gate'
 
 const route = vi.hoisted(() => ({ pathname: '/overview' }))
 const cloudNavigation = vi.hoisted(() => ({ redirect: vi.fn() }))
+const installationNavigation = vi.hoisted(() => ({ redirect: vi.fn() }))
+vi.mock('@/utils/installation-navigation', async (original) => ({
+  ...(await original<typeof import('@/utils/installation-navigation')>()),
+  replaceWithInstallationLogin: installationNavigation.redirect,
+}))
 vi.mock('@/utils/cloud-console', () => ({
   cloudConsoleUrl: 'https://dev.cloud.tapstate.com/',
   replaceWithCloudConsole: cloudNavigation.redirect,
@@ -78,6 +83,7 @@ async function input(element: HTMLInputElement, value: string) {
 }
 beforeEach(() => {
   cloudNavigation.redirect.mockClear()
+  installationNavigation.redirect.mockClear()
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
@@ -104,6 +110,22 @@ afterEach(() => {
 })
 
 describe('whole-site storage boundary', () => {
+  it('automatically leaves the installation listener after the first administrator is complete', async () => {
+    useAuthStore.setState({ isAuthenticated: false })
+    fetcher.mockImplementation(async () =>
+      Response.json({
+        mode: 'OP',
+        management: true,
+        entry: 'LOGIN',
+        automaticAuthorization: true,
+        normalLoginUrl: 'http://127.0.0.1:50690/login',
+      }),
+    )
+    await render()
+    expect(installationNavigation.redirect).toHaveBeenCalledWith('http://127.0.0.1:50690/login')
+    expect(fetcher.mock.calls.every(([url]) => String(url) === '/auth/storage-entry')).toBe(true)
+  })
+
   it('opens storage setup directly when the dedicated OP listener supplies local installation authority', async () => {
     useAuthStore.setState({ isAuthenticated: false })
     fetcher.mockImplementation(async (url) =>

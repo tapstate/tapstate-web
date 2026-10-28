@@ -12,6 +12,7 @@ import {
 } from '@/service/storage-client'
 import { useAuthStore } from '@/stores/auth-store'
 import { replaceWithCloudConsole } from '@/utils/cloud-console'
+import { installationLoginUrl, replaceWithInstallationLogin } from '@/utils/installation-navigation'
 
 import {
   CloudSetupContinuationProvider,
@@ -60,6 +61,13 @@ export function StorageGate({ children }: { children: ReactNode }) {
     session,
     authorityRevision,
   } = useStorage()
+  const normalLogin =
+    entry?.management && entry.mode === 'OP' && entry.entry === 'LOGIN'
+      ? installationLoginUrl(entry.normalLoginUrl)
+      : undefined
+  useEffect(() => {
+    if (normalLogin) replaceWithInstallationLogin(normalLogin)
+  }, [normalLogin])
   const authenticated = useAuthStore((state) => state.isAuthenticated)
   const cloudProfile = useAuthStore((state) => state.profile === 'cloud')
   const setupSubmission = useStorageAction('setup')
