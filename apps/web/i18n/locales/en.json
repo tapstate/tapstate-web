@@ -25,7 +25,6 @@
     "secondaryNavigation": "Secondary navigation",
     "cloudIdentity": {
       "label": "Cloud workspace and cluster",
-      "backToCloudConsole": "Back to Cloud Console",
       "returnToOrganization": "Return to {{organization}} in Tapstate Cloud",
       "organizationLoading": "Loading organization…",
       "organizationUnavailable": "Organization unavailable",

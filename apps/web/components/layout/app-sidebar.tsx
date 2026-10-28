@@ -2,7 +2,7 @@ import type { ComponentType, SVGProps } from 'react'
 
 import { useQuery } from '@tanstack/react-query'
 import { Link, useRouterState } from '@tanstack/react-router'
-import { ArrowLeft, Building2, Database, GitMerge, LayoutDashboard, Table2 } from 'lucide-react'
+import { ArrowUpRight, Building2, Database, GitMerge, LayoutDashboard, Table2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
@@ -45,17 +45,36 @@ export function AppSidebar() {
     : null
 
   return (
-    <aside className="app-sidebar bg-transparent">
+    <aside
+      className={cn('app-sidebar bg-transparent', profile === 'cloud' && 'app-sidebar--cloud')}
+    >
       <div className="app-sidebar__brand mt-2">
-        <div className="app-sidebar__mark" aria-hidden="true">
-          <img alt="" className="h-5 w-5 dark:hidden" src="/tapstate-mark.svg" />
-          <img alt="" className="hidden h-5 w-5 dark:block" src="/tapstate-mark-light.svg" />
-        </div>
-        <span className="app-sidebar__title">{t('app.brand')}</span>
+        <img
+          alt={t('app.brand')}
+          className="app-sidebar__logo dark:hidden"
+          src="/tapstate-lockup-light.svg"
+        />
+        <img
+          alt={t('app.brand')}
+          className="app-sidebar__logo hidden dark:block"
+          src="/tapstate-lockup-dark.svg"
+        />
       </div>
       {profile === 'cloud' && (
         <div className="app-sidebar__cloud-identity" aria-label={t('app.cloudIdentity.label')}>
-          <div className="app-sidebar__cloud-organization">
+          <a
+            className="app-sidebar__cloud-organization"
+            href={organizationUrl ?? undefined}
+            target={organizationUrl ? '_blank' : undefined}
+            rel={organizationUrl ? 'noopener noreferrer' : undefined}
+            aria-label={t('app.cloudIdentity.returnToOrganization', {
+              organization: cloudContext.data?.organizationName ?? '',
+            })}
+            title={t('app.cloudIdentity.returnToOrganization', {
+              organization: cloudContext.data?.organizationName ?? '',
+            })}
+            aria-disabled={!organizationUrl}
+          >
             <span className="app-sidebar__cloud-organization-icon" aria-hidden="true">
               <Building2 className="h-4 w-4" />
             </span>
@@ -68,54 +87,43 @@ export function AppSidebar() {
                   ? t('app.cloudIdentity.organizationLoading')
                   : t('app.cloudIdentity.organizationUnavailable'))}
             </span>
-          </div>
-          <div className="app-sidebar__cloud-cluster" aria-live="polite">
-            <span
-              className={cn(
-                'app-sidebar__cloud-cluster-status',
-                (cloudContext.data?.clusterState === 'READY' ||
-                  (cloudContext.isSuccess && cloudContext.data?.clusterState === null)) &&
-                  'app-sidebar__cloud-cluster-status--ready',
-                cloudContext.data?.clusterState === 'DEGRADED' &&
-                  'app-sidebar__cloud-cluster-status--degraded',
-              )}
-              aria-hidden="true"
-            />
-            <span className="sr-only">
-              {cloudContext.data?.clusterState === 'READY'
-                ? t('app.cloudIdentity.clusterReady')
-                : cloudContext.isSuccess && cloudContext.data.clusterState === null
-                  ? t('app.cloudIdentity.clusterConnected')
-                  : t('app.cloudIdentity.clusterUnavailable')}
-            </span>
-            <span className="app-sidebar__cloud-cluster-copy">
-              <span className="app-sidebar__cloud-cluster-name">
-                {cloudContext.data?.clusterName ??
-                  (cloudContext.isLoading
-                    ? t('app.cloudIdentity.clusterLoading')
-                    : t('app.cloudIdentity.clusterUnavailable'))}
-              </span>
-              <span className="app-sidebar__cloud-cluster-region">
-                {cloudContext.data?.region
-                  ? t('app.cloudIdentity.region', { region: cloudContext.data.region })
-                  : t('app.cloudIdentity.regionUnavailable')}
-              </span>
-            </span>
-          </div>
-          <a
-            className="app-sidebar__cloud-return"
-            href={organizationUrl ?? undefined}
-            aria-label={t('app.cloudIdentity.returnToOrganization', {
-              organization: cloudContext.data?.organizationName ?? '',
-            })}
-            aria-disabled={!organizationUrl}
-            onClick={(event) => {
-              if (!organizationUrl) event.preventDefault()
-            }}
-          >
-            <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <span>{t('app.cloudIdentity.backToCloudConsole')}</span>
+            <ArrowUpRight className="app-sidebar__cloud-organization-arrow" aria-hidden="true" />
           </a>
+          <div className="app-sidebar__cloud-details">
+            <div className="app-sidebar__cloud-cluster" aria-live="polite">
+              <span
+                className={cn(
+                  'app-sidebar__cloud-cluster-status',
+                  (cloudContext.data?.clusterState === 'READY' ||
+                    (cloudContext.isSuccess && cloudContext.data?.clusterState === null)) &&
+                    'app-sidebar__cloud-cluster-status--ready',
+                  cloudContext.data?.clusterState === 'DEGRADED' &&
+                    'app-sidebar__cloud-cluster-status--degraded',
+                )}
+                aria-hidden="true"
+              />
+              <span className="sr-only">
+                {cloudContext.data?.clusterState === 'READY'
+                  ? t('app.cloudIdentity.clusterReady')
+                  : cloudContext.isSuccess && cloudContext.data.clusterState === null
+                    ? t('app.cloudIdentity.clusterConnected')
+                    : t('app.cloudIdentity.clusterUnavailable')}
+              </span>
+              <span className="app-sidebar__cloud-cluster-copy">
+                <span className="app-sidebar__cloud-cluster-name">
+                  {cloudContext.data?.clusterName ??
+                    (cloudContext.isLoading
+                      ? t('app.cloudIdentity.clusterLoading')
+                      : t('app.cloudIdentity.clusterUnavailable'))}
+                </span>
+                <span className="app-sidebar__cloud-cluster-region">
+                  {cloudContext.data?.region
+                    ? t('app.cloudIdentity.region', { region: cloudContext.data.region })
+                    : t('app.cloudIdentity.regionUnavailable')}
+                </span>
+              </span>
+            </div>
+          </div>
         </div>
       )}
 

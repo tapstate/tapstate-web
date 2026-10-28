@@ -21,7 +21,6 @@
     "secondaryNavigation": "次要导航",
     "cloudIdentity": {
       "label": "云工作区和集群",
-      "backToCloudConsole": "返回云控制台",
       "returnToOrganization": "返回 Tapstate Cloud 的{{organization}}组织",
       "organizationLoading": "正在加载组织…",
       "organizationUnavailable": "组织信息不可用",

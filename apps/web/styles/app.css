@@ -84,6 +84,19 @@
     padding: 0 var(--app-shell-sidebar-content-inset) 16px;
   }
 
+  .app-sidebar--cloud {
+    gap: 0;
+  }
+
+  .app-sidebar--cloud .app-sidebar__brand {
+    height: 44px;
+    margin-top: 0;
+  }
+
+  .app-sidebar--cloud .app-sidebar__nav {
+    padding-top: 8px;
+  }
+
   .app-shell {
     --app-shell-gutter: 8px;
     --app-shell-sidebar-content-inset: 8px;
@@ -130,28 +143,25 @@
     padding: 0 var(--app-shell-sidebar-content-inset);
   }
 
-  .app-sidebar__mark {
-    display: flex;
-    width: 20px;
-    height: 20px;
+  .app-sidebar__logo {
+    width: 120px;
+    height: auto;
     flex: none;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .app-sidebar__title {
-    font-size: 13px;
-    font-weight: 650;
-    letter-spacing: 0;
   }
 
   .app-sidebar__cloud-identity {
     flex: none;
     overflow: hidden;
-    margin: 12px var(--app-shell-sidebar-content-inset) 0;
-    border: 1px solid rgb(100 116 139 / 13%);
+    margin: 8px 0;
+    border: 1px solid #fff;
     border-radius: 12px;
-    background: var(--app-surface);
+    background: #fcfcfd;
+    box-shadow: 0 1px 2px 0 rgb(16 24 40 / 5%);
+  }
+
+  .dark .app-sidebar__cloud-identity {
+    border-color: rgb(255 255 255 / 3%);
+    background: #222225;
   }
 
   .app-sidebar__cloud-organization {
@@ -160,6 +170,33 @@
     align-items: center;
     gap: 6px;
     padding: 6px 12px 6px 6px;
+    text-decoration: none;
+    transition:
+      background-color 0.16s ease,
+      color 0.16s ease;
+  }
+
+  .app-sidebar__cloud-organization[href]:hover {
+    background: rgb(16 24 40 / 5%);
+  }
+
+  .app-sidebar__cloud-organization[href]:hover .app-sidebar__cloud-organization-name,
+  .app-sidebar__cloud-organization[href]:hover .app-sidebar__cloud-organization-arrow {
+    color: var(--brand-primary);
+  }
+
+  .app-sidebar__cloud-organization[href]:focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: -2px;
+    border-radius: 11px 11px 0 0;
+  }
+
+  .app-sidebar__cloud-organization-arrow {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    margin-left: auto;
+    color: var(--app-text-muted);
   }
 
   .app-sidebar__cloud-organization-icon {
@@ -170,7 +207,7 @@
     place-items: center;
     border-radius: 8px;
     background: rgb(100 116 139 / 8%);
-    color: var(--brand-primary);
+    color: var(--app-text-muted);
   }
 
   .app-sidebar__cloud-organization-name {
@@ -182,37 +219,25 @@
     white-space: nowrap;
   }
 
-  .app-sidebar__cloud-cluster {
-    display: flex;
-    min-width: 0;
-    align-items: flex-start;
-    gap: 9px;
-    padding: 4px 12px 10px 14px;
-  }
-
-  .app-sidebar__cloud-return {
+  .app-sidebar__cloud-details {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 12px;
-    border-top: 1px solid rgb(100 116 139 / 10%);
-    color: var(--brand-primary);
-    font-size: 12px;
-    font-weight: 600;
-    text-decoration: none;
+    border-top: 1px solid rgb(16 24 40 / 4%);
+    padding: 8px 10px 8px 8px;
   }
 
-  .app-sidebar__cloud-return[href]:hover {
-    background: rgb(100 116 139 / 8%);
+  .dark .app-sidebar__cloud-details {
+    border-color: rgb(200 206 218 / 8%);
   }
 
-  .app-sidebar__cloud-return[href]:focus-visible {
-    outline: 2px solid var(--brand-primary);
-    outline-offset: -2px;
-  }
-
-  .app-sidebar__cloud-return[aria-disabled='true'] {
-    color: var(--app-text-muted);
+  .app-sidebar__cloud-cluster {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 0 4px;
   }
 
   .app-sidebar__cloud-cluster-status {

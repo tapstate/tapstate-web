@@ -21,7 +21,6 @@
     "secondaryNavigation": "次要導覽",
     "cloudIdentity": {
       "label": "雲端工作區與叢集",
-      "backToCloudConsole": "返回雲端控制台",
       "returnToOrganization": "返回 Tapstate Cloud 的{{organization}}組織",
       "organizationLoading": "正在載入組織…",
       "organizationUnavailable": "無法取得組織資訊",
