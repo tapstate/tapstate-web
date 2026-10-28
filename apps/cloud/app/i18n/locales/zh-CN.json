@@ -554,7 +554,7 @@
     "organizations": { "title": "组织", "description": "管理组织成员和访问权限。" },
     "billing": {
       "cancelWarning": "取消后将终止对应 Cluster 并清理其资源，此操作无法撤销。",
-      "title": "用量与账单",
+      "title": "套餐与账单",
       "description": "查看当前组织的资源用量。"
     },
     "settings": { "title": "设置", "description": "管理组织和账户偏好。" },

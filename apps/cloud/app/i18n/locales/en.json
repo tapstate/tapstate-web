@@ -564,7 +564,7 @@
     },
     "billing": {
       "cancelWarning": "This will cancel the subscription, terminate its cluster, and remove its resources. This cannot be undone.",
-      "title": "Usage & billing",
+      "title": "Plans & billing",
       "description": "Review usage for the current organization."
     },
     "settings": {

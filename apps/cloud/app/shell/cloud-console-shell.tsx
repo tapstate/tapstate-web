@@ -22,7 +22,7 @@ const navigation = [
   { label: 'Overview', path: '/', icon: Home, exact: true },
   { label: 'Clusters', path: '/clusters', icon: Server, exact: false },
   { label: 'Alerts', path: '/alerts', icon: BellRing, exact: false },
-  { label: 'Billing', path: '/billing', icon: CreditCard, exact: false },
+  { label: 'Plans & billing', path: '/billing', icon: CreditCard, exact: false },
   { label: 'Settings', path: '/settings', icon: Settings, exact: false },
 ] as const
 
