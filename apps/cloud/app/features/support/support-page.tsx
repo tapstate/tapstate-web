@@ -52,6 +52,7 @@ function formatDate(value: string, locale: string) {
 }
 
 function StatusBadge({ status, category }: { status: string; category: string }) {
+  const { t, i18n } = useTranslation()
   const normalized = category.toLowerCase()
   const tone =
     normalized === 'done' || normalized === 'complete'
@@ -60,11 +61,19 @@ function StatusBadge({ status, category }: { status: string; category: string })
         ? 'border-amber-500/25 bg-amber-500/10 text-amber-800 dark:text-amber-300'
         : 'border-[var(--border)] bg-[var(--app-background)] text-[var(--foreground)]'
 
+  const normStatus = status.toLowerCase()
+  const statusKey = normStatus === 'closed' ? 'done' : normStatus === 'open' ? 'new' : normalized
+  const label =
+    i18n.language.startsWith('zh') && statusKey
+      ? (t(`support.status.${statusKey}`, { defaultValue: status }) as string)
+      : status
+
   return (
     <span
       className={`inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-xs font-medium ${tone}`}
+      title={normalized ? (t(`support.status.${normalized}`, { defaultValue: category }) as string) : undefined}
     >
-      {status}
+      {label}
     </span>
   )
 }
@@ -252,7 +261,9 @@ export function SupportPage() {
         </div>
       </header>
 
-      <div className="mx-auto grid w-full max-w-[1440px] min-w-0 flex-1 content-start gap-5 p-4 sm:p-6">
+      <div
+        className={`mx-auto grid w-full max-w-[1440px] min-w-0 flex-1 content-start gap-5 p-4 sm:p-6 ${selectedId || detailLoading || detailError ? 'xl:grid-cols-[minmax(0,1fr)_440px]' : 'grid-cols-1'}`}
+      >
         <section className="contents">
           <Dialog
             open={creating}
@@ -355,6 +366,8 @@ export function SupportPage() {
                   size="medium"
                   onClick={() => {
                     setSubmitSuccess(false)
+                    setSubmitError(null)
+                    setSubmitUncertain(false)
                     setCreating(true)
                   }}
                   type="button"
@@ -420,24 +433,26 @@ export function SupportPage() {
                       })}
                     </span>
                     <div className="flex w-full justify-end gap-2 sm:w-auto">
-                      <button
-                        className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground)] hover:bg-[var(--app-background)] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50"
+                      <Button
+                        variant="secondary"
+                        size="small"
                         disabled={page.page <= 0 || listLoading}
                         onClick={() => changePage(Math.max(0, page.page - 1))}
                         type="button"
                       >
                         <ArrowLeft aria-hidden="true" className="h-3.5 w-3.5" />
                         {t('support.previous')}
-                      </button>
-                      <button
-                        className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground)] hover:bg-[var(--app-background)] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50"
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="small"
                         disabled={!page.hasNext || listLoading}
                         onClick={() => changePage(page.page + 1)}
                         type="button"
                       >
                         {t('support.next')}
                         <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </>
@@ -460,7 +475,7 @@ export function SupportPage() {
         </section>
 
         <aside
-          className={`order-3 min-w-0 xl:col-start-1 ${selectedId || detailLoading || detailError ? 'block' : 'hidden'}`}
+          className={`order-2 min-w-0 ${selectedId || detailLoading || detailError ? 'block' : 'hidden'}`}
           aria-labelledby="support-detail-heading"
         >
           <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
@@ -525,33 +540,37 @@ export function SupportPage() {
                         {t('support.closeConfirmation')}
                       </p>
                       <div className="flex flex-wrap justify-end gap-2">
-                        <button
-                          className="min-h-10 rounded-lg border border-[var(--border)] px-3 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--surface)] active:scale-[0.96] disabled:opacity-60"
+                        <Button
+                          variant="secondary"
+                          size="small"
                           disabled={closing}
                           onClick={() => setConfirmingClose(false)}
                           type="button"
                         >
                           {t('support.cancel')}
-                        </button>
-                        <button
-                          className="min-h-10 rounded-lg bg-neutral-900 px-3 text-sm font-medium text-white hover:bg-neutral-800 active:scale-[0.96] disabled:opacity-60 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+                        </Button>
+                        <Button
+                          variant="primary"
+                          tone="destructive"
+                          size="small"
                           disabled={closing}
                           onClick={() => void closeTicket()}
                           type="button"
                         >
                           {closing ? t('support.closing') : t('support.confirmClose')}
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ) : (
-                    <button
-                      className="min-h-10 rounded-lg border border-[var(--border)] px-3 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--app-background)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current active:scale-[0.96]"
+                    <Button
+                      variant="secondary"
+                      size="small"
                       disabled={closing}
                       onClick={() => setConfirmingClose(true)}
                       type="button"
                     >
                       {t('support.closeTicket')}
-                    </button>
+                    </Button>
                   ))}
                 {!selected.canClose &&
                   !['done', 'complete'].includes(selected.statusCategory.toLowerCase()) && (

@@ -102,14 +102,14 @@ export function CloudConsoleShell({
               uppercase={false}
               className="org-glass-tag rounded-lg border-transparent"
             >
-              <span>{t('support.organizationBadge')}</span>
+              <span>{t('common.organizationBadge')}</span>
             </Badge>
           </Link>
         </div>
 
         <div
           className="mx-1 mb-4 flex min-w-0 items-center gap-1.5 rounded-xl border border-white bg-[#fcfcfd] p-1.5 pr-3 shadow-[0_1px_2px_0_rgb(16_24_40_/_5%)] dark:border-white/[0.03] dark:bg-[#222225]"
-          aria-label={`${t('support.organization')}: ${currentOrganization?.name ?? t('events.organizationFallback')}`}
+          aria-label={`${t('common.organization')}: ${currentOrganization?.name ?? t('events.organizationFallback')}`}
         >
           <span
             className="grid size-6 shrink-0 place-items-center rounded-lg bg-slate-500/[0.08] text-neutral-500 dark:text-neutral-400"

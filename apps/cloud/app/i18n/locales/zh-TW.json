@@ -32,7 +32,9 @@
   "common": {
     "close": "關閉",
     "searchClusters": "搜尋叢集",
-    "searchOrganizations": "搜尋組織"
+    "searchOrganizations": "搜尋組織",
+    "organization": "組織",
+    "organizationBadge": "組織"
   },
   "organizationList": {
     "current": "目前組織：",

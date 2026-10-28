@@ -32,7 +32,9 @@
   "common": {
     "close": "Close",
     "searchClusters": "Search clusters",
-    "searchOrganizations": "Search organizations"
+    "searchOrganizations": "Search organizations",
+    "organization": "Organization",
+    "organizationBadge": "Org"
   },
   "organizationList": {
     "current": "Current organization:",

@@ -32,7 +32,9 @@
   "common": {
     "close": "关闭",
     "searchClusters": "搜索集群",
-    "searchOrganizations": "搜索组织"
+    "searchOrganizations": "搜索组织",
+    "organization": "组织",
+    "organizationBadge": "组织"
   },
   "organizationList": {
     "current": "当前组织：",
