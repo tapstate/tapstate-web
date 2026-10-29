@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   clusters: vi.fn(),
   navigate: vi.fn(),
   identity: vi.fn(),
+  oauthStart: vi.fn(),
 }))
 vi.mock('@tanstack/react-router', async (original) => ({
   ...(await original<typeof import('@tanstack/react-router')>()),
@@ -22,6 +23,8 @@ vi.mock('../../service/cloud-api', async (original) => {
     cloudApi: {
       ...actual.cloudApi,
       me: mocks.me,
+      oauthStart: mocks.oauthStart,
+      registrationPolicy: vi.fn(async () => ({ trialCodeRequired: true })),
       organizations: mocks.organizations,
       activeClusters: mocks.clusters,
     },
@@ -45,10 +48,19 @@ vi.mock('./automatic-cluster-entry', () => ({
   AutomaticClusterEntry: () => <div>Continuing entry</div>,
 }))
 vi.mock('../auth/auth-page', () => ({
-  AuthPage: ({ onAuthenticated }: { onAuthenticated: (user: unknown) => Promise<void> }) => (
-    <button onClick={() => void onAuthenticated({ email: 'tester@example.invalid' })}>
-      Complete sign-in
-    </button>
+  AuthPage: ({
+    onAuthenticated,
+    onOAuth,
+  }: {
+    onAuthenticated: (user: unknown) => Promise<void>
+    onOAuth: (provider: 'google', mode: 'login', invitation: null, name: string) => Promise<void>
+  }) => (
+    <>
+      <button onClick={() => void onAuthenticated({ email: 'tester@example.invalid' })}>
+        Complete sign-in
+      </button>
+      <button onClick={() => void onOAuth('google', 'login', null, '')}>Provider sign-in</button>
+    </>
   ),
 }))
 
@@ -66,6 +78,8 @@ const load = (deps: ClusterEntrySearch) =>
   })
 beforeEach(() => {
   vi.clearAllMocks()
+  window.sessionStorage.clear()
+  mocks.oauthStart.mockResolvedValue('https://provider.example/authorize')
   mocks.me.mockResolvedValue({ email: 'tester@example.invalid' })
   mocks.organizations.mockResolvedValue([
     { id: 'org-a', name: 'A' },
@@ -75,6 +89,7 @@ beforeEach(() => {
 })
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
   vi.useRealTimers()
 })
 
@@ -166,6 +181,43 @@ describe('Cloud initialization return routing', () => {
       await act(async () => root.render(<Auth />))
       await act(async () => host.querySelector('button')!.click())
       expect(mocks.navigate).toHaveBeenCalledExactlyOnceWith({ to: '/', search: intent })
+    } finally {
+      await act(async () => root.unmount())
+      host.remove()
+    }
+  })
+  it('keeps the original validated Cluster target through a provider callback', async () => {
+    const search = vi.spyOn(AuthRoute, 'useSearch').mockReturnValue(intent)
+    const actualWindow = window
+    const location = { href: 'http://localhost/auth', assign: vi.fn() }
+    vi.stubGlobal(
+      'window',
+      new Proxy(actualWindow, {
+        get(target, key) {
+          return key === 'location' ? location : Reflect.get(target, key, target)
+        },
+      }),
+    )
+    const host = document.createElement('div')
+    document.body.append(host)
+    let root = createRoot(host)
+    const Auth = AuthRoute.options.component as ComponentType
+    try {
+      await act(async () => root.render(<Auth />))
+      await act(async () => (host.querySelectorAll('button')[1] as HTMLButtonElement).click())
+      expect(location.assign).toHaveBeenCalledExactlyOnceWith('https://provider.example/authorize')
+      await act(async () => root.unmount())
+      search.mockReturnValue({})
+      location.href = 'http://localhost/auth?oauth=success'
+      root = createRoot(host)
+      await act(async () => root.render(<Auth />))
+      await act(async () => host.querySelector('button')!.click())
+      expect(mocks.navigate).toHaveBeenCalledExactlyOnceWith({ to: '/', search: intent })
+      await act(async () => root.unmount())
+      root = createRoot(host)
+      await act(async () => root.render(<Auth />))
+      await act(async () => host.querySelector('button')!.click())
+      expect(mocks.navigate).toHaveBeenLastCalledWith({ to: '/', search: {} })
     } finally {
       await act(async () => root.unmount())
       host.remove()

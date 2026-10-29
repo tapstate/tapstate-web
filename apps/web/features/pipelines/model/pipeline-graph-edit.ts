@@ -403,6 +403,7 @@ export function addPipelineNodes(
   connectFrom?: string,
   connectTo?: string,
   insertEdge?: PipelineNodeInsertEdge,
+  insertionMode: 'insert' | 'append' = 'insert',
 ) {
   const normalizedChoices = combineSourceChoices(choices)
   let nextDraft = draft
@@ -411,15 +412,43 @@ export function addPipelineNodes(
 
   normalizedChoices.forEach((choice, index) => {
     const nextPosition = position
-    const result = addPipelineNode(
-      nextDraft,
-      choice,
-      nextPosition,
-      connectFrom,
-      connectTo,
-      index === 0 ? insertEdge : undefined,
-    )
+    const result =
+      insertionMode === 'append'
+        ? addPipelineNode(nextDraft, choice, nextPosition)
+        : addPipelineNode(
+            nextDraft,
+            choice,
+            nextPosition,
+            connectFrom,
+            connectTo,
+            index === 0 ? insertEdge : undefined,
+          )
     nextDraft = result.draft
+    if (insertionMode === 'append' && connectFrom) {
+      const sourceNode = nextDraft.dag.nodes.find((node) => node.id === connectFrom)
+      const targetNode = nextDraft.dag.nodes.find((node) => node.id === result.nodeId)
+      if (
+        sourceNode &&
+        targetNode &&
+        isPipelineDagEdgeValid(sourceNode, targetNode, nextDraft.dag.edges)
+      ) {
+        nextDraft = {
+          ...nextDraft,
+          dag: {
+            ...nextDraft.dag,
+            edges: [
+              ...nextDraft.dag.edges,
+              {
+                id: `edge:${connectFrom}:${result.nodeId}`,
+                source: connectFrom,
+                target: result.nodeId,
+                label: null,
+              },
+            ],
+          },
+        }
+      }
+    }
     nodeIds.push(result.nodeId)
     if (nextPosition) positions[result.nodeId] = nextPosition
   })
@@ -503,9 +532,13 @@ export function updatePipelineNodeConfiguration(
   const configurations = new Map(draft.configurations).set(change.nodeId, next)
   const node = draft.dag.nodes.find((candidate) => candidate.id === change.nodeId)
   if (!node) return { ...draft, configurations }
+  const defaultLabel =
+    current.kind === 'source' ? 'Source' : current.kind === 'target' ? 'New target' : node.label
+  const previousGeneratedLabel = labelForConfiguration(current, defaultLabel)
+  const hasCustomLabel = node.label !== previousGeneratedLabel
   const nextNode = {
     ...node,
-    label: labelForConfiguration(next, node.label),
+    label: hasCustomLabel ? node.label : labelForConfiguration(next, defaultLabel),
     detail: detailForConfiguration(next, node.detail),
   }
   return {
@@ -1044,15 +1077,17 @@ function deriveFrom(
   nodeById: ReadonlyMap<string, PipelineDagNode>,
   configurations: ReadonlyMap<string, PipelineNodeConfiguration>,
 ) {
-  const refs = upstreamIds.flatMap((id) => referencesForNode(id, nodeById, configurations))
+  const refs = referencesForUpstreamIds(upstreamIds, nodeById, configurations)
   if (refs.length === 0) return null
   if (
     configuration.kind === 'transform' &&
     ['nest', 'join'].includes(configuration.transformType)
   ) {
-    const aliases = isRecord(configuration.body.aliases)
-      ? Object.keys(configuration.body.aliases)
-      : []
+    const aliases = isRecord(configuration.from)
+      ? Object.keys(configuration.from)
+      : isRecord(configuration.body.aliases)
+        ? Object.keys(configuration.body.aliases)
+        : []
     return Object.fromEntries(
       refs.map((ref, index) => [aliases[index] ?? `input_${index + 1}`, ref]),
     )
@@ -1090,6 +1125,27 @@ function referencesForNode(
   if (node.type === 'view')
     return [configuration?.kind === 'view' ? configuration.viewId : node.label]
   return node.label ? [node.label] : []
+}
+
+function referencesForUpstreamIds(
+  upstreamIds: readonly string[],
+  nodeById: ReadonlyMap<string, PipelineDagNode>,
+  configurations: ReadonlyMap<string, PipelineNodeConfiguration>,
+) {
+  return upstreamIds.flatMap((id) => referencesForNode(id, nodeById, configurations))
+}
+
+/** Uses the same direct-edge projection as mutation serialization for editor input summaries. */
+export function upstreamPipelineReferences(
+  draft: PipelineGraphDraft | null,
+  nodeId: string | undefined,
+): string[] {
+  if (!draft || !nodeId) return []
+  const nodeById = new Map(draft.dag.nodes.map((node) => [node.id, node]))
+  const upstreamIds = draft.dag.edges
+    .filter((edge) => edge.target === nodeId)
+    .map((edge) => edge.source)
+  return referencesForUpstreamIds(upstreamIds, nodeById, draft.configurations)
 }
 
 function referenceForNode(

@@ -3,15 +3,24 @@ import type { Field } from '@formily/core'
 import { connect, mapProps } from '@formily/react'
 import * as AntdFormily from '@potop/formily-antd-v6'
 import { FormilySchema, useFormilyForm, type FormilyComponentMap } from '@tapstate-web/formily'
-import { Check, Regex, Search, X } from 'lucide-react'
+import { Button } from '@tapstate-web/ui/button'
+import { Checkbox } from '@tapstate-web/ui/checkbox'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@tapstate-web/ui/dropdown-menu'
+import { IconButton } from '@tapstate-web/ui/icon-button'
+import { Tabs, TabsList, TabsPanel, TabsTab } from '@tapstate-web/ui/tabs'
+import { Check, Plus, Regex, Search, Trash2, X } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import type { PipelineJsonObject } from '@/service/pipelines/pipeline-client'
+import type { PipelineDagNode, PipelineJsonObject } from '@/service/pipelines/pipeline-client'
 import type { SourceView } from '@/service/source-client'
 
 import { FormilyAntdProvider } from '@/components/formily/formily-antd-provider'
-import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 
 import type {
@@ -22,7 +31,7 @@ import type {
 } from '../../model/pipeline-node-model'
 import type { PipelineCanvasSelection } from '../canvas/pipeline-canvas-types'
 import type { PipelineSourceTableKind } from '../node-library/pipeline-node-library-types'
-import type { PipelineTransformConfigurationPatch } from '../transform/types'
+import type { PipelineTransformConfigurationPatch, TransformFieldOption } from '../transform/types'
 
 import {
   PIPELINE_ON_FULL_LOAD_POLICIES,
@@ -504,27 +513,31 @@ export function PipelineSourceTablePicker({
             }
 
             return (
-              <label
+              <div
                 key={`${option.tableKind}:${option.value}`}
-                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-[var(--pipeline-text)] transition-colors hover:bg-[var(--pipeline-surface-subtle)]"
+                className="text-text-secondary hover:bg-state-base-hover flex min-h-8 cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm transition-colors"
                 data-pipeline-source-table-option={option.value}
+                onClick={() => toggle(option)}
               >
-                <input type="checkbox" checked={isSelected} onChange={() => toggle(option)} />
+                <Checkbox
+                  checked={isSelected}
+                  aria-label={optionLabel}
+                  onCheckedChange={() => toggle(option)}
+                  onClick={(event) => event.stopPropagation()}
+                />
                 {option.tableKind === 'regex' ? (
                   <Regex
                     className="size-3 shrink-0 text-[var(--pipeline-text-muted)]"
                     aria-hidden="true"
                   />
-                ) : (
-                  <Check className="size-3 shrink-0 text-transparent" aria-hidden="true" />
-                )}
+                ) : null}
                 <span className="min-w-0 flex-1 truncate">{optionLabel}</span>
                 {option.tableKind === 'regex' && (
                   <span className="text-[10px] tracking-wide text-[var(--pipeline-text-muted)] uppercase">
                     {t('pipelines.workspace.config.regexRule')}
                   </span>
                 )}
-              </label>
+              </div>
             )
           })
         ) : (
@@ -564,9 +577,9 @@ export function PipelineSourceTablePicker({
             </div>
             <Button
               type="button"
-              size="sm"
+              size="medium"
               variant="ghost"
-              className="h-8 shrink-0 px-2 text-xs"
+              className="shrink-0"
               data-pipeline-source-table-picker-add-pattern
               disabled={!pattern.trim()}
               onClick={addPattern}
@@ -839,33 +852,54 @@ export function PipelineNodeConfigPanel({
   isReadOnly = false,
   onConfigurationChange,
   onDescriptionChange,
+  onTitleChange,
+  onDelete,
+  nextNodes = [],
+  onSelectNextNode,
+  canAddNextStep = false,
+  onRequestNextStep,
   sourceOptions,
   tableOptions,
   loadTables,
   sources,
   upstreamSourceTables,
   fieldTypes,
+  fieldOptions,
+  upstreamInputs,
 }: {
   selection: PipelineCanvasSelection
   onClose: () => void
   isReadOnly?: boolean
   onConfigurationChange?: (change: PipelineNodeConfigurationChange) => void
   onDescriptionChange?: (description: string) => void
+  onTitleChange?: (title: string) => void
+  onDelete?: () => void
+  nextNodes?: readonly PipelineDagNode[]
+  onSelectNextNode?: (nodeId: string) => void
+  canAddNextStep?: boolean
+  onRequestNextStep?: (screenPosition: { x: number; y: number }) => void
   sourceOptions?: readonly PipelineSchemaOption[]
   tableOptions?: readonly PipelineSchemaOption[]
   loadTables?: PipelineTableLoader
   sources?: readonly SourceView[]
   upstreamSourceTables?: readonly PipelineSourceTableSelection[]
   fieldTypes?: Readonly<Record<string, string>>
+  fieldOptions?: readonly TransformFieldOption[]
+  upstreamInputs?: readonly string[]
 }) {
   const { t } = useTranslation()
   const configuration = selection.configuration
   const [description, setDescription] = useState(selection.description)
+  const [title, setTitle] = useState(selection.label)
   const descriptionRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     setDescription(selection.description)
   }, [selection.description, selection.id])
+
+  useEffect(() => {
+    setTitle(selection.label)
+  }, [selection.label, selection.id])
 
   useLayoutEffect(() => {
     const textarea = descriptionRef.current
@@ -881,77 +915,194 @@ export function PipelineNodeConfigPanel({
   }
 
   return (
-    <>
+    <Tabs value="settings" className="flex min-h-0 flex-1 flex-col">
       <div className="pipeline-node-config__header">
         <div className="flex items-center px-4 pt-4 pb-1">
           <PipelineNodeIcon data={selection} />
-          <div className="min-w-0 flex-1">
-            <h2>{selection.label}</h2>
+          <div className="mr-2 min-w-0 flex-1">
+            <label className="sr-only" htmlFor="pipeline-node-config-title">
+              {t('pipelines.workspace.config.nodeTitle')}
+            </label>
+            <input
+              id="pipeline-node-config-title"
+              value={title}
+              disabled={isReadOnly}
+              onChange={(event) => setTitle(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') event.currentTarget.blur()
+              }}
+              onBlur={() => {
+                if (title.trim()) onTitleChange?.(title.trim())
+                else setTitle(selection.label)
+              }}
+              className="system-xl-semibold text-text-primary focus-visible:ring-components-input-border-hover h-7 w-full min-w-0 appearance-none rounded-md border border-transparent bg-transparent px-1 outline-hidden focus:shadow-xs focus-visible:ring-1"
+            />
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-6 max-sm:size-10"
-            aria-label={t('pipelines.workspace.config.close')}
-            onClick={onClose}
-          >
-            <X className="size-4" />
-          </Button>
+          <div className="flex shrink-0 items-center text-[var(--color-text-tertiary)]">
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger
+                render={
+                  <IconButton
+                    type="button"
+                    size="md"
+                    className="data-popup-open:bg-state-base-hover"
+                    aria-label={t('pipelines.workspace.config.moreActions')}
+                  >
+                    <span className="i-ri-more-fill size-4" aria-hidden="true" />
+                  </IconButton>
+                }
+              />
+              <DropdownMenuContent placement="bottom-end" sideOffset={4}>
+                <DropdownMenuItem disabled={isReadOnly} onClick={onDelete}>
+                  <Trash2 className="size-4" aria-hidden="true" />
+                  {t('pipelines.workspace.config.deleteNode')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <span
+              className="mx-3 h-3.5 w-px bg-[var(--color-divider-regular)]"
+              aria-hidden="true"
+            />
+            <IconButton
+              type="button"
+              size="md"
+              className="max-sm:size-10"
+              aria-label={t('pipelines.workspace.config.close')}
+              onClick={onClose}
+            >
+              <X className="size-4" />
+            </IconButton>
+          </div>
         </div>
-      </div>
-      <fieldset disabled={isReadOnly} className="contents">
         <div className="p-2">
-          <div className="group flex max-h-[3.75rem] overflow-y-auto rounded-[8px] bg-transparent px-2 py-[5px] leading-none focus-within:shadow-xs">
+          <div className="group bg-components-panel-bg flex max-h-15 overflow-y-auto rounded-lg px-2 py-1.25 leading-0 focus-within:shadow-xs">
             <Textarea
+              id="pipeline-node-config-description"
               aria-label={t('pipelines.workspace.config.description')}
-              className="max-h-[3.75rem] min-h-0! w-full resize-none! rounded-none! border-0! bg-transparent! p-0! text-xs! leading-[1.125rem]! text-[var(--pipeline-text)]! shadow-none! outline-none placeholder:text-[var(--pipeline-form-placeholder)]! focus-visible:ring-0!"
+              className="text-text-primary! placeholder:text-text-quaternary! max-h-15 min-h-0! w-full resize-none! rounded-none! border-0! bg-transparent! p-0! text-xs! leading-4.5! shadow-none! outline-none focus-visible:ring-0!"
               placeholder={t('pipelines.workspace.config.descriptionPlaceholder')}
               ref={descriptionRef}
               rows={1}
               value={description}
-              onChange={(event) => {
-                const nextDescription = event.target.value
+              disabled={isReadOnly}
+              onValueChange={(nextDescription) => {
                 setDescription(nextDescription)
                 onDescriptionChange?.(nextDescription)
               }}
             />
           </div>
         </div>
-        <div className="pipeline-node-config__scroll">
-          {configuration?.kind === 'source' || configuration?.kind === 'target' ? (
-            <DataNodeForm
-              configuration={configuration}
-              sourceOptions={sourceOptions}
-              tableOptions={tableOptions}
-              loadTables={loadTables}
-              sources={sources}
-              upstreamSourceTables={upstreamSourceTables}
-              onChange={emit}
-            />
-          ) : null}
-          {configuration?.kind === 'transform' ? (
-            <TransformEditor
-              config={configuration}
-              fieldTypes={fieldTypes}
-              onChange={(patch) => emit(transformPatchValues(patch))}
-            />
-          ) : null}
-          {configuration?.kind === 'view' ? (
-            <>
-              <ViewWriteSettings configuration={configuration} />
-              <div className="pipeline-node-config__empty">
-                {t('pipelines.workspace.config.viewReadOnly')}
-              </div>
-            </>
-          ) : null}
-          {!configuration ? (
-            <div className="pipeline-node-config__empty">
-              {t('pipelines.workspace.inspector.emptyBody')}
-            </div>
-          ) : null}
+        <div className="flex items-center px-4">
+          <TabsList>
+            <TabsTab value="settings">{t('nav.settings').toLocaleUpperCase()}</TabsTab>
+          </TabsList>
         </div>
-      </fieldset>
-    </>
+      </div>
+      <TabsPanel value="settings" className="flex min-h-0 flex-1 flex-col">
+        <fieldset disabled={isReadOnly} className="contents">
+          <div className="pipeline-node-config__scroll">
+            {configuration?.kind === 'source' || configuration?.kind === 'target' ? (
+              <DataNodeForm
+                configuration={configuration}
+                sourceOptions={sourceOptions}
+                tableOptions={tableOptions}
+                loadTables={loadTables}
+                sources={sources}
+                upstreamSourceTables={upstreamSourceTables}
+                onChange={emit}
+              />
+            ) : null}
+            {configuration?.kind === 'transform' ? (
+              <TransformEditor
+                config={configuration}
+                fieldTypes={fieldTypes}
+                fieldOptions={fieldOptions}
+                upstreamInputs={upstreamInputs}
+                onChange={(patch) => emit(transformPatchValues(patch))}
+              />
+            ) : null}
+            {configuration?.kind === 'view' ? (
+              <>
+                <ViewWriteSettings configuration={configuration} />
+                <div className="pipeline-node-config__empty">
+                  {t('pipelines.workspace.config.viewReadOnly')}
+                </div>
+              </>
+            ) : null}
+            {!configuration ? (
+              <div className="pipeline-node-config__empty">
+                {t('pipelines.workspace.inspector.emptyBody')}
+              </div>
+            ) : null}
+            {(canAddNextStep || nextNodes.length > 0) && (
+              <section
+                className="border-divider-regular border-t-[0.5px] p-4"
+                aria-label={t('pipelines.workspace.config.nextStep')}
+              >
+                <h3 className="system-sm-semibold-uppercase text-text-secondary mb-1 flex items-center">
+                  {t('pipelines.workspace.config.nextStep')}
+                </h3>
+                <p className="text-text-tertiary mb-2 text-xs">
+                  {t('pipelines.workspace.config.addNextStep')}
+                </p>
+                <div className="flex py-1">
+                  <div className="border-divider-regular bg-background-default flex size-9 shrink-0 items-center justify-center rounded-lg border-[0.5px] shadow-xs">
+                    <PipelineNodeIcon data={selection} />
+                  </div>
+                  <svg className="h-9 w-6 shrink-0" aria-hidden="true">
+                    <path
+                      d="M0 18h24"
+                      fill="none"
+                      strokeWidth="1"
+                      className="stroke-divider-solid"
+                    />
+                    <rect x="23" y="16" width="1" height="4" className="fill-divider-solid-alt" />
+                  </svg>
+                  <div className="bg-background-section-burn min-w-0 flex-1 space-y-0.5 rounded-[10px] p-0.5">
+                    {nextNodes.map((node) => (
+                      <div
+                        key={node.id}
+                        className="pipeline-node-config__next-step-item group border-divider-regular bg-background-default hover:bg-background-default-hover text-text-secondary flex h-9 items-center gap-1.5 rounded-lg border-[0.5px] px-2 text-xs shadow-xs"
+                      >
+                        <PipelineNodeIcon
+                          data={{ nodeType: node.type, detail: node.detail, connector: null }}
+                        />
+                        <span className="system-xs-medium text-text-secondary min-w-0 flex-1 truncate">
+                          {node.label}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="small"
+                          className="shrink-0 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
+                          onClick={() => onSelectNextNode?.(node.id)}
+                        >
+                          {t('pipelines.workspace.config.jumpToNode')}
+                        </Button>
+                      </div>
+                    ))}
+                    {canAddNextStep && (
+                      <button
+                        type="button"
+                        className="border-divider-regular bg-components-dropzone-bg hover:bg-components-dropzone-bg-alt text-text-placeholder flex h-9 w-full items-center gap-2 rounded-lg border border-dashed px-2 text-left text-xs font-medium uppercase"
+                        onClick={(event) => {
+                          const rect = event.currentTarget.getBoundingClientRect()
+                          onRequestNextStep?.({ x: rect.left, y: rect.top })
+                        }}
+                      >
+                        <span className="bg-background-default-dimmed flex size-5 items-center justify-center rounded-[5px]">
+                          <Plus className="size-3" aria-hidden="true" />
+                        </span>
+                        {t('pipelines.workspace.config.selectNextStep')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </section>
+            )}
+          </div>
+        </fieldset>
+      </TabsPanel>
+    </Tabs>
   )
 }

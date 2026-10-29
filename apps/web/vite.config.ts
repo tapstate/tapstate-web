@@ -3,13 +3,32 @@ import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
 import process from 'node:process'
 import { fileURLToPath, URL } from 'node:url'
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig, loadEnv, type ProxyOptions } from 'vite'
 
 import { getWebBuildInputs } from './build/web-build-inputs'
 
+function rewriteLocalOrigin(
+  proxy: Parameters<NonNullable<ProxyOptions['configure']>>[0],
+  proxyOrigin: string,
+) {
+  proxy.on('proxyReq', (proxyReq, request) => {
+    const origin = request.headers.origin
+    const host = request.headers.host
+    if (typeof origin !== 'string' || typeof host !== 'string') return
+
+    const protocol =
+      'encrypted' in request.socket && request.socket.encrypted === true ? 'https' : 'http'
+    if (origin === `${protocol}://${host}`) proxyReq.setHeader('origin', proxyOrigin)
+  })
+}
+
 export default defineConfig(({ mode }) => {
-  const build = getWebBuildInputs(mode, loadEnv(mode, process.cwd(), ''))
+  const envDir = process.env.TAPSTATE_LOCAL_PREVIEW_ENV_DIR ?? process.cwd()
+  const build = getWebBuildInputs(mode, loadEnv(mode, envDir, ''))
+  const proxyTarget = process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080'
+  const proxyOrigin = new URL(proxyTarget).origin
   return {
+    envDir,
     define: {
       'import.meta.env.VITE_LOCAL_DEVELOPMENT': JSON.stringify(
         String(build.purpose === 'local-development' && build.profile === 'cloud'),
@@ -57,15 +76,26 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: {
         '/auth': {
-          target: process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080',
-          changeOrigin: true,
+          target: proxyTarget,
+          changeOrigin: build.profile === 'cloud',
+          ...(build.profile === 'cloud'
+            ? {
+                configure: (proxy: Parameters<NonNullable<ProxyOptions['configure']>>[0]) =>
+                  rewriteLocalOrigin(proxy, proxyOrigin),
+              }
+            : {}),
         },
         '/api': {
-          target: process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080',
+          target: proxyTarget,
+          changeOrigin: true,
+          configure: (proxy) => rewriteLocalOrigin(proxy, proxyOrigin),
+        },
+        '/version': {
+          target: proxyTarget,
           changeOrigin: true,
         },
         '/connector-icons': {
-          target: process.env.VITE_PROXY_TARGET ?? 'http://localhost:8080',
+          target: proxyTarget,
           changeOrigin: true,
         },
       },

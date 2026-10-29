@@ -103,7 +103,7 @@ describe('ViewsPage', () => {
     expect(page.container.querySelector('a[href="/overview"]')?.textContent).toBe('Set up')
   })
 
-  it('lists one row per replica of a mirror and one per view, each linked to its pipeline', async () => {
+  it('lists one row per replica of a mirror and shows pipeline ownership as secondary text', async () => {
     listViews.mockResolvedValue({
       available: true,
       views: [
@@ -127,15 +127,11 @@ describe('ViewsPage', () => {
     expect(rows[1].textContent).toContain('Loading 42%')
     expect(rows[3].textContent).toContain('Replica')
     expect(rows[3].textContent).toContain('Stale · 12 min')
-    const maintainers = rows.map((row) =>
-      row.querySelector('a[href="/pipelines/$pipelineId/edit"]')?.getAttribute('data-params'),
+    const maintainers = rows.map((row) => row.querySelectorAll('td')[6]?.textContent?.trim())
+    expect(maintainers).toEqual(['mirror-core', 'build-c360', 'mirror-core', 'mirror-core'])
+    expect(rows.every((row) => !row.querySelector('a[href="/pipelines/$pipelineId/edit"]'))).toBe(
+      true,
     )
-    expect(maintainers).toEqual([
-      JSON.stringify({ pipelineId: 'mirror-core' }),
-      JSON.stringify({ pipelineId: 'build-c360' }),
-      JSON.stringify({ pipelineId: 'mirror-core' }),
-      JSON.stringify({ pipelineId: 'mirror-core' }),
-    ])
     expect(page.container.textContent).toContain(
       '4 views · 2 fresh · 1 stale · 1 loading · slowest 4 s behind',
     )

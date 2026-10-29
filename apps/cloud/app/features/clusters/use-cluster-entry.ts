@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Cluster } from '../../service/cloud-api'
 
 import { CloudApiError, cloudApi } from '../../service/cloud-api'
-import { isAllowedCloudClusterHostname } from './cluster-entry-host'
+import { isAllowedCloudClusterOrigin } from './cluster-entry-host'
 import { canEnterCluster } from './cluster-entry-state'
 
 const activeEntryCancellations = new Set<() => void>()
@@ -52,22 +52,34 @@ export function useClusterEntry() {
       const localTarget = ['localhost', '127.0.0.1'].includes(origin.hostname)
       const localApp = ['localhost', '127.0.0.1'].includes(window.location.hostname)
       const consoleHost = window.location.hostname
-      const isAllowedCloudClusterHost = isAllowedCloudClusterHostname(origin.hostname, consoleHost)
+      const localClusterProxyOrigin = import.meta.env.VITE_LOCAL_CLUSTER_PROXY_ORIGIN
+      const usesLocalClusterProxy =
+        import.meta.env.DEV &&
+        localApp &&
+        typeof localClusterProxyOrigin === 'string' &&
+        origin.protocol === 'https:' &&
+        origin.origin === localClusterProxyOrigin
+      const allowedCloudOrigin = isAllowedCloudClusterOrigin(
+        origin,
+        consoleHost,
+        import.meta.env.DEV,
+      )
       if (
         !success ||
         !exchangeCode ||
         origin.username ||
         origin.password ||
-        (!isAllowedCloudClusterHost && !(localApp && localTarget)) ||
-        (!localTarget && origin.port !== '') ||
+        (!allowedCloudOrigin && !(localApp && localTarget) && !usesLocalClusterProxy) ||
         (origin.protocol !== 'https:' && !(localApp && localTarget && origin.protocol === 'http:'))
       ) {
         throw new Error('The Cluster address is unavailable. Please try again later.')
       }
 
-      const target = new URL('/auth/exchange', origin.origin)
+      const targetOrigin = usesLocalClusterProxy ? 'http://localhost:5173' : origin.origin
+      const target = new URL('/auth/exchange', targetOrigin)
       target.searchParams.set('code', exchangeCode)
-      window.location.assign(target.href)
+      if (usesLocalClusterProxy) window.location.replace(target.href)
+      else window.location.assign(target.href)
     } catch (error) {
       if (currentRequestId !== requestId.current) return
       if (error instanceof CloudApiError && error.status === 401) {

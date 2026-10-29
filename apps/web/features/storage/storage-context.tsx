@@ -66,7 +66,12 @@ export function StorageProvider({ children }: { children: ReactNode }) {
   const fetcher = useMemo<typeof fetch>(
     () =>
       async (input, init = {}) => {
-        if (!authorization.secret) return auth.apiFetch(input, init)
+        if (!authorization.secret) {
+          const entry = previousEntry.current
+          if (entry?.mode === 'OP' && entry.management && entry.automaticAuthorization)
+            return fetch(input, { ...init, credentials: 'same-origin' })
+          return auth.apiFetch(input, init)
+        }
         const headers = new Headers(init.headers)
         headers.set('X-Tapstate-Setup-Capability', authorization.secret)
         return fetch(input, { ...init, credentials: 'same-origin', headers })

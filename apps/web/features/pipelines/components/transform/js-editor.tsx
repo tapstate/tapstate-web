@@ -1,14 +1,13 @@
+import { Textarea } from '@tapstate-web/ui/textarea'
 import { Code2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-
-import { Textarea } from '@/components/ui/textarea'
 
 import { TransformEditorShell } from './transform-editor-shell'
 import { TransformSelect } from './transform-select'
 import { mergeBody, type TransformEditorProps } from './types'
 
-export function JsEditor({ config, onChange }: TransformEditorProps) {
+export function JsEditor({ config, onChange, upstreamInputs }: TransformEditorProps) {
   const { t } = useTranslation()
   const [language, setLanguage] = useState(() =>
     typeof config.body.engine === 'string' ? config.body.engine : 'javascript',
@@ -33,7 +32,7 @@ export function JsEditor({ config, onChange }: TransformEditorProps) {
 
   return (
     <TransformEditorShell
-      from={config.from}
+      from={upstreamInputs ?? config.from}
       icon={Code2}
       title={t('pipelines.workspace.transform.js.title')}
     >
@@ -52,8 +51,7 @@ export function JsEditor({ config, onChange }: TransformEditorProps) {
         rows={10}
         placeholder={t('pipelines.workspace.transform.script')}
         className="pipeline-transform__code-editor"
-        onChange={(event) => {
-          const next = event.target.value
+        onValueChange={(next) => {
           setScript(next)
           onChange?.({ body: mergeBody(config, { script: next, engine: language }) })
         }}

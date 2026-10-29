@@ -982,6 +982,84 @@ describe('explicit recovery and import', () => {
     ).toHaveLength(1)
     expect(container.textContent).toContain('Committed')
   })
+  it.each([true, false])(
+    'reconciles an original PENDING import without replay (definitive refusal=%s)',
+    async (refused) => {
+      storage.snapshot = {
+        ...base,
+        setupPhase: 'COMPLETE',
+        businessPhase: 'READY',
+        allowedActions: [
+          'configuration.import.preflight',
+          'configuration.import.commit',
+          'configuration.import.status',
+        ],
+      }
+      storage.fetcher.mockImplementation(async (url) => {
+        if (String(url).endsWith('/preflight'))
+          return Response.json({
+            operation: {
+              ticket: { id: 'original-import', expiresAt: 'later' },
+              phase: 'PENDING',
+              receipt: null,
+            },
+            preparedTransfer: 'prepared-ciphertext',
+          })
+        if (String(url).endsWith('/commit')) {
+          if (refused)
+            return Response.json({ code: 'io.configuration-import-refused' }, { status: 409 })
+          throw new TypeError('connection lost with secret')
+        }
+        return Response.json({
+          importId: 'original-import',
+          phase: 'PENDING',
+          ticket: { id: 'original-import', expiresAt: 'later' },
+          receipt: null,
+        })
+      })
+      await render(<ConfigurationTransfer defaultSourceId="destination-default" />)
+      await act(async () => container.querySelector('summary')!.click())
+      await fill('storage.transfer.key', 'request-only-key')
+      const file = container.querySelector<HTMLInputElement>('input[type="file"]')!
+      Object.defineProperty(file, 'files', {
+        value: [
+          {
+            size: 100,
+            text: async () =>
+              JSON.stringify({ transfer: 'encrypted-package', defaultSourceId: 'source-default' }),
+          },
+        ],
+      })
+      await act(async () => file.dispatchEvent(new Event('change', { bubbles: true })))
+      await click('storage.transfer.preflight')
+      await act(async () =>
+        container.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click(),
+      )
+      await click('storage.transfer.commit')
+      expect(container.textContent).not.toContain('connection lost with secret')
+      expect(container.querySelector<HTMLInputElement>('input[type="file"]')!.disabled).toBe(true)
+      await click('storage.queryResult')
+      expect(JSON.parse(String(storage.fetcher.mock.calls[1][1]?.body))).toMatchObject({
+        importId: 'original-import',
+        transfer: 'prepared-ciphertext',
+        defaultSourceMapping: { 'source-default': 'destination-default' },
+      })
+      expect(JSON.parse(String(storage.fetcher.mock.calls[2][1]?.body))).toEqual({
+        importId: 'original-import',
+      })
+      expect(
+        storage.fetcher.mock.calls.filter(([url]) => String(url).endsWith('/commit')),
+      ).toHaveLength(1)
+      expect(container.querySelector<HTMLInputElement>('input[type="file"]')!.disabled).toBe(
+        !refused,
+      )
+      expect(container.querySelector<HTMLInputElement>('input[type="password"]')!.disabled).toBe(
+        !refused,
+      )
+      expect(container.querySelector<HTMLInputElement>('input[type="checkbox"]')).toBeNull()
+      expect(container.textContent).toContain('Awaiting confirmation')
+    },
+  )
 })
 
 describe('storage connection failure guidance', () => {

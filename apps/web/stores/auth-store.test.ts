@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { AUTH_TOKEN_KEY } from './auth-session'
 import { createAuthStore } from './auth-store'
+import { createBrowserAuthSync } from './browser-auth-sync'
 
 function memoryStorage(initialToken?: string): Storage {
   const values = new Map<string, string>()
@@ -19,23 +20,6 @@ function memoryStorage(initialToken?: string): Storage {
 }
 
 describe('auth store deployment profiles', () => {
-  it('ignores a late 401 from a superseded on-prem session', async () => {
-    let finish!: (response: Response) => void
-    const fetcher = vi.fn<typeof fetch>(
-      () =>
-        new Promise((resolve) => {
-          finish = resolve
-        }),
-    )
-    const store = createAuthStore({ profile: 'on-prem', storage: memoryStorage('old'), fetcher })
-    const pending = store.getState().apiFetch('/api/storage/status')
-    store.getState().setToken('new')
-    finish(new Response(null, { status: 401 }))
-    await pending
-    expect(store.getState().token).toBe('new')
-    expect(store.getState().isAuthenticated).toBe(true)
-  })
-
   it('invalidates once and waits for an explicit sign-in action on concurrent Cloud failures', async () => {
     const redirectToCloudConsole = vi.fn()
     const store = createAuthStore({
@@ -64,12 +48,49 @@ describe('auth store deployment profiles', () => {
     expect(store.getState().isAuthenticated).toBe(true)
     expect(redirectToCloudConsole).not.toHaveBeenCalled()
   })
-  it('keeps the existing on-prem token lifecycle', () => {
+
+  it('keeps a newer login when an older request returns 401', async () => {
+    let finish!: (response: Response) => void
+    const store = createAuthStore({
+      profile: 'on-prem',
+      storage: null,
+      fetcher: (() =>
+        new Promise<Response>((resolve) => {
+          finish = resolve
+        })) as typeof fetch,
+    })
+    store.setState({ token: 'old-access', isAuthenticated: true, status: 'authenticated' })
+    const pending = store.getState().apiFetch('/api/sources')
+    store.setState({ token: 'new-access', isAuthenticated: true, authEpoch: 1 })
+    finish(new Response(JSON.stringify({ code: 'control.unauthenticated' }), { status: 401 }))
+    await pending.catch(() => undefined)
+    expect(store.getState().token).toBe('new-access')
+    expect(store.getState().isAuthenticated).toBe(true)
+  })
+
+  it('keeps the workbench session after an AI provider refuses its own credentials', async () => {
+    const store = createAuthStore({
+      profile: 'on-prem',
+      storage: null,
+      fetcher: vi.fn(
+        async () =>
+          new Response(JSON.stringify({ code: 'control.ai-provider-auth-failed' }), {
+            status: 401,
+          }),
+      ),
+    })
+    store.setState({ token: 'workbench-access', isAuthenticated: true, status: 'authenticated' })
+    await store.getState().apiFetch('/api/ai-provider-settings:check')
+    expect(store.getState().isAuthenticated).toBe(true)
+  })
+
+  it('removes the legacy on-prem bearer instead of persisting it', () => {
     const storage = memoryStorage('stored-token')
     const store = createAuthStore({ profile: 'on-prem', storage })
 
-    expect(store.getState().token).toBe('stored-token')
-    expect(store.getState().isAuthenticated).toBe(true)
+    expect(store.getState().token).toBeNull()
+    expect(store.getState().status).toBe('checking')
+    expect(storage.getItem(AUTH_TOKEN_KEY)).toBeNull()
 
     store.getState().clear()
     expect(storage.getItem(AUTH_TOKEN_KEY)).toBeNull()
@@ -83,7 +104,6 @@ describe('auth store deployment profiles', () => {
     expect(store.getState().token).toBeNull()
     expect(store.getState().isAuthenticated).toBe(true)
 
-    store.getState().setToken('must-not-be-persisted')
     expect(storage.getItem(AUTH_TOKEN_KEY)).toBe('stale-on-prem-token')
     expect(store.getState().token).toBeNull()
   })
@@ -133,5 +153,189 @@ describe('auth store deployment profiles', () => {
     )
     expect(store.getState().isAuthenticated).toBe(true)
     expect(redirectToCloudConsole).not.toHaveBeenCalled()
+  })
+})
+
+function testSync() {
+  let revision = ''
+  const listeners = new Set<() => void>()
+  return {
+    revision: () => revision,
+    read: <T>(action: () => Promise<T>) => action(),
+    mutate: async <T>(action: () => Promise<T>) => {
+      const value = await action()
+      revision += 'x'
+      return { value, revision }
+    },
+    subscribe: (listener: () => void) => {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+      }
+    },
+    close: () => undefined,
+  }
+}
+const access = (principal = 'alice', sessionId = 'session-a', token = 'access-a') => ({
+  token,
+  principal,
+  sessionId,
+  issuer: 'issuer-a',
+  scopes: ['admin'],
+  accessExpiresAt: new Date(Date.now() + 900_000).toISOString(),
+})
+
+describe('on-prem browser session recovery', () => {
+  it('restores a new tab and refreshes expired access without persisting credentials', async () => {
+    const storage = memoryStorage('legacy')
+    const sync = testSync()
+    let exchanges = 0
+    const fetcher = vi.fn<typeof fetch>(async (input) => {
+      if (String(input) === '/auth/browser/session') {
+        exchanges++
+        return Response.json(access('alice', 'session-a', `access-${exchanges}`))
+      }
+      return Response.json({ ok: true })
+    })
+    const store = createAuthStore({ profile: 'on-prem', storage, fetcher, sync })
+    await store.getState().restore()
+    expect(store.getState().principal).toBe('alice')
+    expect(storage.getItem(AUTH_TOKEN_KEY)).toBeNull()
+    store.setState({ accessExpiresAt: 1 })
+    await store.getState().apiFetch('/api/sources')
+    expect(exchanges).toBe(2)
+    expect(new Headers(fetcher.mock.calls.at(-1)?.[1]?.headers).get('Authorization')).toBe(
+      'Bearer access-2',
+    )
+  })
+
+  it('shares one exchange across concurrent requests in the same tab', async () => {
+    let finish!: (response: Response) => void
+    let exchanges = 0
+    const fetcher = vi.fn<typeof fetch>(async (input) => {
+      if (String(input) === '/auth/browser/session') {
+        exchanges++
+        return new Promise((resolve) => {
+          finish = resolve
+        })
+      }
+      return Response.json({ ok: true })
+    })
+    const store = createAuthStore({ profile: 'on-prem', storage: null, fetcher, sync: testSync() })
+    const first = store.getState().apiFetch('/api/sources')
+    const second = store.getState().apiFetch('/api/pipelines')
+    finish(Response.json(access()))
+    await Promise.all([first, second])
+    expect(exchanges).toBe(1)
+  })
+
+  it('never replays an account A operation using account B access', async () => {
+    let reads = 0
+    const fetcher = vi.fn<typeof fetch>(async (input) => {
+      if (String(input) === '/auth/browser/session')
+        return Response.json(++reads === 1 ? access() : access('bob', 'session-b', 'access-b'))
+      return Response.json({ code: 'control.unauthenticated' }, { status: 401 })
+    })
+    const store = createAuthStore({ profile: 'on-prem', storage: null, fetcher, sync: testSync() })
+    await store.getState().restore()
+    await expect(
+      store.getState().apiFetch('/api/sources', { method: 'POST', body: '{}' }),
+    ).rejects.toMatchObject({ name: 'AbortError' })
+    expect(fetcher.mock.calls.filter(([input]) => String(input) === '/api/sources')).toHaveLength(1)
+  })
+
+  it('keeps transient exchange failures recoverable and handles authoritative revoke', async () => {
+    let response = Response.json(access())
+    const fetcher = vi.fn<typeof fetch>(async () => response.clone())
+    const store = createAuthStore({ profile: 'on-prem', storage: null, fetcher, sync: testSync() })
+    await store.getState().restore()
+    response = new Response(null, { status: 503 })
+    await expect(store.getState().restore()).rejects.toBeDefined()
+    expect(store.getState().status).toBe('unavailable')
+    expect(store.getState().token).toBe('access-a')
+    response = Response.json({ code: 'control.unauthenticated' }, { status: 401 })
+    await expect(store.getState().restore()).rejects.toBeDefined()
+    expect(store.getState().status).toBe('anonymous')
+    expect(store.getState().token).toBeNull()
+  })
+
+  it('ignores an exchange completing after logout', async () => {
+    let finish!: (response: Response) => void
+    const fetcher = vi.fn<typeof fetch>(async (input) =>
+      String(input) === '/auth/browser/logout'
+        ? new Response(null, { status: 204 })
+        : new Promise((resolve) => {
+            finish = resolve
+          }),
+    )
+    const store = createAuthStore({ profile: 'on-prem', storage: null, fetcher, sync: testSync() })
+    const restoring = store.getState().restore()
+    await store.getState().logout()
+    finish(Response.json(access()))
+    await expect(restoring).rejects.toMatchObject({ name: 'AbortError' })
+    expect(store.getState().status).toBe('anonymous')
+  })
+})
+
+describe('OP transport credential scope', () => {
+  it('does not send a workbench bearer to another origin', async () => {
+    const fetcher = vi.fn<typeof fetch>(async () => Response.json({ ok: true }))
+    const store = createAuthStore({
+      profile: 'on-prem',
+      storage: null,
+      origin: 'https://workbench.example',
+      fetcher,
+    })
+    store.setState({ token: 'workbench-secret', isAuthenticated: true })
+    await expect(
+      store.getState().apiFetch('https://other.example/api/sources'),
+    ).rejects.toBeDefined()
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+})
+
+it('distinguishes an older server from a temporary session outage', async () => {
+  const store = createAuthStore({
+    profile: 'on-prem',
+    storage: null,
+    sync: testSync(),
+    fetcher: vi.fn(async () => new Response(null, { status: 404 })),
+  })
+  await expect(store.getState().restore()).rejects.toBeDefined()
+  expect(store.getState()).toMatchObject({ status: 'unavailable', recoveryReason: 'upgrade' })
+})
+
+it('shows a recoverable browser-support error when cross-tab locking is unavailable', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(navigator, 'locks')
+  Object.defineProperty(navigator, 'locks', { configurable: true, value: undefined })
+  try {
+    const store = createAuthStore({
+      profile: 'on-prem',
+      storage: null,
+      sync: createBrowserAuthSync(),
+    })
+    await expect(store.getState().restore()).rejects.toMatchObject({ kind: 'browser' })
+    expect(store.getState()).toMatchObject({ status: 'unavailable', recoveryReason: 'browser' })
+  } finally {
+    if (descriptor) Object.defineProperty(navigator, 'locks', descriptor)
+    else Reflect.deleteProperty(navigator, 'locks')
+  }
+})
+
+it('keeps an authoritative expired session anonymous when logout recovery fails', async () => {
+  let outcome: 'restore' | 'logout' = 'restore'
+  const fetcher = vi.fn<typeof fetch>(async (input) => {
+    if (String(input) === '/auth/browser/logout' || outcome === 'logout')
+      return Response.json({ code: 'control.unauthenticated' }, { status: 401 })
+    return Response.json(access())
+  })
+  const store = createAuthStore({ profile: 'on-prem', storage: null, fetcher, sync: testSync() })
+  await store.getState().restore()
+  outcome = 'logout'
+  await expect(store.getState().logout()).rejects.toMatchObject({ status: 401 })
+  expect(store.getState()).toMatchObject({
+    status: 'anonymous',
+    isAuthenticated: false,
+    token: null,
   })
 })

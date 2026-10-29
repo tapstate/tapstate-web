@@ -1,6 +1,7 @@
 import { useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import type { PipelineDagNode } from '@/service/pipelines/pipeline-client'
 import type { SourceView } from '@/service/source-client'
 
 import type { PipelineCanvasSelection } from '../../components/canvas/pipeline-canvas-types'
@@ -8,6 +9,7 @@ import type {
   PipelineSchemaOption,
   PipelineTableLoader,
 } from '../../components/node-config/pipeline-data-node-schema'
+import type { TransformFieldOption } from '../../components/transform/types'
 import type {
   PipelineNodeConfigurationChange,
   PipelineSourceTableSelection,
@@ -15,9 +17,9 @@ import type {
 
 import { PipelineNodeConfigPanel } from '../../components/node-config/pipeline-node-config-panel'
 
-const NODE_PANEL_DEFAULT_WIDTH = 400
-const PANEL_MIN_WIDTH = 320
-const PANEL_MAX_WIDTH = 560
+const NODE_PANEL_DEFAULT_WIDTH = 509
+const PANEL_MIN_WIDTH = 400
+const PANEL_MAX_WIDTH = 720
 const PANEL_RESIZE_STEP = 16
 
 function clampPanelWidth(width: number) {
@@ -30,6 +32,12 @@ export interface PipelineWorkflowPanelProps {
   onClose: () => void
   onConfigurationChange: (change: PipelineNodeConfigurationChange) => void
   onDescriptionChange: (description: string) => void
+  onTitleChange: (title: string) => void
+  onDelete: () => void
+  nextNodes: readonly PipelineDagNode[]
+  onSelectNextNode?: (nodeId: string) => void
+  canAddNextStep: boolean
+  onRequestNextStep: (screenPosition: { x: number; y: number }) => void
   onWidthChange?: (width: number) => void
   sourceOptions: readonly PipelineSchemaOption[]
   tableOptions?: readonly PipelineSchemaOption[]
@@ -37,6 +45,8 @@ export interface PipelineWorkflowPanelProps {
   sources?: readonly SourceView[]
   upstreamSourceTables?: readonly PipelineSourceTableSelection[]
   fieldTypes?: Readonly<Record<string, string>>
+  fieldOptions?: readonly TransformFieldOption[]
+  upstreamInputs?: readonly string[]
 }
 
 /** Owns the resizable inspector shell; form rendering remains in the node-config feature. */
@@ -46,6 +56,12 @@ export function PipelineWorkflowPanel({
   onClose,
   onConfigurationChange,
   onDescriptionChange,
+  onTitleChange,
+  onDelete,
+  nextNodes,
+  onSelectNextNode,
+  canAddNextStep,
+  onRequestNextStep,
   onWidthChange,
   sourceOptions,
   tableOptions,
@@ -53,6 +69,8 @@ export function PipelineWorkflowPanel({
   sources,
   upstreamSourceTables,
   fieldTypes,
+  fieldOptions,
+  upstreamInputs,
 }: PipelineWorkflowPanelProps) {
   const { t } = useTranslation()
   const [width, setWidth] = useState(NODE_PANEL_DEFAULT_WIDTH)
@@ -103,7 +121,7 @@ export function PipelineWorkflowPanel({
 
   return (
     <aside
-      className="pipeline-canvas__node-panel absolute right-0 bottom-3 z-20 flex flex-col max-sm:right-3 max-sm:bottom-3 max-sm:left-3 max-sm:max-h-[min(30rem,calc(100dvh-5rem))]"
+      className="pipeline-canvas__node-panel absolute right-0 bottom-0 z-20 flex flex-col max-[900px]:right-3 max-[900px]:bottom-3 max-[900px]:left-3 max-[900px]:max-h-[min(30rem,calc(100dvh-5rem))]"
       data-workflow-right-panel
       style={{ '--pipeline-node-panel-width': `${width}px` } as CSSProperties}
     >
@@ -132,12 +150,20 @@ export function PipelineWorkflowPanel({
           isReadOnly={isReadOnly}
           onConfigurationChange={onConfigurationChange}
           onDescriptionChange={onDescriptionChange}
+          onTitleChange={onTitleChange}
+          onDelete={onDelete}
+          nextNodes={nextNodes}
+          onSelectNextNode={onSelectNextNode}
+          canAddNextStep={canAddNextStep}
+          onRequestNextStep={onRequestNextStep}
           sourceOptions={sourceOptions}
           tableOptions={tableOptions}
           loadTables={loadTables}
           sources={sources}
           upstreamSourceTables={upstreamSourceTables}
           fieldTypes={fieldTypes}
+          fieldOptions={fieldOptions}
+          upstreamInputs={upstreamInputs}
         />
       </div>
     </aside>

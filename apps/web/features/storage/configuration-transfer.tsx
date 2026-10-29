@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import {
   storageRequest,
+  StorageClientError,
   type ImportPreflight,
   type ImportReceipt,
   type ImportStatus,
@@ -27,11 +28,13 @@ export function ConfigurationTransfer({ defaultSourceId }: { defaultSourceId?: s
   const [importId, setImportId] = useState('')
   const [status, setStatus] = useState<ImportStatus | null>(null)
   const [pendingResult, setPendingResult] = useState(false)
+  const [commitRefused, setCommitRefused] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
   if (!snapshot) return null
   const mapping = sourceDefault && defaultSourceId ? { [sourceDefault]: defaultSourceId } : {}
   const canImport = snapshot.allowedActions.includes('configuration.import.preflight')
   function changed() {
+    setCommitRefused(false)
     setPreflight(null)
     setConfirmed(false)
     setStatus(null)
@@ -210,6 +213,7 @@ export function ConfigurationTransfer({ defaultSourceId }: { defaultSourceId?: s
                   disabled={!confirmed || action.busy}
                   onClick={() => {
                     setPendingResult(true)
+                    setCommitRefused(false)
                     void action.run(
                       () =>
                         storageRequest<ImportReceipt>(fetcher, 'configuration.import.commit', {
@@ -231,6 +235,12 @@ export function ConfigurationTransfer({ defaultSourceId }: { defaultSourceId?: s
                         setPendingResult(false)
                         await refresh(true)
                       },
+                      (failure) =>
+                        setCommitRefused(
+                          failure instanceof StorageClientError &&
+                            failure.status === 409 &&
+                            failure.code === 'io.configuration-import-refused',
+                        ),
                     )
                   }}
                 >
@@ -269,6 +279,16 @@ export function ConfigurationTransfer({ defaultSourceId }: { defaultSourceId?: s
                 setConfirmed(false)
                 if (['COMMITTED', 'ABORTED', 'EXPIRED'].includes(result.phase))
                   setPendingResult(false)
+                if (
+                  result.phase === 'PENDING' &&
+                  result.importId === importId.trim() &&
+                  commitRefused
+                ) {
+                  setPendingResult(false)
+                  setPreflight(null)
+                  setImportId('')
+                  setCommitRefused(false)
+                }
                 if (result.phase === 'COMMITTED') {
                   setTransfer('')
                   setPreflight(null)

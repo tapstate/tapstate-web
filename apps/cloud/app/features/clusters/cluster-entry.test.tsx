@@ -24,7 +24,10 @@ vi.mock('../../service/cloud-api', async (importOriginal) => {
   }
 })
 vi.mock('../../state/cloud-app-state', () => ({ useCloudAppState: () => mocks.state.current }))
-vi.mock('../feedback/tawk-feedback-widget', () => ({ TawkFeedbackWidget: () => null }))
+vi.mock('../feedback/tawk-feedback-widget', () => ({
+  isTawkSupportAvailable: () => false,
+  TawkFeedbackWidget: () => null,
+}))
 
 import { i18n } from '../../i18n'
 import { CloudApiError } from '../../service/cloud-api'
@@ -114,6 +117,7 @@ beforeEach(() => {
 })
 
 afterEach(async () => {
+  vi.unstubAllEnvs()
   await act(async () => root?.unmount())
   host?.remove()
   vi.unstubAllGlobals()
@@ -299,7 +303,6 @@ describe('Cluster recovery entry', () => {
       const enter = vi.fn()
       await render(
         <CloudOverviewView
-          organization={organization}
           clusters={[cluster(state)]}
           onNavigate={vi.fn()}
           onOpenProvisionModal={vi.fn()}
@@ -375,6 +378,7 @@ describe('Cluster recovery entry', () => {
     'https://user:secret@cluster-a.cloud.tapstate.com',
     'https://cluster-a.cloud.tapstate.com:8443',
   ])('rejects invalid exchange target %s', async (baseUri) => {
+    vi.stubEnv('DEV', false)
     consoleHostname = 'cloud.tapstate.com'
     mocks.resolveCluster.mockResolvedValue({
       success: true,

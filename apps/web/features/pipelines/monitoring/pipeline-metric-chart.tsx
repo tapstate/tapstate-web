@@ -62,7 +62,9 @@ export function PipelineMetricChart({ metrics }: { metrics: PipelineMetrics | un
               style={{ '--pipeline-metric-ratio': `${entry.ratio}%` } as CSSProperties}
             />
           </span>
-          <span className="pipeline-monitoring__metric-value">{formatter.format(entry.value)}</span>
+          <span className="pipeline-monitoring__metric-value" title={formatter.format(entry.value)}>
+            {formatter.format(entry.value)}
+          </span>
         </div>
       ))}
     </div>

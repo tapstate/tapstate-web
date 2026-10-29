@@ -3,7 +3,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 
 import { cloudApi } from '../../service/cloud-api'
-import { TawkFeedbackWidget } from './tawk-feedback-widget'
+import { openTawkSupport, TawkFeedbackWidget } from './tawk-feedback-widget'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
@@ -48,6 +48,36 @@ describe('TawkFeedbackWidget', () => {
     root = createRoot(host)
   })
 
+  it('keeps the support launcher hidden before the user asks for help', async () => {
+    await act(async () => root.render(<TawkFeedbackWidget />))
+    await act(async () => window.Tawk_API?.onLoad?.())
+
+    expect(hideWidget).toHaveBeenCalled()
+    expect(showWidget).not.toHaveBeenCalled()
+  })
+
+  it('hides the launcher again when the support chat is minimized', async () => {
+    await act(async () => root.render(<TawkFeedbackWidget />))
+    const api = window.Tawk_API as typeof window.Tawk_API & { onChatMinimized?: () => void }
+    await act(async () => api?.onChatMinimized?.())
+
+    expect(hideWidget).toHaveBeenCalled()
+  })
+
+  it('opens the hosted support page when the widget script is unavailable', async () => {
+    await act(async () => root.render(<TawkFeedbackWidget />))
+    const open = vi.spyOn(window, 'open').mockReturnValue(null)
+
+    openTawkSupport()
+
+    expect(open).toHaveBeenCalledWith(
+      'https://tawk.to/chat/6ad811f9c0b97c34b365a428/1k5e0ceht',
+      '_blank',
+      'noopener,noreferrer',
+    )
+    open.mockRestore()
+  })
+
   it('queues an offline notice without forwarding the visitor form data', async () => {
     const notify = vi.spyOn(cloudApi, 'notifyTawkOfflineSubmission').mockResolvedValue({
       queued: true,
@@ -69,5 +99,26 @@ describe('TawkFeedbackWidget', () => {
       '6ad811f9c0b97c34b365a428',
     )
     expect(notify.mock.calls[0]).toHaveLength(2)
+  })
+
+  it('configures the widget to anchor on the bottom-left adjacent to the sidebar', async () => {
+    await act(async () => {
+      root.render(<TawkFeedbackWidget />)
+    })
+
+    expect(window.Tawk_API?.customStyle).toEqual({
+      visibility: {
+        desktop: {
+          position: 'bl',
+          xOffset: 260,
+          yOffset: 20,
+        },
+        mobile: {
+          position: 'bl',
+          xOffset: 10,
+          yOffset: 10,
+        },
+      },
+    })
   })
 })

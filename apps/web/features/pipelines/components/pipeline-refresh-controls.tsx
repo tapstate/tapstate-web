@@ -1,6 +1,7 @@
+import { Button } from '@tapstate-web/ui/button'
+import { IconButton } from '@tapstate-web/ui/icon-button'
 import { Pause, Play, RefreshCw } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 export const PIPELINE_AUTO_REFRESH_INTERVAL_MS = 5_000
@@ -14,6 +15,32 @@ export interface PipelineRefreshControlLabels {
   pauseAria: string
   resume: string
   resumeAria: string
+}
+
+export function PipelineRefreshButton({
+  isFetching,
+  label,
+  ariaLabel,
+  onRefresh,
+}: {
+  isFetching: boolean
+  label: string
+  ariaLabel: string
+  onRefresh: () => void
+}) {
+  return (
+    <IconButton
+      type="button"
+      variant="secondary"
+      size="lg"
+      aria-label={ariaLabel}
+      title={label}
+      onClick={onRefresh}
+      disabled={isFetching}
+    >
+      <RefreshCw className={cn('size-4', isFetching && 'animate-spin')} aria-hidden="true" />
+    </IconButton>
+  )
 }
 
 export function PipelineRefreshControls({
@@ -31,10 +58,10 @@ export function PipelineRefreshControls({
 }) {
   return (
     <div className="flex shrink-0 items-center gap-1.5">
-      <Button
+      <IconButton
         type="button"
-        variant="outline"
-        size="icon-sm"
+        variant="secondary"
+        size="lg"
         className="relative"
         aria-label={labels.refreshAria}
         title={`${labels.refresh} · ${autoRefresh ? labels.active : labels.paused}`}
@@ -42,26 +69,30 @@ export function PipelineRefreshControls({
         disabled={isFetching}
         data-auto-refresh={autoRefresh ? 'on' : 'off'}
       >
-        <RefreshCw className={cn('size-3.5', isFetching && 'animate-spin')} aria-hidden="true" />
         <span
-          className={cn(
-            'absolute top-1 right-1 size-1.5 rounded-full',
-            autoRefresh ? 'bg-primary' : 'bg-muted-foreground',
-          )}
+          className="relative inline-flex size-full items-center justify-center"
           aria-hidden="true"
-        />
-      </Button>
+        >
+          <RefreshCw className={cn('size-4', isFetching && 'animate-spin')} />
+          <span
+            className={cn(
+              'absolute top-0.5 right-0.5 size-1.5 rounded-full',
+              autoRefresh ? 'bg-primary' : 'bg-muted-foreground',
+            )}
+          />
+        </span>
+      </IconButton>
       <Button
         type="button"
-        variant="outline"
-        size="sm"
+        variant="secondary"
+        size="medium"
         aria-label={autoRefresh ? labels.pauseAria : labels.resumeAria}
         onClick={onToggle}
       >
         {autoRefresh ? (
-          <Pause className="size-3.5" aria-hidden="true" />
+          <Pause className="size-4" aria-hidden="true" />
         ) : (
-          <Play className="size-3.5" aria-hidden="true" />
+          <Play className="size-4" aria-hidden="true" />
         )}
         {autoRefresh ? labels.pause : labels.resume}
       </Button>
