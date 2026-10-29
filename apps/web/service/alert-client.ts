@@ -91,6 +91,27 @@ export interface Catalog {
   deployment: string
   types: AlertType[]
 }
+export interface MaintenanceHealth {
+  available: boolean
+  degraded: boolean
+  warning: boolean
+  capacitySampleStale: boolean
+  capacityMeasuredAt?: string
+  logicalBytes?: number
+  admissionReservedBytes?: number
+  capacityBytes: number
+  pending?: number
+  oldestPendingAgeSeconds?: number
+  failed?: number
+  exhausted?: number
+  pressure: 'NORMAL' | 'WARNING' | 'PAUSED' | 'FULL'
+  lastSuccess?: string
+  cadenceSeconds: number
+  changed: number
+  failures: number
+  oldestCandidateAgeSeconds: number
+  skipped: Record<string, number>
+}
 export interface Health {
   deployment?: string
   degraded: boolean
@@ -98,6 +119,9 @@ export interface Health {
   code?: string
   coverage: string[]
   cleanupAvailable: boolean
+  evaluationLagMillis?: number
+  lastEvaluatedAt?: string
+  maintenance?: MaintenanceHealth
   refreshedAt: string
   rejected: number
   queuedInputs: number

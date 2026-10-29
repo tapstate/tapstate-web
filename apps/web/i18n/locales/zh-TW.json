@@ -2600,6 +2600,19 @@
         "create": "新增靜默時段"
       }
     },
-    "elapsedDuration": "持續時間"
+    "elapsedDuration": "持續時間",
+    "capacityMeasured": "{{bytes}} / {{limit}} 位元組 · {{pressure}}",
+    "deliveryMeasured": "待投遞 {{pending}} · 最舊 {{age}} 秒 · 失敗 {{failed}} · 重試耗盡 {{exhausted}}",
+    "cleanupMeasured": "已回收 / 裁剪 {{changed}} · 失敗輪次 {{failures}} · 最舊候選 {{age}} 秒",
+    "lastEvaluated": "最後完成",
+    "cleanupCadence": "已完成 · 每 {{minutes}} 分鐘檢查一次",
+    "capacityPressure": {
+      "NORMAL": "容量正常",
+      "WARNING": "容量預警",
+      "PAUSED": "已暫停測試與重複提醒",
+      "FULL": "已暫停新增耐久接納"
+    },
+    "maintenanceRunning": "正常",
+    "deliveryQueue": "通知佇列"
   }
 }

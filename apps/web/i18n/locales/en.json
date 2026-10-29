@@ -2600,6 +2600,19 @@
         "create": "New silence window"
       }
     },
-    "elapsedDuration": "Duration"
+    "elapsedDuration": "Duration",
+    "capacityMeasured": "{{bytes}} / {{limit}} bytes · {{pressure}}",
+    "deliveryMeasured": "Pending {{pending}} · oldest {{age}} s · failed {{failed}} · exhausted {{exhausted}}",
+    "cleanupMeasured": "Reclaimed / pruned {{changed}} · failed rounds {{failures}} · oldest candidate {{age}} s",
+    "lastEvaluated": "Last completed",
+    "cleanupCadence": "Completed · every {{minutes}} minutes",
+    "capacityPressure": {
+      "NORMAL": "Capacity normal",
+      "WARNING": "Capacity warning",
+      "PAUSED": "Tests and repeat reminders paused",
+      "FULL": "New durable admissions paused"
+    },
+    "maintenanceRunning": "Operational",
+    "deliveryQueue": "Notification queue"
   }
 }

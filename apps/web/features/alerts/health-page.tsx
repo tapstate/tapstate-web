@@ -24,7 +24,12 @@ export function HealthPage() {
         <p role="status">{t('alerts.loading')}</p>
       </section>
     )
-  const health = query.data
+  const health = query.isError ? undefined : query.data
+  const maintenance = health?.maintenance
+  const measured = maintenance && !maintenance.capacitySampleStale
+  const pressure = maintenance
+    ? t(`alerts.capacityPressure.${maintenance.pressure}`)
+    : t('alerts.notMeasured')
   const degraded = !health || health.degraded || health.closed || query.isError
   const checks = [
     {
@@ -45,17 +50,49 @@ export function HealthPage() {
     },
     {
       id: 'storage',
-      state: 'notIndependentlyMeasured',
-      detail: t('alerts.storageHealthNote'),
+      state: measured
+        ? maintenance.degraded
+          ? 'degraded'
+          : 'maintenanceRunning'
+        : 'notIndependentlyMeasured',
+      detail: measured
+        ? t('alerts.capacityMeasured', {
+            bytes: (maintenance.logicalBytes ?? 0) + (maintenance.admissionReservedBytes ?? 0),
+            limit: maintenance.capacityBytes,
+            pressure,
+          })
+        : t('alerts.storageHealthNote'),
       to: '/settings',
     },
     {
       id: 'sending',
       state: 'verifyFromDeliveries',
-      detail: t('alerts.acceptanceBoundary'),
+      detail: measured
+        ? t('alerts.deliveryMeasured', {
+            pending: maintenance.pending ?? 0,
+            age: maintenance.oldestPendingAgeSeconds ?? 0,
+            failed: maintenance.failed ?? 0,
+            exhausted: maintenance.exhausted ?? 0,
+          })
+        : t('alerts.acceptanceBoundary'),
       to: '/alerts',
     },
-    { id: 'cleanup', state: 'inputUnavailable', detail: t('alerts.cleanupPending'), to: null },
+    {
+      id: 'cleanup',
+      state: maintenance?.lastSuccess
+        ? maintenance.degraded
+          ? 'degraded'
+          : 'maintenanceRunning'
+        : 'inputUnavailable',
+      detail: maintenance
+        ? t('alerts.cleanupMeasured', {
+            changed: maintenance.changed,
+            failures: maintenance.failures,
+            age: maintenance.oldestCandidateAgeSeconds,
+          })
+        : t(query.isError ? 'alerts.unavailable' : 'alerts.cleanupPending'),
+      to: null,
+    },
   ]
   return (
     <section className="alerts-page">
@@ -91,24 +128,46 @@ export function HealthPage() {
       <div className="alert-health-grid">
         <div className="alert-health-stat">
           <span>{t('alerts.evaluationLag')}</span>
-          <strong>—</strong>
-          <small>{t('alerts.notMeasured')}</small>
+          <strong>
+            {health?.evaluationLagMillis == null
+              ? '—'
+              : `${(health.evaluationLagMillis / 1000).toFixed(1)} s`}
+          </strong>
+          <small>
+            {t('alerts.lastEvaluated')} <Time value={health?.lastEvaluatedAt} />
+          </small>
         </div>
         <div className="alert-health-stat">
           <span>
             {t(
               health?.deployment === 'CLOUD_MANAGED'
                 ? 'alerts.managedChannel'
-                : 'alerts.deliveryAttention',
+                : query.isError
+                  ? 'alerts.deliveryQueue'
+                  : 'alerts.deliveryAttention',
             )}
           </span>
-          <strong>—</strong>
-          <small>{t('alerts.notMeasured')}</small>
+          <strong>{measured ? (maintenance.pending ?? 0) : '—'}</strong>
+          <small>{t('alerts.acceptanceBoundary')}</small>
         </div>
         <div className="alert-health-stat">
           <span>{t('alerts.lastCleanup')}</span>
-          <strong>—</strong>
-          <small>{t('alerts.inputUnavailable')}</small>
+          <strong>
+            <time dateTime={maintenance?.lastSuccess} title={maintenance?.lastSuccess}>
+              {maintenance?.lastSuccess
+                ? new Date(maintenance.lastSuccess).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                  })
+                : '—'}
+            </time>
+          </strong>
+          <small>
+            {maintenance
+              ? t('alerts.cleanupCadence', { minutes: maintenance.cadenceSeconds / 60 })
+              : t('alerts.inputUnavailable')}
+          </small>
         </div>
       </div>
       <div className="alert-table-wrap">
@@ -128,7 +187,7 @@ export function HealthPage() {
                 <td>{t(`alerts.healthChecks.${row.id}`)}</td>
                 <td>
                   <span
-                    className={`alert-state ${row.id === 'evaluation' && !degraded ? 'alert-state--good' : ''}`}
+                    className={`alert-state ${row.state === 'maintenanceRunning' || (row.id === 'evaluation' && !degraded) ? 'alert-state--good' : ''}`}
                   >
                     {t(`alerts.${row.state}`)}
                   </span>

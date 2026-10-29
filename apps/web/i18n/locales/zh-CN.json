@@ -2600,6 +2600,19 @@
         "create": "新建静默窗口"
       }
     },
-    "elapsedDuration": "持续时间"
+    "elapsedDuration": "持续时间",
+    "capacityMeasured": "{{bytes}} / {{limit}} 字节 · {{pressure}}",
+    "deliveryMeasured": "待投递 {{pending}} · 最老 {{age}} 秒 · 失败 {{failed}} · 重试耗尽 {{exhausted}}",
+    "cleanupMeasured": "已回收 / 裁剪 {{changed}} · 失败轮次 {{failures}} · 最老候选 {{age}} 秒",
+    "lastEvaluated": "最后完成",
+    "cleanupCadence": "已完成 · 每 {{minutes}} 分钟检查一次",
+    "capacityPressure": {
+      "NORMAL": "容量正常",
+      "WARNING": "容量预警",
+      "PAUSED": "已暂停测试与重复提醒",
+      "FULL": "已暂停新增耐久接纳"
+    },
+    "maintenanceRunning": "正常",
+    "deliveryQueue": "通知队列"
   }
 }
