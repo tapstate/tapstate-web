@@ -646,9 +646,19 @@
     },
     "delete": {
       "title": "Delete {{id}}?",
-      "body": "This permanently removes the stored Pipeline and its runtime state.",
+      "body": "This permanently removes the stored Pipeline, its draft and its runtime state.",
       "confirm": "Delete Pipeline",
-      "failed": "Pipeline could not be deleted."
+      "failed": "Pipeline could not be deleted.",
+      "notStopped": "Pipeline {{id}} is {{actual}} and is headed for {{desired}}. Stop it and wait for it to settle before deleting it.",
+      "inUse": "Pipeline {{id}} is still referenced by: {{referrers}}. Remove those references first.",
+      "incomplete": "The Pipeline definition was removed, but some cleanup is incomplete. Refresh the list to review the remaining draft and runtime state.",
+      "conflict": "The Pipeline or its draft changed since it was loaded. Refresh the list and confirm deletion again.",
+      "waitingForStop": "Stopping is already requested. Wait for the Pipeline to stop, then confirm deletion again.",
+      "stopPipeline": "Stop Pipeline",
+      "cleanupTitle": "Cleanup needs attention for {{id}}",
+      "cleanupReason": "Reason: {{reason}}",
+      "unknownCleanup": "The remaining cleanup could not be determined. Review the server diagnostics before taking further action.",
+      "dismiss": "Dismiss"
     },
     "table": {
       "modified": "Last modified",

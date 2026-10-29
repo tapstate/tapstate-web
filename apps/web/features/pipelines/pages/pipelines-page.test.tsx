@@ -42,7 +42,8 @@ vi.mock('@tanstack/react-router', async (importOriginal) => ({
 
 vi.mock('@/service/source-client', () => ({ listSources }))
 vi.mock('@/service/view-client', () => ({ listViews }))
-vi.mock('@/service/pipelines/pipeline-client', () => ({
+vi.mock('@/service/pipelines/pipeline-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/service/pipelines/pipeline-client')>()),
   createPipelineDraft,
   deletePipelineDraft,
   getPipelineDraft,
@@ -186,7 +187,7 @@ beforeEach(() => {
   stopPipeline.mockResolvedValue({})
   getPipelineDraft.mockResolvedValue({ etag: '"3"' })
   deletePipelineDraft.mockResolvedValue(undefined)
-  apiFetch.mockResolvedValue({ ok: true })
+  apiFetch.mockResolvedValue(new Response(null, { status: 204 }))
   createPipelineDraft.mockResolvedValue(undefined)
   navigate.mockReset()
 })
@@ -410,11 +411,234 @@ describe('PipelinesPage', () => {
     await act(async () => elementWithText('button', 'Delete Pipeline')?.click())
 
     await vi.waitFor(() =>
-      expect(apiFetch).toHaveBeenCalledWith('/api/artifacts/failed_import', {
+      expect(apiFetch).toHaveBeenCalledWith('/api/pipelines/failed_import', {
         method: 'DELETE',
-        headers: { 'If-Match': `"${'c'.repeat(64)}"` },
+        headers: { 'If-Match': `"${'c'.repeat(64)}"`, 'If-Draft-Match': '"4"' },
       }),
     )
+  })
+
+  it('keeps a coded delete refusal in the padded dialog body and asks before stopping', async () => {
+    apiFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          code: 'artifact.pipeline-not-stopped',
+          params: { actual: 'FAILED', desired: 'RUNNING' },
+        }),
+        { status: 409 },
+      ),
+    )
+    await renderPage()
+    const trigger = await vi.waitFor(() => {
+      const button = document.querySelector<HTMLButtonElement>(
+        '[aria-label="Pipeline lifecycle actions for failed_import"]',
+      )
+      expect(button).not.toBeNull()
+      return button
+    })
+    await act(async () => trigger?.click())
+    await act(async () => elementWithText('[role="menuitem"]', 'Delete')?.click())
+    await act(async () => elementWithText('button', 'Delete Pipeline')?.click())
+    const alert = await vi.waitFor(() => {
+      const value = document.querySelector('[role="alert"]')
+      expect(value?.textContent).toContain('FAILED')
+      expect(value?.textContent).toContain('RUNNING')
+      return value
+    })
+    expect(alert?.closest('[data-slot="dialog-body"]')).not.toBeNull()
+    expect(stopPipeline).not.toHaveBeenCalled()
+    await act(async () => elementWithText('button', 'Stop Pipeline')?.click())
+    await vi.waitFor(() => expect(document.body.textContent).toContain('Stop failed_import?'))
+    expect(stopPipeline).not.toHaveBeenCalled()
+    await act(async () => elementWithText('button', 'Stop and keep state')?.click())
+    await vi.waitFor(() =>
+      expect(stopPipeline).toHaveBeenCalledWith('failed_import', false, apiFetch),
+    )
+    await vi.waitFor(() => expect(document.body.textContent).toContain('Delete failed_import?'))
+    expect(apiFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('explains an in-flight stop without asking to stop the Pipeline again', async () => {
+    apiFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          code: 'artifact.pipeline-not-stopped',
+          params: { actual: 'RUNNING', desired: 'STOPPED' },
+        }),
+        { status: 409 },
+      ),
+    )
+    await renderPage()
+    const trigger = await vi.waitFor(() => {
+      const button = document.querySelector<HTMLButtonElement>(
+        '[aria-label="Pipeline lifecycle actions for failed_import"]',
+      )
+      expect(button).not.toBeNull()
+      return button
+    })
+    await act(async () => trigger?.click())
+    await act(async () => elementWithText('[role="menuitem"]', 'Delete')?.click())
+    await act(async () => elementWithText('button', 'Delete Pipeline')?.click())
+    await vi.waitFor(() =>
+      expect(document.querySelector('[role="alert"]')?.textContent).toContain(
+        'Stopping is already requested.',
+      ),
+    )
+    expect(elementWithText('button', 'Stop Pipeline')).toBeUndefined()
+    expect(stopPipeline).not.toHaveBeenCalled()
+  })
+
+  it('keeps incomplete cleanup diagnostics after the removed catalog row unmounts', async () => {
+    apiFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          code: 'artifact.reclaim-incomplete',
+          params: { reason: 'unknown-commit', residue: ['draft:failed_import', 'state:unknown'] },
+          message: 'The artifact removal stands; cleanup is uncertain.',
+        }),
+        { status: 500 },
+      ),
+    )
+    listPipelines
+      .mockResolvedValueOnce([
+        {
+          id: 'failed_import',
+          name: 'failed_import',
+          revision: 4,
+          contentHash: 'c'.repeat(64),
+          hasArtifact: true,
+          status: { state: 'STOPPED' },
+        },
+      ])
+      .mockResolvedValue([])
+    await renderPage()
+    const trigger = await vi.waitFor(() => {
+      const value = document.querySelector<HTMLButtonElement>(
+        '[aria-label="Pipeline lifecycle actions for failed_import"]',
+      )
+      expect(value).not.toBeNull()
+      return value
+    })
+    await act(async () => trigger?.click())
+    await act(async () => elementWithText('[role="menuitem"]', 'Delete')?.click())
+    await act(async () => elementWithText('button', 'Delete Pipeline')?.click())
+    await vi.waitFor(() => expect(document.querySelector('tbody tr')).toBeNull())
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain('unknown-commit')
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain('draft:failed_import')
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain('state:unknown')
+    expect(elementWithText('button', 'Delete Pipeline')).toBeUndefined()
+    expect(elementWithText('button', 'Dismiss')).toBeDefined()
+  })
+
+  it('waits for authoritative STOPPED after returning from the explicit stop confirmation', async () => {
+    const row = {
+      id: 'failed_import',
+      name: 'failed_import',
+      revision: 4,
+      contentHash: 'c'.repeat(64),
+      hasArtifact: true,
+      status: { state: 'FAILED' },
+    }
+    listPipelines.mockResolvedValue([row])
+    apiFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          code: 'artifact.pipeline-not-stopped',
+          params: { actual: 'FAILED', desired: 'RUNNING' },
+        }),
+        { status: 409 },
+      ),
+    )
+    stopPipeline.mockImplementationOnce(async () => {
+      listPipelines.mockResolvedValue([{ ...row, status: { state: 'STOPPING' } }])
+    })
+    const queryClient = await renderPage()
+    const trigger = await vi.waitFor(() => {
+      const value = document.querySelector<HTMLButtonElement>(
+        '[aria-label="Pipeline lifecycle actions for failed_import"]',
+      )
+      expect(value).not.toBeNull()
+      return value
+    })
+    await act(async () => trigger?.click())
+    await act(async () => elementWithText('[role="menuitem"]', 'Delete')?.click())
+    await act(async () => elementWithText('button', 'Delete Pipeline')?.click())
+    await act(async () => elementWithText('button', 'Stop Pipeline')?.click())
+    await act(async () => elementWithText('button', 'Stop and keep state')?.click())
+    await vi.waitFor(() =>
+      expect(document.body.textContent).toContain('Stopping is already requested.'),
+    )
+    expect(elementWithText('button', 'Delete Pipeline')?.getAttribute('disabled')).not.toBeNull()
+    expect(apiFetch).toHaveBeenCalledTimes(1)
+    listPipelines.mockResolvedValue([{ ...row, status: { state: 'STOPPED' } }])
+    await act(async () => {
+      await queryClient.invalidateQueries({ queryKey: ['pipelines'] })
+    })
+    await vi.waitFor(() =>
+      expect(elementWithText('button', 'Delete Pipeline')?.getAttribute('disabled')).toBeNull(),
+    )
+    expect(apiFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('polls an open STOPPING delete dialog with global refresh paused and stops polling on close', async () => {
+    const row = {
+      id: 'stopping_import',
+      name: 'stopping_import',
+      revision: 4,
+      contentHash: 'c'.repeat(64),
+      hasArtifact: true,
+      status: { state: 'STOPPING' },
+    }
+    listPipelines.mockResolvedValue([row])
+    await renderPage()
+    const trigger = await vi.waitFor(() => {
+      const value = document.querySelector<HTMLButtonElement>(
+        '[aria-label="Pipeline lifecycle actions for stopping_import"]',
+      )
+      expect(value).not.toBeNull()
+      return value
+    })
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>('[aria-label="Pause automatic pipeline refresh"]')
+        ?.click(),
+    )
+    await act(async () => trigger?.click())
+    vi.useFakeTimers()
+    try {
+      await act(async () => elementWithText('[role="menuitem"]', 'Delete')?.click())
+      expect(elementWithText('button', 'Delete Pipeline')?.getAttribute('disabled')).not.toBeNull()
+      const calls = listPipelines.mock.calls.length
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5_000)
+      })
+      expect(listPipelines).toHaveBeenCalledTimes(calls + 1)
+      expect(elementWithText('button', 'Delete Pipeline')?.getAttribute('disabled')).not.toBeNull()
+      await act(async () => elementWithText('button', 'Cancel')?.click())
+      const closedCalls = listPipelines.mock.calls.length
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10_000)
+      })
+      expect(listPipelines).toHaveBeenCalledTimes(closedCalls)
+      await act(async () => trigger?.click())
+      await act(async () => elementWithText('[role="menuitem"]', 'Delete')?.click())
+      listPipelines.mockResolvedValue([{ ...row, status: { state: 'STOPPED' } }])
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5_000)
+      })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1)
+      })
+      expect(elementWithText('button', 'Delete Pipeline')?.getAttribute('disabled')).toBeNull()
+      const stoppedCalls = listPipelines.mock.calls.length
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10_000)
+      })
+      expect(listPipelines).toHaveBeenCalledTimes(stoppedCalls)
+      expect(apiFetch).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('confirms stop before interrupting a running Pipeline', async () => {
