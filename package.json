@@ -18,6 +18,5 @@
     "oxfmt": "^0.60.0",
     "oxlint": "^1.75.0",
     "typescript": "^6.0.3"
-  },
-  "packageManager": "pnpm@11.10.0"
-}
+  }
+},

@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next'
 
 const LEGAL_DOCS = {
-  eula: 'https://docs.tapstate.com/legal/eula',
-  privacy: 'https://docs.tapstate.com/privacy',
-  subscription: 'https://docs.tapstate.com/subscription-policy',
-  dpa: 'https://docs.tapstate.com/data-processing-addendum',
+  eula: 'https://tapstate.com/legal/eula',
+  privacy: 'https://tapstate.com/legal/privacy',
+  subscription: 'https://tapstate.com/legal/subscription-policy',
+  dpa: 'https://tapstate.com/legal/data-processing-addendum',
 } as const
 
 export function AppFooter() {

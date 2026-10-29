@@ -23,10 +23,10 @@ type AuthMode = 'login' | 'register'
 
 const CURRENT_LEGAL_VERSION = import.meta.env.VITE_LEGAL_VERSION ?? 'legal-v1.0-2026-10-27'
 const LEGAL_DOCS = {
-  eula: 'https://docs.tapstate.com/legal/eula',
-  privacy: 'https://docs.tapstate.com/privacy',
-  subscription: 'https://docs.tapstate.com/subscription-policy',
-  dpa: 'https://docs.tapstate.com/data-processing-addendum',
+  eula: 'https://tapstate.com/legal/eula',
+  privacy: 'https://tapstate.com/legal/privacy',
+  subscription: 'https://tapstate.com/legal/subscription-policy',
+  dpa: 'https://tapstate.com/legal/data-processing-addendum',
 } as const
 
 const emailCodeCooldownSeconds = 60
