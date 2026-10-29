@@ -386,7 +386,10 @@ export function PipelineLifecycleMenu({
               variant="outline"
               disabled={pending}
               className="px-3 text-[13px]"
-              onClick={() => setStopDialogOpen(false)}
+              onClick={() => {
+                returnToDeleteAfterStop.current = false
+                setStopDialogOpen(false)
+              }}
             >
               {t('pipelines.lifecycle.cancel')}
             </Button>
