@@ -1,22 +1,15 @@
+import { DrawerClose, DrawerTitle } from '@tapstate-web/ui/drawer'
+import { IconButton } from '@tapstate-web/ui/icon-button'
 import { X } from 'lucide-react'
-import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { PipelineLogLine } from '@/service/pipelines/pipeline-client'
-
-import { Button } from '@/components/ui/button'
 
 function normalizedLevel(level: string) {
   return level.trim().toUpperCase()
 }
 
-export function PipelineLogDetailPanel({
-  line,
-  onClose,
-}: {
-  line: PipelineLogLine
-  onClose: () => void
-}) {
+export function PipelineLogDetailPanel({ line }: { line: PipelineLogLine }) {
   const { i18n, t } = useTranslation()
   const level = normalizedLevel(line.level)
   const fullTimestamp = new Intl.DateTimeFormat(i18n.language, {
@@ -26,16 +19,8 @@ export function PipelineLogDetailPanel({
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
+    timeZoneName: 'short',
   }).format(line.timestampMillis)
-
-  useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
-    }
-
-    document.addEventListener('keydown', closeOnEscape)
-    return () => document.removeEventListener('keydown', closeOnEscape)
-  }, [onClose])
 
   return (
     <aside
@@ -43,17 +28,20 @@ export function PipelineLogDetailPanel({
       aria-label={t('pipelines.workspace.runtime.logs.details')}
     >
       <div className="pipeline-log-detail__header">
-        <h2 className="pipeline-log-detail__title">
+        <DrawerTitle className="pipeline-log-detail__title">
           {t('pipelines.workspace.runtime.logs.details')}
-        </h2>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t('pipelines.workspace.runtime.logs.closeDetailsAria')}
-          onClick={onClose}
-        >
-          <X className="size-4" aria-hidden="true" />
-        </Button>
+        </DrawerTitle>
+        <DrawerClose
+          render={
+            <IconButton
+              variant="ghost"
+              size="lg"
+              aria-label={t('pipelines.workspace.runtime.logs.closeDetailsAria')}
+            >
+              <X className="size-4" aria-hidden="true" />
+            </IconButton>
+          }
+        />
       </div>
 
       <dl className="pipeline-log-detail__metadata">

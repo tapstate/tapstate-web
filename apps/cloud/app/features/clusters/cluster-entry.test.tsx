@@ -1,4 +1,4 @@
-import { act, type ReactNode } from 'react'
+import { act, StrictMode, type ReactNode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -24,11 +24,17 @@ vi.mock('../../service/cloud-api', async (importOriginal) => {
   }
 })
 vi.mock('../../state/cloud-app-state', () => ({ useCloudAppState: () => mocks.state.current }))
-vi.mock('../feedback/tawk-feedback-widget', () => ({ TawkFeedbackWidget: () => null }))
+vi.mock('../feedback/tawk-feedback-widget', () => ({
+  isTawkSupportAvailable: () => false,
+  TawkFeedbackWidget: () => null,
+}))
 
+import { i18n } from '../../i18n'
 import { CloudApiError } from '../../service/cloud-api'
 import { CloudConsoleShell } from '../../shell/cloud-console-shell'
 import { CloudOverviewView } from '../overview/cloud-overview-view'
+import { AutomaticClusterEntry } from './automatic-cluster-entry'
+import { clusterEntrySearch } from './cluster-entry-intent'
 import { ClustersPage } from './clusters-page'
 import { cancelPendingClusterEntries, useClusterEntry } from './use-cluster-entry'
 
@@ -111,12 +117,153 @@ beforeEach(() => {
 })
 
 afterEach(async () => {
+  vi.unstubAllEnvs()
   await act(async () => root?.unmount())
   host?.remove()
   vi.unstubAllGlobals()
 })
 
 describe('Cluster recovery entry', () => {
+  it('automatically resumes an authorized Cluster through the original C1 path once', async () => {
+    await render(
+      <StrictMode>
+        <AutomaticClusterEntry
+          cluster={cluster('DEGRADED')}
+          organizationId={organization.id}
+          onBack={() => {}}
+        />
+      </StrictMode>,
+    )
+    expect(mocks.resolveCluster).toHaveBeenCalledExactlyOnceWith('cluster-a', organization.id)
+    expect(assign).toHaveBeenCalledExactlyOnceWith(
+      'http://localhost:28443/auth/exchange?code=single-use-code',
+    )
+  })
+
+  it('does not automatically retry a failed C1 return as the page rerenders', async () => {
+    mocks.resolveCluster.mockRejectedValue(new CloudApiError('Dependency unavailable', 503))
+    const element = (
+      <AutomaticClusterEntry
+        cluster={cluster('DEGRADED')}
+        organizationId={organization.id}
+        onBack={() => {}}
+      />
+    )
+    await render(element)
+    expect(host.textContent).toContain('Dependency unavailable')
+    await act(async () => root.render(element))
+    expect(mocks.resolveCluster).toHaveBeenCalledTimes(1)
+    expect(assign).not.toHaveBeenCalled()
+  })
+
+  it('discards an automatic entry response after the waiting page is left', async () => {
+    let complete!: (value: Cluster) => void
+    mocks.cluster.mockImplementation(
+      () =>
+        new Promise<Cluster>((resolve) => {
+          complete = resolve
+        }),
+    )
+    await render(
+      <AutomaticClusterEntry
+        cluster={cluster('READY')}
+        organizationId={organization.id}
+        onBack={() => {}}
+      />,
+    )
+    await act(async () => root.unmount())
+    await act(async () => complete(cluster('READY')))
+    expect(mocks.resolveCluster).not.toHaveBeenCalled()
+    expect(assign).not.toHaveBeenCalled()
+  })
+
+  it('cancels immediately when returning to the console even before navigation unmounts the page', async () => {
+    let complete!: (value: Cluster) => void
+    mocks.cluster.mockImplementation(
+      () =>
+        new Promise<Cluster>((resolve) => {
+          complete = resolve
+        }),
+    )
+    const back = vi.fn()
+    await render(
+      <AutomaticClusterEntry
+        cluster={cluster('READY')}
+        organizationId={organization.id}
+        onBack={back}
+      />,
+    )
+    await act(async () => button(i18n.t('clusterEntry.back')).click())
+    expect(back).toHaveBeenCalledTimes(1)
+    await act(async () => complete(cluster('READY')))
+    expect(mocks.resolveCluster).not.toHaveBeenCalled()
+    expect(assign).not.toHaveBeenCalled()
+  })
+
+  it('lets a later manual Cluster selection supersede an automatic return', async () => {
+    let complete!: (value: Cluster) => void
+    const another = { ...cluster('READY'), id: 'cluster-b' }
+    mocks.cluster.mockImplementation((_org, id) =>
+      id === 'cluster-a'
+        ? new Promise<Cluster>((resolve) => {
+            complete = resolve
+          })
+        : Promise.resolve(another),
+    )
+    await render(
+      <>
+        <AutomaticClusterEntry
+          cluster={cluster('READY')}
+          organizationId={organization.id}
+          onBack={() => {}}
+        />
+        <HookEntry value={another} />
+      </>,
+    )
+    await act(async () => button('Enter').click())
+    await act(async () => complete(cluster('READY')))
+    expect(mocks.resolveCluster).toHaveBeenCalledExactlyOnceWith('cluster-b', organization.id)
+    expect(assign).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not enter a Cluster under a different organization or unavailable state', async () => {
+    await render(
+      <AutomaticClusterEntry
+        cluster={cluster('READY')}
+        organizationId="other-org"
+        onBack={() => {}}
+      />,
+    )
+    expect(mocks.cluster).not.toHaveBeenCalled()
+    expect(mocks.resolveCluster).not.toHaveBeenCalled()
+    await act(async () =>
+      root.render(
+        <AutomaticClusterEntry
+          cluster={cluster('DRAINED')}
+          organizationId={organization.id}
+          onBack={() => {}}
+        />,
+      ),
+    )
+    expect(mocks.resolveCluster).not.toHaveBeenCalled()
+  })
+
+  it('preserves only bounded target identifiers in an entry intent, never a return URL or code', () => {
+    expect(
+      clusterEntrySearch({
+        organizationId: 'org-a',
+        enterClusterId: 'cluster-a',
+        returnUrl: 'https://evil.example',
+        code: 'private',
+      }),
+    ).toEqual({ organizationId: 'org-a', enterClusterId: 'cluster-a' })
+    expect(
+      clusterEntrySearch({ organizationId: 'org-a', enterClusterId: 'https://evil.example' })
+        .enterClusterId,
+    ).toBeUndefined()
+    expect(clusterEntrySearch({ enterClusterId: 'cluster-a' }).enterClusterId).toBeUndefined()
+  })
+
   it('opens a degraded Cluster from the list through the original exchange flow', async () => {
     await render(<ClustersPage />)
     expect(host.textContent).toContain('Degraded')
@@ -156,7 +303,6 @@ describe('Cluster recovery entry', () => {
       const enter = vi.fn()
       await render(
         <CloudOverviewView
-          organization={organization}
           clusters={[cluster(state)]}
           onNavigate={vi.fn()}
           onOpenProvisionModal={vi.fn()}
@@ -218,7 +364,10 @@ describe('Cluster recovery entry', () => {
     mocks.cluster.mockRejectedValue(new CloudApiError('Session expired', 401))
     await render(<HookEntry value={cluster('DEGRADED')} />)
     await act(async () => button('Enter').click())
-    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/auth' })
+    expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/auth',
+      search: { organizationId: organization.id, enterClusterId: 'cluster-a' },
+    })
     expect(mocks.resolveCluster).not.toHaveBeenCalled()
     expect(assign).not.toHaveBeenCalled()
   })
@@ -229,6 +378,7 @@ describe('Cluster recovery entry', () => {
     'https://user:secret@cluster-a.cloud.tapstate.com',
     'https://cluster-a.cloud.tapstate.com:8443',
   ])('rejects invalid exchange target %s', async (baseUri) => {
+    vi.stubEnv('DEV', false)
     consoleHostname = 'cloud.tapstate.com'
     mocks.resolveCluster.mockResolvedValue({
       success: true,

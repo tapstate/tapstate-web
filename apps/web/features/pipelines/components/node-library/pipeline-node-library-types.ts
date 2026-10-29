@@ -29,6 +29,7 @@ export interface PipelineNodeInsertionContext {
   position: { x: number; y: number }
   /** Browser coordinates are only used to anchor the selector. They are never persisted. */
   screenPosition?: { x: number; y: number }
+  selectorOrigin?: 'canvas' | 'next-step'
   connectFrom: string | null
   /** The node to connect the newly selected node into (input-side insertion). */
   connectTo?: string | null

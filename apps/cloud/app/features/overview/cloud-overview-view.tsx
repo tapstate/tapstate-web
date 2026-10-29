@@ -1,12 +1,12 @@
+import { Button } from '@tapstate-web/ui/button'
 import { ArrowRight, ArrowUpRight, Plus } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
-import type { Cluster, Organization } from '../../service/cloud-api'
+import type { Cluster } from '../../service/cloud-api'
 
 import { canEnterCluster } from '../clusters/cluster-entry-state'
 
 interface CloudOverviewViewProps {
-  organization: Organization | null
-  subscriptionLabel?: string
   clusters: Cluster[]
   onNavigate: (tab: 'clusters') => void
   onOpenProvisionModal: () => void
@@ -57,8 +57,6 @@ function egressAddressState(cluster: Cluster) {
 }
 
 export function CloudOverviewView({
-  organization,
-  subscriptionLabel,
   clusters,
   onNavigate,
   onOpenProvisionModal,
@@ -66,6 +64,7 @@ export function CloudOverviewView({
   enteringClusterId,
   entryError,
 }: CloudOverviewViewProps) {
+  const { t } = useTranslation()
   const activeRegions = new Set(
     clusters.filter((cluster) => cluster.state === 'READY').map((cluster) => cluster.region),
   )
@@ -75,25 +74,14 @@ export function CloudOverviewView({
       <div className="flex shrink-0 items-center justify-between border-b border-black/[0.05] px-6 py-4 dark:border-white/[0.05]">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
-            Cloud Overview
+            {t('sections.overview.title')}
           </h1>
-          <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-            Organization:{' '}
-            <span className="font-mono text-neutral-800 dark:text-neutral-200">
-              {organization?.name ?? '—'}
-            </span>
-            {subscriptionLabel && ` (${subscriptionLabel})`}
-          </p>
         </div>
 
-        <button
-          onClick={onOpenProvisionModal}
-          className="flex h-8 items-center gap-1.5 rounded-lg bg-neutral-900 px-3 text-xs font-medium text-white shadow-2xs transition-colors hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100"
-          type="button"
-        >
+        <Button onClick={onOpenProvisionModal} variant="primary" size="medium" type="button">
           <Plus className="h-3.5 w-3.5" />
           <span>Provision Cluster</span>
-        </button>
+        </Button>
       </div>
 
       <div className="max-w-5xl space-y-6 p-6">
@@ -149,14 +137,15 @@ export function CloudOverviewView({
             <h2 className="text-xs font-semibold tracking-wider text-neutral-400 uppercase">
               Managed Clusters
             </h2>
-            <button
+            <Button
               onClick={() => onNavigate('clusters')}
-              className="flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+              variant="ghost"
+              size="small"
               type="button"
             >
               <span>View all clusters</span>
               <ArrowRight className="h-3 w-3" />
-            </button>
+            </Button>
           </div>
 
           <div className="divide-y divide-black/[0.05] overflow-hidden rounded-xl border border-black/[0.06] dark:divide-white/[0.05] dark:border-white/[0.06]">

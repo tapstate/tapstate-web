@@ -375,6 +375,65 @@ describe('Pipeline client', () => {
     })
   })
 
+  it('retains an identity refusal before sampling and rejects unknown identity states', async () => {
+    for (const status of ['action-required', 'unknown-status']) {
+      const events = [
+        { kind: 'run.accepted', payload: { pipelineId: 'orders' } },
+        { kind: 'compile.completed', payload: { executionSpec: {}, contexts: [] } },
+        {
+          kind: 'identity.completed',
+          payload: {
+            targets: [
+              {
+                element: 'out',
+                connection: 'target',
+                table: 'orders',
+                stream: 'orders',
+                status,
+                reason: 'field-collision',
+                sourceField: '_id',
+                preservedField: '_unwind_source_id',
+                writeKey: ['_unwind_source_id', 'TAG_NO'],
+                generatedFields: [],
+              },
+            ],
+          },
+        },
+        {
+          kind: 'run.failed',
+          payload: { code: 'connector.target-identity-conflict', reason: 'field-collision' },
+        },
+      ]
+      const response = new Response(
+        events
+          .map((event, seq) =>
+            JSON.stringify({
+              runId: 'identity-run',
+              candidateHash: 'a'.repeat(64),
+              seq,
+              at: '2026-10-22T00:00:00Z',
+              ...event,
+            }),
+          )
+          .join('\n'),
+        { headers: { 'Content-Type': 'application/x-ndjson' } },
+      )
+      const result = streamPipelinePreview(
+        { pipelineId: 'orders', drafts: [{ content: 'candidate' }] },
+        fetcherFor(response),
+      )
+      if (status === 'action-required') {
+        await expect(result).resolves.toMatchObject({
+          identityPlans: [{ status: 'action-required', preservedField: '_unwind_source_id' }],
+          failure: { code: 'connector.target-identity-conflict' },
+          documents: [],
+        })
+      } else {
+        await expect(result).rejects.toMatchObject({ kind: 'protocol' })
+      }
+    }
+  })
+
   it('accepts both logical JSON and Mongo Extended JSON preview results', async () => {
     for (const format of ['logical-json', 'mongo-extended-json'] as const) {
       const runId = 'preview-run'
@@ -402,6 +461,7 @@ describe('Pipeline client', () => {
             complete: true,
             truncated: false,
             documents: [{ _id: { $oid: '64f0c0de0011223344556677' } }],
+            logicalDocuments: [{ _id: 'source-id', position: 0 }],
             rowCount: 1,
           },
         },
@@ -428,7 +488,11 @@ describe('Pipeline client', () => {
           { pipelineId: 'orders', drafts: [{ content: 'candidate' }] },
           fetcherFor(response),
         ),
-      ).resolves.toMatchObject({ format, rowCount: 1 })
+      ).resolves.toMatchObject({
+        format,
+        rowCount: 1,
+        logicalDocuments: [{ _id: 'source-id', position: 0 }],
+      })
     }
   })
 

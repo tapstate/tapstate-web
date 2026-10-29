@@ -102,12 +102,13 @@ describe('PipelineHandle', () => {
     expect(handle?.textContent).toContain('Drag')
 
     const tooltip = handle?.querySelector('[data-pipeline-handle-tooltip="true"]')
-    expect(tooltip?.className).toContain('border-pipeline-panel-border')
-    expect(tooltip?.className).toContain('bg-pipeline-tooltip-bg')
+    expect(tooltip?.className).toContain('border-components-panel-border')
+    expect(tooltip?.className).toContain('bg-components-tooltip-bg')
     expect(tooltip?.className).toContain('border-[0.5px]')
 
     const addButton = handle?.querySelector<HTMLButtonElement>('[data-handle-add="true"]')
     expect(addButton?.tagName).toBe('BUTTON')
+    expect(addButton?.tabIndex).toBe(0)
     expect(addButton?.classList.contains('size-4')).toBe(true)
     expect(addButton?.classList.contains('z-10')).toBe(true)
     act(() =>
@@ -117,6 +118,20 @@ describe('PipelineHandle', () => {
     )
 
     expect(onRequestAdd).toHaveBeenCalledWith('output', { x: 324, y: 178 })
+  })
+
+  it('opens the node selector when the keyboard-available add button is activated', () => {
+    const onRequestAdd = vi.fn()
+    const host = renderHandle('input', { onRequestAdd })
+    const addButton = host.querySelector<HTMLButtonElement>('[data-handle-add="true"]')
+    expect(addButton?.tabIndex).toBe(0)
+
+    act(() => addButton?.click())
+
+    expect(onRequestAdd).toHaveBeenCalledWith(
+      'input',
+      expect.objectContaining({ x: expect.any(Number), y: expect.any(Number) }),
+    )
   })
 
   it('keeps a connected handle connectable while hiding its insert trigger', () => {

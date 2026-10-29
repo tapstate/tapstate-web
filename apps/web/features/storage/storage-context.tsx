@@ -11,6 +11,8 @@ import {
 
 import {
   acceptSnapshot,
+  validateInitializationProgress,
+  type InitializationProgress,
   storageRequest,
   type StorageSnapshot,
   StorageClientError,
@@ -18,13 +20,17 @@ import {
 import { useAuthStore } from '@/stores/auth-store'
 
 export interface StorageEntry {
+  initializationProgress?: InitializationProgress
   mode: 'OP' | 'CLOUD'
   management: boolean
+  automaticAuthorization?: boolean
+  normalLoginUrl?: string
   entry: 'LOGIN' | 'SETUP_REQUIRED' | 'RESTART_REQUIRED' | 'FIRST_ADMIN_REQUIRED' | 'UNAVAILABLE'
 }
 interface StorageState {
   entry?: StorageEntry
   snapshot?: StorageSnapshot
+  lastKnownSnapshot?: StorageSnapshot
   loading: boolean
   error: unknown
   refresh: (configurationChanged?: boolean) => Promise<void>
@@ -34,6 +40,8 @@ interface StorageState {
   session: number
   authorityRevision: number
   setSetupPending: (pending: boolean) => void
+  setOpRestartExpected: (pending: boolean) => void
+  opRestartExpected: boolean
   autoRefreshing: boolean
 }
 const Context = createContext<StorageState | null>(null)
@@ -46,9 +54,11 @@ export function useStorage() {
 export function StorageProvider({ children }: { children: ReactNode }) {
   const auth = useAuthStore()
   const queryClient = useQueryClient()
-  const [authorization, setAuthorization] = useState({ secret: '', revision: 0 })
+  const [authorization, setAuthorization] = useState({ secret: '', revision: 0, purpose: 'SETUP' })
   const [setupPending, setSetupPending] = useState(false)
+  const [opRestartExpected, setOpRestartExpected] = useState(false)
   const previous = useRef<StorageSnapshot | undefined>(undefined)
+  const previousEntry = useRef<StorageEntry | undefined>(undefined)
   const queryKey = useMemo(
     () => ['storage', window.location.origin, auth.sessionRevision, authorization.revision],
     [auth.sessionRevision, authorization.revision],
@@ -56,7 +66,12 @@ export function StorageProvider({ children }: { children: ReactNode }) {
   const fetcher = useMemo<typeof fetch>(
     () =>
       async (input, init = {}) => {
-        if (!authorization.secret) return auth.apiFetch(input, init)
+        if (!authorization.secret) {
+          const entry = previousEntry.current
+          if (entry?.mode === 'OP' && entry.management && entry.automaticAuthorization)
+            return fetch(input, { ...init, credentials: 'same-origin' })
+          return auth.apiFetch(input, init)
+        }
         const headers = new Headers(init.headers)
         headers.set('X-Tapstate-Setup-Capability', authorization.secret)
         return fetch(input, { ...init, credentials: 'same-origin', headers })
@@ -71,6 +86,13 @@ export function StorageProvider({ children }: { children: ReactNode }) {
     const temporaryFailure =
       failure instanceof TypeError ||
       (failure instanceof StorageClientError && failure.status >= 500)
+    if (
+      opRestartExpected &&
+      (!failure || temporaryFailure) &&
+      entry?.initializationProgress?.state !== 'FAILED' &&
+      !['FIRST_ADMIN_REQUIRED', 'LOGIN'].includes(entry?.entry ?? '')
+    )
+      return 2000
     // Only rediscover the public entry after the temporary Cloud session is retired.
     // The query function still refuses protected status reads without a current session.
     if (
@@ -81,12 +103,20 @@ export function StorageProvider({ children }: { children: ReactNode }) {
       (temporaryFailure || (!failure && entry?.entry === 'UNAVAILABLE'))
     )
       return 10000
+    if (
+      entry?.management &&
+      (entry.initializationProgress?.state === 'RUNNING' ||
+        (entry.entry === 'RESTART_REQUIRED' && entry.initializationProgress?.state === 'COMPLETE'))
+    )
+      return 2000
     const authorized = entry
       ? entry.management
-        ? Boolean(authorization.secret)
+        ? Boolean(authorization.secret) || entry.automaticAuthorization === true
         : auth.isAuthenticated
       : Boolean(authorization.secret) || auth.isAuthenticated
     if (!authorized) return false
+    const latest = snapshot ?? previous.current
+    if (latest?.initializationProgress?.state === 'FAILED') return false
     if (
       entry &&
       (['RESTART_REQUIRED', 'FIRST_ADMIN_REQUIRED', 'UNAVAILABLE'].includes(entry.entry) ||
@@ -94,12 +124,15 @@ export function StorageProvider({ children }: { children: ReactNode }) {
     )
       return false
     if (failure && !temporaryFailure) return false
-    const phase = (snapshot ?? previous.current)?.businessPhase
+    const phase = latest?.businessPhase
     const transitioning = ['PREPARING', 'RECOVERING', 'AUTH_READY'].includes(phase ?? '')
+    const pendingInitialSave =
+      phase === 'NOT_CONFIGURED' &&
+      (setupPending || latest?.initializationProgress?.state === 'RUNNING')
     // A known intervention or terminal phase wins over an outstanding write or failed read.
-    if (phase && !transitioning && !(setupPending && phase === 'NOT_CONFIGURED')) return false
+    if (phase && !transitioning && !pendingInitialSave) return false
     if (temporaryFailure) return 10000
-    if (!setupPending && !transitioning) return false
+    if (!setupPending && !transitioning && !pendingInitialSave) return false
     return 3000
   }
   const query = useQuery<{ entry: StorageEntry; snapshot?: StorageSnapshot; failure?: unknown }>({
@@ -135,13 +168,23 @@ export function StorageProvider({ children }: { children: ReactNode }) {
         ].includes(entry.entry)
       )
         throw new StorageClientError('protocol', 200)
+      if (entry.initializationProgress !== undefined) {
+        if (!entry.management || entry.mode !== 'OP') throw new StorageClientError('protocol', 200)
+        validateInitializationProgress(entry.initializationProgress)
+      }
       if (signal.aborted || useAuthStore.getState().sessionRevision !== auth.sessionRevision)
         throw new DOMException('Request superseded', 'AbortError')
       if (entry.mode !== (auth.profile === 'cloud' ? 'CLOUD' : 'OP'))
         throw new StorageClientError('protocol', 200)
+      previousEntry.current = entry
       if (
         entry.management
-          ? !authorization.secret || ['LOGIN', 'RESTART_REQUIRED'].includes(entry.entry)
+          ? (!authorization.secret && !entry.automaticAuthorization) ||
+            ['LOGIN', 'RESTART_REQUIRED'].includes(entry.entry) ||
+            entry.initializationProgress?.state === 'RUNNING' ||
+            (entry.entry === 'FIRST_ADMIN_REQUIRED' &&
+              authorization.purpose === 'SETUP' &&
+              !entry.automaticAuthorization)
           : !auth.isAuthenticated
       )
         return { entry, snapshot: undefined, failure: undefined }
@@ -161,6 +204,16 @@ export function StorageProvider({ children }: { children: ReactNode }) {
       }
     },
   })
+  useEffect(() => {
+    const entry = query.data?.entry
+    const failure = query.error ?? query.data?.failure
+    if (
+      entry?.initializationProgress?.state === 'FAILED' ||
+      (entry && ['FIRST_ADMIN_REQUIRED', 'LOGIN'].includes(entry.entry)) ||
+      (failure instanceof StorageClientError && failure.status < 500)
+    )
+      setOpRestartExpected(false)
+  }, [query.data, query.error])
   useEffect(
     () => () => {
       void queryClient.cancelQueries({ queryKey })
@@ -181,22 +234,35 @@ export function StorageProvider({ children }: { children: ReactNode }) {
   return (
     <Context.Provider
       value={{
-        entry: query.data?.entry,
+        entry: query.data?.entry ?? (opRestartExpected ? previousEntry.current : undefined),
         snapshot: query.data?.snapshot,
+        lastKnownSnapshot: previous.current,
         loading: query.isPending,
         error: query.error ?? query.data?.failure,
         fetcher,
         refresh,
-        authorized: Boolean(authorization.secret),
+        authorized:
+          query.data?.entry.automaticAuthorization === true ||
+          (Boolean(authorization.secret) &&
+            !(
+              query.data?.entry.entry === 'FIRST_ADMIN_REQUIRED' &&
+              authorization.purpose === 'SETUP'
+            )),
         session: auth.sessionRevision,
         authorityRevision: authorization.revision,
         setSetupPending,
+        setOpRestartExpected,
+        opRestartExpected,
         autoRefreshing: Boolean(
           pollInterval(query.data?.snapshot, query.error ?? query.data?.failure, query.data?.entry),
         ),
         authorize: (secret) => {
           previous.current = undefined
-          setAuthorization((current) => ({ secret, revision: current.revision + 1 }))
+          setAuthorization((current) => ({
+            secret,
+            revision: current.revision + 1,
+            purpose: query.data?.entry.entry === 'FIRST_ADMIN_REQUIRED' ? 'FIRST_ADMIN' : 'SETUP',
+          }))
         },
       }}
     >

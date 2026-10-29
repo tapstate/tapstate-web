@@ -1,14 +1,14 @@
+import { StatusDot } from '@tapstate-web/ui/status-dot'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import type { ConnectionTestCheck, ConnectionTestReport } from '@/service/source-client'
 
-import { Button } from '@/components/ui/button'
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -21,6 +21,44 @@ interface ConnectionTestResultProps {
 
 function checkDetail(check: ConnectionTestCheck) {
   return check.message ?? check.reason ?? check.solution ?? null
+}
+
+const cdcReadinessItems: Record<string, string> = {
+  mysql: 'sources.test.cdcReadiness.mysql',
+  'aws-rds-mysql': 'sources.test.cdcReadiness.rdsMysql',
+  postgres: 'sources.test.cdcReadiness.postgres',
+  oracle: 'sources.test.cdcReadiness.oracle',
+  sqlserver: 'sources.test.cdcReadiness.sqlserver',
+  db2: 'sources.test.cdcReadiness.db2',
+  mongodb: 'sources.test.cdcReadiness.mongodb',
+  'mongodb-atlas': 'sources.test.cdcReadiness.mongodb',
+}
+
+function CheckResultRow({ check }: { check: ConnectionTestCheck }) {
+  const { t } = useTranslation()
+  const dotStatus =
+    check.status === 'FAILED' ? 'error' : check.status === 'WARNING' ? 'warning' : 'success'
+
+  return (
+    <li className="flex items-start justify-between gap-4 py-3 first:pt-1 last:pb-1">
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-start justify-between gap-4">
+          <p className="system-sm-medium text-text-primary min-w-0">{check.name}</p>
+          <span
+            className={`system-xs-medium inline-flex shrink-0 items-center gap-2 whitespace-nowrap ${check.status === 'FAILED' ? 'text-text-destructive' : 'text-text-secondary'}`}
+          >
+            <StatusDot className="rounded-full" size="small" status={dotStatus} />
+            {t(`sources.test.status.${check.status.toLowerCase()}`)}
+          </span>
+        </div>
+        {checkDetail(check) && (
+          <p className="system-xs-regular text-text-secondary mt-1 break-words">
+            {checkDetail(check)}
+          </p>
+        )}
+      </div>
+    </li>
+  )
 }
 
 export function ConnectionTestResult({ report, error }: ConnectionTestResultProps) {
@@ -36,27 +74,30 @@ export function ConnectionTestResult({ report, error }: ConnectionTestResultProp
         ? t('sources.test.errors.connectorFailed')
         : t(`sources.test.errors.${clientError.kind}`)
       : t('sources.test.errors.unknown')
+
     return (
-      <section
-        className="border-destructive/30 bg-destructive/5 overflow-hidden rounded-lg border text-[13px] leading-relaxed"
-        role="alert"
-      >
-        <div className="flex items-start gap-2 px-3 py-3">
-          <AlertCircle className="text-destructive mt-0.5 size-4 shrink-0" aria-hidden="true" />
+      <section className="bg-background-section-burn grid gap-3 rounded-lg p-4" role="alert">
+        <div className="flex items-start gap-3">
+          <AlertCircle
+            className="text-text-destructive mt-0.5 size-4 shrink-0"
+            aria-hidden="true"
+          />
           <div className="min-w-0 space-y-1">
-            <p className="text-foreground font-medium">{t('sources.test.failed')}</p>
-            <p className="text-foreground">{summary}</p>
+            <p className="system-sm-medium text-text-primary">{t('sources.test.failed')}</p>
+            <p className="system-xs-regular text-text-secondary">{summary}</p>
             {timedOut && (
-              <p className="text-muted-foreground">{t('sources.test.errors.timeoutHint')}</p>
+              <p className="system-xs-regular text-text-secondary">
+                {t('sources.test.errors.timeoutHint')}
+              </p>
             )}
           </div>
         </div>
         {clientError && (clientError.code || technicalDetail || clientError.message) && (
-          <details className="border-destructive/15 bg-background/70 border-t px-3 py-2.5">
-            <summary className="text-muted-foreground focus-visible:ring-ring cursor-pointer rounded-sm font-medium focus-visible:ring-2 focus-visible:outline-none">
+          <details className="border-divider-subtle border-t pt-3">
+            <summary className="system-xs-medium text-text-secondary focus-visible:ring-state-accent-solid cursor-pointer rounded-sm focus-visible:ring-2 focus-visible:outline-none">
               {t('sources.test.errors.technicalDetails')}
             </summary>
-            <dl className="text-muted-foreground mt-2 grid gap-1.5 break-words">
+            <dl className="system-xs-regular text-text-secondary mt-2 grid gap-2 break-words">
               {clientError.code && (
                 <div>
                   <dt className="inline font-medium">{t('sources.test.errors.code')}: </dt>
@@ -72,7 +113,7 @@ export function ConnectionTestResult({ report, error }: ConnectionTestResultProp
               {technicalDetail && (
                 <div>
                   <dt className="inline font-medium">{t('sources.test.errors.detail')}: </dt>
-                  <dd className="inline font-mono text-[12px]">{technicalDetail}</dd>
+                  <dd className="inline font-mono">{technicalDetail}</dd>
                 </div>
               )}
               {clientError.message && (
@@ -91,48 +132,43 @@ export function ConnectionTestResult({ report, error }: ConnectionTestResultProp
   if (!report) return null
 
   const passed = report.outcome === 'PASSED'
+  const cdcReadinessKey = cdcReadinessItems[report.connectorId]
   return (
-    <section
-      aria-live="polite"
-      className={`flex flex-col gap-2 rounded-lg border px-3 py-2.5 text-[13px] leading-relaxed ${
-        passed
-          ? 'border-primary/30 bg-primary/5 text-foreground'
-          : 'border-destructive/30 bg-destructive/10 text-foreground'
-      }`}
-    >
-      <div className="flex items-center gap-2 font-medium">
+    <div className="grid gap-4">
+      <section className="flex items-start gap-3" role="status" aria-live="polite">
         {passed ? (
-          <CheckCircle2 className="text-primary size-4 shrink-0" aria-hidden="true" />
+          <CheckCircle2 className="text-text-success mt-0.5 size-4 shrink-0" aria-hidden="true" />
         ) : (
-          <AlertCircle className="text-destructive size-4 shrink-0" aria-hidden="true" />
+          <AlertCircle
+            className="text-text-destructive mt-0.5 size-4 shrink-0"
+            aria-hidden="true"
+          />
         )}
-        <span>{t(passed ? 'sources.test.passed' : 'sources.test.failed')}</span>
-      </div>
+        <p className="system-sm-medium text-text-primary">
+          {t(passed ? 'sources.test.passed' : 'sources.test.failed')}
+        </p>
+      </section>
       {report.checks.length > 0 && (
-        <ul className="border-border grid gap-1.5 border-t pt-2">
-          {report.checks.map((check) => {
-            const detail = checkDetail(check)
-            return (
-              <li key={`${check.name}:${check.status}`} className="grid gap-0.5">
-                <span className="flex items-center justify-between gap-3">
-                  <span className="min-w-0 truncate font-medium">{check.name}</span>
-                  <span
-                    className={
-                      check.status === 'FAILED'
-                        ? 'text-destructive shrink-0'
-                        : 'text-muted-foreground shrink-0'
-                    }
-                  >
-                    {t(`sources.test.status.${check.status.toLowerCase()}`)}
-                  </span>
-                </span>
-                {detail && <span className="text-muted-foreground">{detail}</span>}
-              </li>
-            )
-          })}
+        <ul className="divide-divider-subtle bg-background-section-burn divide-y rounded-lg px-3 py-2">
+          {report.checks.map((check) => (
+            <CheckResultRow key={`${check.name}:${check.status}`} check={check} />
+          ))}
         </ul>
       )}
-    </section>
+      {passed && cdcReadinessKey && (
+        <section className="bg-background-section-burn grid gap-2 rounded-lg p-4">
+          <h3 className="system-sm-medium text-text-primary">
+            {t('sources.test.cdcReadiness.title')}
+          </h3>
+          <p className="system-xs-regular text-text-secondary">
+            {t('sources.test.cdcReadiness.manualCheck')}
+          </p>
+          <ul className="system-xs-regular text-text-secondary list-disc space-y-1 pl-5">
+            <li>{t(cdcReadinessKey)}</li>
+          </ul>
+        </section>
+      )}
+    </div>
   )
 }
 
@@ -147,19 +183,16 @@ export function ConnectionTestResultDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        closeLabel={t('ask.actions.close')}
-        className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-[560px]"
+        closeLabel={t('common.close')}
+        className="max-h-[calc(100dvh-2rem)] overflow-hidden"
       >
         <DialogHeader>
           <DialogTitle>{t('sources.test.title')}</DialogTitle>
           <DialogDescription>{t('sources.test.description')}</DialogDescription>
         </DialogHeader>
-        <ConnectionTestResult report={report} error={error} />
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            {t('ask.actions.close')}
-          </Button>
-        </DialogFooter>
+        <DialogBody className="grid gap-4 px-6 py-5">
+          <ConnectionTestResult report={report} error={error} />
+        </DialogBody>
       </DialogContent>
     </Dialog>
   )

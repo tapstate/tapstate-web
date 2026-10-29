@@ -1,0 +1,185 @@
+/* Shared assistant anatomy: compact controls, flexible transcript, one composer. */
+.pipeline-ai-copilot,
+.pipeline-ai-inline,
+.pipeline-ai-helper-popover {
+  --ai-input-radius: 12px;
+  --ai-compose-padding: 9px;
+}
+.pipeline-ai-copilot {
+  width: 100%;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  background: var(--color-components-panel-bg);
+}
+.pipeline-ai-copilot > * {
+  min-width: 0;
+}
+.pipeline-ai-transcript {
+  overflow-wrap: anywhere;
+  scrollbar-gutter: stable;
+}
+.pipeline-ai-welcome {
+  padding: 4px 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 24px;
+}
+.pipeline-ai-bubble {
+  max-width: 100%;
+  font-size: 14px;
+  line-height: 24px;
+  overflow-wrap: anywhere;
+}
+.pipeline-ai-bubble-user {
+  max-width: 90%;
+  border-radius: 16px;
+  padding: 12px 16px;
+  background: var(--color-components-panel-bg-alt);
+  color: var(--color-text-primary);
+}
+.pipeline-ai-bubble-answer {
+  width: 100%;
+}
+.pipeline-ai-message pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.pipeline-ai-suggestion {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--color-components-panel-border);
+  border-radius: 8px;
+  background: var(--color-components-panel-bg);
+  color: var(--color-text-secondary);
+  text-align: left;
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+}
+.pipeline-ai-suggestion:hover {
+  background: var(--color-state-base-hover);
+}
+.pipeline-ai-suggestion:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.pipeline-ai-composer {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--color-components-chat-input-border);
+  border-radius: var(--ai-input-radius);
+  padding: var(--ai-compose-padding) var(--ai-compose-padding) 44px;
+  background: var(--color-components-panel-bg-blur);
+  box-shadow: var(--shadow-md);
+}
+.pipeline-ai-composer:focus-within {
+  border-color: var(--color-components-input-border-active);
+}
+.pipeline-ai-composer .pipeline-ai-composer-input {
+  display: block;
+  width: 100%;
+  min-height: 24px;
+  max-height: 158px;
+  resize: none;
+  border: 0;
+  padding: 2px 4px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  outline: none;
+  box-shadow: none;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  border-radius: 0;
+}
+.pipeline-ai-composer-input::placeholder {
+  color: var(--color-text-placeholder);
+}
+.pipeline-ai-composer .pipeline-ai-composer-send {
+  position: absolute;
+  inset-inline-end: var(--ai-compose-padding);
+  inset-block-end: var(--ai-compose-padding);
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  border-radius: 50%;
+  transition:
+    background-color 120ms,
+    transform 120ms;
+}
+.pipeline-ai-composer .pipeline-ai-composer-send:active {
+  transform: scale(0.94);
+}
+.pipeline-ai-composer-actions {
+  position: absolute;
+  inset-inline-start: 13px;
+  inset-inline-end: 49px;
+  inset-block-end: var(--ai-compose-padding);
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+.pipeline-ai-suggestion:focus-visible {
+  outline: 2px solid var(--color-components-input-border-active);
+  outline-offset: 2px;
+}
+
+.pipeline-ai-waiting {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 20px;
+}
+.pipeline-ai-waiting > span,
+.pipeline-ai-waiting > span::before,
+.pipeline-ai-waiting > span::after {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-text-tertiary);
+  animation: pipeline-ai-dot 1s infinite linear alternate;
+}
+.pipeline-ai-waiting > span {
+  position: relative;
+  animation-delay: 0.5s;
+}
+.pipeline-ai-waiting > span::before,
+.pipeline-ai-waiting > span::after {
+  content: '';
+  position: absolute;
+  top: 0;
+}
+.pipeline-ai-waiting > span::before {
+  left: -7px;
+  animation-delay: 0s;
+}
+.pipeline-ai-waiting > span::after {
+  left: 7px;
+  animation-delay: 1s;
+}
+@keyframes pipeline-ai-dot {
+  from {
+    opacity: 1;
+  }
+  50%,
+  to {
+    opacity: 0.3;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pipeline-ai-waiting > span,
+  .pipeline-ai-waiting > span::before,
+  .pipeline-ai-waiting > span::after {
+    animation: none;
+  }
+}

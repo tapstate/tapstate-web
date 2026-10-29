@@ -351,10 +351,18 @@ function messagesForLocale(spec: JsonRecord, locale: string) {
   return {}
 }
 
+const MONGODB_CONNECTOR_IDS = new Set(['mongodb', 'mongodb-atlas'])
 const MONGODB_PRESENTATION_FIELD_NAMES = new Set(['isUrlTips1', 'isUrlTips2', 'uriTips'])
 
 function isMongoDbConnector(connectorId: string | undefined) {
-  return connectorId?.trim().toLocaleLowerCase() === 'mongodb'
+  return MONGODB_CONNECTOR_IDS.has(connectorId?.trim().toLocaleLowerCase() ?? '')
+}
+
+function isMongoDbPresentationField(name: string, value: unknown) {
+  if (MONGODB_PRESENTATION_FIELD_NAMES.has(name)) return true
+
+  const field = asRecord(value)
+  return field?.type === 'void' && field['x-component'] === 'Text'
 }
 
 function isAtlasConnector(connectorId: string | undefined) {
@@ -436,7 +444,7 @@ function withoutMongoDbPresentationFields(node: JsonRecord): JsonRecord {
 
   const nextProperties = Object.fromEntries(
     Object.entries(properties)
-      .filter(([name]) => !MONGODB_PRESENTATION_FIELD_NAMES.has(name))
+      .filter(([name, value]) => !isMongoDbPresentationField(name, value))
       .map(([name, value]) => {
         const property = asRecord(value)
         return [name, property === null ? value : withoutMongoDbPresentationFields(property)]
@@ -445,7 +453,7 @@ function withoutMongoDbPresentationFields(node: JsonRecord): JsonRecord {
   const required = Array.isArray(node.required)
     ? node.required.filter(
         (name): name is string =>
-          typeof name === 'string' && !MONGODB_PRESENTATION_FIELD_NAMES.has(name),
+          typeof name === 'string' && !isMongoDbPresentationField(name, properties[name]),
       )
     : node.required
 

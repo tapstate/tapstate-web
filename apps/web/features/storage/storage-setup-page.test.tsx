@@ -173,7 +173,7 @@ describe('storage setup form', () => {
     expect(storage.fetcher).not.toHaveBeenCalled()
   })
   it.each(['en', 'zh-CN', 'zh-TW'])(
-    'checks platform CONFIG with the first Cloud database test in %s',
+    'checks all Cloud databases with one button in %s',
     async (locale) => {
       await i18n.changeLanguage(locale)
       storage.snapshot = { ...base, mode: 'CLOUD', health: { ...base.health, CONFIG: 'AVAILABLE' } }
@@ -193,12 +193,11 @@ describe('storage setup form', () => {
       const buttons = [...container.querySelectorAll('button')].filter(
         (button) => button.textContent === i18n.t('storage.test'),
       )
-      expect(buttons).toHaveLength(2)
+      expect(buttons).toHaveLength(1)
       await act(async () => buttons[0].click())
       expect(
         storage.fetcher.mock.calls.map(([, init]) => JSON.parse(String(init?.body)).layer),
-      ).toEqual(['CONFIG', 'CACHE'])
-      await act(async () => buttons[1].click())
+      ).toEqual(['CONFIG', 'CACHE', 'MASTER'])
       await click('storage.save')
       const commit = storage.fetcher.mock.calls.find(([url]) => String(url).endsWith('/commit'))!
       expect(JSON.parse(String(commit[1]?.body)).testStamps).toEqual({
@@ -234,38 +233,74 @@ describe('storage setup form', () => {
     expect(storage.fetcher).toHaveBeenCalledTimes(1)
     expect(container.textContent).not.toContain(i18n.t('storage.testPassed'))
   })
-  it('shows red failure and invalidates a previously passed layer on a failed retest', async () => {
-    let fail = false
+  it.each(['CONFIG', 'CACHE', 'MASTER'] as const)(
+    'reports a %s failure while checking every layer and disables Save',
+    async (failedLayer) => {
+      let fail: string | null = null
+      storage.fetcher.mockImplementation(async (_url, init) => {
+        const { layer } = JSON.parse(String(init?.body))
+        return fail === layer
+          ? Response.json(
+              { code: 'control.storage-test-failed', params: { causeCode: 'store.unreachable' } },
+              { status: 400 },
+            )
+          : Response.json({
+              layer,
+              testStamp: layer,
+              expiresAt: new Date(Date.now() + 600000).toISOString(),
+            })
+      })
+      await render(<StorageSetupForm />)
+      await fill('storage.uri', 'mongodb://user:secret@localhost/admin')
+      await click('storage.test')
+      expect(container.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(
+        false,
+      )
+      fail = failedLayer
+      await click('storage.test')
+      expect(
+        storage.fetcher.mock.calls
+          .slice(-3)
+          .map(([, init]) => JSON.parse(String(init?.body)).layer),
+      ).toEqual(['CONFIG', 'CACHE', 'MASTER'])
+      for (const layer of ['CONFIG', 'CACHE', 'MASTER'] as const) {
+        const group = [...container.querySelectorAll('[role="group"]')].find(
+          (element) => element.getAttribute('aria-label') === i18n.t(`storage.layers.${layer}`),
+        )!
+        expect(group.textContent).toContain(
+          i18n.t(layer === failedLayer ? 'storage.testFailed' : 'storage.testPassed'),
+        )
+        expect(
+          group.querySelector(
+            layer === failedLayer ? '.text-destructive svg' : '.text-success svg',
+          ),
+        ).toBeTruthy()
+        expect(Boolean(group.querySelector('[role="alert"]'))).toBe(layer === failedLayer)
+      }
+      expect(container.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(
+        true,
+      )
+    },
+  )
+  it('shows separate errors when more than one connection check fails', async () => {
     storage.fetcher.mockImplementation(async (_url, init) => {
       const { layer } = JSON.parse(String(init?.body))
-      return fail
-        ? Response.json(
-            { code: 'control.storage-test-failed', params: { causeCode: 'store.unreachable' } },
-            { status: 400 },
-          )
-        : Response.json({
+      return layer === 'CONFIG'
+        ? Response.json({
             layer,
             testStamp: layer,
             expiresAt: new Date(Date.now() + 600000).toISOString(),
           })
+        : Response.json(
+            { code: 'control.storage-test-failed', params: { causeCode: 'store.unreachable' } },
+            { status: 400 },
+          )
     })
     await render(<StorageSetupForm />)
-    await fill('storage.uri', 'mongodb://user:secret@localhost/admin')
-    for (const button of [...container.querySelectorAll('button')].filter(
-      (button) => button.textContent === i18n.t('storage.test'),
-    ))
-      await act(async () => button.click())
-    expect(container.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(
-      false,
-    )
-    const cache = [...container.querySelectorAll('[role="group"]')].find(
-      (group) => group.getAttribute('aria-label') === i18n.t('storage.layers.CACHE'),
-    )!
-    expect(cache.querySelector('.text-success svg')).toBeTruthy()
-    fail = true
-    await act(async () => cache.querySelector<HTMLButtonElement>('button')!.click())
-    expect(cache.querySelector('.text-destructive svg')).toBeTruthy()
-    expect(cache.textContent).toContain(i18n.t('storage.testFailed'))
+    await fill('storage.uri', 'mongodb://localhost/admin')
+    await click('storage.test')
+    expect(storage.fetcher).toHaveBeenCalledTimes(3)
+    expect(container.querySelectorAll('[role="alert"]')).toHaveLength(2)
     expect(container.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(true)
   })
   it('expires the displayed passed state and save permission without another interaction', async () => {
@@ -381,7 +416,7 @@ describe('storage setup form', () => {
   })
 
   it.each(['en', 'zh-CN', 'zh-TW'])(
-    'requires explicit layer tests and confirmation in %s',
+    'requires one explicit test for every layer and confirmation in %s',
     async (locale) => {
       await i18n.changeLanguage(locale)
       storage.fetcher.mockImplementation(async (url, init) => {
@@ -947,6 +982,84 @@ describe('explicit recovery and import', () => {
     ).toHaveLength(1)
     expect(container.textContent).toContain('Committed')
   })
+  it.each([true, false])(
+    'reconciles an original PENDING import without replay (definitive refusal=%s)',
+    async (refused) => {
+      storage.snapshot = {
+        ...base,
+        setupPhase: 'COMPLETE',
+        businessPhase: 'READY',
+        allowedActions: [
+          'configuration.import.preflight',
+          'configuration.import.commit',
+          'configuration.import.status',
+        ],
+      }
+      storage.fetcher.mockImplementation(async (url) => {
+        if (String(url).endsWith('/preflight'))
+          return Response.json({
+            operation: {
+              ticket: { id: 'original-import', expiresAt: 'later' },
+              phase: 'PENDING',
+              receipt: null,
+            },
+            preparedTransfer: 'prepared-ciphertext',
+          })
+        if (String(url).endsWith('/commit')) {
+          if (refused)
+            return Response.json({ code: 'io.configuration-import-refused' }, { status: 409 })
+          throw new TypeError('connection lost with secret')
+        }
+        return Response.json({
+          importId: 'original-import',
+          phase: 'PENDING',
+          ticket: { id: 'original-import', expiresAt: 'later' },
+          receipt: null,
+        })
+      })
+      await render(<ConfigurationTransfer defaultSourceId="destination-default" />)
+      await act(async () => container.querySelector('summary')!.click())
+      await fill('storage.transfer.key', 'request-only-key')
+      const file = container.querySelector<HTMLInputElement>('input[type="file"]')!
+      Object.defineProperty(file, 'files', {
+        value: [
+          {
+            size: 100,
+            text: async () =>
+              JSON.stringify({ transfer: 'encrypted-package', defaultSourceId: 'source-default' }),
+          },
+        ],
+      })
+      await act(async () => file.dispatchEvent(new Event('change', { bubbles: true })))
+      await click('storage.transfer.preflight')
+      await act(async () =>
+        container.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click(),
+      )
+      await click('storage.transfer.commit')
+      expect(container.textContent).not.toContain('connection lost with secret')
+      expect(container.querySelector<HTMLInputElement>('input[type="file"]')!.disabled).toBe(true)
+      await click('storage.queryResult')
+      expect(JSON.parse(String(storage.fetcher.mock.calls[1][1]?.body))).toMatchObject({
+        importId: 'original-import',
+        transfer: 'prepared-ciphertext',
+        defaultSourceMapping: { 'source-default': 'destination-default' },
+      })
+      expect(JSON.parse(String(storage.fetcher.mock.calls[2][1]?.body))).toEqual({
+        importId: 'original-import',
+      })
+      expect(
+        storage.fetcher.mock.calls.filter(([url]) => String(url).endsWith('/commit')),
+      ).toHaveLength(1)
+      expect(container.querySelector<HTMLInputElement>('input[type="file"]')!.disabled).toBe(
+        !refused,
+      )
+      expect(container.querySelector<HTMLInputElement>('input[type="password"]')!.disabled).toBe(
+        !refused,
+      )
+      expect(container.querySelector<HTMLInputElement>('input[type="checkbox"]')).toBeNull()
+      expect(container.textContent).toContain('Awaiting confirmation')
+    },
+  )
 })
 
 describe('storage connection failure guidance', () => {

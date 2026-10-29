@@ -12,6 +12,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { ToastProvider } from '@/components/ui/toast'
 import {
   SourceClientError,
   type ConnectorSummary,
@@ -25,6 +26,7 @@ const {
   getSource,
   getSourceSchema,
   listConnectors,
+  listPipelineArtifacts,
   listSources,
   testConnection,
   registerCreated,
@@ -42,6 +44,7 @@ const {
     getSource: vi.fn(),
     getSourceSchema: vi.fn(),
     listConnectors: vi.fn(),
+    listPipelineArtifacts: vi.fn(),
     listSources: vi.fn(),
     testConnection: vi.fn(),
     registerCreated: (callback: (source: SourceView) => void) => {
@@ -83,6 +86,11 @@ vi.mock('@/service/source-client', async (importOriginal) => ({
   listConnectors,
   listSources,
   testConnection,
+}))
+
+vi.mock('@/service/pipelines/pipeline-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/service/pipelines/pipeline-client')>()),
+  listPipelineArtifacts,
 }))
 
 vi.mock('./source-create-dialog', () => ({
@@ -204,10 +212,32 @@ function buttonWithLabel(text: string) {
   )
 }
 
+function menuItemWithText(text: string) {
+  return [...document.body.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((item) =>
+    item.textContent?.trim().includes(text),
+  )
+}
+
+function hasToastText(text: string) {
+  return document.body.textContent?.includes(text) ?? false
+}
+
+function sourceActionMenuButton() {
+  return [...(container?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find((button) =>
+    button.textContent?.toLowerCase().includes('more'),
+  )
+}
+
 async function waitForPage(assertion: () => void | Promise<void>) {
   await act(async () => {
     await vi.waitFor(assertion)
   })
+}
+
+async function openSourceActions() {
+  await waitForPage(() => expect(sourceActionMenuButton()).toBeDefined())
+  await act(async () => sourceActionMenuButton()?.click())
+  await waitForPage(() => expect(menuItemWithText('Test connection')).toBeDefined())
 }
 
 beforeEach(() => {
@@ -217,6 +247,7 @@ beforeEach(() => {
   getSampleInstallStatus.mockReset()
   loadSampleSources.mockResolvedValue(null)
   listConnectors.mockResolvedValue([mysqlConnector])
+  listPipelineArtifacts.mockResolvedValue([])
   listSources.mockResolvedValue([source])
   getSource.mockResolvedValue({ source, etag: `"${source.contentHash}"` })
   getSourceSchema.mockResolvedValue(schemaReport)
@@ -282,7 +313,7 @@ describe('SourcesPage', () => {
     await waitForPage(() => expect(container?.textContent).toContain('Discovered'))
 
     expect(container.textContent).toContain('Tables in orders')
-    expect(container.textContent).toContain('1 configured secrets')
+    expect(container.textContent).toContain('1 configured secret')
     expect(container.textContent).not.toContain('Last 24h')
     expect(container.textContent).not.toContain('—')
 
@@ -290,7 +321,11 @@ describe('SourcesPage', () => {
       row.textContent?.includes('orders'),
     )
     expect(tableRow).toBeDefined()
-    await act(async () => (tableRow as HTMLElement).click())
+    const openTable = tableRow?.querySelector<HTMLButtonElement>(
+      'button[aria-label="Open table orders"]',
+    )
+    expect(openTable).toBeTruthy()
+    await act(async () => openTable?.click())
 
     expect(container.textContent).toContain('id')
     expect(container.textContent).toContain('BIGINT')
@@ -303,8 +338,8 @@ describe('SourcesPage', () => {
     expect(tableDetailHeader?.textContent).toContain('orders')
     expect(buttonWithLabel('Expand')).toBeUndefined()
     const columnsTab = buttonWithText('Columns')
-    expect(columnsTab?.getAttribute('data-active')).toBe('true')
-    expect(columnsTab?.className).toContain('hover:bg-transparent')
+    expect(columnsTab?.getAttribute('role')).toBe('tab')
+    expect(columnsTab?.getAttribute('aria-selected')).toBe('true')
   })
 
   it('derives the table detail and tab selection directly from the route', async () => {
@@ -384,9 +419,9 @@ describe('SourcesPage', () => {
     })
     await waitForPage(() => expect(buttonWithText('orders')).toBeDefined())
     await act(async () => buttonWithText('orders')?.click())
-    await waitForPage(() => expect(buttonWithText('Test connection')).toBeDefined())
+    await openSourceActions()
 
-    await act(async () => buttonWithText('Test connection')?.click())
+    await act(async () => menuItemWithText('Test connection')?.click())
 
     await waitForPage(() => expect(document.body.textContent).toContain('Connection test passed'))
     expect(testConnection).toHaveBeenCalledWith(
@@ -412,9 +447,9 @@ describe('SourcesPage', () => {
     })
     await waitForPage(() => expect(buttonWithText('orders')).toBeDefined())
     await act(async () => buttonWithText('orders')?.click())
-    await waitForPage(() => expect(buttonWithText('Delete source')).toBeDefined())
+    await openSourceActions()
 
-    await act(async () => buttonWithText('Delete source')?.click())
+    await act(async () => menuItemWithText('Delete source')?.click())
     await waitForPage(() => expect(container?.textContent).toContain('Delete orders?'))
     expect(container?.textContent).toContain('orders')
 
@@ -473,7 +508,9 @@ describe('SourcesPage', () => {
     await act(async () => {
       root?.render(
         <QueryClientProvider client={queryClient}>
-          <SourcesPage />
+          <ToastProvider closeLabel="Close">
+            <SourcesPage />
+          </ToastProvider>
         </QueryClientProvider>,
       )
     })
@@ -481,11 +518,10 @@ describe('SourcesPage', () => {
     await act(async () => buttonWithText('orders')?.click())
     await waitForPage(() => expect(container?.textContent).toContain('Discovered'))
     expect(discoverSourceSchema).toHaveBeenCalledTimes(1)
-    await act(async () => buttonWithText('Refresh schema')?.click())
+    await openSourceActions()
+    await act(async () => menuItemWithText('Refresh schema')?.click())
     await waitForPage(() => expect(discoverSourceSchema).toHaveBeenCalledTimes(2))
-    expect(container?.querySelector('[role="status"]')?.textContent).toBe(
-      'Schema refreshed for orders',
-    )
+    await waitForPage(() => expect(hasToastText('Schema refreshed for orders')).toBe(true))
     expect(discoverSourceSchema).toHaveBeenCalledWith(
       { id: 'orders', connectorId: 'mysql', settings: source.config },
       expect.any(Function),
@@ -494,7 +530,11 @@ describe('SourcesPage', () => {
     const tableRow = [...(container?.querySelectorAll('tbody tr') ?? [])].find((row) =>
       row.textContent?.includes('orders'),
     )
-    await act(async () => (tableRow as HTMLElement).click())
+    const openTable = tableRow?.querySelector<HTMLButtonElement>(
+      'button[aria-label="Open table orders"]',
+    )
+    expect(openTable).toBeTruthy()
+    await act(async () => openTable?.click())
     expect(container.textContent).toContain('id')
     expect(container.textContent).toContain('BIGINT')
     expect(container.textContent).toContain('email')
@@ -519,13 +559,17 @@ describe('SourcesPage', () => {
     })
     await waitForPage(() => expect(buttonWithText('orders')).toBeDefined())
     await act(async () => buttonWithText('orders')?.click())
-    await waitForPage(() => expect(buttonWithText('Refresh schema')).toBeDefined())
-    await act(async () => buttonWithText('Refresh schema')?.click())
+    await openSourceActions()
+    await act(async () => menuItemWithText('Refresh schema')?.click())
 
     await waitForPage(() => {
       expect(container?.textContent).toContain('The schema could not be loaded. Try again.')
       expect(buttonWithText('Retry')).toBeDefined()
     })
+
+    await act(async () => buttonWithText('Retry')?.click())
+    await waitForPage(() => expect(discoverSourceSchema).toHaveBeenCalledTimes(2))
+    await waitForPage(() => expect(container?.textContent).toContain('Discovered'))
   })
 
   it('shows creation success as a transient message without adding a page block', async () => {
@@ -545,7 +589,9 @@ describe('SourcesPage', () => {
     await act(async () => {
       root?.render(
         <QueryClientProvider client={queryClient}>
-          <SourcesPage />
+          <ToastProvider closeLabel="Close">
+            <SourcesPage />
+          </ToastProvider>
         </QueryClientProvider>,
       )
     })
@@ -558,15 +604,15 @@ describe('SourcesPage', () => {
       }),
     )
 
-    const successToast = container.querySelector('[role="status"]')
-    expect(successToast?.textContent).toBe('Source feyn created')
-    expect(successToast?.className).toContain('fixed')
-    expect(successToast?.className).not.toContain('border-b')
+    await waitForPage(() => expect(hasToastText('Source feyn created')).toBe(true))
+    expect(container.querySelector('[role="status"]')?.textContent ?? '').not.toContain(
+      'Source feyn created',
+    )
     const discovered = { ...schemaReport, connectionId: 'feyn' }
     expect(discoverSourceSchema).toHaveBeenCalledTimes(1)
     await act(async () => finishDiscovery(discovered))
     expect(queryClient.getQueryData(['source-schema', 'feyn'])).toEqual(discovered)
-    expect(container.querySelector('[role="status"]')?.textContent).toBe('Source feyn created')
+    expect(hasToastText('Source feyn created')).toBe(true)
   })
 
   it('keeps creation success when the catalog navigates to the source detail route', async () => {
@@ -605,7 +651,9 @@ describe('SourcesPage', () => {
     await act(async () => {
       root?.render(
         <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
+          <ToastProvider closeLabel="Close">
+            <RouterProvider router={router} />
+          </ToastProvider>
         </QueryClientProvider>,
       )
     })
@@ -615,10 +663,7 @@ describe('SourcesPage', () => {
 
     await waitForPage(() => {
       expect(router.state.location.pathname).toBe('/sources/feyn')
-      const successToast = [...(container?.querySelectorAll('[role="status"]') ?? [])].find(
-        (element) => element.className.includes('fixed'),
-      )
-      expect(successToast?.textContent).toBe('Source feyn created')
+      expect(hasToastText('Source feyn created')).toBe(true)
     })
   })
 
@@ -702,7 +747,9 @@ describe('SourcesPage', () => {
     await act(async () => {
       root?.render(
         <QueryClientProvider client={queryClient}>
-          <SourcesPage />
+          <ToastProvider closeLabel="Close">
+            <SourcesPage />
+          </ToastProvider>
         </QueryClientProvider>,
       )
     })
@@ -726,14 +773,14 @@ describe('SourcesPage', () => {
 
     await waitForPage(() => {
       expect(container?.textContent).toContain('mysql.internal')
-      expect(container?.querySelector('[role="status"]')?.textContent).toBe('Source orders updated')
+      expect(hasToastText('Source orders updated')).toBe(true)
       expect(queryClient.getQueryData(['source', 'orders'])).toEqual(saved)
     })
     const discovered = { ...schemaReport, discoveredAt: schemaReport.discoveredAt + 1000 }
     expect(discoverSourceSchema).toHaveBeenCalledTimes(1)
     await act(async () => finishDiscovery(discovered))
     expect(queryClient.getQueryData(['source-schema', 'orders'])).toEqual(discovered)
-    expect(container?.querySelector('[role="status"]')?.textContent).toBe('Source orders updated')
+    expect(hasToastText('Source orders updated')).toBe(true)
   })
 
   it('tags sample sources and removes them as a set, naming a pipeline that still reads one', async () => {
@@ -772,7 +819,20 @@ describe('SourcesPage', () => {
 
     await act(async () => buttonWithText('Remove sample sources')?.click())
     await waitForPage(() =>
-      expect(container?.querySelector('[role="alert"]')?.textContent).toContain(
+      expect(document.body.querySelector('[role="alertdialog"]')?.textContent).toContain(
+        'Remove sample sources?',
+      ),
+    )
+    expect(removeSampleSources).not.toHaveBeenCalled()
+    const confirmRemove = [
+      ...(document.body
+        .querySelector('[role="alertdialog"]')
+        ?.querySelectorAll<HTMLButtonElement>('button') ?? []),
+    ].find((button) => button.textContent?.trim() === 'Remove sample sources')
+    expect(confirmRemove).toBeDefined()
+    await act(async () => confirmRemove?.click())
+    await waitForPage(() =>
+      expect(document.body.querySelector('[role="alert"]')?.textContent).toContain(
         'Sample source sample_cards_crm is still read by: c360_pipeline',
       ),
     )

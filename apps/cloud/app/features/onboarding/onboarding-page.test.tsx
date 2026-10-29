@@ -135,7 +135,8 @@ function buttonWithText(text: string) {
 }
 
 function changeOrganizationName(value: string) {
-  const input = host?.querySelector<HTMLInputElement>('#onboarding-organization')
+  const input = host?.querySelector<HTMLInputElement>('input[autocomplete="organization"]')
+  expect(input).not.toBeNull()
   const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
   valueSetter?.call(input, value)
   input?.dispatchEvent(new Event('input', { bubbles: true }))
@@ -249,7 +250,7 @@ describe('Cloud onboarding payment', () => {
 
     expect(onCreateWorkspace).toHaveBeenCalledWith(
       expect.objectContaining({
-        clusterName: 'acme-data-stream',
+        clusterName: 'acme-data',
         organizationSlug: 'acme-data',
         specKey: 'small',
       }),
@@ -337,7 +338,7 @@ describe('Cloud onboarding subscription cancellation', () => {
     expect(onCreateWorkspace.mock.calls[1]?.[0]).toMatchObject({
       organizationName: 'Acme Data',
       organizationSlug: 'acme-data',
-      clusterName: 'acme-data-stream',
+      clusterName: 'acme-data',
       region: { code: alternateRegion.code },
     })
     expect(cancelSubscription).toHaveBeenCalledWith(organization.id, activeSubscription.id)

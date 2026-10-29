@@ -3,28 +3,51 @@ import type { ComponentType, SVGProps } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import {
+  AlertDialog as SourceAlertDialog,
+  AlertDialogBody as SourceAlertDialogBody,
+  AlertDialogCancelButton as SourceAlertDialogCancelButton,
+  AlertDialogConfirmButton as SourceAlertDialogConfirmButton,
+  AlertDialogContent as SourceAlertDialogContent,
+  AlertDialogDescription as SourceAlertDialogDescription,
+  AlertDialogFooter as SourceAlertDialogFooter,
+  AlertDialogHeader as SourceAlertDialogHeader,
+  AlertDialogTitle as SourceAlertDialogTitle,
+} from '@tapstate-web/ui/alert-dialog'
+import { Button as SourceButton } from '@tapstate-web/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@tapstate-web/ui/dropdown-menu'
+import { FirstEmptyActionCard } from '@tapstate-web/ui/first-empty-action-card'
+import { LoadingPlaceholder } from '@tapstate-web/ui/loading-placeholder'
+import { SearchInput } from '@tapstate-web/ui/search-input'
+import { StatusDot } from '@tapstate-web/ui/status-dot'
+import { Tabs, TabsList, TabsTab } from '@tapstate-web/ui/tabs'
+import {
   Activity,
   AlertCircle,
   ArrowLeft,
-  CheckCircle2,
   ChevronRight,
   Columns,
   Database,
   FileText,
   GitMerge,
-  ListFilter,
   LoaderCircle,
+  MoreHorizontal,
   Plus,
   RefreshCw,
-  Search,
   Server,
   Settings,
   Table as TableIcon,
   Trash2,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import type { PipelineCatalogState } from '@/service/pipelines/pipeline-client'
 import type {
   ConnectorSummary,
   SourceEnvelope,
@@ -35,17 +58,12 @@ import type {
 } from '@/service/source-client'
 
 import { ConnectorIcon } from '@/components/connector-icon'
+import { ResourceListHeader } from '@/components/resource-list-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { RouteTabs } from '@/components/ui/route-tabs'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { useOptionalToast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
+import { listPipelineArtifacts } from '@/service/pipelines/pipeline-client'
 import {
   isSampleSource,
   loadSampleSources,
@@ -154,6 +172,7 @@ export function SourcesPage({
   onArrivalCreateClosed,
 }: SourcesPageProps = {}) {
   const { t } = useTranslation()
+  const toast = useOptionalToast()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const apiFetch = useAuthStore((state) => state.apiFetch)
@@ -166,7 +185,9 @@ export function SourcesPage({
   const [deletingSource, setDeletingSource] = useState<Source | null>(null)
   const successMessage = useSourceFeedbackStore((state) => state.successMessage)
   const setSuccessMessage = useSourceFeedbackStore((state) => state.setSuccessMessage)
+  const takeSuccessMessage = useSourceFeedbackStore((state) => state.takeSuccessMessage)
   const [removingSamples, setRemovingSamples] = useState(false)
+  const [sampleRemoveConfirmOpen, setSampleRemoveConfirmOpen] = useState(false)
   const [sampleDialogOpen, setSampleDialogOpen] = useState(false)
   // Same key as Overview; a deployment without sample settings leaves this null.
   const samplesQuery = useQuery({
@@ -193,7 +214,7 @@ export function SourcesPage({
   }
 
   function selectorDescription(table: SourceTableView) {
-    if (table.type === 'literal' && table.name) return table.name
+    if (table.type === 'literal' && table.name) return t('sources.details.selectorExactTable')
     if (table.pattern) return table.pattern
     if (table.filter) return table.filter
     if (table.pk?.length) return table.pk.join(', ')
@@ -238,6 +259,12 @@ export function SourcesPage({
     queryKey: ['connectors'],
     queryFn: () => listConnectors(apiFetch),
   })
+  const pipelineArtifactsQuery = useQuery({
+    queryKey: ['pipeline-artifacts'],
+    queryFn: () => listPipelineArtifacts(apiFetch),
+    staleTime: 15_000,
+    retry: false,
+  })
   const editingSourceQuery = useQuery({
     queryKey: ['source', editingSourceId],
     enabled: editingSourceId !== null,
@@ -251,6 +278,23 @@ export function SourcesPage({
   const sources = (sourcesQuery.data ?? [])
     .filter(isDataSource)
     .map((source) => toSource(source, connectorsById.get(source.connector)))
+  const pipelineStateBySource = useMemo(() => {
+    const states = new Map<string, PipelineCatalogState>()
+    for (const pipeline of pipelineArtifactsQuery.data ?? []) {
+      const state = pipeline.status?.state
+      if (!state) continue
+      for (const source of pipeline.sources ?? []) {
+        const existing = states.get(source.id)
+        if (existing === 'RUNNING') continue
+        if (state === 'RUNNING' || state === 'STARTING' || state === 'RESUMING') {
+          states.set(source.id, state)
+        } else if (!existing && ['PAUSED', 'STOPPED', 'COMPLETED'].includes(state)) {
+          states.set(source.id, state)
+        }
+      }
+    }
+    return states
+  }, [pipelineArtifactsQuery.data])
   const sourceSearchQuery = searchText.trim().toLowerCase()
   const filteredSources = sourceSearchQuery
     ? sources.filter(
@@ -415,9 +459,11 @@ export function SourcesPage({
             pipelines: result.refused.referrers.join(', '),
           }),
         )
+        return
       } else {
         setSuccessMessage(t('sources.samples.removed', { count: result.removed.length }))
       }
+      setSampleRemoveConfirmOpen(false)
     } catch {
       setSampleRemoveError(t('sources.samples.error'))
     } finally {
@@ -438,10 +484,9 @@ export function SourcesPage({
   }
 
   useEffect(() => {
-    if (!successMessage) return
-    const timeoutId = window.setTimeout(() => setSuccessMessage(''), 4000)
-    return () => window.clearTimeout(timeoutId)
-  }, [successMessage])
+    if (!successMessage || !toast || !takeSuccessMessage(successMessage)) return
+    toast.show({ tone: 'success', title: successMessage, duration: 4000 })
+  }, [successMessage, takeSuccessMessage, toast])
 
   useEffect(() => {
     if (!selectedSource || !(sourceSchemaQuery.error instanceof SourceClientError)) return
@@ -462,42 +507,38 @@ export function SourcesPage({
 
   return (
     <section className="flex h-full w-full flex-col overflow-hidden bg-white">
-      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-gray-100/70 px-4 md:px-6">
-        <h1 className="min-w-0 truncate text-[15px] font-semibold text-gray-900">
-          {t('sources.title')}
-        </h1>
-        <div className="flex shrink-0 items-center gap-2">
-          {samplesAvailable && (
-            <Button
-              type="button"
-              variant="outline"
-              className="px-3 text-[13px] font-medium"
-              onClick={() => setSampleDialogOpen(true)}
-            >
-              {t('overview.addSources.sample.action')}
-            </Button>
-          )}
-          {(sourcesQuery.data ?? []).some(isSampleSource) && (
-            <Button
-              type="button"
-              variant="outline"
-              className="px-3 text-[13px] font-medium"
-              disabled={removingSamples}
-              onClick={() => void removeSamples()}
-            >
-              {removingSamples ? t('sources.samples.removing') : t('sources.samples.remove')}
-            </Button>
-          )}
+      <ResourceListHeader title={t('sources.title')}>
+        {(sourcesQuery.data === undefined || sources.length > 0) && samplesAvailable && (
+          <Button type="button" variant="ghost" onClick={() => setSampleDialogOpen(true)}>
+            {t('overview.addSources.sample.action')}
+          </Button>
+        )}
+        {sources.some((source) => isSampleSource(source.raw)) && (
           <Button
             type="button"
-            className="px-3 text-[13px] font-medium shadow-sm"
-            onClick={() => setCreateOpen(true)}
+            variant="ghost"
+            disabled={removingSamples}
+            onClick={() => {
+              setSampleRemoveError('')
+              setSampleRemoveConfirmOpen(true)
+            }}
           >
-            <Plus className="h-4 w-4" aria-hidden="true" />
+            {removingSamples ? t('sources.samples.removing') : t('sources.samples.remove')}
+          </Button>
+        )}
+        {selectedSource && (
+          <Button type="button" variant="ghost" onClick={() => selectSource(null)}>
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            {t('sources.allSources')}
+          </Button>
+        )}
+        {(sourcesQuery.data === undefined || sources.length > 0) && (
+          <Button type="button" onClick={() => setCreateOpen(true)}>
+            <Plus className="size-3.5" aria-hidden="true" />
             {t('sources.actions.create')}
           </Button>
-        </div>
-      </header>
+        )}
+      </ResourceListHeader>
       {sampleRemoveError && (
         <div
           className="text-destructive flex items-start justify-between gap-3 border-b border-gray-100/70 px-4 py-2 text-[13px] md:px-6"
@@ -510,80 +551,50 @@ export function SourcesPage({
         </div>
       )}
 
-      {successMessage && (
-        <div
-          className="pointer-events-none fixed top-4 right-4 z-50"
-          role="status"
-          aria-live="polite"
-        >
-          <div className="border-border bg-background text-foreground flex items-center gap-2 rounded-lg border px-3 py-2 text-[13px] shadow-lg">
-            <CheckCircle2 className="text-primary size-4 shrink-0" aria-hidden="true" />
-            <span>{successMessage}</span>
-          </div>
-        </div>
-      )}
-
       <div className="flex min-h-0 flex-1 flex-col bg-white md:flex-row">
-        <aside className="flex w-full shrink-0 flex-col border-b border-gray-100/70 bg-[#fcfcfd]/80 md:w-64 md:border-r md:border-b-0">
-          <div className="border-b border-gray-100/70 p-3">
-            <label className="relative block">
-              <span className="sr-only">{t('sources.search.label')}</span>
-              <Search className="absolute top-2 left-3 h-4 w-4 text-gray-400" aria-hidden="true" />
-              <input
-                value={searchText}
-                type="search"
-                className="w-full rounded-lg border border-gray-200/80 bg-white py-1.5 pr-3 pl-9 text-[13px] transition outline-none focus:border-gray-300 focus:ring-2 focus:ring-gray-900/10"
-                placeholder={t('sources.search.placeholder')}
-                onChange={(event) => setSearchText(event.target.value)}
-              />
-            </label>
-
-            <label className="relative mt-2 block">
-              <span className="sr-only">{t('sources.filters.connectionStatus.label')}</span>
-              <ListFilter
-                className="absolute top-2 left-3 h-3.5 w-3.5 text-gray-400"
-                aria-hidden="true"
-              />
-              <Select value="all">
-                <SelectTrigger
-                  aria-label={t('sources.filters.connectionStatus.label')}
-                  className="border-gray-200/80 py-1.5 pr-3 pl-8 text-gray-600 shadow-none"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('sources.filters.connectionStatus.all')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </label>
+        <aside className="bg-components-card-bg border-divider-subtle flex w-full shrink-0 flex-col border-b md:w-64 md:border-r md:border-b-0">
+          <div className="border-divider-subtle border-b p-3">
+            <SearchInput
+              className="w-full"
+              value={searchText}
+              onValueChange={setSearchText}
+              aria-label={t('sources.search.label')}
+              clearLabel={t('sources.search.clear')}
+              placeholder={t('sources.search.placeholder')}
+            />
           </div>
-
-          <div className="flex min-h-[150px] flex-1 gap-1 overflow-auto p-2 md:flex-col">
+          <nav
+            aria-label={t('sources.allSources')}
+            className="flex min-h-[150px] flex-1 gap-1 overflow-auto p-2 md:flex-col"
+          >
             <Button
               type="button"
               variant="ghost"
+              size="sm"
+              aria-pressed={selectedSource === null}
               className={cn(
-                'h-auto min-w-[160px] justify-start px-3 py-2 text-left text-[13px] md:min-w-0',
+                'h-auto min-h-8 min-w-[160px] shrink-0 justify-start px-3 py-2 text-left md:min-w-0',
                 selectedSource === null
-                  ? 'bg-gray-100 font-medium text-gray-900'
-                  : 'text-gray-600 hover:bg-gray-50',
+                  ? 'bg-background-default-hover text-text-primary font-medium'
+                  : 'text-text-secondary',
               )}
               onClick={() => selectSource(null)}
             >
-              <Database className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+              <Database className="size-4 shrink-0" aria-hidden="true" />
               <span className="truncate">{t('sources.allSources')}</span>
             </Button>
-
             {filteredSources.map((source) => (
               <Button
                 key={source.id}
                 type="button"
                 variant="ghost"
+                size="sm"
+                aria-pressed={selectedSource?.id === source.id}
                 className={cn(
-                  'h-auto min-w-[190px] justify-start px-3 py-2 text-left text-[13px] md:min-w-0',
+                  'h-auto min-h-8 min-w-[190px] shrink-0 justify-start px-3 py-2 text-left md:min-w-0',
                   selectedSource?.id === source.id
-                    ? 'bg-gray-100 font-medium text-gray-900'
-                    : 'text-gray-600 hover:bg-gray-50',
+                    ? 'bg-background-default-hover text-text-primary font-medium'
+                    : 'text-text-secondary',
                 )}
                 onClick={() => selectSource(source)}
               >
@@ -592,27 +603,22 @@ export function SourcesPage({
                   name={source.connectorName}
                   iconPath={source.connectorIcon}
                   size={16}
-                  className="size-4 rounded-md border-0 bg-transparent"
+                  className="size-4 shrink-0 rounded-md border-0 bg-transparent"
                 />
-                <span className="truncate">{source.name}</span>
+                <span className="min-w-0 flex-1 truncate">{source.name}</span>
                 {isSampleSource(source.raw) && (
-                  <Badge variant="secondary">{t('sources.samples.tag')}</Badge>
+                  <Badge variant="dimm" uppercase={false}>
+                    {t('sources.samples.tag')}
+                  </Badge>
                 )}
-                <span
-                  className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300"
-                  aria-hidden="true"
-                />
               </Button>
             ))}
-          </div>
+          </nav>
         </aside>
 
-        <main className="flex min-w-0 flex-1 flex-col bg-white">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-white">
           {sourcesQuery.isLoading ? (
-            <div className="page-state">
-              <LoaderCircle className="h-7 w-7 animate-spin text-gray-300" aria-hidden="true" />
-              <div className="page-state__title">{t('sources.states.loading')}</div>
-            </div>
+            <LoadingPlaceholder className="h-full" label={t('sources.states.loading')} />
           ) : loadError ? (
             <div className="page-state">
               <AlertCircle className="h-8 w-8 text-orange-400" aria-hidden="true" />
@@ -628,10 +634,10 @@ export function SourcesPage({
             </div>
           ) : selectedSource && !selectedTable ? (
             <>
-              <div className="shrink-0 border-b border-gray-100/70 bg-white px-4 py-4 md:px-6">
+              <div className="border-divider-subtle shrink-0 border-b bg-white px-4 py-4 md:px-8">
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div className="flex min-w-0 items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200/70 bg-gray-50">
+                    <div className="bg-background-default-subtle border-divider-subtle flex size-10 shrink-0 items-center justify-center rounded-xl border">
                       <ConnectorIcon
                         connectorId={selectedSource.type}
                         name={selectedSource.connectorName}
@@ -641,20 +647,16 @@ export function SourcesPage({
                       />
                     </div>
                     <div className="min-w-0">
-                      <h2 className="truncate text-base font-semibold text-gray-900">
+                      <h2 className="text-text-primary truncate text-base font-semibold">
                         {selectedSource.name}
                       </h2>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-[12px] text-gray-500">
+                      <div className="system-xs-regular text-text-tertiary mt-1 flex flex-wrap items-center gap-2">
                         <span className="inline-flex items-center gap-1.5">
-                          <Server className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />
+                          <Server className="size-3.5" aria-hidden="true" />
                           {selectedSource.host}
                         </span>
                         <span>{selectedSource.type}</span>
                         <span className="inline-flex items-center gap-1.5">
-                          <span
-                            className="h-1.5 w-1.5 rounded-full bg-gray-300"
-                            aria-hidden="true"
-                          />
                           {t('sources.details.secretConfiguredCount', {
                             count: selectedSource.raw.configuredSecrets.length,
                           })}
@@ -682,57 +684,66 @@ export function SourcesPage({
                       </div>
                     )}
                     <Button
-                      variant="outline"
-                      type="button"
-                      disabled={testingSourceId !== null}
-                      onClick={() => void runSourceTest(selectedSource.raw)}
-                    >
-                      {testingSourceId === selectedSource.id && (
-                        <LoaderCircle className="size-3.5 animate-spin" />
-                      )}
-                      {t(
-                        testingSourceId === selectedSource.id
-                          ? 'sources.test.testing'
-                          : 'sources.actions.test',
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      type="button"
-                      disabled={schemaRefreshingSourceId !== null}
-                      onClick={() => void refreshSourceSchema(selectedSource.raw)}
-                    >
-                      <RefreshCw
-                        className={cn(
-                          'size-3.5',
-                          schemaRefreshingSourceId === selectedSource.id && 'animate-spin',
-                        )}
-                      />
-                      {t(
-                        schemaRefreshingSourceId === selectedSource.id
-                          ? 'sources.schema.refreshing'
-                          : 'sources.actions.refreshSchema',
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
+                      variant="secondary"
                       type="button"
                       disabled={editLoading}
-                      className="min-w-[72px]"
                       onClick={() => setEditingSourceId(selectedSource.id)}
                     >
                       {editLoading && <LoaderCircle className="size-3.5 animate-spin" />}
                       {t('sources.detail.edit')}
                     </Button>
-                    <Button
-                      variant="outline"
-                      type="button"
-                      className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => setDeletingSource(selectedSource)}
-                    >
-                      <Trash2 className="size-3.5" aria-hidden="true" />
-                      {t('sources.delete.confirm')}
-                    </Button>
+                    <DropdownMenu modal={false}>
+                      <DropdownMenuTrigger
+                        render={
+                          <SourceButton variant="tertiary" type="button">
+                            <MoreHorizontal className="size-4" aria-hidden="true" />
+                            {t('common.more')}
+                          </SourceButton>
+                        }
+                      />
+                      <DropdownMenuContent placement="bottom-end" sideOffset={4}>
+                        <DropdownMenuItem
+                          disabled={testingSourceId !== null}
+                          onClick={() => void runSourceTest(selectedSource.raw)}
+                        >
+                          {testingSourceId === selectedSource.id ? (
+                            <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <Activity className="size-4" aria-hidden="true" />
+                          )}
+                          {t(
+                            testingSourceId === selectedSource.id
+                              ? 'sources.test.testing'
+                              : 'sources.actions.test',
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={schemaRefreshingSourceId !== null}
+                          onClick={() => void refreshSourceSchema(selectedSource.raw)}
+                        >
+                          <RefreshCw
+                            className={cn(
+                              'size-4',
+                              schemaRefreshingSourceId === selectedSource.id && 'animate-spin',
+                            )}
+                            aria-hidden="true"
+                          />
+                          {t(
+                            schemaRefreshingSourceId === selectedSource.id
+                              ? 'sources.schema.refreshing'
+                              : 'sources.actions.refreshSchema',
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() => setDeletingSource(selectedSource)}
+                        >
+                          <Trash2 className="size-4" aria-hidden="true" />
+                          {t('sources.delete.confirm')}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </div>
@@ -746,8 +757,12 @@ export function SourcesPage({
                     <span className="text-[12px] text-gray-500">
                       {t('sources.schema.discoveredAt', {
                         date: new Intl.DateTimeFormat(undefined, {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          timeZoneName: 'short',
                         }).format(new Date(sourceSchemaQuery.data.discoveredAt)),
                       })}
                     </span>
@@ -826,11 +841,7 @@ export function SourcesPage({
                     ]}
                   >
                     {visibleTables.map((table) => (
-                      <tr
-                        key={table.id}
-                        className="group cursor-pointer transition-colors hover:bg-gray-50/70"
-                        onClick={() => selectTable(table)}
-                      >
+                      <tr key={table.id} className="group transition-colors hover:bg-gray-50/70">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <TableIcon
@@ -845,10 +856,17 @@ export function SourcesPage({
                           {table.selector}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <ChevronRight
-                            className="inline-block h-4 w-4 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100"
-                            aria-hidden="true"
-                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-text-secondary"
+                            aria-label={t('sources.details.openTableNamed', { name: table.name })}
+                            onClick={() => selectTable(table)}
+                          >
+                            {t('sources.details.openTable')}
+                            <ChevronRight className="size-3.5" aria-hidden="true" />
+                          </Button>
                         </td>
                       </tr>
                     ))}
@@ -898,7 +916,12 @@ export function SourcesPage({
             <AllSourcesView
               sources={sources}
               filteredSources={filteredSources}
+              pipelineStateBySource={pipelineStateBySource}
+              pipelineStatusLoading={pipelineArtifactsQuery.isPending}
+              pipelineStatusUnavailable={pipelineArtifactsQuery.isError}
               onCreate={() => setCreateOpen(true)}
+              onSample={() => setSampleDialogOpen(true)}
+              samplesAvailable={samplesAvailable}
               onSelect={selectSource}
               onTest={(source) => void runSourceTest(source.raw)}
               testingSourceId={testingSourceId}
@@ -908,6 +931,41 @@ export function SourcesPage({
         </main>
       </div>
 
+      <SourceAlertDialog
+        open={sampleRemoveConfirmOpen}
+        onOpenChange={(nextOpen) => {
+          if (!removingSamples) setSampleRemoveConfirmOpen(nextOpen)
+        }}
+      >
+        <SourceAlertDialogContent>
+          <SourceAlertDialogHeader>
+            <SourceAlertDialogTitle>
+              {t('sources.samples.removeConfirmTitle')}
+            </SourceAlertDialogTitle>
+            <SourceAlertDialogDescription>
+              {t('sources.samples.removeConfirmBody')}
+            </SourceAlertDialogDescription>
+          </SourceAlertDialogHeader>
+          {sampleRemoveError && (
+            <SourceAlertDialogBody>
+              <p className="system-sm-regular text-text-destructive" role="alert">
+                {sampleRemoveError}
+              </p>
+            </SourceAlertDialogBody>
+          )}
+          <SourceAlertDialogFooter>
+            <SourceAlertDialogCancelButton variant="secondary" disabled={removingSamples}>
+              {t('sources.delete.cancel')}
+            </SourceAlertDialogCancelButton>
+            <SourceAlertDialogConfirmButton
+              disabled={removingSamples}
+              onClick={() => void removeSamples()}
+            >
+              {removingSamples ? t('sources.samples.removing') : t('sources.samples.remove')}
+            </SourceAlertDialogConfirmButton>
+          </SourceAlertDialogFooter>
+        </SourceAlertDialogContent>
+      </SourceAlertDialog>
       <ConnectionTestResultDialog
         report={testReport}
         error={testError}
@@ -1005,40 +1063,40 @@ function SourceTableDetailHeader({
           {tableName}
         </span>
       </nav>
-      <RouteTabs
-        aria-label={t('sources.tabs.label')}
-        className="mt-3"
-        items={tabs.map((tab) => ({ value: tab.value, label: t(tab.labelKey) }))}
-        value={activeTab}
-        onValueChange={onSelectTab}
-      />
+      <Tabs value={activeTab} onValueChange={(value) => onSelectTab(value as SourceTab)}>
+        <TabsList className="mt-3" aria-label={t('sources.tabs.label')}>
+          {tabs.map((tab) => (
+            <TabsTab key={tab.value} value={tab.value} className="ui-route-tab">
+              {t(tab.labelKey)}
+            </TabsTab>
+          ))}
+        </TabsList>
+      </Tabs>
     </div>
   )
 }
 
 function DataTable({ headers, children }: { headers: string[]; children: React.ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200/70 bg-white shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[680px] text-left text-[13px]">
-          <thead className="border-b border-gray-200/70 bg-gray-50/70 text-gray-500">
-            <tr>
-              {headers.map((header, index) => (
-                <th
-                  key={`${header}-${index}`}
-                  className={cn(
-                    'px-4 py-2.5 font-medium',
-                    index === headers.length - 1 && 'text-right',
-                  )}
-                >
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100/70">{children}</tbody>
-        </table>
-      </div>
+    <div className="min-w-0 overflow-x-auto">
+      <table className="w-full min-w-175 border-collapse border-0 text-left text-sm">
+        <thead className="border-divider-subtle text-text-tertiary h-8 border-b text-xs/8 font-medium uppercase">
+          <tr>
+            {headers.map((header, index) => (
+              <th
+                key={`${header}-${index}`}
+                className={cn(
+                  'px-4 font-[weight:inherit] whitespace-nowrap',
+                  index === headers.length - 1 && 'text-right',
+                )}
+              >
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="text-text-secondary">{children}</tbody>
+      </table>
     </div>
   )
 }
@@ -1133,7 +1191,12 @@ function TableSchemaView({
 function AllSourcesView({
   sources,
   filteredSources,
+  pipelineStateBySource,
+  pipelineStatusLoading,
+  pipelineStatusUnavailable,
   onCreate,
+  onSample,
+  samplesAvailable,
   onSelect,
   onTest,
   testingSourceId,
@@ -1141,7 +1204,12 @@ function AllSourcesView({
 }: {
   sources: Source[]
   filteredSources: Source[]
+  pipelineStateBySource: Map<string, PipelineCatalogState>
+  pipelineStatusLoading: boolean
+  pipelineStatusUnavailable: boolean
   onCreate: () => void
+  onSample: () => void
+  samplesAvailable: boolean
   onSelect: (source: Source) => void
   onTest: (source: Source) => void
   testingSourceId: string | null
@@ -1149,20 +1217,58 @@ function AllSourcesView({
 }) {
   const { t } = useTranslation()
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-gray-50/40">
-      <div className="shrink-0 border-b border-gray-100/70 bg-white px-4 py-4 md:px-6">
-        <h2 className="text-base font-semibold text-gray-900">{t('sources.allSources')}</h2>
-        <p className="mt-1 text-[13px] text-gray-500">{t('sources.allSourcesDescription')}</p>
-      </div>
-      <div className="min-h-0 flex-1 overflow-auto p-4 md:p-6">
+    <div className="flex min-h-0 flex-1 flex-col bg-white">
+      <div className="min-h-0 flex-1 overflow-auto px-4 pt-2 pb-6 md:px-8">
         {sources.length === 0 ? (
-          <div className="page-state rounded-lg border border-gray-200/70 bg-white">
-            <Database className="h-8 w-8 text-gray-300" aria-hidden="true" />
-            <div className="page-state__title">{t('sources.empty.title')}</div>
-            <p className="page-state__body">{t('sources.empty.body')}</p>
-            <Button type="button" className="px-3 text-[13px] font-medium" onClick={onCreate}>
-              {t('sources.actions.create')}
-            </Button>
+          <div className="relative min-h-130 overflow-hidden">
+            <div
+              className="pointer-events-none absolute inset-x-0 inset-y-2 grid grid-cols-[repeat(auto-fill,minmax(min(100%,288px),1fr))] grid-rows-4 gap-2.5"
+              aria-hidden="true"
+            >
+              {Array.from({ length: 16 }, (_, index) => (
+                <div key={index} className="bg-background-default-lighter rounded-xl opacity-75" />
+              ))}
+            </div>
+            <div className="from-background-body/0 to-background-body pointer-events-none absolute inset-0 bg-linear-to-b" />
+            <section
+              className="absolute inset-0 flex items-center justify-center overflow-hidden p-2"
+              aria-labelledby="sources-first-empty-title"
+            >
+              <div className="flex w-full max-w-130 flex-col items-center gap-6">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="border-divider-regular bg-components-card-bg flex size-14 items-center justify-center overflow-hidden rounded-xl border border-dashed p-1 backdrop-blur-md">
+                    <Database className="text-text-tertiary size-6" aria-hidden="true" />
+                  </div>
+                  <div className="text-center">
+                    <h2
+                      id="sources-first-empty-title"
+                      className="system-sm-regular text-text-tertiary max-w-130 whitespace-pre-line"
+                    >
+                      {t('sources.empty.title')}
+                    </h2>
+                    <p className="system-sm-regular text-text-tertiary mt-1">
+                      {t('sources.empty.body')}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex w-full flex-col gap-2 pb-8">
+                  <FirstEmptyActionCard
+                    title={t('sources.actions.create')}
+                    description={t('sources.empty.body')}
+                    icon={<Plus className="size-4" aria-hidden="true" />}
+                    onClick={onCreate}
+                  />
+                  {samplesAvailable && (
+                    <FirstEmptyActionCard
+                      title={t('overview.addSources.sample.action')}
+                      description={t('sources.empty.sampleDescription')}
+                      icon={<Database className="size-4" aria-hidden="true" />}
+                      onClick={onSample}
+                    />
+                  )}
+                </div>
+              </div>
+            </section>
           </div>
         ) : (
           <DataTable
@@ -1186,6 +1292,9 @@ function AllSourcesView({
                 <SourceListRow
                   key={source.id}
                   source={source}
+                  pipelineState={pipelineStateBySource.get(source.id) ?? null}
+                  pipelineStatusLoading={pipelineStatusLoading}
+                  pipelineStatusUnavailable={pipelineStatusUnavailable}
                   onSelect={onSelect}
                   onTest={onTest}
                   testingSourceId={testingSourceId}
@@ -1202,12 +1311,18 @@ function AllSourcesView({
 
 function SourceListRow({
   source,
+  pipelineState,
+  pipelineStatusLoading,
+  pipelineStatusUnavailable,
   onSelect,
   onTest,
   testingSourceId,
   autoDiscoveryAttempted,
 }: {
   source: Source
+  pipelineState: PipelineCatalogState | null
+  pipelineStatusLoading: boolean
+  pipelineStatusUnavailable: boolean
   onSelect: (source: Source) => void
   onTest: (source: Source) => void
   testingSourceId: string | null
@@ -1255,15 +1370,22 @@ function SourceListRow({
   ])
 
   const testing = testingSourceId === source.id || testQuery.isPending
+  const pipelineStatus = pipelineState ? t(`sources.test.pipeline.${pipelineState}`) : null
   const testStatus = testing
     ? t('sources.test.testing')
-    : testQuery.data?.outcome === 'PASSED'
-      ? t('sources.test.status.passed')
-      : testQuery.data?.outcome === 'FAILED'
-        ? t('sources.test.status.failed')
-        : testQuery.error instanceof SourceClientError && testQuery.error.status === 404
-          ? t('sources.test.notTested')
-          : t('sources.test.statusUnavailable')
+    : pipelineStatus
+      ? pipelineStatus
+      : testQuery.data?.outcome === 'PASSED'
+        ? t('sources.test.status.passed')
+        : testQuery.data?.outcome === 'FAILED'
+          ? t('sources.test.status.failed')
+          : testQuery.error instanceof SourceClientError && testQuery.error.status === 404
+            ? pipelineStatusLoading
+              ? t('sources.test.checkingPipeline')
+              : pipelineStatusUnavailable
+                ? t('sources.test.statusUnavailable')
+                : t('sources.test.notTested')
+            : t('sources.test.statusUnavailable')
   const tableStatus = schemaQuery.data
     ? t('sources.tablesCount', { count: schemaQuery.data.tables.length })
     : discovering || schemaQuery.isPending
@@ -1291,7 +1413,7 @@ function SourceListRow({
   }
 
   return (
-    <tr className="group transition-colors hover:bg-gray-50/70">
+    <tr className="group border-divider-subtle hover:bg-background-default-hover h-8 border-b transition-colors">
       <td className="px-4 py-3">
         <Button
           type="button"
@@ -1299,7 +1421,7 @@ function SourceListRow({
           className="h-auto justify-start px-0 text-left"
           onClick={() => onSelect(source)}
         >
-          <span className="flex h-6 w-6 items-center justify-center rounded-lg border border-gray-200/70 bg-gray-50">
+          <span className="bg-background-default-subtle flex size-6 items-center justify-center rounded-lg">
             <ConnectorIcon
               connectorId={source.type}
               name={source.connectorName}
@@ -1308,45 +1430,45 @@ function SourceListRow({
               className="size-4 rounded-md border-0 bg-transparent"
             />
           </span>
-          <span className="font-medium text-gray-900">{source.name}</span>
+          <span className="text-text-primary font-medium">{source.name}</span>
           {isSampleSource(source.raw) && (
-            <Badge variant="secondary">{t('sources.samples.tag')}</Badge>
+            <Badge variant="dimm" uppercase={false}>
+              {t('sources.samples.tag')}
+            </Badge>
           )}
         </Button>
       </td>
-      <td className="px-4 py-3 text-gray-600">{source.type}</td>
+      <td className="text-text-secondary px-4 py-3">{source.type}</td>
       <td className="px-4 py-3">
-        <span
-          className={cn(
-            'inline-flex items-center gap-1.5 rounded-lg px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset',
-            testQuery.data?.outcome === 'PASSED'
-              ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/15'
-              : testQuery.data?.outcome === 'FAILED'
-                ? 'bg-red-50 text-red-700 ring-red-600/15'
-                : 'bg-gray-50 text-gray-600 ring-gray-600/15',
-          )}
-        >
-          <span
-            className={cn(
-              'h-1 w-1 rounded-full',
-              testQuery.data?.outcome === 'PASSED'
-                ? 'bg-emerald-500'
-                : testQuery.data?.outcome === 'FAILED'
-                  ? 'bg-red-500'
-                  : 'bg-gray-400',
-            )}
-            aria-hidden="true"
+        <span className="text-text-secondary inline-flex items-center gap-2">
+          <StatusDot
+            className="size-1 rounded-full"
+            status={
+              pipelineState === 'RUNNING'
+                ? 'success'
+                : pipelineState === 'STARTING' || pipelineState === 'RESUMING'
+                  ? 'normal'
+                  : pipelineState !== null
+                    ? 'disabled'
+                    : testQuery.data?.outcome === 'PASSED'
+                      ? 'success'
+                      : testQuery.data?.outcome === 'FAILED'
+                        ? 'error'
+                        : testing
+                          ? 'normal'
+                          : 'disabled'
+            }
           />
           {testStatus}
         </span>
       </td>
-      <td className="px-4 py-3 text-gray-500">{source.host}</td>
-      <td className="px-4 py-3 text-gray-600">
+      <td className="text-text-tertiary px-4 py-3">{source.host}</td>
+      <td className="text-text-secondary px-4 py-3">
         {tableStatus}
         {discoveryFailed && (
           <button
             type="button"
-            className="ml-2 text-blue-600 hover:underline"
+            className="text-text-accent ml-2 hover:underline"
             onClick={() => void retryDiscovery()}
           >
             {t('state.error.retry')}
@@ -1357,7 +1479,7 @@ function SourceListRow({
         <Button
           variant="ghost"
           size="icon-sm"
-          className="text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-700"
+          className="text-text-tertiary opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
           type="button"
           aria-label={`${t('sources.actions.test')} ${source.name}`}
           title={t('sources.actions.test')}

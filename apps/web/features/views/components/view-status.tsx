@@ -1,9 +1,12 @@
 import { Link } from '@tanstack/react-router'
+import { StatusDot } from '@tapstate-web/ui/status-dot'
+import { Database } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import type { ConnectorSummary, SourceView } from '@/service/source-client'
 import type { ViewFreshness, ViewLocation } from '@/service/view-client'
 
-import { cn } from '@/lib/utils'
+import { ConnectorIcon } from '@/components/connector-icon'
 import { MANAGED_VIEW_STORE_SOURCE_ID } from '@/service/source-client'
 
 import { durationParts } from '../views-model'
@@ -40,12 +43,15 @@ export function useFreshnessText() {
 
 export function ViewStatus({ status }: { status: ViewFreshness }) {
   const text = useFreshnessText()
+  const dotStatus = {
+    fresh: 'success',
+    stale: 'warning',
+    loading: 'normal',
+    'not-loaded': 'disabled',
+  } as const
   return (
     <span className="views-status">
-      <span
-        className={cn('views-status__dot', `views-status__dot--${status.state}`)}
-        aria-hidden="true"
-      />
+      <StatusDot className="views-status__dot rounded-full" status={dotStatus[status.state]} />
       {text(status)}
     </span>
   )
@@ -63,6 +69,46 @@ export function StoredIn({ location }: { location: ViewLocation }) {
   return (
     <Link to="/settings" className="views-link">
       {label}
+    </Link>
+  )
+}
+
+/** A subdued source link for the Views table, with the registered connector mark. */
+export function StoredInSourceLink({
+  location,
+  source,
+  connector,
+}: {
+  location: ViewLocation
+  source: SourceView | undefined
+  connector: ConnectorSummary | undefined
+}) {
+  const { t } = useTranslation()
+  const label =
+    location.storeId === MANAGED_VIEW_STORE_SOURCE_ID
+      ? t('views.storedIn.managed')
+      : location.database
+        ? t('views.storedIn.store', { store: location.storeId, database: location.database })
+        : location.storeId
+
+  return (
+    <Link
+      to="/sources/$sourceId"
+      params={{ sourceId: location.storeId }}
+      className="views-stored-in"
+    >
+      {source && connector?.icon ? (
+        <ConnectorIcon
+          connectorId={source.connector}
+          name={connector.name}
+          iconPath={connector.icon}
+          size={16}
+          className="size-4 rounded-none border-0 bg-transparent"
+        />
+      ) : (
+        <Database className="size-4 shrink-0" aria-hidden="true" />
+      )}
+      <span className="truncate">{label}</span>
     </Link>
   )
 }

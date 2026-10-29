@@ -75,7 +75,7 @@ describe('PipelineMonitoringPage', () => {
     expect(container?.textContent).toContain('42')
   })
 
-  it('supports an explicit refresh and pausing automatic observation updates', async () => {
+  it('supports explicit refresh without polling monitoring snapshots', async () => {
     await renderPage()
 
     await vi.waitFor(() => expect(container?.textContent).toContain('Running'))
@@ -84,15 +84,19 @@ describe('PipelineMonitoringPage', () => {
     )
     await vi.waitFor(() => expect(getPipelineMetrics).toHaveBeenCalledTimes(2))
 
-    await act(async () =>
-      document
-        .querySelector<HTMLButtonElement>('[aria-label="Pause automatic monitoring refresh"]')
-        ?.click(),
-    )
-    expect(container?.textContent).toContain('Updates paused')
-    expect(
-      document.querySelector('[aria-label="Resume automatic monitoring refresh"]'),
-    ).not.toBeNull()
+    vi.useFakeTimers()
+    try {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000)
+      })
+      expect(getPipelineStatus).toHaveBeenCalledTimes(2)
+      expect(getPipelineMetrics).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
+
+    expect(document.querySelector('[aria-label="Pause automatic monitoring refresh"]')).toBeNull()
+    expect(document.querySelector('[aria-label="Resume automatic monitoring refresh"]')).toBeNull()
   })
 
   it('distinguishes empty metrics from a failed observation request', async () => {
