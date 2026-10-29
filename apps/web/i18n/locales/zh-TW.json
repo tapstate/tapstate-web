@@ -577,9 +577,20 @@
     },
     "delete": {
       "title": "刪除 {{id}}？",
-      "body": "此操作會永久刪除已儲存的流水線及其執行狀態。",
+      "body": "此操作會永久刪除已儲存的流水線、草稿及其執行狀態。",
       "confirm": "刪除流水線",
-      "failed": "流水線刪除失敗。"
+      "failed": "流水線刪除失敗。",
+      "notStopped": "流水線 {{id}} 目前為 {{actual}}，目標狀態為 {{desired}}。請先停止，等待狀態穩定後再刪除。",
+      "inUse": "流水線 {{id}} 仍被以下資源引用：{{referrers}}。請先移除這些引用。",
+      "incomplete": "流水線定義已刪除，但部分清理尚未完成。請重新整理清單，檢查剩餘草稿和執行狀態。",
+      "conflict": "流水線或草稿已發生修改。請重新整理清單後再次確認刪除。",
+      "stopTimedOut": "流水線尚未停止，請重試停止操作。",
+      "waitingForStop": "已要求停止。請等待流水線停止後，再次確認刪除。",
+      "stopPipeline": "停止流水線",
+      "cleanupTitle": "{{id}} 的清理需要處理",
+      "cleanupReason": "原因：{{reason}}",
+      "unknownCleanup": "無法確定剩餘清理內容。請先檢查伺服器診斷，再執行後續操作。",
+      "dismiss": "關閉"
     },
     "lifecycle": {
       "actions": "{{id}} 的流水線生命週期操作",
