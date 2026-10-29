@@ -575,3 +575,61 @@ it('offers new static types through generic rule controls without new locale bra
     types.splice(1)
   }
 })
+
+it('renders a statically described HTTPS JSON channel and saves its public fields through the existing receiver form', async () => {
+  const original = fetcher.getMockImplementation()!
+  fetcher.mockImplementation(async (url, init) =>
+    String(url).endsWith('/catalog')
+      ? Response.json({
+          deployment: 'ON_PREM',
+          types,
+          channels: [
+            {
+              id: 'email',
+              version: 1,
+              label: 'Email',
+              transportFamily: 'EMAIL',
+              transportVersion: 1,
+              fields: [],
+            },
+            {
+              id: 'webhook',
+              version: 1,
+              label: 'Webhook',
+              transportFamily: 'HTTPS_JSON',
+              transportVersion: 1,
+              fields: [],
+            },
+            {
+              id: 'test.sink',
+              version: 1,
+              label: 'Test sink',
+              transportFamily: 'HTTPS_JSON',
+              transportVersion: 1,
+              fields: [{ key: 'topic', label: 'Topic', maximumBytes: 64, required: true }],
+            },
+          ],
+        })
+      : original(url, init),
+  )
+  await render()
+  await click('Receivers')
+  await click('Create')
+  const channel = [...container.querySelectorAll('label')]
+    .find((l) => l.querySelector('span')?.textContent === 'Channel')!
+    .querySelector('button')!
+  await choose(channel, 'Test sink')
+  await input('Name', 'Generic receiver')
+  await input('HTTPS endpoint', 'https://notify.example.test/private-hook')
+  await input('Topic', 'orders')
+  await click('Save and activate')
+  const sent = requests().find((r) => r.path.endsWith('/configuration/save'))!.body.form
+  expect(sent.transport).toMatchObject({
+    channelType: 'test.sink',
+    family: 'HTTPS_JSON',
+    transportVersion: 1,
+    parameters: { topic: 'orders' },
+  })
+  expect(sent.endpoint).toBe('https://notify.example.test/private-hook')
+  expect(requests().filter((r) => r.path.endsWith('/test'))).toHaveLength(0)
+})
