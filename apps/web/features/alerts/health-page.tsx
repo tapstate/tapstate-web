@@ -31,7 +31,8 @@ export function HealthPage() {
       id: 'observations',
       state: query.isError ? 'unavailable' : 'partialCoverage',
       detail:
-        health?.coverage.map((c) => t(`alerts.types.${c}`)).join(', ') ?? t('alerts.unavailable'),
+        health?.coverage.map((c) => t(`alerts.types.${c}`, { defaultValue: c })).join(', ') ??
+        t('alerts.unavailable'),
       to: '/alerts',
     },
     {

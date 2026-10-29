@@ -69,6 +69,7 @@ export interface AlertType {
   guidance?: string
   parameters: {
     name: string
+    kind?: 'DURATION_SECONDS' | 'DECIMAL'
     unit: string
     minimum: number
     maximum: number

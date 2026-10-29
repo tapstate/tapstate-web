@@ -535,9 +535,17 @@ function SettingsContent() {
                       ).map((edge) => (
                         <tr key={`${r.id}-${edge.rootType}-${edge.dependentType}`}>
                           <td>{r.name}</td>
-                          <td>{edge.rootType ? t(`alerts.types.${edge.rootType}`) : '—'}</td>
                           <td>
-                            {edge.dependentType ? t(`alerts.types.${edge.dependentType}`) : '—'}
+                            {edge.rootType
+                              ? t(`alerts.types.${edge.rootType}`, { defaultValue: edge.rootType })
+                              : '—'}
+                          </td>
+                          <td>
+                            {edge.dependentType
+                              ? t(`alerts.types.${edge.dependentType}`, {
+                                  defaultValue: edge.dependentType,
+                                })
+                              : '—'}
                           </td>
                           <td>
                             {t(r.enabled && edge.rootType ? 'alerts.enabled' : 'alerts.disabled')}
@@ -665,7 +673,7 @@ function SettingsContent() {
                         >
                           {catalog.data?.types.map((v) => (
                             <option key={v.id} value={v.id}>
-                              {t(`alerts.types.${v.id}`)}
+                              {t(`alerts.types.${v.id}`, { defaultValue: v.id })}
                               {!v.inputAvailable ? ` · ${t('alerts.inputUnavailable')}` : ''}
                             </option>
                           ))}
@@ -723,13 +731,13 @@ function SettingsContent() {
                         ?.parameters.map((p) => (
                           <Field
                             key={p.name}
-                            label={`${t(`alerts.parameters.${p.name}`)} (${p.unit})`}
+                            label={`${t(`alerts.parameters.${p.name}`, { defaultValue: p.name })} (${p.unit})`}
                           >
                             <input
                               type="number"
                               min={p.minimum}
                               max={p.maximum}
-                              step={1}
+                              step={p.kind === 'DECIMAL' ? 'any' : 1}
                               required
                               value={form.parameters?.[p.name] ?? p.defaultValue}
                               onChange={(e) =>
@@ -828,7 +836,7 @@ function SettingsContent() {
                       >
                         {catalog.data?.types.map((v) => (
                           <option key={v.id} value={v.id}>
-                            {t(`alerts.types.${v.id}`)}
+                            {t(`alerts.types.${v.id}`, { defaultValue: v.id })}
                           </option>
                         ))}
                       </AlertSelect>
@@ -862,7 +870,7 @@ function SettingsContent() {
                             >
                               {catalog.data?.types.map((v) => (
                                 <option key={v.id} value={v.id}>
-                                  {t(`alerts.types.${v.id}`)}
+                                  {t(`alerts.types.${v.id}`, { defaultValue: v.id })}
                                 </option>
                               ))}
                             </AlertSelect>
@@ -931,7 +939,11 @@ function SettingsContent() {
                                         .map((r) => (
                                           <tr key={r.key}>
                                             <td>{r.resource.id}</td>
-                                            <td>{t(`alerts.types.${r.typeId}`)}</td>
+                                            <td>
+                                              {t(`alerts.types.${r.typeId}`, {
+                                                defaultValue: r.typeId,
+                                              })}
+                                            </td>
                                             <td>
                                               <Severity value={r.severity} />
                                             </td>
@@ -1786,7 +1798,7 @@ function ConfigTable({
                 <strong>{r.name ?? r.reason}</strong>
                 <small>
                   {r.typeId ? (
-                    t(`alerts.types.${r.typeId}`)
+                    t(`alerts.types.${r.typeId}`, { defaultValue: r.typeId })
                   ) : r.transport?.channelType === 'email' ? (
                     <>
                       <Mail className="h-3 w-3" /> Email · SMTP TLS
@@ -1837,7 +1849,7 @@ function ConfigTable({
                 <>
                   <td>
                     {r.typeIds?.length
-                      ? r.typeIds.map((v) => t(`alerts.types.${v}`)).join(', ')
+                      ? r.typeIds.map((v) => t(`alerts.types.${v}`, { defaultValue: v })).join(', ')
                       : t('alerts.all')}
                     <small>{r.severities?.join(' / ')}</small>
                   </td>

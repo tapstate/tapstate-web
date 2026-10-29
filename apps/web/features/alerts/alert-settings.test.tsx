@@ -553,3 +553,25 @@ it('edits inhibition from its own page while preserving hidden route bindings', 
   expect(sent.name).toBe(routeForm.name)
   expect(requests().some((r) => r.path.endsWith('/preview'))).toBe(false)
 })
+
+it('offers new static types through generic rule controls without new locale branches', async () => {
+  const original = types[0]
+  types.push(
+    { ...original, id: 'test.queue-high' },
+    { ...original, id: 'test.replica-unavailable' },
+  )
+  try {
+    await render()
+    await click('Create')
+    const type = [...container.querySelectorAll('label')]
+      .find((label) => label.querySelector('span')?.textContent === 'Alert type')!
+      .querySelector<HTMLElement>('[role="combobox"]')!
+    await choose(type, 'test.queue-high')
+    expect(container.textContent).toContain('test.queue-high')
+    expect(container.textContent).not.toContain('alerts.types.test.queue-high')
+    await choose(type, 'test.replica-unavailable')
+    expect(container.textContent).toContain('test.replica-unavailable')
+  } finally {
+    types.splice(1)
+  }
+})

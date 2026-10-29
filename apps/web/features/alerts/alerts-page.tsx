@@ -303,7 +303,9 @@ function AlertsContent() {
                         )}
                       </span>
                     </span>
-                    <strong className="alert-row-title">{t(`alerts.types.${row.typeId}`)}</strong>
+                    <strong className="alert-row-title">
+                      {t(`alerts.types.${row.typeId}`, { defaultValue: row.typeId })}
+                    </strong>
                     <span className="alert-row-resource">
                       {row.resource.id}
                       {row.quality && row.quality !== 'VALID' && (
@@ -336,7 +338,9 @@ function AlertsContent() {
                   <Severity value={detail.data.severity} />
                   <span className="alert-state">{t(`alerts.status.${detail.data.status}`)}</span>
                 </div>
-                <h2>{t(`alerts.types.${detail.data.typeId}`)}</h2>
+                <h2>
+                  {t(`alerts.types.${detail.data.typeId}`, { defaultValue: detail.data.typeId })}
+                </h2>
                 <p>{detail.data.resource.id}</p>
                 {detail.data.quality && detail.data.quality !== 'VALID' && (
                   <p className="alert-warning">{t('alerts.unknownObservation')}</p>

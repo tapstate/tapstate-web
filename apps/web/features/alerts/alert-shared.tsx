@@ -116,7 +116,8 @@ export function AlertBell() {
                 <span>
                   {row.resource.id}
                   <small>
-                    {t(`alerts.types.${row.typeId}`)} · <AlertDuration from={row.firedAt} />
+                    {t(`alerts.types.${row.typeId}`, { defaultValue: row.typeId })} ·{' '}
+                    <AlertDuration from={row.firedAt} />
                   </small>
                 </span>
               </Link>
