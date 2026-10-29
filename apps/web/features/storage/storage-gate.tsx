@@ -12,6 +12,8 @@ import {
 } from '@/service/storage-client'
 import { useAuthStore } from '@/stores/auth-store'
 import { replaceWithCloudConsole } from '@/utils/cloud-console'
+import { installationLoginUrl, replaceWithInstallationLogin } from '@/utils/installation-navigation'
+import { prepareInstallationReconnect } from '@/utils/installation-reconnect'
 
 import {
   CloudSetupContinuationProvider,
@@ -44,7 +46,7 @@ export function StorageBoundary({ children }: { children: ReactNode }) {
 }
 
 export function StorageGate({ children }: { children: ReactNode }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const {
     entry,
@@ -56,10 +58,23 @@ export function StorageGate({ children }: { children: ReactNode }) {
     authorized,
     authorize,
     setSetupPending,
+    setOpRestartExpected,
+    opRestartExpected,
     autoRefreshing,
     session,
     authorityRevision,
   } = useStorage()
+  const normalLogin =
+    entry?.management && entry.mode === 'OP' && entry.entry === 'LOGIN'
+      ? installationLoginUrl(entry.normalLoginUrl)
+      : undefined
+  useEffect(() => {
+    if (normalLogin) replaceWithInstallationLogin(normalLogin)
+  }, [normalLogin])
+  useEffect(() => {
+    if (entry?.mode === 'OP' && entry.management)
+      void prepareInstallationReconnect(i18n.resolvedLanguage)
+  }, [entry?.mode, entry?.management, i18n.resolvedLanguage])
   const authenticated = useAuthStore((state) => state.isAuthenticated)
   const cloudProfile = useAuthStore((state) => state.profile === 'cloud')
   const setupSubmission = useStorageAction('setup')
@@ -136,6 +151,27 @@ export function StorageGate({ children }: { children: ReactNode }) {
     (loading ||
       (!error && entry?.mode === 'CLOUD' && !entry.management && entry.entry === 'UNAVAILABLE'))
   const continuingProgress = pendingHandoff?.progress ?? handoffProgress
+  const transientRestartError =
+    error instanceof TypeError || (error instanceof StorageClientError && error.status >= 500)
+  const restartWaiting =
+    transientRestartError &&
+    entry?.mode === 'OP' &&
+    entry.management &&
+    (opRestartExpected || entry.initializationProgress?.state === 'RUNNING')
+  const restartingWithoutProgress =
+    opRestartExpected &&
+    entry?.mode === 'OP' &&
+    entry.management &&
+    !entry.initializationProgress &&
+    (!error || transientRestartError) &&
+    (Boolean(error) || ['UNAVAILABLE', 'RESTART_REQUIRED'].includes(entry.entry))
+  if (restartingWithoutProgress)
+    return (
+      <StorageFrame>
+        <StorageIndicator tone="working">{t('storage.initialization.restarting')}</StorageIndicator>
+        <p className="text-muted-foreground text-sm">{t('storage.setupResultPending')}</p>
+      </StorageFrame>
+    )
   if (
     entry?.management &&
     entry.mode === 'OP' &&
@@ -147,9 +183,14 @@ export function StorageGate({ children }: { children: ReactNode }) {
         <InitializationMilestones
           progress={entry.initializationProgress}
           mode="OP"
-          stale={Boolean(error)}
+          stale={Boolean(error) && !restartWaiting}
         />
-        {Boolean(error) && <StorageError error={error} />}
+        {restartWaiting && (
+          <p role="status" className="text-muted-foreground text-sm">
+            {t('storage.initialization.restarting')}
+          </p>
+        )}
+        {Boolean(error) && !restartWaiting && <StorageError error={error} />}
       </StorageFrame>
     )
   if (continuing || awaitingEntry)
@@ -292,10 +333,27 @@ export function StorageGate({ children }: { children: ReactNode }) {
           {showSetup && (
             <StorageSetupForm
               submission={setupSubmission}
-              beforeSubmit={() => continuation.prepare(snapshot)}
-              onDispatched={() => continuation.submitted(snapshot)}
-              onRefused={(failure) => continuation.refused(snapshot, failure)}
-              onSubmitted={(checkedAt) => setSubmittedChecks({ scope: setupScope, checkedAt })}
+              beforeSubmit={async () => {
+                if (snapshot.mode === 'OP')
+                  await prepareInstallationReconnect(i18n.resolvedLanguage)
+                await continuation.prepare(snapshot)
+              }}
+              onDispatched={() => {
+                if (snapshot.mode === 'OP') setOpRestartExpected(true)
+                continuation.submitted(snapshot)
+              }}
+              onRefused={(failure) => {
+                if (
+                  snapshot.mode === 'OP' &&
+                  failure instanceof StorageClientError &&
+                  failure.status < 500
+                )
+                  setOpRestartExpected(false)
+                continuation.refused(snapshot, failure)
+              }}
+              onSubmitted={(checkedAt) => {
+                setSubmittedChecks({ scope: setupScope, checkedAt })
+              }}
               onTestsInvalidated={() => setSubmittedChecks(undefined)}
             />
           )}

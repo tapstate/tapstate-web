@@ -13,6 +13,11 @@ import { StorageBoundary } from './storage-gate'
 
 const route = vi.hoisted(() => ({ pathname: '/overview' }))
 const cloudNavigation = vi.hoisted(() => ({ redirect: vi.fn() }))
+const installationNavigation = vi.hoisted(() => ({ redirect: vi.fn() }))
+vi.mock('@/utils/installation-navigation', async (original) => ({
+  ...(await original<typeof import('@/utils/installation-navigation')>()),
+  replaceWithInstallationLogin: installationNavigation.redirect,
+}))
 vi.mock('@/utils/cloud-console', () => ({
   cloudConsoleUrl: 'https://dev.cloud.tapstate.com/',
   replaceWithCloudConsole: cloudNavigation.redirect,
@@ -78,6 +83,7 @@ async function input(element: HTMLInputElement, value: string) {
 }
 beforeEach(() => {
   cloudNavigation.redirect.mockClear()
+  installationNavigation.redirect.mockClear()
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
@@ -104,6 +110,22 @@ afterEach(() => {
 })
 
 describe('whole-site storage boundary', () => {
+  it('automatically leaves the installation listener after the first administrator is complete', async () => {
+    useAuthStore.setState({ isAuthenticated: false })
+    fetcher.mockImplementation(async () =>
+      Response.json({
+        mode: 'OP',
+        management: true,
+        entry: 'LOGIN',
+        automaticAuthorization: true,
+        normalLoginUrl: 'http://127.0.0.1:50690/login',
+      }),
+    )
+    await render()
+    expect(installationNavigation.redirect).toHaveBeenCalledWith('http://127.0.0.1:50690/login')
+    expect(fetcher.mock.calls.every(([url]) => String(url) === '/auth/storage-entry')).toBe(true)
+  })
+
   it('opens storage setup directly when the dedicated OP listener supplies local installation authority', async () => {
     useAuthStore.setState({ isAuthenticated: false })
     fetcher.mockImplementation(async (url) =>
@@ -284,6 +306,85 @@ describe('whole-site storage boundary', () => {
       ...overrides,
     })
   }
+
+  it('does not call a later outage a restart after Save was definitively refused', async () => {
+    useAuthStore.setState({ isAuthenticated: false })
+    let disconnected = false
+    fetcher.mockImplementation(async (url, init) => {
+      if (disconnected) throw new TypeError('unrelated outage')
+      if (String(url) === '/auth/storage-entry')
+        return Response.json({
+          mode: 'OP',
+          management: true,
+          entry: 'SETUP_REQUIRED',
+          automaticAuthorization: true,
+        })
+      if (String(url) === '/api/storage/test')
+        return Response.json({
+          layer: JSON.parse(String(init?.body)).layer,
+          testStamp: 'proof',
+          expiresAt: new Date(Date.now() + 600000).toISOString(),
+          checks: [],
+        })
+      if (String(url) === '/api/storage/setup/commit')
+        return Response.json({ code: 'control.storage-test-failed' }, { status: 400 })
+      return Response.json(
+        state({
+          setupPhase: 'LOCAL_SETUP',
+          businessPhase: 'NOT_CONFIGURED',
+          bindingVersion: 0,
+          authGeneration: 0,
+          allowedActions: ['storage.test', 'storage.setup.commit'],
+        }),
+      )
+    })
+    await render()
+    await input(container.querySelector('input')!, 'mongodb://localhost/')
+    await click('Test connection')
+    await click('Save storage settings')
+    disconnected = true
+    await click('Refresh status')
+    expect(container.textContent).not.toContain(
+      'Restarting the service. Reconnecting automatically',
+    )
+    expect(container.querySelector('[role="alert"]')).not.toBeNull()
+  })
+
+  it('keeps OP restart milestones spinning and retries reads without showing a transient disconnect', async () => {
+    vi.useFakeTimers()
+    useAuthStore.setState({ isAuthenticated: false })
+    let disconnected = false
+    fetcher.mockImplementation(async () => {
+      if (disconnected) throw new TypeError('connection closed during restart')
+      return Response.json({
+        mode: 'OP',
+        management: true,
+        entry: 'UNAVAILABLE',
+        initializationProgress: initializing().initializationProgress,
+      })
+    })
+    await render()
+    disconnected = true
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2100)
+    })
+    await settle()
+    expect(container.textContent).toContain('Restarting the service. Reconnecting automatically')
+    expect(container.textContent).toContain('1 of 4 steps completed')
+    expect(container.textContent).not.toContain('The server response could not be confirmed')
+    expect(container.querySelector('.animate-spin')).not.toBeNull()
+    const before = fetcher.mock.calls.length
+    disconnected = false
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2100)
+    })
+    await settle()
+    expect(fetcher.mock.calls.length).toBeGreaterThan(before)
+    expect(container.textContent).not.toContain(
+      'Restarting the service. Reconnecting automatically',
+    )
+    expect(fetcher.mock.calls.every(([url]) => String(url) === '/auth/storage-entry')).toBe(true)
+  })
 
   it('restores OP restart milestones without an installation secret or protected status read', async () => {
     useAuthStore.setState({ isAuthenticated: false })
