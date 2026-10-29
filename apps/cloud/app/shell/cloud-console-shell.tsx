@@ -1,7 +1,17 @@
 import type { ReactNode } from 'react'
 
 import { Link, useNavigate } from '@tanstack/react-router'
-import { BellRing, ChevronRight, CreditCard, Home, Server, Settings } from 'lucide-react'
+import Badge from '@tapstate-web/ui/badge'
+import {
+  BellRing,
+  Building2,
+  ChevronRight,
+  CreditCard,
+  Home,
+  LifeBuoy,
+  Server,
+  Settings,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import type { Cluster, Organization } from '../service/cloud-api'
@@ -22,6 +32,7 @@ const navigation = [
   { label: 'Clusters', path: '/clusters', icon: Server, exact: false },
   { label: 'Alerts', path: '/alerts', icon: BellRing, exact: false },
   { label: 'Plans & billing', path: '/billing', icon: CreditCard, exact: false },
+  { label: 'Support', path: '/support', icon: LifeBuoy, exact: false },
   { label: 'Settings', path: '/settings', icon: Settings, exact: false },
 ] as const
 
@@ -72,26 +83,52 @@ export function CloudConsoleShell({
       <aside className="flex h-full w-[240px] shrink-0 flex-col px-2 py-3 text-neutral-800 dark:text-neutral-200">
         <div className="mb-3 px-2 py-1">
           <Link
-            className="flex items-center gap-2.5 rounded-lg transition-opacity hover:opacity-85"
+            className="inline-flex items-center gap-2 rounded-lg transition-opacity hover:opacity-85"
             search={{ organizationId: currentOrganization?.id }}
             to="/"
           >
-            <img alt="Tapstate" className="h-6 w-6 shrink-0 dark:hidden" src="/tapstate-mark.svg" />
             <img
               alt="Tapstate"
-              className="hidden h-6 w-6 shrink-0 dark:block"
-              src="/tapstate-mark-light.svg"
+              className="w-[120px] shrink-0 dark:hidden"
+              src="/tapstate-lockup-light.svg"
             />
-            <span className="text-sm font-semibold tracking-tight text-neutral-900 dark:text-white">
-              Tapstate Cloud
-            </span>
+            <img
+              alt="Tapstate"
+              className="hidden w-[120px] shrink-0 dark:block"
+              src="/tapstate-lockup-dark.svg"
+            />
+            <Badge
+              as="span"
+              uppercase={false}
+              className="org-glass-tag rounded-lg border-transparent"
+            >
+              <span>{t('common.organizationBadge')}</span>
+            </Badge>
           </Link>
+        </div>
+
+        <div
+          className="mx-1 mb-4 flex min-w-0 items-center gap-1.5 rounded-xl border border-white bg-[#fcfcfd] p-1.5 pr-3 shadow-[0_1px_2px_0_rgb(16_24_40_/_5%)] dark:border-white/[0.03] dark:bg-[#222225]"
+          aria-label={`${t('common.organization')}: ${currentOrganization?.name ?? t('events.organizationFallback')}`}
+        >
+          <span
+            className="grid size-6 shrink-0 place-items-center rounded-lg bg-slate-500/[0.08] text-neutral-500 dark:text-neutral-400"
+            aria-hidden="true"
+          >
+            <Building2 className="size-4" />
+          </span>
+          <span
+            className="min-w-0 truncate text-[13px] font-semibold text-neutral-900 dark:text-neutral-100"
+            title={currentOrganization?.name}
+          >
+            {currentOrganization?.name ?? t('events.organizationFallback')}
+          </span>
         </div>
 
         <div className="flex-1 space-y-1 overflow-y-auto px-1">
           {visibleNavigation.map(({ exact, icon: Icon, label, path }) => (
             <Link
-              activeOptions={{ exact }}
+              activeOptions={{ exact, includeSearch: false }}
               activeProps={{
                 className:
                   'bg-white font-medium text-neutral-900 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_1px_rgba(0,0,0,0.03)] hover:bg-white dark:bg-[#25272a] dark:text-white dark:hover:bg-[#25272a]',
@@ -107,17 +144,19 @@ export function CloudConsoleShell({
             >
               <Icon className="h-4 w-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
               <span className="truncate">
-                {path === '/alerts'
-                  ? t('sections.alerts.title')
-                  : path === '/settings'
-                    ? t('sections.settings.title')
-                    : path === '/billing'
-                      ? t('sections.billing.title')
-                      : path === '/clusters'
-                        ? t('sections.clusters.title')
-                        : path === '/'
-                          ? t('sections.overview.title')
-                          : label}
+                {path === '/support'
+                  ? t('support.nav')
+                  : path === '/alerts'
+                    ? t('sections.alerts.title')
+                    : path === '/settings'
+                      ? t('sections.settings.title')
+                      : path === '/billing'
+                        ? t('sections.billing.title')
+                        : path === '/clusters'
+                          ? t('sections.clusters.title')
+                          : path === '/'
+                            ? t('sections.overview.title')
+                            : label}
               </span>
             </Link>
           ))}

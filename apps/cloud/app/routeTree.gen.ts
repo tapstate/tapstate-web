@@ -21,6 +21,7 @@ import { Route as ConsoleDeliveriesRouteImport } from './routes/_console.deliver
 import { Route as ConsoleEventsRouteImport } from './routes/_console.events'
 import { Route as ConsoleOrganizationsRouteImport } from './routes/_console.organizations'
 import { Route as ConsoleSettingsRouteImport } from './routes/_console.settings'
+import { Route as ConsoleSupportRouteImport } from './routes/_console.support'
 import { Route as ConsoleCheckoutCancelRouteImport } from './routes/_console.checkout.cancel'
 import { Route as ConsoleCheckoutSuccessRouteImport } from './routes/_console.checkout.success'
 
@@ -83,6 +84,11 @@ const ConsoleSettingsRoute = ConsoleSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => ConsoleRoute,
 } as any)
+const ConsoleSupportRoute = ConsoleSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => ConsoleRoute,
+} as any)
 const ConsoleCheckoutCancelRoute = ConsoleCheckoutCancelRouteImport.update({
   id: '/checkout/cancel',
   path: '/checkout/cancel',
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/events': typeof ConsoleEventsRoute
   '/organizations': typeof ConsoleOrganizationsRoute
   '/settings': typeof ConsoleSettingsRoute
+  '/support': typeof ConsoleSupportRoute
   '/checkout/cancel': typeof ConsoleCheckoutCancelRoute
   '/checkout/success': typeof ConsoleCheckoutSuccessRoute
 }
@@ -120,6 +127,7 @@ export interface FileRoutesByTo {
   '/events': typeof ConsoleEventsRoute
   '/organizations': typeof ConsoleOrganizationsRoute
   '/settings': typeof ConsoleSettingsRoute
+  '/support': typeof ConsoleSupportRoute
   '/': typeof ConsoleIndexRoute
   '/checkout/cancel': typeof ConsoleCheckoutCancelRoute
   '/checkout/success': typeof ConsoleCheckoutSuccessRoute
@@ -137,6 +145,7 @@ export interface FileRoutesById {
   '/_console/events': typeof ConsoleEventsRoute
   '/_console/organizations': typeof ConsoleOrganizationsRoute
   '/_console/settings': typeof ConsoleSettingsRoute
+  '/_console/support': typeof ConsoleSupportRoute
   '/_console/': typeof ConsoleIndexRoute
   '/_console/checkout/cancel': typeof ConsoleCheckoutCancelRoute
   '/_console/checkout/success': typeof ConsoleCheckoutSuccessRoute
@@ -155,6 +164,7 @@ export interface FileRouteTypes {
     | '/events'
     | '/organizations'
     | '/settings'
+    | '/support'
     | '/checkout/cancel'
     | '/checkout/success'
   fileRoutesByTo: FileRoutesByTo
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/events'
     | '/organizations'
     | '/settings'
+    | '/support'
     | '/'
     | '/checkout/cancel'
     | '/checkout/success'
@@ -185,6 +196,7 @@ export interface FileRouteTypes {
     | '/_console/events'
     | '/_console/organizations'
     | '/_console/settings'
+    | '/_console/support'
     | '/_console/'
     | '/_console/checkout/cancel'
     | '/_console/checkout/success'
@@ -282,6 +294,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleSettingsRouteImport
       parentRoute: typeof ConsoleRoute
     }
+    '/_console/support': {
+      id: '/_console/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof ConsoleSupportRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
     '/_console/checkout/cancel': {
       id: '/_console/checkout/cancel'
       path: '/checkout/cancel'
@@ -308,6 +327,7 @@ interface ConsoleRouteChildren {
   ConsoleEventsRoute: typeof ConsoleEventsRoute
   ConsoleOrganizationsRoute: typeof ConsoleOrganizationsRoute
   ConsoleSettingsRoute: typeof ConsoleSettingsRoute
+  ConsoleSupportRoute: typeof ConsoleSupportRoute
   ConsoleIndexRoute: typeof ConsoleIndexRoute
   ConsoleCheckoutCancelRoute: typeof ConsoleCheckoutCancelRoute
   ConsoleCheckoutSuccessRoute: typeof ConsoleCheckoutSuccessRoute
@@ -322,6 +342,7 @@ const ConsoleRouteChildren: ConsoleRouteChildren = {
   ConsoleEventsRoute: ConsoleEventsRoute,
   ConsoleOrganizationsRoute: ConsoleOrganizationsRoute,
   ConsoleSettingsRoute: ConsoleSettingsRoute,
+  ConsoleSupportRoute: ConsoleSupportRoute,
   ConsoleIndexRoute: ConsoleIndexRoute,
   ConsoleCheckoutCancelRoute: ConsoleCheckoutCancelRoute,
   ConsoleCheckoutSuccessRoute: ConsoleCheckoutSuccessRoute,
