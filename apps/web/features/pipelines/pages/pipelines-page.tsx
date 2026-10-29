@@ -15,6 +15,7 @@ import {
   listPipelineArtifacts,
   listPipelines,
   type PipelineCatalogItem,
+  type PipelineClientError,
   type PipelineView,
 } from '@/service/pipelines/pipeline-client'
 import { listViews } from '@/service/view-client'
@@ -23,6 +24,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { PipelineCreationDialog } from '../components/create/pipeline-creation-dialog'
 import {
   PipelineLifecycleMenu,
+  PipelineDeletionCleanupNotice,
   type PipelineLifecycleAction,
 } from '../components/pipeline-lifecycle-menu'
 import { PipelineMutationFeedback } from '../components/pipeline-mutation-feedback'
@@ -50,6 +52,11 @@ export function PipelinesPage() {
     pipelineId: string
     action: PipelineLifecycleAction
     message?: string
+  } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<PipelineCatalogItem | null>(null)
+  const [deleteCleanup, setDeleteCleanup] = useState<{
+    pipelineId: string
+    error: PipelineClientError
   } | null>(null)
   const starter = useStartPipeline({ apiFetch })
   const pipelinesQuery = useQuery({
@@ -218,6 +225,8 @@ export function PipelinesPage() {
                 lagByPipeline={lagByPipeline}
                 apiFetch={apiFetch}
                 startPipeline={starter.startPipeline}
+                onRequestDelete={setDeleteTarget}
+                onDeleteIncomplete={(pipelineId, error) => setDeleteCleanup({ pipelineId, error })}
                 onMutationError={(pipelineId, action, error) => {
                   const message = serverErrorMessage(error)
                   setLifecycleFeedback({ pipelineId, action, message })
@@ -234,6 +243,26 @@ export function PipelinesPage() {
           action={lifecycleFeedback.action}
           message={lifecycleFeedback.message}
           onDismiss={() => setLifecycleFeedback(null)}
+        />
+      )}
+      {deleteTarget && (
+        <PipelineLifecycleMenu
+          presentation="dialog-only"
+          pipelineId={deleteTarget.id}
+          status={
+            (pipelines.find((item) => item.id === deleteTarget.id) ?? deleteTarget).status.state
+          }
+          contentHash={deleteTarget.contentHash ?? null}
+          draftRevision={deleteTarget.revision ?? null}
+          apiFetch={apiFetch}
+          onDeleteDialogClose={() => setDeleteTarget(null)}
+          onDeleteIncomplete={(error) => setDeleteCleanup({ pipelineId: deleteTarget.id, error })}
+        />
+      )}
+      {deleteCleanup && (
+        <PipelineDeletionCleanupNotice
+          {...deleteCleanup}
+          onDismiss={() => setDeleteCleanup(null)}
         />
       )}
       <StartChecksDialog {...starter.dialog} />
@@ -326,14 +355,18 @@ function PipelineTable({
   startPipeline,
   onMutationError,
   onMutationStart,
+  onDeleteIncomplete,
+  onRequestDelete,
 }: {
   pipelines: PipelineCatalogItem[]
+  onRequestDelete: (pipeline: PipelineCatalogItem) => void
   artifactsById: Map<string, PipelineView>
   lagByPipeline: Map<string, number>
   apiFetch: ApiFetcher
   startPipeline: PipelineStarter
   onMutationError: (pipelineId: string, action: PipelineLifecycleAction, error?: unknown) => void
   onMutationStart: () => void
+  onDeleteIncomplete: (pipelineId: string, error: PipelineClientError) => void
 }) {
   const { t } = useTranslation()
 
@@ -372,6 +405,8 @@ function PipelineTable({
               apiFetch={apiFetch}
               startPipeline={startPipeline}
               onMutationStart={onMutationStart}
+              onDeleteIncomplete={onDeleteIncomplete}
+              onRequestDelete={onRequestDelete}
               onMutationError={onMutationError}
             />
           ))}
@@ -389,14 +424,18 @@ function PipelineTableRow({
   startPipeline,
   onMutationError,
   onMutationStart,
+  onDeleteIncomplete,
+  onRequestDelete,
 }: {
   pipeline: PipelineCatalogItem
+  onRequestDelete: (pipeline: PipelineCatalogItem) => void
   artifact?: PipelineView
   lagSeconds?: number
   apiFetch: ApiFetcher
   startPipeline: PipelineStarter
   onMutationError: (pipelineId: string, action: PipelineLifecycleAction, error?: unknown) => void
   onMutationStart: () => void
+  onDeleteIncomplete: (pipelineId: string, error: PipelineClientError) => void
 }) {
   const { i18n, t } = useTranslation()
   const sources = artifact?.sources?.map((source) => source.id).join(', ')
@@ -476,11 +515,14 @@ function PipelineTableRow({
       <td className="relative w-20 px-4 py-3">
         <PipelineLifecycleMenu
           pipelineId={pipeline.id}
+          onRequestDelete={() => onRequestDelete(pipeline)}
           status={pipeline.status.state}
           contentHash={pipeline.contentHash ?? null}
+          draftRevision={pipeline.revision ?? null}
           apiFetch={apiFetch}
           startPipeline={startPipeline}
           onMutationStart={onMutationStart}
+          onDeleteIncomplete={(error) => onDeleteIncomplete(pipeline.id, error)}
           onMutationError={(action, error) => onMutationError(pipeline.id, action, error)}
         />
       </td>

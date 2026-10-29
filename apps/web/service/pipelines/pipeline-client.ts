@@ -1171,6 +1171,56 @@ export async function updatePipelineDraft(
   })
 }
 
+/** Deletes the applied Pipeline and the authoring revision shown in the catalog. */
+export async function deletePipeline(
+  id: string,
+  contentHash: string,
+  draftRevision: number | null,
+  fetcher: ApiFetcher = fetch,
+): Promise<void> {
+  if (
+    !/^[0-9a-f]{64}$/.test(contentHash) ||
+    (draftRevision !== null && (!Number.isSafeInteger(draftRevision) || draftRevision < 1))
+  ) {
+    throw new PipelineClientError(
+      'protocol',
+      'Pipeline deletion requires current version preconditions.',
+    )
+  }
+  let response: Response
+  try {
+    response = await fetcher(`/api/pipelines/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: {
+        'If-Match': `"${contentHash}"`,
+        'If-Draft-Match': draftRevision === null ? '"none"' : `"${draftRevision}"`,
+      },
+    })
+  } catch (error) {
+    throw new PipelineClientError(
+      'network',
+      error instanceof Error ? error.message : 'The request did not reach Tapstate.',
+    )
+  }
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null)
+    throw new PipelineClientError(
+      'server',
+      responseMessage(payload, 'Tapstate refused the Pipeline deletion.'),
+      response.status,
+      isRecord(payload) && typeof payload.code === 'string' ? payload.code : null,
+      isRecord(payload) && isRecord(payload.params) ? payload.params : {},
+    )
+  }
+  if (response.status !== 204) {
+    throw new PipelineClientError(
+      'protocol',
+      'Tapstate returned an invalid Pipeline deletion response.',
+      response.status,
+    )
+  }
+}
+
 export async function deletePipelineDraft(
   id: string,
   etag: string,
