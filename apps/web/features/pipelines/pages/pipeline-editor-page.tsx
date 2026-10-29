@@ -118,11 +118,12 @@ import { PipelineMonitoringPage } from '../monitoring/pipeline-monitoring-page'
 import { PipelineStartNotices } from '../start-checks/pipeline-start-notice'
 import { StartChecksDialog } from '../start-checks/start-checks-dialog'
 import { useStartPipeline } from '../start-checks/use-start-pipeline'
+import { ValidationPage } from '../validation/validation-page'
 import { PipelineWorkflowWithInnerContext } from '../workflow-app'
 import { PipelineWorkflow } from '../workflow-app/components/pipeline-workflow'
 import { WizardBuilder } from './wizard-builder'
 
-export type PipelineWorkspaceSection = 'orchestrate' | 'logs' | 'monitoring'
+export type PipelineWorkspaceSection = 'orchestrate' | 'logs' | 'monitoring' | 'validation'
 
 function isPipelineReadOnly(status?: PipelineCatalogState) {
   return (
@@ -289,6 +290,7 @@ const workspaceNavigation = [
   },
   { section: 'logs', labelKey: 'pipelines.workspace.navigation.logs', icon: ScrollText },
   { section: 'monitoring', labelKey: 'pipelines.workspace.navigation.monitoring', icon: Gauge },
+  { section: 'validation', labelKey: 'dataValidation.title', icon: Activity },
 ] as const
 
 function WorkspaceNavLink({
@@ -319,6 +321,12 @@ function WorkspaceNavLink({
       </Link>
     )
   }
+  if (section === 'validation')
+    return (
+      <Link to="/pipelines/$pipelineId/edit/validation" params={{ pipelineId }} {...commonProps}>
+        {children}
+      </Link>
+    )
   if (section === 'monitoring') {
     return (
       <Link to="/pipelines/$pipelineId/edit/monitoring" params={{ pipelineId }} {...commonProps}>
@@ -2026,12 +2034,13 @@ export function PipelineWorkspacePage({
         <WorkspacePageFrame
           pipelineId={pipelineId}
           section={section}
-          showHeading={section !== 'logs'}
+          showHeading={section !== 'logs' && section !== 'validation'}
         >
           {section === 'monitoring' && (
             <PipelineMonitoringPage pipelineId={pipelineId} hasArtifact={hasArtifact} />
           )}
           {section === 'logs' && <PipelineLogsPage pipelineId={pipelineId} />}
+          {section === 'validation' && <ValidationPage pipelineId={pipelineId} />}
         </WorkspacePageFrame>
       )}
     </main>

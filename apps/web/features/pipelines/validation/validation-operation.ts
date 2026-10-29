@@ -1,0 +1,92 @@
+import type {
+  ValidationOperation,
+  ValidationReference,
+  ValidationTask,
+} from '@/service/pipelines/validation-client'
+
+export interface ValidationControlSelection {
+  /** Read/stop selector only. Fresh starts use a new command and the evaluated definition. */
+  readonly operation: ValidationOperation
+  readonly source: 'DURABLE_PERMISSION' | 'ENTRY_OBSERVATION'
+  readonly knownRun: string
+  readonly report: ValidationReference | null
+}
+
+export function validationReportReference(task: ValidationTask): ValidationReference | null {
+  const permission = task.permission
+  if (!permission || permission.taskGeneration !== task.taskGeneration || !permission.run.trim())
+    return null
+  return {
+    pipeline: task.pipelineId,
+    task: task.taskId,
+    generation: permission.taskGeneration,
+    sequence: permission.sequence,
+    run: permission.run,
+  }
+}
+
+/**
+ * The current descriptor carries an exact durable permission selector; it does not name or grant the
+ * execution owner. The backend resolves that owner from the stored Start before entry-context routing.
+ * Before permission exists, only an exact recorded entry observation can supply missing coordinates.
+ */
+export function validationControlSelection(
+  task: ValidationTask,
+): ValidationControlSelection | null {
+  const permission = task.permission,
+    descriptor = task.context,
+    observation = task.scheduleObservation
+  if (!descriptor || (permission && permission.taskGeneration !== task.taskGeneration)) return null
+  const entry =
+    observation &&
+    observation.command &&
+    observation.sequence &&
+    observation.run &&
+    ['START_REQUESTED', 'UNKNOWN', 'FAILED'].includes(observation.state)
+      ? observation
+      : null
+  const newerEntry =
+    entry &&
+    (!permission ||
+      (permission.phase === 'CLOSED' &&
+        BigInt(entry.sequence!) > BigInt(permission.sequence) &&
+        entry.command !== permission.command &&
+        entry.run !== permission.run))
+  if (entry && newerEntry) {
+    return {
+      source: 'ENTRY_OBSERVATION',
+      knownRun: entry.run!,
+      report: null,
+      operation: {
+        context: {
+          cluster: descriptor.cluster,
+          node: entry.node,
+          boot: entry.boot,
+          member: entry.member,
+          incarnation: entry.context,
+        },
+        pipeline: task.pipelineId,
+        task: task.taskId,
+        taskGeneration: task.taskGeneration,
+        revision: task.revision,
+        sequence: entry.sequence!,
+        command: entry.command!,
+      },
+    }
+  }
+  if (!permission || !permission.run.trim()) return null
+  return {
+    source: 'DURABLE_PERMISSION',
+    knownRun: permission.run,
+    report: validationReportReference(task),
+    operation: {
+      context: { ...descriptor },
+      pipeline: task.pipelineId,
+      task: task.taskId,
+      taskGeneration: permission.taskGeneration,
+      revision: permission.revision,
+      sequence: permission.sequence,
+      command: permission.command,
+    },
+  }
+}

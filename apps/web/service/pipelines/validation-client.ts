@@ -165,6 +165,7 @@ const task = shape({
   nextStartSequence: positive,
   closed: flag,
   method,
+  comparisonFingerprint: hash,
   historyLimit,
   schedule: nullable(schedule),
   scheduleEnabled: flag,
@@ -208,6 +209,7 @@ const evaluationShape = shape({
   configurationRevision: counter,
   mappingRevision: nullable(positive),
   fingerprint: nullable(hash),
+  comparisonFingerprint: nullable(hash),
   mappings: array(shape({ id: text, source: side, target: side })),
   premise,
   conclusionScope: observationScope,
@@ -218,7 +220,8 @@ const evaluation: Check<Decoded<typeof evaluationShape>> = (
   budget,
 ): value is Decoded<typeof evaluationShape> =>
   evaluationShape(value, budget) &&
-  (value.mappingRevision === null) === (value.fingerprint === null)
+  (value.mappingRevision === null) === (value.fingerprint === null) &&
+  (value.mappingRevision === null) === (value.comparisonFingerprint === null)
 export type ValidationEvaluation = Decoded<typeof evaluation>
 const saved = shape({
   outcome: oneOf('APPLIED', 'DUPLICATE'),
@@ -714,10 +717,15 @@ export function createValidationClient(fetcher: ApiFetcher) {
       signal?: AbortSignal,
     ): Promise<ValidationDisabled> =>
       post<ValidationDisabled>('schedule-disable', input, disabled, signal, disableRefused),
-    previewSchedule: (
+    async previewSchedule(
       input: { schedule: ValidationSchedule; inputRevision: string },
       signal?: AbortSignal,
-    ) => post('schedule-preview', input, preview, signal),
+    ) {
+      const result = await post('schedule-preview', input, preview, signal)
+      if (result.inputRevision !== input.inputRevision || result.zoneId !== input.schedule.zoneId)
+        return protocol()
+      return result
+    },
     async task(
       pipeline: string,
       taskId: string,

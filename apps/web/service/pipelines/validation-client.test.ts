@@ -72,6 +72,7 @@ const evaluated = {
   configurationRevision: big,
   mappingRevision: big,
   fingerprint,
+  comparisonFingerprint: fingerprint,
   mappings: [
     {
       id: 'orders',
@@ -91,6 +92,7 @@ const task = {
   nextStartSequence: '9007199254740995',
   closed: false,
   method: 'COUNT',
+  comparisonFingerprint: fingerprint,
   historyLimit: 10,
   schedule,
   scheduleEnabled: false,
@@ -251,6 +253,7 @@ describe('direct full validation client', () => {
         method,
         mappingRevision: null,
         fingerprint: null,
+        comparisonFingerprint: null,
         mappings: [
           {
             id: 'orders',
@@ -680,6 +683,27 @@ describe('direct full validation client', () => {
       connectorId: 'mysql',
       discoveredAt: 100,
       tables: [{ name: 'orders' }],
+    })
+  })
+  it('refuses a schedule preview for an older input revision or another explicit zone', async () => {
+    const base = {
+      base: boundary.startedAt,
+      inputRevision: '1',
+      zoneId: schedule.zoneId,
+      rulesVersion: 'validation-unix-v1',
+      occurrences: Array.from({ length: 5 }, () => ({
+        at: boundary.startedAt,
+        local: '2026-10-30T08:00:00',
+        offset: '+08:00',
+        weekday: 'FRIDAY',
+      })),
+    }
+    const f = fixture([json(base), json({ ...base, inputRevision: '2', zoneId: 'UTC' })])
+    await expect(f.client.previewSchedule({ schedule, inputRevision: '2' })).rejects.toMatchObject({
+      kind: 'protocol',
+    })
+    await expect(f.client.previewSchedule({ schedule, inputRevision: '2' })).rejects.toMatchObject({
+      kind: 'protocol',
     })
   })
 })
