@@ -393,7 +393,12 @@ function SettingsContent() {
     }
   }
   function create() {
-    const type = catalog.data?.types.find((t) => t.inputAvailable) ?? catalog.data?.types[0]
+    const stateful = catalog.data?.types.filter((t) => !t.kind || t.kind === 'STATEFUL') ?? []
+    const type = stateful.find((t) => t.inputAvailable) ?? stateful[0]
+    if (kind === 'RULE' && !type) {
+      setError(true)
+      return
+    }
     const next: AlertForm = {
       kind,
       id: crypto.randomUUID(),
@@ -682,12 +687,14 @@ function SettingsContent() {
                             })
                           }}
                         >
-                          {catalog.data?.types.map((v) => (
-                            <option key={v.id} value={v.id}>
-                              {t(`alerts.types.${v.id}`, { defaultValue: v.id })}
-                              {!v.inputAvailable ? ` · ${t('alerts.inputUnavailable')}` : ''}
-                            </option>
-                          ))}
+                          {catalog.data?.types
+                            .filter((v) => !v.kind || v.kind === 'STATEFUL')
+                            .map((v) => (
+                              <option key={v.id} value={v.id}>
+                                {t(`alerts.types.${v.id}`, { defaultValue: v.id })}
+                                {!v.inputAvailable ? ` · ${t('alerts.inputUnavailable')}` : ''}
+                              </option>
+                            ))}
                         </AlertSelect>
                       </Field>
                       <div className="alert-note alert-note--info">

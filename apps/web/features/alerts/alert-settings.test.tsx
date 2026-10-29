@@ -633,3 +633,37 @@ it('renders a statically described HTTPS JSON channel and saves its public field
   expect(sent.endpoint).toBe('https://notify.example.test/private-hook')
   expect(requests().filter((r) => r.path.endsWith('/test'))).toHaveLength(0)
 })
+
+it('does not offer one-shot event descriptors as stateful rules', async () => {
+  const original = fetcher.getMockImplementation()!
+  fetcher.mockImplementation(async (url, init) =>
+    String(url).endsWith('/catalog')
+      ? Response.json({
+          deployment: 'ON_PREM',
+          types: [
+            {
+              id: 'test.one-shot',
+              version: 1,
+              kind: 'EVENT',
+              resourceKinds: ['pipeline'],
+              severity: 'WARNING',
+              enabledByDefault: false,
+              inputAvailable: true,
+              parameters: [],
+            },
+            { ...types[0], kind: 'STATEFUL' },
+          ],
+        })
+      : original(url, init),
+  )
+  await render()
+  await click('Create')
+  const selector = [...container.querySelectorAll('label')]
+    .find((l) => l.querySelector('span')?.textContent === 'Alert type')!
+    .querySelector('button')!
+  await act(async () => selector.click())
+  await settle()
+  const options = [...document.querySelectorAll('[role="option"]')].map((o) => o.textContent)
+  expect(options.join(' ')).not.toContain('test.one-shot')
+  expect(options.length).toBe(1)
+})

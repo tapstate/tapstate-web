@@ -58,6 +58,7 @@ export interface AlertPage<T> {
   refreshedAt?: string
 }
 export interface AlertType {
+  kind?: 'STATEFUL' | 'EVENT'
   id: string
   version: number
   resourceKinds: string[]

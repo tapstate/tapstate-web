@@ -73,17 +73,15 @@ describe('stateless installation navigation reconnect', () => {
     vm.runInNewContext(script, {
       Date,
       document: { getElementById: () => ({ hidden: true, textContent: '', onclick: undefined }) },
-      fetch: vi
-        .fn()
-        .mockResolvedValue({
-          ok: true,
-          json: async () => ({
-            mode: 'OP',
-            management: true,
-            entry: 'UNAVAILABLE',
-            initializationProgress: { state: 'RUNNING' },
-          }),
+      fetch: vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          mode: 'OP',
+          management: true,
+          entry: 'UNAVAILABLE',
+          initializationProgress: { state: 'RUNNING' },
         }),
+      }),
       AbortSignal,
       location: { replace: redirect },
       setTimeout: vi.fn(),
