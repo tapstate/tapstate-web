@@ -71,7 +71,11 @@ function StatusBadge({ status, category }: { status: string; category: string })
   return (
     <span
       className={`inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-xs font-medium ${tone}`}
-      title={normalized ? (t(`support.status.${normalized}`, { defaultValue: category }) as string) : undefined}
+      title={
+        normalized
+          ? (t(`support.status.${normalized}`, { defaultValue: category }) as string)
+          : undefined
+      }
     >
       {label}
     </span>
