@@ -72,7 +72,7 @@ function toForm(policy: AlertPolicy): FormState {
   }
 }
 
-export function AlertPolicyPage() {
+export function AlertPolicyPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useTranslation()
   const { activeOrganization } = useCloudAppState()
   const organizationId = activeOrganization?.id
@@ -225,27 +225,45 @@ export function AlertPolicyPage() {
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-y-auto">
-      <header className="flex shrink-0 items-center justify-between border-b border-black/[0.05] px-6 py-4 dark:border-white/[0.05]">
-        <div>
-          <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
-            <BellRing className="h-5 w-5 text-neutral-400" />
-            {t('events.tabPolicies')}
-          </h1>
-          <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+      {!embedded ? (
+        <header className="flex shrink-0 items-center justify-between border-b border-black/[0.05] px-6 py-4 dark:border-white/[0.05]">
+          <div>
+            <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
+              <BellRing className="h-5 w-5 text-neutral-400" />
+              {t('events.tabPolicies')}
+            </h1>
+            <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+              {t('events.policySubtitle', {
+                organization: activeOrganization?.name ?? t('events.organizationFallback'),
+              })}
+            </p>
+          </div>
+          <button
+            className="flex items-center gap-1.5 rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs text-white transition-colors hover:bg-neutral-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+            onClick={startCreate}
+            type="button"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {t('events.actions.create')}
+          </button>
+        </header>
+      ) : (
+        <div className="flex shrink-0 items-center justify-between px-6 pt-4 pb-1">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">
             {t('events.policySubtitle', {
               organization: activeOrganization?.name ?? t('events.organizationFallback'),
             })}
           </p>
+          <button
+            className="flex items-center gap-1.5 rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs text-white transition-colors hover:bg-neutral-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+            onClick={startCreate}
+            type="button"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {t('events.actions.create')}
+          </button>
         </div>
-        <button
-          className="flex items-center gap-1.5 rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs text-white transition-colors hover:bg-neutral-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
-          onClick={startCreate}
-          type="button"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          {t('events.actions.create')}
-        </button>
-      </header>
+      )}
 
       <div className="grid gap-4 p-6 lg:grid-cols-[1fr_380px]">
         <section className="space-y-2">

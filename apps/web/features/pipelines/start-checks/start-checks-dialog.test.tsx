@@ -143,6 +143,88 @@ describe('Start-check client fixture', () => {
     expect(button('Start')).toBeUndefined()
   })
 
+  it('keeps completed blocking check diagnostics behind a closed details disclosure', async () => {
+    const finding = {
+      key: 'unwind-target-identity/views/lead/lead/orders',
+      check: 'unwind-target-identity',
+      subject: {
+        kind: 'TARGET',
+        id: 'views/lead/lead/orders',
+        element: 'lead',
+        label: 'lead on views from orders',
+      },
+      behavior: 'BLOCK',
+      evaluation: 'COMPLETE',
+      code: 'start-check.target-identity-refused',
+      params: {
+        target: 'lead',
+        stream: 'orders',
+        connection: 'views',
+        field: '_id',
+        preserved: 'original_id',
+        key: '_id, _index',
+        reason: 'target-key-conflict',
+        identityStatus: 'refused',
+      },
+      message:
+        "Target 'lead' on 'views' cannot safely preserve '_id' as 'original_id': target-key-conflict.",
+      actions: [],
+    }
+    const report: StartCheckReport = {
+      ...answerable,
+      outcome: 'BLOCKED',
+      plan: [],
+      findings: [finding],
+    }
+    await renderDialog(report)
+
+    const content = dialog()!
+    expect(content.getAttribute('role')).toBe('alertdialog')
+    expect(content.textContent).toContain(finding.message)
+    expect(button('Close')).toBeDefined()
+    expect(button('Start')).toBeUndefined()
+
+    const details = content.querySelector('details')
+    expect(
+      details,
+      'Completed blocking checks must also offer collapsed diagnostic details',
+    ).not.toBeNull()
+    expect(details?.hasAttribute('open')).toBe(false)
+    expect(details?.textContent).toContain(finding.check)
+    expect(details?.textContent).toContain(finding.evaluation)
+
+    const primaryContent = content.cloneNode(true) as HTMLElement
+    primaryContent.querySelectorAll('details').forEach((disclosure) => disclosure.remove())
+    expect(primaryContent.textContent).toContain(finding.message)
+    expect(primaryContent.textContent).not.toContain(finding.check)
+    expect(primaryContent.textContent).not.toContain(finding.evaluation)
+  })
+
+  it('keeps a confirmed blocker distinct from an unavailable warning', async () => {
+    const blocker = {
+      ...answerable.findings[0]!,
+      behavior: 'BLOCK',
+      evaluation: 'COMPLETE',
+      message: 'The target identity conflicts with the configured fields.',
+      actions: [],
+    }
+    const warning = {
+      ...answerable.findings[2]!,
+      behavior: 'WARN',
+      evaluation: 'UNAVAILABLE',
+      message: 'A warning check did not answer during the remaining 714 ms wait.',
+      actions: [],
+    }
+    await renderDialog({ ...answerable, outcome: 'BLOCKED', findings: [blocker, warning] })
+    expect(dialog()?.textContent).toContain('This pipeline cannot start yet.')
+    expect(dialog()?.textContent).toContain(blocker.message)
+    expect(button('Recheck')).toBeDefined()
+    expect(button('Start')).toBeUndefined()
+    const details = dialog()?.querySelector('details')
+    expect(details?.hasAttribute('open')).toBe(false)
+    expect(details?.textContent).toContain(warning.message)
+  })
+
   it('previews what a destructive answer changes and styles it from its flag', async () => {
     await renderDialog(answerable)
 
@@ -205,7 +287,7 @@ describe('Start-check client fixture', () => {
     expect(startDecisions(unknownOutcome, {})).toEqual([])
     await renderDialog(unknownOutcome)
 
-    expect(dialog()?.textContent).toContain('Something stops this start.')
+    expect(dialog()?.textContent).toContain('This pipeline cannot start yet.')
     expect(button('Start')).toBeUndefined()
     expect(button('Close')).toBeDefined()
   })

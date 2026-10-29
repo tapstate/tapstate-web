@@ -84,6 +84,19 @@
     padding: 0 var(--app-shell-sidebar-content-inset) 16px;
   }
 
+  .app-sidebar--cloud {
+    gap: 0;
+  }
+
+  .app-sidebar--cloud .app-sidebar__brand {
+    height: 44px;
+    margin-top: 0;
+  }
+
+  .app-sidebar--cloud .app-sidebar__nav {
+    padding-top: 8px;
+  }
+
   .app-shell {
     --app-shell-gutter: 8px;
     --app-shell-sidebar-content-inset: 8px;
@@ -130,114 +143,101 @@
     padding: 0 var(--app-shell-sidebar-content-inset);
   }
 
-  .app-sidebar__mark {
-    display: flex;
-    width: 20px;
-    height: 20px;
+  .app-sidebar__logo {
+    width: 120px;
+    height: auto;
     flex: none;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .app-sidebar__title {
-    font-size: 13px;
-    font-weight: 650;
-    letter-spacing: 0;
   }
 
   .app-sidebar__cloud-identity {
-    display: grid;
     flex: none;
-    gap: 10px;
-    padding: 0 var(--app-shell-sidebar-content-inset);
+    overflow: hidden;
+    margin: 8px 0;
+    border: 1px solid #fff;
+    border-radius: 12px;
+    background: #fcfcfd;
+    box-shadow: 0 1px 2px 0 rgb(16 24 40 / 5%);
+  }
+
+  .dark .app-sidebar__cloud-identity {
+    border-color: rgb(255 255 255 / 3%);
+    background: #222225;
   }
 
   .app-sidebar__cloud-organization {
     display: flex;
     min-width: 0;
-    height: 32px;
     align-items: center;
-    gap: 10px;
-    border-radius: 8px;
-    padding: 0 4px;
-    margin: 0 -4px;
+    gap: 6px;
+    padding: 6px 12px 6px 6px;
     text-decoration: none;
+    transition:
+      background-color 0.16s ease,
+      color 0.16s ease;
   }
 
-  .app-sidebar__cloud-organization[href]:hover,
-  .app-sidebar__cloud-organization[href]:focus-visible {
-    background: rgb(100 116 139 / 8%);
+  .app-sidebar__cloud-organization[href]:hover {
+    background: rgb(16 24 40 / 5%);
+  }
+
+  .app-sidebar__cloud-organization[href]:hover .app-sidebar__cloud-organization-name,
+  .app-sidebar__cloud-organization[href]:hover .app-sidebar__cloud-organization-arrow {
+    color: var(--brand-primary);
   }
 
   .app-sidebar__cloud-organization[href]:focus-visible {
     outline: 2px solid var(--brand-primary);
-    outline-offset: 2px;
+    outline-offset: -2px;
+    border-radius: 11px 11px 0 0;
   }
 
-  .app-sidebar__cloud-organization--disabled {
-    cursor: default;
-  }
-
-  .app-sidebar__cloud-return-icon {
-    width: 14px;
-    height: 14px;
-    flex: 0 0 auto;
+  .app-sidebar__cloud-organization-arrow {
+    width: 16px;
+    height: 16px;
+    flex: none;
     margin-left: auto;
     color: var(--app-text-muted);
-    opacity: 0;
-  }
-
-  .app-sidebar__cloud-organization[href]:hover .app-sidebar__cloud-return-icon,
-  .app-sidebar__cloud-organization[href]:focus-visible .app-sidebar__cloud-return-icon {
-    opacity: 1;
-  }
-
-  .app-sidebar__cloud-organization[href]:active {
-    transform: translateY(1px);
   }
 
   .app-sidebar__cloud-organization-icon {
     display: grid;
     width: 24px;
     height: 24px;
-    flex: 0 0 auto;
+    flex: none;
     place-items: center;
-    border: 1px solid rgb(100 116 139 / 14%);
-    border-radius: 7px;
-    background: rgb(255 255 255 / 82%);
-    color: var(--brand-primary);
+    border-radius: 8px;
+    background: rgb(100 116 139 / 8%);
+    color: var(--app-text-muted);
   }
 
   .app-sidebar__cloud-organization-name {
     overflow: hidden;
     color: var(--app-text);
     font-size: 13px;
-    font-weight: 650;
+    font-weight: 600;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .app-sidebar__cloud-cluster {
+  .app-sidebar__cloud-details {
     display: flex;
-    min-width: 0;
-    align-items: flex-start;
-    gap: 9px;
-    border: 1px solid rgb(100 116 139 / 13%);
-    border-radius: 10px;
-    padding: 8px 9px;
-    background: rgb(255 255 255 / 54%);
-    position: relative;
-    margin-left: 12px;
+    align-items: center;
+    gap: 6px;
+    border-top: 1px solid rgb(16 24 40 / 4%);
+    padding: 8px 10px 8px 8px;
   }
 
-  .app-sidebar__cloud-cluster::before {
-    position: absolute;
-    top: -11px;
-    left: 11px;
-    width: 1px;
-    height: 10px;
-    background: rgb(100 116 139 / 20%);
-    content: '';
+  .dark .app-sidebar__cloud-details {
+    border-color: rgb(200 206 218 / 8%);
+  }
+
+  .app-sidebar__cloud-cluster {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 0 4px;
   }
 
   .app-sidebar__cloud-cluster-status {
@@ -602,8 +602,7 @@
     }
 
     .app-sidebar__cloud-identity {
-      grid-template-columns: minmax(0, 1fr) minmax(150px, auto);
-      align-items: center;
+      margin: 0;
     }
 
     .app-sidebar__link {

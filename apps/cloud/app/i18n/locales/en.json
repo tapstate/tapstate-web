@@ -1,6 +1,23 @@
 {
-  "notFound": { "message": "This page is not available.", "back": "Back to Overview" },
+  "notFound": {
+    "message": "This page is not available.",
+    "back": "Back to Overview"
+  },
   "app": {
+    "help": {
+      "openMenu": "Help",
+      "documentation": "Documentation",
+      "contactSupport": "Contact support"
+    },
+    "account": {
+      "openMenu": "Account",
+      "profile": "Profile",
+      "settings": "Settings",
+      "appearance": "Appearance",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "logOut": "Log out"
+    },
     "brand": "Tapstate Cloud",
     "console": "Cloud Console",
     "organization": "ORGANIZATION",
@@ -15,7 +32,9 @@
   "common": {
     "close": "Close",
     "searchClusters": "Search clusters",
-    "searchOrganizations": "Search organizations"
+    "searchOrganizations": "Search organizations",
+    "organization": "Organization",
+    "organizationBadge": "Org"
   },
   "organizationList": {
     "current": "Current organization:",
@@ -118,8 +137,8 @@
     "organizationNameRequired": "Enter your organization name to continue.",
     "requestCodeFirst": "Request an email code before continuing.",
     "securityNote": "Your session is protected by a secure, HttpOnly cookie.",
-    "legalAgreement": "I agree to the <a class=\"underline hover:no-underline\" href=\"{{eula}}\" target=\"_blank\" rel=\"noopener noreferrer\">Terms of Service</a>, <a class=\"underline hover:no-underline\" href=\"{{privacy}}\" target=\"_blank\" rel=\"noopener noreferrer\">Privacy Policy</a>, <a class=\"underline hover:no-underline\" href=\"{{subscription}}\" target=\"_blank\" rel=\"noopener noreferrer\">Subscription Policy</a>, and <a class=\"underline hover:no-underline\" href=\"{{dpa}}\" target=\"_blank\" rel=\"noopener noreferrer\">Data Processing Addendum</a>.",
-    "legalRequired": "You must agree to the legal documents to register.",
+    "legalNoticeSignup": "By signing up, you agree to our <eulaLink>Terms of Service</eulaLink> & <privacyLink>Privacy Policy</privacyLink>.",
+    "legalNoticeSignin": "By signing in, you agree to our <eulaLink>Terms of Service</eulaLink> & <privacyLink>Privacy Policy</privacyLink>.",
     "footer": "© 2026 Tapstate Systems Inc.",
     "showcase": {
       "headlinePrimary": "Define your business view once.",
@@ -224,6 +243,8 @@
     }
   },
   "settings": {
+    "tabAccount": "Account",
+    "tabOrganization": "Organization & team",
     "linkedIdentitiesTitle": "Sign-in methods",
     "linkedIdentitiesDescription": "Link Google or GitHub after reauthenticating your Cloud account. Matching email addresses are never linked automatically.",
     "provider": {
@@ -253,7 +274,7 @@
     "newClusterLabel": "Cluster name",
     "clusterNamePlaceholder": "acme-data-2",
     "clusterNameHint": "Use English letters and numbers, separated by hyphens.",
-    "regionLabel": "Open region",
+    "regionLabel": "Region",
     "openRegions": "Available cloud regions",
     "available": "Available",
     "loadingRegions": "Loading available regions…",
@@ -264,7 +285,7 @@
     "regionReadonly": "The region cannot be changed after cluster creation.",
     "regionDefault": "Region default",
     "planLabel": "Instance plan",
-    "planHint": "Choose a plan before continuing to secure payment.",
+    "planHint": "Select a plan to continue to payment.",
     "loadingPlans": "Loading plans…",
     "plansError": "Plans and prices could not be loaded.",
     "noPlans": "No plans are available right now.",
@@ -336,6 +357,11 @@
     "cancelSubscriptionError": "Cancellation could not be confirmed. Review the deployment status before changing settings.",
     "cancelStatusError": "Could not refresh the current deployment status. The cancellation request was not sent; try again.",
     "footnote": "Cluster provisioning runs in the background. The console will show the status returned by Cloud."
+  },
+  "clusters": {
+    "egress": {
+      "sourceAllowlistHint": "Stable · use this IP in source allowlists. Reopen the Cluster console to refresh source setup."
+    }
   },
   "billing": {
     "title": "Plans & billing",
@@ -439,9 +465,10 @@
     }
   },
   "events": {
-    "title": "Events & alerts",
+    "title": "Alerts",
     "subtitle": "Key events and alert delivery for {{organization}}.",
     "organizationFallback": "your organization",
+    "tabEvents": "Events",
     "tabPolicies": "Alert policies",
     "tabDeliveries": "Delivery history",
     "policySubtitle": "Email alert rules for {{organization}}.",
@@ -535,13 +562,17 @@
       "title": "Clusters",
       "description": "Review cluster status and open an authorized Cluster Console."
     },
+    "alerts": {
+      "title": "Alerts",
+      "description": "Monitor platform events, alert policies, and notification deliveries."
+    },
     "organizations": {
       "title": "Organization",
       "description": "Manage organization membership and access."
     },
     "billing": {
       "cancelWarning": "This will cancel the subscription, terminate its cluster, and remove its resources. This cannot be undone.",
-      "title": "Usage & billing",
+      "title": "Plans & billing",
       "description": "Review usage for the current organization."
     },
     "settings": {
@@ -551,17 +582,69 @@
     "notConnectedTitle": "Cloud services are not connected",
     "notConnectedDescription": "This screen is a protected route. Cloud data will appear after sign-in and API integration are available."
   },
-  "footer": {
-    "legalLinks": {
-      "eula": "Terms of Service",
-      "privacy": "Privacy Policy",
-      "subscription": "Subscription Policy",
-      "dpa": "Data Processing Addendum"
+  "support": {
+    "nav": "Support",
+    "navigationLabel": "Cloud Console navigation",
+    "accountMenu": "Account and settings",
+    "closeAccountMenu": "Close account and settings",
+    "organization": "Organization",
+    "settings": "Settings",
+    "switchToLightMode": "Switch to light mode",
+    "switchToDarkMode": "Switch to dark mode",
+    "signOut": "Sign out",
+    "title": "Support",
+    "scope": "Get help with Tapstate Cloud.",
+    "responseTarget": "First response within 1 business day.",
+    "createTitle": "Create a ticket",
+    "createDescription": "Describe the issue and our support team will follow up by email.",
+    "summaryLabel": "Summary",
+    "summaryPlaceholder": "Briefly describe the issue",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Include what you were doing and what happened.",
+    "submit": "Submit ticket",
+    "submitting": "Submitting…",
+    "submitSuccess": "Your ticket was submitted.",
+    "uncertainGuidance": "The result could not be confirmed. Refresh My tickets to check whether it was created before trying again.",
+    "myTickets": "My tickets",
+    "listDescription": "Only tickets submitted from your Cloud account are shown.",
+    "refresh": "Refresh tickets",
+    "retry": "Try again",
+    "loading": "Loading tickets…",
+    "loadingDetails": "Loading ticket details…",
+    "emptyTitle": "No tickets yet",
+    "emptyDescription": "Create a ticket when you need help with your Cloud account, Console, Cluster, or data integration.",
+    "pageCount": "Page {{current}} of {{total}} · {{count}} tickets",
+    "previous": "Previous",
+    "next": "Next",
+    "details": "Ticket details",
+    "submittedAt": "Submitted",
+    "selectTicket": "Select a ticket",
+    "selectTicketDescription": "Choose a ticket from My tickets to view its latest Jira status and details.",
+    "closeTicket": "Close ticket",
+    "closeConfirmation": "Close this ticket? You will not be able to reopen it from Cloud Console.",
+    "confirmClose": "Confirm close",
+    "cancel": "Cancel",
+    "closing": "Closing…",
+    "closeUnavailable": "This Jira workflow does not currently allow this ticket to be closed.",
+    "status": {
+      "done": "Done",
+      "complete": "Done",
+      "indeterminate": "In progress",
+      "new": "Open"
     },
-    "company": "TAPDATA HONG KONG LIMITED",
-    "address": "#557, 5/F, Building 19W, 19 Science Park West Avenue, Hong Kong SAR",
-    "supportEmail": "support@tapdata.io",
-    "contact": "Contact",
-    "support": "Support"
+    "operationId": "Operation ID: {{id}}",
+    "errors": {
+      "generic": "We could not complete this request. Try again. {{opId}}",
+      "network": "The Cloud service could not be reached. Refresh the ticket list before retrying. {{opId}}",
+      "notConfigured": "The support ticket service is temporarily unavailable. Contact your administrator. {{opId}}",
+      "customerNotReady": "Your verified Cloud email could not be linked to one support customer. Contact your administrator. {{opId}}",
+      "emailNotVerified": "Verify your Cloud account email before submitting a ticket. {{opId}}",
+      "integrationFailed": "The support service could not be reached. Try again later. {{opId}}",
+      "requestRejected": "The support service rejected this request. Check the summary and description, then try again. {{opId}}",
+      "closeUnavailable": "This ticket cannot be closed in its current Jira workflow. Refresh the details and try again. {{opId}}",
+      "notFound": "This ticket could not be found. Refresh My tickets to see the latest list. {{opId}}",
+      "submissionUncertain": "Cloud could not confirm whether the ticket was created. Check My tickets before submitting again. {{opId}}"
+    },
+    "organizationBadge": "Org"
   }
 }

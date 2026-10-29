@@ -2,15 +2,7 @@ import type { ComponentType, SVGProps } from 'react'
 
 import { useQuery } from '@tanstack/react-query'
 import { Link, useRouterState } from '@tanstack/react-router'
-import {
-  ArrowLeft,
-  Building2,
-  Database,
-  GitMerge,
-  LayoutDashboard,
-  Settings,
-  Table2,
-} from 'lucide-react'
+import { ArrowUpRight, Building2, Database, GitMerge, LayoutDashboard, Table2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
@@ -33,11 +25,6 @@ const navigation: NavigationItem[] = [
   { labelKey: 'nav.views', to: '/views', icon: Table2 },
 ]
 
-/** Kept apart from the places above, at the foot of the sidebar. */
-const footerNavigation: NavigationItem[] = [
-  { labelKey: 'nav.settings', to: '/settings', icon: Settings },
-]
-
 export function AppSidebar() {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const { t } = useTranslation()
@@ -58,22 +45,35 @@ export function AppSidebar() {
     : null
 
   return (
-    <aside className="app-sidebar bg-transparent">
-      {profile === 'cloud' ? (
-        <div className="app-sidebar__cloud-identity mt-2" aria-label={t('app.cloudIdentity.label')}>
+    <aside
+      className={cn('app-sidebar bg-transparent', profile === 'cloud' && 'app-sidebar--cloud')}
+    >
+      <div className="app-sidebar__brand mt-2">
+        <img
+          alt={t('app.brand')}
+          className="app-sidebar__logo dark:hidden"
+          src="/tapstate-lockup-light.svg"
+        />
+        <img
+          alt={t('app.brand')}
+          className="app-sidebar__logo hidden dark:block"
+          src="/tapstate-lockup-dark.svg"
+        />
+      </div>
+      {profile === 'cloud' && (
+        <div className="app-sidebar__cloud-identity" aria-label={t('app.cloudIdentity.label')}>
           <a
-            className={cn(
-              'app-sidebar__cloud-organization',
-              !organizationUrl && 'app-sidebar__cloud-organization--disabled',
-            )}
+            className="app-sidebar__cloud-organization"
             href={organizationUrl ?? undefined}
+            target={organizationUrl ? '_blank' : undefined}
+            rel={organizationUrl ? 'noopener noreferrer' : undefined}
             aria-label={t('app.cloudIdentity.returnToOrganization', {
               organization: cloudContext.data?.organizationName ?? '',
             })}
+            title={t('app.cloudIdentity.returnToOrganization', {
+              organization: cloudContext.data?.organizationName ?? '',
+            })}
             aria-disabled={!organizationUrl}
-            onClick={(event) => {
-              if (!organizationUrl) event.preventDefault()
-            }}
           >
             <span className="app-sidebar__cloud-organization-icon" aria-hidden="true">
               <Building2 className="h-4 w-4" />
@@ -87,41 +87,43 @@ export function AppSidebar() {
                   ? t('app.cloudIdentity.organizationLoading')
                   : t('app.cloudIdentity.organizationUnavailable'))}
             </span>
-            <ArrowLeft className="app-sidebar__cloud-return-icon" aria-hidden="true" />
+            <ArrowUpRight className="app-sidebar__cloud-organization-arrow" aria-hidden="true" />
           </a>
-          <div className="app-sidebar__cloud-cluster" aria-live="polite">
-            <span
-              className={cn(
-                'app-sidebar__cloud-cluster-status',
-                cloudContext.data?.clusterState === 'READY' &&
-                  'app-sidebar__cloud-cluster-status--ready',
-                cloudContext.data?.clusterState === 'DEGRADED' &&
-                  'app-sidebar__cloud-cluster-status--degraded',
-              )}
-              aria-hidden="true"
-            />
-            <span className="app-sidebar__cloud-cluster-copy">
-              <span className="app-sidebar__cloud-cluster-name">
-                {cloudContext.data?.clusterName ??
-                  (cloudContext.isLoading
-                    ? t('app.cloudIdentity.clusterLoading')
-                    : t('app.cloudIdentity.clusterUnavailable'))}
+          <div className="app-sidebar__cloud-details">
+            <div className="app-sidebar__cloud-cluster" aria-live="polite">
+              <span
+                className={cn(
+                  'app-sidebar__cloud-cluster-status',
+                  (cloudContext.data?.clusterState === 'READY' ||
+                    (cloudContext.isSuccess && cloudContext.data?.clusterState === null)) &&
+                    'app-sidebar__cloud-cluster-status--ready',
+                  cloudContext.data?.clusterState === 'DEGRADED' &&
+                    'app-sidebar__cloud-cluster-status--degraded',
+                )}
+                aria-hidden="true"
+              />
+              <span className="sr-only">
+                {cloudContext.data?.clusterState === 'READY'
+                  ? t('app.cloudIdentity.clusterReady')
+                  : cloudContext.isSuccess && cloudContext.data.clusterState === null
+                    ? t('app.cloudIdentity.clusterConnected')
+                    : t('app.cloudIdentity.clusterUnavailable')}
               </span>
-              <span className="app-sidebar__cloud-cluster-region">
-                {cloudContext.data?.region
-                  ? t('app.cloudIdentity.region', { region: cloudContext.data.region })
-                  : t('app.cloudIdentity.regionUnavailable')}
+              <span className="app-sidebar__cloud-cluster-copy">
+                <span className="app-sidebar__cloud-cluster-name">
+                  {cloudContext.data?.clusterName ??
+                    (cloudContext.isLoading
+                      ? t('app.cloudIdentity.clusterLoading')
+                      : t('app.cloudIdentity.clusterUnavailable'))}
+                </span>
+                <span className="app-sidebar__cloud-cluster-region">
+                  {cloudContext.data?.region
+                    ? t('app.cloudIdentity.region', { region: cloudContext.data.region })
+                    : t('app.cloudIdentity.regionUnavailable')}
+                </span>
               </span>
-            </span>
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="app-sidebar__brand mt-2">
-          <div className="app-sidebar__mark" aria-hidden="true">
-            <img alt="" className="h-5 w-5 dark:hidden" src="/tapstate-mark.svg" />
-            <img alt="" className="hidden h-5 w-5 dark:block" src="/tapstate-mark-light.svg" />
-          </div>
-          <span className="app-sidebar__title">{t('app.brand')}</span>
         </div>
       )}
 
@@ -131,16 +133,7 @@ export function AppSidebar() {
         ))}
       </nav>
 
-      <nav
-        className="app-sidebar__nav app-sidebar__nav--footer"
-        aria-label={t('app.secondaryNavigation')}
-      >
-        {footerNavigation.map((item) => (
-          <SidebarLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
-        ))}
-      </nav>
-
-      <AppHeader />
+      <AppHeader cloudUserEmail={profile === 'cloud' ? cloudContext.data?.userEmail : null} />
     </aside>
   )
 }

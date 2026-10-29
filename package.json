@@ -6,6 +6,7 @@
   "scripts": {
     "ui:docs:check": "node tools/check-ui-docs.mjs",
     "dev": "pnpm --filter web dev",
+    "dev:cloud-proxy": "node tools/dev-cloud-proxy.mjs",
     "build": "pnpm --filter web build",
     "preview": "pnpm --filter web preview",
     "format": "pnpm exec oxfmt . '!apps/web/app/routeTree.gen.ts' '!apps/cloud/app/routeTree.gen.ts'",

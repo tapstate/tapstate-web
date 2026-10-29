@@ -1,9 +1,13 @@
-import type { MouseEvent, ReactNode } from 'react'
+import type { MouseEvent, ReactNode, Ref } from 'react'
 
 import { Link } from '@tanstack/react-router'
 import { Button } from '@tapstate-web/ui/button'
 import { useReactFlow } from '@xyflow/react'
 import { useTranslation } from 'react-i18next'
+
+import type { PipelineCatalogState } from '@/service/pipelines/pipeline-client'
+
+import { PipelineStatusBadge } from '../../components/pipeline-status-badge'
 
 export interface PipelineWorkflowHeaderProps {
   placement?: 'floating' | 'sticky'
@@ -18,10 +22,12 @@ export interface PipelineWorkflowHeaderProps {
   runLabel?: string
   runPendingLabel?: string
   runButtonId?: string
+  runButtonRef?: Ref<HTMLButtonElement>
   runButtonActiveGuide?: boolean
   dockStatus?: ReactNode
   draftUpdatedAt?: string | null
   hasPublishedArtifact?: boolean
+  runtimeStatus?: PipelineCatalogState
   pipelineId?: string
   selectedNodeId?: string | null
   stopAction?: ReactNode
@@ -73,10 +79,12 @@ export function PipelineWorkflowHeader({
   runLabel,
   runPendingLabel,
   runButtonId,
+  runButtonRef,
   runButtonActiveGuide,
   dockStatus,
   draftUpdatedAt,
   hasPublishedArtifact = false,
+  runtimeStatus,
   pipelineId,
   selectedNodeId,
   stopAction,
@@ -94,6 +102,7 @@ export function PipelineWorkflowHeader({
         {stopAction ??
           (!isReadOnly && (
             <button
+              ref={runButtonRef}
               id={runButtonId}
               data-guide-active={runButtonActiveGuide || undefined}
               type="button"
@@ -176,6 +185,7 @@ export function PipelineWorkflowHeader({
       {stopAction ??
         (!isReadOnly && (
           <Button
+            ref={runButtonRef}
             id={runButtonId}
             type="button"
             variant="primary"
@@ -260,6 +270,7 @@ export function PipelineWorkflowHeader({
                         minute: '2-digit',
                         second: '2-digit',
                         hour12: false,
+                        timeZoneName: 'short',
                       })}
                     </time>
                   )}
@@ -272,6 +283,14 @@ export function PipelineWorkflowHeader({
                     ? t('pipelines.workspace.actions.published')
                     : t('pipelines.workspace.actions.unpublished')}
                 </span>
+              </>
+            )}
+            {runtimeStatus && (
+              <>
+                <span aria-hidden="true" className="mx-1">
+                  ·
+                </span>
+                <PipelineStatusBadge status={runtimeStatus} className="h-4 px-1 text-[9px]" />
               </>
             )}
           </div>

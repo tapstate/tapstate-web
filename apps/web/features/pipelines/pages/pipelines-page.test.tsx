@@ -11,8 +11,10 @@ const {
   getPipelineDraft,
   getStartChecks,
   listPipelines,
+  listPipelineArtifacts,
   listPipelineDrafts,
   listSources,
+  listViews,
   navigate,
   runPipeline,
   stopPipeline,
@@ -23,8 +25,10 @@ const {
   getPipelineDraft: vi.fn(),
   getStartChecks: vi.fn(),
   listPipelines: vi.fn(),
+  listPipelineArtifacts: vi.fn(),
   listPipelineDrafts: vi.fn(),
   listSources: vi.fn(),
+  listViews: vi.fn(),
   navigate: vi.fn(),
   runPipeline: vi.fn(),
   stopPipeline: vi.fn(),
@@ -37,12 +41,14 @@ vi.mock('@tanstack/react-router', async (importOriginal) => ({
 }))
 
 vi.mock('@/service/source-client', () => ({ listSources }))
+vi.mock('@/service/view-client', () => ({ listViews }))
 vi.mock('@/service/pipelines/pipeline-client', () => ({
   createPipelineDraft,
   deletePipelineDraft,
   getPipelineDraft,
   getStartChecks,
   listPipelineDrafts,
+  listPipelineArtifacts,
   listPipelines,
   runPipeline,
   stopPipeline,
@@ -129,6 +135,8 @@ async function renderPage() {
 
 beforeEach(() => {
   listSources.mockResolvedValue([{ id: 'orders' }])
+  listViews.mockResolvedValue({ available: false })
+  listPipelineArtifacts.mockResolvedValue([])
   listPipelines.mockResolvedValue([
     {
       id: 'orders_to_warehouse',
@@ -210,13 +218,13 @@ describe('PipelinesPage', () => {
     expect(elementWithText('button', 'Create')).toBeDefined()
     expect(
       document
-        .querySelector<HTMLAnchorElement>('a[href="/pipelines/orders_to_warehouse/edit"]')
+        .querySelector<HTMLAnchorElement>('a[href="/pipelines/orders_to_warehouse"]')
         ?.getAttribute('href'),
-    ).toBe('/pipelines/orders_to_warehouse/edit')
+    ).toBe('/pipelines/orders_to_warehouse')
     expect(document.querySelector('table')?.className).toContain('pipeline-list__table')
     expect(
       document
-        .querySelector<HTMLSpanElement>('a[href="/pipelines/orders_to_warehouse/edit"] span[title]')
+        .querySelector<HTMLSpanElement>('a[href="/pipelines/orders_to_warehouse"] span[title]')
         ?.getAttribute('title'),
     ).toBe('orders_to_warehouse')
     expect([...document.querySelectorAll('th')].map((header) => header.textContent)).not.toContain(
@@ -612,12 +620,12 @@ describe('PipelinesPage', () => {
     })
   })
 
-  it('omits the Explorer while keeping the Pipeline table as the editor entry point', async () => {
+  it('omits the Explorer while keeping the Pipeline table as the read-only detail entry point', async () => {
     await renderPage()
 
     await vi.waitFor(() => expect(container?.textContent).toContain('orders_to_warehouse'))
     expect(container?.textContent).not.toContain('Explorer')
-    expect(container?.querySelector('a[href="/pipelines/orders_to_warehouse/edit"]')).not.toBeNull()
+    expect(container?.querySelector('a[href="/pipelines/orders_to_warehouse"]')).not.toBeNull()
     expect(document.querySelector('[data-testid="pipeline-canvas"]')).toBeNull()
   })
 
@@ -632,9 +640,62 @@ describe('PipelinesPage', () => {
 
     await vi.waitFor(() => expect(listPipelines).toHaveBeenCalledTimes(2))
     await vi.waitFor(() =>
-      expect(container?.textContent).toContain('No pipelines have been stored in this workspace.'),
+      expect(container?.textContent).toContain(
+        'No pipelines yet. Create one to start moving data.',
+      ),
     )
   })
+
+  it.each([
+    ['COMPLETE', 'Close', 'menu'],
+    ['UNAVAILABLE', 'Escape', 'more'],
+    ['UNAVAILABLE', 'Close', 'direct'],
+  ])(
+    'clears the pending list action after closing a refused %s start with %s',
+    async (evaluation, dismissal, entry) => {
+      runPipeline.mockRejectedValueOnce(
+        startRefusal({
+          ...answerable,
+          outcome: 'BLOCKED',
+          findings: [{ ...answerable.findings[0]!, behavior: 'BLOCK', evaluation, actions: [] }],
+        }),
+      )
+      const queryClient = await renderPage()
+      const trigger = () =>
+        document.querySelector<HTMLButtonElement>(
+          `[aria-label="${entry === 'direct' ? 'Start pipeline new_import' : entry === 'more' ? 'More actions for new_import' : 'Pipeline lifecycle actions for new_import'}"]`,
+        )
+      await vi.waitFor(() => expect(trigger()).not.toBeNull())
+      await act(async () => trigger()?.click())
+      if (entry !== 'direct') {
+        await act(async () => elementWithText('[role="menuitem"]', 'Start')?.click())
+      }
+      await vi.waitFor(() => expect(startChecksDialog()).not.toBeNull())
+      vi.spyOn(queryClient, 'invalidateQueries').mockImplementation(() => new Promise(() => {}))
+      expect(dialogButton('Close')).toBeDefined()
+      if (entry === 'direct') {
+        await act(async () => trigger()?.click())
+        expect(runPipeline).toHaveBeenCalledOnce()
+      }
+      await act(async () => {
+        if (dismissal === 'Close') dialogButton('Close')?.click()
+        else
+          startChecksDialog()?.dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+          )
+      })
+      await vi.waitFor(() => expect(startChecksDialog()).toBeNull())
+      await vi.waitFor(() => expect(trigger()?.disabled).toBe(false))
+      await vi.waitFor(() =>
+        expect(document.activeElement).toBe(
+          entry === 'direct'
+            ? trigger()
+            : document.querySelector('[aria-label="More actions for new_import"]'),
+        ),
+      )
+      expect(runPipeline).toHaveBeenCalledOnce()
+    },
+  )
 
   it('asks start checks in the shared dialog and re-sends the answers with the report hash', async () => {
     const warning = answerable.findings.find(({ behavior }) => behavior === 'WARN')!

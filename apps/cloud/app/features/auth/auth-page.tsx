@@ -3,9 +3,9 @@ import { Field as SharedUIField, FieldDescription, FieldLabel } from '@tapstate-
 import { IconButton } from '@tapstate-web/ui/icon-button'
 import { Input } from '@tapstate-web/ui/input'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@tapstate-web/ui/input-group'
-import { AlertCircle, Eye, EyeOff, Moon, RefreshCw, ShieldCheck, Sun } from 'lucide-react'
+import { AlertCircle, Eye, EyeOff, Moon, RefreshCw, Sun } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
 
 import './auth-pages.css'
 
@@ -132,7 +132,6 @@ export function AuthPage({
   const [isSendingCode, setIsSendingCode] = useState(false)
   const [isStartingOAuth, setIsStartingOAuth] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [agreedLegal, setAgreedLegal] = useState(false)
   const [oauthCompleting, setOauthCompleting] = useState(false)
   const oauthHandled = useRef(false)
   const emailParts = email.trim().split('@')
@@ -205,10 +204,6 @@ export function AuthPage({
         !trialCodeRequired)
     if (needsOrganizationName && !organizationName.trim()) {
       setError('auth.errors.organizationNameRequired')
-      return
-    }
-    if (mode === 'register' && !agreedLegal) {
-      setError('auth.legalRequired')
       return
     }
     setError(null)
@@ -303,7 +298,6 @@ export function AuthPage({
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode)
     setError(null)
-    setAgreedLegal(false)
   }
 
   const applyInvitationLink = (event: FormEvent<HTMLFormElement>) => {
@@ -606,29 +600,6 @@ export function AuthPage({
             </AuthField>
           )}
 
-          {mode === 'register' && (
-            <label className="flex cursor-pointer items-start gap-2 text-[11px] text-neutral-500 dark:text-neutral-400">
-              <input
-                type="checkbox"
-                checked={agreedLegal}
-                onChange={(e) => setAgreedLegal(e.target.checked)}
-                className="mt-0.5 h-3.5 w-3.5 rounded border-neutral-300 text-[#111827] focus:ring-[#111827] dark:border-neutral-600 dark:bg-neutral-800 dark:text-white"
-                required
-              />
-              <span
-                className="leading-snug"
-                dangerouslySetInnerHTML={{
-                  __html: t('auth.legalAgreement', {
-                    eula: LEGAL_DOCS.eula,
-                    privacy: LEGAL_DOCS.privacy,
-                    subscription: LEGAL_DOCS.subscription,
-                    dpa: LEGAL_DOCS.dpa,
-                  }),
-                }}
-              />
-            </label>
-          )}
-
           {(mode === 'login' || verificationSent) && (
             <Button
               aria-labelledby="auth-submit-label"
@@ -676,9 +647,28 @@ export function AuthPage({
           )}
         </div>
 
-        <div className="border-divider-subtle body-xs-regular text-text-tertiary flex items-center justify-center gap-2 border-t pt-4">
-          <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0" />
-          <span>{t('auth.securityNote')}</span>
+        <div className="border-divider-subtle body-xs-regular text-text-tertiary border-t pt-4 text-center">
+          <Trans
+            i18nKey={mode === 'register' ? 'auth.legalNoticeSignup' : 'auth.legalNoticeSignin'}
+            components={{
+              eulaLink: (
+                <a
+                  className="text-text-primary hover:text-text-secondary font-semibold transition-colors"
+                  href={LEGAL_DOCS.eula}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                />
+              ),
+              privacyLink: (
+                <a
+                  className="text-text-primary hover:text-text-secondary font-semibold transition-colors"
+                  href={LEGAL_DOCS.privacy}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                />
+              ),
+            }}
+          />
         </div>
       </div>
     </AuthShell>

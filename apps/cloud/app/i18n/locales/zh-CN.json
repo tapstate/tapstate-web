@@ -1,6 +1,23 @@
 {
-  "notFound": { "message": "此页面不可用。", "back": "返回概览" },
+  "notFound": {
+    "message": "此页面不可用。",
+    "back": "返回概览"
+  },
   "app": {
+    "help": {
+      "openMenu": "帮助",
+      "documentation": "文档",
+      "contactSupport": "联系客服"
+    },
+    "account": {
+      "openMenu": "账户",
+      "profile": "个人资料",
+      "settings": "设置",
+      "appearance": "外观",
+      "themeLight": "浅色",
+      "themeDark": "深色",
+      "logOut": "退出登录"
+    },
     "brand": "Tapstate Cloud",
     "console": "Cloud 控制台",
     "organization": "组织",
@@ -15,7 +32,9 @@
   "common": {
     "close": "关闭",
     "searchClusters": "搜索集群",
-    "searchOrganizations": "搜索组织"
+    "searchOrganizations": "搜索组织",
+    "organization": "组织",
+    "organizationBadge": "组织"
   },
   "organizationList": {
     "current": "当前组织：",
@@ -118,8 +137,8 @@
     "organizationNameRequired": "请输入组织名称。",
     "requestCodeFirst": "请先获取邮箱验证码。",
     "securityNote": "会话由安全的 HttpOnly Cookie 保护。",
-    "legalAgreement": "我已阅读并同意 <a class=\"underline hover:no-underline\" href=\"{{eula}}\" target=\"_blank\" rel=\"noopener noreferrer\">《服务条款》</a>、<a class=\"underline hover:no-underline\" href=\"{{privacy}}\" target=\"_blank\" rel=\"noopener noreferrer\">《隐私政策》</a>、<a class=\"underline hover:no-underline\" href=\"{{subscription}}\" target=\"_blank\" rel=\"noopener noreferrer\">《订阅政策》</a> 和 <a class=\"underline hover:no-underline\" href=\"{{dpa}}\" target=\"_blank\" rel=\"noopener noreferrer\">《数据处理附录》</a>。",
-    "legalRequired": "请先同意以上法律文档才能注册。",
+    "legalNoticeSignup": "注册即表示您同意我们的 <eulaLink>服务条款</eulaLink> 与 <privacyLink>隐私政策</privacyLink>。",
+    "legalNoticeSignin": "登录即表示您同意我们的 <eulaLink>服务条款</eulaLink> 与 <privacyLink>隐私政策</privacyLink>。",
     "footer": "© 2026 Tapstate Systems Inc.",
     "showcase": {
       "headlinePrimary": "一次定义业务视图。",
@@ -224,6 +243,8 @@
     }
   },
   "settings": {
+    "tabAccount": "个人账户",
+    "tabOrganization": "组织与团队",
     "linkedIdentitiesTitle": "登录方式",
     "linkedIdentitiesDescription": "重新验证 Cloud 账户后即可关联 Google 或 GitHub。邮箱相同不会触发自动关联。",
     "provider": {
@@ -253,7 +274,7 @@
     "newClusterLabel": "集群名称",
     "clusterNamePlaceholder": "acme-data-2",
     "clusterNameHint": "请使用英文字母和数字，并以连字符分隔。",
-    "regionLabel": "开放区域",
+    "regionLabel": "区域",
     "openRegions": "可用云区域",
     "available": "可用",
     "loadingRegions": "正在加载可用区域…",
@@ -264,7 +285,7 @@
     "regionReadonly": "集群创建后不能更改区域。",
     "regionDefault": "区域默认配置",
     "planLabel": "实例规格",
-    "planHint": "选择规格后继续前往安全支付。",
+    "planHint": "选择规格后继续付款。",
     "loadingPlans": "正在加载规格…",
     "plansError": "规格与价格加载失败。",
     "noPlans": "当前没有可用的规格。",
@@ -336,6 +357,11 @@
     "cancelSubscriptionError": "无法确认订阅取消结果。请先查看当前部署状态，再修改设置。",
     "cancelStatusError": "无法刷新当前部署状态，尚未发送取消请求；请重试。",
     "footnote": "集群会在后台创建。控制台将显示 Cloud 返回的实际状态。"
+  },
+  "clusters": {
+    "egress": {
+      "sourceAllowlistHint": "地址已稳定 · 可用于数据源访问白名单。重新打开 Cluster Console 后，数据源设置会显示此地址。"
+    }
   },
   "billing": {
     "title": "套餐与账单",
@@ -439,9 +465,10 @@
     }
   },
   "events": {
-    "title": "事件与告警",
+    "title": "告警",
     "subtitle": "{{organization}} 的关键事件与告警投递。",
     "organizationFallback": "你的组织",
+    "tabEvents": "事件",
     "tabPolicies": "告警策略",
     "tabDeliveries": "投递历史",
     "policySubtitle": "{{organization}} 的邮件告警规则。",
@@ -527,32 +554,97 @@
     }
   },
   "sections": {
-    "overview": { "title": "概览", "description": "查看 Cloud 组织和托管集群摘要。" },
+    "overview": {
+      "title": "概览",
+      "description": "查看 Cloud 组织和托管集群摘要。"
+    },
     "clusters": {
       "title": "集群",
       "description": "查看集群状态并打开获准访问的 Cluster Console。"
     },
-    "organizations": { "title": "组织", "description": "管理组织成员和访问权限。" },
+    "alerts": {
+      "title": "告警",
+      "description": "监控关键事件、告警策略与通知投递。"
+    },
+    "organizations": {
+      "title": "组织",
+      "description": "管理组织成员和访问权限。"
+    },
     "billing": {
       "cancelWarning": "取消后将终止对应 Cluster 并清理其资源，此操作无法撤销。",
-      "title": "用量与账单",
+      "title": "套餐与账单",
       "description": "查看当前组织的资源用量。"
     },
-    "settings": { "title": "设置", "description": "管理组织和账户偏好。" },
+    "settings": {
+      "title": "设置",
+      "description": "管理组织和账户偏好。"
+    },
     "notConnectedTitle": "Cloud 服务尚未接通",
     "notConnectedDescription": "此页面属于受保护路由。完成登录和 API 接入后，才会显示 Cloud 数据。"
   },
-  "footer": {
-    "legalLinks": {
-      "eula": "服务条款",
-      "privacy": "隐私政策",
-      "subscription": "订阅政策",
-      "dpa": "数据处理附录"
+  "support": {
+    "nav": "支持工单",
+    "navigationLabel": "Cloud 控制台导航",
+    "accountMenu": "账户与设置",
+    "closeAccountMenu": "关闭账户与设置菜单",
+    "organization": "组织",
+    "settings": "设置",
+    "switchToLightMode": "切换到浅色模式",
+    "switchToDarkMode": "切换到深色模式",
+    "signOut": "退出登录",
+    "title": "支持工单",
+    "scope": "获取 Tapstate Cloud 的帮助。",
+    "responseTarget": "1 个工作日内首次回复。",
+    "createTitle": "创建工单",
+    "createDescription": "描述遇到的问题，支持团队会通过邮件跟进。",
+    "summaryLabel": "标题",
+    "summaryPlaceholder": "简要描述问题",
+    "descriptionLabel": "问题描述",
+    "descriptionPlaceholder": "请说明你正在进行的操作以及发生的情况。",
+    "submit": "提交工单",
+    "submitting": "正在提交…",
+    "submitSuccess": "工单已提交。",
+    "uncertainGuidance": "暂时无法确认提交结果。请先刷新“我的工单”确认是否已创建，再决定是否重试。",
+    "myTickets": "我的工单",
+    "listDescription": "这里只显示由你当前 Cloud 账户提交的工单。",
+    "refresh": "刷新工单",
+    "retry": "重试",
+    "loading": "正在加载工单…",
+    "loadingDetails": "正在加载工单详情…",
+    "emptyTitle": "还没有工单",
+    "emptyDescription": "需要 Cloud 账户、控制台、集群或数据集成方面的帮助时，可以创建工单。",
+    "pageCount": "第 {{current}} 页，共 {{total}} 页 · {{count}} 张工单",
+    "previous": "上一页",
+    "next": "下一页",
+    "details": "工单详情",
+    "submittedAt": "提交时间",
+    "selectTicket": "选择一张工单",
+    "selectTicketDescription": "从“我的工单”中选择工单，查看 Jira 最新状态和详情。",
+    "closeTicket": "关闭工单",
+    "closeConfirmation": "确定关闭这张工单吗？关闭后无法从 Cloud 控制台重新打开。",
+    "confirmClose": "确认关闭",
+    "cancel": "取消",
+    "closing": "正在关闭…",
+    "closeUnavailable": "当前 Jira 工作流不允许关闭这张工单。",
+    "status": {
+      "done": "已完成",
+      "complete": "已完成",
+      "indeterminate": "处理中",
+      "new": "未处理"
     },
-    "company": "TAPDATA HONG KONG LIMITED",
-    "address": "#557, 5/F, Building 19W, 19 Science Park West Avenue, Hong Kong SAR",
-    "supportEmail": "support@tapdata.io",
-    "contact": "联系我们",
-    "support": "技术支持"
+    "operationId": "操作编号：{{id}}",
+    "errors": {
+      "generic": "无法完成此请求，请重试。{{opId}}",
+      "network": "暂时无法连接 Cloud 服务。请先刷新工单列表，再决定是否重试。{{opId}}",
+      "notConfigured": "支持工单服务暂不可用，请联系管理员。{{opId}}",
+      "customerNotReady": "无法将已验证的 Cloud 邮箱唯一关联到支持客户，请联系管理员。{{opId}}",
+      "emailNotVerified": "请先验证 Cloud 账户邮箱，再提交工单。{{opId}}",
+      "integrationFailed": "暂时无法连接支持服务，请稍后重试。{{opId}}",
+      "requestRejected": "支持服务未接受此请求。请检查标题和描述后重试。{{opId}}",
+      "closeUnavailable": "当前 Jira 工作流无法关闭此工单。请刷新详情后重试。{{opId}}",
+      "notFound": "找不到此工单。请刷新“我的工单”查看最新列表。{{opId}}",
+      "submissionUncertain": "Cloud 无法确认工单是否创建成功。请先检查“我的工单”，再提交新请求。{{opId}}"
+    },
+    "organizationBadge": "组织"
   }
 }
