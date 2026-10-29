@@ -295,6 +295,7 @@ function ViewOverview({ view }: { view: ViewSummary }) {
             <ViewStatus status={view.status} />
           </div>
           <p className="views-stat__hint">{lastApplied}</p>
+          <p className="views-stat__hint">{t('views.measurementNote')}</p>
         </div>
         <div className="views-summary__metrics">
           <Stat

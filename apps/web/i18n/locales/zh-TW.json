@@ -1676,12 +1676,17 @@
       "replica": "副本"
     },
     "status": {
-      "fresh": "最新 · 落後 {{behind}}",
-      "stale": "過期 · {{age}}",
-      "staleUnknown": "過期",
+      "fresh": "觀測有效 · 事件年齡 {{behind}}",
+      "stale": "觀測不可用 · 已過 {{age}}",
+      "staleUnknown": "觀測不可用",
       "loading": "載入中 {{percent}}%",
       "loadingUnknown": "載入中",
-      "notLoaded": "未載入"
+      "notLoaded": "未載入",
+      "measurementUnavailable": "事件年齡不可用",
+      "times": "測量 {{measured}} · 重新整理 {{refreshed}}",
+      "timeUnknown": "未回報測量時間",
+      "clockUnavailable": "觀測時間不可核",
+      "unknownTime": "未知"
     },
     "duration": {
       "s": "{{value}} 秒",
@@ -1693,11 +1698,11 @@
     "summary": {
       "total_one": "{{count}} 個檢視",
       "total_other": "{{count}} 個檢視",
-      "fresh_one": "{{count}} 個最新",
-      "fresh_other": "{{count}} 個最新",
-      "stale_one": "{{count}} 個過期",
-      "stale_other": "{{count}} 個過期",
-      "slowest": "最慢落後 {{behind}}",
+      "fresh_one": "{{count}} 觀測有效",
+      "fresh_other": "{{count}} 觀測有效",
+      "stale_one": "{{count}} 觀測不可用",
+      "stale_other": "{{count}} 觀測不可用",
+      "slowest": "最大事件年齡 {{behind}}",
       "loading_one": "{{count}} 個載入中",
       "loading_other": "{{count}} 個載入中",
       "notLoaded_one": "{{count}} 個未載入",
@@ -1751,13 +1756,13 @@
       "collection": "collection {{name}}",
       "storedIn": "存放於",
       "siblings": "此 pipeline 還寫入：",
-      "freshness": "新鮮度",
+      "freshness": "事件年齡與觀測",
       "lastApplied": "最近一次變更在 {{age}}前",
       "lastAppliedUnknown": "上次套用時間尚未回報",
       "documentLimit": "單一文件上限 16 MB",
       "initialLoad": "初次載入",
-      "upToDate": "已是最新",
-      "streaming": "初次載入已完成；變更擷取持續保持最新。",
+      "upToDate": "觀測有效",
+      "streaming": "Pipeline 正在執行且有近期測量。事件年齡不能證明來源沒有更新的資料。",
       "pipelineState": {
         "NEW": "從未啟動",
         "RUNNING": "執行中",
@@ -1767,8 +1772,9 @@
         "FAILED": "已失敗"
       }
     },
-    "footnote": "狀態綜合了 pipeline 的狀態與檢視落後於來源的程度。檢視是建立出的文件；副本是一張表的鏡像。",
-    "browseCollections": "瀏覽集合"
+    "footnote": "狀態將目前觀測與目標確認事件的年齡分開呈現。檢視是建構出的文件；複本是一張表的鏡像。",
+    "browseCollections": "瀏覽集合",
+    "measurementNote": "事件年齡以秒計，從最後一筆目標確認寫入的來源事件起算，取目前輸出各輸入表的最大值，無滑動視窗。來源閒置時也會增長，不代表端到端延遲。觀測年齡另行判斷；頁面每 5 秒重新整理。"
   },
   "notFound": {
     "back": "返回工作區",

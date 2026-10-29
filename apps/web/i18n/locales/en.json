@@ -1676,12 +1676,17 @@
       "replica": "Replica"
     },
     "status": {
-      "fresh": "Fresh · {{behind}} behind",
-      "stale": "Stale · {{age}}",
-      "staleUnknown": "Stale",
+      "fresh": "Observed · event age {{behind}}",
+      "stale": "Observation unavailable · {{age}} old",
+      "staleUnknown": "Observation unavailable",
       "loading": "Loading {{percent}}%",
       "loadingUnknown": "Loading",
-      "notLoaded": "Not loaded"
+      "notLoaded": "Not loaded",
+      "measurementUnavailable": "Event age unavailable",
+      "times": "Measured {{measured}} · refreshed {{refreshed}}",
+      "timeUnknown": "Measurement time not reported",
+      "clockUnavailable": "Observation time unavailable",
+      "unknownTime": "unknown"
     },
     "duration": {
       "s": "{{value}} s",
@@ -1693,11 +1698,11 @@
     "summary": {
       "total_one": "{{count}} view",
       "total_other": "{{count}} views",
-      "fresh_one": "{{count}} fresh",
-      "fresh_other": "{{count}} fresh",
-      "stale_one": "{{count}} stale",
-      "stale_other": "{{count}} stale",
-      "slowest": "slowest {{behind}} behind",
+      "fresh_one": "{{count}} observed",
+      "fresh_other": "{{count}} observed",
+      "stale_one": "{{count}} unavailable",
+      "stale_other": "{{count}} unavailable",
+      "slowest": "maximum event age {{behind}}",
       "loading_one": "{{count}} loading",
       "loading_other": "{{count}} loading",
       "notLoaded_one": "{{count}} not loaded",
@@ -1751,13 +1756,13 @@
       "collection": "collection {{name}}",
       "storedIn": "Stored in",
       "siblings": "Also written by this pipeline:",
-      "freshness": "Freshness",
+      "freshness": "Event age and observation",
       "lastApplied": "last change applied {{age}} ago",
       "lastAppliedUnknown": "Last applied time is not reported",
       "documentLimit": "limit 16 MB per document",
       "initialLoad": "Initial load",
-      "upToDate": "Up to date",
-      "streaming": "Initial load finished; change capture keeps it current.",
+      "upToDate": "Observations current",
+      "streaming": "The Pipeline is running with recent measurements. Event age does not prove the Source has no newer data.",
       "pipelineState": {
         "NEW": "never started",
         "RUNNING": "running",
@@ -1767,8 +1772,9 @@
         "FAILED": "failed"
       }
     },
-    "footnote": "Status combines the pipeline's state with how far the view is behind its sources. A View is a built document; a Replica is a mirrored copy of one table.",
-    "browseCollections": "Browse collections"
+    "footnote": "Status separates current observations from target-confirmed event age. A View is a built document; a Replica is a mirrored copy of one table.",
+    "browseCollections": "Browse collections",
+    "measurementNote": "Event age is seconds since the last target-confirmed source event, using the maximum across this output’s inputs and no rolling window. It grows during source idleness and does not measure end-to-end lag. Observation age is separate; this page refreshes every 5 seconds."
   },
   "notFound": {
     "back": "Back to workspace",
