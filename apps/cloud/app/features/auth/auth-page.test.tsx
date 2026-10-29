@@ -163,6 +163,7 @@ describe('Cloud invitation authentication', () => {
       password: 'correct-horse-battery',
       displayName: 'Member',
       organizationName: '',
+      agreedLegalVersion: expect.any(String),
     })
     expect(props.onAuthenticated).toHaveBeenCalledWith(user)
   })
@@ -198,6 +199,7 @@ describe('Cloud invitation authentication', () => {
       password: 'correct-horse-battery',
       displayName: 'Member',
       organizationName: 'Member Workspace',
+      agreedLegalVersion: expect.any(String),
     })
     expect(props.onAuthenticated).toHaveBeenCalledWith(user)
   })
@@ -309,5 +311,27 @@ describe('Cloud invitation authentication', () => {
     expect(authorizationUrl).toBe(
       new URL('/oauth2/authorization/google', cloudApiOrigin || window.location.origin).toString(),
     )
+  })
+
+  it('renders terms of service and privacy policy links at the bottom without underline', async () => {
+    await renderPage()
+
+    const eulaLink = host?.querySelector<HTMLAnchorElement>(
+      'a[href="https://tapstate.com/legal/eula"]',
+    )
+    const privacyLink = host?.querySelector<HTMLAnchorElement>(
+      'a[href="https://tapstate.com/legal/privacy"]',
+    )
+
+    expect(eulaLink).not.toBeNull()
+    expect(privacyLink).not.toBeNull()
+    expect(eulaLink?.textContent).toBe('Terms of Service')
+    expect(privacyLink?.textContent).toBe('Privacy Policy')
+    expect(eulaLink?.className).toContain('text-text-primary')
+    expect(eulaLink?.className).toContain('font-semibold')
+    expect(eulaLink?.className).not.toContain('underline')
+    expect(privacyLink?.className).toContain('text-text-primary')
+    expect(privacyLink?.className).toContain('font-semibold')
+    expect(privacyLink?.className).not.toContain('underline')
   })
 })

@@ -19,6 +19,7 @@ export interface RegisteredUser extends UserProfile {
 export interface LoginResult {
   email: string
   displayName?: string
+  agreedLegalVersion?: string
 }
 
 export interface Organization {
@@ -56,6 +57,7 @@ export interface EmailRegistrationInput {
   password: string
   displayName?: string
   organizationName?: string
+  agreedLegalVersion?: string
 }
 
 export interface RegistrationPolicy {
@@ -293,6 +295,7 @@ export interface RegisterInput {
   email: string
   password: string
   displayName?: string
+  agreedLegalVersion?: string
 }
 
 export interface LoginInput {

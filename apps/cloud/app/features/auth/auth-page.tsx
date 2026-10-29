@@ -3,9 +3,9 @@ import { Field as SharedUIField, FieldDescription, FieldLabel } from '@tapstate-
 import { IconButton } from '@tapstate-web/ui/icon-button'
 import { Input } from '@tapstate-web/ui/input'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@tapstate-web/ui/input-group'
-import { AlertCircle, Eye, EyeOff, Moon, RefreshCw, ShieldCheck, Sun } from 'lucide-react'
+import { AlertCircle, Eye, EyeOff, Moon, RefreshCw, Sun } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
 
 import './auth-pages.css'
 
@@ -20,6 +20,14 @@ import { AuthProviderButtons } from './auth-provider-buttons'
 import { InteractiveCustomer360Showcase } from './interactive-customer-360-showcase'
 
 type AuthMode = 'login' | 'register'
+
+const CURRENT_LEGAL_VERSION = import.meta.env.VITE_LEGAL_VERSION ?? 'legal-v1.0-2026-10-27'
+const LEGAL_DOCS = {
+  eula: 'https://tapstate.com/legal/eula',
+  privacy: 'https://tapstate.com/legal/privacy',
+  subscription: 'https://tapstate.com/legal/subscription-policy',
+  dpa: 'https://tapstate.com/legal/data-processing-addendum',
+} as const
 
 const emailCodeCooldownSeconds = 60
 
@@ -223,6 +231,7 @@ export function AuthPage({
           password,
           displayName: displayName.trim(),
           organizationName: organizationName.trim(),
+          agreedLegalVersion: CURRENT_LEGAL_VERSION,
         })
       }
       await onAuthenticated(user)
@@ -638,9 +647,28 @@ export function AuthPage({
           )}
         </div>
 
-        <div className="border-divider-subtle body-xs-regular text-text-tertiary flex items-center justify-center gap-2 border-t pt-4">
-          <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0" />
-          <span>{t('auth.securityNote')}</span>
+        <div className="border-divider-subtle body-xs-regular text-text-tertiary border-t pt-4 text-center">
+          <Trans
+            i18nKey={mode === 'register' ? 'auth.legalNoticeSignup' : 'auth.legalNoticeSignin'}
+            components={{
+              eulaLink: (
+                <a
+                  className="text-text-primary hover:text-text-secondary font-semibold transition-colors"
+                  href={LEGAL_DOCS.eula}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                />
+              ),
+              privacyLink: (
+                <a
+                  className="text-text-primary hover:text-text-secondary font-semibold transition-colors"
+                  href={LEGAL_DOCS.privacy}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                />
+              ),
+            }}
+          />
         </div>
       </div>
     </AuthShell>

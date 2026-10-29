@@ -169,6 +169,28 @@ export function StateStorePage() {
                       : (versionQuery.data ?? t('stateStorePage.about.unavailable'))}
                   </dd>
                 </dl>
+                <div className="settings-about__legal">
+                  <p className="settings-about__copyright">{t('stateStorePage.about.copyright')}</p>
+                  <div className="settings-about__legal-links">
+                    <a
+                      href="https://tapstate.com/legal/privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {t('stateStorePage.about.privacyPolicy')}
+                    </a>
+                    <span aria-hidden="true" className="settings-about__divider">
+                      ·
+                    </span>
+                    <a
+                      href="https://tapstate.com/legal/eula"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {t('stateStorePage.about.termsOfService')}
+                    </a>
+                  </div>
+                </div>
                 <footer className="settings-about__links">
                   <a
                     href="https://github.com/tapstate/tapstate/blob/main/LICENSE"

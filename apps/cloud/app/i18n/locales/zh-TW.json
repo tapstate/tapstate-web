@@ -137,6 +137,8 @@
     "organizationNameRequired": "請輸入組織名稱。",
     "requestCodeFirst": "請先取得電子郵件驗證碼。",
     "securityNote": "工作階段由安全的 HttpOnly Cookie 保護。",
+    "legalNoticeSignup": "註冊即表示您同意我們的 <eulaLink>服務條款</eulaLink> 與 <privacyLink>隱私政策</privacyLink>。",
+    "legalNoticeSignin": "登入即表示您同意我們的 <eulaLink>服務條款</eulaLink> 與 <privacyLink>隱私政策</privacyLink>。",
     "footer": "© 2026 Tapstate Systems Inc.",
     "showcase": {
       "headlinePrimary": "一次定義業務檢視。",

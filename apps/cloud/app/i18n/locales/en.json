@@ -137,6 +137,8 @@
     "organizationNameRequired": "Enter your organization name to continue.",
     "requestCodeFirst": "Request an email code before continuing.",
     "securityNote": "Your session is protected by a secure, HttpOnly cookie.",
+    "legalNoticeSignup": "By signing up, you agree to our <eulaLink>Terms of Service</eulaLink> & <privacyLink>Privacy Policy</privacyLink>.",
+    "legalNoticeSignin": "By signing in, you agree to our <eulaLink>Terms of Service</eulaLink> & <privacyLink>Privacy Policy</privacyLink>.",
     "footer": "© 2026 Tapstate Systems Inc.",
     "showcase": {
       "headlinePrimary": "Define your business view once.",
