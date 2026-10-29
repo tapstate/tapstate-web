@@ -653,6 +653,7 @@
       "inUse": "Pipeline {{id}} is still referenced by: {{referrers}}. Remove those references first.",
       "incomplete": "The Pipeline definition was removed, but some cleanup is incomplete. Refresh the list to review the remaining draft and runtime state.",
       "conflict": "The Pipeline or its draft changed since it was loaded. Refresh the list and confirm deletion again.",
+      "stopTimedOut": "The Pipeline has not stopped yet. Try stopping it again.",
       "waitingForStop": "Stopping is already requested. Wait for the Pipeline to stop, then confirm deletion again.",
       "stopPipeline": "Stop Pipeline",
       "cleanupTitle": "Cleanup needs attention for {{id}}",

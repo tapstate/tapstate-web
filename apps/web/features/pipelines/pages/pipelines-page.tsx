@@ -53,6 +53,7 @@ export function PipelinesPage() {
     action: PipelineLifecycleAction
     message?: string
   } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<PipelineCatalogItem | null>(null)
   const [deleteCleanup, setDeleteCleanup] = useState<{
     pipelineId: string
     error: PipelineClientError
@@ -224,6 +225,7 @@ export function PipelinesPage() {
                 lagByPipeline={lagByPipeline}
                 apiFetch={apiFetch}
                 startPipeline={starter.startPipeline}
+                onRequestDelete={setDeleteTarget}
                 onDeleteIncomplete={(pipelineId, error) => setDeleteCleanup({ pipelineId, error })}
                 onMutationError={(pipelineId, action, error) => {
                   const message = serverErrorMessage(error)
@@ -241,6 +243,20 @@ export function PipelinesPage() {
           action={lifecycleFeedback.action}
           message={lifecycleFeedback.message}
           onDismiss={() => setLifecycleFeedback(null)}
+        />
+      )}
+      {deleteTarget && (
+        <PipelineLifecycleMenu
+          presentation="dialog-only"
+          pipelineId={deleteTarget.id}
+          status={
+            (pipelines.find((item) => item.id === deleteTarget.id) ?? deleteTarget).status.state
+          }
+          contentHash={deleteTarget.contentHash ?? null}
+          draftRevision={deleteTarget.revision ?? null}
+          apiFetch={apiFetch}
+          onDeleteDialogClose={() => setDeleteTarget(null)}
+          onDeleteIncomplete={(error) => setDeleteCleanup({ pipelineId: deleteTarget.id, error })}
         />
       )}
       {deleteCleanup && (
@@ -340,8 +356,10 @@ function PipelineTable({
   onMutationError,
   onMutationStart,
   onDeleteIncomplete,
+  onRequestDelete,
 }: {
   pipelines: PipelineCatalogItem[]
+  onRequestDelete: (pipeline: PipelineCatalogItem) => void
   artifactsById: Map<string, PipelineView>
   lagByPipeline: Map<string, number>
   apiFetch: ApiFetcher
@@ -388,6 +406,7 @@ function PipelineTable({
               startPipeline={startPipeline}
               onMutationStart={onMutationStart}
               onDeleteIncomplete={onDeleteIncomplete}
+              onRequestDelete={onRequestDelete}
               onMutationError={onMutationError}
             />
           ))}
@@ -406,8 +425,10 @@ function PipelineTableRow({
   onMutationError,
   onMutationStart,
   onDeleteIncomplete,
+  onRequestDelete,
 }: {
   pipeline: PipelineCatalogItem
+  onRequestDelete: (pipeline: PipelineCatalogItem) => void
   artifact?: PipelineView
   lagSeconds?: number
   apiFetch: ApiFetcher
@@ -494,6 +515,7 @@ function PipelineTableRow({
       <td className="relative w-20 px-4 py-3">
         <PipelineLifecycleMenu
           pipelineId={pipeline.id}
+          onRequestDelete={() => onRequestDelete(pipeline)}
           status={pipeline.status.state}
           contentHash={pipeline.contentHash ?? null}
           draftRevision={pipeline.revision ?? null}

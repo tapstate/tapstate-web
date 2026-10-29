@@ -30,6 +30,7 @@ import {
   deletePipelineDraft,
   PipelineClientError,
   getPipelineDraft,
+  getPipelineStatus,
   stopPipeline,
   type PipelineCatalogState,
 } from '@/service/pipelines/pipeline-client'
@@ -62,13 +63,17 @@ export function PipelineLifecycleMenu({
   onMutationError,
   onMutationStart,
   onDeleteIncomplete,
+  onRequestDelete,
+  onDeleteDialogClose,
 }: {
   pipelineId: string
   status?: PipelineCatalogState
   apiFetch: ApiFetcher
   contentHash: string | null
   draftRevision?: number | null
-  presentation?: 'list' | 'stop-button'
+  presentation?: 'list' | 'stop-button' | 'dialog-only'
+  onRequestDelete?: () => void
+  onDeleteDialogClose?: () => void
   /** The host's shared start flow; without it the menu offers no start. */
   startPipeline?: PipelineStarter
   onMutationError?: (action: PipelineLifecycleAction, error?: unknown) => void
@@ -80,10 +85,12 @@ export function PipelineLifecycleMenu({
   const moreTriggerRef = useRef<HTMLButtonElement>(null)
   const actionButtonRef = useRef<HTMLButtonElement>(null)
   const actionInFlight = useRef(false)
-  const returnToDeleteAfterStop = useRef(false)
   const [pendingAction, setPendingAction] = useState<PipelineLifecycleAction | null>(null)
   const [stopDialogOpen, setStopDialogOpen] = useState(false)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(presentation === 'dialog-only')
+  const [waitingForStop, setWaitingForStop] = useState(false)
+  const [stopTimedOut, setStopTimedOut] = useState(false)
+  const [stopCompleted, setStopCompleted] = useState(false)
   const [deletePending, setDeletePending] = useState(false)
   const [deleteError, setDeleteError] = useState<PipelineClientError | null>(null)
   const isDraft = contentHash === null
@@ -93,11 +100,39 @@ export function PipelineLifecycleMenu({
   const pending = pendingAction !== null || deletePending
 
   useEffect(() => {
-    if (!deleteDialogOpen || status !== 'STOPPING') return
+    if (deleteDialogOpen && status === 'STOPPING' && !stopTimedOut && !stopCompleted)
+      setWaitingForStop(true)
+  }, [deleteDialogOpen, status, stopTimedOut, stopCompleted])
+
+  useEffect(() => {
+    if (
+      !deleteDialogOpen ||
+      stopTimedOut ||
+      stopCompleted ||
+      (!waitingForStop && status !== 'STOPPING')
+    )
+      return
+    if (waitingForStop && status === 'STOPPED') {
+      setWaitingForStop(false)
+      setDeleteError(null)
+      return
+    }
     let cancelled = false
     let timer: ReturnType<typeof setTimeout>
     async function pollStop() {
-      await queryClient.invalidateQueries({ queryKey: ['pipelines'] }).catch(() => undefined)
+      try {
+        const current = await getPipelineStatus(pipelineId, apiFetch)
+        if (cancelled) return
+        if (current.state === 'STOPPED') {
+          setStopCompleted(true)
+          setWaitingForStop(false)
+          setDeleteError(null)
+          await queryClient.invalidateQueries({ queryKey: ['pipelines'] }).catch(() => undefined)
+          return
+        }
+      } catch {
+        // Retry until the timeout so a transient status error does not lose the flow.
+      }
       if (!cancelled) timer = setTimeout(pollStop, PIPELINE_AUTO_REFRESH_INTERVAL_MS)
     }
     timer = setTimeout(pollStop, PIPELINE_AUTO_REFRESH_INTERVAL_MS)
@@ -105,7 +140,25 @@ export function PipelineLifecycleMenu({
       cancelled = true
       clearTimeout(timer)
     }
-  }, [deleteDialogOpen, queryClient, status])
+  }, [
+    apiFetch,
+    deleteDialogOpen,
+    pipelineId,
+    queryClient,
+    status,
+    waitingForStop,
+    stopTimedOut,
+    stopCompleted,
+  ])
+
+  useEffect(() => {
+    if (!deleteDialogOpen || !waitingForStop) return
+    const timeout = setTimeout(() => {
+      setWaitingForStop(false)
+      setStopTimedOut(true)
+    }, 60_000)
+    return () => clearTimeout(timeout)
+  }, [deleteDialogOpen, waitingForStop])
 
   async function refreshProjections() {
     // The shared key prefix refreshes the catalog and any open detail projections.
@@ -140,15 +193,9 @@ export function PipelineLifecycleMenu({
       await refreshProjections()
       if (nextAction === 'stop') {
         setStopDialogOpen(false)
-        if (returnToDeleteAfterStop.current) {
-          returnToDeleteAfterStop.current = false
-          setDeleteError(null)
-          setDeleteDialogOpen(true)
-        }
       }
     } catch (error) {
       if (nextAction === 'stop') {
-        returnToDeleteAfterStop.current = false
         setStopDialogOpen(false)
       }
       // A lifecycle request can race with another worker or with a different
@@ -178,6 +225,7 @@ export function PipelineLifecycleMenu({
       }
       await refreshProjections()
       setDeleteDialogOpen(false)
+      onDeleteDialogClose?.()
     } catch (error) {
       const failure =
         error instanceof PipelineClientError
@@ -186,10 +234,13 @@ export function PipelineLifecycleMenu({
       if (failure.code === 'artifact.reclaim-incomplete' && onDeleteIncomplete) {
         setDeleteDialogOpen(false)
         onDeleteIncomplete(failure)
+        onDeleteDialogClose?.()
       } else {
         setDeleteError(failure)
       }
       await refreshProjections().catch(() => undefined)
+      if (failure.code === 'artifact.pipeline-not-stopped' && failure.params.desired === 'STOPPED')
+        setWaitingForStop(true)
     } finally {
       actionInFlight.current = false
       setDeletePending(false)
@@ -280,8 +331,11 @@ export function PipelineLifecycleMenu({
             <DropdownMenuItem
               variant="destructive"
               onClick={() => {
-                setDeleteError(null)
-                setDeleteDialogOpen(true)
+                if (onRequestDelete) onRequestDelete()
+                else {
+                  setDeleteError(null)
+                  setDeleteDialogOpen(true)
+                }
               }}
             >
               <Trash2 className="size-4 shrink-0" aria-hidden="true" />
@@ -295,7 +349,7 @@ export function PipelineLifecycleMenu({
 
   return (
     <>
-      {presentation === 'stop-button' ? (
+      {presentation === 'dialog-only' ? null : presentation === 'stop-button' ? (
         <SharedUIButton
           type="button"
           variant="ghost"
@@ -364,7 +418,6 @@ export function PipelineLifecycleMenu({
         open={stopDialogOpen}
         onOpenChange={(open) => {
           if (!pending) {
-            if (!open) returnToDeleteAfterStop.current = false
             setStopDialogOpen(open)
           }
         }}
@@ -387,7 +440,6 @@ export function PipelineLifecycleMenu({
               disabled={pending}
               className="px-3 text-[13px]"
               onClick={() => {
-                returnToDeleteAfterStop.current = false
                 setStopDialogOpen(false)
               }}
             >
@@ -420,7 +472,10 @@ export function PipelineLifecycleMenu({
       <Dialog
         open={deleteDialogOpen}
         onOpenChange={(open) => {
-          if (!deletePending) setDeleteDialogOpen(open)
+          if (!deletePending) {
+            setDeleteDialogOpen(open)
+            if (!open) onDeleteDialogClose?.()
+          }
         }}
       >
         <DialogContent
@@ -432,14 +487,25 @@ export function PipelineLifecycleMenu({
             <DialogTitle>{t('pipelines.delete.title', { id: pipelineId })}</DialogTitle>
             <DialogDescription>{t('pipelines.delete.body')}</DialogDescription>
           </DialogHeader>
-          {!deleteError && status === 'STOPPING' && (
+          {stopTimedOut && (
             <DialogBody>
-              <p role="status" className="system-sm-regular text-text-secondary">
-                {t('pipelines.delete.waitingForStop')}
+              <p role="alert">
+                {deleteError && deleteError.code !== 'artifact.pipeline-not-stopped'
+                  ? deleteError.message
+                  : t('pipelines.delete.stopTimedOut')}
               </p>
             </DialogBody>
           )}
-          {deleteError && (
+          {!deleteError &&
+            !stopTimedOut &&
+            (waitingForStop || (status === 'STOPPING' && !stopCompleted)) && (
+              <DialogBody>
+                <p role="status" className="system-sm-regular text-text-secondary">
+                  {t('pipelines.delete.waitingForStop')}
+                </p>
+              </DialogBody>
+            )}
+          {deleteError && !stopTimedOut && (
             <DialogBody>
               <div
                 role="alert"
@@ -475,20 +541,7 @@ export function PipelineLifecycleMenu({
                 {deleteError.code === 'artifact.pipeline-not-stopped' &&
                   (deleteError.params.desired === 'STOPPED' ? (
                     <p className="text-text-secondary">{t('pipelines.delete.waitingForStop')}</p>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={pending}
-                      onClick={() => {
-                        returnToDeleteAfterStop.current = true
-                        setDeleteDialogOpen(false)
-                        requestAction('stop')
-                      }}
-                    >
-                      {t('pipelines.delete.stopPipeline')}
-                    </Button>
-                  ))}
+                  ) : null)}
               </div>
             </DialogBody>
           )}
@@ -498,20 +551,60 @@ export function PipelineLifecycleMenu({
               variant="outline"
               disabled={deletePending}
               className="px-3 text-[13px]"
-              onClick={() => setDeleteDialogOpen(false)}
+              onClick={() => {
+                setDeleteDialogOpen(false)
+                onDeleteDialogClose?.()
+              }}
             >
               {t('pipelines.lifecycle.cancel')}
             </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={deletePending || status === 'STOPPING'}
-              className="px-3 text-[13px]"
-              onClick={() => void executeDelete()}
-            >
-              {deletePending && <LoaderCircle className="animate-spin" />}
-              {t('pipelines.delete.confirm')}
-            </Button>
+            {stopTimedOut ||
+            (deleteError?.code === 'artifact.pipeline-not-stopped' &&
+              deleteError.params.desired !== 'STOPPED') ? (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={pending}
+                onClick={() => {
+                  setStopTimedOut(false)
+                  setStopCompleted(false)
+                  setPendingAction('stop')
+                  void stopPipeline(pipelineId, false, apiFetch)
+                    .then(async () => {
+                      setDeleteError(null)
+                      await refreshProjections()
+                      setWaitingForStop(true)
+                    })
+                    .catch((error: unknown) => {
+                      setStopTimedOut(true)
+                      setDeleteError(
+                        error instanceof PipelineClientError
+                          ? error
+                          : new PipelineClientError('network', t('pipelines.delete.failed')),
+                      )
+                    })
+                    .finally(() => setPendingAction(null))
+                }}
+              >
+                {pendingAction === 'stop' && <LoaderCircle className="animate-spin" />}
+                {t('pipelines.delete.stopPipeline')}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={
+                  deletePending || waitingForStop || (status === 'STOPPING' && !stopCompleted)
+                }
+                className="px-3 text-[13px]"
+                onClick={() => void executeDelete()}
+              >
+                {(deletePending || waitingForStop || (status === 'STOPPING' && !stopCompleted)) && (
+                  <LoaderCircle className="animate-spin" />
+                )}
+                {t('pipelines.delete.confirm')}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
