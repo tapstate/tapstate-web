@@ -5,7 +5,13 @@ import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { alertCall, type AlarmRow, type AlertPage, type DeliveryRow } from '@/service/alert-client'
+import {
+  alertCall,
+  defaultExternalChannels,
+  type AlarmRow,
+  type AlertPage,
+  type DeliveryRow,
+} from '@/service/alert-client'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { AlertSelect } from './alert-select'
@@ -233,7 +239,12 @@ function AlertsContent() {
               }
             >
               <option value="">{t('alerts.all')}</option>
-              {(managed ? ['cloud-sdk'] : onPrem ? ['email', 'webhook'] : []).map((c) => (
+              {(managed
+                ? ['cloud-sdk']
+                : onPrem
+                  ? (catalog.data?.channels ?? defaultExternalChannels).map((c) => c.id)
+                  : []
+              ).map((c) => (
                 <option key={c}>{c}</option>
               ))}
             </AlertSelect>
@@ -586,7 +597,9 @@ function DeliveryTable({
                   ? 'Email'
                   : r.channel === 'webhook'
                     ? 'Webhook'
-                    : t('alerts.managedChannel')}
+                    : r.channel === 'cloud-sdk'
+                      ? t('alerts.managedChannel')
+                      : r.channel}
               </td>
               <td>
                 <span className="alert-state">

@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select'
 import {
   alertCall,
+  defaultExternalChannels,
   AlertClientError,
   emptyMessages,
   testCommandId,
@@ -31,6 +32,12 @@ import { AlertSelect } from './alert-select'
 import { Severity, Time } from './alert-shared'
 import './alerts.css'
 
+function previewChannelId(format: string) {
+  return format.startsWith('json:') ? format.slice(5) : format === 'webhook' ? 'webhook' : 'email'
+}
+function jsonPreview(format: string) {
+  return format === 'webhook' || format.startsWith('json:')
+}
 export function AlertSettings() {
   const session = useAuthStore((s) => s.sessionRevision)
   return <SettingsContent key={session} />
@@ -190,9 +197,15 @@ function SettingsContent() {
   ])
   useEffect(() => {
     if (editingInhibition || kind !== 'SUBSCRIPTION' || !form?.channels?.length) return
-    const wanted = previewFormat === 'webhook' ? 'webhook' : 'email'
+    const wanted = previewChannelId(previewFormat)
     if (!form.channels.some((c) => c.channelType === wanted)) {
-      setPreviewFormat(form.channels[0].channelType === 'webhook' ? 'webhook' : 'text')
+      setPreviewFormat(
+        form.channels[0].channelType === 'email'
+          ? 'text'
+          : form.channels[0].channelType === 'webhook'
+            ? 'webhook'
+            : `json:${form.channels[0].channelType}`,
+      )
       return
     }
     const controller = new AbortController()
@@ -337,9 +350,7 @@ function SettingsContent() {
     }
   }
   async function renderPreview(signal?: AbortSignal) {
-    const channel = form?.channels?.find(
-      (c) => c.channelType === (previewFormat === 'webhook' ? 'webhook' : 'email'),
-    )
+    const channel = form?.channels?.find((c) => c.channelType === previewChannelId(previewFormat))
     if (!channel) return
     const stamp = serial.current
     setError(false)
@@ -776,6 +787,7 @@ function SettingsContent() {
                       form={form}
                       update={update}
                       policies={catalog.data?.channelPolicies}
+                      descriptors={catalog.data?.channels}
                     />
                   )}
                   {kind === 'SILENCE' && (
@@ -974,83 +986,85 @@ function SettingsContent() {
                             )}
                           </section>
                           <h3 className="alert-form-section">{t('alerts.notificationTargets')}</h3>
-                          {['email', 'webhook'].map((channelType) => {
-                            const channel = form.channels?.find(
-                              (c) => c.channelType === channelType,
-                            )
-                            return (
-                              <section key={channelType}>
-                                <label className="alert-check">
-                                  <input
-                                    type="checkbox"
-                                    checked={Boolean(channel)}
-                                    onChange={(e) =>
-                                      update({
-                                        channels: e.target.checked
-                                          ? [
-                                              ...(form.channels ?? []),
-                                              {
-                                                channelType,
-                                                receivers: [],
-                                                messages: emptyMessages(),
-                                              },
-                                            ]
-                                          : form.channels?.filter(
-                                              (c) => c.channelType !== channelType,
-                                            ),
-                                      })
-                                    }
-                                  />
-                                  {channelType}
-                                </label>
-                                {channel && (
-                                  <>
-                                    <Field label={t('alerts.receivers')}>
-                                      <AlertSelect
-                                        multiple
-                                        value={channel.receivers}
-                                        onChange={(e) =>
-                                          update({
-                                            channels: form.channels?.map((c) =>
-                                              c.channelType === channelType
-                                                ? {
-                                                    ...c,
-                                                    receivers: [...e.target.selectedOptions].map(
-                                                      (o) => o.value,
-                                                    ),
-                                                  }
-                                                : c,
-                                            ),
-                                          })
-                                        }
-                                      >
-                                        {channel.receivers
-                                          .filter(
-                                            (id) =>
-                                              !receivers.data?.pages
-                                                .flatMap((p) => p.rows)
-                                                .some((r) => r.id === id),
-                                          )
-                                          .map((id) => (
-                                            <option key={id} value={id}>
-                                              {t('alerts.selectedReceiverPending', { id })}
-                                            </option>
-                                          ))}
-                                        {receivers.data?.pages
-                                          .flatMap((p) => p.rows)
-                                          .filter((r) => r.transport?.channelType === channelType)
-                                          .map((r) => (
-                                            <option key={r.id} value={r.id}>
-                                              {r.name}
-                                            </option>
-                                          ))}
-                                      </AlertSelect>
-                                    </Field>
-                                  </>
-                                )}
-                              </section>
-                            )
-                          })}
+                          {(catalog.data?.channels ?? defaultExternalChannels).map(
+                            ({ id: channelType }) => {
+                              const channel = form.channels?.find(
+                                (c) => c.channelType === channelType,
+                              )
+                              return (
+                                <section key={channelType}>
+                                  <label className="alert-check">
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(channel)}
+                                      onChange={(e) =>
+                                        update({
+                                          channels: e.target.checked
+                                            ? [
+                                                ...(form.channels ?? []),
+                                                {
+                                                  channelType,
+                                                  receivers: [],
+                                                  messages: emptyMessages(),
+                                                },
+                                              ]
+                                            : form.channels?.filter(
+                                                (c) => c.channelType !== channelType,
+                                              ),
+                                        })
+                                      }
+                                    />
+                                    {channelType}
+                                  </label>
+                                  {channel && (
+                                    <>
+                                      <Field label={t('alerts.receivers')}>
+                                        <AlertSelect
+                                          multiple
+                                          value={channel.receivers}
+                                          onChange={(e) =>
+                                            update({
+                                              channels: form.channels?.map((c) =>
+                                                c.channelType === channelType
+                                                  ? {
+                                                      ...c,
+                                                      receivers: [...e.target.selectedOptions].map(
+                                                        (o) => o.value,
+                                                      ),
+                                                    }
+                                                  : c,
+                                              ),
+                                            })
+                                          }
+                                        >
+                                          {channel.receivers
+                                            .filter(
+                                              (id) =>
+                                                !receivers.data?.pages
+                                                  .flatMap((p) => p.rows)
+                                                  .some((r) => r.id === id),
+                                            )
+                                            .map((id) => (
+                                              <option key={id} value={id}>
+                                                {t('alerts.selectedReceiverPending', { id })}
+                                              </option>
+                                            ))}
+                                          {receivers.data?.pages
+                                            .flatMap((p) => p.rows)
+                                            .filter((r) => r.transport?.channelType === channelType)
+                                            .map((r) => (
+                                              <option key={r.id} value={r.id}>
+                                                {r.name}
+                                              </option>
+                                            ))}
+                                        </AlertSelect>
+                                      </Field>
+                                    </>
+                                  )}
+                                </section>
+                              )
+                            },
+                          )}
                           {receivers.hasNextPage && (
                             <Button
                               type="button"
@@ -1125,15 +1139,19 @@ function SettingsContent() {
                               setPreview(null)
                             }}
                           >
-                            {['text', 'html', 'webhook']
-                              .filter((v) =>
-                                form.channels?.some(
-                                  (c) => c.channelType === (v === 'webhook' ? 'webhook' : 'email'),
-                                ),
+                            {(form.channels ?? [])
+                              .flatMap((c) =>
+                                c.channelType === 'email'
+                                  ? ['text', 'html']
+                                  : c.channelType === 'webhook'
+                                    ? ['webhook']
+                                    : [`json:${c.channelType}`],
                               )
                               .map((v) => (
                                 <option key={v} value={v}>
-                                  {t(`alerts.previewFormats.${v}`)}
+                                  {v.startsWith('json:')
+                                    ? `${catalog.data?.channels?.find((c) => c.id === previewChannelId(v))?.label ?? previewChannelId(v)} JSON`
+                                    : t(`alerts.previewFormats.${v}`)}
                                 </option>
                               ))}
                           </AlertSelect>
@@ -1157,7 +1175,7 @@ function SettingsContent() {
                               />
                             ) : (
                               <pre className="alert-stack">
-                                {previewFormat === 'webhook' ? preview.webhook : preview.text}
+                                {jsonPreview(previewFormat) ? preview.webhook : preview.text}
                               </pre>
                             )}
                           </>
@@ -1165,7 +1183,7 @@ function SettingsContent() {
                         <MessagesEditor
                           form={form}
                           update={update}
-                          channelType={previewFormat === 'webhook' ? 'webhook' : 'email'}
+                          channelType={previewChannelId(previewFormat)}
                         />
                       </details>
                     </>
@@ -1433,10 +1451,12 @@ function ReceiverFields({
   form,
   update,
   policies,
+  descriptors = defaultExternalChannels,
 }: {
   form: AlertForm
   update: (patch: Partial<AlertForm> | ((current: AlertForm) => Partial<AlertForm>)) => void
   policies?: Catalog['channelPolicies']
+  descriptors?: Catalog['channels']
 }) {
   const { t } = useTranslation()
   const transport = form.transport!
@@ -1469,7 +1489,22 @@ function ReceiverFields({
                       from: '',
                       recipients: [],
                     }
-                  : { channelType: 'webhook', authentication: 'NONE', trust: 'SYSTEM' },
+                  : {
+                      channelType: e.target.value,
+                      authentication: 'NONE',
+                      trust: 'SYSTEM',
+                      ...(e.target.value !== 'webhook'
+                        ? {
+                            family: 'HTTPS_JSON' as const,
+                            transportVersion: 1,
+                            parameters: Object.fromEntries(
+                              (descriptors.find((c) => c.id === e.target.value)?.fields ?? [])
+                                .filter((f) => f.defaultValue != null)
+                                .map((f) => [f.key, f.defaultValue!]),
+                            ),
+                          }
+                        : {}),
+                    },
               endpoint: '',
               secret: '',
               privateCa: '',
@@ -1477,8 +1512,16 @@ function ReceiverFields({
             })
           }
         >
-          <option value="email">Email</option>
-          <option value="webhook">Webhook</option>
+          {descriptors.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.label}
+            </option>
+          ))}
+          {!descriptors.some((c) => c.id === transport.channelType) && (
+            <option value={transport.channelType} disabled>
+              {transport.channelType}
+            </option>
+          )}
         </AlertSelect>
       </Field>
       {transport.channelType === 'email' ? (
@@ -1560,6 +1603,18 @@ function ReceiverFields({
             />
           </Field>
         ))}
+      {(descriptors.find((c) => c.id === transport.channelType)?.fields ?? []).map((field) => (
+        <Field key={field.key} label={field.label}>
+          <input
+            required={field.required}
+            maxLength={field.maximumBytes}
+            value={transport.parameters?.[field.key] ?? ''}
+            onChange={(e) =>
+              patch({ parameters: { ...transport.parameters, [field.key]: e.target.value } })
+            }
+          />
+        </Field>
+      ))}
       <Field label={t('alerts.trust')}>
         <AlertSelect value={transport.trust} onChange={(e) => patch({ trust: e.target.value })}>
           <option value="SYSTEM">{t('alerts.systemTrust')}</option>
@@ -1803,9 +1858,13 @@ function ConfigTable({
                     <>
                       <Mail className="h-3 w-3" /> Email · SMTP TLS
                     </>
-                  ) : r.transport?.channelType === 'webhook' ? (
+                  ) : r.transport && r.transport.channelType !== 'email' ? (
                     <>
-                      <Webhook className="h-3 w-3" /> Webhook · HTTPS
+                      <Webhook className="h-3 w-3" />{' '}
+                      {(catalog?.channels ?? defaultExternalChannels).find(
+                        (c) => c.id === r.transport?.channelType,
+                      )?.label ?? r.transport?.channelType}{' '}
+                      · HTTPS
                     </>
                   ) : (
                     ''
@@ -1877,7 +1936,9 @@ function ConfigTable({
                 <td>
                   {r.transport?.recipients?.join(', ') ?? r.transport?.origin}
                   <small>
-                    {r.transport?.channelType === 'webhook' && t('alerts.endpointPrivate')}
+                    {r.transport &&
+                      r.transport.channelType !== 'email' &&
+                      t('alerts.endpointPrivate')}
                   </small>
                 </td>
               )}

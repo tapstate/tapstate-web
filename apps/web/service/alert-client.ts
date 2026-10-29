@@ -76,7 +76,40 @@ export interface AlertType {
     defaultValue: number
   }[]
 }
+export interface AlertChannelDescriptor {
+  id: string
+  version: number
+  label: string
+  transportFamily: 'EMAIL' | 'HTTPS_JSON'
+  transportVersion: number
+  fields: {
+    key: string
+    label: string
+    maximumBytes: number
+    required: boolean
+    defaultValue?: string | null
+  }[]
+}
+export const defaultExternalChannels: AlertChannelDescriptor[] = [
+  {
+    id: 'email',
+    version: 1,
+    label: 'Email',
+    transportFamily: 'EMAIL',
+    transportVersion: 1,
+    fields: [],
+  },
+  {
+    id: 'webhook',
+    version: 1,
+    label: 'Webhook',
+    transportFamily: 'HTTPS_JSON',
+    transportVersion: 1,
+    fields: [],
+  },
+]
 export interface Catalog {
+  channels?: AlertChannelDescriptor[]
   clusterId?: string
   refreshedAt?: string
   channelPolicies?: Record<
@@ -161,6 +194,9 @@ export interface AlertForm {
   inhibition?: { rootType: string; dependentType: string }[]
   transport?: {
     channelType: string
+    family?: 'HTTPS_JSON'
+    transportVersion?: number
+    parameters?: Record<string, string>
     host?: string
     port?: number
     encryption?: string
