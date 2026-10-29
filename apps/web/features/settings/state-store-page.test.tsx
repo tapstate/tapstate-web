@@ -197,8 +197,8 @@ describe('StateStorePage', () => {
     const links = [...container.querySelectorAll('.settings-about__legal-links a')]
     expect(links).toHaveLength(2)
     expect(links[0].textContent).toBe('Privacy Policy')
-    expect(links[0].getAttribute('href')).toBe('https://docs.tapstate.com/privacy')
+    expect(links[0].getAttribute('href')).toBe('https://tapstate.com/legal/privacy')
     expect(links[1].textContent).toBe('Terms of Service')
-    expect(links[1].getAttribute('href')).toBe('https://docs.tapstate.com/legal/eula')
+    expect(links[1].getAttribute('href')).toBe('https://tapstate.com/legal/eula')
   })
 })

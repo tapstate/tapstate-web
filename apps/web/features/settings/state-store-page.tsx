@@ -173,7 +173,7 @@ export function StateStorePage() {
                   <p className="settings-about__copyright">{t('stateStorePage.about.copyright')}</p>
                   <div className="settings-about__legal-links">
                     <a
-                      href="https://docs.tapstate.com/privacy"
+                      href="https://tapstate.com/legal/privacy"
                       target="_blank"
                       rel="noopener noreferrer"
                     >
@@ -183,7 +183,7 @@ export function StateStorePage() {
                       ·
                     </span>
                     <a
-                      href="https://docs.tapstate.com/legal/eula"
+                      href="https://tapstate.com/legal/eula"
                       target="_blank"
                       rel="noopener noreferrer"
                     >

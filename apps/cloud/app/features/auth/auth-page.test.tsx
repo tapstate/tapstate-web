@@ -317,10 +317,10 @@ describe('Cloud invitation authentication', () => {
     await renderPage()
 
     const eulaLink = host?.querySelector<HTMLAnchorElement>(
-      'a[href="https://docs.tapstate.com/legal/eula"]',
+      'a[href="https://tapstate.com/legal/eula"]',
     )
     const privacyLink = host?.querySelector<HTMLAnchorElement>(
-      'a[href="https://docs.tapstate.com/privacy"]',
+      'a[href="https://tapstate.com/legal/privacy"]',
     )
 
     expect(eulaLink).not.toBeNull()
