@@ -174,6 +174,15 @@ const task = shape({
   scheduleObservation: nullable(scheduleObservation),
 })
 export type ValidationTask = Decoded<typeof task>
+const sourceHints = shape({
+  connectionId: text,
+  connectorId: text,
+  tables: array(shape({ name: text }), 1024),
+  discoveredAt: (value: unknown): value is number =>
+    typeof value === 'number' && Number.isSafeInteger(value) && value >= 0,
+})
+export type ValidationSourceHints = Decoded<typeof sourceHints>
+
 const field = shape({
   name: text,
   type: nullable(text),
@@ -510,13 +519,9 @@ function protocol(): never {
 }
 // Accommodates the bounded evaluation projection and report wire forms, including JSON escaping.
 const MAX_RESPONSE_BYTES = 64 * 1024 * 1024
-async function boundedBody(response: Response): Promise<string> {
+async function boundedBody(response: Response, maxBytes = MAX_RESPONSE_BYTES): Promise<string> {
   const length = response.headers.get('content-length')
-  if (
-    length &&
-    /^\d+$/.test(length) &&
-    (length.length > 10 || Number(length) > MAX_RESPONSE_BYTES)
-  ) {
+  if (length && /^\d+$/.test(length) && (length.length > 10 || Number(length) > maxBytes)) {
     void response.body?.cancel().catch(() => {})
     return protocol()
   }
@@ -528,15 +533,13 @@ async function boundedBody(response: Response): Promise<string> {
     for (;;) {
       const next = await reader.read()
       if (next.done) break
-      if (next.value.byteLength > MAX_RESPONSE_BYTES - used) {
+      if (next.value.byteLength > maxBytes - used) {
         void reader.cancel().catch(() => {})
         return protocol()
       }
       const needed = used + next.value.byteLength
       if (needed > buffer.length) {
-        const grown = new Uint8Array(
-          Math.min(MAX_RESPONSE_BYTES, Math.max(buffer.length * 2, needed)),
-        )
+        const grown = new Uint8Array(Math.min(maxBytes, Math.max(buffer.length * 2, needed)))
         grown.set(buffer.subarray(0, used))
         buffer = grown
       }
@@ -590,6 +593,7 @@ export function createValidationClient(fetcher: ApiFetcher) {
     body?: unknown,
     absent = false,
     refusal?: Check<T>,
+    maxBytes = MAX_RESPONSE_BYTES,
   ): Promise<T | null> {
     const encoded = body === undefined ? undefined : JSON.stringify(body)
     let response: Response
@@ -607,7 +611,7 @@ export function createValidationClient(fetcher: ApiFetcher) {
     }
     let raw: string
     try {
-      raw = await boundedBody(response)
+      raw = await boundedBody(response, maxBytes)
     } catch (error) {
       if (error instanceof PipelineClientError) throw error
       if (record(error) && error.name === 'AbortError') throw error
@@ -671,6 +675,36 @@ export function createValidationClient(fetcher: ApiFetcher) {
     return result
   }
   return {
+    /** Retained, server-scoped names are authoring hints; evaluation rechecks the selected scope. */
+    async sourceHints(source: string, signal?: AbortSignal): Promise<ValidationSourceHints | null> {
+      const result = await request(
+        `/sources/${encodeURIComponent(source)}/schema`,
+        sourceHints,
+        signal,
+        undefined,
+        true,
+        undefined,
+        8 * 1024 * 1024,
+      )
+      if (
+        result !== null &&
+        (result.connectionId !== source ||
+          source.length > 512 ||
+          result.connectorId.length === 0 ||
+          result.connectorId.length > 512 ||
+          result.tables.some((table) => table.name.length === 0 || table.name.length > 512) ||
+          new Set(result.tables.map((table) => table.name)).size !== result.tables.length)
+      )
+        return protocol()
+      return result === null
+        ? null
+        : {
+            connectionId: result.connectionId,
+            connectorId: result.connectorId,
+            discoveredAt: result.discoveredAt,
+            tables: result.tables.map((table) => ({ name: table.name })),
+          }
+    },
     evaluate: (input: ValidationSelection, signal?: AbortSignal) =>
       post('evaluate', input, evaluation, signal),
     save: (input: ValidationSave, signal?: AbortSignal): Promise<ValidationSaved> =>

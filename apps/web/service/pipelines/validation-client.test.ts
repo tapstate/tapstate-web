@@ -624,4 +624,62 @@ describe('direct full validation client', () => {
     )
     expect(f.requests).toHaveLength(2)
   })
+  it('reads only bounded server-scoped name hints and checks their original Source identity', async () => {
+    const hints = {
+      connectionId: 'source/a',
+      connectorId: 'mysql',
+      tables: [{ name: 'orders' }],
+      discoveredAt: 100,
+    }
+    const f = fixture([
+      json(hints),
+      new Response(null, { status: 404 }),
+      json({ ...hints, connectionId: 'other' }),
+      json({ ...hints, tables: [{ name: 'orders' }, { name: 'orders' }] }),
+    ])
+    expect(await f.client.sourceHints('source/a')).toEqual(hints)
+    expect(new URL(f.requests[0].url).pathname).toBe('/api/sources/source%2Fa/schema')
+    expect(await f.client.sourceHints('source/a')).toBeNull()
+    await expect(f.client.sourceHints('source/a')).rejects.toMatchObject({ kind: 'protocol' })
+    await expect(f.client.sourceHints('source/a')).rejects.toMatchObject({ kind: 'protocol' })
+  })
+
+  it('rejects a hint response over its transport or name-count bound before using it', async () => {
+    const oversized = new Response('unused', {
+      headers: { 'content-length': String(8 * 1024 * 1024 + 1) },
+    })
+    const names = {
+      connectionId: 'source',
+      connectorId: 'mysql',
+      tables: Array.from({ length: 1025 }, (_, i) => ({ name: `table_${i}` })),
+      discoveredAt: 100,
+    }
+    const f = fixture([oversized, json(names)])
+    await expect(f.client.sourceHints('source')).rejects.toMatchObject({ kind: 'protocol' })
+    await expect(f.client.sourceHints('source')).rejects.toMatchObject({ kind: 'protocol' })
+  })
+  it('retains only bounded table-name hints rather than full discovery schemas', async () => {
+    const f = fixture([
+      json({
+        connectionId: 'source',
+        connectorId: 'mysql',
+        discoveredAt: 100,
+        tables: [
+          {
+            name: 'orders',
+            fields: [{ name: 'private-model-sentinel', type: 'text' }],
+            primaryKey: ['id'],
+            indexes: [],
+          },
+        ],
+        extra: 'unused',
+      }),
+    ])
+    expect(await f.client.sourceHints('source')).toEqual({
+      connectionId: 'source',
+      connectorId: 'mysql',
+      discoveredAt: 100,
+      tables: [{ name: 'orders' }],
+    })
+  })
 })
