@@ -1,9 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { connect, mapProps } from '@formily/react'
-
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { SegmentedControl, SegmentedControlItem } from '@tapstate-web/ui/segmented-control'
 
 type RadioOption = {
   disabled?: boolean
@@ -41,42 +39,29 @@ function SegmentedRadioGroup({
   value,
 }: SegmentedRadioProps) {
   return (
-    <div
-      data-slot="button-group"
-      className="border-border bg-muted inline-flex w-fit max-w-full gap-1 overflow-x-auto rounded-lg border p-1"
-      role="group"
+    <SegmentedControl
       aria-label={ariaLabel}
+      disabled={disabled || readOnly}
+      value={value}
+      onValueChange={onChange}
     >
       {options.map(normalizeOption).map((option) => {
-        const selected = Object.is(option.value, value)
-
         return (
-          <Button
+          <SegmentedControlItem
             key={String(option.value)}
-            type="button"
-            variant="ghost"
-            size="sm"
-            aria-pressed={selected}
-            disabled={disabled || readOnly || option.disabled}
-            className={cn(
-              'shrink-0',
-              selected
-                ? 'bg-background text-foreground hover:bg-background shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-transparent',
-            )}
-            onClick={() => onChange?.(option.value)}
+            value={option.value}
+            disabled={option.disabled}
           >
             {option.label}
-          </Button>
+          </SegmentedControlItem>
         )
       })}
-    </div>
+    </SegmentedControl>
   )
 }
 
 /**
- * A Formily Radio.Group renderer using the application's shadcn button-group
- * visual language instead of AntD's radio-button styling.
+ * A Formily Radio.Group renderer using the vendored shared UI segmented control.
  */
 export const FormilySegmentedRadioGroup = connect(
   SegmentedRadioGroup,

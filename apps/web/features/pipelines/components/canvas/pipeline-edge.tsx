@@ -20,7 +20,7 @@ export function PipelineEdge({
   const [isHovered, setIsHovered] = useState(false)
   const [isTriggerHovered, setIsTriggerHovered] = useState(false)
   const [edgePath, labelX, labelY] = getBezierPath({
-    // React Flow calculates endpoints at the center of the 16px handles. Dify
+    // React Flow calculates endpoints at the center of the 16px handles. shared UI
     // pulls the rendered path inward by half the handle width so it meets the
     // blue bar rather than stopping at the outer edge of the hit area.
     sourceX: sourceX - 8,
@@ -42,7 +42,7 @@ export function PipelineEdge({
         markerEnd={markerEnd}
         interactionWidth={24}
         style={{
-          stroke: selected ? 'var(--pipeline-selection)' : 'var(--pipeline-edge)',
+          stroke: selected ? 'var(--color-workflow-link-line-active)' : 'var(--pipeline-edge)',
           strokeWidth: selected ? 2.25 : 1.75,
         }}
       />
@@ -57,19 +57,17 @@ export function PipelineEdge({
       />
       <EdgeLabelRenderer>
         <div
-          className="nopan nodrag absolute z-[3] transition-opacity duration-150"
-          style={{
-            transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-            pointerEvents: isInsertVisible ? 'auto' : 'none',
-            opacity: isInsertVisible ? 1 : 0,
-          }}
+          className={`nopan nodrag group/edge-insert absolute z-[3] transition-opacity duration-150 focus-within:pointer-events-auto focus-within:opacity-100 focus-within:transition-none ${isInsertVisible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
+          style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
           onMouseEnter={() => setIsTriggerHovered(true)}
           onMouseLeave={() => setIsTriggerHovered(false)}
         >
           <button
             type="button"
-            className="z-10 grid size-4 place-items-center rounded-full border-0 bg-[var(--pipeline-selection)] p-0 text-white shadow-sm transition-transform duration-150 hover:scale-150"
+            tabIndex={0}
+            className="focus-visible:ring-components-input-border-hover z-10 grid size-4 place-items-center rounded-full border-0 bg-[var(--pipeline-selection)] p-0 text-white shadow-sm transition-transform duration-150 hover:scale-150 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:transition-none"
             aria-label={t('pipelines.workspace.nodeSelector.insertOnEdge')}
+            data-edge-insert="true"
             onClick={(event) => {
               event.stopPropagation()
               data?.onRequestInsert?.({ x: event.clientX, y: event.clientY })

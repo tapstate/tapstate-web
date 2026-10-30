@@ -296,15 +296,18 @@ describe('StateStorePage', () => {
     expect(container.textContent).not.toContain('internal:27017')
     expect(
       [...container.querySelectorAll('.settings-sections__item')].map((item) => item.textContent),
-    ).toEqual(['State store'])
+    ).toEqual(['State store', 'About'])
     expect([...container.querySelectorAll('dt')].map((label) => label.textContent)).toEqual([
       'Type',
       'Database',
       'Access',
     ])
-    expect([...container.querySelectorAll('button')].map((button) => button.textContent)).toEqual([
-      'Refresh status',
-    ])
+    expect(
+      [...container.querySelectorAll('button')]
+        .filter((button) => !button.classList.contains('settings-sections__item'))
+        .map((button) => button.textContent),
+    ).toEqual(['Refresh status'])
+    expect(container.querySelectorAll('.settings-sections__item')).toHaveLength(2)
     expect(container.textContent).not.toContain('Members')
     expect(container.textContent).not.toContain('API keys')
     expect(container.textContent).not.toContain('Add store')
@@ -346,14 +349,45 @@ describe('StateStorePage', () => {
     expect(container.querySelector('li')?.textContent).toContain('tapstate_cloud')
     expect(container.textContent).not.toContain('Tapstate state store')
     expect(container.textContent).not.toContain('unmarked')
-    expect([...container.querySelectorAll('button')].map((button) => button.textContent)).toEqual([
-      'Refresh status',
-    ])
+    expect(
+      [...container.querySelectorAll('button')]
+        .filter((button) => !button.classList.contains('settings-sections__item'))
+        .map((button) => button.textContent),
+    ).toEqual(['Refresh status'])
+    expect(container.querySelectorAll('.settings-sections__item')).toHaveLength(2)
     expect(container.textContent).not.toContain('Members')
     expect(container.textContent).not.toContain('API keys')
     expect(container.textContent).not.toContain('Add store')
     expect(container.textContent).not.toContain('Checks')
     expect(container.textContent).not.toContain('Usage')
     expect(container.textContent).not.toContain('Delete')
+  })
+
+  it('renders about section with version, copyright, and legal links', async () => {
+    mockState.listSources.mockResolvedValue([])
+    mockState.apiFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ version: '0.6.0' }),
+    })
+
+    await render()
+
+    const aboutTab = [
+      ...container.querySelectorAll<HTMLButtonElement>('.settings-sections__item'),
+    ].find((item) => item.textContent === 'About')
+    expect(aboutTab).toBeDefined()
+    await act(async () => {
+      aboutTab?.click()
+    })
+
+    expect(container.querySelector('.settings-about__copyright')?.textContent).toContain(
+      'TAPDATA HONG KONG LIMITED',
+    )
+    const links = [...container.querySelectorAll('.settings-about__legal-links a')]
+    expect(links).toHaveLength(2)
+    expect(links[0].textContent).toBe('Privacy Policy')
+    expect(links[0].getAttribute('href')).toBe('https://tapstate.com/legal/privacy')
+    expect(links[1].textContent).toBe('Terms of Service')
+    expect(links[1].getAttribute('href')).toBe('https://tapstate.com/legal/eula')
   })
 })

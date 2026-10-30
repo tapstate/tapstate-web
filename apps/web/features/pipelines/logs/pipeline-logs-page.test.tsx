@@ -21,6 +21,7 @@ Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
 let root: Root | undefined
 let container: HTMLDivElement | undefined
+const LOG_TIME_BASE = Date.now() - 3 * 24 * 60 * 60 * 1000
 
 async function renderPage() {
   container = document.createElement('div')
@@ -41,9 +42,9 @@ beforeEach(() => {
   getPipelineLogs.mockResolvedValue({
     pipelineId: 'orders_to_warehouse',
     lines: [
-      { timestampMillis: 1_724_500_800_123, level: 'INFO', message: 'Pipeline started' },
-      { timestampMillis: 1_724_500_801_123, level: 'WARN', message: 'Slow downstream sink' },
-      { timestampMillis: 1_724_500_802_123, level: 'ERROR', message: 'Sink rejected record' },
+      { timestampMillis: LOG_TIME_BASE, level: 'INFO', message: 'Pipeline started' },
+      { timestampMillis: LOG_TIME_BASE + 1_000, level: 'WARN', message: 'Slow downstream sink' },
+      { timestampMillis: LOG_TIME_BASE + 2_000, level: 'ERROR', message: 'Sink rejected record' },
     ],
   })
 })
@@ -64,7 +65,7 @@ describe('PipelineLogsPage', () => {
 
     expect(container?.querySelector('h1')?.textContent).toBe('Pipeline logs')
     expect(container?.textContent).toContain(
-      'Inspect the latest runtime log lines captured for this Pipeline.',
+      'Showing the latest log lines captured for this Pipeline. Filters apply only to this returned tail.',
     )
     expect(container?.querySelector('.pipeline-logs__workbench')).not.toBeNull()
   })
@@ -76,9 +77,12 @@ describe('PipelineLogsPage', () => {
     expect(getPipelineLogs).toHaveBeenCalledWith('orders_to_warehouse', expect.any(Function))
     expect(container?.textContent).toContain('Slow downstream sink')
 
-    await act(async () =>
-      document.querySelector<HTMLButtonElement>('[data-log-level="WARN"]')?.click(),
+    await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="All"]')?.click())
+    const warningOption = [...document.body.querySelectorAll<HTMLElement>('[role="option"]')].find(
+      (option) => option.textContent?.trim() === 'WARN',
     )
+    expect(warningOption).toBeDefined()
+    await act(async () => warningOption?.click())
     expect(container?.textContent).not.toContain('Pipeline started')
     expect(container?.textContent).toContain('Slow downstream sink')
     expect(container?.textContent).not.toContain('Sink rejected record')
@@ -124,12 +128,13 @@ describe('PipelineLogsPage', () => {
     act(() => line?.click())
 
     expect(line?.getAttribute('aria-pressed')).toBe('true')
-    expect(container?.querySelector('.pipeline-logs__content--with-detail')).not.toBeNull()
-    expect(container?.textContent).toContain('Log details')
-    expect(container?.textContent).toContain('Pipeline started')
+    const drawer = document.body.querySelector('.pipeline-logs__drawer-popup')
+    expect(drawer).not.toBeNull()
+    expect(drawer?.textContent).toContain('Log details')
+    expect(drawer?.textContent).toContain('Pipeline started')
 
-    const timestamp = document.querySelector('.pipeline-log-detail time')
-    expect(timestamp?.getAttribute('dateTime')).toBe(new Date(1_724_500_800_123).toISOString())
+    const timestamp = drawer?.querySelector('.pipeline-log-detail time')
+    expect(timestamp?.getAttribute('dateTime')).toBe(new Date(LOG_TIME_BASE).toISOString())
     expect(timestamp?.textContent).toBe(
       new Intl.DateTimeFormat('en', {
         year: 'numeric',
@@ -138,7 +143,8 @@ describe('PipelineLogsPage', () => {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
-      }).format(1_724_500_800_123),
+        timeZoneName: 'short',
+      }).format(LOG_TIME_BASE),
     )
 
     act(() =>

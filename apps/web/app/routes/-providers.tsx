@@ -2,8 +2,10 @@ import type { ReactNode } from 'react'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
-import { I18nextProvider } from 'react-i18next'
+import { I18nextProvider, useTranslation } from 'react-i18next'
 
+import { DialogProvider } from '@/components/ui/dialog'
+import { ToastProvider } from '@/components/ui/toast'
 import { i18n } from '@/i18n'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -29,9 +31,35 @@ export function Providers({ children }: { children: ReactNode }) {
     [queryClient],
   )
 
+  useEffect(() => {
+    const unsubscribe = useAuthStore.subscribe((state, previous) => {
+      if (state.profile === 'on-prem' && state.authEpoch !== previous.authEpoch) {
+        void queryClient.cancelQueries()
+        queryClient.clear()
+      }
+    })
+    const disconnect = useAuthStore.getState().connect()
+    return () => {
+      unsubscribe()
+      disconnect()
+    }
+  }, [queryClient])
+
   return (
     <I18nextProvider i18n={i18n}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <LocalizedUIProviders>{children}</LocalizedUIProviders>
+      </QueryClientProvider>
     </I18nextProvider>
+  )
+}
+
+function LocalizedUIProviders({ children }: { children: ReactNode }) {
+  const { t } = useTranslation()
+
+  return (
+    <DialogProvider closeLabel={t('common.close')}>
+      <ToastProvider closeLabel={t('common.close')}>{children}</ToastProvider>
+    </DialogProvider>
   )
 }

@@ -1,9 +1,8 @@
+import { Button } from '@tapstate-web/ui/button'
+import { Input } from '@tapstate-web/ui/input'
 import { GitBranch, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 
 import {
   celFilterField,
@@ -12,6 +11,10 @@ import {
   celFilterLiteral,
   type FilterLiteralKind,
 } from '../filter-cel'
+import {
+  SearchablePicker,
+  type SearchablePickerOption,
+} from '../reference-wizard/searchable-picker'
 import { TransformEditorShell } from './transform-editor-shell'
 import { TransformSelect } from './transform-select'
 import { mergeBody, type TransformEditorProps } from './types'
@@ -91,7 +94,13 @@ function parseLiteral(value: string): { value: string; kind: FilterLiteralKind }
   return { value: value.replace(/^['"]|['"]$/g, ''), kind: 'string' }
 }
 
-export function FilterEditor({ config, onChange, fieldTypes }: TransformEditorProps) {
+export function FilterEditor({
+  config,
+  onChange,
+  fieldTypes,
+  fieldOptions: transformFieldOptions = [],
+  upstreamInputs,
+}: TransformEditorProps) {
   const { t } = useTranslation()
   const initialExpression = typeof config.body.expr === 'string' ? config.body.expr : ''
   const [rows, setRows] = useState(() => parseExpression(initialExpression))
@@ -129,7 +138,7 @@ export function FilterEditor({ config, onChange, fieldTypes }: TransformEditorPr
 
   return (
     <TransformEditorShell
-      from={config.from}
+      from={upstreamInputs ?? config.from}
       icon={GitBranch}
       title={t('pipelines.workspace.transform.filter.title')}
     >
@@ -152,22 +161,74 @@ export function FilterEditor({ config, onChange, fieldTypes }: TransformEditorPr
           const fieldType = celFilterFieldType(row.field, fieldTypes)
           const fieldKind = celFilterFieldKind(fieldType)
           const containsSupported = fieldKind === 'string'
+          const hasFieldSchema =
+            transformFieldOptions.length > 0 || Object.keys(fieldTypes ?? {}).length > 0
+          const isKnownEnvelopeField = ['op', 'ts', 'src'].includes(row.field)
+          const fieldOptions: SearchablePickerOption[] = [
+            ...(transformFieldOptions.length > 0
+              ? transformFieldOptions
+              : Object.entries(fieldTypes ?? {}).map(([field, type]) => ({
+                  value: field,
+                  label: field,
+                  detail: type || undefined,
+                }))),
+            {
+              value: 'op',
+              label: 'op',
+              detail: t('pipelines.workspace.transform.wizard.operationTypeDetail'),
+            },
+            {
+              value: 'ts',
+              label: 'ts',
+              detail: t('pipelines.workspace.transform.wizard.eventTimestampDetail'),
+            },
+            {
+              value: 'src',
+              label: 'src',
+              detail: t('pipelines.workspace.transform.wizard.sourceMetadataDetail'),
+            },
+          ].filter(
+            (option, optionIndex, options) =>
+              options.findIndex((candidate) => candidate.value === option.value) === optionIndex,
+          )
+          if (row.field && !fieldOptions.some((option) => option.value === row.field)) {
+            fieldOptions.unshift({ value: row.field, label: row.field })
+          }
 
           return (
             <div key={`${index}-${row.field}`}>
               <div className="pipeline-transform__condition">
-                <Input
-                  aria-label={t('pipelines.workspace.transform.field')}
-                  value={row.field}
-                  placeholder={t('pipelines.workspace.transform.field')}
-                  onChange={(event) =>
-                    updateRows(
-                      rows.map((item, itemIndex) =>
-                        itemIndex === index ? { ...item, field: event.target.value } : item,
-                      ),
-                    )
-                  }
-                />
+                {hasFieldSchema || isKnownEnvelopeField ? (
+                  <SearchablePicker
+                    ariaLabel={t('pipelines.workspace.transform.field')}
+                    emptyLabel={t('pipelines.workspace.transform.wizard.noFieldMatches')}
+                    className="min-w-0 flex-1"
+                    onValueChange={(field) =>
+                      updateRows(
+                        rows.map((item, itemIndex) =>
+                          itemIndex === index ? { ...item, field } : item,
+                        ),
+                      )
+                    }
+                    openLabel={t('pipelines.workspace.transform.wizard.openFieldPicker')}
+                    options={fieldOptions}
+                    placeholder={t('pipelines.workspace.transform.field')}
+                    value={row.field}
+                  />
+                ) : (
+                  <Input
+                    aria-label={t('pipelines.workspace.transform.field')}
+                    value={row.field}
+                    placeholder={t('pipelines.workspace.transform.field')}
+                    onChange={(event) =>
+                      updateRows(
+                        rows.map((item, itemIndex) =>
+                          itemIndex === index ? { ...item, field: event.target.value } : item,
+                        ),
+                      )
+                    }
+                  />
+                )}
                 <TransformSelect
                   label={t('pipelines.workspace.transform.operator')}
                   value={row.operator}
@@ -205,7 +266,8 @@ export function FilterEditor({ config, onChange, fieldTypes }: TransformEditorPr
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-sm"
+                  size="small"
+                  className="size-6 p-0"
                   aria-label={t('pipelines.workspace.transform.removeCondition')}
                   onClick={() => {
                     const nextRows = rows.filter((_, itemIndex) => itemIndex !== index)
@@ -230,8 +292,8 @@ export function FilterEditor({ config, onChange, fieldTypes }: TransformEditorPr
       </div>
       <Button
         type="button"
-        variant="outline"
-        size="sm"
+        variant="secondary"
+        size="small"
         className="w-fit gap-1.5"
         onClick={() =>
           updateRows([...rows, { field: '', operator: 'equals', value: '', literalKind: 'auto' }])

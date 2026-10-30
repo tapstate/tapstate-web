@@ -24,7 +24,10 @@ vi.mock('../../service/cloud-api', async (importOriginal) => {
   }
 })
 vi.mock('../../state/cloud-app-state', () => ({ useCloudAppState: () => mocks.state.current }))
-vi.mock('../feedback/tawk-feedback-widget', () => ({ TawkFeedbackWidget: () => null }))
+vi.mock('../feedback/tawk-feedback-widget', () => ({
+  isTawkSupportAvailable: () => false,
+  TawkFeedbackWidget: () => null,
+}))
 
 import { i18n } from '../../i18n'
 import { CloudApiError } from '../../service/cloud-api'
@@ -37,7 +40,7 @@ import { cancelPendingClusterEntries, useClusterEntry } from './use-cluster-entr
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
-const organization: Organization = { id: 'org-a', name: 'Org A', slug: 'org-a' }
+const organization: Organization = { id: 'org-a', name: 'Org A' }
 const blockedStates: ClusterState[] = [
   'PROVISIONING_PENDING',
   'PROVISIONING',
@@ -114,6 +117,7 @@ beforeEach(() => {
 })
 
 afterEach(async () => {
+  vi.unstubAllEnvs()
   await act(async () => root?.unmount())
   host?.remove()
   vi.unstubAllGlobals()
@@ -134,6 +138,27 @@ describe('Cluster recovery entry', () => {
     expect(assign).toHaveBeenCalledExactlyOnceWith(
       'http://localhost:28443/auth/exchange?code=single-use-code',
     )
+  })
+
+  it('enters when the same Cluster becomes available', async () => {
+    await render(
+      <AutomaticClusterEntry
+        cluster={cluster('PROVISIONING')}
+        organizationId={organization.id}
+        onBack={() => {}}
+      />,
+    )
+    expect(mocks.resolveCluster).not.toHaveBeenCalled()
+    await act(async () =>
+      root.render(
+        <AutomaticClusterEntry
+          cluster={cluster('READY')}
+          organizationId={organization.id}
+          onBack={() => {}}
+        />,
+      ),
+    )
+    expect(mocks.resolveCluster).toHaveBeenCalledExactlyOnceWith('cluster-a', organization.id)
   })
 
   it('does not automatically retry a failed C1 return as the page rerenders', async () => {
@@ -299,7 +324,6 @@ describe('Cluster recovery entry', () => {
       const enter = vi.fn()
       await render(
         <CloudOverviewView
-          organization={organization}
           clusters={[cluster(state)]}
           onNavigate={vi.fn()}
           onOpenProvisionModal={vi.fn()}
@@ -375,6 +399,7 @@ describe('Cluster recovery entry', () => {
     'https://user:secret@cluster-a.cloud.tapstate.com',
     'https://cluster-a.cloud.tapstate.com:8443',
   ])('rejects invalid exchange target %s', async (baseUri) => {
+    vi.stubEnv('DEV', false)
     consoleHostname = 'cloud.tapstate.com'
     mocks.resolveCluster.mockResolvedValue({
       success: true,

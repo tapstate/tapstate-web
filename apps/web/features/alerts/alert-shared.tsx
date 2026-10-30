@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { PopoverClose, PopoverTrigger } from '@tapstate-web/ui/popover'
 import { Bell, X } from 'lucide-react'
 import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger, PopoverClose } from '@/components/ui/popover'
+import { Popover, PopoverContent } from '@/components/ui/popover'
 import { alertCall, type AlarmRow, type AlertPage, type Health } from '@/service/alert-client'
 import { useAuthStore } from '@/stores/auth-store'
 

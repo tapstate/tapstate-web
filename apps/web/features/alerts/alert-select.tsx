@@ -1,12 +1,7 @@
+import { Select } from '@tapstate-web/ui/select'
 import { Children, isValidElement, type ReactElement, type ReactNode } from 'react'
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 type Choice = { value?: string | number; disabled?: boolean; children?: ReactNode }
 type Change = { target: { value: string; selectedOptions: { value: string }[] } }
@@ -59,7 +54,7 @@ export function AlertSelect({
       target: { value: selected[0] ?? '', selectedOptions: selected.map((v) => ({ value: v })) },
     })
   return multiple ? (
-    <Select
+    <Select<string, true>
       items={choices}
       multiple
       value={Array.isArray(value) ? [...value] : []}

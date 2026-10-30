@@ -16,9 +16,9 @@ describe('resolveTawkWidgetConfig', () => {
     ).toEqual({ propertyId: '6ad811f9c0b97c34b365a428', widgetId: '1k5e0ceht' })
   })
 
-  it('uses the production Property only for the production Cloud host', () => {
+  it('uses the shared Property for the production Cloud host', () => {
     expect(resolveTawkWidgetConfig({ hostname: 'cloud.tapstate.com', development: false })).toEqual(
-      { propertyId: '6ad81a2c88dd6c34b5979eb7', widgetId: '1k5e2cghv' },
+      { propertyId: '6ad811f9c0b97c34b365a428', widgetId: '1k5e0ceht' },
     )
   })
 

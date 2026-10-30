@@ -38,6 +38,7 @@ import {
   normalizeConnectorConfigValues,
 } from './connector-spec-formily-schema'
 import { buildSourceConfig, createInitialConfig, type SourceConfigState } from './source-form'
+import { SourceReadModeControl } from './source-read-mode-control'
 import { TableSelectionEditor } from './table-selection-editor'
 
 interface SourceEditDialogProps {
@@ -426,7 +427,7 @@ export function SourceEditDialog({
     >
       <DialogContent
         closeDisabled={submitting || testing || pendingFileReads}
-        closeLabel={t('ask.actions.close')}
+        closeLabel={t('common.close')}
         className="bg-background border-border flex h-[90vh] max-h-[800px] w-full max-w-[1100px] flex-col gap-0 overflow-hidden rounded-2xl border p-0 shadow-2xl ring-0 sm:max-w-[1100px]"
       >
         <DialogHeader className="border-border bg-background flex h-14 shrink-0 flex-row items-center border-b px-6 pr-12">
@@ -501,37 +502,17 @@ export function SourceEditDialog({
                         <span className="text-foreground text-[13px] font-medium">
                           {t('sources.edit.modeLabel')}
                         </span>
-                        <div
-                          className="border-border bg-muted inline-flex w-fit max-w-full gap-1 overflow-x-auto rounded-lg border p-1"
-                          role="group"
-                          aria-label={t('sources.edit.modeLabel')}
-                        >
-                          {connector.modes.map((item) => {
-                            const selected = mode === item
-                            return (
-                              <Button
-                                key={item}
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                aria-pressed={selected}
-                                disabled={submitting || testing}
-                                className={
-                                  selected
-                                    ? 'bg-background text-foreground hover:bg-background shadow-sm'
-                                    : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
-                                }
-                                onClick={() => {
-                                  setMode(item)
-                                  setTestReport(null)
-                                  setTestError(null)
-                                }}
-                              >
-                                {item}
-                              </Button>
-                            )
-                          })}
-                        </div>
+                        <SourceReadModeControl
+                          ariaLabel={t('sources.edit.modeLabel')}
+                          modes={connector.modes}
+                          value={mode}
+                          disabled={submitting || testing}
+                          onChange={(nextMode) => {
+                            setMode(nextMode)
+                            setTestReport(null)
+                            setTestError(null)
+                          }}
+                        />
                       </div>
                     )}
 
@@ -572,7 +553,7 @@ export function SourceEditDialog({
                     disabled={submitting || testing}
                     aria-invalid={Boolean(fieldErrors.metadata)}
                     className="min-h-24 font-mono text-[12px]"
-                    onChange={(event) => setMetadata(event.target.value)}
+                    onValueChange={setMetadata}
                   />
                   {fieldErrors.metadata && (
                     <span className="text-destructive text-[12px] leading-relaxed">

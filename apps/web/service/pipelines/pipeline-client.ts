@@ -178,7 +178,22 @@ export interface PipelinePreviewEvent {
   payload: Record<string, unknown>
 }
 
+export interface PipelineTargetIdentity {
+  element: string
+  connection: string
+  table: string
+  stream: string
+  status: 'not-required' | 'automatic' | 'action-required'
+  reason: string
+  sourceField: string | null
+  preservedField: string | null
+  writeKey: string[]
+  generatedFields: string[]
+}
+
 export interface PipelinePreviewRun {
+  logicalDocuments?: Record<string, unknown>[]
+  identityPlans?: PipelineTargetIdentity[]
   runId: string
   candidateHash: string
   format: 'logical-json' | 'mongo-extended-json' | null
@@ -223,6 +238,7 @@ export type PipelineCatalogState =
   | PipelineRuntimeState
   | 'DRAFT'
   | 'RECOVERY_REQUIRED'
+  | 'NOT_STARTED'
   | 'STARTING'
   | 'PAUSING'
   | 'RESUMING'
@@ -622,6 +638,7 @@ function isPipelineStatus(value: unknown): value is PipelineStatus {
       'FAILED',
       'UNAVAILABLE',
       'RECOVERY_REQUIRED',
+      'NOT_STARTED',
     ].includes(value.state as string) &&
     (value.failure === undefined ||
       value.failure === null ||
@@ -642,6 +659,7 @@ function isPipelineCatalogStatus(value: unknown): value is PipelineCatalogStatus
       'STOPPING',
       'UNAVAILABLE',
       'RECOVERY_REQUIRED',
+      'NOT_STARTED',
     ].includes(value.state as string) &&
     (value.desiredState === undefined ||
       value.desiredState === null ||
@@ -1153,6 +1171,56 @@ export async function updatePipelineDraft(
   })
 }
 
+/** Deletes the applied Pipeline and the authoring revision shown in the catalog. */
+export async function deletePipeline(
+  id: string,
+  contentHash: string,
+  draftRevision: number | null,
+  fetcher: ApiFetcher = fetch,
+): Promise<void> {
+  if (
+    !/^[0-9a-f]{64}$/.test(contentHash) ||
+    (draftRevision !== null && (!Number.isSafeInteger(draftRevision) || draftRevision < 1))
+  ) {
+    throw new PipelineClientError(
+      'protocol',
+      'Pipeline deletion requires current version preconditions.',
+    )
+  }
+  let response: Response
+  try {
+    response = await fetcher(`/api/pipelines/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: {
+        'If-Match': `"${contentHash}"`,
+        'If-Draft-Match': draftRevision === null ? '"none"' : `"${draftRevision}"`,
+      },
+    })
+  } catch (error) {
+    throw new PipelineClientError(
+      'network',
+      error instanceof Error ? error.message : 'The request did not reach Tapstate.',
+    )
+  }
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null)
+    throw new PipelineClientError(
+      'server',
+      responseMessage(payload, 'Tapstate refused the Pipeline deletion.'),
+      response.status,
+      isRecord(payload) && typeof payload.code === 'string' ? payload.code : null,
+      isRecord(payload) && isRecord(payload.params) ? payload.params : {},
+    )
+  }
+  if (response.status !== 204) {
+    throw new PipelineClientError(
+      'protocol',
+      'Tapstate returned an invalid Pipeline deletion response.',
+      response.status,
+    )
+  }
+}
+
 export async function deletePipelineDraft(
   id: string,
   etag: string,
@@ -1278,6 +1346,8 @@ export async function streamPipelinePreview(
   let contexts: Record<string, unknown>[] = []
   let sample: Record<string, unknown> | null = null
   let documents: Record<string, unknown>[] = []
+  let logicalDocuments: Record<string, unknown>[] | undefined
+  let identityPlans: PipelineTargetIdentity[] | undefined
   let format: PipelinePreviewRun['format'] = null
   let trace: Record<string, unknown>[] = []
   let sampleId: string | null = null
@@ -1374,6 +1444,34 @@ export async function streamPipelinePreview(
         compileCompleted = true
         executionSpec = payload.executionSpec
         contexts = payload.contexts
+        break
+      case 'identity.completed':
+        if (
+          !compileCompleted ||
+          identityPlans !== undefined ||
+          sampleCompleted ||
+          !Array.isArray(payload.targets) ||
+          !payload.targets.every(
+            (target) =>
+              isRecord(target) &&
+              typeof target.element === 'string' &&
+              typeof target.connection === 'string' &&
+              typeof target.table === 'string' &&
+              typeof target.stream === 'string' &&
+              typeof target.reason === 'string' &&
+              ['not-required', 'automatic', 'action-required'].includes(String(target.status)) &&
+              (target.sourceField === null || typeof target.sourceField === 'string') &&
+              (target.preservedField === null || typeof target.preservedField === 'string') &&
+              isStringArray(target.writeKey) &&
+              isStringArray(target.generatedFields),
+          )
+        ) {
+          throw new PipelineClientError(
+            'protocol',
+            'Tapstate returned invalid target identity assessment.',
+          )
+        }
+        identityPlans = payload.targets as unknown as PipelineTargetIdentity[]
         break
       case 'sample.completed':
         if (
@@ -1486,13 +1584,18 @@ export async function streamPipelinePreview(
           !Array.isArray(payload.documents) ||
           !payload.documents.every(isRecord) ||
           !Number.isInteger(payload.rowCount) ||
-          payload.rowCount !== payload.documents.length
+          payload.rowCount !== payload.documents.length ||
+          (payload.logicalDocuments !== undefined &&
+            (!Array.isArray(payload.logicalDocuments) ||
+              !payload.logicalDocuments.every(isRecord) ||
+              payload.logicalDocuments.length !== payload.rowCount))
         ) {
           throw new PipelineClientError('protocol', 'Tapstate returned invalid preview documents.')
         }
         resultCompleted = true
         format = resultFormat
         documents = payload.documents
+        logicalDocuments = payload.logicalDocuments as Record<string, unknown>[] | undefined
         rowCount = payload.rowCount
         break
       }
@@ -1599,6 +1702,8 @@ export async function streamPipelinePreview(
     sampleId,
     rowCount,
     failure,
+    ...(identityPlans === undefined ? {} : { identityPlans }),
+    ...(logicalDocuments === undefined ? {} : { logicalDocuments }),
   }
 }
 
@@ -1716,16 +1821,45 @@ export async function getPipeline(id: string, fetcher: ApiFetcher = fetch): Prom
   return payload
 }
 
-export async function listPipelines(fetcher: ApiFetcher = fetch): Promise<PipelineCatalogItem[]> {
-  const payload = await request('/pipelines', fetcher)
-  if (
-    !isRecord(payload) ||
-    !Array.isArray(payload.items) ||
-    !payload.items.every(isPipelineCatalogItem)
-  ) {
-    throw new PipelineClientError('protocol', 'Tapstate returned an invalid Pipeline list.')
+const PIPELINE_LIST_PAGE_SIZE = 200
+
+async function listAllPipelinePages<T>(
+  path: string,
+  fetcher: ApiFetcher,
+  isItem: (value: unknown) => value is T,
+  invalidResponseMessage: string,
+): Promise<T[]> {
+  const items: T[] = []
+  for (let offset = 0; ; offset += PIPELINE_LIST_PAGE_SIZE) {
+    const payload = await request(
+      `${path}?limit=${PIPELINE_LIST_PAGE_SIZE}&offset=${offset}`,
+      fetcher,
+    )
+    if (!isRecord(payload) || !Array.isArray(payload.items) || !payload.items.every(isItem)) {
+      throw new PipelineClientError('protocol', invalidResponseMessage)
+    }
+    items.push(...payload.items)
+    if (payload.items.length < PIPELINE_LIST_PAGE_SIZE) return items
   }
-  return payload.items.map((item) =>
+}
+
+export async function listPipelineArtifacts(fetcher: ApiFetcher = fetch): Promise<PipelineView[]> {
+  return listAllPipelinePages(
+    '/pipelines:artifacts',
+    fetcher,
+    isPipelineView,
+    'Tapstate returned an invalid Pipeline artifact list.',
+  )
+}
+
+export async function listPipelines(fetcher: ApiFetcher = fetch): Promise<PipelineCatalogItem[]> {
+  const items = await listAllPipelinePages(
+    '/pipelines',
+    fetcher,
+    isPipelineCatalogItem,
+    'Tapstate returned an invalid Pipeline list.',
+  )
+  return items.map((item) =>
     item.status.displayState === 'RECOVERY_REQUIRED'
       ? { ...item, status: { ...item.status, state: 'RECOVERY_REQUIRED' as const } }
       : item,

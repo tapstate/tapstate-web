@@ -22,6 +22,7 @@ export function AutomaticClusterEntry({
   selection.current = { cluster, enterCluster }
   const started = useRef(false)
   const clusterId = cluster?.id
+  const enterable = Boolean(cluster && canEnterCluster(cluster.state))
   useEffect(() => {
     const selected = selection.current
     if (
@@ -36,7 +37,7 @@ export function AutomaticClusterEntry({
     return () => {
       started.current = false
     }
-  }, [clusterId, organizationId])
+  }, [clusterId, organizationId, enterable])
   const available = cluster && cluster.orgId === organizationId && canEnterCluster(cluster.state)
   return (
     <section className="mx-auto max-w-xl space-y-4 p-6" aria-label={t('clusterEntry.title')}>

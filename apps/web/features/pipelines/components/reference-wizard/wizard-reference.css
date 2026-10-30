@@ -33,14 +33,14 @@
   min-height: 0;
 }
 @layer components {
-  .wizard-reference button {
+  .wizard-reference button:not([data-wizard-search-trigger]) {
     border-radius: var(--wizard-control-radius);
   }
 }
 .wizard-reference .wizard-reference-relation-radius {
   border-radius: var(--wizard-card-radius);
 }
-.wizard-reference input,
+.wizard-reference input:not([data-wizard-search-control]),
 .wizard-reference select,
 .wizard-reference textarea {
   border-radius: var(--wizard-control-radius);
@@ -181,7 +181,7 @@
   flex: 0 0 auto;
 }
 .wizard-reference .wizard-reference-canvas {
-  padding: var(--wizard-canvas-gutter) 0 var(--wizard-canvas-gutter) var(--wizard-canvas-gutter);
+  padding: var(--wizard-canvas-gutter) 32px;
 }
 .wizard-reference .wizard-reference-notices {
   flex: 0 0 auto;
@@ -274,5 +274,40 @@
   .wizard-reference section > .flex {
     flex-wrap: wrap;
     gap: 12px;
+  }
+}
+
+.wizard-reference .wizard-reference-sidebar {
+  width: 420px;
+  flex: 0 0 420px;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid var(--wizard-border);
+  background: var(--wizard-card);
+}
+.wizard-reference .wizard-reference-assistant {
+  width: 100%;
+  max-width: 100%;
+  flex: 1 1 0%;
+  min-width: 0;
+  min-height: 0;
+}
+.wizard-reference .wizard-reference-sidebar .wizard-reference-preview {
+  width: 100%;
+  flex: 1;
+  border-left: 0;
+}
+.wizard-reference .pipeline-ai-copilot button:focus-visible {
+  outline: 2px solid var(--wizard-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1100px) {
+  .wizard-reference .wizard-reference-sidebar {
+    width: 100%;
+    flex: none;
+    height: 680px;
+    border-left: 0;
+    border-top: 1px solid var(--wizard-border);
   }
 }

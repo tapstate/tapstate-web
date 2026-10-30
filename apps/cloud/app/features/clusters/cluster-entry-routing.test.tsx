@@ -8,6 +8,14 @@ const mocks = vi.hoisted(() => ({
   clusters: vi.fn(),
   navigate: vi.fn(),
   identity: vi.fn(),
+  currentClusters: [{ id: 'cluster-b', orgId: 'org-b', state: 'PROVISIONING' }] as Array<{
+    id: string
+    orgId: string
+    state: string
+  }>,
+  entryCluster: vi.fn(),
+  oauthStart: vi.fn(),
+  authenticated: undefined as undefined | ((user: unknown, setup?: boolean) => Promise<void>),
 }))
 vi.mock('@tanstack/react-router', async (original) => ({
   ...(await original<typeof import('@tanstack/react-router')>()),
@@ -22,6 +30,8 @@ vi.mock('../../service/cloud-api', async (original) => {
     cloudApi: {
       ...actual.cloudApi,
       me: mocks.me,
+      oauthStart: mocks.oauthStart,
+      registrationPolicy: vi.fn(async () => ({ trialCodeRequired: true })),
       organizations: mocks.organizations,
       activeClusters: mocks.clusters,
     },
@@ -33,6 +43,7 @@ vi.mock('../../state/cloud-app-state', () => ({
     setDarkMode: vi.fn(),
     setIdentity: mocks.identity,
     activeOrganization: { id: 'org-b' },
+    clusters: mocks.currentClusters,
     setClusters: vi.fn(),
   }),
 }))
@@ -42,14 +53,37 @@ vi.mock('../../shell/cloud-console-shell', () => ({
   ),
 }))
 vi.mock('./automatic-cluster-entry', () => ({
-  AutomaticClusterEntry: () => <div>Continuing entry</div>,
+  AutomaticClusterEntry: ({ cluster }: { cluster: unknown }) => {
+    mocks.entryCluster(cluster)
+    return <div>Continuing entry</div>
+  },
 }))
 vi.mock('../auth/auth-page', () => ({
-  AuthPage: ({ onAuthenticated }: { onAuthenticated: (user: unknown) => Promise<void> }) => (
-    <button onClick={() => void onAuthenticated({ email: 'tester@example.invalid' })}>
-      Complete sign-in
-    </button>
-  ),
+  AuthPage: ({
+    onAuthenticated,
+    onOAuth,
+    organizationSetupRequired,
+  }: {
+    onAuthenticated: (user: unknown, setup?: boolean) => Promise<void>
+    onOAuth: (provider: 'google', mode: 'login', invitation: null, defer: boolean) => Promise<void>
+    organizationSetupRequired?: boolean
+  }) => {
+    mocks.authenticated = onAuthenticated
+    return (
+      <>
+        <button
+          onClick={() =>
+            void onAuthenticated({ email: 'tester@example.invalid' }, organizationSetupRequired)
+          }
+        >
+          Complete sign-in
+        </button>
+        <button onClick={() => void onOAuth('google', 'login', null, false)}>
+          Provider sign-in
+        </button>
+      </>
+    )
+  },
 }))
 
 import type { ClusterEntrySearch } from './cluster-entry-intent'
@@ -66,6 +100,11 @@ const load = (deps: ClusterEntrySearch) =>
   })
 beforeEach(() => {
   vi.clearAllMocks()
+  window.sessionStorage.clear()
+  window.history.replaceState({}, '', '/auth')
+  mocks.authenticated = undefined
+  mocks.currentClusters = [{ id: 'cluster-b', orgId: 'org-b', state: 'PROVISIONING' }]
+  mocks.oauthStart.mockResolvedValue('https://provider.example/authorize')
   mocks.me.mockResolvedValue({ email: 'tester@example.invalid' })
   mocks.organizations.mockResolvedValue([
     { id: 'org-a', name: 'A' },
@@ -75,10 +114,35 @@ beforeEach(() => {
 })
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
   vi.useRealTimers()
 })
 
 describe('Cloud initialization return routing', () => {
+  it('supplies the refreshed Cluster to automatic entry', async () => {
+    vi.spyOn(ConsoleRoute, 'useSearch').mockReturnValue(intent)
+    vi.spyOn(ConsoleRoute, 'useLoaderData').mockReturnValue({
+      session: { email: 'tester@example.invalid' },
+      organizations: [{ id: 'org-b', name: 'B' }],
+      clusters: [{ id: 'cluster-b', orgId: 'org-b', state: 'PROVISIONING' }],
+    } as never)
+    const host = document.createElement('div')
+    document.body.append(host)
+    const root = createRoot(host)
+    const Console = ConsoleRoute.options.component as ComponentType
+    try {
+      await act(async () => root.render(<Console />))
+      mocks.currentClusters = [{ id: 'cluster-b', orgId: 'org-b', state: 'READY' }]
+      await act(async () => root.render(<Console />))
+      expect(mocks.entryCluster).toHaveBeenLastCalledWith(
+        expect.objectContaining({ state: 'READY' }),
+      )
+    } finally {
+      await act(async () => root.unmount())
+      host.remove()
+    }
+  })
+
   it('preserves the target when the mounted Console session expires during entry', async () => {
     vi.useFakeTimers()
     vi.spyOn(ConsoleRoute, 'useSearch').mockReturnValue(intent)
@@ -166,6 +230,82 @@ describe('Cloud initialization return routing', () => {
       await act(async () => root.render(<Auth />))
       await act(async () => host.querySelector('button')!.click())
       expect(mocks.navigate).toHaveBeenCalledExactlyOnceWith({ to: '/', search: intent })
+    } finally {
+      await act(async () => root.unmount())
+      host.remove()
+    }
+  })
+  it('completes required organization onboarding before attempting a retained Cluster target', async () => {
+    vi.spyOn(AuthRoute, 'useSearch').mockReturnValue(intent)
+    window.history.replaceState({}, '', '/auth?oauth=success&onboarding=organization')
+    const host = document.createElement('div')
+    document.body.append(host)
+    const root = createRoot(host)
+    const Auth = AuthRoute.options.component as ComponentType
+    try {
+      await act(async () => root.render(<Auth />))
+      await act(async () => host.querySelector('button')!.click())
+      expect(mocks.navigate).toHaveBeenCalledExactlyOnceWith({
+        to: '/onboarding',
+        search: { organizationId: undefined, subscriptionId: undefined, createOrganization: true },
+      })
+      expect(new URL(window.location.href).searchParams.has('onboarding')).toBe(false)
+    } finally {
+      await act(async () => root.unmount())
+      host.remove()
+    }
+  })
+
+  it.each([undefined, true])(
+    'ignores a completed sign-in after leaving Auth (setup=%s)',
+    async (setup) => {
+      vi.spyOn(AuthRoute, 'useSearch').mockReturnValue(intent)
+      const host = document.createElement('div')
+      document.body.append(host)
+      const root = createRoot(host)
+      const Auth = AuthRoute.options.component as ComponentType
+      await act(async () => root.render(<Auth />))
+      const complete = mocks.authenticated!
+      await act(async () => root.unmount())
+      host.remove()
+      await act(async () => complete({ email: 'tester@example.invalid' }, setup))
+      expect(mocks.identity).not.toHaveBeenCalled()
+      expect(mocks.navigate).not.toHaveBeenCalled()
+    },
+  )
+
+  it('keeps the original validated Cluster target through a provider callback', async () => {
+    const search = vi.spyOn(AuthRoute, 'useSearch').mockReturnValue(intent)
+    const actualWindow = window
+    const location = { href: 'http://localhost/auth', assign: vi.fn() }
+    vi.stubGlobal(
+      'window',
+      new Proxy(actualWindow, {
+        get(target, key) {
+          return key === 'location' ? location : Reflect.get(target, key, target)
+        },
+      }),
+    )
+    const host = document.createElement('div')
+    document.body.append(host)
+    let root = createRoot(host)
+    const Auth = AuthRoute.options.component as ComponentType
+    try {
+      await act(async () => root.render(<Auth />))
+      await act(async () => (host.querySelectorAll('button')[1] as HTMLButtonElement).click())
+      expect(location.assign).toHaveBeenCalledExactlyOnceWith('https://provider.example/authorize')
+      await act(async () => root.unmount())
+      search.mockReturnValue({})
+      location.href = 'http://localhost/auth?oauth=success'
+      root = createRoot(host)
+      await act(async () => root.render(<Auth />))
+      await act(async () => host.querySelector('button')!.click())
+      expect(mocks.navigate).toHaveBeenCalledExactlyOnceWith({ to: '/', search: intent })
+      await act(async () => root.unmount())
+      root = createRoot(host)
+      await act(async () => root.render(<Auth />))
+      await act(async () => host.querySelector('button')!.click())
+      expect(mocks.navigate).toHaveBeenLastCalledWith({ to: '/', search: {} })
     } finally {
       await act(async () => root.unmount())
       host.remove()

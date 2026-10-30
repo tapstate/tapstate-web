@@ -30,14 +30,14 @@ describe('resolveTawkWidgetConfig', () => {
     ).toEqual({ propertyId: '6ad811f9c0b97c34b365a428', widgetId: '1k5e0ceht' })
   })
 
-  it('uses the production Property for the production Cloud Console origin', () => {
+  it('uses the shared Property for the production Cloud Console origin', () => {
     expect(
       resolveTawkWidgetConfig({
         enabled: true,
         cloudConsoleUrl: 'https://cloud.tapstate.com/',
         development: false,
       }),
-    ).toEqual({ propertyId: '6ad81a2c88dd6c34b5979eb7', widgetId: '1k5e2cghv' })
+    ).toEqual({ propertyId: '6ad811f9c0b97c34b365a428', widgetId: '1k5e0ceht' })
   })
 
   it('does not activate a Property for an unrelated Cloud Console host', () => {

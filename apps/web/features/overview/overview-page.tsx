@@ -426,6 +426,12 @@ function OverviewContent({
 
 function OverviewRuntimeMetrics({ overview }: { overview: OverviewModel }) {
   const { t } = useTranslation()
+  const healthCounts = [
+    ['running', overview.pipelines.running],
+    ['idle', overview.pipelines.idle],
+    ['blocked', overview.pipelines.blocked],
+    ['failed', overview.pipelines.error],
+  ] as const
   return (
     <div className="overview-runtime-metrics" aria-label={t('overview.streamStatus.label')}>
       <span>{t('overview.streamStatus.sources', { count: overview.sources.count })}</span>
@@ -435,6 +441,14 @@ function OverviewRuntimeMetrics({ overview }: { overview: OverviewModel }) {
           ? t('overview.pipelines.none')
           : t('overview.pipelines.metric', { count: overview.pipelines.total })}
       </span>
+      {healthCounts
+        .filter(([, count]) => count > 0)
+        .map(([state, count]) => (
+          <span key={state} className="contents">
+            <span aria-hidden="true">·</span>
+            <span>{t(`overview.pipelines.health.${state}`, { count })}</span>
+          </span>
+        ))}
       <span aria-hidden="true">·</span>
       <span>
         {overview.stateStore.ready

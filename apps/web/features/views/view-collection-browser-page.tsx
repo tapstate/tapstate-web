@@ -1,5 +1,7 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { SearchInput } from '@tapstate-web/ui/search-input'
+import { Tabs, TabsList, TabsPanel, TabsTab } from '@tapstate-web/ui/tabs'
 import {
   AlertCircle,
   Boxes,
@@ -7,7 +9,6 @@ import {
   Database,
   LoaderCircle,
   RefreshCw,
-  Search,
   Table2,
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
@@ -182,19 +183,14 @@ export function ViewCollectionBrowserPage() {
                 {numberFormatter.format(collections.length)}
               </span>
             </div>
-            <label className="relative mx-3 my-3 block">
-              <Search
-                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-                aria-hidden="true"
-              />
-              <span className="sr-only">{t('views.search.label')}</span>
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={t('views.search.placeholder')}
-                className="border-input bg-background placeholder:text-muted-foreground focus-visible:ring-ring h-9 w-full rounded-lg border pr-3 pl-9 text-sm outline-none focus-visible:ring-2"
-              />
-            </label>
+            <SearchInput
+              className="mx-3 my-3"
+              value={search}
+              onValueChange={setSearch}
+              aria-label={t('views.search.label')}
+              clearLabel={t('views.search.clear')}
+              placeholder={t('views.search.placeholder')}
+            />
             <div className="min-h-0 flex-1 space-y-1 overflow-y-auto px-2 pb-2">
               {visibleCollections.length > 0 ? (
                 visibleCollections.map((collection) => (
@@ -275,36 +271,29 @@ export function ViewCollectionBrowserPage() {
                   )}
                 </section>
 
-                <div
-                  className="border-border flex shrink-0 gap-1 border-b px-3 sm:px-5"
-                  role="tablist"
-                  aria-label={t('views.detailTabs')}
+                <Tabs
+                  className="flex min-h-0 flex-1 flex-col"
+                  value={activeTab}
+                  onValueChange={(value) => {
+                    if (value === 'preview' || value === 'model' || value === 'lineage')
+                      setActiveTab(value)
+                  }}
                 >
-                  {(['preview', 'model', 'lineage'] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      role="tab"
-                      aria-selected={activeTab === tab}
-                      aria-controls="view-detail-panel"
-                      className={`focus-visible:ring-ring min-h-11 border-b-2 px-3 text-sm font-medium transition-transform focus-visible:ring-2 focus-visible:outline-none active:scale-95 ${activeTab === tab ? 'border-foreground' : 'border-transparent'}`}
-                      onClick={() => setActiveTab(tab)}
-                    >
-                      <span
-                        className={activeTab === tab ? 'text-foreground' : 'text-muted-foreground'}
-                      >
+                  <TabsList
+                    className="border-divider-subtle shrink-0 gap-6 border-b px-4 sm:px-6"
+                    aria-label={t('views.detailTabs')}
+                  >
+                    {(['preview', 'model', 'lineage'] as const).map((tab) => (
+                      <TabsTab key={tab} value={tab}>
                         {t(`views.tabs.${tab}`)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-
-                <div
-                  id="view-detail-panel"
-                  role="tabpanel"
-                  className="min-h-0 flex-1 overflow-auto p-4 sm:p-6"
-                >
-                  {activeTab === 'preview' && (
+                      </TabsTab>
+                    ))}
+                  </TabsList>
+                  <TabsPanel
+                    value="preview"
+                    tabIndex={-1}
+                    className="min-h-0 flex-1 overflow-auto p-4 sm:p-6"
+                  >
                     <PreviewPanel
                       columns={previewColumns}
                       rows={previewQuery.data?.rows ?? []}
@@ -315,16 +304,24 @@ export function ViewCollectionBrowserPage() {
                       numberFormatter={numberFormatter}
                       t={t}
                     />
-                  )}
-                  {activeTab === 'model' && (
+                  </TabsPanel>
+                  <TabsPanel
+                    value="model"
+                    tabIndex={-1}
+                    className="min-h-0 flex-1 overflow-auto p-4 sm:p-6"
+                  >
                     <ModelPanel
                       fields={viewFields}
                       discovered={selectedCollection.fields !== undefined}
                       numberFormatter={numberFormatter}
                       t={t}
                     />
-                  )}
-                  {activeTab === 'lineage' && (
+                  </TabsPanel>
+                  <TabsPanel
+                    value="lineage"
+                    tabIndex={-1}
+                    className="min-h-0 flex-1 overflow-auto p-4 sm:p-6"
+                  >
                     <LineagePanel
                       pipeline={owningPipeline}
                       pipelinesLoading={pipelinesLoading}
@@ -332,8 +329,8 @@ export function ViewCollectionBrowserPage() {
                       sourceTables={sourceTables}
                       t={t}
                     />
-                  )}
-                </div>
+                  </TabsPanel>
+                </Tabs>
               </>
             ) : (
               <div className="text-muted-foreground flex flex-1 items-center justify-center p-6 text-sm">

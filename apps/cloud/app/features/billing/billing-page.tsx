@@ -93,7 +93,7 @@ export function BillingPage() {
     if (!organizationId || isLoading || hasLoadError || subscription) return
     void navigate({
       to: '/onboarding',
-      search: { organizationId, subscriptionId: undefined },
+      search: { organizationId, subscriptionId: undefined, createOrganization: false },
       replace: true,
     })
   }, [hasLoadError, isLoading, navigate, organizationId, subscription])

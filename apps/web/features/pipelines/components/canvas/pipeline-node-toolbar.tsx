@@ -1,16 +1,15 @@
 import type { MouseEvent } from 'react'
 
-import { MoreHorizontal, Trash2 } from 'lucide-react'
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
-
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from '@tapstate-web/ui/dropdown-menu'
+import { IconButton } from '@tapstate-web/ui/icon-button'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+
 import { cn } from '@/lib/utils'
 
 interface PipelineNodeToolbarProps {
@@ -20,9 +19,9 @@ interface PipelineNodeToolbarProps {
 }
 
 /**
- * Dify-style action bar for a selected node.
+ * source-matched action bar for a selected node.
  *
- * The Dify-style outer wrapper owns positioning and visibility. The inner
+ * The source-matched outer wrapper owns positioning and visibility. The inner
  * action bar is an interaction island, so node dragging and canvas panning
  * never compete with the delete button.
  */
@@ -56,21 +55,21 @@ export function PipelineNodeToolbar({
         <DropdownMenu open={open} onOpenChange={setOpen}>
           <DropdownMenuTrigger
             render={
-              <button
+              <IconButton
                 type="button"
-                className="hover:bg-pipeline-actionbar-bg-accent data-popup-open:bg-pipeline-actionbar-bg-accent flex size-6 h-5! w-5! cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-inherit transition-colors hover:text-[var(--pipeline-text)] focus-visible:ring-1 focus-visible:ring-[var(--pipeline-selection)] focus-visible:outline-hidden"
+                size="md"
+                className="hover:bg-pipeline-actionbar-bg-accent data-popup-open:bg-state-base-hover h-5! w-5! rounded-md border-0 p-0 hover:text-[var(--pipeline-text)] focus-visible:ring-[var(--pipeline-selection)]"
                 aria-label={t('pipelines.workspace.actions.nodeToolbar.more', { node: nodeLabel })}
-                title={t('pipelines.workspace.actions.nodeToolbar.more', { node: nodeLabel })}
                 data-toolbar-action="more"
               >
-                <MoreHorizontal className="size-4" aria-hidden="true" />
-              </button>
+                <span className="i-ri-more-fill size-4" aria-hidden="true" />
+              </IconButton>
             }
           />
           <DropdownMenuContent
-            align="end"
+            placement="bottom-end"
             sideOffset={4}
-            className="w-auto min-w-40 whitespace-nowrap"
+            className="border-components-panel-border bg-components-panel-bg-blur w-auto min-w-40 border-[0.5px] py-1 whitespace-nowrap shadow-lg backdrop-blur-[5px]"
           >
             <DropdownMenuItem
               variant="destructive"
@@ -81,9 +80,9 @@ export function PipelineNodeToolbar({
                 onRequestDelete?.()
               }}
             >
-              <Trash2 className="size-4" aria-hidden="true" />
+              <span className="i-ri-delete-bin-line size-4" aria-hidden="true" />
               {t('pipelines.workspace.actions.nodeToolbar.delete', { node: nodeLabel })}
-              <DropdownMenuShortcut>⌫</DropdownMenuShortcut>
+              <span className="ml-auto pl-4 text-xs text-[var(--pipeline-text-subtle)]">⌫</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

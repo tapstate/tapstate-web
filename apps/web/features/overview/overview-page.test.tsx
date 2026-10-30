@@ -279,10 +279,10 @@ describe('OverviewPage', () => {
     await act(async () => buttonNamed('Add data sources', container)?.click())
     await settle()
 
-    expect(document.body.textContent).toContain('Or connect a source')
+    expect(document.querySelector('[role="dialog"][aria-label="Add data sources"]')).not.toBeNull()
     await act(async () => buttonNamed('Connect a source')?.click())
     await settle()
-    expect(document.body.textContent).not.toContain('Or connect a source')
+    expect(document.querySelector('[role="dialog"][aria-label="Add data sources"]')).toBeNull()
 
     await act(async () => buttonNamed('Save source')?.click())
     await settle()
@@ -566,7 +566,8 @@ describe('OverviewPage', () => {
     await act(async () => buttonNamed('Add data sources', container)?.click())
     await settle()
 
-    expect(document.body.textContent).toContain('Or connect a source')
-    expect(document.body.textContent).not.toContain('Sample bank sources')
+    expect(document.querySelector('[role="dialog"][aria-label="Add data sources"]')).not.toBeNull()
+    expect(document.body.textContent).toContain('Connect a source')
+    expect(document.body.textContent).not.toContain('Sample order data')
   })
 })

@@ -23,7 +23,13 @@ function ConsoleLayout() {
   const navigate = useNavigate()
   const { session, organizations, clusters } = Route.useLoaderData()
   const { enterClusterId, organizationId } = Route.useSearch()
-  const { activeOrganization, user, setClusters, setIdentity } = useCloudAppState()
+  const {
+    activeOrganization,
+    user,
+    clusters: currentClusters,
+    setClusters,
+    setIdentity,
+  } = useCloudAppState()
 
   useEffect(() => {
     setIdentity(session, organizations, clusters)
@@ -62,7 +68,7 @@ function ConsoleLayout() {
         <AutomaticClusterEntry
           key={`${organizationId}:${enterClusterId}`}
           organizationId={organizationId}
-          cluster={clusters.find(
+          cluster={(activeOrganization?.id === organizationId ? currentClusters : clusters).find(
             (cluster) => cluster.id === enterClusterId && cluster.orgId === organizationId,
           )}
           onBack={() => void navigate({ to: '/', search: { organizationId }, replace: true })}
@@ -88,7 +94,11 @@ export const Route = createFileRoute('/_console')({
           throw new CloudApiError('The requested Cluster is unavailable to this account.', 403)
         throw redirect({
           to: '/onboarding',
-          search: { organizationId: undefined, subscriptionId: undefined },
+          search: {
+            organizationId: undefined,
+            subscriptionId: undefined,
+            createOrganization: false,
+          },
         })
       }
       const selectedOrganization = organizations.find((item) => item.id === deps.organizationId)

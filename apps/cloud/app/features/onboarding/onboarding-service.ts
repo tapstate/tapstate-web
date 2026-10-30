@@ -8,6 +8,7 @@ import {
   type Subscription,
 } from '../../service/cloud-api'
 import { newClientRequestId, rememberCheckoutAttempt } from '../billing/checkout-attempt'
+import { suggestedClusterDisplayName } from '../clusters/cluster-name'
 
 export interface OnboardingWorkspace {
   organization: Organization
@@ -58,16 +59,7 @@ async function findExistingWorkspace(
 }
 
 export function suggestedClusterName(organization: Organization, clusters: Cluster[]) {
-  const base = `${organization.slug}-stream`.slice(0, 100)
-  const names = new Set(clusters.map((cluster) => cluster.name.toLowerCase()))
-  if (!names.has(base.toLowerCase())) return base
-
-  for (let suffix = 2; suffix < 1000; suffix += 1) {
-    const candidate = `${organization.slug}-stream-${suffix}`.slice(0, 100)
-    if (!names.has(candidate.toLowerCase())) return candidate
-  }
-
-  return `${organization.slug.slice(0, 88)}-stream-${Date.now().toString(36)}`
+  return suggestedClusterDisplayName(organization.name, clusters)
 }
 
 export async function loadOnboardingWorkspace(
@@ -122,22 +114,26 @@ export async function findProvisioningWorkspace(
   return null
 }
 
-async function findOrCreateOrganization(input: OnboardingInput) {
+async function findOrCreateOrganization(input: OnboardingInput, createOrganization: boolean) {
   let organizations = await cloudApi.organizations()
-  if (organizations.length > 0) return organizations[0]
+  if (!createOrganization && organizations.length > 0) return organizations[0]
   let organization: Organization | undefined
 
   if (!organization) {
     try {
       organization = await cloudApi.createOrganization({
         name: input.organizationName,
-        slug: input.organizationSlug,
       })
     } catch (error) {
       if (!(error instanceof CloudApiError) || error.status !== 409) throw error
       organizations = await cloudApi.organizations()
-      organization = organizations.find((item) => item.slug === input.organizationSlug)
-      if (!organization) throw error
+      const matches = organizations.filter(
+        (item) =>
+          item.ownerEmail?.toLowerCase() === input.userEmail.toLowerCase() &&
+          item.name === input.organizationName,
+      )
+      if (matches.length !== 1) throw error
+      organization = matches[0]
     }
   }
 
@@ -148,8 +144,10 @@ export async function startOnboardingSubscription(
   input: OnboardingInput,
   existingOrganization?: Organization | null,
   onOrganizationResolved?: (organization: Organization) => void,
+  createOrganization = false,
 ): Promise<OnboardingStart> {
-  const organization = existingOrganization ?? (await findOrCreateOrganization(input))
+  const organization =
+    existingOrganization ?? (await findOrCreateOrganization(input, createOrganization))
   onOrganizationResolved?.(organization)
   const existing = await findExistingWorkspace(organization, input)
   if (existing) return existing

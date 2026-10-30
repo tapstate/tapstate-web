@@ -1,5 +1,10 @@
 {
   "app": {
+    "help": {
+      "openMenu": "Help",
+      "documentation": "Documentation",
+      "contactSupport": "Contact support"
+    },
     "brand": "Tapstate",
     "primaryNavigation": "Primary navigation",
     "previewMode": "AI Studio migration preview",
@@ -11,11 +16,10 @@
     },
     "notifications": "View notifications",
     "logout": "Sign out",
-    "shortcuts": {
-      "ask": "⌘J"
-    },
     "user": {
+      "accountMenu": "Account menu",
       "avatar": "User avatar",
+      "avatarFor": "User avatar for {{name}}",
       "initial": "U"
     },
     "secondaryNavigation": "Secondary navigation",
@@ -25,6 +29,8 @@
       "organizationLoading": "Loading organization…",
       "organizationUnavailable": "Organization unavailable",
       "clusterLoading": "Loading cluster…",
+      "clusterReady": "Cluster ready",
+      "clusterConnected": "Cluster console connected",
       "clusterUnavailable": "Cluster unavailable",
       "region": "AWS {{region}}",
       "regionUnavailable": "Region unavailable"
@@ -56,7 +62,8 @@
     "more": "More actions",
     "remove": "Remove",
     "skipToContent": "Skip to canvas",
-    "separator": "/"
+    "separator": "/",
+    "save": "Save"
   },
   "auth": {
     "signedOut": {
@@ -114,7 +121,10 @@
     },
     "session": {
       "expired": "Your session expired. Sign in again.",
-      "logoutFailed": "Cloud sign-out did not complete. Try again."
+      "logoutFailed": "Cloud sign-out did not complete. Try again.",
+      "unavailable": "Your session could not be verified. Check the connection and try again.",
+      "browserUnsupported": "This browser cannot safely coordinate sign-in across tabs. Use an up-to-date browser.",
+      "serverUpgradeRequired": "This server does not support browser sessions yet. Upgrade the server and try again."
     }
   },
   "state": {
@@ -173,10 +183,30 @@
       "description": "Results are based on the current Source configuration.",
       "action": "Test connection",
       "testing": "Testing connection",
+      "checkingPipeline": "Checking pipeline activity",
       "notTested": "Not tested",
       "statusUnavailable": "Status unavailable",
       "passed": "Connection test passed",
       "failed": "Connection test failed",
+      "pipeline": {
+        "RUNNING": "Connected · pipeline running",
+        "STARTING": "Pipeline is connecting",
+        "RESUMING": "Pipeline is resuming",
+        "PAUSED": "Used by a paused pipeline",
+        "STOPPED": "Used by a stopped pipeline",
+        "COMPLETED": "Used by a completed pipeline"
+      },
+      "cdcReadiness": {
+        "title": "Before starting CDC",
+        "manualCheck": "The connection test does not check these table-level requirements.",
+        "mysql": "Confirm binary logging uses row-based events and retains enough history to cover expected source outages.",
+        "rdsMysql": "Set RDS binlog retention for expected outages; RDS for MySQL defaults to no binary-log retention.",
+        "postgres": "Confirm wal_level is logical, a publication covers selected tables, replication slots are available, and retained WAL has enough disk capacity.",
+        "oracle": "Enable ARCHIVELOG and minimal supplemental logging; add required key or table logging for the selected tables.",
+        "sqlserver": "Enable CDC for the database and selected tables, and keep SQL Server Agent running for capture jobs.",
+        "mongodb": "Use a replica set or sharded cluster. Enable collection pre-images when the pipeline requires full before-images.",
+        "db2": "Enable DATA CAPTURE CHANGES on each table selected for CDC."
+      },
       "reenterSecrets": "Re-enter configured secrets before testing this draft.",
       "status": {
         "passed": "Passed",
@@ -208,7 +238,8 @@
     },
     "empty": {
       "title": "No sources yet",
-      "body": "Add a connector-backed source to make live data available to Tapstate."
+      "body": "Connect a data source to make live data available to Tapstate.",
+      "sampleDescription": "Explore with a sample source before connecting your own data."
     },
     "columns": {
       "comment": "Comment",
@@ -219,7 +250,8 @@
     },
     "search": {
       "label": "Search sources",
-      "placeholder": "Search sources..."
+      "placeholder": "Search sources...",
+      "clear": "Clear source search"
     },
     "filters": {
       "connectionStatus": {
@@ -243,9 +275,13 @@
       "connectionOnly": "Connection only",
       "endpointUnavailable": "Endpoint not exposed",
       "selectorUnavailable": "Selector details unavailable",
+      "selectorExactTable": "Exact table",
+      "openTable": "Open",
+      "openTableNamed": "Open table {{name}}",
       "noConfiguration": "This source has no visible non-secret configuration.",
       "secretConfigured": "Configured",
-      "secretConfiguredCount": "{{count}} configured secrets",
+      "secretConfiguredCount_one": "{{count}} configured secret",
+      "secretConfiguredCount_other": "{{count}} configured secrets",
       "noTables": "No table selectors are configured for this source.",
       "unnamedTable": "Unnamed selector",
       "srs": "Shared-record settings",
@@ -293,7 +329,8 @@
         "unknown": "The source could not be created. Try again.",
         "specUnavailable": "This connector does not provide a stored form specification.",
         "specInvalid": "This connector provides an invalid form specification."
-      }
+      },
+      "clearSearch": "Clear connector search"
     },
     "detail": {
       "back": "Back to sources",
@@ -448,7 +485,9 @@
       "error": "The sample sources could not be removed. Try again.",
       "dismiss": "Dismiss",
       "added_one": "Added {{count}} sample source.",
-      "added_other": "Added {{count}} sample sources."
+      "added_other": "Added {{count}} sample sources.",
+      "removeConfirmTitle": "Remove sample sources?",
+      "removeConfirmBody": "The sample sources will be deleted. Sources still used by pipelines cannot be removed."
     }
   },
   "pipelines": {
@@ -457,7 +496,8 @@
     "allPipelines": "All Pipelines",
     "explorer": "Explorer",
     "states": {
-      "empty": "No pipelines have been stored in this workspace.",
+      "empty": "No pipelines yet. Create one to start moving data.",
+      "createDescription": "Choose a builder and connect your data.",
       "error": "We couldn't load stored pipelines.",
       "loading": "Loading stored pipelines."
     },
@@ -470,19 +510,19 @@
       "refreshPaused": "Auto-refresh paused",
       "refresh": "Refresh pipelines",
       "refreshAria": "Refresh pipeline list",
-      "pauseRefresh": "Pause updates",
+      "pauseRefresh": "Pause auto-refresh",
       "pauseRefreshAria": "Pause automatic pipeline refresh",
-      "resumeRefresh": "Resume updates",
+      "resumeRefresh": "Resume auto-refresh",
       "resumeRefreshAria": "Resume automatic pipeline refresh"
     },
     "createMenu": {
       "title": "Creation mode",
       "wizard": "Pipeline builder",
-      "wizardDescription": "Build a pipeline step by step",
+      "wizardDescription": "Use the guided flow for a straightforward source-to-target copy.",
       "sql": "Build with DuckDB SQL",
       "sqlDescription": "Write SQL to transform data",
       "dag": "Build with DAG Designer",
-      "dagDescription": "Visual node-based editor",
+      "dagDescription": "Use the canvas to arrange sources, transforms, and destinations.",
       "ai": "Build with AI",
       "aiDescription": "Generate pipeline from prompt"
     },
@@ -497,7 +537,7 @@
       "identityTitle": "Name your pipeline",
       "identityHint": "Pipeline IDs are stable handles used by the API and runtime.",
       "idLabel": "Pipeline ID",
-      "idPlaceholder": "orders_to_warehouse",
+      "idPlaceholder": "orders_to_store",
       "idHint": "Use a stable ID with letters, numbers, hyphens, or underscores. It cannot be changed later.",
       "idInvalid": "Use 1–64 letters, numbers, hyphens, or underscores.",
       "descriptionLabel": "Description",
@@ -532,6 +572,7 @@
     "actions": {
       "collapseNode": "Collapse {{name}}",
       "expandNode": "Expand {{name}}",
+      "viewPipeline": "View {{id}} details",
       "editPipeline": "Edit {{id}}",
       "edit": "Edit",
       "copyPipeline": "Copy pipeline ID",
@@ -558,8 +599,14 @@
       "dismissFeedback": "Dismiss lifecycle error"
     },
     "startChecks": {
+      "descriptionUnavailable": "A start check could not finish. Recheck to get an updated result; the pipeline has not been started.",
+      "temporarilyUnavailable": "This check could not finish. No configuration change has been confirmed as necessary.",
+      "recheck": "Recheck",
+      "rechecking": "Rechecking…",
+      "recheckFailed": "Could not refresh the checks. Try again.",
+      "details": "Technical details",
       "title": "Start checks for {{id}}",
-      "descriptionBlocked": "Something stops this start. Resolve it, then start the Pipeline again.",
+      "descriptionBlocked": "This pipeline cannot start yet. Review and fix the checks below, then try again.",
       "descriptionConfirm": "Choose how to handle each question, then start.",
       "descriptionReady": "Review the results, then start.",
       "changedWhileConfirming": "{{id}} changed while you were confirming. Its checks were run again, so review them before starting.",
@@ -593,6 +640,8 @@
         "titleWarnings": "{{id}} started with warnings",
         "titleStarted": "{{id}} started",
         "titleNotStarted": "{{id}} did not start",
+        "warningDescription": "Start check warning: {{messages}}",
+        "warningFallback": "A start check returned a warning.",
         "definitionChanged": "Definition changed",
         "staleTitle": "Answers not used because the question is no longer asked",
         "dismiss": "Dismiss start notice for {{id}}"
@@ -600,15 +649,33 @@
     },
     "delete": {
       "title": "Delete {{id}}?",
-      "body": "This permanently removes the stored Pipeline and its runtime state.",
+      "body": "This permanently removes the stored Pipeline, its draft and its runtime state.",
       "confirm": "Delete Pipeline",
-      "failed": "Pipeline could not be deleted."
+      "failed": "Pipeline could not be deleted.",
+      "notStopped": "Pipeline {{id}} is {{actual}} and is headed for {{desired}}. Stop it and wait for it to settle before deleting it.",
+      "inUse": "Pipeline {{id}} is still referenced by: {{referrers}}. Remove those references first.",
+      "incomplete": "The Pipeline definition was removed, but some cleanup is incomplete. Refresh the list to review the remaining draft and runtime state.",
+      "conflict": "The Pipeline or its draft changed since it was loaded. Refresh the list and confirm deletion again.",
+      "stopTimedOut": "The Pipeline has not stopped yet. Try stopping it again.",
+      "waitingForStop": "Stopping is already requested. Wait for the Pipeline to stop, then confirm deletion again.",
+      "stopPipeline": "Stop Pipeline",
+      "cleanupTitle": "Cleanup needs attention for {{id}}",
+      "cleanupReason": "Reason: {{reason}}",
+      "unknownCleanup": "The remaining cleanup could not be determined. Review the server diagnostics before taking further action.",
+      "dismiss": "Dismiss"
     },
     "table": {
       "modified": "Last modified",
       "resourceName": "Resource name",
       "status": "Status",
       "type": "Type",
+      "sources": "Sources",
+      "target": "Destination",
+      "lag": "Lag",
+      "lagSeconds": "{{value}} s",
+      "lastError": "Last error",
+      "targetTables_one": "{{count}} table",
+      "targetTables_other": "{{count}} tables",
       "version": "Version",
       "draftRevision": "Draft · r{{revision}}"
     },
@@ -694,7 +761,34 @@
         "dismissSaveError": "Dismiss save error",
         "runFailed": "Pipeline could not be started.",
         "draftSaveUnavailable": "Add and connect at least one Source before saving this new Pipeline.",
-        "draftRunUnavailable": "Save this new Pipeline before running it."
+        "draftRunUnavailable": "Save this new Pipeline before running it.",
+        "addNote": "Add note",
+        "organizeNodes": "Organize nodes",
+        "zoomIn": "Zoom in",
+        "zoomOut": "Zoom out",
+        "canvasHistory": "Canvas history",
+        "undo": "Undo",
+        "redo": "Redo",
+        "history": "History",
+        "noChangesYet": "No changes yet",
+        "stepForward": "Step forward {{count}}",
+        "currentState": "Current state",
+        "stepBackward": "Step backward {{count}}",
+        "canvasViewport": "Canvas viewport",
+        "canvasZoom": "Canvas zoom",
+        "exportImage": "Export image",
+        "currentView": "Current view",
+        "wholePipeline": "Whole Pipeline",
+        "exportFormat": "Export {{format}}",
+        "deleteNote": "Delete note",
+        "noteText": "Note text",
+        "notePlaceholder": "Add a note...",
+        "notesStorageUnavailable": "Notes could not be saved",
+        "notesStorageUnavailableDescription": "Your notes will stay available until you leave this page.",
+        "scrollToSelectedNode": "Scroll to selected node",
+        "autoSaved": "Auto-Saved",
+        "published": "Published",
+        "unpublished": "Unpublished"
       },
       "diagnostics": {
         "title": "Fix these issues before saving",
@@ -758,7 +852,12 @@
         "nest": "Nest",
         "js": "JavaScript",
         "view": "View",
-        "target": "Target"
+        "target": "Target",
+        "sourceTab": "Source",
+        "transformTab": "Transform",
+        "destinationTab": "Destination",
+        "addNode": "Add node",
+        "clearSearch": "Clear search"
       },
       "tabs": {
         "label": "Pipeline workspace panels",
@@ -846,7 +945,14 @@
         "descriptionPlaceholder": "Add a description",
         "close": "Close configuration",
         "resizePanel": "Resize configuration panel",
-        "viewReadOnly": "Views are derived from the Pipeline definition and cannot be edited here."
+        "viewReadOnly": "Views are derived from the Pipeline definition and cannot be edited here.",
+        "nodeTitle": "Node title",
+        "moreActions": "More node actions",
+        "deleteNode": "Delete node",
+        "nextStep": "Next step",
+        "jumpToNode": "Jump to node",
+        "addNextStep": "Add the next step in this pipeline",
+        "selectNextStep": "Select next step"
       },
       "transform": {
         "field": "Field",
@@ -895,6 +1001,8 @@
         "aliases": "Named inputs",
         "inputAlias": "Input alias",
         "upstreamInput": "Upstream input",
+        "noUpstreamInputs": "Connect an upstream node on the canvas first.",
+        "unionCanvasInputHint": "Add or remove Union inputs by connecting nodes on the canvas.",
         "removeAlias": "Remove input",
         "addAlias": "Add input",
         "engine": "Query engine",
@@ -962,7 +1070,6 @@
           "expandStep": "Expand step",
           "stepName": "Step name",
           "stepNamePlaceholder": "e.g. Exclude cancelled orders / Format recipient",
-          "dslId": "System DSL ID",
           "addNextStep": "Add next transform",
           "filterDescription": "Pass only rows or events that match a CEL boolean expression.",
           "mapDescription": "Rename, drop, compute, or add fields. Unlisted fields pass through by default.",
@@ -970,6 +1077,7 @@
           "jsDescription": "Use process(record, ctx) to filter, transform, and emit events.",
           "unionDescription": "Merge input streams into one; fields are not aligned or deduplicated.",
           "filterConditions": "Filter conditions",
+          "conditionsCombinedWithAnd": "Conditions combined with AND",
           "visualConditionBuilder": "Switch to visual conditions",
           "rawCelEditor": "Edit CEL expression",
           "and": "AND",
@@ -1054,10 +1162,56 @@
           "unionSemanticsMapAdvice": "before Union to align the fields.",
           "unionInputList": "Current input streams (from):",
           "currentTable": "Current table",
-          "removeUnionInput": "Remove input stream",
+          "removeUnionInput": "Remove {{source}} · {{table}} from Union inputs",
           "addUpstreamInput": "Add upstream stream",
           "selectAnotherInput": "Select another available stream",
-          "unionWizardUnavailable": "Union needs explicit multi-stream references, which this builder does not collect. Remove this step to save and start."
+          "unionCurrentInput": "Current pipeline output",
+          "unionAdditionalInputs": "Additional input tables",
+          "unionSelectedInputs": "Selected input tables",
+          "unionSelectedCount": "{{count}} selected",
+          "unionSearchLabel": "Search Union inputs",
+          "unionSearchPlaceholder": "Search by source or table name",
+          "unionNoSelection": "No additional tables selected.",
+          "unionNoSearchResults": "No tables match your search.",
+          "openFieldPicker": "Open field picker",
+          "noFieldMatches": "No matching fields.",
+          "unionNoAdditionalInputs": "No additional source tables are available for this Union.",
+          "unionInputRequired": "Select at least one additional table to publish this Union.",
+          "unionWizardUnavailable": "Union needs explicit multi-stream references, which this builder does not collect. Remove this step to save and start.",
+          "identitySettings": "Source identity",
+          "sourceIdField": "Source identity field name",
+          "restoreSourceIdDefault": "Restore default",
+          "sourceIdFieldHelp": "Used only when expanded rows conflict with the target identity constraint. The original value and type are preserved; each target is checked separately. An omitted setting inherits the previous unwind’s name, shown here. Restore default explicitly selects _unwind_source_id.",
+          "mapOperations": {
+            "operations": "Field operations",
+            "delete": "Delete fields",
+            "add": "Add fields",
+            "rename": "Rename fields",
+            "compute": "Compute fields",
+            "append": "Add another",
+            "removeOperation": "Remove operation",
+            "removeField": "Remove selected field",
+            "selectFields": "Search and select fields",
+            "newName": "New name",
+            "fixedValue": "Fixed value",
+            "expression": "CEL expression",
+            "anotherAdd": "Add another field",
+            "anotherRename": "Rename another field",
+            "anotherCompute": "Compute another field",
+            "hint": "Choose an operation below to start.",
+            "draftHint": "Incomplete rows stay as drafts and do not generate rules.",
+            "duplicateField": "Resolve repeated output field names before applying: {{field}}",
+            "sourceField": "Source field"
+          },
+          "filterDraftHint": "Complete a condition to preview CEL.",
+          "visualFilterUnavailable": "This expression cannot be represented by these visual conditions. Continue editing CEL to preserve it.",
+          "pickerDescriptions": {
+            "filter": "Keep records that match your conditions.",
+            "map": "Rename, remove, add or calculate fields.",
+            "unwind": "Turn array items into separate records.",
+            "js": "Process records with JavaScript.",
+            "union": "Combine records from multiple tables."
+          }
         }
       },
       "runtime": {
@@ -1077,9 +1231,9 @@
           "lastRefreshed": "Last refreshed {{time}}",
           "refresh": "Refresh",
           "refreshAria": "Refresh logs",
-          "pause": "Pause updates",
+          "pause": "Pause auto-refresh",
           "pauseAria": "Pause automatic log refresh",
-          "resume": "Resume updates",
+          "resume": "Resume auto-refresh",
           "resumeAria": "Resume automatic log refresh",
           "search": "Search this log tail",
           "allLevels": "All levels",
@@ -1097,7 +1251,23 @@
           "filteredEmptyTitle": "No matching log lines",
           "filteredEmptyBody": "Adjust the filters to inspect the returned log tail.",
           "errorTitle": "We couldn't load logs",
-          "errorBody": "Check the control plane and try again."
+          "errorBody": "Check the control plane and try again.",
+          "searchPlaceholder": "Search",
+          "allFilterLevels": "All",
+          "timeRange": "Time range",
+          "clearLevelFilter": "Clear log level filter",
+          "clearTimeRange": "Clear time range filter",
+          "periods": {
+            "today": "Today",
+            "last7Days": "Last 7 Days",
+            "last4Weeks": "Last 4 Weeks",
+            "last3Months": "Last 3 Months",
+            "last12Months": "Last 12 Months",
+            "monthToDate": "Month to Date",
+            "quarterToDate": "Quarter to Date",
+            "yearToDate": "Year to Date",
+            "allTime": "All Time"
+          }
         },
         "unavailableTitle": "Observation unavailable",
         "unavailableBody": "This Pipeline has not published runtime observation yet.",
@@ -1120,9 +1290,9 @@
           "lastRefreshed": "Last refreshed {{time}}",
           "refresh": "Refresh",
           "refreshAria": "Refresh monitoring",
-          "pause": "Pause updates",
+          "pause": "Pause auto-refresh",
           "pauseAria": "Pause automatic monitoring refresh",
-          "resume": "Resume updates",
+          "resume": "Resume auto-refresh",
           "resumeAria": "Resume automatic monitoring refresh",
           "noMetricsTitle": "No metrics available",
           "noMetricsBody": "This Pipeline has not reported any numeric metrics yet.",
@@ -1187,7 +1357,8 @@
           "COMPLETED": "Completed",
           "FAILED": "Failed",
           "UNAVAILABLE": "Unavailable",
-          "RECOVERY_REQUIRED": "Full recovery required"
+          "RECOVERY_REQUIRED": "Full recovery required",
+          "NOT_STARTED": "Not started"
         }
       },
       "apiAccess": {
@@ -1197,7 +1368,8 @@
         "pendingBody": "Serve outputs are present, but this Pipeline does not expose a published endpoint yet.",
         "serveDetail": "Serve output"
       }
-    }
+    },
+    "create": "Create pipeline"
   },
   "explorations": {
     "title": "Explorations",
@@ -1253,50 +1425,15 @@
       }
     }
   },
-  "ask": {
-    "launch": "Ask Tapstate",
-    "newChat": "New chat",
-    "panelLabel": "Ask Tapstate panel",
-    "skills": "Skills",
-    "actions": {
-      "attach": "Attach file",
-      "close": "Close",
-      "maximize": "Maximize",
-      "minimize": "Minimize",
-      "send": "Send"
-    },
-    "input": {
-      "placeholder": "Ask Tapstate..."
-    },
-    "preview": {
-      "rows": "100k+ rows"
-    },
-    "prompts": {
-      "pipeline": "Create Pipeline",
-      "pipelinePrompt": "Create a new pipeline",
-      "source": "Create Data Source",
-      "sourcePrompt": "Create a data source",
-      "trends": "Analyze data trends",
-      "trendsPrompt": "Analyze active user trends"
-    },
-    "responses": {
-      "default": "I can help you explore your data.\n\n1. Analyze your trips data source\n2. Create a new pipeline\n3. Check the best_tip_zones API\n\nWhat would you like to start with?",
-      "queryPreview": "I queried [View: daily_active_users] for you. Here is a preview of the latest data:\n\n[DataPreview: daily_active_users]\n\nThe data looks clean and is updating in real time. Do you want me to analyze this week's trend?",
-      "sourceCreated": "I created the Data Source [DataSource: user_events] connected to your PostgreSQL instance. Open it to inspect schema and sync status."
-    },
-    "shortcuts": {
-      "context": "to add current view to context",
-      "contextKey": "Tab",
-      "mention": "to mention any table, view, or API",
-      "mentionKey": "{'@'}"
-    },
-    "welcome": {
-      "body": "Ask anything or tell Tapstate what you need.",
-      "title": "Welcome to Tapstate"
-    }
-  },
   "wizard": {
     "eyebrow": "Pipeline builder",
+    "search": {
+      "sources": "Search sources",
+      "tables": "Search tables",
+      "fields": "Search fields",
+      "noResults": "No matching options.",
+      "openOptions": "Open options"
+    },
     "draft": "Draft",
     "dslMode": "DSL guided",
     "backToPipelines": "Back to Pipelines",
@@ -1307,9 +1444,9 @@
     "flowLabel": "Pipeline steps",
     "sourceTitle": "Choose a source",
     "sourceHint": "Start with one connected table.",
-    "rootTableLabel": "Root table",
-    "selectRootTable": "Select root table",
-    "editRootTable": "Edit root table",
+    "rootTableLabel": "Input table",
+    "selectRootTable": "Select input table",
+    "editRootTable": "Edit input table",
     "rootAnchorHint": "Anchor table for document assembly. Each row becomes a result document.",
     "postAssemblyLabel": "Post-assembly",
     "targetDestinationLabel": "Target destination",
@@ -1319,11 +1456,11 @@
     "rootTableMetadata": "Source: {{source}} · PK: {{primaryKey}} · {{count}} columns",
     "setupRequired": "Setup required",
     "switchTable": "Switch table",
-    "confirmRootTable": "Confirm root table",
+    "confirmRootTable": "Confirm input table",
     "saveRootChanges": "Save root changes",
     "cancelRootEdit": "Cancel",
-    "confirmRootFirst": "Confirm the root table before adding related tables or transforms.",
-    "rootChangeWarning": "Changing the root table will clear the related tables and transforms in this draft.",
+    "confirmRootFirst": "Confirm the input table before adding related tables or transforms.",
+    "rootChangeWarning": "Changing the input table will clear the related tables and transforms in this draft.",
     "columnsLabel": "Columns",
     "moreColumns": "+{{count}} more",
     "sourceSelect": "Select a source",
@@ -1354,8 +1491,8 @@
       "failed": "Preview failed. The last completed result remains visible.",
       "noResult": "No completed result is available.",
       "noDocuments": "The sample produced no documents.",
-      "noRootTitle": "No root table selected",
-      "noRootBody": "Select a root table in Step 1 to preview assembled sample documents.",
+      "noRootTitle": "No input table selected",
+      "noRootBody": "Select a input table in Step 1 to preview assembled sample documents.",
       "status": {
         "idle": "Ready",
         "loading": "Loading",
@@ -1383,7 +1520,10 @@
       "embeddedArray": "Array · {{count}} items",
       "embeddedDocument": "Embedded document",
       "transformAnnotation": "Changed fields: {{fields}}",
-      "unknownTransformOrigin": "Field origin is unknown for JS step(s): {{steps}}"
+      "unknownTransformOrigin": "Field origin is unknown for JS step(s): {{steps}}",
+      "projection": "Preview stage",
+      "targetProjection": "Target write result",
+      "logicalProjection": "Logical operator result"
     },
     "relations": {
       "addRelatedTable": "Add related table",
@@ -1609,6 +1749,158 @@
           "calloutNext": "Start Pipeline"
         }
       }
+    },
+    "assistant": {
+      "title": "Tapstate AI",
+      "subtitle": "Build and refine your pipeline",
+      "open": "Tapstate AI",
+      "configure": "Configure AI provider",
+      "reset": "Clear conversation",
+      "close": "Close AI assistant",
+      "focus": "Current focus:",
+      "rootPromptLabel": "Describe the pipeline you want to build",
+      "rootPromptPlaceholder": "Describe the data flow you want to build…",
+      "rootPromptSubmit": "Draft with AI",
+      "rootPromptHint": "Tapstate AI will suggest changes for review. Nothing changes until you apply them.",
+      "queuedRootPrompt": "Your prompt will send when the current response finishes.",
+      "manualRootSetup": "Or choose a source and table manually",
+      "diff": "View diff",
+      "back": "Back to chat",
+      "loading": "Loading",
+      "welcome": "Describe the tables, relationships, or transformations you need. I can propose a pipeline configuration for you to review before applying.",
+      "you": "You",
+      "name": "Tapstate AI",
+      "generating": "Validating metadata and generating a proposal…",
+      "connecting": "Connecting to your AI provider…",
+      "review": "Review proposed pipeline changes",
+      "changeSummary": "Change summary",
+      "dslDiff": "DSL changes",
+      "needsInput": "The proposed configuration needs more information or correction. Continue the conversation to refine it.",
+      "diffTitle": "Proposed changes",
+      "noProposal": "No complete proposal yet. Ask the assistant to propose a change.",
+      "editProposal": "Edit proposed configuration (JSON)",
+      "reviewHint": "Review or edit this proposed configuration. Apply validates it against the saved draft and updates the editor.",
+      "apply": "Validate and apply",
+      "applied": "Applied to editor",
+      "undoApply": "Undo apply",
+      "undoStale": "The draft changed after this AI update, so it can no longer be undone safely.",
+      "reject": "Reject",
+      "requestFailed": "The assistant request failed. Check the provider configuration and try again. Partial output has not changed the pipeline.",
+      "applyFailed": "Could not validate this proposal. Check the configuration JSON or retry.",
+      "invalid": "The proposed configuration did not pass server validation. Edit it and retry.",
+      "normalized": "The server normalized this configuration. Review the updated proposal, then apply again.",
+      "stale": "This proposal is based on an older draft. Generate a new proposal for the current saved draft.",
+      "suggestions": "Suggested intents",
+      "waitForSave": "Sending is unavailable while this draft is read-only or another draft action is running.",
+      "saveBeforeSend": "Tapstate AI saves your latest draft changes before generating. Applying a proposal still waits for the save.",
+      "savingDraft": "Saving the latest draft before sending…",
+      "saveBeforeSendFailed": "The latest draft could not be saved, so the request was not sent. Resolve the save error and try again.",
+      "prompt": "Pipeline assistant prompt",
+      "placeholder": "Describe tables, relationships, or transformation rules…",
+      "newline": "Shift + Enter for a new line",
+      "send": "Send",
+      "stop": "Stop",
+      "unconfigured": "Not configured",
+      "documentFocus": "Document transforms",
+      "helpers": {
+        "clean": "AI cleaning / filtering",
+        "relations": "AI infer relationships",
+        "metrics": "AI generate CEL metrics"
+      },
+      "helperPopover": {
+        "scope": "Scope:",
+        "prompt": "Your request",
+        "placeholders": {
+          "clean": "Describe a filter or field change…",
+          "relations": "Name the related tables and join fields…",
+          "metrics": "Describe the metric to calculate…"
+        },
+        "send": "Ask AI"
+      },
+      "inputTableFocus": "Input table",
+      "relationsFocus": "Related tables",
+      "intents": {
+        "assemble": "Assemble a pipeline from available tables",
+        "relations": "Infer parent and child relationships",
+        "clean": "Generate filtering and cleaning rules",
+        "metrics": "Generate document metrics with CEL",
+        "diagnose": "Diagnose the pipeline configuration"
+      },
+      "prompts": {
+        "assemble": "Help assemble this pipeline using the available sources and tables. Propose a input table, nested relationships, and transformations for review.",
+        "relations": "Analyze available table metadata and propose parent and child relationships with supported join keys. Ask for clarification when metadata is insufficient.",
+        "clean": "For the focused table, propose suitable filtering and field cleaning rules. Use only supported transforms and available columns.",
+        "metrics": "For the document transform stage, propose supported CEL expressions for derived business metrics using available fields.",
+        "diagnose": "Review this pipeline for configuration issues, unsupported relations, and transformation mistakes. Explain findings and propose corrections for review."
+      },
+      "provider": {
+        "title": "AI provider",
+        "description": "Use an OpenAI compatible API to generate pipeline suggestions. Configure the endpoint and model provided by your AI service.",
+        "endpoint": "API base URL",
+        "model": "Model ID",
+        "key": "API key",
+        "configured": "Provider configured",
+        "rotate": "Enter a new key to replace the saved key",
+        "secretHint": "The key is stored securely by the server. It is never saved in browser storage or returned to this panel.",
+        "save": "Save provider",
+        "check": "Check connection",
+        "delete": "Remove provider",
+        "saveSuccess": "Provider saved.",
+        "checkSuccess": "Connection verified.",
+        "deleteSuccess": "Provider removed.",
+        "failed": "The provider operation failed. Check the endpoint, model and credentials, then retry.",
+        "loadFailed": "Could not load provider settings. Close and reopen this panel to retry."
+      },
+      "editedReview": "The edited proposal was validated. Review the updated diff, then apply again.",
+      "progress": {
+        "connecting": "Connecting to your AI provider…",
+        "streaming": "The assistant is responding…",
+        "validating": "Validating the proposed pipeline…",
+        "ready": "Review proposed pipeline changes",
+        "complete": "Response complete",
+        "error": "The assistant request failed. Check the provider configuration and try again. Partial output has not changed the pipeline."
+      },
+      "canceled": "Generation stopped. Partial output has not changed the pipeline.",
+      "errors": {
+        "notConfigured": "Configure an AI provider in this panel before generating a proposal.",
+        "providerAuth": "The AI provider rejected the credentials. Enter a valid API key in the provider configuration and retry.",
+        "providerUnavailable": "The AI provider is unavailable. Check the endpoint and model or retry later.",
+        "schema": "The model response did not match the supported Builder schema. Refine the request and generate a new proposal.",
+        "domain": "The proposal failed pipeline validation. Review the configuration and generate a corrected proposal.",
+        "stale": "This proposal is based on an older draft. Generate a new proposal for the current saved draft.",
+        "overloaded": "The assistant is busy. Wait a moment and retry.",
+        "requestFailed": "The assistant request failed. Check the provider configuration and try again. Partial output has not changed the pipeline."
+      },
+      "copyCode": "Copy code",
+      "copied": "Copied"
+    },
+    "targetIdentity": {
+      "title": "Target identity check",
+      "pending": "Select a target and wait for its identity constraints to be checked.",
+      "failed": "The identity check could not complete. Starting requires a successful check.",
+      "automatic": "The original {{source}} is preserved as {{preserved}}.",
+      "generated": "{{fields}}: generated by the target when written.",
+      "unchanged": "The target accepts the expanded key. Existing field names are retained.",
+      "writeKey": "Updates and deletes match: {{key}}.",
+      "refused": "Resolve the target identity constraints before starting.",
+      "status": {
+        "not-required": "No change needed",
+        "automatic": "Handled automatically",
+        "action-required": "Action required"
+      },
+      "reasons": {
+        "field-collision": "The source already contains {{preserved}}. Choose another source identity field name.",
+        "identity-generation-unavailable": "The target requires {{field}} to be unique but cannot safely generate a new value. Adjust the target identity mapping.",
+        "target-columns-missing": "The target is missing {{preserved}} or another matching-key column. Update the target schema before starting.",
+        "logical-key-index-missing": "The target needs a unique index on the complete logical matching key.",
+        "nullable-key-not-unique": "The target cannot guarantee replay-safe matching for nullable key fields.",
+        "other-unique-constraint": "Another target unique constraint conflicts with the expanded rows. Adjust the target schema or mapping.",
+        "multiple-identity-fields": "This target has multiple identity fields requiring an explicit mapping.",
+        "invalid-field-name": "Choose a nonblank top-level source identity field name.",
+        "target-key-conflict": "Streams writing to this target require incompatible automatic matching keys. Use one matching key or separate targets.",
+        "ambiguous-source-id-field": "Several expansions reaching this target use different source identity field names. Choose one name for this target.",
+        "key-representation-unsupported": "The target key type cannot be verified to preserve source identifiers without loss. Use compatible key columns or an explicit mapping."
+      }
     }
   },
   "views": {
@@ -1621,7 +1913,8 @@
     "search": {
       "label": "Search views",
       "placeholder": "Search views...",
-      "empty": "No views match this search."
+      "empty": "No views match this search.",
+      "clear": "Clear view search"
     },
     "empty": {
       "title": "No materialized views yet",
@@ -1774,7 +2067,8 @@
     },
     "footnote": "Status separates current observations from target-confirmed event age. A View is a built document; a Replica is a mirrored copy of one table.",
     "browseCollections": "Browse collections",
-    "measurementNote": "Event age is seconds since the last target-confirmed source event, using the maximum across this output’s inputs and no rolling window. It grows during source idleness and does not measure end-to-end lag. Observation age is separate; this page refreshes every 5 seconds."
+    "measurementNote": "Event age is seconds since the last target-confirmed source event, using the maximum across this output’s inputs and no rolling window. It grows during source idleness and does not measure end-to-end lag. Observation age is separate; this page refreshes every 5 seconds.",
+    "createView": "Create view"
   },
   "notFound": {
     "back": "Back to workspace",
@@ -1897,6 +2191,16 @@
       "running": "Running",
       "idle": "Idle",
       "error": "Error",
+      "health": {
+        "running_one": "{{count}} running",
+        "running_other": "{{count}} running",
+        "idle_one": "{{count}} idle",
+        "idle_other": "{{count}} idle",
+        "blocked_one": "{{count}} blocked",
+        "blocked_other": "{{count}} blocked",
+        "failed_one": "{{count}} failed",
+        "failed_other": "{{count}} failed"
+      },
       "open": "Pipelines →",
       "none": "No pipeline yet.",
       "build": "Build your first pipeline",
@@ -1932,11 +2236,14 @@
       "pipelineIs": {
         "running": "its pipeline {{pipeline}} is running",
         "idle": "its pipeline {{pipeline}} is stopped",
+        "blocked": "its pipeline {{pipeline}} could not start",
         "error": "its pipeline {{pipeline}} has failed",
         "unknown": "maintained by {{pipeline}}"
       },
       "openPipeline": "Open in Pipelines",
-      "openView": "Open in Views"
+      "openView": "Open in Views",
+      "pipelineBlocked": "Pipeline start blocked",
+      "pipelineUnavailable": "Pipeline status unavailable"
     },
     "subtitle": "Data flows from your sources, through pipelines, into the state store.",
     "addSources": {
@@ -1959,6 +2266,27 @@
         "adding": "Adding…",
         "added": "Added",
         "error": "The sample sources could not be added. Try again, or connect your own database."
+      }
+    },
+    "addSourcesDialog": {
+      "title": "Add data sources",
+      "description": "Connect the databases your pipelines will read from. Available connectors depend on this Cluster.",
+      "orConnect": "Or connect a source",
+      "connect": "Connect a source",
+      "connectAction": "Connect",
+      "connected": "Connected: {{sources}}",
+      "done": "Done",
+      "connector": {
+        "relational": "Relational database",
+        "document": "Document database",
+        "database": "Database"
+      },
+      "sample": {
+        "title": "Sample order data",
+        "tag": "Recommended",
+        "description": "{{names}} contains order data. Preview a document before adding the sources.",
+        "view": "View samples",
+        "choose": "Choose samples"
       }
     }
   },
@@ -1992,6 +2320,17 @@
     "sectionsLabel": "Settings sections",
     "sections": {
       "stateStore": "State store"
+    },
+    "about": {
+      "title": "About",
+      "version": "Version",
+      "loading": "Loading version…",
+      "unavailable": "Unavailable",
+      "license": "Apache License 2.0",
+      "releaseNotes": "Release notes",
+      "copyright": "© 2026 TAPDATA HONG KONG LIMITED, Contributors.",
+      "privacyPolicy": "Privacy Policy",
+      "termsOfService": "Terms of Service"
     }
   },
   "storage": {
@@ -2620,5 +2959,172 @@
     },
     "maintenanceRunning": "Operational",
     "deliveryQueue": "Notification queue"
+  },
+  "pipelineDetails": {
+    "backToPipelines": "Pipelines",
+    "edit": "Edit pipeline",
+    "logs": "Logs",
+    "loading": "Loading pipeline details…",
+    "notFound": "Pipeline {{id}} is not available.",
+    "error": "Pipeline details could not be loaded.",
+    "observedAt": "Last observed {{time}}",
+    "lastError": "Last runtime error",
+    "sources": "Sources",
+    "destinations": "Destinations",
+    "transforms": "Transforms",
+    "noSources": "No source connections are recorded.",
+    "noDestinations": "No destinations are recorded.",
+    "noTransforms": "No transforms are configured.",
+    "tableCount_one": "{{count}} table",
+    "tableCount_other": "{{count}} tables"
+  },
+  "uiKit": {
+    "title": "UI Kit",
+    "subtitle": "Interactive reference for shared controls, states, and overlays.",
+    "language": "Language",
+    "darkMode": "Dark theme",
+    "sections": {
+      "buttons": "Buttons",
+      "fields": "Fields and inputs",
+      "selection": "Selection controls",
+      "feedback": "Feedback",
+      "surfaces": "Surfaces and tables",
+      "overlays": "Menus and overlays"
+    },
+    "buttons": {
+      "loading": "Saving",
+      "disabled": "Unavailable action",
+      "iconLabel": "Add item",
+      "sizeSmall": "Small",
+      "sizeMedium": "Medium",
+      "sizeLarge": "Large",
+      "variantPrimary": "Primary",
+      "variantSecondary": "Secondary",
+      "variantTertiary": "Tertiary",
+      "variantGhost": "Ghost",
+      "variantDestructive": "Destructive"
+    },
+    "tones": {
+      "neutral": "Neutral",
+      "brand": "Brand",
+      "success": "Success",
+      "warning": "Warning",
+      "danger": "Danger",
+      "info": "Information"
+    },
+    "schema": {
+      "title": "Schema fields",
+      "description": "The same controls render schema labels, validation, loading, and submit errors.",
+      "workspace": "Workspace name",
+      "workspaceDescription": "This field is connected to the in-memory form state.",
+      "workspacePlaceholder": "Enter a workspace name",
+      "requiredError": "Enter a workspace name.",
+      "region": "Default region",
+      "regionPlaceholder": "Choose a region",
+      "validate": "Check required fields",
+      "loadRegions": "Load regions",
+      "submitFailureAction": "Simulate submit failure",
+      "submitFailure": "The workspace directory couldn't save this change."
+    },
+    "fields": {
+      "email": "Email address",
+      "emailPlaceholder": "name{'@'}company.com",
+      "description": "Used for account notifications.",
+      "invalid": "Workspace name",
+      "invalidValue": "!",
+      "invalidError": "Use letters, numbers, and hyphens.",
+      "password": "Password",
+      "passwordPlaceholder": "Enter a password",
+      "notes": "Notes",
+      "notesPlaceholder": "Add context for your team",
+      "disabled": "Read-only field",
+      "disabledValue": "This value cannot be changed here.",
+      "search": "Search",
+      "searchPlaceholder": "Search records"
+    },
+    "selection": {
+      "checkbox": "Include archived items",
+      "switch": "Enable live refresh",
+      "radio": "Default region",
+      "radioDescription": "Choose where this workspace runs.",
+      "northAmerica": "North America",
+      "asiaPacific": "Asia Pacific",
+      "cardOne": "Production workspace",
+      "cardTwo": "Staging workspace",
+      "selected": "Selected",
+      "notSelected": "Not selected",
+      "selectOption": "Choose a region",
+      "regionOne": "US East",
+      "regionTwo": "Europe West"
+    },
+    "feedback": {
+      "badgeDefault": "Default badge",
+      "badgeDimmed": "Dimmed badge",
+      "badgeCornerMark": "Corner mark",
+      "alertTitle": "Changes saved",
+      "alertDescription": "The current view reflects the latest workspace state.",
+      "toastInfo": "Sync started",
+      "toastSuccess": "Connection verified",
+      "toastWarning": "Some records need review",
+      "toastDanger": "Sync failed",
+      "infoAction": "Info toast",
+      "successAction": "Success",
+      "warningAction": "Warning",
+      "errorAction": "Error",
+      "actionToast": "Action toast",
+      "toastDescription": "This notification closes automatically.",
+      "toastAction": "Undo",
+      "toastActionDone": "The action was undone.",
+      "toastPersistent": "Persistent notification",
+      "toastUpdate": "Show persistent notification",
+      "toastUpdateAction": "Update notification",
+      "toastUpdated": "Notification updated",
+      "promise": "Run successful operation",
+      "promiseError": "Run failed operation",
+      "promisePending": "Working…",
+      "promiseSuccess": "Operation completed",
+      "promiseFailure": "Operation failed"
+    },
+    "surfaces": {
+      "panelTitle": "Workspace details",
+      "panelDescription": "A bordered surface groups related settings.",
+      "emptyTitle": "No matching records",
+      "emptyDescription": "Change the filters or create a new record.",
+      "skeleton": "Loading preview",
+      "tableTitle": "Recent activity",
+      "name": "Name",
+      "status": "Status",
+      "updated": "Updated",
+      "recordOne": "Customer profile",
+      "recordTwo": "Orders stream",
+      "ready": "Ready",
+      "inProgress": "In progress",
+      "timeOne": "Just now",
+      "timeTwo": "2 minutes ago"
+    },
+    "overlays": {
+      "menuTrigger": "Open menu",
+      "menuItem": "Rename workspace",
+      "menuDanger": "Delete workspace",
+      "popoverTrigger": "Open popover",
+      "popoverTitle": "Quick settings",
+      "popoverDescription": "This popover keeps related actions close to their trigger.",
+      "tooltipTrigger": "Focus or hover for help",
+      "tooltipText": "Tooltips provide short, supplemental guidance.",
+      "dialogTrigger": "Open dialog",
+      "dialogTitle": "Edit workspace",
+      "dialogDescription": "Review the information before saving.",
+      "dialogBody": "Long content stays scrollable inside the dialog body.",
+      "alertDialogTrigger": "Open confirmation",
+      "alertDialogTitle": "Remove this workspace?",
+      "alertDialogDescription": "This action cannot be undone.",
+      "drawerTrigger": "Open drawer",
+      "drawerTitle": "Workspace activity",
+      "drawerDescription": "A side surface for focused details and follow-up actions.",
+      "drawerBody": "The drawer body scrolls independently when content is long.",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "close": "Close"
+    }
   }
 }

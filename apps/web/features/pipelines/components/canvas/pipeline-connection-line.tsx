@@ -1,6 +1,6 @@
 import { getBezierPath, Position, type ConnectionLineComponentProps } from '@xyflow/react'
 
-/** Mirrors Dify's lightweight connection preview and endpoint marker. */
+/** Mirrors shared UI's lightweight connection preview and endpoint marker. */
 export function PipelineConnectionLine({
   fromX,
   fromY,
