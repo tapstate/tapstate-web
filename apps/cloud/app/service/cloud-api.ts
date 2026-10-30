@@ -426,6 +426,10 @@ const organizationApiPrefix = `${apiPrefix}/orgs`
 
 export const cloudApi = {
   login: (input: LoginInput) => request<LoginResult>(`${apiPrefix}/auth/login`, jsonBody(input)),
+  requestLoginCode: (email: string) =>
+    request<void>(`${apiPrefix}/auth/email/login/code`, jsonBody({ email })),
+  loginWithEmailCode: (email: string, code: string) =>
+    request<LoginResult>(`${apiPrefix}/auth/email/login`, jsonBody({ email, code })),
   registrationPolicy: () => request<RegistrationPolicy>(`${apiPrefix}/auth/registration-policy`),
   requestEmailCode: (email: string, invitationToken: string | null) =>
     request<void>(

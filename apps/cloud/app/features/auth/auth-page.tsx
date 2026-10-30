@@ -42,6 +42,8 @@ interface AuthPageProps {
   trialCodeRequired: boolean
   onRetryRegistrationPolicy: () => void
   onLogin: (input: LoginInput) => Promise<UserProfile>
+  onRequestLoginCode: (email: string) => Promise<void>
+  onLoginWithCode: (email: string, code: string) => Promise<UserProfile>
   onRequestCode: (email: string, invitationToken: string | null) => Promise<void>
   onRegisterWithEmail: (input: EmailRegistrationInput) => Promise<UserProfile>
   onAccessType: (code: string) => Promise<{ type: 'trial' | 'organization' }>
@@ -110,6 +112,8 @@ export function AuthPage({
   trialCodeRequired,
   onRetryRegistrationPolicy,
   onLogin,
+  onRequestLoginCode,
+  onLoginWithCode,
   onRequestCode,
   onRegisterWithEmail,
   onAccessType,
@@ -127,6 +131,7 @@ export function AuthPage({
   )
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [loginMethod, setLoginMethod] = useState<'password' | 'code'>('password')
   const [displayName, setDisplayName] = useState('')
   const [verificationCode, setVerificationCode] = useState('')
   const [verificationSent, setVerificationSent] = useState(false)
@@ -206,7 +211,10 @@ export function AuthPage({
     try {
       let user: UserProfile
       if (mode === 'login') {
-        user = await onLogin({ email: email.trim(), password })
+        user =
+          loginMethod === 'code'
+            ? await onLoginWithCode(email.trim(), verificationCode.trim())
+            : await onLogin({ email: email.trim(), password })
         if (activeInvitationToken) {
           const needsOrganizationSetup = accessType === 'trial'
           user = await onAcceptInvitation(activeInvitationToken, needsOrganizationSetup)
@@ -243,6 +251,20 @@ export function AuthPage({
   }
 
   const handleRequestCode = async () => {
+    if (mode === 'login' && loginMethod === 'code') {
+      setError(null)
+      setIsSendingCode(true)
+      try {
+        await onRequestLoginCode(email.trim())
+        setVerificationSent(true)
+        setResendAvailableIn(emailCodeCooldownSeconds)
+      } catch (cause) {
+        setError(errorMessageKey(cause))
+      } finally {
+        setIsSendingCode(false)
+      }
+      return
+    }
     if (registrationPolicyBlocked) {
       setError('auth.errors.registrationPolicyUnavailable')
       return
@@ -289,6 +311,9 @@ export function AuthPage({
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode)
+    setVerificationSent(false)
+    setVerificationCode('')
+    setResendAvailableIn(0)
     setError(null)
   }
 
@@ -483,6 +508,22 @@ export function AuthPage({
         )}
 
         <form className="space-y-4" onSubmit={handleSubmit}>
+          {mode === 'login' && (
+            <button
+              className="system-sm-medium text-components-button-secondary-accent-text underline"
+              type="button"
+              onClick={() => {
+                setLoginMethod(loginMethod === 'password' ? 'code' : 'password')
+                setVerificationSent(false)
+                setVerificationCode('')
+                setResendAvailableIn(0)
+                setError(null)
+              }}
+            >
+              {t(loginMethod === 'password' ? 'auth.useEmailCode' : 'auth.usePassword')}
+            </button>
+          )}
+
           {mode === 'register' && (
             <AuthField label={t('auth.nameLabel')} name="auth-name">
               <Input
@@ -508,7 +549,7 @@ export function AuthPage({
             />
           </AuthField>
 
-          {mode === 'register' && (
+          {(mode === 'register' || (mode === 'login' && loginMethod === 'code')) && (
             <div className="space-y-2">
               <Button
                 className="w-full"
@@ -517,9 +558,10 @@ export function AuthPage({
                   isSendingCode ||
                   isSubmitting ||
                   resendAvailableIn > 0 ||
-                  registrationPolicyBlocked ||
-                  trialCodeBlocked ||
-                  Boolean(activeInvitationToken && !accessType)
+                  (mode === 'register' &&
+                    (registrationPolicyBlocked ||
+                      trialCodeBlocked ||
+                      Boolean(activeInvitationToken && !accessType)))
                 }
                 onClick={handleRequestCode}
                 size="large"
@@ -554,7 +596,8 @@ export function AuthPage({
             </div>
           )}
 
-          {(mode === 'login' || verificationSent) && (
+          {((mode === 'login' && loginMethod === 'password') ||
+            (mode === 'register' && verificationSent)) && (
             <AuthField label={t('auth.passwordLabel')} name="auth-password">
               <InputGroup>
                 <InputGroupInput
@@ -583,7 +626,8 @@ export function AuthPage({
             </AuthField>
           )}
 
-          {(mode === 'login' || verificationSent) && (
+          {((mode === 'login' && (loginMethod === 'password' || verificationSent)) ||
+            (mode === 'register' && verificationSent)) && (
             <Button
               aria-labelledby="auth-submit-label"
               className="w-full"

@@ -45,6 +45,8 @@ async function renderPage(props: Partial<ComponentProps<typeof AuthPage>> = {}) 
     onRetryRegistrationPolicy: vi.fn(),
     onAccessType: vi.fn().mockResolvedValue({ type: 'organization' }),
     onLogin: vi.fn().mockResolvedValue(user),
+    onRequestLoginCode: vi.fn().mockResolvedValue(undefined),
+    onLoginWithCode: vi.fn().mockResolvedValue(user),
     onRequestCode: vi.fn().mockResolvedValue(undefined),
     onRegisterWithEmail: vi.fn().mockResolvedValue(user),
     onAcceptInvitation: vi.fn().mockResolvedValue(user),
@@ -92,6 +94,22 @@ afterEach(async () => {
 })
 
 describe('Cloud invitation authentication', () => {
+  it('signs in using an email code', async () => {
+    const props = await renderPage({ invitationToken: null })
+    await act(async () => changeInput('#auth-email', 'member@example.com'))
+    await clickButton('Sign in with an email code')
+    await clickButton('Email me a verification code')
+    await act(async () => changeInput('#auth-code', '123456'))
+    await act(async () => {
+      host
+        ?.querySelector('#auth-email')
+        ?.closest('form')
+        ?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    })
+    expect(props.onRequestLoginCode).toHaveBeenCalledWith('member@example.com')
+    expect(props.onLoginWithCode).toHaveBeenCalledWith('member@example.com', '123456')
+    expect(props.onAuthenticated).toHaveBeenCalledWith(user)
+  })
   it('offers sign-in for a registered email and preserves the entered address', async () => {
     await renderPage({
       invitationToken: null,
