@@ -593,15 +593,15 @@ export function OnboardingPage({
 
   const accountName = user.displayName?.trim() || user.email
   const clusterAddressDescription = (
-    <>
-      <FieldDescription>{t('onboarding.clusterAddressHint')}</FieldDescription>
+    <FieldDescription className="grid gap-1">
+      <span>{t('onboarding.clusterAddressHint')}</span>
       {addressPreview && (
-        <FieldDescription className="grid gap-1">
+        <span className="grid gap-1">
           <span>{t('onboarding.clusterAddressPreviewLabel')}</span>
           <code className="text-text-secondary block font-mono break-all">{addressPreview}</code>
-        </FieldDescription>
+        </span>
       )}
-    </>
+    </FieldDescription>
   )
 
   return (

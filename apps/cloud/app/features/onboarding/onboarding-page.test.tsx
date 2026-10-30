@@ -111,7 +111,7 @@ const cancelledSubscription: Subscription = {
 const readyCluster: Cluster = {
   ...failedCluster,
   state: 'READY',
-  publicDns: 'acme-data-0123456789abcdef01234567.dev.cloud.tapstate.com',
+  publicDns: 'acme-data.dev.cloud.tapstate.com',
 }
 
 const readySubscription: Subscription = {
@@ -255,8 +255,8 @@ describe('Cloud onboarding payment', () => {
 
     await act(async () => changeOrganizationName('FLY'))
 
-    expect(host?.textContent).toContain('https://fly-<cluster-id>.dev.cloud.tapstate.com')
-    expect(host?.textContent).toContain('The Cluster name starts its URL')
+    expect(host?.textContent).toContain('https://fly.dev.cloud.tapstate.com')
+    expect(host?.textContent).toContain('The normalized Cluster name is the hostname')
   })
 
   it('loads plan prices and starts a secure checkout with the selected plan', async () => {
@@ -368,9 +368,7 @@ describe('Cloud onboarding Cluster address', () => {
   it('shows the resolved URL when the Cluster is ready', async () => {
     await renderReadyPage()
 
-    expect(host?.textContent).toContain(
-      'https://acme-data-0123456789abcdef01234567.dev.cloud.tapstate.com',
-    )
+    expect(host?.textContent).toContain('https://acme-data.dev.cloud.tapstate.com')
   })
 })
 

@@ -270,7 +270,7 @@
     "newClusterLabel": "叢集名稱",
     "clusterNamePlaceholder": "acme-data-2",
     "clusterNameHint": "叢集名稱必須能轉換為有效主機名稱；空格和標點會轉換為連字號。",
-    "clusterAddressHint": "叢集名稱會成為存取地址的開頭，過長時會縮短；建立後系統會追加唯一 Cluster ID。",
+    "clusterAddressHint": "正規化後的叢集名稱就是存取地址中的主機名稱。",
     "clusterAddressPreviewLabel": "叢集存取地址預覽",
     "clusterAddressLabel": "叢集存取地址",
     "regionLabel": "區域",
