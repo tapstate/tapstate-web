@@ -2237,6 +2237,7 @@
     "channel": "Channel",
     "result": "Result",
     "all": "All",
+    "attemptCount": "Attempts used",
     "attempts": "attempts",
     "more": "Load next page",
     "detail": "Alert details",
@@ -2257,6 +2258,10 @@
     "eventId": "Cloud event ID",
     "deadline": "Original deadline",
     "nextAttempt": "Next eligible attempt",
+    "capabilities": {
+      "UNKNOWN_TYPE": "The alarm type {{typeId}} is not installed on this node. Restore support before another attempt.",
+      "UNSUPPORTED_TYPE_VERSION": "This task needs {{typeId}} version {{typeVersion}}; this node supports version {{availableVersion}}. Restore support before another attempt."
+    },
     "technical": "Technical identifiers",
     "retryRisk": "The original result may be unknown. Another attempt can duplicate a message. The original target, content and deadline remain.",
     "retry": "Authorize another bounded cycle",

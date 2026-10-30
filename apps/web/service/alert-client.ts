@@ -42,6 +42,12 @@ export interface DeliveryRow {
   source?: string
   eventId?: string
   diagnostic?: { phase: string; action: string; status: number } | null
+  capability?: {
+    reason: 'UNKNOWN_TYPE' | 'UNSUPPORTED_TYPE_VERSION'
+    typeId: string
+    typeVersion: number | null
+    availableVersion: number | null
+  }
   attemptHistory?: {
     number: number
     outcome: string

@@ -22,12 +22,14 @@ let recovered = false
 let detailReads = 0
 let managed = false
 let receiptSource: string | undefined = undefined
+let unavailableType = false
 beforeEach(() => {
   vi.useFakeTimers()
   focusManager.setFocused(true)
   recovered = false
   managed = false
   receiptSource = undefined
+  unavailableType = false
   detailReads = 0
   route.search = { key: 'original-key', episode: 1 }
   route.navigate.mockReset()
@@ -68,11 +70,19 @@ beforeEach(() => {
           channel: managed ? 'cloud-sdk' : 'email',
           source: receiptSource,
           eventId: receiptSource === 'sdk-event-center' ? 'original-cloud-event' : undefined,
-          displayState: managed ? 'ACCEPTED' : 'UNKNOWN',
+          displayState: unavailableType ? 'PAUSED' : managed ? 'ACCEPTED' : 'UNKNOWN',
           outcome: managed ? 'ACCEPTED' : 'UNKNOWN',
           deadline: '2026-10-29T00:00:00Z',
           stopped: true,
-          canRetry: true,
+          canRetry: !unavailableType,
+          capability: unavailableType
+            ? {
+                reason: 'UNSUPPORTED_TYPE_VERSION',
+                typeId: 'test.pipeline-condition',
+                typeVersion: 2,
+                availableVersion: 1,
+              }
+            : undefined,
           attempts: 1,
           attemptHistory: managed
             ? [{ number: 1, outcome: 'ACCEPTED', endedAt: '2026-10-28T00:00:00Z' }]
@@ -171,4 +181,19 @@ it('does not promote an old local Cloud placeholder into a provider receipt', as
   expect(node.textContent).toContain('Historical local placeholder; no remote receipt')
   expect(node.textContent).not.toContain('Provider accepted')
   expect(node.textContent).not.toContain('Cloud accepted the event.')
+})
+it('explains a missing type version without offering another attempt or changing the original result', async () => {
+  unavailableType = true
+  route.search = { view: 'deliveries', delivery: 'delivery-original' }
+  await render()
+  expect(node.textContent).toContain(
+    'This task needs test.pipeline-condition version 2; this node supports version 1.',
+  )
+  expect(node.textContent).toContain('Paused')
+  expect(
+    [...node.querySelectorAll('button')].some(
+      (b) => b.textContent === 'Authorize another bounded cycle',
+    ),
+  ).toBe(false)
+  expect(route.navigate).not.toHaveBeenCalled()
 })

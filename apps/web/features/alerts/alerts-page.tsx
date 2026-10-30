@@ -465,6 +465,15 @@ function AlertsContent() {
                 <p>
                   {delivery.data.channel} · <DeliveryResult value={delivery.data} />
                 </p>
+                {delivery.data.capability && (
+                  <p className="alert-warning" role="status">
+                    {t(`alerts.capabilities.${delivery.data.capability.reason}`, {
+                      typeId: delivery.data.capability.typeId,
+                      typeVersion: delivery.data.capability.typeVersion,
+                      availableVersion: delivery.data.capability.availableVersion,
+                    })}
+                  </p>
+                )}
                 <p>
                   {delivery.data.source === 'sdk-event-center'
                     ? t('alerts.cloudAccepted')
@@ -492,7 +501,7 @@ function AlertsContent() {
                   <dd>
                     <Time value={delivery.data.createdAt} />
                   </dd>
-                  <dt>{t('alerts.attemptLimit')}</dt>
+                  <dt>{t('alerts.attemptCount')}</dt>
                   <dd>{delivery.data.attempts}</dd>
                 </dl>
                 <h3>{t('alerts.recentSending')}</h3>

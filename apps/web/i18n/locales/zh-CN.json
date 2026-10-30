@@ -2237,6 +2237,7 @@
     "channel": "渠道",
     "result": "结果",
     "all": "全部",
+    "attemptCount": "累计尝试次数",
     "attempts": "次尝试",
     "more": "加载下一页",
     "detail": "告警详情",
@@ -2257,6 +2258,10 @@
     "eventId": "Cloud 事件 ID",
     "deadline": "原始截止时间",
     "nextAttempt": "下次可尝试时间",
+    "capabilities": {
+      "UNKNOWN_TYPE": "当前节点未安装告警类型 {{typeId}}，恢复支持后才能再次尝试。",
+      "UNSUPPORTED_TYPE_VERSION": "此任务需要 {{typeId}} 版本 {{typeVersion}}，当前节点支持版本 {{availableVersion}}；恢复支持后才能再次尝试。"
+    },
     "technical": "技术标识",
     "retryRisk": "原结果可能未知，再次尝试可能重复发送；仍使用原目标、内容和截止时间。",
     "retry": "授权一个有限重试周期",
