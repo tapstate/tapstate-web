@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowRight, CircleAlert, Eye, EyeOff, LoaderCircle } from 'lucide-react'
-import { useEffect, useMemo, useState, type SyntheticEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { AppLocale } from '@/i18n'
@@ -39,14 +39,18 @@ function LoginRouteComponent() {
 }
 
 function CloudLoginRouteComponent() {
-  useEffect(() => {
-    replaceWithCloudConsole()
-  }, [])
-
-  return null
+  const { t } = useTranslation()
+  return <Button onClick={() => replaceWithCloudConsole()}>{t('storage.cloudLogin')}</Button>
 }
 
 function OnPremLoginRouteComponent() {
+  const active = useRef(true)
+  useEffect(() => {
+    active.current = true
+    return () => {
+      active.current = false
+    }
+  }, [])
   const navigate = useNavigate()
   const redirect = safeLoginReturn(Route.useSearch().redirect)
   const { t, i18n } = useTranslation()
@@ -124,6 +128,7 @@ function OnPremLoginRouteComponent() {
     if (error.status === 404 || error.status === 405) return t('auth.session.serverUpgradeRequired')
     if (error.kind === 'network') return t('auth.login.errors.network')
     if (error.kind === 'protocol') return t('auth.login.errors.protocol')
+    if (error.status === 503) return t('storage.errors.dependency')
     return error.code === 'control.auth-failed'
       ? t('auth.login.errors.invalidCredentials')
       : t('auth.login.errors.server')
@@ -135,10 +140,12 @@ function OnPremLoginRouteComponent() {
     if (!validate()) return
 
     setIsSubmitting(true)
+    const originalSession = useAuthStore.getState().sessionRevision
     try {
       await login({ username: username.trim(), password })
     } catch (error) {
-      setFormError(errorMessage(error))
+      if (active.current && useAuthStore.getState().sessionRevision === originalSession)
+        setFormError(errorMessage(error))
     } finally {
       setIsSubmitting(false)
     }

@@ -5,6 +5,7 @@ import type { PipelineCatalogState } from '@/service/pipelines/pipeline-client'
 import { cn } from '@/lib/utils'
 
 const pipelineStatusClasses: Record<PipelineCatalogState, string> = {
+  RECOVERY_REQUIRED: 'border-border bg-muted text-muted-foreground',
   DRAFT: 'pipeline-list__status--draft text-slate-600 bg-slate-100 border-slate-200',
   NOT_STARTED: 'pipeline-list__status--new text-sky-700 bg-sky-50/80 border-sky-200/50',
   NEW: 'pipeline-list__status--new text-sky-700 bg-sky-50/80 border-sky-200/50',

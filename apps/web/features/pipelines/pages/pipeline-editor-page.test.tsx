@@ -1161,6 +1161,23 @@ describe('PipelineEditorPage', () => {
     })
   })
 
+  it('keeps an explicit recovery requirement separate from ordinary Run', async () => {
+    getPipelineStatus.mockResolvedValue({
+      pipelineId: 'orders_to_warehouse',
+      state: 'NEW',
+      displayState: 'RECOVERY_REQUIRED',
+      desiredState: 'STOPPED',
+    })
+    await renderPage()
+    await vi.waitFor(() => expect(container?.textContent).toContain('Full recovery required'))
+    expect(elementWithText('button', 'Run')).toBeUndefined()
+    expect(container?.querySelector<HTMLAnchorElement>('a[href="/settings"]')?.textContent).toBe(
+      'Review full recovery',
+    )
+    expect(runPipeline).not.toHaveBeenCalled()
+    expect(publishPipelineDraft).not.toHaveBeenCalled()
+  })
+
   it('uses the single-pipeline lifecycle projection without reading the catalog', async () => {
     listPipelines.mockResolvedValue([])
     getPipelineStatus.mockResolvedValue({

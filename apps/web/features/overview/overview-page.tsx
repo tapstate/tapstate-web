@@ -36,7 +36,6 @@ import { useAuthStore } from '@/stores/auth-store'
 import { getDeploymentProfile } from '@/utils/deployment-profile'
 
 import { AddSourcesDialog } from './components/add-sources-dialog'
-import { AtlasStoreDialog } from './components/atlas-store-dialog'
 import { OverviewTopology } from './components/overview-topology'
 import { buildOverview, type OverviewModel } from './overview-model'
 
@@ -94,7 +93,6 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
   })
   const [addSourcesOpen, setAddSourcesOpen] = useState(false)
   const [sampleDialogOpen, setSampleDialogOpen] = useState(false)
-  const [atlasOpen, setAtlasOpen] = useState(false)
   const [sourceFormOpen, setSourceFormOpen] = useState(false)
   const [sourceConnectorId, setSourceConnectorId] = useState<string | null>(null)
   const returnToAddSources = useRef(false)
@@ -241,17 +239,17 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
             guideAvailable={guideAvailable}
             onConnectAtlas={() => {
               if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready)
-                setAtlasOpen(true)
+                void navigate({ to: '/settings' })
               else window.location.assign('/settings')
             }}
             onAddSources={() => {
               if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready)
-                setAtlasOpen(true)
+                void navigate({ to: '/settings' })
               else setAddSourcesOpen(true)
             }}
             onConnectSource={(connectorId) => {
               if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready) {
-                setAtlasOpen(true)
+                void navigate({ to: '/settings' })
               } else if (sourceForm) {
                 setSourceConnectorId(connectorId)
                 returnToAddSources.current = false
@@ -262,12 +260,12 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
             }}
             onTrySample={() => {
               if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready)
-                setAtlasOpen(true)
+                void navigate({ to: '/settings' })
               else setSampleDialogOpen(true)
             }}
             onBuildPipeline={() => {
               if (getDeploymentProfile() === 'cloud' && !overview.stateStore.ready)
-                setAtlasOpen(true)
+                void navigate({ to: '/settings' })
               else if (!overview.setup.done.sources) setAddSourcesOpen(true)
               else if (guideAvailable && guidedPipeline)
                 void navigate({
@@ -334,17 +332,6 @@ export function OverviewPage({ sourceForm }: OverviewPageProps = {}) {
         }}
         onConnectOwn={() => {
           setSampleDialogOpen(false)
-          setAddSourcesOpen(true)
-        }}
-      />
-      <AtlasStoreDialog
-        open={atlasOpen}
-        onOpenChange={setAtlasOpen}
-        onCreated={(created) => {
-          queryClient.setQueryData<SourceView[]>(['sources'], (current) => [
-            ...(current ?? []).filter((item) => item.id !== created.id),
-            created,
-          ])
           setAddSourcesOpen(true)
         }}
       />
@@ -748,7 +735,7 @@ function OverviewAttentionRow({ item }: { item: OverviewModel['attention'][numbe
       <span className="text-muted-foreground">
         {[
           minutes === null
-            ? t('overview.attention.neverApplied')
+            ? t('overview.attention.lastAppliedUnknown')
             : t('overview.attention.lastApplied', { count: minutes }),
           t(`overview.attention.pipelineIs.${item.pipelineHealth ?? 'unknown'}`, {
             pipeline: item.pipelineId,

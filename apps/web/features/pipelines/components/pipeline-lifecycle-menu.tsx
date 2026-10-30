@@ -43,6 +43,7 @@ export type PipelineLifecycleAction = 'start' | 'stop'
 
 const lifecycleActionByState: Partial<Record<PipelineCatalogState, PipelineLifecycleAction>> = {
   NEW: 'start',
+  NOT_STARTED: 'start',
   STOPPED: 'start',
   COMPLETED: 'start',
   // A failed observation is a dead run whose desired state is still RUNNING.
@@ -87,6 +88,7 @@ export function PipelineLifecycleMenu({
   const actionInFlight = useRef(false)
   const [pendingAction, setPendingAction] = useState<PipelineLifecycleAction | null>(null)
   const [stopDialogOpen, setStopDialogOpen] = useState(false)
+  const [clearOnly, setClearOnly] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(presentation === 'dialog-only')
   const [waitingForStop, setWaitingForStop] = useState(false)
   const [stopTimedOut, setStopTimedOut] = useState(false)
@@ -96,6 +98,7 @@ export function PipelineLifecycleMenu({
   const isDraft = contentHash === null
   const action = !isDraft && status ? lifecycleActionByState[status] : undefined
   const resolvedAction = action === 'start' && !startPipeline ? undefined : action
+  const canClearState = !isDraft && (status === 'STOPPED' || status === 'COMPLETED')
 
   const pending = pendingAction !== null || deletePending
 
@@ -264,9 +267,11 @@ export function PipelineLifecycleMenu({
   function requestAction(
     nextAction: PipelineLifecycleAction,
     returnFocus?: RefObject<HTMLElement | null>,
+    onlyClear = false,
   ) {
     if (nextAction === 'stop') {
       onMutationStart?.()
+      setClearOnly(onlyClear)
       setStopDialogOpen(true)
       return
     }
@@ -317,6 +322,16 @@ export function PipelineLifecycleMenu({
               >
                 <ActionIcon className="size-4 shrink-0" aria-hidden="true" />
                 {actionLabel}
+              </DropdownMenuItem>
+            ) : null}
+            {canClearState ? (
+              <DropdownMenuItem
+                disabled={pending}
+                variant="destructive"
+                onClick={() => requestAction('stop', moreTriggerRef, true)}
+              >
+                <Square aria-hidden="true" />
+                {t('pipelines.lifecycle.clearState')}
               </DropdownMenuItem>
             ) : null}
             <DropdownMenuItem onClick={() => window.location.assign(editHref)}>
@@ -429,9 +444,22 @@ export function PipelineLifecycleMenu({
         >
           <DialogHeader>
             <DialogTitle className="[overflow-wrap:anywhere] break-words">
-              {t('pipelines.lifecycle.confirmStopTitle', { id: pipelineId })}
+              {t(
+                clearOnly
+                  ? 'pipelines.lifecycle.confirmClearTitle'
+                  : 'pipelines.lifecycle.confirmStopTitle',
+                {
+                  id: pipelineId,
+                },
+              )}
             </DialogTitle>
-            <DialogDescription>{t('pipelines.lifecycle.confirmStopBody')}</DialogDescription>
+            <DialogDescription>
+              {t(
+                clearOnly
+                  ? 'pipelines.lifecycle.confirmClearBody'
+                  : 'pipelines.lifecycle.confirmStopBody',
+              )}
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col sm:flex-col [&>button]:w-full [&>button]:min-w-0 [&>button]:whitespace-normal">
             <Button
@@ -445,16 +473,18 @@ export function PipelineLifecycleMenu({
             >
               {t('pipelines.lifecycle.cancel')}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={pending}
-              className="px-3 text-[13px]"
-              onClick={() => void execute('stop', false)}
-            >
-              {pendingAction === 'stop' && <LoaderCircle className="animate-spin" />}
-              {t('pipelines.lifecycle.confirmStopKeepState')}
-            </Button>
+            {!clearOnly && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pending}
+                className="px-3 text-[13px]"
+                onClick={() => void execute('stop', false)}
+              >
+                {pendingAction === 'stop' && <LoaderCircle className="animate-spin" />}
+                {t('pipelines.lifecycle.confirmStopKeepState')}
+              </Button>
+            )}
             <Button
               type="button"
               variant="destructive"
@@ -463,7 +493,11 @@ export function PipelineLifecycleMenu({
               onClick={() => void execute('stop', true)}
             >
               {pendingAction === 'stop' && <LoaderCircle className="animate-spin" />}
-              {t('pipelines.lifecycle.confirmStopClearState')}
+              {t(
+                clearOnly
+                  ? 'pipelines.lifecycle.clearState'
+                  : 'pipelines.lifecycle.confirmStopClearState',
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

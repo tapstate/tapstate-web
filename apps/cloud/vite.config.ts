@@ -1,6 +1,9 @@
+import type { ClientRequest, IncomingMessage } from 'node:http'
+
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
+import { EventEmitter } from 'node:events'
 import process from 'node:process'
 import { loadEnv, type ProxyOptions } from 'vite'
 import { defineConfig } from 'vitest/config'
@@ -9,15 +12,19 @@ function rewriteLocalOrigin(
   proxy: Parameters<NonNullable<ProxyOptions['configure']>>[0],
   proxyOrigin: string,
 ) {
-  proxy.on('proxyReq', (proxyReq, request) => {
-    const origin = request.headers.origin
-    const host = request.headers.host
-    if (typeof origin !== 'string' || typeof host !== 'string') return
+  EventEmitter.prototype.on.call(
+    proxy,
+    'proxyReq',
+    (proxyReq: ClientRequest, request: IncomingMessage) => {
+      const origin = request.headers.origin
+      const host = request.headers.host
+      if (typeof origin !== 'string' || typeof host !== 'string') return
 
-    const protocol =
-      'encrypted' in request.socket && request.socket.encrypted === true ? 'https' : 'http'
-    if (origin === `${protocol}://${host}`) proxyReq.setHeader('origin', proxyOrigin)
-  })
+      const protocol =
+        'encrypted' in request.socket && request.socket.encrypted === true ? 'https' : 'http'
+      if (origin === `${protocol}://${host}`) proxyReq.setHeader('origin', proxyOrigin)
+    },
+  )
 }
 
 export default defineConfig(({ mode }) => {

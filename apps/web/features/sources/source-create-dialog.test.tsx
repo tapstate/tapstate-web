@@ -340,6 +340,38 @@ describe('Cluster outbound IP guidance', () => {
 })
 
 describe('SourceCreateDialog', () => {
+  it.each(['cloud', 'on-prem'])(
+    'opens the registered Atlas source form in %s mode',
+    async (profile) => {
+      getDeploymentProfile.mockReturnValue(profile)
+      const atlas: ConnectorSummary = { ...mongodb, id: 'mongodb-atlas', name: 'MongoDB Atlas' }
+      listConnectors.mockResolvedValue([mongodb, atlas])
+      getConnector.mockResolvedValue({ ...detail, ...atlas })
+      host = document.createElement('div')
+      document.body.append(host)
+      root = createRoot(host)
+      await act(async () => {
+        root?.render(
+          <SourceCreateDialog open onOpenChange={() => undefined} onCreated={() => undefined} />,
+        )
+      })
+      const atlasCard = () =>
+        [...document.body.querySelectorAll('button')].find(
+          (button) =>
+            button.getAttribute('role') === 'radio' &&
+            button.textContent?.includes('MongoDB Atlas'),
+        )
+      await vi.waitFor(() => expect(atlasCard()).toBeDefined())
+      await act(async () => atlasCard()?.click())
+      await vi.waitFor(() =>
+        expect(getConnector).toHaveBeenCalledWith('mongodb-atlas', expect.any(Function)),
+      )
+      expect(dialogContent()?.querySelector('h2')?.textContent).toBe('MongoDB Atlas')
+      expect(document.body.textContent).toContain('Source ID')
+      expect(fieldInput('Spec host')).not.toBeNull()
+    },
+  )
+
   it('renders a compact floating connector grid and enters the spec-backed form immediately', async () => {
     host = document.createElement('div')
     document.body.append(host)
