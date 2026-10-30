@@ -111,6 +111,7 @@ const cancelledSubscription: Subscription = {
 const readyCluster: Cluster = {
   ...failedCluster,
   state: 'READY',
+  publicDns: 'acme-data.dev.cloud.tapstate.com',
 }
 
 const readySubscription: Subscription = {
@@ -244,6 +245,20 @@ afterEach(async () => {
 })
 
 describe('Cloud onboarding payment', () => {
+  it('previews the Cluster URL from the entered Organization name', async () => {
+    await renderPage(async () => ({
+      checkoutUrl: 'https://checkout.stripe.com/c/pay/test',
+      organization,
+      specKey: 'small',
+      subscriptionId: 'subscription-pending',
+    }))
+
+    await act(async () => changeOrganizationName('FLY'))
+
+    expect(host?.textContent).toContain('https://fly.dev.cloud.tapstate.com')
+    expect(host?.textContent).toContain('The normalized Cluster name is the hostname')
+  })
+
   it('loads plan prices and starts a secure checkout with the selected plan', async () => {
     const onCreateWorkspace = vi.fn(async (_input: OnboardingInput) => ({
       checkoutUrl: 'https://checkout.stripe.com/c/pay/test',
@@ -346,6 +361,14 @@ describe('Cloud onboarding payment', () => {
 
     expect(onCreateWorkspace).not.toHaveBeenCalled()
     expect(buttonWithText('Continue to secure payment')?.hasAttribute('disabled')).toBe(true)
+  })
+})
+
+describe('Cloud onboarding Cluster address', () => {
+  it('shows the resolved URL when the Cluster is ready', async () => {
+    await renderReadyPage()
+
+    expect(host?.textContent).toContain('https://acme-data.dev.cloud.tapstate.com')
   })
 })
 

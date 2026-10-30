@@ -358,3 +358,42 @@
     linear-gradient(#000 0 0);
   mask-composite: exclude;
 }
+
+.auth-transition {
+  position: relative;
+}
+.auth-transition-panel {
+  width: 100%;
+  min-width: 0;
+}
+.auth-otp {
+  width: 100%;
+}
+.auth-otp-slots {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.auth-otp-slot {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--color-components-input-bg-normal);
+  color: var(--color-components-input-text-filled);
+  font-size: 16px;
+  font-weight: 500;
+}
+.auth-otp-slot-active {
+  background: var(--color-components-input-bg-active);
+  box-shadow: 0 0 0 2px var(--color-state-accent-solid);
+}
+.auth-otp-caret {
+  height: 18px;
+  width: 1px;
+  background: var(--color-text-accent);
+}

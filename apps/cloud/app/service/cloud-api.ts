@@ -422,10 +422,14 @@ const putJson = (body: unknown): Pick<RequestInit, 'method' | 'body'> => ({
 })
 const deleteRequest: Pick<RequestInit, 'method'> = { method: 'DELETE' }
 const apiPrefix = '/v1/api'
-const organizationApiPrefix = '/v2/api/orgs'
+const organizationApiPrefix = `${apiPrefix}/orgs`
 
 export const cloudApi = {
   login: (input: LoginInput) => request<LoginResult>(`${apiPrefix}/auth/login`, jsonBody(input)),
+  requestLoginCode: (email: string) =>
+    request<void>(`${apiPrefix}/auth/email/login/code`, jsonBody({ email })),
+  loginWithEmailCode: (email: string, code: string) =>
+    request<LoginResult>(`${apiPrefix}/auth/email/login`, jsonBody({ email, code })),
   registrationPolicy: () => request<RegistrationPolicy>(`${apiPrefix}/auth/registration-policy`),
   requestEmailCode: (email: string, invitationToken: string | null) =>
     request<void>(

@@ -125,6 +125,8 @@ function AuthRoute() {
       onAccessType={cloudApi.accessType}
       onCurrentSession={cloudApi.me}
       onLogin={(input) => cloudApi.login(input)}
+      onRequestLoginCode={cloudApi.requestLoginCode}
+      onLoginWithCode={cloudApi.loginWithEmailCode}
       onOAuth={async (provider, mode, invitationToken, deferOrganizationCreation) => {
         const authorizationUrl = await cloudApi.oauthStart(
           provider,
