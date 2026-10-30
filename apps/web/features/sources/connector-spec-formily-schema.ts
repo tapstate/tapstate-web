@@ -365,6 +365,40 @@ function isMongoDbPresentationField(name: string, value: unknown) {
   return field?.type === 'void' && field['x-component'] === 'Text'
 }
 
+function isAtlasConnector(connectorId: string | undefined) {
+  return connectorId?.trim().toLocaleLowerCase() === 'mongodb-atlas'
+}
+
+function withMongoUriSchema(node: JsonRecord, connectorId?: string): JsonRecord {
+  if (!isMongoDbConnector(connectorId) && !isAtlasConnector(connectorId)) return node
+  const properties = asRecord(node.properties)
+  const uri = asRecord(properties?.uri)
+  if (properties === null || uri === null) return node
+
+  const validators = uri['x-validator']
+  const legacyAtlasPattern = String.raw`^mongodb\+srv:\/\/[^/]+\/([^/?]+)`
+  const nextValidators =
+    isAtlasConnector(connectorId) && Array.isArray(validators)
+      ? validators.map((value) => {
+          const validator = asRecord(value)
+          return validator?.pattern === legacyAtlasPattern
+            ? { ...validator, pattern: String.raw`^mongodb(?:\+srv)?:\/\/[^/]+\/([^/?]+)` }
+            : value
+        })
+      : validators
+  return {
+    ...node,
+    properties: {
+      ...properties,
+      uri: {
+        ...uri,
+        ...(uri['x-component'] === 'Input' ? { 'x-component': 'Password' } : {}),
+        ...(nextValidators === undefined ? {} : { 'x-validator': nextValidators }),
+      },
+    },
+  }
+}
+
 function isMysqlConnector(connectorId: string | undefined) {
   return connectorId?.trim().toLocaleLowerCase() === 'mysql'
 }
@@ -384,7 +418,7 @@ function finiteNumber(value: unknown) {
  * Formily schema and its defaults agree on the value type.
  */
 function withConnectorSpecificSchema(node: JsonRecord, connectorId?: string): JsonRecord {
-  if (!isMysqlConnector(connectorId)) return node
+  if (!isMysqlConnector(connectorId)) return withMongoUriSchema(node, connectorId)
 
   const properties = asRecord(node.properties)
   const port = asRecord(properties?.port)

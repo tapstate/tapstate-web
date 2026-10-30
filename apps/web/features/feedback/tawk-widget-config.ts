@@ -15,8 +15,8 @@ const devWidget: TawkWidgetConfig = {
 }
 
 const prodWidget: TawkWidgetConfig = {
-  propertyId: '6ad81a2c88dd6c34b5979eb7',
-  widgetId: '1k5e2cghv',
+  propertyId: '6ad811f9c0b97c34b365a428',
+  widgetId: '1k5e0ceht',
 }
 
 function isHostOrSubdomain(hostname: string, domain: string) {

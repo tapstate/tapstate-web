@@ -28,7 +28,7 @@ export function viewEntry(
 export function sourceEntry(id: string): SourceView {
   return {
     id,
-    metadata: null,
+    metadata: id === 'views' ? { labels: { store: 'true' } } : null,
     connector: 'mongodb',
     config: {},
     configuredSecrets: [],

@@ -5,6 +5,7 @@ import type { ApiFetcher } from '../source-client'
 import {
   createPipeline,
   createPipelineDraft,
+  deletePipeline,
   deletePipelineDraft,
   getPipeline,
   getPipelineDraft,
@@ -230,6 +231,22 @@ describe('Pipeline client', () => {
     expect(catalogItem.hasArtifact).toBe(false)
   })
 
+  it('projects required recovery without inventing an observed execution state', async () => {
+    const item = {
+      ...catalogItem,
+      status: {
+        ...catalogItem.status,
+        state: 'UNAVAILABLE',
+        displayState: 'RECOVERY_REQUIRED',
+        desiredState: 'STOPPED',
+      },
+    }
+
+    await expect(listPipelines(fetcherFor(jsonResponse({ items: [item] })))).resolves.toEqual([
+      { ...item, status: { ...item.status, state: 'RECOVERY_REQUIRED' } },
+    ])
+  })
+
   it('uses revision ETags for the durable draft contract', async () => {
     const listRequests: Request[] = []
     const { schemaVersion: _schemaVersion, graph: _graph, wizard: _wizard, ...summary } = draft
@@ -312,6 +329,53 @@ describe('Pipeline client', () => {
     ).resolves.toBeUndefined()
     expect(deleteRequests[0]!.method).toBe('DELETE')
     expect(deleteRequests[0]!.headers.get('If-Match')).toBe('"4"')
+  })
+
+  it('deletes the whole Pipeline with both version conditions and preserves coded refusals', async () => {
+    const requests: Request[] = []
+    await expect(
+      deletePipeline(
+        'orders/warehouse',
+        pipeline.contentHash,
+        4,
+        fetcherFor(new Response(null, { status: 204 }), requests),
+      ),
+    ).resolves.toBeUndefined()
+    expect(new URL(requests[0]!.url).pathname).toBe('/api/pipelines/orders%2Fwarehouse')
+    expect(requests[0]!.headers.get('If-Match')).toBe(`"${pipeline.contentHash}"`)
+    expect(requests[0]!.headers.get('If-Draft-Match')).toBe('"4"')
+    await expect(
+      deletePipeline(
+        'p2',
+        pipeline.contentHash,
+        null,
+        fetcherFor(
+          jsonResponse(
+            {
+              code: 'artifact.pipeline-not-stopped',
+              params: { actual: 'FAILED', desired: 'RUNNING' },
+              message: 'Pipeline cannot be deleted.',
+            },
+            409,
+          ),
+        ),
+      ),
+    ).rejects.toMatchObject({
+      code: 'artifact.pipeline-not-stopped',
+      status: 409,
+      params: { actual: 'FAILED', desired: 'RUNNING' },
+    })
+  })
+
+  it('asserts draft absence explicitly when deleting an artifact-only Pipeline', async () => {
+    const requests: Request[] = []
+    await deletePipeline(
+      'artifact_only',
+      pipeline.contentHash,
+      null,
+      fetcherFor(new Response(null, { status: 204 }), requests),
+    )
+    expect(requests[0]!.headers.get('If-Draft-Match')).toBe('"none"')
   })
 
   it('publishes and previews an explicit draft revision', async () => {

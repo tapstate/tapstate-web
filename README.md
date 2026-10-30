@@ -67,7 +67,7 @@ pnpm lint         # oxlint diagnostics + repo-wide format check
 
 - Vite 负责本地开发服务器、预览与打包产物。
 - Web 部署形态由 Vite mode 决定：本地默认 mode 和 `onprem` 使用 on-prem 行为，`cloud` 启用云版专属行为。分别用 `pnpm --filter web dev --mode onprem`、`pnpm --filter web dev --mode cloud` 启动；打包时对应使用 `pnpm --filter web build --mode onprem` 或 `pnpm --filter web build --mode cloud`。
-- Cloud build 的 401 和 `/login` 会整页返回 Cloud Console；`*.cloud.tapstate.com` 集群运行时返回 `https://cloud.tapstate.com/`，`*.dev.cloud.tapstate.com` 返回 `https://dev.cloud.tapstate.com/`。其他自定义主机可用 `VITE_CLOUD_CONSOLE_URL` 指定返回地址，未配置时使用 dev 预览地址。显式退出先结束当前 Cluster 会话，再请求 Cloud Console 全局退出，并在 Cloud 退出成功或会话已失效时整页跳转至 Cloud `/auth`。其他 Cloud 退出错误会留在当前页面并允许重试。
+- Cloud build 的 401 会清除当前会话并显示显式重新登录入口；依赖不可用保留诊断，不自动循环跳转。用户选择重新登录后整页返回 Cloud Console；`*.cloud.tapstate.com` 集群运行时返回 `https://cloud.tapstate.com/`，`*.dev.cloud.tapstate.com` 返回 `https://dev.cloud.tapstate.com/`。其他自定义主机可用 `VITE_CLOUD_CONSOLE_URL` 指定返回地址，未配置时使用 dev 预览地址。显式退出先结束当前 Cluster 会话，再请求 Cloud Console 全局退出，并在 Cloud 退出成功或会话已失效时整页跳转至 Cloud `/auth`。其他 Cloud 退出错误会留在当前页面并允许重试。
 - TanStack Router 负责 SPA 路由；路由源码按 File Routes 形态维护在 `apps/web/app/routes/`，由 `@tanstack/router-plugin` 生成 `apps/web/app/routeTree.gen.ts`。
 - Cloud Console 在 `apps/cloud` 独立构建；使用同一套 File Routes / Oxlint / OXC / i18next 基线，业务路由在认证接通前默认拒绝访问。
 - 当前仍按 SPA / client-first 落地；不引入 SSR、Server Actions、API Routes 或 BFF。

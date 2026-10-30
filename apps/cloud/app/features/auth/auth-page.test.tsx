@@ -107,7 +107,7 @@ describe('Cloud invitation authentication', () => {
     await clickButton('Continue')
     await clickButton('Sign up with Google')
 
-    expect(props.onOAuth).toHaveBeenCalledWith('google', 'register', token, '')
+    expect(props.onOAuth).toHaveBeenCalledWith('google', 'register', token, false)
     expect(props.onRequestCode).not.toHaveBeenCalled()
   })
 
@@ -162,25 +162,24 @@ describe('Cloud invitation authentication', () => {
       code: '123456',
       password: 'correct-horse-battery',
       displayName: 'Member',
-      organizationName: '',
+      agreedLegalVersion: expect.any(String),
+      deferOrganizationCreation: false,
     })
-    expect(props.onAuthenticated).toHaveBeenCalledWith(user)
+    expect(props.onAuthenticated).toHaveBeenCalledWith(user, false)
   })
 
   it('starts Google signup without a trial code after the gate is disabled', async () => {
     const props = await renderPage({ invitationToken: null, trialCodeRequired: false })
     await clickButton('Sign up')
-    await act(async () => changeInput('#auth-organization-name', 'Member Workspace'))
     await clickButton('Sign up with Google')
 
-    expect(props.onOAuth).toHaveBeenCalledWith('google', 'register', null, 'Member Workspace')
+    expect(props.onOAuth).toHaveBeenCalledWith('google', 'register', null, true)
   })
 
   it('registers a new account and organization without a trial code when the gate is disabled', async () => {
     const props = await renderPage({ invitationToken: null, trialCodeRequired: false })
     await clickButton('Sign up')
     await act(async () => changeInput('#auth-name', 'Member'))
-    await act(async () => changeInput('#auth-organization-name', 'Member Workspace'))
     await act(async () => changeInput('#auth-email', 'member@example.com'))
 
     const requestCodeButton = buttonWithText('Email me a verification code') as HTMLButtonElement
@@ -197,9 +196,10 @@ describe('Cloud invitation authentication', () => {
       code: '123456',
       password: 'correct-horse-battery',
       displayName: 'Member',
-      organizationName: 'Member Workspace',
+      agreedLegalVersion: expect.any(String),
+      deferOrganizationCreation: true,
     })
-    expect(props.onAuthenticated).toHaveBeenCalledWith(user)
+    expect(props.onAuthenticated).toHaveBeenCalledWith(user, true)
   })
 
   it('shows the rate limit response and allows retrying after the limit clears', async () => {
@@ -279,8 +279,9 @@ describe('Cloud invitation authentication', () => {
 
   it('starts the selected provider with the invitation signup intent', async () => {
     const props = await renderPage()
+    expect(host?.querySelector('#auth-organization-name')).toBeNull()
     await clickButton('Sign up with Google')
-    expect(props.onOAuth).toHaveBeenCalledWith('google', 'register', 'invite-token', '')
+    expect(props.onOAuth).toHaveBeenCalledWith('google', 'register', 'invite-token', false)
   })
 
   it('sends the invitation token in the OAuth-start request body, not in its URL', async () => {
@@ -305,9 +306,32 @@ describe('Cloud invitation authentication', () => {
     expect(JSON.parse(String(requestInit?.body))).toEqual({
       flow: 'signup',
       invitationToken: 'raw-invitation-token',
+      deferOrganizationCreation: false,
     })
     expect(authorizationUrl).toBe(
       new URL('/oauth2/authorization/google', cloudApiOrigin || window.location.origin).toString(),
     )
+  })
+
+  it('renders terms of service and privacy policy links at the bottom without underline', async () => {
+    await renderPage()
+
+    const eulaLink = host?.querySelector<HTMLAnchorElement>(
+      'a[href="https://tapstate.com/legal/eula"]',
+    )
+    const privacyLink = host?.querySelector<HTMLAnchorElement>(
+      'a[href="https://tapstate.com/legal/privacy"]',
+    )
+
+    expect(eulaLink).not.toBeNull()
+    expect(privacyLink).not.toBeNull()
+    expect(eulaLink?.textContent).toBe('Terms of Service')
+    expect(privacyLink?.textContent).toBe('Privacy Policy')
+    expect(eulaLink?.className).toContain('text-text-primary')
+    expect(eulaLink?.className).toContain('font-semibold')
+    expect(eulaLink?.className).not.toContain('underline')
+    expect(privacyLink?.className).toContain('text-text-primary')
+    expect(privacyLink?.className).toContain('font-semibold')
+    expect(privacyLink?.className).not.toContain('underline')
   })
 })

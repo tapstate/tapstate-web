@@ -56,7 +56,6 @@ Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 const organization: Organization = {
   id: 'org-1',
   name: 'Acme Data',
-  slug: 'acme-data',
 }
 
 const region: Region = {
@@ -142,7 +141,17 @@ function changeOrganizationName(value: string) {
   input?.dispatchEvent(new Event('input', { bubbles: true }))
 }
 
-async function renderPage(onCreateWorkspace: (input: OnboardingInput) => Promise<OnboardingStart>) {
+type CreateWorkspace = (
+  input: OnboardingInput,
+  existingOrganization?: Organization | null,
+  onOrganizationResolved?: (organization: Organization) => void,
+  createOrganization?: boolean,
+) => Promise<OnboardingStart>
+
+async function renderPage(
+  onCreateWorkspace: CreateWorkspace,
+  options: { currentOrganization?: Organization | null; createOrganization?: boolean } = {},
+) {
   host = document.createElement('div')
   document.body.append(host)
   root = createRoot(host)
@@ -156,6 +165,8 @@ async function renderPage(onCreateWorkspace: (input: OnboardingInput) => Promise
           isOpeningCluster={false}
           onComplete={() => undefined}
           onCreateWorkspace={onCreateWorkspace}
+          currentOrganization={options.currentOrganization}
+          createOrganization={options.createOrganization}
           setDarkMode={() => undefined}
           user={{ email: 'user@example.com', displayName: 'Test User' }}
         />
@@ -250,11 +261,69 @@ describe('Cloud onboarding payment', () => {
 
     expect(onCreateWorkspace).toHaveBeenCalledWith(
       expect.objectContaining({
-        clusterName: 'acme-data',
-        organizationSlug: 'acme-data',
+        clusterName: 'Acme Data',
         specKey: 'small',
       }),
       null,
+      expect.any(Function),
+      false,
+    )
+    expect(navigateToCheckout).toHaveBeenCalledWith('https://checkout.stripe.com/c/pay/test')
+  })
+
+  it('keeps a newly created organization selected after checkout setup fails', async () => {
+    const onCreateWorkspace = vi.fn(
+      async (
+        _input: OnboardingInput,
+        _existingOrganization: Organization | null | undefined,
+        onOrganizationResolved: ((organization: Organization) => void) | undefined,
+        createOrganization: boolean | undefined,
+      ) => {
+        if (createOrganization) {
+          onOrganizationResolved?.(organization)
+          throw new Error('Checkout setup failed')
+        }
+        return {
+          checkoutUrl: 'https://checkout.stripe.com/c/pay/test',
+          organization,
+          specKey: 'small',
+          subscriptionId: 'subscription-pending',
+        }
+      },
+    )
+    await renderPage(onCreateWorkspace, { createOrganization: true })
+
+    await submitSetup()
+
+    expect(onCreateWorkspace).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ organizationName: 'Acme Data' }),
+      null,
+      expect.any(Function),
+      true,
+    )
+    expect(navigate).toHaveBeenCalledWith({
+      to: '/onboarding',
+      search: {
+        organizationId: organization.id,
+        subscriptionId: undefined,
+        createOrganization: false,
+      },
+      replace: true,
+    })
+
+    await act(async () => {
+      host
+        ?.querySelector('form')
+        ?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    })
+
+    expect(onCreateWorkspace).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ organizationName: 'Acme Data' }),
+      organization,
+      undefined,
+      false,
     )
     expect(navigateToCheckout).toHaveBeenCalledWith('https://checkout.stripe.com/c/pay/test')
   })
@@ -337,8 +406,7 @@ describe('Cloud onboarding subscription cancellation', () => {
     expect(onCreateWorkspace).toHaveBeenCalledTimes(2)
     expect(onCreateWorkspace.mock.calls[1]?.[0]).toMatchObject({
       organizationName: 'Acme Data',
-      organizationSlug: 'acme-data',
-      clusterName: 'acme-data',
+      clusterName: 'Acme Data',
       region: { code: alternateRegion.code },
     })
     expect(cancelSubscription).toHaveBeenCalledWith(organization.id, activeSubscription.id)

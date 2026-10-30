@@ -4,14 +4,21 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
-import { listSources } from '@/service/source-client'
-import { stateStoreSource } from '@/service/state-store-source'
+import { ConfigurationTransfer } from '@/features/storage/configuration-transfer'
+import { useStorage } from '@/features/storage/storage-context'
+import { StorageRecovery } from '@/features/storage/storage-recovery'
+import { StorageError, StorageHealthPanel } from '@/features/storage/storage-ui'
+import { useStorageAction } from '@/features/storage/use-storage-action'
+import { getSource, listSources, testConnection } from '@/service/source-client'
+import { stateStoreDatabase, stateStoreSource } from '@/service/state-store-source'
+import { StorageClientError } from '@/service/storage-client'
 import { useAuthStore } from '@/stores/auth-store'
 import { getDeploymentProfile } from '@/utils/deployment-profile'
 
 /** Settings, State stores: one deployment-managed destination, never a data source. */
 export function StateStorePage() {
   const { t } = useTranslation()
+  const { snapshot, refresh } = useStorage()
   const [activeSection, setActiveSection] = useState<'stateStore' | 'about'>('stateStore')
   const apiFetch = useAuthStore((state) => state.apiFetch)
   const sourcesQuery = useQuery({ queryKey: ['sources'], queryFn: () => listSources(apiFetch) })
@@ -33,10 +40,30 @@ export function StateStorePage() {
   })
   const profile = getDeploymentProfile()
   const managed = stateStoreSource(sourcesQuery.data ?? [], profile)
-  const database =
-    typeof managed?.config.database === 'string' && managed.config.database.trim().length > 0
-      ? managed.config.database
-      : null
+  const database = managed ? stateStoreDatabase(managed) : null
+
+  const verification = useStorageAction()
+  const canVerify = Boolean(managed && snapshot?.allowedActions.includes('connection.test'))
+  function refreshStatus() {
+    void verification.run(
+      async (isCurrent) => {
+        try {
+          if (canVerify && managed) {
+            const { source } = await getSource(managed.id, apiFetch)
+            if (!isCurrent()) return
+            if (!stateStoreSource([source], profile)) throw new StorageClientError('stale', 409)
+            await testConnection(
+              { id: source.id, connectorId: source.connector, settings: source.config },
+              apiFetch,
+            )
+          }
+        } finally {
+          if (isCurrent()) await refresh()
+        }
+      },
+      () => {},
+    )
+  }
 
   return (
     <section className="settings-page">
@@ -67,6 +94,24 @@ export function StateStorePage() {
         <div className="settings-page__body">
           {activeSection === 'stateStore' ? (
             <>
+              {snapshot && (
+                <StorageHealthPanel
+                  snapshot={snapshot}
+                  checkingApplicationData={verification.busy && canVerify}
+                  unverifiedApplicationData={Boolean(verification.error)}
+                />
+              )}
+              <div>
+                <Button variant="outline" disabled={verification.busy} onClick={refreshStatus}>
+                  {t(
+                    verification.busy && canVerify
+                      ? 'storage.verification.CHECKING'
+                      : 'storage.refresh',
+                  )}
+                </Button>
+              </div>
+              {Boolean(verification.error) && <StorageError error={verification.error} />}
+
               <div className="settings-page__section-header">
                 <h2 className="text-foreground text-[15px] font-semibold">
                   {t('stateStorePage.title')}
@@ -140,6 +185,10 @@ export function StateStorePage() {
                   </li>
                 </ul>
               )}
+              {snapshot?.allowedActions.includes('configuration.import.status') && (
+                <ConfigurationTransfer defaultSourceId={managed?.id} />
+              )}
+              {snapshot?.allowedActions.includes('storage.recovery.plan') && <StorageRecovery />}
             </>
           ) : (
             <section className="settings-about" aria-labelledby="settings-about-heading">
@@ -169,6 +218,28 @@ export function StateStorePage() {
                       : (versionQuery.data ?? t('stateStorePage.about.unavailable'))}
                   </dd>
                 </dl>
+                <div className="settings-about__legal">
+                  <p className="settings-about__copyright">{t('stateStorePage.about.copyright')}</p>
+                  <div className="settings-about__legal-links">
+                    <a
+                      href="https://tapstate.com/legal/privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {t('stateStorePage.about.privacyPolicy')}
+                    </a>
+                    <span aria-hidden="true" className="settings-about__divider">
+                      ·
+                    </span>
+                    <a
+                      href="https://tapstate.com/legal/eula"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {t('stateStorePage.about.termsOfService')}
+                    </a>
+                  </div>
+                </div>
                 <footer className="settings-about__links">
                   <a
                     href="https://github.com/tapstate/tapstate/blob/main/LICENSE"

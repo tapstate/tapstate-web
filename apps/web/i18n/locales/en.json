@@ -83,7 +83,7 @@
       "title": "Welcome back",
       "subtitle": "Sign in to continue working with your live data.",
       "usernameLabel": "Username",
-      "usernamePlaceholder": "you{'@'}company.com",
+      "usernamePlaceholder": "you@company.com",
       "passwordLabel": "Password",
       "passwordPlaceholder": "Enter your password",
       "passwordShow": "Show password",
@@ -593,6 +593,9 @@
       "cancel": "Cancel",
       "confirmStopKeepState": "Stop and keep state",
       "confirmStopClearState": "Stop and clear state",
+      "clearState": "Clear all state",
+      "confirmClearTitle": "Clear state for {{id}}?",
+      "confirmClearBody": "Clear saved progress and operator state. The pipeline stays stopped. Start a full load to apply the current table selection. Existing destination data follows the configured full-load policy.",
       "dismissFeedback": "Dismiss lifecycle error"
     },
     "startChecks": {
@@ -646,9 +649,20 @@
     },
     "delete": {
       "title": "Delete {{id}}?",
-      "body": "This permanently removes the stored Pipeline and its runtime state.",
+      "body": "This permanently removes the stored Pipeline, its draft and its runtime state.",
       "confirm": "Delete Pipeline",
-      "failed": "Pipeline could not be deleted."
+      "failed": "Pipeline could not be deleted.",
+      "notStopped": "Pipeline {{id}} is {{actual}} and is headed for {{desired}}. Stop it and wait for it to settle before deleting it.",
+      "inUse": "Pipeline {{id}} is still referenced by: {{referrers}}. Remove those references first.",
+      "incomplete": "The Pipeline definition was removed, but some cleanup is incomplete. Refresh the list to review the remaining draft and runtime state.",
+      "conflict": "The Pipeline or its draft changed since it was loaded. Refresh the list and confirm deletion again.",
+      "stopTimedOut": "The Pipeline has not stopped yet. Try stopping it again.",
+      "waitingForStop": "Stopping is already requested. Wait for the Pipeline to stop, then confirm deletion again.",
+      "stopPipeline": "Stop Pipeline",
+      "cleanupTitle": "Cleanup needs attention for {{id}}",
+      "cleanupReason": "Reason: {{reason}}",
+      "unknownCleanup": "The remaining cleanup could not be determined. Review the server diagnostics before taking further action.",
+      "dismiss": "Dismiss"
     },
     "table": {
       "modified": "Last modified",
@@ -1332,7 +1346,6 @@
         },
         "states": {
           "DRAFT": "Draft",
-          "NOT_STARTED": "Not started",
           "NEW": "New",
           "STARTING": "Starting",
           "RUNNING": "Running",
@@ -1343,7 +1356,9 @@
           "STOPPED": "Stopped",
           "COMPLETED": "Completed",
           "FAILED": "Failed",
-          "UNAVAILABLE": "Unavailable"
+          "UNAVAILABLE": "Unavailable",
+          "RECOVERY_REQUIRED": "Full recovery required",
+          "NOT_STARTED": "Not started"
         }
       },
       "apiAccess": {
@@ -1888,24 +1903,6 @@
       }
     }
   },
-  "pipelineDetails": {
-    "backToPipelines": "Pipelines",
-    "edit": "Edit pipeline",
-    "logs": "Logs",
-    "loading": "Loading pipeline details…",
-    "notFound": "Pipeline {{id}} is not available.",
-    "error": "Pipeline details could not be loaded.",
-    "observedAt": "Last observed {{time}}",
-    "lastError": "Last runtime error",
-    "sources": "Sources",
-    "destinations": "Destinations",
-    "transforms": "Transforms",
-    "noSources": "No source connections are recorded.",
-    "noDestinations": "No destinations are recorded.",
-    "noTransforms": "No transforms are configured.",
-    "tableCount_one": "{{count}} table",
-    "tableCount_other": "{{count}} tables"
-  },
   "views": {
     "title": "Views",
     "subtitle": "Browse the collections Tapstate materializes in your Cloud state store.",
@@ -2049,7 +2046,7 @@
       "siblings": "Also written by this pipeline:",
       "freshness": "Freshness",
       "lastApplied": "last change applied {{age}} ago",
-      "neverApplied": "no change applied yet",
+      "lastAppliedUnknown": "Last applied time is not reported",
       "documentLimit": "limit 16 MB per document",
       "initialLoad": "Initial load",
       "upToDate": "Up to date",
@@ -2172,27 +2169,6 @@
         "close": "Close"
       }
     },
-    "addSourcesDialog": {
-      "title": "Add data sources",
-      "description": "Connect the databases your pipelines will read from. Available connectors depend on this Cluster.",
-      "orConnect": "Or connect a source",
-      "connect": "Connect a source",
-      "connectAction": "Connect",
-      "connected": "Connected: {{sources}}",
-      "done": "Done",
-      "connector": {
-        "relational": "Relational database",
-        "document": "Document database",
-        "database": "Database"
-      },
-      "sample": {
-        "title": "Sample order data",
-        "tag": "Recommended",
-        "description": "{{names}} contains order data. Preview a document before adding the sources.",
-        "view": "View samples",
-        "choose": "Choose samples"
-      }
-    },
     "sources": {
       "title": "Sources",
       "metric_one": "{{count}} source",
@@ -2251,12 +2227,10 @@
       "title": "Needs attention",
       "clear": "All clear. No failed pipelines or stale views.",
       "pipelineFailed": "Failed pipeline",
-      "pipelineBlocked": "Pipeline start blocked",
-      "pipelineUnavailable": "Pipeline status unavailable",
       "viewStale": "Stale view",
       "lastApplied_one": "last change applied {{count}} min ago",
       "lastApplied_other": "last change applied {{count}} min ago",
-      "neverApplied": "no change applied yet",
+      "lastAppliedUnknown": "Last applied time is not reported",
       "pipelineIs": {
         "running": "its pipeline {{pipeline}} is running",
         "idle": "its pipeline {{pipeline}} is stopped",
@@ -2265,7 +2239,9 @@
         "unknown": "maintained by {{pipeline}}"
       },
       "openPipeline": "Open in Pipelines",
-      "openView": "Open in Views"
+      "openView": "Open in Views",
+      "pipelineBlocked": "Pipeline start blocked",
+      "pipelineUnavailable": "Pipeline status unavailable"
     },
     "subtitle": "Data flows from your sources, through pipelines, into the state store.",
     "addSources": {
@@ -2289,6 +2265,27 @@
         "added": "Added",
         "error": "The sample sources could not be added. Try again, or connect your own database."
       }
+    },
+    "addSourcesDialog": {
+      "title": "Add data sources",
+      "description": "Connect the databases your pipelines will read from. Available connectors depend on this Cluster.",
+      "orConnect": "Or connect a source",
+      "connect": "Connect a source",
+      "connectAction": "Connect",
+      "connected": "Connected: {{sources}}",
+      "done": "Done",
+      "connector": {
+        "relational": "Relational database",
+        "document": "Document database",
+        "database": "Database"
+      },
+      "sample": {
+        "title": "Sample order data",
+        "tag": "Recommended",
+        "description": "{{names}} contains order data. Preview a document before adding the sources.",
+        "view": "View samples",
+        "choose": "Choose samples"
+      }
     }
   },
   "stateStorePage": {
@@ -2303,13 +2300,14 @@
     },
     "managed": {
       "name": "Tapstate state store",
-      "type": "MongoDB · server metadata database",
-      "access": "Shares the MongoDB this server already uses. For production, use a separate MongoDB."
+      "type": "MongoDB · application database",
+      "access": "Application data uses this system-owned default Source. Configuration and durable cache use their separately configured databases.",
+      "deleteReason": "The server manages this store"
     },
     "cloud": {
       "name": "Atlas state store",
-      "type": "MongoDB Atlas",
-      "access": "You supplied this Atlas URI during setup. Credentials are hidden on this page."
+      "type": "MongoDB Atlas · application database",
+      "access": "The default application-data destination for this cluster. Configuration and durable cache use their separately configured databases."
     },
     "states": {
       "loading": "Loading state stores…",
@@ -2317,18 +2315,261 @@
       "empty": "No state store yet. Pipelines cannot start until one is set."
     },
     "settings": "Settings",
+    "sectionsLabel": "Settings sections",
+    "sections": {
+      "stateStore": "State store"
+    },
     "about": {
       "title": "About",
       "version": "Version",
       "loading": "Loading version…",
       "unavailable": "Unavailable",
       "license": "Apache License 2.0",
-      "releaseNotes": "Release notes"
-    },
-    "sectionsLabel": "Settings sections",
-    "sections": {
-      "stateStore": "State store"
+      "releaseNotes": "Release notes",
+      "copyright": "© 2026 TAPDATA HONG KONG LIMITED, Contributors.",
+      "privacyPolicy": "Privacy Policy",
+      "termsOfService": "Terms of Service"
     }
+  },
+  "storage": {
+    "loading": "Checking storage…",
+    "healthTitle": "Storage health",
+    "setupTitle": "Set up cluster storage",
+    "cloudSetup": "Configuration storage is supplied by the platform. Connect your Atlas cache and application databases.",
+    "opSetup": "Use one MongoDB or Atlas connection and three different database names. Test each layer before saving.",
+    "connector": "Database service",
+    "uri": "Connection URI",
+    "platformProvided": "Provided by the platform",
+    "tlsHelp": "Standard mongodb:// and mongodb+srv:// URIs are supported. TLS verifies the server certificate and hostname. Client certificates and private keys are not supported.",
+    "atlasHelp": "Atlas requires public endpoints, the cluster egress IP in its access list, and TLS. Password authentication prefers SCRAM-SHA-256 and supports SCRAM-SHA-1 accounts. Keep authSource=admin.",
+    "customCa": "Custom CA for configuration and cache",
+    "customCaHelp": "Optional PEM certificate bundles, up to 64 KiB each. Custom CA-only connections for the default application database are outside this release. No private keys.",
+    "configCa": "Configuration CA bundle",
+    "cacheCa": "Cache CA bundle",
+    "distinctDatabases": "Each layer needs a different database name.",
+    "setupResultPending": "Initialization is still running. Its request did not return a result; this page will keep checking the original operation.",
+    "setupCommitHelp": "Saving binds these databases to this cluster. A timeout may mean the operation is still running. Refresh its status before retrying.",
+    "save": "Save storage settings",
+    "working": "Working…",
+    "test": "Test connection",
+    "testPassed": "Connection checks passed",
+    "initialization": {
+      "title": "Initializing your cluster",
+      "completed": "{{completed}} of {{total}} steps completed",
+      "totalElapsed": "Total elapsed",
+      "steps": "Initialization steps",
+      "unknownDuration": "Time unavailable",
+      "loadingCluster": "Loading your Cluster…",
+      "updatingSession": "Updating sign-in. Initialization continues; the last confirmed progress is shown.",
+      "stale": "Progress could not be refreshed. The last confirmed state is shown.",
+      "runtimeHelp": "Preparing data connectors and checking required resources. A slow database connection can extend this step.",
+      "restored": "Earlier completed steps were restored from saved configuration. Their previous durations are unavailable.",
+      "canLeave": "You can close this page. Closing it does not cancel initialization. Reopen this Cluster from Cloud to see its progress.",
+      "backToCloud": "Back to Cloud",
+      "connecting": "Continuing to your cluster…",
+      "stage": {
+        "SAVE_SETTINGS": "Save storage settings",
+        "PREPARE_STORAGE": "Prepare runtime storage",
+        "START_RUNTIME": "Start services and data connectors",
+        "PUBLISH_READY": "Finish initialization"
+      },
+      "state": {
+        "PENDING": "Waiting",
+        "RUNNING": "In progress",
+        "LAST_RUNNING": "Last confirmed in progress",
+        "COMPLETE": "Completed",
+        "FAILED": "Failed — action required"
+      },
+      "opStage": {
+        "SAVE_SETTINGS": "Save database settings",
+        "PREPARE_STORAGE": "Prepare configuration and runtime storage",
+        "START_RUNTIME": "Restart and register data connectors",
+        "PUBLISH_READY": "Ready to create the first administrator"
+      },
+      "opCanLeave": "You can close this page and return to this installation address. Saved settings are retained. After the automatic restart, use the new first-administrator credential from the installation capability file.",
+      "restarting": "Restarting the service. Reconnecting automatically…"
+    },
+    "setupCheckRetained": "Runtime preparation is still in progress. This is the connection test completed before saving.",
+    "testRequired": "Connection test required",
+    "showUri": "Show connection URI",
+    "hideUri": "Hide connection URI",
+    "testWorking": "Checking connection…",
+    "testFailed": "Connection check failed",
+    "testExpired": "Check expired — test again",
+    "testAutomatic": "Checked automatically",
+    "refresh": "Refresh status",
+    "continue": "Continue",
+    "reauthorize": "Enter a new installation credential",
+    "ownerRequired": "Continue as the installation administrator",
+    "managementHelp": "Open the management address shown by the installation command on the server. For remote access, use an explicit secure tunnel. Storage and first-administrator writes require that dedicated channel.",
+    "capability": "Installation credential",
+    "capabilityHelp": "Enter the current credential from the owner-only capability file created by the installation command. It stays in this page only. After a restart or expiry, obtain a fresh credential through that command.",
+    "loginTitle": "Sign in to continue",
+    "loginHelp": "Storage setup and sign-in are separate. Sign in again through the original entry to obtain a current session. Saved storage settings are retained.",
+    "cloudLogin": "Return to Cloud sign-in",
+    "opLogin": "Open sign-in",
+    "firstAdminTitle": "Create the first administrator",
+    "createAdmin": "Create administrator",
+    "adminComplete": "Administrator setup complete",
+    "normalLoginHelp": "Open the normal cluster service address and sign in with the account you created. This management channel does not serve ordinary sessions.",
+    "adminUnknownHelp": "Check status before trying again. If the account was created, use normal sign-in; do not create another administrator or reset the password.",
+    "resourceIds": "Resource IDs, separated by commas",
+    "operationId": "Operation ID for result lookup",
+    "originalResultHelp": "Keep this ID for a refresh or a later sign-in. An unknown result must be checked with the original ID before another attempt.",
+    "queryResult": "Check original result",
+    "operationStatus": "Result: {{phase}}",
+    "layers": {
+      "CONFIG": "Configuration",
+      "CACHE": "Durable cache",
+      "MASTER": "Application data"
+    },
+    "health": {
+      "UNKNOWN": "Not verified",
+      "AVAILABLE": "Available",
+      "UNAVAILABLE": "Unavailable",
+      "AUTH_READY": "Sign-in ready; business not ready"
+    },
+    "errors": {
+      "authentication": "Your session has expired. Sign in again.",
+      "permission": "This credential cannot perform this action. Check its purpose and validity.",
+      "conflict": "The state has changed. Refresh and review it again before confirming.",
+      "dependency": "Storage is temporarily unavailable. Restore the original storage and refresh. Sign-in cannot bypass this dependency.",
+      "request": "The request was refused. Review the settings or check the original operation result before retrying.",
+      "responseUnavailable": "The server response could not be confirmed. Refresh status to check the original operation before retrying.",
+      "network": "The response could not be verified. Check the connection and the original operation result.",
+      "databaseCredentials": "The database rejected these credentials. Check the database username, password and authentication database.",
+      "databasePermissions": "This account does not have the required database permissions. Check read, write, index and transaction access on the selected database.",
+      "databaseConnection": "The database could not be reached. Check DNS, network access, the Atlas IP access list and TLS settings."
+    },
+    "recovery": {
+      "title": "Recover runtime storage and pipelines",
+      "help": "Cluster recovery prepares new runtime storage and leaves every affected pipeline stopped. Then preview and explicitly confirm a full rebuild for each pipeline, including its source and target requirements.",
+      "scope": "Rebuild scope",
+      "cluster": "Runtime storage for the cluster",
+      "pipelines": "One pipeline full rebuild",
+      "previous": "Previous recovery operation ID, if requested by the server",
+      "preview": "Preview impact",
+      "affected": "Affected pipelines",
+      "noPipelines": "No pipelines are included in this plan.",
+      "confirmHelp": "I have reviewed this pipeline, its source full-load capability, models, and target handling, and explicitly confirm a new full rebuild. A changed scope needs a new preview.",
+      "confirm": "Confirm full rebuild",
+      "clusterConfirmHelp": "I have stopped and isolated every old cluster member using the deployment tools and verified that old source/target connections and in-flight writes have ended. I confirm this entire scope. The cluster checks local cleanup and storage identity; I am responsible for isolation across machines. All affected pipelines will remain stopped.",
+      "clusterConfirm": "Confirm runtime storage recovery",
+      "clusterComplete": "Runtime storage is ready. Every affected pipeline remains stopped until you explicitly confirm its full rebuild. This does not mean its data or targets have recovered.",
+      "continueOriginal": "Continue this operation",
+      "targets": "Target handling for this full rebuild",
+      "executionFailed": "This operation has not completed. Inspect the pipeline error. If its run failed, stop it before explicitly continuing this original operation.",
+      "stalePreview": "The current inputs no longer match this preview. Check the original scope and preview it again before confirming.",
+      "selectPipeline": "Select one pipeline to rebuild",
+      "repreview": "Recheck this scope",
+      "policy": {
+        "APPEND": "Keep existing rows and apply the configured write mode.",
+        "CLEAR": "Clear the selected target tables before loading the full source again.",
+        "FAIL": "Refuse the full load if a selected target table already contains rows."
+      },
+      "reviewRequired": "Review full recovery",
+      "shared": "One shared log storage scope",
+      "canonicalChain": "Original shared capture identity",
+      "physicalChain": "Original physical log identity",
+      "sharedHelp": "Use both original identities from the storage diagnosis. The server determines the actual affected pipelines. Other shared logs and their readers continue to run.",
+      "sharedConfirmHelp": "I have stopped and isolated the listed pipelines and the old shared capture on every machine, and verified that their old source/target connections and in-flight writes have ended. I confirm this exact scope. The affected pipelines will remain stopped and each needs an explicit full rebuild.",
+      "sharedConfirm": "Confirm shared log recovery",
+      "sharedComplete": "The replacement shared log is ready. For each listed pipeline, use Stop with clear state, then explicitly start its full load. Other pipelines keep their state. The affected data and targets have not yet recovered.",
+      "sharedFailure": "This original shared recovery has not completed. Inspect its error and recheck this same scope before confirming a changed preview.",
+      "openPipelines": "Open pipelines"
+    },
+    "transfer": {
+      "title": "Transfer configuration",
+      "help": "Export selected resources and their required definitions in an encrypted package. Runtime state, business data and cluster keys are excluded. Keep the transfer key separately; it is never stored here.",
+      "key": "Transfer key (32 bytes, unpadded base64url)",
+      "export": "Export configuration",
+      "users": "OP usernames to include",
+      "download": "Download encrypted package",
+      "import": "Import configuration",
+      "file": "Encrypted package",
+      "mapping": "Default target: {{source}} → {{destination}}",
+      "preflight": "Check import",
+      "confirmHelp": "I confirm this default-target mapping and insertion of the checked configuration. Existing resources are not overwritten and pipelines will not start automatically.",
+      "commit": "Confirm import"
+    },
+    "phase": {
+      "NOT_CONFIGURED": "Storage setup required",
+      "PREPARING": "Preparing storage",
+      "RESTART_REQUIRED": "Restart required",
+      "FIRST_ADMIN_REQUIRED": "Create the first administrator",
+      "AUTH_READY": "Sign-in ready",
+      "READY": "Storage admitted",
+      "UNAVAILABLE": "Storage unavailable",
+      "AWAITING_REBUILD_CONFIRMATION": "Rebuild confirmation required",
+      "RECOVERING": "Rebuilding runtime state",
+      "CLEANUP_REQUIRED": "Cleanup needs verification"
+    },
+    "phaseHelp": {
+      "NOT_CONFIGURED": "Test and save the databases before using the cluster.",
+      "PREPARING": "The original setup is being prepared. Saved database settings stay in place.",
+      "RESTART_REQUIRED": "Storage is saved. Restart through the installation command, then authorize first-administrator creation.",
+      "FIRST_ADMIN_REQUIRED": "Set a username and password for the first administrator.",
+      "AUTH_READY": "Authentication is available. Business services are still waiting for storage admission.",
+      "READY": "Runtime storage is admitted. Each layer below reports its own verification state.",
+      "UNAVAILABLE": "Restore the original storage and check again. Do not replace the binding or repeat installation.",
+      "AWAITING_REBUILD_CONFIRMATION": "Sign-in has been restored; business state has not. Review and explicitly confirm the rebuild.",
+      "RECOVERING": "Check the original recovery operation. Business access remains closed until recovery is verified.",
+      "CLEANUP_REQUIRED": "A previous attempt has not confirmed resource cleanup. Keep the original settings and check again."
+    },
+    "operationPhase": {
+      "PLANNED": "Awaiting confirmation",
+      "CONFIRMED": "Confirmed; completion pending",
+      "RUNNING": "Running",
+      "COMPLETE": "Complete",
+      "COMMITTED": "Committed",
+      "PREPARED": "Ready for confirmation",
+      "NOT_COMMITTED": "Not committed",
+      "EXPIRED": "Expired",
+      "UNKNOWN": "Result not yet verified",
+      "FAILED": "Failed; check original result",
+      "PENDING": "Awaiting confirmation",
+      "COMMITTING": "Commit result pending",
+      "ABORTED": "Not committed"
+    },
+    "mongodb": "MongoDB",
+    "atlas": "MongoDB Atlas",
+    "title": "Cluster storage",
+    "verification": {
+      "UNKNOWN": "Not verified",
+      "CHECKING": "Checking…",
+      "PASSED": "Last check passed",
+      "FAILED": "Last check failed",
+      "EXPIRED": "Check expired",
+      "checkedAt": "Last checked:",
+      "help": "Refresh status checks the current default destination. Results expire after 10 minutes."
+    },
+    "entryUnavailable": "Cluster sign-in is temporarily unavailable. Your saved storage settings are retained.",
+    "autoRefresh": "Status updates automatically. You do not need to refresh or submit again.",
+    "autoRetry": "The status check could not complete. Retrying automatically; your original request has not been resubmitted.",
+    "setupProgressTitle": "Finishing cluster setup",
+    "setupSubmittingHelp": "Saving your database settings and preparing the cluster.",
+    "setupSavedHelp": "The database settings are saved. The cluster is preparing its runtime.",
+    "resumeSetupTitle": "Continue saved storage setup",
+    "resumeSetupHelp": "These databases are already bound. Use the original connection details to continue. If the previous result is uncertain, refresh its status first.",
+    "resumeSetup": "Continue original setup"
+  },
+  "pipelineDetails": {
+    "backToPipelines": "Pipelines",
+    "edit": "Edit pipeline",
+    "logs": "Logs",
+    "loading": "Loading pipeline details…",
+    "notFound": "Pipeline {{id}} is not available.",
+    "error": "Pipeline details could not be loaded.",
+    "observedAt": "Last observed {{time}}",
+    "lastError": "Last runtime error",
+    "sources": "Sources",
+    "destinations": "Destinations",
+    "transforms": "Transforms",
+    "noSources": "No source connections are recorded.",
+    "noDestinations": "No destinations are recorded.",
+    "noTransforms": "No transforms are configured.",
+    "tableCount_one": "{{count}} table",
+    "tableCount_other": "{{count}} tables"
   },
   "uiKit": {
     "title": "UI Kit",

@@ -19,12 +19,12 @@ export interface RegisteredUser extends UserProfile {
 export interface LoginResult {
   email: string
   displayName?: string
+  agreedLegalVersion?: string
 }
 
 export interface Organization {
   id: string
   name: string
-  slug: string
   ownerEmail?: string
   status?: 'ACTIVE' | 'SUSPENDED' | string
 }
@@ -55,7 +55,8 @@ export interface EmailRegistrationInput {
   code: string
   password: string
   displayName?: string
-  organizationName?: string
+  agreedLegalVersion?: string
+  deferOrganizationCreation?: boolean
 }
 
 export interface RegistrationPolicy {
@@ -293,6 +294,7 @@ export interface RegisterInput {
   email: string
   password: string
   displayName?: string
+  agreedLegalVersion?: string
 }
 
 export interface LoginInput {
@@ -302,13 +304,37 @@ export interface LoginInput {
 
 export interface CreateOrganizationInput {
   name: string
-  slug: string
 }
 
 export interface CreateSubscriptionInput {
   region: string
   clusterName: string
   specKey?: string
+}
+
+export interface CloudTicket {
+  id: string
+  jiraKey: string
+  summary: string
+  description: string
+  status: string
+  statusCategory: string
+  createdAt: string
+  canClose: boolean
+}
+
+export interface CloudTicketPage {
+  items: CloudTicket[]
+  page: number
+  size: number
+  totalItems: number
+  totalPages: number
+  hasNext: boolean
+}
+
+export interface CreateCloudTicketInput {
+  summary: string
+  description: string
 }
 
 export class CloudApiError extends Error {
@@ -396,6 +422,7 @@ const putJson = (body: unknown): Pick<RequestInit, 'method' | 'body'> => ({
 })
 const deleteRequest: Pick<RequestInit, 'method'> = { method: 'DELETE' }
 const apiPrefix = '/v1/api'
+const organizationApiPrefix = '/v2/api/orgs'
 
 export const cloudApi = {
   login: (input: LoginInput) => request<LoginResult>(`${apiPrefix}/auth/login`, jsonBody(input)),
@@ -409,20 +436,26 @@ export const cloudApi = {
     request<LoginResult>(`${apiPrefix}/auth/email/register`, jsonBody(input)),
   accessType: (code: string) =>
     request<{ type: 'trial' | 'organization' }>(`${apiPrefix}/auth/access`, jsonBody({ code })),
-  acceptInvitation: (invitationToken: string, organizationName?: string) =>
+  acceptInvitation: (invitationToken: string, deferOrganizationCreation = false) =>
     request<LoginResult>(
       `${apiPrefix}/auth/invitations/accept`,
-      jsonBody({ invitationToken, organizationName }),
+      jsonBody({ invitationToken, deferOrganizationCreation }),
     ),
   oauthStart: async (
     provider: 'google' | 'github',
     flow: 'login' | 'signup' | 'link',
     invitationToken?: string,
     organizationName?: string,
+    deferOrganizationCreation = false,
   ) => {
     const result = await request<{ authorizationUrl: string }>(
       `${apiPrefix}/auth/oauth/${provider}/start`,
-      jsonBody({ flow, invitationToken: invitationToken ?? null, organizationName }),
+      jsonBody({
+        flow,
+        invitationToken: invitationToken ?? null,
+        organizationName,
+        deferOrganizationCreation,
+      }),
     )
     const authorizationBase = cloudApiOrigin || window.location.origin
     return new URL(result.authorizationUrl, authorizationBase).toString()
@@ -452,11 +485,11 @@ export const cloudApi = {
       ...jsonBody({ eventId, propertyId }),
       keepalive: true,
     }),
-  organizations: async () => asList<Organization>(await request<unknown>(`${apiPrefix}/orgs`)),
+  organizations: async () => asList<Organization>(await request<unknown>(organizationApiPrefix)),
   createOrganization: (input: CreateOrganizationInput) =>
-    request<Organization>(`${apiPrefix}/orgs`, jsonBody(input)),
+    request<Organization>(organizationApiPrefix, jsonBody(input)),
   organization: (orgId: string) =>
-    request<Organization>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}`),
+    request<Organization>(`${organizationApiPrefix}/${encodeURIComponent(orgId)}`),
   regions: async () => asList<Region>(await request<unknown>(`${apiPrefix}/regions`)),
   region: (code: string) => request<Region>(`${apiPrefix}/regions/${encodeURIComponent(code)}`),
   specs: async () => asList<Spec>(await request<unknown>(`${apiPrefix}/specs`)),
@@ -529,6 +562,14 @@ export const cloudApi = {
       `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
       post,
     ),
+  tickets: (page = 0, size = 20) =>
+    request<CloudTicketPage>(`${apiPrefix}/tickets?page=${page}&size=${size}`),
+  createTicket: (input: CreateCloudTicketInput) =>
+    request<CloudTicket>(`${apiPrefix}/tickets`, jsonBody(input)),
+  ticket: (cloudTicketId: string) =>
+    request<CloudTicket>(`${apiPrefix}/tickets/${encodeURIComponent(cloudTicketId)}`),
+  closeTicket: (cloudTicketId: string) =>
+    request<CloudTicket>(`${apiPrefix}/tickets/${encodeURIComponent(cloudTicketId)}/close`, post),
   cancelAtPeriodEnd: (orgId: string, subscriptionId: string) =>
     request<Subscription>(
       `${apiPrefix}/orgs/${encodeURIComponent(orgId)}/subscriptions/${encodeURIComponent(subscriptionId)}/cancel-at-period-end`,

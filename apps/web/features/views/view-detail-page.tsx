@@ -328,7 +328,7 @@ function ViewOverview({ view, siblings }: { view: ViewSummary; siblings: ViewSum
   const duration = useDurationText()
   const lastApplied =
     view.lastAppliedAt === null
-      ? t('views.detail.neverApplied')
+      ? t('views.detail.lastAppliedUnknown')
       : t('views.detail.lastApplied', {
           age: duration((Date.now() - view.lastAppliedAt) / 1000),
         })

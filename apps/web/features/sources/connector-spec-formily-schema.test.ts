@@ -111,6 +111,72 @@ const localizedSpecText = JSON.stringify({
 })
 
 describe('connector spec Formily schema', () => {
+  it.each([
+    ['mongodb://user:pass@one:27017,two:27017/example?tls=true', true],
+    ['mongodb+srv://user:pass@cluster.example/example?authSource=admin', true],
+    ['mongodb://user:pass@one:27017/?tls=true', false],
+    ['mongodb+srv://user:pass@cluster.example/?authSource=admin', false],
+    ['mongodb://user:pass@one:27017', false],
+    ['https://cluster.example/example', false],
+  ])('validates the Atlas database URI format %s', (value, valid) => {
+    const atlasSpec = JSON.stringify({
+      configOptions: {
+        connection: {
+          type: 'object',
+          properties: {
+            uri: {
+              type: 'string',
+              required: true,
+              'x-component': 'Input',
+              'x-validator': [
+                {
+                  pattern: String.raw`^mongodb\+srv:\/\/[^/]+\/([^/?]+)`,
+                  message: 'A database is required',
+                },
+              ],
+            },
+          },
+        },
+      },
+    })
+    const schema = connectorSpecConnectionSchema(atlasSpec, 'en', 'mongodb-atlas')
+    const fields = schema.properties as Record<
+      string,
+      { 'x-validator': { pattern: string; message: string }[] }
+    >
+    const uri = fields.uri
+    expect(new RegExp(uri['x-validator'][0].pattern).test(value)).toBe(valid)
+    expect(uri['x-validator'][0].message).toBe('A database is required')
+    expect(schema).toMatchObject({ properties: { uri: { required: true } } })
+  })
+
+  it.each(['mongodb', 'mongodb-atlas'])(
+    'masks credential-bearing URI input for %s',
+    (connectorId) => {
+      const schema = connectorSpecConnectionSchema(
+        JSON.stringify({
+          configOptions: {
+            connection: {
+              type: 'object',
+              properties: {
+                uri: { type: 'string', 'x-component': 'Input' },
+                host: { type: 'string', 'x-component': 'Input' },
+              },
+            },
+          },
+        }),
+        'en',
+        connectorId,
+      )
+      expect(schema).toMatchObject({
+        properties: {
+          uri: { 'x-component': 'Password' },
+          host: { 'x-component': 'Input' },
+        },
+      })
+    },
+  )
+
   it('parses configOptions.connection and preserves the declared form structure', () => {
     const schema = connectorSpecConnectionSchema(specText, 'en')
 

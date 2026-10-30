@@ -1,14 +1,16 @@
-import '@/i18n/index'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { i18n } from '@/i18n/index'
 
 const {
   apiFetch,
   createPipelineDraft,
   deletePipelineDraft,
   getPipelineDraft,
+  getPipelineStatus,
   getStartChecks,
   listPipelines,
   listPipelineArtifacts,
@@ -23,6 +25,7 @@ const {
   createPipelineDraft: vi.fn(),
   deletePipelineDraft: vi.fn(),
   getPipelineDraft: vi.fn(),
+  getPipelineStatus: vi.fn(),
   getStartChecks: vi.fn(),
   listPipelines: vi.fn(),
   listPipelineArtifacts: vi.fn(),
@@ -42,10 +45,12 @@ vi.mock('@tanstack/react-router', async (importOriginal) => ({
 
 vi.mock('@/service/source-client', () => ({ listSources }))
 vi.mock('@/service/view-client', () => ({ listViews }))
-vi.mock('@/service/pipelines/pipeline-client', () => ({
+vi.mock('@/service/pipelines/pipeline-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/service/pipelines/pipeline-client')>()),
   createPipelineDraft,
   deletePipelineDraft,
   getPipelineDraft,
+  getPipelineStatus,
   getStartChecks,
   listPipelineDrafts,
   listPipelineArtifacts,
@@ -133,7 +138,8 @@ async function renderPage() {
   return queryClient
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await i18n.changeLanguage('en')
   listSources.mockResolvedValue([{ id: 'orders' }])
   listViews.mockResolvedValue({ available: false })
   listPipelineArtifacts.mockResolvedValue([])
@@ -186,7 +192,7 @@ beforeEach(() => {
   stopPipeline.mockResolvedValue({})
   getPipelineDraft.mockResolvedValue({ etag: '"3"' })
   deletePipelineDraft.mockResolvedValue(undefined)
-  apiFetch.mockResolvedValue({ ok: true })
+  apiFetch.mockResolvedValue(new Response(null, { status: 204 }))
   createPipelineDraft.mockResolvedValue(undefined)
   navigate.mockReset()
 })
@@ -196,6 +202,7 @@ afterEach(async () => {
   container?.remove()
   root = undefined
   container = undefined
+  await i18n.changeLanguage('en')
   vi.clearAllMocks()
 })
 
@@ -462,11 +469,323 @@ describe('PipelinesPage', () => {
     await act(async () => elementWithText('button', 'Delete Pipeline')?.click())
 
     await vi.waitFor(() =>
-      expect(apiFetch).toHaveBeenCalledWith('/api/artifacts/failed_import', {
+      expect(apiFetch).toHaveBeenCalledWith('/api/pipelines/failed_import', {
         method: 'DELETE',
-        headers: { 'If-Match': `"${'c'.repeat(64)}"` },
+        headers: { 'If-Match': `"${'c'.repeat(64)}"`, 'If-Draft-Match': '"4"' },
       }),
     )
+  })
+
+  it('keeps a coded delete refusal in the padded dialog body and asks before stopping', async () => {
+    apiFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          code: 'artifact.pipeline-not-stopped',
+          params: { actual: 'FAILED', desired: 'RUNNING' },
+        }),
+        { status: 409 },
+      ),
+    )
+    await renderPage()
+    const trigger = await vi.waitFor(() => {
+      const button = document.querySelector<HTMLButtonElement>(
+        '[aria-label="Pipeline lifecycle actions for failed_import"]',
+      )
+      expect(button).not.toBeNull()
+      return button
+    })
+    await act(async () => trigger?.click())
+    await act(async () => elementWithText('[role="menuitem"]', 'Delete')?.click())
+    await act(async () => elementWithText('button', 'Delete Pipeline')?.click())
+    const alert = await vi.waitFor(() => {
+      const value = document.querySelector('[role="alert"]')
+      expect(value?.textContent).toContain('FAILED')
+      expect(value?.textContent).toContain('RUNNING')
+      return value
+    })
+    expect(alert?.closest('[data-slot="dialog-body"]')).not.toBeNull()
+    for (const [locale, detail] of [
+      ['en', 'Stop it and wait for it to settle before deleting it.'],
+      ['zh-CN', '请先停止，等待状态稳定后再删除。'],
+      ['zh-TW', '請先停止，等待狀態穩定後再刪除。'],
+    ] as const) {
+      await act(async () => i18n.changeLanguage(locale))
+      await vi.waitFor(() => expect(alert?.textContent).toContain(detail))
+    }
+    await act(async () => i18n.changeLanguage('en'))
+    expect(stopPipeline).not.toHaveBeenCalled()
+    await act(async () => elementWithText('button', 'Stop Pipeline')?.click())
+    await vi.waitFor(() =>
+      expect(stopPipeline).toHaveBeenCalledWith('failed_import', false, apiFetch),
+    )
+    expect(document.body.textContent).toContain('Delete failed_import?')
+    expect(apiFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps deletion open when stopping removes the row from a status search', async () => {
+    const row = {
+      id: 'filtered',
+      name: 'filtered',
+      revision: 4,
+      contentHash: 'c'.repeat(64),
+      hasArtifact: true,
+      status: { state: 'RUNNING' },
+    }
+    listPipelines.mockResolvedValue([row])
+    apiFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          code: 'artifact.pipeline-not-stopped',
+          params: { actual: 'RUNNING', desired: 'RUNNING' },
+        }),
+        { status: 409 },
+      ),
+    )
+    stopPipeline.mockImplementationOnce(async () => {
+      listPipelines.mockResolvedValue([{ ...row, status: { state: 'STOPPED' } }])
+    })
+    await renderPage()
+    const search = document.querySelector<HTMLInputElement>('input[placeholder]')!
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!
+      setter.call(search, 'RUNNING')
+      search.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    const trigger = await vi.waitFor(() => {
+      const value = document.querySelector<HTMLButtonElement>(
+        '[aria-label="Pipeline lifecycle actions for filtered"]',
+      )
+      expect(value).not.toBeNull()
+      return value
+    })
+    await act(async () => trigger?.click())
+    await act(async () => elementWithText('[role="menuitem"]', 'Delete')?.click())
+    await act(async () => elementWithText('button', 'Delete Pipeline')?.click())
+    await vi.waitFor(() => expect(elementWithText('button', 'Stop Pipeline')).toBeDefined())
+    await act(async () => elementWithText('button', 'Stop Pipeline')?.click())
+    await vi.waitFor(() => expect(document.body.textContent).toContain('Delete filtered?'))
+    await vi.waitFor(() =>
+      expect(elementWithText('button', 'Delete Pipeline')?.getAttribute('disabled')).toBeNull(),
+    )
+    expect(document.querySelector('tbody tr')).toBeNull()
+  })
+
+  it.each([
+    {
+      code: 'artifact.in-use',
+      params: { referrers: ['downstream_orders'] },
+      detail: 'still referenced by: downstream_orders',
+    },
+    {
+      code: 'artifact.version-conflict',
+      params: { id: 'failed_import' },
+      detail: 'changed since it was loaded',
+    },
+  ])('shows the $code delete refusal in the dialog', async ({ code, params, detail }) => {
+    apiFetch.mockResolvedValueOnce(new Response(JSON.stringify({ code, params }), { status: 409 }))
+    await renderPage()
+    const trigger = await vi.waitFor(() => {
+      const button = document.querySelector<HTMLButtonElement>(
+        '[aria-label="Pipeline lifecycle actions for failed_import"]',
+      )
+      expect(button).not.toBeNull()
+      return button
+    })
+    await act(async () => trigger?.click())
+    await act(async () => elementWithText('[role="menuitem"]', 'Delete')?.click())
+    await act(async () => elementWithText('button', 'Delete Pipeline')?.click())
+
+    const alert = await vi.waitFor(() => {
+      const value = document.querySelector('[role="alert"]')
+      expect(value?.textContent).toContain(detail)
+      return value
+    })
+    expect(alert?.closest('[data-slot="dialog-body"]')).not.toBeNull()
+    expect(elementWithText('button', 'Cancel')).toBeDefined()
+  })
+
+  it('explains an in-flight stop without asking to stop the Pipeline again', async () => {
+    apiFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          code: 'artifact.pipeline-not-stopped',
+          params: { actual: 'RUNNING', desired: 'STOPPED' },
+        }),
+        { status: 409 },
+      ),
+    )
+    await renderPage()
+    const trigger = await vi.waitFor(() => {
+      const button = document.querySelector<HTMLButtonElement>(
+        '[aria-label="Pipeline lifecycle actions for failed_import"]',
+      )
+      expect(button).not.toBeNull()
+      return button
+    })
+    await act(async () => trigger?.click())
+    await act(async () => elementWithText('[role="menuitem"]', 'Delete')?.click())
+    await act(async () => elementWithText('button', 'Delete Pipeline')?.click())
+    await vi.waitFor(() =>
+      expect(document.querySelector('[role="alert"]')?.textContent).toContain(
+        'Stopping is already requested.',
+      ),
+    )
+    expect(elementWithText('button', 'Stop Pipeline')).toBeUndefined()
+    expect(stopPipeline).not.toHaveBeenCalled()
+  })
+
+  it('keeps incomplete cleanup diagnostics after the removed catalog row unmounts', async () => {
+    apiFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          code: 'artifact.reclaim-incomplete',
+          params: { reason: 'unknown-commit', residue: ['draft:failed_import', 'state:unknown'] },
+          message: 'The artifact removal stands; cleanup is uncertain.',
+        }),
+        { status: 500 },
+      ),
+    )
+    listPipelines
+      .mockResolvedValueOnce([
+        {
+          id: 'failed_import',
+          name: 'failed_import',
+          revision: 4,
+          contentHash: 'c'.repeat(64),
+          hasArtifact: true,
+          status: { state: 'STOPPED' },
+        },
+      ])
+      .mockResolvedValue([])
+    await renderPage()
+    const trigger = await vi.waitFor(() => {
+      const value = document.querySelector<HTMLButtonElement>(
+        '[aria-label="Pipeline lifecycle actions for failed_import"]',
+      )
+      expect(value).not.toBeNull()
+      return value
+    })
+    await act(async () => trigger?.click())
+    await act(async () => elementWithText('[role="menuitem"]', 'Delete')?.click())
+    await act(async () => elementWithText('button', 'Delete Pipeline')?.click())
+    await vi.waitFor(() => expect(document.querySelector('tbody tr')).toBeNull())
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain('unknown-commit')
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain('draft:failed_import')
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain('state:unknown')
+    expect(elementWithText('button', 'Delete Pipeline')).toBeUndefined()
+    expect(elementWithText('button', 'Dismiss')).toBeDefined()
+  })
+
+  it('waits for authoritative STOPPED after returning from the explicit stop confirmation', async () => {
+    const row = {
+      id: 'failed_import',
+      name: 'failed_import',
+      revision: 4,
+      contentHash: 'c'.repeat(64),
+      hasArtifact: true,
+      status: { state: 'FAILED' },
+    }
+    listPipelines.mockResolvedValue([row])
+    apiFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          code: 'artifact.pipeline-not-stopped',
+          params: { actual: 'FAILED', desired: 'RUNNING' },
+        }),
+        { status: 409 },
+      ),
+    )
+    stopPipeline.mockImplementationOnce(async () => {
+      listPipelines.mockResolvedValue([{ ...row, status: { state: 'STOPPING' } }])
+    })
+    const queryClient = await renderPage()
+    const trigger = await vi.waitFor(() => {
+      const value = document.querySelector<HTMLButtonElement>(
+        '[aria-label="Pipeline lifecycle actions for failed_import"]',
+      )
+      expect(value).not.toBeNull()
+      return value
+    })
+    await act(async () => trigger?.click())
+    await act(async () => elementWithText('[role="menuitem"]', 'Delete')?.click())
+    await act(async () => elementWithText('button', 'Delete Pipeline')?.click())
+    await act(async () => elementWithText('button', 'Stop Pipeline')?.click())
+    await vi.waitFor(() =>
+      expect(document.body.textContent).toContain('Stopping is already requested.'),
+    )
+    expect(elementWithText('button', 'Delete Pipeline')?.getAttribute('disabled')).not.toBeNull()
+    expect(apiFetch).toHaveBeenCalledTimes(1)
+    listPipelines.mockResolvedValue([{ ...row, status: { state: 'STOPPED' } }])
+    await act(async () => {
+      await queryClient.invalidateQueries({ queryKey: ['pipelines'] })
+    })
+    await vi.waitFor(() =>
+      expect(elementWithText('button', 'Delete Pipeline')?.getAttribute('disabled')).toBeNull(),
+    )
+    expect(apiFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('polls an open STOPPING delete dialog with global refresh paused and stops polling on close', async () => {
+    const row = {
+      id: 'stopping_import',
+      name: 'stopping_import',
+      revision: 4,
+      contentHash: 'c'.repeat(64),
+      hasArtifact: true,
+      status: { state: 'STOPPING' },
+    }
+    listPipelines.mockResolvedValue([row])
+    getPipelineStatus.mockResolvedValue({ pipelineId: row.id, state: 'STOPPING' })
+    await renderPage()
+    const trigger = await vi.waitFor(() => {
+      const value = document.querySelector<HTMLButtonElement>(
+        '[aria-label="Pipeline lifecycle actions for stopping_import"]',
+      )
+      expect(value).not.toBeNull()
+      return value
+    })
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>('[aria-label="Pause automatic pipeline refresh"]')
+        ?.click(),
+    )
+    await act(async () => trigger?.click())
+    vi.useFakeTimers()
+    try {
+      await act(async () => elementWithText('[role="menuitem"]', 'Delete')?.click())
+      expect(elementWithText('button', 'Delete Pipeline')?.getAttribute('disabled')).not.toBeNull()
+      const calls = getPipelineStatus.mock.calls.length
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5_000)
+      })
+      expect(getPipelineStatus).toHaveBeenCalledTimes(calls + 1)
+      expect(elementWithText('button', 'Delete Pipeline')?.getAttribute('disabled')).not.toBeNull()
+      await act(async () => elementWithText('button', 'Cancel')?.click())
+      const closedCalls = getPipelineStatus.mock.calls.length
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10_000)
+      })
+      expect(getPipelineStatus).toHaveBeenCalledTimes(closedCalls)
+      await act(async () => trigger?.click())
+      await act(async () => elementWithText('[role="menuitem"]', 'Delete')?.click())
+      listPipelines.mockResolvedValue([{ ...row, status: { state: 'STOPPED' } }])
+      getPipelineStatus.mockResolvedValue({ pipelineId: row.id, state: 'STOPPED' })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5_000)
+      })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1)
+      })
+      expect(elementWithText('button', 'Delete Pipeline')?.getAttribute('disabled')).toBeNull()
+      const stoppedCalls = getPipelineStatus.mock.calls.length
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10_000)
+      })
+      expect(getPipelineStatus).toHaveBeenCalledTimes(stoppedCalls)
+      expect(apiFetch).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('confirms stop before interrupting a running Pipeline', async () => {
@@ -490,6 +809,41 @@ describe('PipelinesPage', () => {
       expect(stopPipeline).toHaveBeenCalledWith('orders_to_warehouse', false, expect.anything()),
     )
   })
+
+  it.each(['STOPPED', 'COMPLETED'] as const)(
+    'keeps Start and offers an explicit clearing confirmation for a %s Pipeline',
+    async (state) => {
+      listPipelines.mockResolvedValue([
+        {
+          id: 'retained_import',
+          name: 'retained_import',
+          contentHash: 'f'.repeat(64),
+          hasArtifact: true,
+          status: { state },
+        },
+      ])
+      await renderPage()
+      await vi.waitFor(() => expect(container?.textContent).toContain('retained_import'))
+      const trigger = document.querySelector<HTMLButtonElement>(
+        '[aria-label="Pipeline lifecycle actions for retained_import"]',
+      )
+      await act(async () => trigger?.click())
+      expect(elementWithText('[role="menuitem"]', 'Start')).toBeDefined()
+      expect(elementWithText('[role="menuitem"]', 'Clear all state')).toBeDefined()
+      await act(async () => elementWithText('[role="menuitem"]', 'Clear all state')?.click())
+      await vi.waitFor(() =>
+        expect(document.body.textContent).toContain('Clear state for retained_import?'),
+      )
+      expect(stopPipeline).not.toHaveBeenCalled()
+      expect(runPipeline).not.toHaveBeenCalled()
+      expect(elementWithText('button', 'Stop and keep state')).toBeUndefined()
+      await act(async () => elementWithText('button', 'Clear all state')?.click())
+      await vi.waitFor(() =>
+        expect(stopPipeline).toHaveBeenCalledWith('retained_import', true, expect.anything()),
+      )
+      expect(runPipeline).not.toHaveBeenCalled()
+    },
+  )
 
   it('sends an explicit clear-state choice and closes confirmation before showing a failure', async () => {
     stopPipeline.mockRejectedValueOnce(

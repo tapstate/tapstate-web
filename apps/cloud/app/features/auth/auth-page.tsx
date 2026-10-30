@@ -3,9 +3,9 @@ import { Field as SharedUIField, FieldDescription, FieldLabel } from '@tapstate-
 import { IconButton } from '@tapstate-web/ui/icon-button'
 import { Input } from '@tapstate-web/ui/input'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@tapstate-web/ui/input-group'
-import { AlertCircle, Eye, EyeOff, Moon, RefreshCw, ShieldCheck, Sun } from 'lucide-react'
+import { AlertCircle, Eye, EyeOff, Moon, RefreshCw, Sun } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
 
 import './auth-pages.css'
 
@@ -21,6 +21,14 @@ import { InteractiveCustomer360Showcase } from './interactive-customer-360-showc
 
 type AuthMode = 'login' | 'register'
 
+const CURRENT_LEGAL_VERSION = import.meta.env.VITE_LEGAL_VERSION ?? 'legal-v1.0-2026-10-27'
+const LEGAL_DOCS = {
+  eula: 'https://tapstate.com/legal/eula',
+  privacy: 'https://tapstate.com/legal/privacy',
+  subscription: 'https://tapstate.com/legal/subscription-policy',
+  dpa: 'https://tapstate.com/legal/data-processing-addendum',
+} as const
+
 const emailCodeCooldownSeconds = 60
 
 interface AuthPageProps {
@@ -29,6 +37,7 @@ interface AuthPageProps {
   invitationToken: string | null
   initialMode?: 'login' | 'register'
   oauthOutcome?: string
+  organizationSetupRequired?: boolean
   registrationPolicyStatus: 'loading' | 'ready' | 'error'
   trialCodeRequired: boolean
   onRetryRegistrationPolicy: () => void
@@ -36,14 +45,17 @@ interface AuthPageProps {
   onRequestCode: (email: string, invitationToken: string | null) => Promise<void>
   onRegisterWithEmail: (input: EmailRegistrationInput) => Promise<UserProfile>
   onAccessType: (code: string) => Promise<{ type: 'trial' | 'organization' }>
-  onAcceptInvitation: (invitationToken: string, organizationName?: string) => Promise<UserProfile>
+  onAcceptInvitation: (
+    invitationToken: string,
+    deferOrganizationCreation?: boolean,
+  ) => Promise<UserProfile>
   onCurrentSession: () => Promise<UserProfile>
-  onAuthenticated: (user: UserProfile) => Promise<void>
+  onAuthenticated: (user: UserProfile, organizationSetupRequired?: boolean) => Promise<void>
   onOAuth: (
     provider: 'google' | 'github',
     mode: AuthMode,
     invitationToken: string | null,
-    organizationName?: string,
+    deferOrganizationCreation: boolean,
   ) => Promise<void>
 }
 
@@ -93,6 +105,7 @@ export function AuthPage({
   invitationToken,
   initialMode,
   oauthOutcome,
+  organizationSetupRequired = false,
   registrationPolicyStatus,
   trialCodeRequired,
   onRetryRegistrationPolicy,
@@ -109,7 +122,6 @@ export function AuthPage({
   const [activeInvitationToken, setActiveInvitationToken] = useState(invitationToken)
   const [invitationLink, setInvitationLink] = useState('')
   const [accessType, setAccessType] = useState<'trial' | 'organization' | null>(null)
-  const [organizationName, setOrganizationName] = useState('')
   const [mode, setMode] = useState<AuthMode>(
     initialMode ?? (invitationToken ? 'register' : 'login'),
   )
@@ -164,14 +176,14 @@ export function AuthPage({
       oauthHandled.current = true
       setOauthCompleting(true)
       void onCurrentSession()
-        .then(onAuthenticated)
+        .then((user) => onAuthenticated(user, organizationSetupRequired))
         .catch((cause: unknown) => setError(errorMessageKey(cause)))
         .finally(() => setOauthCompleting(false))
       return
     }
     const message = oauthErrorMessage(oauthOutcome)
     if (message) setError(message)
-  }, [oauthOutcome, onAuthenticated, onCurrentSession])
+  }, [oauthOutcome, onAuthenticated, onCurrentSession, organizationSetupRequired])
 
   useEffect(() => {
     if (resendAvailableIn === 0) return
@@ -188,16 +200,6 @@ export function AuthPage({
       return
     }
     if (activeInvitationToken && !accessType) return
-    const needsOrganizationName =
-      accessType === 'trial' ||
-      (mode === 'register' &&
-        !activeInvitationToken &&
-        registrationPolicyStatus === 'ready' &&
-        !trialCodeRequired)
-    if (needsOrganizationName && !organizationName.trim()) {
-      setError('auth.errors.organizationNameRequired')
-      return
-    }
     setError(null)
     setIsSubmitting(true)
 
@@ -205,8 +207,12 @@ export function AuthPage({
       let user: UserProfile
       if (mode === 'login') {
         user = await onLogin({ email: email.trim(), password })
-        if (activeInvitationToken)
-          user = await onAcceptInvitation(activeInvitationToken, organizationName.trim())
+        if (activeInvitationToken) {
+          const needsOrganizationSetup = accessType === 'trial'
+          user = await onAcceptInvitation(activeInvitationToken, needsOrganizationSetup)
+          await onAuthenticated(user, needsOrganizationSetup)
+          return
+        }
       } else {
         if (!activeInvitationToken && trialCodeRequired) {
           setError('auth.errors.invitationRequired')
@@ -222,8 +228,11 @@ export function AuthPage({
           code: verificationCode.trim(),
           password,
           displayName: displayName.trim(),
-          organizationName: organizationName.trim(),
+          agreedLegalVersion: CURRENT_LEGAL_VERSION,
+          deferOrganizationCreation: accessType === 'trial' || !activeInvitationToken,
         })
+        await onAuthenticated(user, accessType === 'trial' || !activeInvitationToken)
+        return
       }
       await onAuthenticated(user)
     } catch (cause) {
@@ -266,20 +275,12 @@ export function AuthPage({
       return
     }
     if (activeInvitationToken && !accessType) return
-    const needsOrganizationName =
-      accessType === 'trial' ||
-      (mode === 'register' &&
-        !activeInvitationToken &&
-        registrationPolicyStatus === 'ready' &&
-        !trialCodeRequired)
-    if (needsOrganizationName && !organizationName.trim()) {
-      setError('auth.errors.organizationNameRequired')
-      return
-    }
     setError(null)
     setIsStartingOAuth(true)
     try {
-      await onOAuth(provider, mode, activeInvitationToken, organizationName.trim())
+      const deferOrganizationCreation =
+        accessType === 'trial' || (mode === 'register' && !activeInvitationToken)
+      await onOAuth(provider, mode, activeInvitationToken, deferOrganizationCreation)
     } catch (cause) {
       setError(errorMessageKey(cause))
       setIsStartingOAuth(false)
@@ -424,22 +425,6 @@ export function AuthPage({
           >
             {t('auth.changeCode')}
           </button>
-        </div>
-      )}
-
-      {(accessType === 'trial' ||
-        (mode === 'register' && !activeInvitationToken && !trialCodeRequired)) && (
-        <div className="mt-4">
-          <AuthField label={t('auth.organizationNameLabel')} name="auth-organization-name">
-            <Input
-              autoComplete="organization"
-              id="auth-organization-name"
-              maxLength={100}
-              onValueChange={setOrganizationName}
-              required
-              value={organizationName}
-            />
-          </AuthField>
         </div>
       )}
 
@@ -638,9 +623,28 @@ export function AuthPage({
           )}
         </div>
 
-        <div className="border-divider-subtle body-xs-regular text-text-tertiary flex items-center justify-center gap-2 border-t pt-4">
-          <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0" />
-          <span>{t('auth.securityNote')}</span>
+        <div className="border-divider-subtle body-xs-regular text-text-tertiary border-t pt-4 text-center">
+          <Trans
+            i18nKey={mode === 'register' ? 'auth.legalNoticeSignup' : 'auth.legalNoticeSignin'}
+            components={{
+              eulaLink: (
+                <a
+                  className="text-text-primary hover:text-text-secondary font-semibold transition-colors"
+                  href={LEGAL_DOCS.eula}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                />
+              ),
+              privacyLink: (
+                <a
+                  className="text-text-primary hover:text-text-secondary font-semibold transition-colors"
+                  href={LEGAL_DOCS.privacy}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                />
+              ),
+            }}
+          />
         </div>
       </div>
     </AuthShell>

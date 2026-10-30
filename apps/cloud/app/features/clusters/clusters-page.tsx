@@ -13,6 +13,7 @@ import type { ClusterState } from '../../service/cloud-api'
 
 import { cloudApi, type Cluster } from '../../service/cloud-api'
 import { useCloudAppState } from '../../state/cloud-app-state'
+import { canEnterCluster } from './cluster-entry-state'
 import { useClusterEntry } from './use-cluster-entry'
 
 function dateLabel(value: string | null | undefined, language: string) {
@@ -53,7 +54,11 @@ export function ClustersPage() {
   const openProvisioning = () => {
     void navigate({
       to: '/onboarding',
-      search: { organizationId: activeOrganization?.id, subscriptionId: undefined },
+      search: {
+        organizationId: activeOrganization?.id,
+        subscriptionId: undefined,
+        createOrganization: false,
+      },
     })
   }
 
@@ -222,7 +227,9 @@ export function ClustersPage() {
                     <button
                       className="focus-visible:outline-state-accent-solid rounded-sm text-left focus-visible:outline-2 enabled:cursor-pointer enabled:hover:underline disabled:cursor-default"
                       disabled={
-                        cluster.state !== 'READY' || enteringId !== null || !activeOrganization
+                        !canEnterCluster(cluster.state) ||
+                        enteringId !== null ||
+                        !activeOrganization
                       }
                       onClick={() => {
                         if (activeOrganization) void enterCluster(cluster, activeOrganization.id)

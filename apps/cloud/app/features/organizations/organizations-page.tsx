@@ -105,9 +105,7 @@ export function OrganizationsPage({ embedded = false }: { embedded?: boolean } =
   const filteredOrganizations = useMemo(
     () =>
       organizations.filter((organization) =>
-        `${organization.name} ${organization.slug}`
-          .toLowerCase()
-          .includes(searchQuery.trim().toLowerCase()),
+        organization.name.toLowerCase().includes(searchQuery.trim().toLowerCase()),
       ),
     [organizations, searchQuery],
   )
@@ -311,11 +309,10 @@ export function OrganizationsPage({ embedded = false }: { embedded?: boolean } =
               <FilterEmptyState title={t('organizationList.noMatches')} />
             </div>
           ) : (
-            <table className="w-full min-w-175 border-collapse border-0 text-sm">
+            <table className="w-full min-w-150 border-collapse border-0 text-sm">
               <thead className="border-divider-subtle text-text-tertiary h-8 border-b text-xs/8 font-medium uppercase">
                 <tr className="[&>th]:px-3 [&>th]:text-left [&>th]:font-[weight:inherit]">
                   <th>{t('organizationList.name')}</th>
-                  <th>{t('organizationList.slug')}</th>
                   <th>{t('organizationList.status')}</th>
                   <th>{t('organizationList.owner')}</th>
                 </tr>
@@ -332,7 +329,6 @@ export function OrganizationsPage({ embedded = false }: { embedded?: boolean } =
                         <Badge className="ml-2">{t('organizationList.currentBadge')}</Badge>
                       )}
                     </td>
-                    <td className="px-3 py-2 font-mono text-xs">{organization.slug}</td>
                     <td className="px-3 py-2">
                       <span className="inline-flex items-center gap-1.5">
                         <StatusDot

@@ -195,6 +195,7 @@ export function WizardBuilder({
   >('idle')
   const [livePreviewError, setLivePreviewError] = useState('')
   const editorReadOnly = readOnly || (busy && action === 'start')
+  const recoveryRequired = lifecycleStatus === 'RECOVERY_REQUIRED'
   const currentDraft = useRef(draft)
   const currentEtag = useRef(etag)
   const pending = useRef<Promise<void> | null>(null)
@@ -452,7 +453,7 @@ export function WizardBuilder({
     start: boolean,
     returnFocus: RefObject<HTMLElement | null> = runButtonRef,
   ) {
-    if (busy || readOnly) return
+    if (busy || readOnly || (start && recoveryRequired)) return
     setBusy(true)
     setAction(start ? 'start' : 'save')
     setStartPhase(start ? 'saving' : null)
@@ -690,6 +691,7 @@ export function WizardBuilder({
               onApplyPreset={applyCustomer360Preset}
               onAddFormula={addCustomerLifetimeValue}
               onSaveDraft={() => void savePipeline(false)}
+              launchDisabled={recoveryRequired || readOnly || busy}
               onLaunch={() => void savePipeline(true)}
             />
           )}
@@ -742,7 +744,9 @@ export function WizardBuilder({
             }
             showWorkbenchHeader={!guidedPreset}
             onInspectPlan={inspectDsl}
-            onStart={() => void savePipeline(true, workbenchRunButtonRef)}
+            onStart={
+              recoveryRequired ? undefined : () => void savePipeline(true, workbenchRunButtonRef)
+            }
             startButtonRef={workbenchRunButtonRef}
             startReadOnly={readOnly}
             startBusy={actionsBusy}

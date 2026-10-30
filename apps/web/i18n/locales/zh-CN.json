@@ -1,6 +1,10 @@
 {
   "app": {
-    "help": { "openMenu": "帮助", "documentation": "文档", "contactSupport": "联系客服" },
+    "help": {
+      "openMenu": "帮助",
+      "documentation": "文档",
+      "contactSupport": "联系客服"
+    },
     "brand": "Tapstate",
     "primaryNavigation": "主导航",
     "previewMode": "AI Studio 迁移预览",
@@ -79,7 +83,7 @@
       "title": "欢迎回来",
       "subtitle": "登录后继续处理实时数据。",
       "usernameLabel": "用户名",
-      "usernamePlaceholder": "you{'@'}company.com",
+      "usernamePlaceholder": "you@company.com",
       "passwordLabel": "密码",
       "passwordPlaceholder": "输入密码",
       "passwordShow": "显示密码",
@@ -589,6 +593,9 @@
       "cancel": "取消",
       "confirmStopKeepState": "停止并保留状态",
       "confirmStopClearState": "停止并清除状态",
+      "clearState": "清空所有状态",
+      "confirmClearTitle": "清空 {{id}} 的状态？",
+      "confirmClearBody": "清空已保存的进度和算子状态，任务保持停止。请重新以全量模式启动，以应用当前选表。已有目标数据按配置的全量处理策略处理。",
       "dismissFeedback": "关闭生命周期错误"
     },
     "startChecks": {
@@ -642,9 +649,20 @@
     },
     "delete": {
       "title": "删除 {{id}}？",
-      "body": "此操作会永久删除已存储的流水线及其运行状态。",
+      "body": "此操作会永久删除已存储的流水线、草稿及其运行状态。",
       "confirm": "删除流水线",
-      "failed": "流水线删除失败。"
+      "failed": "流水线删除失败。",
+      "notStopped": "流水线 {{id}} 当前为 {{actual}}，目标状态为 {{desired}}。请先停止，等待状态稳定后再删除。",
+      "inUse": "流水线 {{id}} 仍被以下资源引用：{{referrers}}。请先移除这些引用。",
+      "incomplete": "流水线定义已删除，但部分清理尚未完成。请刷新列表，检查剩余草稿和运行状态。",
+      "conflict": "流水线或草稿已发生修改。请刷新列表后重新确认删除。",
+      "stopTimedOut": "流水线尚未停止，请重试停止操作。",
+      "waitingForStop": "已请求停止。请等待流水线停止后，再次确认删除。",
+      "stopPipeline": "停止流水线",
+      "cleanupTitle": "{{id}} 的清理需要处理",
+      "cleanupReason": "原因：{{reason}}",
+      "unknownCleanup": "无法确定剩余清理内容。请先检查服务端诊断，再执行后续操作。",
+      "dismiss": "关闭"
     },
     "table": {
       "modified": "最后修改",
@@ -1328,7 +1346,6 @@
         },
         "states": {
           "DRAFT": "草稿",
-          "NOT_STARTED": "尚未启动",
           "NEW": "新建",
           "STARTING": "正在启动",
           "RUNNING": "运行中",
@@ -1339,7 +1356,9 @@
           "STOPPED": "已停止",
           "COMPLETED": "已完成",
           "FAILED": "失败",
-          "UNAVAILABLE": "不可用"
+          "UNAVAILABLE": "不可用",
+          "RECOVERY_REQUIRED": "需要全量恢复",
+          "NOT_STARTED": "尚未启动"
         }
       },
       "apiAccess": {
@@ -1884,24 +1903,6 @@
       }
     }
   },
-  "pipelineDetails": {
-    "backToPipelines": "Pipelines",
-    "edit": "编辑流水线",
-    "logs": "日志",
-    "loading": "正在加载流水线详情…",
-    "notFound": "流水线 {{id}} 不可用。",
-    "error": "无法加载流水线详情。",
-    "observedAt": "最近观测时间：{{time}}",
-    "lastError": "最近一次运行错误",
-    "sources": "数据源",
-    "destinations": "目标端",
-    "transforms": "转换步骤",
-    "noSources": "没有记录此流水线的数据源。",
-    "noDestinations": "没有记录此流水线的目标端。",
-    "noTransforms": "未配置转换步骤。",
-    "tableCount_one": "{{count}} 张表",
-    "tableCount_other": "{{count}} 张表"
-  },
   "views": {
     "title": "视图",
     "subtitle": "查看 Tapstate 在云版状态存储中持续维护的集合。",
@@ -2045,7 +2046,7 @@
       "siblings": "此 pipeline 还写入：",
       "freshness": "新鲜度",
       "lastApplied": "最近一次变更在 {{age}}前",
-      "neverApplied": "尚未应用任何变更",
+      "lastAppliedUnknown": "上次应用时间未上报",
       "documentLimit": "单个文档上限 16 MB",
       "initialLoad": "初次加载",
       "upToDate": "已是最新",
@@ -2168,27 +2169,6 @@
         "close": "关闭"
       }
     },
-    "addSourcesDialog": {
-      "title": "添加数据源",
-      "description": "连接流水线要读取的数据库。可用连接器取决于当前 Cluster。",
-      "orConnect": "或连接数据源",
-      "connect": "连接数据源",
-      "connectAction": "连接",
-      "connected": "已连接：{{sources}}",
-      "done": "完成",
-      "connector": {
-        "relational": "关系型数据库",
-        "document": "文档数据库",
-        "database": "数据库"
-      },
-      "sample": {
-        "title": "订单样例数据",
-        "tag": "推荐",
-        "description": "{{names}} 包含订单数据。添加前可以先预览文档。",
-        "view": "查看样例",
-        "choose": "选择样例"
-      }
-    },
     "sources": {
       "title": "数据源",
       "metric_one": "{{count}} 个数据源",
@@ -2247,12 +2227,10 @@
       "title": "需要关注",
       "clear": "一切正常。没有失败的 pipeline 或过期的视图。",
       "pipelineFailed": "失败的 pipeline",
-      "pipelineBlocked": "Pipeline 启动受阻",
-      "pipelineUnavailable": "Pipeline 状态不可用",
       "viewStale": "过期的视图",
       "lastApplied_one": "最近一次变更在 {{count}} 分钟前",
       "lastApplied_other": "最近一次变更在 {{count}} 分钟前",
-      "neverApplied": "尚未应用任何变更",
+      "lastAppliedUnknown": "上次应用时间未上报",
       "pipelineIs": {
         "running": "其 pipeline {{pipeline}} 正在运行",
         "idle": "其 pipeline {{pipeline}} 已停止",
@@ -2261,7 +2239,9 @@
         "unknown": "由 {{pipeline}} 维护"
       },
       "openPipeline": "在 Pipelines 中打开",
-      "openView": "在视图中打开"
+      "openView": "在视图中打开",
+      "pipelineBlocked": "Pipeline 启动受阻",
+      "pipelineUnavailable": "Pipeline 状态不可用"
     },
     "subtitle": "数据从数据源经 pipeline 流入 state store。",
     "addSources": {
@@ -2285,6 +2265,27 @@
         "added": "已添加",
         "error": "样例数据源添加失败。请重试，或连接你自己的数据库。"
       }
+    },
+    "addSourcesDialog": {
+      "title": "添加数据源",
+      "description": "连接流水线要读取的数据库。可用连接器取决于当前 Cluster。",
+      "orConnect": "或连接数据源",
+      "connect": "连接数据源",
+      "connectAction": "连接",
+      "connected": "已连接：{{sources}}",
+      "done": "完成",
+      "connector": {
+        "relational": "关系型数据库",
+        "document": "文档数据库",
+        "database": "数据库"
+      },
+      "sample": {
+        "title": "订单样例数据",
+        "tag": "推荐",
+        "description": "{{names}} 包含订单数据。添加前可以先预览文档。",
+        "view": "查看样例",
+        "choose": "选择样例"
+      }
     }
   },
   "stateStorePage": {
@@ -2299,13 +2300,14 @@
     },
     "managed": {
       "name": "Tapstate state store",
-      "type": "MongoDB · 服务器元数据库",
-      "access": "与此服务器已使用的 MongoDB 共用。生产环境请使用单独的 MongoDB。"
+      "type": "MongoDB · 应用数据库",
+      "access": "应用数据写入这个系统管理的默认数据源。配置与耐久缓存分别使用各自配置的数据库。",
+      "deleteReason": "此 store 由服务器管理"
     },
     "cloud": {
       "name": "Atlas state store",
-      "type": "MongoDB Atlas",
-      "access": "此 Atlas URI 由你在设置时提供。此页面不会显示凭据。"
+      "type": "MongoDB Atlas · 应用数据库",
+      "access": "此 Cluster 的默认应用数据目标。配置与耐久缓存分别使用各自配置的数据库。"
     },
     "states": {
       "loading": "正在加载 state store…",
@@ -2313,18 +2315,261 @@
       "empty": "还没有 state store。设置之前 pipeline 无法启动。"
     },
     "settings": "设置",
+    "sectionsLabel": "设置分区",
+    "sections": {
+      "stateStore": "State store"
+    },
     "about": {
       "title": "关于",
       "version": "版本",
       "loading": "正在加载版本…",
       "unavailable": "暂不可用",
       "license": "Apache 2.0 许可证",
-      "releaseNotes": "版本说明"
-    },
-    "sectionsLabel": "设置分区",
-    "sections": {
-      "stateStore": "State store"
+      "releaseNotes": "版本说明",
+      "copyright": "© 2026 TAPDATA HONG KONG LIMITED, Contributors.",
+      "privacyPolicy": "隐私政策",
+      "termsOfService": "服务条款"
     }
+  },
+  "storage": {
+    "loading": "正在检查存储…",
+    "healthTitle": "存储健康",
+    "setupTitle": "设置集群存储",
+    "cloudSetup": "配置库由平台提供。请连接你的 Atlas 缓存库和主数据库。",
+    "opSetup": "填写一份 MongoDB 或 Atlas 连接及三个不同库名，逐库测试后保存。",
+    "connector": "数据库服务",
+    "uri": "连接 URI",
+    "platformProvided": "平台提供",
+    "tlsHelp": "支持 mongodb:// 和 mongodb+srv://。TLS 严格验证服务端证书和主机名，不支持客户端证书及私钥。",
+    "atlasHelp": "Atlas 须使用公网端点，将集群出口 IP 加入白名单，并启用 TLS。密码认证优先使用 SCRAM-SHA-256，也支持 SCRAM-SHA-1 账号；保留 authSource=admin。",
+    "customCa": "配置库和缓存库的自定义 CA",
+    "customCaHelp": "可选 PEM 证书集合，每份不超过 64 KiB。本期默认主数据库不支持仅自定义 CA 的连接。不要填写私钥。",
+    "configCa": "配置库 CA 证书",
+    "cacheCa": "缓存库 CA 证书",
+    "distinctDatabases": "三个存储层必须使用不同库名。",
+    "setupResultPending": "初始化仍在进行。请求未能返回结果；此页面会继续查询原操作状态。",
+    "setupCommitHelp": "保存会将这些数据库绑定到当前集群。超时可能意味着操作仍在进行，请先刷新状态再重试。",
+    "save": "保存存储设置",
+    "working": "正在处理…",
+    "test": "测试连接",
+    "testPassed": "连接检查通过",
+    "initialization": {
+      "title": "正在初始化 Cluster",
+      "completed": "已完成 {{completed}} / {{total}} 项",
+      "totalElapsed": "总耗时",
+      "steps": "初始化步骤",
+      "unknownDuration": "耗时未知",
+      "loadingCluster": "正在加载你的 Cluster…",
+      "updatingSession": "正在更新登录会话。初始化会继续进行，当前显示最近确认的进度。",
+      "stale": "暂时无法刷新进度，当前展示最后确认的状态。",
+      "runtimeHelp": "正在准备数据连接器并核验所需资源。数据库连接较慢时，这一步可能耗时较长。",
+      "restored": "已从保存的配置恢复此前完成的步骤，之前的耗时无法获取。",
+      "canLeave": "可以关闭此页面，关闭不会取消初始化。之后从 Cloud 重新进入这个 Cluster 即可查看进度。",
+      "backToCloud": "返回 Cloud",
+      "connecting": "正在接续到你的 Cluster…",
+      "stage": {
+        "SAVE_SETTINGS": "保存存储配置",
+        "PREPARE_STORAGE": "准备运行数据库",
+        "START_RUNTIME": "初始化运行服务与数据连接器",
+        "PUBLISH_READY": "完成初始化"
+      },
+      "state": {
+        "PENDING": "等待中",
+        "RUNNING": "进行中",
+        "LAST_RUNNING": "最后确认时正在进行",
+        "COMPLETE": "已完成",
+        "FAILED": "失败，需要处理"
+      },
+      "opStage": {
+        "SAVE_SETTINGS": "保存数据库配置",
+        "PREPARE_STORAGE": "准备配置与运行存储",
+        "START_RUNTIME": "自动重启并注册数据连接器",
+        "PUBLISH_READY": "准备创建首个管理员"
+      },
+      "opCanLeave": "可以关闭页面，之后从此安装地址重新进入。已保存的配置会保留；自动重启后，使用安装凭证文件中的新首管凭证继续。",
+      "restarting": "正在重启服务，页面将自动重新连接…"
+    },
+    "setupCheckRetained": "运行环境仍在准备中。这是保存前已完成的连接测试结果。",
+    "testRequired": "需要测试连接",
+    "showUri": "显示连接串",
+    "hideUri": "隐藏连接串",
+    "testWorking": "正在检查连接…",
+    "testFailed": "连接检查失败",
+    "testExpired": "检查结果已过期，请重新测试",
+    "testAutomatic": "由系统自动检查",
+    "refresh": "刷新状态",
+    "continue": "继续",
+    "reauthorize": "输入新的安装凭证",
+    "ownerRequired": "由安装管理员继续",
+    "managementHelp": "请在服务器上打开安装命令给出的管理地址；远程访问须显式建立安全隧道。存储设置及首管创建仅能通过此专用通道完成。",
+    "capability": "安装凭证",
+    "capabilityHelp": "输入安装命令生成、仅部署账号可读的凭证文件中的当前凭证。它仅保留在本页内存；重启或过期后需通过安装命令重新授权。",
+    "loginTitle": "登录后继续",
+    "loginHelp": "存储设置与登录分别处理。请从原入口重新登录以取得新会话；已保存的存储设置会保留。",
+    "cloudLogin": "返回 Cloud 登录",
+    "opLogin": "前往登录",
+    "firstAdminTitle": "创建首个管理员",
+    "createAdmin": "创建管理员",
+    "adminComplete": "管理员设置已完成",
+    "normalLoginHelp": "请打开集群普通服务地址，使用刚创建的账号登录。此管理通道不承载普通会话。",
+    "adminUnknownHelp": "请先检查状态。若账号已创建，请普通登录，不要重复创建管理员或重置密码。",
+    "resourceIds": "资源 ID，以逗号分隔",
+    "operationId": "用于结果查询的操作 ID",
+    "originalResultHelp": "请保留此 ID，以便刷新或重新登录后查询。结果未知时必须先核对原操作，不要另建操作重试。",
+    "queryResult": "查询原操作结果",
+    "operationStatus": "结果：{{phase}}",
+    "layers": {
+      "CONFIG": "配置",
+      "CACHE": "耐久缓存",
+      "MASTER": "主数据"
+    },
+    "health": {
+      "UNKNOWN": "尚未核验",
+      "AVAILABLE": "可用",
+      "UNAVAILABLE": "不可用",
+      "AUTH_READY": "可登录，业务未就绪"
+    },
+    "errors": {
+      "authentication": "会话已失效，请重新登录。",
+      "permission": "当前凭证不能执行此操作，请核对用途及有效期。",
+      "conflict": "状态已改变，请刷新并重新核对后再确认。",
+      "dependency": "存储暂不可用，请恢复原存储后刷新。重新登录不能绕过此依赖故障。",
+      "request": "请求被拒绝，请核对设置或查询原操作结果后再重试。",
+      "responseUnavailable": "暂时无法确认服务器响应。请刷新状态核对原操作结果后再重试。",
+      "network": "无法确认响应，请检查连接并核对原操作结果。",
+      "databaseCredentials": "数据库拒绝了这些凭据。请检查数据库用户名、密码和认证数据库。",
+      "databasePermissions": "此账号缺少所需的数据库权限。请检查所选数据库的读、写、索引和事务权限。",
+      "databaseConnection": "无法连接数据库。请检查 DNS、网络访问、Atlas IP 访问列表和 TLS 设置。"
+    },
+    "recovery": {
+      "title": "恢复运行存储与 Pipeline",
+      "help": "整库恢复只准备新的运行存储，所有受影响 Pipeline 保持停止。随后逐个预检并明确确认全量重建，核对源数据和目标处理前置。",
+      "scope": "重建范围",
+      "cluster": "集群运行存储",
+      "pipelines": "单个 Pipeline 全量重建",
+      "previous": "服务端要求时填写原恢复操作 ID",
+      "preview": "预检影响范围",
+      "affected": "受影响的 Pipeline",
+      "noPipelines": "此方案不包含 Pipeline。",
+      "confirmHelp": "我已核对这个 Pipeline、源全量能力、模型与目标处理，明确确认发起新的全量重建。范围变化后须重新预检。",
+      "confirm": "确认全量重建",
+      "clusterConfirmHelp": "我已通过部署工具停止并隔离全部旧 Cluster 成员，并确认源/目标端旧连接和在途写入均已结束。我确认本次完整范围。Cluster 核验本机释放和存储身份，跨机器隔离由我负责。所有受影响 Pipeline 将保持停止。",
+      "clusterConfirm": "确认恢复运行存储",
+      "clusterComplete": "运行存储已就绪。所有受影响 Pipeline 保持停止，需要逐个明确确认全量重建；这不表示 Pipeline 数据或目标已恢复。",
+      "continueOriginal": "继续此原操作",
+      "targets": "本次全量的目标处理方式",
+      "executionFailed": "此操作尚未完成。请查看任务错误；运行失败时，先停止任务，再明确继续此原操作。",
+      "stalePreview": "当前输入已不匹配此预检。请核对原范围并重新预检，再确认执行。",
+      "selectPipeline": "选择一个任务做全量重建",
+      "repreview": "重新预检此范围",
+      "policy": {
+        "APPEND": "保留已有数据，按配置的写入模式写入。",
+        "CLEAR": "先清空选中的目标表，再重新全量读取源数据。",
+        "FAIL": "选中的目标表已有数据时，拒绝执行全量。"
+      },
+      "reviewRequired": "查看全量恢复",
+      "shared": "单个共享日志范围",
+      "canonicalChain": "原共享采集身份",
+      "physicalChain": "原物理日志身份",
+      "sharedHelp": "填写存储诊断中的两个原身份。服务端核对实际受影响的 Pipeline；其他共享日志及其消费者继续运行。",
+      "sharedConfirmHelp": "我已在所有机器停止并隔离列表中的 Pipeline 和原共享采集，确认其旧源/目标连接与在途写入已结束。我确认这个确切范围。受影响 Pipeline 将保持停止，随后须逐个明确确认全量重建。",
+      "sharedConfirm": "确认恢复共享日志",
+      "sharedComplete": "新的共享日志已就绪。请逐个对列表中的 Pipeline 执行“停止并清空状态”，再明确启动全量；其他 Pipeline 保留原状态。受影响的数据和目标尚未恢复。",
+      "sharedFailure": "此原共享恢复尚未完成。请查看错误，并重新预检同一范围；预检变化后需要再次确认。",
+      "openPipelines": "前往 Pipeline"
+    },
+    "transfer": {
+      "title": "配置转移",
+      "help": "导出选中资源及其必要定义的加密包，不包含运行状态、业务数据和集群密钥。请另行保管传输密钥，本页不会保存。",
+      "key": "传输密钥（32 字节，无填充 base64url）",
+      "export": "导出配置",
+      "users": "包含的 OP 用户名",
+      "download": "下载加密包",
+      "import": "导入配置",
+      "file": "加密包文件",
+      "mapping": "默认目标：{{source}} → {{destination}}",
+      "preflight": "预检导入",
+      "confirmHelp": "我确认此默认目标映射及预检配置的插入。既有资源不会被覆盖，Pipeline 不会自动启动。",
+      "commit": "确认导入"
+    },
+    "phase": {
+      "NOT_CONFIGURED": "需要设置存储",
+      "PREPARING": "正在准备存储",
+      "RESTART_REQUIRED": "需要重启",
+      "FIRST_ADMIN_REQUIRED": "创建首个管理员",
+      "AUTH_READY": "登录已就绪",
+      "READY": "存储已准入",
+      "UNAVAILABLE": "存储不可用",
+      "AWAITING_REBUILD_CONFIRMATION": "等待确认重建",
+      "RECOVERING": "正在重建运行状态",
+      "CLEANUP_REQUIRED": "清理结果待核验"
+    },
+    "phaseHelp": {
+      "NOT_CONFIGURED": "使用集群前需完成数据库测试与保存。",
+      "PREPARING": "正在继续原设置，已保存的数据库配置会保留。",
+      "RESTART_REQUIRED": "存储设置已保存。请通过安装流程受控重启，再授权创建首管。",
+      "FIRST_ADMIN_REQUIRED": "设置首个管理员的用户名和密码。",
+      "AUTH_READY": "鉴权可用，业务服务仍在等待存储准入。",
+      "READY": "运行存储已准入；下方分别显示各层核验状态。",
+      "UNAVAILABLE": "请恢复原存储后再次检查，不要替换绑定或重复安装。",
+      "AWAITING_REBUILD_CONFIRMATION": "登录已恢复，业务状态尚未恢复。请预检并明确确认重建。",
+      "RECOVERING": "请查询原恢复操作，核验完成前业务保持禁入。",
+      "CLEANUP_REQUIRED": "上次尝试的资源清理尚未确认，请保留原设置并再次检查。"
+    },
+    "operationPhase": {
+      "PLANNED": "待确认",
+      "CONFIRMED": "已确认，等待完成",
+      "RUNNING": "进行中",
+      "COMPLETE": "已完成",
+      "COMMITTED": "已提交",
+      "PREPARED": "等待确认提交",
+      "NOT_COMMITTED": "未提交",
+      "EXPIRED": "已过期",
+      "UNKNOWN": "结果待确认",
+      "FAILED": "失败，请核对原结果",
+      "PENDING": "待确认",
+      "COMMITTING": "提交结果待确认",
+      "ABORTED": "未提交"
+    },
+    "mongodb": "MongoDB",
+    "atlas": "MongoDB Atlas",
+    "title": "集群存储",
+    "verification": {
+      "UNKNOWN": "尚未核验",
+      "CHECKING": "正在核验…",
+      "PASSED": "最近核验通过",
+      "FAILED": "最近核验失败",
+      "EXPIRED": "核验已过期",
+      "checkedAt": "最近核验时间：",
+      "help": "刷新状态会检查当前默认目标，核验结果在 10 分钟后过期。"
+    },
+    "entryUnavailable": "集群登录暂时不可用，已保存的存储设置会保留。",
+    "autoRefresh": "状态会自动更新，无需手动刷新或重复提交。",
+    "autoRetry": "暂时无法获取状态，正在自动重试查询，不会重复提交原请求。",
+    "setupProgressTitle": "正在完成集群设置",
+    "setupSubmittingHelp": "正在保存数据库设置并准备集群。",
+    "setupSavedHelp": "数据库设置已保存，集群正在初始化运行环境。",
+    "resumeSetupTitle": "继续已保存的存储设置",
+    "resumeSetupHelp": "数据库绑定已保存。请使用原连接信息继续；若上次结果仍不确定，请先刷新状态。",
+    "resumeSetup": "继续原设置"
+  },
+  "pipelineDetails": {
+    "backToPipelines": "Pipelines",
+    "edit": "编辑流水线",
+    "logs": "日志",
+    "loading": "正在加载流水线详情…",
+    "notFound": "流水线 {{id}} 不可用。",
+    "error": "无法加载流水线详情。",
+    "observedAt": "最近观测时间：{{time}}",
+    "lastError": "最近一次运行错误",
+    "sources": "数据源",
+    "destinations": "目标端",
+    "transforms": "转换步骤",
+    "noSources": "没有记录此流水线的数据源。",
+    "noDestinations": "没有记录此流水线的目标端。",
+    "noTransforms": "未配置转换步骤。",
+    "tableCount_one": "{{count}} 张表",
+    "tableCount_other": "{{count}} 张表"
   },
   "uiKit": {
     "title": "UI 组件预览",

@@ -14,6 +14,14 @@ export const resources = {
   'zh-TW': { translation: zhTW },
 } as const
 
+function syncDocumentLanguage() {
+  if (typeof document !== 'undefined') {
+    document.documentElement.lang = i18next.resolvedLanguage || i18next.language || 'en'
+  }
+}
+
+i18next.on('languageChanged', syncDocumentLanguage)
+
 export function setupI18n() {
   if (!i18next.isInitialized) {
     void i18next.use(initReactI18next).init({
@@ -26,6 +34,7 @@ export function setupI18n() {
     })
   }
 
+  syncDocumentLanguage()
   return i18next
 }
 

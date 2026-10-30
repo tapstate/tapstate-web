@@ -1,5 +1,4 @@
 import { Tabs, TabsList, TabsTab } from '@tapstate-web/ui/tabs'
-import { BellRing } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -39,13 +38,12 @@ export function AlertsPage({ initialTab = 'events', onTabChange }: AlertsPagePro
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden">
-      <header className="flex shrink-0 items-center justify-between border-b border-black/[0.05] px-6 py-4 dark:border-white/[0.05]">
+      <header className="border-divider-subtle flex shrink-0 items-center justify-between gap-4 border-b px-6 py-4">
         <div>
-          <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
-            <BellRing className="h-5 w-5 text-neutral-400" />
+          <h1 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
             {t('sections.alerts.title')}
           </h1>
-          <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+          <p className="body-sm-regular text-text-tertiary mt-1">
             {t('events.subtitle', {
               organization: activeOrganization?.name ?? t('events.organizationFallback'),
             })}

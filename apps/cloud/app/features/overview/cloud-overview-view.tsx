@@ -1,11 +1,12 @@
 import { Button } from '@tapstate-web/ui/button'
 import { ArrowRight, ArrowUpRight, Plus } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
-import type { Cluster, Organization } from '../../service/cloud-api'
+import type { Cluster } from '../../service/cloud-api'
+
+import { canEnterCluster } from '../clusters/cluster-entry-state'
 
 interface CloudOverviewViewProps {
-  organization: Organization | null
-  subscriptionLabel?: string
   clusters: Cluster[]
   onNavigate: (tab: 'clusters') => void
   onOpenProvisionModal: () => void
@@ -56,8 +57,6 @@ function egressAddressState(cluster: Cluster) {
 }
 
 export function CloudOverviewView({
-  organization,
-  subscriptionLabel,
   clusters,
   onNavigate,
   onOpenProvisionModal,
@@ -65,6 +64,7 @@ export function CloudOverviewView({
   enteringClusterId,
   entryError,
 }: CloudOverviewViewProps) {
+  const { t } = useTranslation()
   const activeRegions = new Set(
     clusters.filter((cluster) => cluster.state === 'READY').map((cluster) => cluster.region),
   )
@@ -74,15 +74,8 @@ export function CloudOverviewView({
       <div className="flex shrink-0 items-center justify-between border-b border-black/[0.05] px-6 py-4 dark:border-white/[0.05]">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
-            Cloud Overview
+            {t('sections.overview.title')}
           </h1>
-          <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-            Organization:{' '}
-            <span className="font-mono text-neutral-800 dark:text-neutral-200">
-              {organization?.name ?? '—'}
-            </span>
-            {subscriptionLabel && ` (${subscriptionLabel})`}
-          </p>
         </div>
 
         <Button onClick={onOpenProvisionModal} variant="primary" size="medium" type="button">
@@ -168,7 +161,7 @@ export function CloudOverviewView({
                     key={cluster.id}
                     onClick={() => onEnterCluster(cluster)}
                     className="group flex w-full items-center justify-between gap-4 px-4 py-3.5 text-left transition-colors hover:bg-black/[0.02] disabled:cursor-default disabled:hover:bg-transparent dark:hover:bg-white/[0.02] dark:disabled:hover:bg-white/[0.02]"
-                    disabled={cluster.state !== 'READY' || enteringClusterId !== null}
+                    disabled={!canEnterCluster(cluster.state) || enteringClusterId !== null}
                     type="button"
                   >
                     <span className="flex items-center gap-3">
@@ -203,7 +196,7 @@ export function CloudOverviewView({
                           {dateLabel(cluster.createdAt)}
                         </span>
                       </span>
-                      {cluster.state === 'READY' && (
+                      {canEnterCluster(cluster.state) && (
                         <ArrowUpRight className="h-4 w-4 text-neutral-400 transition-colors group-hover:text-neutral-800 dark:group-hover:text-white" />
                       )}
                     </span>
