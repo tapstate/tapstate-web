@@ -408,7 +408,9 @@ export function AuthPage({
         <p className="body-sm-regular text-text-tertiary">
           {t(
             mode === 'login'
-              ? 'auth.loginDescription'
+              ? loginMethod === 'code'
+                ? 'auth.loginCodeDescription'
+                : 'auth.loginDescription'
               : activeInvitationToken
                 ? 'auth.registerDescription'
                 : registrationPolicyStatus !== 'ready'
@@ -589,7 +591,9 @@ export function AuthPage({
                     value={verificationCode}
                   />
                   <FieldDescription>
-                    {t('auth.codeSentTo', { email: email.trim() })}
+                    {t(mode === 'login' ? 'auth.loginCodeSentTo' : 'auth.codeSentTo', {
+                      email: email.trim(),
+                    })}
                   </FieldDescription>
                 </AuthField>
               )}
