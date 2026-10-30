@@ -88,7 +88,11 @@ export const Route = createFileRoute('/_console')({
           throw new CloudApiError('The requested Cluster is unavailable to this account.', 403)
         throw redirect({
           to: '/onboarding',
-          search: { organizationId: undefined, subscriptionId: undefined },
+          search: {
+            organizationId: undefined,
+            subscriptionId: undefined,
+            createOrganization: false,
+          },
         })
       }
       const selectedOrganization = organizations.find((item) => item.id === deps.organizationId)

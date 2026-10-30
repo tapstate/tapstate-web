@@ -38,8 +38,8 @@ import { ClustersPage } from './clusters-page'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
-const organizationA: Organization = { id: 'org-a', name: 'Org A', slug: 'org-a' }
-const organizationB: Organization = { id: 'org-b', name: 'Org B', slug: 'org-b' }
+const organizationA: Organization = { id: 'org-a', name: 'Org A' }
+const organizationB: Organization = { id: 'org-b', name: 'Org B' }
 
 function makeCluster(
   id: string,

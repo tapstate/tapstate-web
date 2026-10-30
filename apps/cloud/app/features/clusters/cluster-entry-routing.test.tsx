@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   identity: vi.fn(),
   oauthStart: vi.fn(),
+  authenticated: undefined as undefined | ((user: unknown, setup?: boolean) => Promise<void>),
 }))
 vi.mock('@tanstack/react-router', async (original) => ({
   ...(await original<typeof import('@tanstack/react-router')>()),
@@ -51,17 +52,28 @@ vi.mock('../auth/auth-page', () => ({
   AuthPage: ({
     onAuthenticated,
     onOAuth,
+    organizationSetupRequired,
   }: {
-    onAuthenticated: (user: unknown) => Promise<void>
-    onOAuth: (provider: 'google', mode: 'login', invitation: null, name: string) => Promise<void>
-  }) => (
-    <>
-      <button onClick={() => void onAuthenticated({ email: 'tester@example.invalid' })}>
-        Complete sign-in
-      </button>
-      <button onClick={() => void onOAuth('google', 'login', null, '')}>Provider sign-in</button>
-    </>
-  ),
+    onAuthenticated: (user: unknown, setup?: boolean) => Promise<void>
+    onOAuth: (provider: 'google', mode: 'login', invitation: null, defer: boolean) => Promise<void>
+    organizationSetupRequired?: boolean
+  }) => {
+    mocks.authenticated = onAuthenticated
+    return (
+      <>
+        <button
+          onClick={() =>
+            void onAuthenticated({ email: 'tester@example.invalid' }, organizationSetupRequired)
+          }
+        >
+          Complete sign-in
+        </button>
+        <button onClick={() => void onOAuth('google', 'login', null, false)}>
+          Provider sign-in
+        </button>
+      </>
+    )
+  },
 }))
 
 import type { ClusterEntrySearch } from './cluster-entry-intent'
@@ -79,6 +91,8 @@ const load = (deps: ClusterEntrySearch) =>
 beforeEach(() => {
   vi.clearAllMocks()
   window.sessionStorage.clear()
+  window.history.replaceState({}, '', '/auth')
+  mocks.authenticated = undefined
   mocks.oauthStart.mockResolvedValue('https://provider.example/authorize')
   mocks.me.mockResolvedValue({ email: 'tester@example.invalid' })
   mocks.organizations.mockResolvedValue([
@@ -186,6 +200,45 @@ describe('Cloud initialization return routing', () => {
       host.remove()
     }
   })
+  it('completes required organization onboarding before attempting a retained Cluster target', async () => {
+    vi.spyOn(AuthRoute, 'useSearch').mockReturnValue(intent)
+    window.history.replaceState({}, '', '/auth?oauth=success&onboarding=organization')
+    const host = document.createElement('div')
+    document.body.append(host)
+    const root = createRoot(host)
+    const Auth = AuthRoute.options.component as ComponentType
+    try {
+      await act(async () => root.render(<Auth />))
+      await act(async () => host.querySelector('button')!.click())
+      expect(mocks.navigate).toHaveBeenCalledExactlyOnceWith({
+        to: '/onboarding',
+        search: { organizationId: undefined, subscriptionId: undefined, createOrganization: true },
+      })
+      expect(new URL(window.location.href).searchParams.has('onboarding')).toBe(false)
+    } finally {
+      await act(async () => root.unmount())
+      host.remove()
+    }
+  })
+
+  it.each([undefined, true])(
+    'ignores a completed sign-in after leaving Auth (setup=%s)',
+    async (setup) => {
+      vi.spyOn(AuthRoute, 'useSearch').mockReturnValue(intent)
+      const host = document.createElement('div')
+      document.body.append(host)
+      const root = createRoot(host)
+      const Auth = AuthRoute.options.component as ComponentType
+      await act(async () => root.render(<Auth />))
+      const complete = mocks.authenticated!
+      await act(async () => root.unmount())
+      host.remove()
+      await act(async () => complete({ email: 'tester@example.invalid' }, setup))
+      expect(mocks.identity).not.toHaveBeenCalled()
+      expect(mocks.navigate).not.toHaveBeenCalled()
+    },
+  )
+
   it('keeps the original validated Cluster target through a provider callback', async () => {
     const search = vi.spyOn(AuthRoute, 'useSearch').mockReturnValue(intent)
     const actualWindow = window

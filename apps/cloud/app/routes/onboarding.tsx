@@ -16,8 +16,15 @@ import { CloudApiError, cloudApi } from '../service/cloud-api'
 import { useCloudAppState } from '../state/cloud-app-state'
 
 function OnboardingRoute() {
-  const { user, organization, suggestedName, initialWorkspace, initialProgress, resumeError } =
-    Route.useLoaderData()
+  const {
+    user,
+    organization,
+    suggestedName,
+    initialWorkspace,
+    initialProgress,
+    resumeError,
+    createOrganization,
+  } = Route.useLoaderData()
   const { completeOnboarding, darkMode, setDarkMode } = useCloudAppState()
   const { enterCluster, enteringId, entryError } = useClusterEntry()
 
@@ -30,6 +37,7 @@ function OnboardingRoute() {
       }}
       onCreateWorkspace={startOnboardingSubscription}
       currentOrganization={organization}
+      createOrganization={createOrganization}
       initialWorkspace={initialWorkspace}
       initialProgress={initialProgress}
       suggestedClusterName={suggestedName}
@@ -46,10 +54,12 @@ export const Route = createFileRoute('/onboarding')({
   validateSearch: (search: Record<string, unknown>) => ({
     organizationId: typeof search.organizationId === 'string' ? search.organizationId : undefined,
     subscriptionId: typeof search.subscriptionId === 'string' ? search.subscriptionId : undefined,
+    createOrganization: search.createOrganization === true,
   }),
   loaderDeps: ({ search }) => ({
     organizationId: search.organizationId,
     subscriptionId: search.subscriptionId,
+    createOrganization: search.createOrganization,
   }),
   loader: async ({
     deps,
@@ -60,6 +70,7 @@ export const Route = createFileRoute('/onboarding')({
     initialWorkspace: OnboardingWorkspace | null
     initialProgress: Awaited<ReturnType<typeof cloudApi.deploymentProgress>> | null
     resumeError: boolean
+    createOrganization: boolean
   }> => {
     try {
       const user = await cloudApi.me()
@@ -73,8 +84,11 @@ export const Route = createFileRoute('/onboarding')({
       if (deps.organizationId && !organizations.some((item) => item.id === deps.organizationId)) {
         throw redirect({ to: '/organizations', search: { organizationId: undefined } })
       }
-      organization =
-        organizations.find((item) => item.id === deps.organizationId) ?? organizations[0] ?? null
+      organization = deps.createOrganization
+        ? null
+        : (organizations.find((item) => item.id === deps.organizationId) ??
+          organizations[0] ??
+          null)
       if (organization) {
         const clusters = await cloudApi.clusters(organization.id)
         suggestedName = suggestedClusterName(organization, clusters)
@@ -108,6 +122,7 @@ export const Route = createFileRoute('/onboarding')({
         initialWorkspace,
         initialProgress,
         resumeError,
+        createOrganization: deps.createOrganization,
       }
     } catch (error) {
       if (error instanceof CloudApiError && error.status === 401) {

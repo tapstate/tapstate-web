@@ -40,7 +40,7 @@ import { cancelPendingClusterEntries, useClusterEntry } from './use-cluster-entr
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
-const organization: Organization = { id: 'org-a', name: 'Org A', slug: 'org-a' }
+const organization: Organization = { id: 'org-a', name: 'Org A' }
 const blockedStates: ClusterState[] = [
   'PROVISIONING_PENDING',
   'PROVISIONING',

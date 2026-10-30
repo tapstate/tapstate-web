@@ -25,7 +25,6 @@ export interface LoginResult {
 export interface Organization {
   id: string
   name: string
-  slug: string
   ownerEmail?: string
   status?: 'ACTIVE' | 'SUSPENDED' | string
 }
@@ -56,8 +55,8 @@ export interface EmailRegistrationInput {
   code: string
   password: string
   displayName?: string
-  organizationName?: string
   agreedLegalVersion?: string
+  deferOrganizationCreation?: boolean
 }
 
 export interface RegistrationPolicy {
@@ -305,7 +304,6 @@ export interface LoginInput {
 
 export interface CreateOrganizationInput {
   name: string
-  slug: string
 }
 
 export interface CreateSubscriptionInput {
@@ -424,6 +422,7 @@ const putJson = (body: unknown): Pick<RequestInit, 'method' | 'body'> => ({
 })
 const deleteRequest: Pick<RequestInit, 'method'> = { method: 'DELETE' }
 const apiPrefix = '/v1/api'
+const organizationApiPrefix = '/v2/api/orgs'
 
 export const cloudApi = {
   login: (input: LoginInput) => request<LoginResult>(`${apiPrefix}/auth/login`, jsonBody(input)),
@@ -437,20 +436,26 @@ export const cloudApi = {
     request<LoginResult>(`${apiPrefix}/auth/email/register`, jsonBody(input)),
   accessType: (code: string) =>
     request<{ type: 'trial' | 'organization' }>(`${apiPrefix}/auth/access`, jsonBody({ code })),
-  acceptInvitation: (invitationToken: string, organizationName?: string) =>
+  acceptInvitation: (invitationToken: string, deferOrganizationCreation = false) =>
     request<LoginResult>(
       `${apiPrefix}/auth/invitations/accept`,
-      jsonBody({ invitationToken, organizationName }),
+      jsonBody({ invitationToken, deferOrganizationCreation }),
     ),
   oauthStart: async (
     provider: 'google' | 'github',
     flow: 'login' | 'signup' | 'link',
     invitationToken?: string,
     organizationName?: string,
+    deferOrganizationCreation = false,
   ) => {
     const result = await request<{ authorizationUrl: string }>(
       `${apiPrefix}/auth/oauth/${provider}/start`,
-      jsonBody({ flow, invitationToken: invitationToken ?? null, organizationName }),
+      jsonBody({
+        flow,
+        invitationToken: invitationToken ?? null,
+        organizationName,
+        deferOrganizationCreation,
+      }),
     )
     const authorizationBase = cloudApiOrigin || window.location.origin
     return new URL(result.authorizationUrl, authorizationBase).toString()
@@ -480,11 +485,11 @@ export const cloudApi = {
       ...jsonBody({ eventId, propertyId }),
       keepalive: true,
     }),
-  organizations: async () => asList<Organization>(await request<unknown>(`${apiPrefix}/orgs`)),
+  organizations: async () => asList<Organization>(await request<unknown>(organizationApiPrefix)),
   createOrganization: (input: CreateOrganizationInput) =>
-    request<Organization>(`${apiPrefix}/orgs`, jsonBody(input)),
+    request<Organization>(organizationApiPrefix, jsonBody(input)),
   organization: (orgId: string) =>
-    request<Organization>(`${apiPrefix}/orgs/${encodeURIComponent(orgId)}`),
+    request<Organization>(`${organizationApiPrefix}/${encodeURIComponent(orgId)}`),
   regions: async () => asList<Region>(await request<unknown>(`${apiPrefix}/regions`)),
   region: (code: string) => request<Region>(`${apiPrefix}/regions/${encodeURIComponent(code)}`),
   specs: async () => asList<Spec>(await request<unknown>(`${apiPrefix}/specs`)),

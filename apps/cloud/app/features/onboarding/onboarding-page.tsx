@@ -27,6 +27,7 @@ import {
 } from '../../service/cloud-api'
 import { formatPrice } from '../billing/billing-format'
 import { navigateToCheckout } from '../billing/checkout-navigation'
+import { hasValidClusterDnsLabel } from '../clusters/cluster-name'
 import {
   isProvisioningCancelled,
   isProvisioningFailed,
@@ -40,6 +41,7 @@ interface OnboardingPageProps {
   setDarkMode: (enabled: boolean) => void
   user: UserProfile
   currentOrganization?: Organization | null
+  createOrganization?: boolean
   initialWorkspace?: OnboardingWorkspace | null
   initialProgress?: DeploymentProgress | null
   suggestedClusterName?: string
@@ -49,6 +51,7 @@ interface OnboardingPageProps {
     input: OnboardingInput,
     existingOrganization?: Organization | null,
     onOrganizationResolved?: (organization: Organization) => void,
+    createOrganization?: boolean,
   ) => Promise<OnboardingStart>
   isOpeningCluster: boolean
   entryError: string | null
@@ -99,20 +102,12 @@ function workspaceScreen(workspace: OnboardingWorkspace): OnboardingScreen {
   return 'provisioning'
 }
 
-function toSlug(name: string) {
-  return name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 80)
-}
-
 export function OnboardingPage({
   darkMode,
   setDarkMode,
   user,
   currentOrganization = null,
+  createOrganization = false,
   initialWorkspace = null,
   initialProgress = null,
   suggestedClusterName = '',
@@ -127,6 +122,7 @@ export function OnboardingPage({
   const [regions, setRegions] = useState<Region[]>([])
   const [selectedRegionCode, setSelectedRegionCode] = useState('')
   const [organizationName, setOrganizationName] = useState('')
+  const [resolvedOrganization, setResolvedOrganization] = useState<Organization | null>(null)
   const [clusterNameInput, setClusterNameInput] = useState(suggestedClusterName)
   const [isLoadingRegions, setIsLoadingRegions] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -158,6 +154,7 @@ export function OnboardingPage({
   const [hasSpecsError, setHasSpecsError] = useState(false)
   const [consent, setConsent] = useState(false)
   const hasRedirectedToAuth = useRef(false)
+  const organization = resolvedOrganization ?? currentOrganization
 
   const redirectToAuth = () => {
     if (hasRedirectedToAuth.current) return
@@ -174,20 +171,17 @@ export function OnboardingPage({
     [selectedSpecKey, specs],
   )
   const canManage =
-    !currentOrganization?.ownerEmail ||
-    currentOrganization.ownerEmail.toLowerCase() === user.email.toLowerCase()
-  const organizationSlug = currentOrganization?.slug ?? toSlug(organizationName)
-  const organizationDisplayName = currentOrganization?.name ?? organizationName.trim()
-  const clusterName = currentOrganization
-    ? toSlug(clusterNameInput).slice(0, 100)
-    : organizationSlug
-      ? organizationSlug.slice(0, 100)
-      : ''
+    !organization?.ownerEmail || organization.ownerEmail.toLowerCase() === user.email.toLowerCase()
+  const organizationDisplayName = organization?.name ?? organizationName.trim()
+  const clusterName = organization
+    ? clusterNameInput.trim().slice(0, 100)
+    : (clusterNameInput.trim() || organizationDisplayName).slice(0, 100)
+  const clusterNameIsValid = hasValidClusterDnsLabel(clusterName)
 
   useEffect(() => {
-    if (!currentOrganization || !suggestedClusterName) return
+    if (!organization || !suggestedClusterName) return
     setClusterNameInput(suggestedClusterName)
-  }, [currentOrganization?.id, suggestedClusterName])
+  }, [organization?.id, suggestedClusterName])
 
   useEffect(() => {
     if (!initialWorkspace) return
@@ -349,8 +343,8 @@ export function OnboardingPage({
     setHasSubmitError(false)
     if (
       !selectedRegion ||
-      !organizationSlug ||
-      !clusterName ||
+      !organizationDisplayName ||
+      !clusterNameIsValid ||
       !selectedSpec ||
       !consent ||
       !canManage
@@ -359,16 +353,33 @@ export function OnboardingPage({
 
     setIsSubmitting(true)
     let redirecting = false
+    const shouldCreateOrganization = createOrganization && !resolvedOrganization
+    const shouldResolveOrganization = !organization && !resolvedOrganization
     try {
       const result = await onCreateWorkspace(
         {
           organizationName: organizationDisplayName,
-          organizationSlug,
+          userEmail: user.email,
           region: selectedRegion,
           clusterName,
           specKey: selectedSpec.key,
         },
-        currentOrganization,
+        organization,
+        shouldResolveOrganization
+          ? (resolved) => {
+              setResolvedOrganization(resolved)
+              void navigate({
+                to: '/onboarding',
+                search: {
+                  organizationId: resolved.id,
+                  subscriptionId: undefined,
+                  createOrganization: false,
+                },
+                replace: true,
+              })
+            }
+          : undefined,
+        shouldCreateOrganization,
       )
       if ('checkoutUrl' in result) {
         redirecting = true
@@ -384,6 +395,7 @@ export function OnboardingPage({
         search: {
           organizationId: result.organization.id,
           subscriptionId: result.subscription.id,
+          createOrganization: false,
         },
         replace: true,
       })
@@ -565,7 +577,11 @@ export function OnboardingPage({
     setClusterNameInput(suggestedClusterName)
     void navigate({
       to: '/onboarding',
-      search: { organizationId: workspace.organization.id, subscriptionId: undefined },
+      search: {
+        organizationId: workspace.organization.id,
+        subscriptionId: undefined,
+        createOrganization: false,
+      },
       replace: true,
     })
   }
@@ -611,7 +627,7 @@ export function OnboardingPage({
               </h1>
               <p className="text-[14px] text-neutral-500 dark:text-neutral-400">
                 {t(
-                  currentOrganization
+                  organization
                     ? 'onboarding.existingOrganizationDescription'
                     : 'onboarding.description',
                 )}
@@ -635,13 +651,16 @@ export function OnboardingPage({
             )}
 
             <form className="space-y-6" onSubmit={handleSubmit}>
-              {currentOrganization ? (
+              {organization ? (
                 <>
                   <Field name="organization">
                     <FieldLabel>{t('onboarding.organizationLabel')}</FieldLabel>
-                    <Input disabled value={currentOrganization.name} />
+                    <Input disabled value={organization.name} />
                   </Field>
-                  <Field name="clusterName" invalid={Boolean(clusterNameInput && !clusterName)}>
+                  <Field
+                    name="clusterName"
+                    invalid={Boolean(clusterNameInput && !clusterNameIsValid)}
+                  >
                     <FieldLabel>{t('onboarding.newClusterLabel')}</FieldLabel>
                     <Input
                       autoComplete="off"
@@ -655,21 +674,38 @@ export function OnboardingPage({
                   </Field>
                 </>
               ) : (
-                <Field
-                  name="organizationName"
-                  invalid={Boolean(organizationName && !organizationSlug)}
-                >
-                  <FieldLabel>{t('onboarding.organizationLabel')}</FieldLabel>
-                  <Input
-                    autoComplete="organization"
-                    maxLength={100}
-                    onValueChange={setOrganizationName}
-                    placeholder={t('onboarding.organizationPlaceholder')}
-                    required
-                    value={organizationName}
-                  />
-                  <FieldError>{t('onboarding.slugHint')}</FieldError>
-                </Field>
+                <>
+                  <Field
+                    name="organizationName"
+                    invalid={Boolean(organizationName && !organizationDisplayName)}
+                  >
+                    <FieldLabel>{t('onboarding.organizationLabel')}</FieldLabel>
+                    <Input
+                      autoComplete="organization"
+                      maxLength={100}
+                      onValueChange={(value) => {
+                        setOrganizationName(value)
+                        setClusterNameInput(value)
+                      }}
+                      placeholder={t('onboarding.organizationPlaceholder')}
+                      required
+                      value={organizationName}
+                    />
+                    <FieldError>{t('onboarding.organizationNameRequired')}</FieldError>
+                  </Field>
+                  <Field name="clusterName" invalid={Boolean(clusterName && !clusterNameIsValid)}>
+                    <FieldLabel>{t('onboarding.clusterLabel')}</FieldLabel>
+                    <Input
+                      autoComplete="off"
+                      maxLength={100}
+                      onValueChange={setClusterNameInput}
+                      placeholder={t('onboarding.clusterNamePlaceholder')}
+                      required
+                      value={clusterName}
+                    />
+                    <FieldError>{t('onboarding.clusterNameHint')}</FieldError>
+                  </Field>
+                </>
               )}
 
               <Field aria-busy={isLoadingRegions} className="grid gap-2" name="region">
@@ -869,11 +905,7 @@ export function OnboardingPage({
                     className="system-sm-medium text-text-secondary m-0"
                     id="onboarding-cluster-summary"
                   >
-                    {t(
-                      currentOrganization
-                        ? 'onboarding.newClusterLabel'
-                        : 'onboarding.clusterLabel',
-                    )}
+                    {t(organization ? 'onboarding.newClusterLabel' : 'onboarding.clusterLabel')}
                   </h2>
                   <span className="system-xs-regular text-text-tertiary">
                     {selectedSpec?.key ?? t('onboarding.regionDefault')}
@@ -904,8 +936,8 @@ export function OnboardingPage({
                   hasLoadError ||
                   hasSpecsError ||
                   !selectedRegion ||
-                  !organizationSlug ||
-                  !clusterName ||
+                  !organizationDisplayName ||
+                  !clusterNameIsValid ||
                   !selectedSpec ||
                   !consent ||
                   !canManage ||
