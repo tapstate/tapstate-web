@@ -46,7 +46,11 @@ export function OverviewPage() {
       onOpenProvisionModal={() =>
         void navigate({
           to: '/onboarding',
-          search: { organizationId: activeOrganization?.id, subscriptionId: undefined },
+          search: {
+            organizationId: activeOrganization?.id,
+            subscriptionId: undefined,
+            createOrganization: false,
+          },
         })
       }
       onEnterCluster={(cluster) => {

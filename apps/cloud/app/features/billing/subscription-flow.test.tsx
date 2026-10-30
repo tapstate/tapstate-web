@@ -41,7 +41,6 @@ Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 const organization: Organization = {
   id: 'org-1',
   name: 'Acme Data',
-  slug: 'acme-data',
   ownerEmail: 'owner@example.com',
 }
 
@@ -167,7 +166,11 @@ describe('Cloud subscription flow', () => {
     await vi.waitFor(() =>
       expect(mocks.navigate).toHaveBeenCalledWith({
         to: '/onboarding',
-        search: { organizationId: organization.id, subscriptionId: undefined },
+        search: {
+          organizationId: organization.id,
+          subscriptionId: undefined,
+          createOrganization: false,
+        },
         replace: true,
       }),
     )
@@ -181,7 +184,11 @@ describe('Cloud subscription flow', () => {
     await vi.waitFor(() =>
       expect(mocks.navigate).toHaveBeenCalledWith({
         to: '/onboarding',
-        search: { organizationId: organization.id, subscriptionId: undefined },
+        search: {
+          organizationId: organization.id,
+          subscriptionId: undefined,
+          createOrganization: false,
+        },
         replace: true,
       }),
     )

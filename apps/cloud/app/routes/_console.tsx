@@ -59,7 +59,11 @@ export const Route = createFileRoute('/_console')({
       if (organizations.length === 0) {
         throw redirect({
           to: '/onboarding',
-          search: { organizationId: undefined, subscriptionId: undefined },
+          search: {
+            organizationId: undefined,
+            subscriptionId: undefined,
+            createOrganization: false,
+          },
         })
       }
       const selectedOrganization = organizations.find((item) => item.id === deps.organizationId)

@@ -53,7 +53,11 @@ export function ClustersPage() {
   const openProvisioning = () => {
     void navigate({
       to: '/onboarding',
-      search: { organizationId: activeOrganization?.id, subscriptionId: undefined },
+      search: {
+        organizationId: activeOrganization?.id,
+        subscriptionId: undefined,
+        createOrganization: false,
+      },
     })
   }
 

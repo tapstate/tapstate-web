@@ -221,12 +221,6 @@ export function SettingsPage({ initialTab = 'account', onTabChange }: SettingsPa
                       {activeOrganization?.name ?? '—'}
                     </div>
                   </div>
-                  <div className="border-t border-black/[0.05] pt-3 dark:border-white/[0.05]">
-                    <div className="text-xs font-medium text-neutral-900 dark:text-white">Slug</div>
-                    <div className="mt-1 font-mono text-xs text-neutral-500 dark:text-neutral-400">
-                      {activeOrganization?.slug ?? '—'}
-                    </div>
-                  </div>
                   <div className="flex items-start gap-2 border-t border-black/[0.05] pt-3 text-xs text-neutral-500 dark:border-white/[0.05] dark:text-neutral-400">
                     <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                     <span>Changes to these settings are not available yet.</span>
