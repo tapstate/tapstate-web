@@ -40,6 +40,8 @@ interface OnboardingPageProps {
   darkMode: boolean
   setDarkMode: (enabled: boolean) => void
   user: UserProfile
+  onLogout: () => void | Promise<void>
+  consoleOrganizationId?: string
   currentOrganization?: Organization | null
   createOrganization?: boolean
   initialWorkspace?: OnboardingWorkspace | null
@@ -106,6 +108,8 @@ export function OnboardingPage({
   darkMode,
   setDarkMode,
   user,
+  onLogout,
+  consoleOrganizationId,
   currentOrganization = null,
   createOrganization = false,
   initialWorkspace = null,
@@ -620,9 +624,25 @@ export function OnboardingPage({
         </div>
 
         <div className="flex items-center gap-3">
+          {(consoleOrganizationId ?? currentOrganization?.id) && (
+            <Button
+              variant="secondary"
+              onClick={() =>
+                void navigate({
+                  to: '/',
+                  search: { organizationId: consoleOrganizationId ?? currentOrganization?.id },
+                })
+              }
+            >
+              {t('clusterEntry.back')}
+            </Button>
+          )}
           <span className="hidden max-w-56 truncate text-xs text-neutral-500 sm:block dark:text-neutral-400">
             {accountName}
           </span>
+          <Button variant="secondary" onClick={() => void onLogout()}>
+            {t('app.account.logOut')}
+          </Button>
           <IconButton
             aria-label={t('app.toggleTheme')}
             onClick={() => setDarkMode(!darkMode)}

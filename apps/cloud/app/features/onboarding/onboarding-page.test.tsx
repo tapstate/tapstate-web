@@ -151,7 +151,11 @@ type CreateWorkspace = (
 
 async function renderPage(
   onCreateWorkspace: CreateWorkspace,
-  options: { currentOrganization?: Organization | null; createOrganization?: boolean } = {},
+  options: {
+    currentOrganization?: Organization | null
+    createOrganization?: boolean
+    onLogout?: () => void
+  } = {},
 ) {
   host = document.createElement('div')
   document.body.append(host)
@@ -164,6 +168,7 @@ async function renderPage(
           darkMode={false}
           entryError={null}
           isOpeningCluster={false}
+          onLogout={options.onLogout ?? (() => undefined)}
           onComplete={() => undefined}
           onCreateWorkspace={onCreateWorkspace}
           currentOrganization={options.currentOrganization}
@@ -197,6 +202,7 @@ async function renderReadyPage() {
           entryError={null}
           initialWorkspace={readyWorkspace}
           isOpeningCluster={false}
+          onLogout={() => undefined}
           onComplete={() => undefined}
           onCreateWorkspace={async () => readyWorkspace}
           setDarkMode={() => undefined}
@@ -242,6 +248,26 @@ afterEach(async () => {
   host = undefined
   root = undefined
   vi.clearAllMocks()
+})
+
+describe('Cloud onboarding navigation', () => {
+  it('offers logout to a user without an organization and no console link', async () => {
+    const onLogout = vi.fn()
+    await renderPage(vi.fn(), { onLogout })
+    const logout = buttonWithText('Log out')
+    expect(logout).toBeDefined()
+    await act(async () => logout?.click())
+    expect(onLogout).toHaveBeenCalledOnce()
+    expect(buttonWithText('Back to console')).toBeUndefined()
+  })
+
+  it('returns existing organization users to their console', async () => {
+    await renderPage(vi.fn(), { currentOrganization: organization })
+    const back = buttonWithText('Back to console')
+    expect(back).toBeDefined()
+    await act(async () => back?.click())
+    expect(navigate).toHaveBeenCalledWith({ to: '/', search: { organizationId: organization.id } })
+  })
 })
 
 describe('Cloud onboarding payment', () => {
