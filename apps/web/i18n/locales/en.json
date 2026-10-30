@@ -2941,6 +2941,10 @@
         "identity": "Identity / structure",
         "source": "Source problems"
       },
+      "pathKinds": {
+        "TARGET_MISSING": "Destination path not found in this read",
+        "TARGET_EXTRA": "Destination path without a corresponding source path"
+      },
       "kinds": {
         "TARGET_MISSING": "Destination row not found in this read",
         "TARGET_EXTRA": "Destination row without a matching source row",

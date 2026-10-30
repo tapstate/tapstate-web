@@ -2,8 +2,11 @@ import type { PipelineView } from '@/service/pipelines/pipeline-client'
 import type {
   ValidationSelection,
   ValidationSourceHints,
+  ValidationSourceFieldHints,
   ValidationTask,
 } from '@/service/pipelines/validation-client'
+
+import { PipelineClientError } from '@/service/pipelines/pipeline-client'
 
 export type MappingHintReason =
   | 'unresolved-output'
@@ -21,6 +24,100 @@ export interface ValidationMappingHint {
   choice: ValidationSelection['mappings'][number] | null
   reason: MappingHintReason | null
   retainedDiscoveryAt: number | null
+  sourceFields?: readonly string[]
+  targetFields?: readonly string[]
+}
+
+/** Field menus use exact retained physical models, never display labels or inferred rename rules. */
+export async function validationLoadedFieldHints(
+  pipeline: PipelineView,
+  hints: readonly ValidationMappingHint[],
+  read: (source: string) => Promise<ValidationSourceFieldHints | null>,
+): Promise<readonly ValidationMappingHint[]> {
+  const owners = new Map<string, Set<string>>()
+  const identityKey = (output: string, connection: string | null, identity: string) =>
+    JSON.stringify([output, connection, identity])
+  for (const hint of hints) {
+    if (!hint.choice) continue
+    for (const identity of [
+      `${hint.outputId}:${hint.table}`,
+      `${hint.outputId}:${hint.sourceId}.${hint.table}`,
+    ]) {
+      const key = identityKey(hint.outputId, hint.targetSourceId, identity)
+      const matches = owners.get(key) ?? new Set<string>()
+      matches.add(hint.key)
+      owners.set(key, matches)
+    }
+  }
+  const targets = new Map<string, string[]>()
+  for (const output of pipeline.outputTargets?.outputs ?? []) {
+    if (output.kind !== 'replica') continue
+    const matches = owners.get(identityKey(output.element, output.connection, output.identity))
+    if (matches?.size !== 1) continue
+    const key = matches.values().next().value!
+    const tables = targets.get(key) ?? []
+    tables.push(output.table)
+    targets.set(key, tables)
+  }
+  const requests = new Map<string, Set<string>>()
+  const request = (source: string | null, table: string | null | undefined) => {
+    if (!source || !table) return
+    const tables = requests.get(source) ?? new Set<string>()
+    tables.add(table)
+    requests.set(source, tables)
+  }
+  const targetTable = (hint: ValidationMappingHint) => {
+    const tables = targets.get(hint.key)
+    return tables?.length === 1 ? tables[0] : undefined
+  }
+  for (const hint of hints) {
+    if (!hint.choice) continue
+    request(hint.sourceId, hint.table)
+    request(hint.targetSourceId, targetTable(hint))
+  }
+  const loaded = new Map<string, Map<string, readonly string[]>>()
+  const sources = [...requests.entries()]
+  let next = 0,
+    retainedBytes = 0,
+    failed = false
+  // A page retains only selected names. Do not fetch every large source model concurrently.
+  const worker = async () => {
+    while (!failed && next < sources.length) {
+      const [source, tables] = sources[next++]!
+      try {
+        const model = await read(source)
+        const selected = new Map<string, readonly string[]>()
+        if (model?.connectionId === source)
+          for (const table of model.tables) {
+            if (!tables.has(table.name)) continue
+            const fields = table.fields.map((field) => field.name)
+            for (const name of fields) retainedBytes += 64 + 2 * name.length
+            if (retainedBytes > 8 * 1024 * 1024)
+              throw new PipelineClientError(
+                'protocol',
+                'Loaded validation field suggestions exceed the page budget.',
+              )
+            selected.set(table.name, fields)
+          }
+        loaded.set(source, selected)
+      } catch (error) {
+        failed = true
+        throw error
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(2, sources.length) }, worker))
+  const fields = (source: string | null, table: string | null | undefined) =>
+    source && table ? (loaded.get(source)?.get(table) ?? []) : []
+  return hints.map((hint) =>
+    hint.choice
+      ? {
+          ...hint,
+          sourceFields: fields(hint.sourceId, hint.table),
+          targetFields: fields(hint.targetSourceId, targetTable(hint)),
+        }
+      : hint,
+  )
 }
 
 type HintsReader = (source: string) => Promise<ValidationSourceHints | null>

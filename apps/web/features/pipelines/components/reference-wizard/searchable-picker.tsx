@@ -174,6 +174,7 @@ export function SearchablePicker({
 export function FieldAutocomplete({
   ariaLabel,
   className,
+  disabled = false,
   emptyLabel,
   inputClassName,
   onValueChange,
@@ -184,6 +185,7 @@ export function FieldAutocomplete({
 }: {
   ariaLabel: string
   className?: string
+  disabled?: boolean
   emptyLabel: string
   inputClassName?: string
   onValueChange: (value: string) => void
@@ -208,6 +210,7 @@ export function FieldAutocomplete({
 
   return (
     <Autocomplete<string>
+      disabled={disabled}
       items={values}
       filteredItems={open && !searchActive ? values : undefined}
       open={open}

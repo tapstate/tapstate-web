@@ -661,6 +661,37 @@ describe('direct full validation client', () => {
     await expect(f.client.sourceHints('source')).rejects.toMatchObject({ kind: 'protocol' })
     await expect(f.client.sourceHints('source')).rejects.toMatchObject({ kind: 'protocol' })
   })
+  it('projects bounded loaded field names separately and leaves missing models absent', async () => {
+    const f = fixture([
+      json({
+        connectionId: 'source',
+        tables: [
+          {
+            name: 'orders',
+            fields: [{ name: 'id', type: 'INT64', unused: 'not-retained' }],
+            primaryKey: ['id'],
+          },
+        ],
+      }),
+      new Response('', { status: 404 }),
+    ])
+    expect(await f.client.sourceFieldHints('source')).toEqual({
+      connectionId: 'source',
+      tables: [{ name: 'orders', fields: [{ name: 'id' }] }],
+    })
+    expect(await f.client.sourceFieldHints('source')).toBeNull()
+  })
+  it('rejects foreign or repeated loaded field suggestions without inventing a usable subset', async () => {
+    const f = fixture([
+      json({ connectionId: 'foreign', tables: [] }),
+      json({
+        connectionId: 'source',
+        tables: [{ name: 'orders', fields: [{ name: 'id' }, { name: 'id' }] }],
+      }),
+    ])
+    await expect(f.client.sourceFieldHints('source')).rejects.toMatchObject({ kind: 'protocol' })
+    await expect(f.client.sourceFieldHints('source')).rejects.toMatchObject({ kind: 'protocol' })
+  })
   it('retains only bounded table-name hints rather than full discovery schemas', async () => {
     const f = fixture([
       json({

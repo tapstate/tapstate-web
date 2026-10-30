@@ -2941,6 +2941,10 @@
         "identity": "身分 / 結構",
         "source": "來源問題"
       },
+      "pathKinds": {
+        "TARGET_MISSING": "本次讀取未找到目標路徑",
+        "TARGET_EXTRA": "目標路徑未找到對應來源路徑"
+      },
       "kinds": {
         "TARGET_MISSING": "本次讀取未找到目標列",
         "TARGET_EXTRA": "目標列未找到配對來源列",

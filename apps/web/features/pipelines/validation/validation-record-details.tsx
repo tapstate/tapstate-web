@@ -123,7 +123,11 @@ export function ValidationRecordDetails({
     pages = Math.ceil(rows.length / 20),
     safePage = Math.min(page, Math.max(1, pages))
   function issue(finding: RecordFinding) {
-    return t(`dataValidation.record.kinds.${finding.kind}`, { defaultValue: finding.kind })
+    const scope =
+      finding.path.length && (finding.kind === 'TARGET_MISSING' || finding.kind === 'TARGET_EXTRA')
+        ? 'pathKinds'
+        : 'kinds'
+    return t(`dataValidation.record.${scope}.${finding.kind}`, { defaultValue: finding.kind })
   }
   return (
     <div className="space-y-5">

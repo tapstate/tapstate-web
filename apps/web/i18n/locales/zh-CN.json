@@ -2941,6 +2941,10 @@
         "identity": "身份 / 结构",
         "source": "源问题"
       },
+      "pathKinds": {
+        "TARGET_MISSING": "本次读取未找到目标路径",
+        "TARGET_EXTRA": "目标路径未找到对应源路径"
+      },
       "kinds": {
         "TARGET_MISSING": "本次读取未找到目标行",
         "TARGET_EXTRA": "目标行未找到配对源行",

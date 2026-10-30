@@ -102,6 +102,10 @@ const json = (value: unknown, status = 200) =>
     status,
     headers: { 'content-type': 'application/json' },
   })
+function noLoadedModels(read: typeof fetch): typeof fetch {
+  return (path, init) =>
+    String(path).endsWith('/schema') ? Promise.resolve(json(null, 404)) : read(path, init)
+}
 async function mount(view: React.ReactNode) {
   container = document.createElement('div')
   document.body.append(container)
@@ -141,6 +145,72 @@ afterEach(async () => {
 })
 
 describe('real validation page mutation boundaries', () => {
+  it('offers loaded model fields in an editable dropdown while absent models stay blank', async () => {
+    const read = vi.fn(async () => {
+      throw new Error('no independent precheck was requested')
+    })
+    const hints = [
+      {
+        key: 'orders',
+        outputId: 'out',
+        sourceId: 'source',
+        table: 'orders',
+        targetSourceId: 'target',
+        choice: { mappingId: 'orders', outputId: 'out', sourceId: 'source', table: 'orders' },
+        reason: null,
+        retainedDiscoveryAt: 100,
+        sourceFields: ['tenant_id', 'id'],
+        targetFields: [],
+      },
+    ] as const
+    const view = (pending: boolean) => (
+      <ValidationBulkSettings
+        pipelineId="flow"
+        client={createValidationClient(read)}
+        task={null}
+        hints={hints}
+        pending={pending}
+        onSave={async () => {}}
+        onStart={async () => {}}
+        onSchedule={() => {}}
+        onHistory={() => {}}
+      />
+    )
+    await mount(view(false))
+    const inputs = [...container!.querySelectorAll<HTMLInputElement>('input[role="combobox"]')]
+    expect(inputs).toHaveLength(2)
+    expect(inputs.map((input) => input.value)).toEqual(['', ''])
+    const trigger = (side: string) =>
+      document.querySelector<HTMLButtonElement>(
+        `[aria-label="wizard.search.openOptions · dataValidation.bulk.${side} · orders · 1"]`,
+      )!
+    await act(async () => trigger('source').click())
+    await settled(() => expect(document.querySelectorAll('[role="option"]')).toHaveLength(2))
+    const option = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find(
+      (node) => node.textContent === 'tenant_id',
+    )!
+    await act(async () => option.click())
+    expect(inputs[0].value).toBe('tenant_id')
+    await act(async () => trigger('target').click())
+    expect(document.querySelectorAll('[role="option"]')).toHaveLength(0)
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+        inputs[1],
+        'manual_id',
+      )
+      inputs[1].dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect(inputs[1].value).toBe('manual_id')
+    expect(button('dataValidation.bulk.save').disabled).toBe(false)
+    expect(read).not.toHaveBeenCalled()
+    await act(async () => root!.render(view(true)))
+    expect(
+      [...container!.querySelectorAll<HTMLInputElement>('input[role="combobox"]')].every(
+        (input) => input.disabled,
+      ),
+    ).toBe(true)
+    expect(trigger('source').disabled).toBe(true)
+  })
   it('does not save under a successor auth session when an old evaluation completes', async () => {
     let complete!: (response: Response) => void, input!: ValidationSelection
     const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
@@ -154,7 +224,7 @@ describe('real validation page mutation boundaries', () => {
         return json({ outcome: 'APPLIED', fingerprint, taskGeneration: generation })
       return json(null, 404)
     })
-    useAuthStore.setState({ apiFetch: read, sessionRevision: 1 })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 1 })
     await mount(<ValidationPage pipelineId="flow" />)
     await settled(() => expect(button('dataValidation.bulk.save')).toBeDefined())
     await click('dataValidation.methods.COUNT')
@@ -229,11 +299,13 @@ describe('real validation page mutation boundaries', () => {
     )
     await click('dataValidation.bulk.inspect')
     await settled(() => expect(read).toHaveBeenCalled())
-    expect(
-      [...document.querySelectorAll<HTMLInputElement>('input[list^="validation-target-"]')].every(
-        (input) => input.value === '',
+    const targets = [
+      ...document.querySelectorAll<HTMLInputElement>(
+        'tbody td:nth-child(5) input[role="combobox"]',
       ),
-    ).toBe(true)
+    ]
+    expect(targets).toHaveLength(2)
+    expect(targets.every((input) => input.value === '')).toBe(true)
     expect(button('dataValidation.bulk.save').disabled).toBe(true)
   })
   it('retries only the original START after a lost request before entry dispatch', async () => {
@@ -265,7 +337,7 @@ describe('real validation page mutation boundaries', () => {
         if (action.includes('/reports/')) return json(null, 404)
         return json(saved)
       })
-    useAuthStore.setState({ apiFetch: read, sessionRevision: 3 })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 3 })
     await mount(<ValidationPage pipelineId="flow" />)
     await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
     await click('dataValidation.bulk.start')
@@ -288,7 +360,7 @@ describe('real validation page mutation boundaries', () => {
         }
         return saves.length ? json({ ...saved, revision: '2' }) : json(null, 404)
       })
-    useAuthStore.setState({ apiFetch: read, sessionRevision: 4 })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 4 })
     await mount(<ValidationPage pipelineId="flow" />)
     await settled(() => expect(button('dataValidation.bulk.save')).toBeDefined())
     await click('dataValidation.methods.COUNT')
@@ -329,7 +401,7 @@ describe('real validation page mutation boundaries', () => {
       }
       return json(current)
     })
-    useAuthStore.setState({ apiFetch: read, sessionRevision: 5 })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 5 })
     await mount(<ValidationPage pipelineId="flow" />)
     await settled(() => expect(button('dataValidation.schedule.title').disabled).toBe(false))
     await click('dataValidation.schedule.title')
@@ -357,7 +429,7 @@ describe('real validation page mutation boundaries', () => {
           )
         : json(null, 404),
     )
-    useAuthStore.setState({ apiFetch: read, sessionRevision: 6 })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 6 })
     await mount(<ValidationPage pipelineId="flow" />)
     await settled(() => expect(button('dataValidation.bulk.save')).toBeDefined())
     await click('dataValidation.methods.COUNT')
@@ -403,7 +475,7 @@ describe('real validation page mutation boundaries', () => {
       taskReads++
       return json(taskReads >= 3 ? occupied : saved)
     })
-    useAuthStore.setState({ apiFetch: read, sessionRevision: 7 })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 7 })
     await mount(<ValidationPage pipelineId="flow" />)
     await settled(() => expect(taskReads).toBe(2))
     await click('dataValidation.bulk.start')
@@ -456,7 +528,7 @@ describe('real validation page mutation boundaries', () => {
           })
         : json(observed),
     )
-    useAuthStore.setState({ apiFetch: read, sessionRevision: 8 })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 8 })
     await mount(<ValidationPage pipelineId="flow" />)
     await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
     expect(read.mock.calls.some(([path]) => String(path).endsWith(':start'))).toBe(false)
@@ -554,7 +626,7 @@ describe('real validation page mutation boundaries', () => {
       if (action.includes('/reports/old-report')) return json(report)
       return json(current)
     })
-    useAuthStore.setState({ apiFetch: read, sessionRevision: 9 })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 9 })
     await mount(<ValidationPage pipelineId="flow" />)
     await settled(() => expect(button('dataValidation.report.open').disabled).toBe(false))
     await click('dataValidation.report.open')
@@ -658,7 +730,7 @@ describe('real validation page mutation boundaries', () => {
         })
       return json(current)
     })
-    useAuthStore.setState({ apiFetch: read, sessionRevision: 10 })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 10 })
     await mount(<ValidationPage pipelineId="flow" />)
     await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
     await click('dataValidation.bulk.start')

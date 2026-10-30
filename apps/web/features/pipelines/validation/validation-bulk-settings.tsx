@@ -17,6 +17,7 @@ import { PipelineClientError } from '@/service/pipelines/pipeline-client'
 
 import type { ValidationMappingHint } from './validation-mapping-hints'
 
+import { FieldAutocomplete } from '../components/reference-wizard/searchable-picker'
 import { ValidationRequestError } from './validation-view-parts'
 
 type Client = ReturnType<typeof createValidationClient>
@@ -357,30 +358,32 @@ export function ValidationBulkSettings({
                       ? '—'
                       : row.pairs.map((pair, i) => (
                           <div key={i}>
-                            <Input
-                              aria-label={t('dataValidation.bulk.keyLabel', {
+                            <FieldAutocomplete
+                              ariaLabel={t('dataValidation.bulk.keyLabel', {
                                 side: t('dataValidation.bulk.source'),
                                 table: row.hint.table ?? row.hint.outputId,
                                 index: i + 1,
                               })}
+                              openLabel={`${t('wizard.search.openOptions')} · ${t('dataValidation.bulk.source')} · ${row.hint.table ?? row.hint.outputId} · ${i + 1}`}
+                              emptyLabel={t('wizard.search.noResults')}
+                              placeholder=""
                               value={pair.source}
-                              list={`validation-source-${index}-${i}`}
+                              options={(
+                                mapping?.source.fields.map((field) => field.name) ??
+                                row.hint.sourceFields ??
+                                []
+                              ).map((name) => ({ value: name, label: name }))}
                               disabled={!row.included || pending || busy}
-                              onChange={(event) =>
+                              onValueChange={(field) =>
                                 change(index, (value) => ({
                                   ...value,
                                   confirmation: crypto.randomUUID(),
                                   pairs: value.pairs.map((current, j) =>
-                                    j === i ? { ...current, source: event.target.value } : current,
+                                    j === i ? { ...current, source: field } : current,
                                   ),
                                 }))
                               }
                             />
-                            <datalist id={`validation-source-${index}-${i}`}>
-                              {mapping?.source.fields.map((field) => (
-                                <option key={field.name} value={field.name} />
-                              ))}
-                            </datalist>
                           </div>
                         ))}
                     {method !== 'COUNT' && (
@@ -415,30 +418,32 @@ export function ValidationBulkSettings({
                       ? '—'
                       : row.pairs.map((pair, i) => (
                           <div key={i} className="flex items-center gap-2">
-                            <Input
-                              aria-label={t('dataValidation.bulk.keyLabel', {
+                            <FieldAutocomplete
+                              ariaLabel={t('dataValidation.bulk.keyLabel', {
                                 side: t('dataValidation.bulk.target'),
                                 table: row.hint.table ?? row.hint.outputId,
                                 index: i + 1,
                               })}
+                              openLabel={`${t('wizard.search.openOptions')} · ${t('dataValidation.bulk.target')} · ${row.hint.table ?? row.hint.outputId} · ${i + 1}`}
+                              emptyLabel={t('wizard.search.noResults')}
+                              placeholder=""
                               value={pair.target}
-                              list={`validation-target-${index}-${i}`}
+                              options={(
+                                mapping?.target.fields.map((field) => field.name) ??
+                                row.hint.targetFields ??
+                                []
+                              ).map((name) => ({ value: name, label: name }))}
                               disabled={!row.included || pending || busy}
-                              onChange={(event) =>
+                              onValueChange={(field) =>
                                 change(index, (value) => ({
                                   ...value,
                                   confirmation: crypto.randomUUID(),
                                   pairs: value.pairs.map((current, j) =>
-                                    j === i ? { ...current, target: event.target.value } : current,
+                                    j === i ? { ...current, target: field } : current,
                                   ),
                                 }))
                               }
                             />
-                            <datalist id={`validation-target-${index}-${i}`}>
-                              {mapping?.target.fields.map((field) => (
-                                <option key={field.name} value={field.name} />
-                              ))}
-                            </datalist>
                             {row.pairs.length > 1 && (
                               <Button
                                 size="small"

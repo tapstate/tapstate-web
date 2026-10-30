@@ -183,6 +183,11 @@ const sourceHints = shape({
     typeof value === 'number' && Number.isSafeInteger(value) && value >= 0,
 })
 export type ValidationSourceHints = Decoded<typeof sourceHints>
+const sourceFieldHints = shape({
+  connectionId: text,
+  tables: array(shape({ name: text, fields: array(shape({ name: text }), 4096) }), 1024),
+})
+export type ValidationSourceFieldHints = Decoded<typeof sourceFieldHints>
 
 const field = shape({
   name: text,
@@ -678,6 +683,42 @@ export function createValidationClient(fetcher: ApiFetcher) {
     return result
   }
   return {
+    /** Existing platform models provide suggestions only; missing discovery never invents fields. */
+    async sourceFieldHints(
+      source: string,
+      signal?: AbortSignal,
+    ): Promise<ValidationSourceFieldHints | null> {
+      const result = await request(
+        `/sources/${encodeURIComponent(source)}/schema`,
+        sourceFieldHints,
+        signal,
+        undefined,
+        true,
+        undefined,
+        8 * 1024 * 1024,
+      )
+      if (result === null) return null
+      if (
+        result.connectionId !== source ||
+        result.tables.some(
+          (table) =>
+            table.name.length === 0 ||
+            table.name.length > 512 ||
+            new Set(table.fields.map((field) => field.name)).size !== table.fields.length ||
+            table.fields.some((field) => field.name.length === 0 || field.name.length > 512),
+        )
+      )
+        return protocol()
+      if (new Set(result.tables.map((table) => table.name)).size !== result.tables.length)
+        return protocol()
+      return {
+        connectionId: source,
+        tables: result.tables.map((table) => ({
+          name: table.name,
+          fields: table.fields.map((field) => ({ name: field.name })),
+        })),
+      }
+    },
     /** Retained, server-scoped names are authoring hints; evaluation rechecks the selected scope. */
     async sourceHints(source: string, signal?: AbortSignal): Promise<ValidationSourceHints | null> {
       const result = await request(

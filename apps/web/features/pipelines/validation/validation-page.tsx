@@ -18,7 +18,11 @@ import { useAuthStore } from '@/stores/auth-store'
 
 import { ValidationBulkSettings } from './validation-bulk-settings'
 import { ValidationHistoryPanel } from './validation-history-panel'
-import { validationMappingHints, type ValidationMappingHint } from './validation-mapping-hints'
+import {
+  validationLoadedFieldHints,
+  validationMappingHints,
+  type ValidationMappingHint,
+} from './validation-mapping-hints'
 import { sameValidationOperation, validationStartBusy } from './validation-operation'
 import { validationClientKey } from './validation-query-key'
 import { ValidationRunPanel } from './validation-run-panel'
@@ -50,7 +54,12 @@ export function ValidationPage({ pipelineId }: { pipelineId: string }) {
         (source) => client.sourceHints(source, signal),
         task,
       )
-      return { task, hints }
+      return {
+        task,
+        hints: await validationLoadedFieldHints(pipeline, hints, (source) =>
+          client.sourceFieldHints(source, signal),
+        ),
+      }
     },
     retry: false,
     refetchOnWindowFocus: false,

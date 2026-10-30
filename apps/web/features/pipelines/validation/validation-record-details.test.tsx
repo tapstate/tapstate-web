@@ -126,6 +126,46 @@ afterEach(async () => {
   root = undefined
   container = undefined
 })
+it('distinguishes missing paths from missing rows without inventing absent samples', async () => {
+  const basis = detail('1')
+  const item = (kind: string, path: ValidationValue[]) =>
+    object({
+      kind: text(kind),
+      location: object({ scope, fieldPath: array(path) }),
+      multiplicity: nil,
+      count: number('1'),
+    })
+  const current = {
+    ...basis,
+    observation: object({
+      targetPresence: text('PRESENT'),
+      findings: array([
+        item('TARGET_MISSING', [text('nullable_text')]),
+        item('TARGET_MISSING', []),
+        item('TARGET_EXTRA', [
+          text('items'),
+          { type: 'int32', value: '0', metadata: {} },
+          text('optional'),
+        ]),
+      ]),
+      samples: array([]),
+      samplesTruncated: { type: 'boolean', value: true, metadata: {} },
+      notCompared: array([]),
+      reads: array([]),
+    }),
+  }
+  await mount(
+    <ValidationRecordDetails detail={current} pending={false} error={null} mappings={mappings} />,
+  )
+  const rows = [...container!.querySelector('tbody')!.querySelectorAll('tr')]
+  expect(rows).toHaveLength(3)
+  expect(rows[0].textContent).toContain('dataValidation.record.pathKinds.TARGET_MISSING')
+  expect(rows[1].textContent).toContain('dataValidation.record.kinds.TARGET_MISSING')
+  expect(rows[2].textContent).toContain('dataValidation.record.pathKinds.TARGET_EXTRA')
+  expect(
+    rows.every((row) => row.textContent?.includes('dataValidation.record.cells.NOT_RETAINED')),
+  ).toBe(true)
+})
 it('shows exact mandatory finding counts independently of the one retained sample', async () => {
   await mount(
     <ValidationRecordDetails
