@@ -227,21 +227,54 @@
     padding: calc(var(--spacing) * 0) calc(var(--spacing) * 1);
   }
   .alert-bell-panel {
-    width: min(360px, calc(100vw - 32px));
+    width: min(390px, calc(100vw - 32px));
+    overflow: clip;
     max-width: 90vw;
     font-size: 12px;
   }
-  .alert-bell-panel > a:last-child {
-    display: block;
-    padding-top: calc(var(--spacing) * 4);
-    color: var(--primary);
+  .alert-bell-panel footer {
+    display: flex;
+    padding: 10px 12px 12px;
+    border-top: 1px solid var(--border);
+  }
+  .alert-bell-panel footer a {
+    width: 100%;
   }
   .alert-preview-row {
+    display: block;
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+  }
+  .alert-preview-meta {
     display: flex;
-    gap: calc(var(--spacing) * 2);
     align-items: center;
-    padding: calc(var(--spacing) * 3) 0;
-    border-bottom: 1px solid var(--border);
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .alert-preview-meta small {
+    display: inline;
+    margin: 0;
+    font-size: 11px;
+  }
+  .alert-preview-row strong {
+    display: block;
+    margin: 5px 0 2px;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+  .alert-preview-resource {
+    display: block;
+    font-size: 11px;
+    color: var(--muted-foreground);
+  }
+  .alert-bell-panel .alert-bell-critical {
+    display: block;
+    margin-top: 3px;
+    color: var(--destructive);
+    font-size: 11px;
+  }
+  .alert-bell-panel > p {
+    padding: 12px 14px;
   }
   .app-alert-toolbar {
     display: flex;
@@ -808,6 +841,11 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 10px;
+    padding: 13px 14px 9px;
+  }
+  .alert-bell-panel header strong {
+    font-size: 14px;
   }
   .alert-bell-panel header button {
     min-height: 28px;
@@ -817,7 +855,8 @@
   .alert-bell-panel .alert-bell-order {
     color: var(--muted-foreground);
     font-size: 11px;
-    margin: calc(var(--spacing) * 2) 0 calc(var(--spacing) * 0);
+    margin: 0;
+    padding: 0 14px 10px;
   }
   .alert-bell > button {
     min-height: 30px;

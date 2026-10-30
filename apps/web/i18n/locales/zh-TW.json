@@ -2958,7 +2958,11 @@
       "FULL": "已暫停新增耐久接納"
     },
     "maintenanceRunning": "正常",
-    "deliveryQueue": "通知佇列"
+    "deliveryQueue": "通知佇列",
+    "activeAlerts": "活動告警",
+    "activeAlertPreview": "活動告警預覽",
+    "criticalPreviewCount": "{{count}} 條危急",
+    "criticalPreviewAtLeast": "至少 {{count}} 條危急"
   },
   "pipelineDetails": {
     "backToPipelines": "Pipelines",

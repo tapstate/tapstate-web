@@ -132,3 +132,33 @@ it('opens on a later focus after closing while the trigger itself already has fo
     outside.remove()
   }
 })
+
+it.each([
+  { total: 7, critical: 1, label: '1 critical' },
+  { total: 7, critical: 5, label: 'At least 5 critical' },
+  { total: 5, critical: 5, label: '5 critical' },
+])(
+  'reports only the critical count proven by the bounded ordered page: $label',
+  async ({ total, critical, label }) => {
+    fetcher.mockResolvedValue(
+      Response.json({
+        total,
+        rows: Array.from({ length: 5 }, (_, i) => ({
+          key: String(i),
+          episode: 1,
+          severity: i < critical ? 'CRITICAL' : 'MAJOR',
+          typeId: 'pipeline.failed',
+          resource: { id: `orders-${i}` },
+        })),
+      }),
+    )
+    await render()
+    await act(async () => node.querySelector('button')!.click())
+    expect(document.querySelector('.alert-bell-critical')?.textContent).toBe(label)
+    expect(document.querySelector('.alert-preview-row strong')?.textContent).toBe(
+      'Pipeline execution failed',
+    )
+    expect(document.querySelector('.alert-preview-resource')?.textContent).toBe('orders-0')
+    expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body)).limit).toBe(5)
+  },
+)

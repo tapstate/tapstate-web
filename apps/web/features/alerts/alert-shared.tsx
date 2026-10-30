@@ -27,6 +27,11 @@ export function AlertBell() {
       alertCall<AlertPage<AlarmRow>>(apiFetch, 'center', { limit: 5 }, signal),
     refetchInterval: 5000,
   })
+  const previewRows = query.data?.rows.slice(0, 5) ?? []
+  const critical = previewRows.filter((row) => row.severity === 'CRITICAL').length
+  const exactCritical =
+    !query.data?.isolated &&
+    (critical < previewRows.length || previewRows.length === query.data?.total)
   return (
     <Popover
       open={open}
@@ -82,12 +87,23 @@ export function AlertBell() {
         className="alert-bell-panel"
         id="alert-bell-preview"
         role="dialog"
-        aria-label={t('alerts.preview')}
+        aria-label={t('alerts.activeAlertPreview')}
       >
         <header>
-          <strong>
-            {t('alerts.active')} ({query.isError ? '—' : (query.data?.total ?? '—')})
-          </strong>
+          <div>
+            <strong>
+              {t('alerts.activeAlerts')}{' '}
+              <span>{query.isError ? '—' : (query.data?.total ?? '—')}</span>
+            </strong>
+            {!query.isError && critical > 0 && (
+              <small className="alert-bell-critical">
+                {t(
+                  exactCritical ? 'alerts.criticalPreviewCount' : 'alerts.criticalPreviewAtLeast',
+                  { count: critical },
+                )}
+              </small>
+            )}
+          </div>
           <PopoverClose
             render={<Button variant="ghost" size="icon-sm" aria-label={t('alerts.close')} />}
           >
@@ -102,7 +118,7 @@ export function AlertBell() {
         ) : (
           <>
             {!query.data?.rows.length && <p>{t('alerts.emptyActive')}</p>}
-            {query.data?.rows.slice(0, 5).map((row) => (
+            {previewRows.map((row) => (
               <Link
                 key={row.key}
                 to="/alerts"
@@ -113,29 +129,33 @@ export function AlertBell() {
                   setOpen(false)
                 }}
               >
-                <Severity value={row.severity} />
-                <span>
-                  {row.resource.id}
+                <span className="alert-preview-meta">
+                  <Severity value={row.severity} />
                   <small>
-                    {t(`alerts.types.${row.typeId}`, { defaultValue: row.typeId })} ·{' '}
-                    <AlertDuration from={row.firedAt} />
+                    {t('alerts.elapsedDuration')} <AlertDuration from={row.firedAt} />
                   </small>
                 </span>
+                <strong>{t(`alerts.types.${row.typeId}`, { defaultValue: row.typeId })}</strong>
+                <span className="alert-preview-resource">{row.resource.id}</span>
               </Link>
             ))}
             {query.data?.isolated && <p>{t('alerts.isolated')}</p>}
           </>
         )}
-        <Link
-          to="/alerts"
-          search={{ view: (query.data?.total ?? 0) > 0 ? 'active' : 'history' }}
-          onClick={() => {
-            closeReason.current = 'navigation'
-            setOpen(false)
-          }}
-        >
-          {t((query.data?.total ?? 0) > 0 ? 'alerts.viewAll' : 'alerts.viewHistory')}
-        </Link>
+        <footer>
+          <Button variant="outline" asChild>
+            <Link
+              to="/alerts"
+              search={{ view: (query.data?.total ?? 0) > 0 ? 'active' : 'history' }}
+              onClick={() => {
+                closeReason.current = 'navigation'
+                setOpen(false)
+              }}
+            >
+              {t((query.data?.total ?? 0) > 0 ? 'alerts.viewAll' : 'alerts.viewHistory')}
+            </Link>
+          </Button>
+        </footer>
       </PopoverContent>
     </Popover>
   )

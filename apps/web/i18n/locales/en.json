@@ -2958,7 +2958,11 @@
       "FULL": "New durable admissions paused"
     },
     "maintenanceRunning": "Operational",
-    "deliveryQueue": "Notification queue"
+    "deliveryQueue": "Notification queue",
+    "activeAlerts": "Active alerts",
+    "activeAlertPreview": "Active alert preview",
+    "criticalPreviewCount": "{{count}} critical",
+    "criticalPreviewAtLeast": "At least {{count}} critical"
   },
   "pipelineDetails": {
     "backToPipelines": "Pipelines",
