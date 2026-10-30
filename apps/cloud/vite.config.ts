@@ -55,7 +55,6 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       proxy: {
         '/v1/api': apiProxy,
-        '/v2/api': apiProxy,
       },
     },
     test: {
