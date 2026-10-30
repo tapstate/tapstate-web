@@ -47,20 +47,36 @@ function valueMatches(value: ValidationValue, needle: string): boolean {
     validationScalarText(value).toLowerCase().includes(needle)
   )
 }
-export function ValidationReportPanel({
-  client,
-  reference,
-  live = false,
-}: {
+type ReportPanelProps = {
   client: Client
   reference: ValidationReference
   live?: boolean
-}) {
+}
+type ListPosition = { search: string; page: number }
+const initialPosition: ListPosition = { search: '', page: 1 }
+
+export function ValidationReportPanel(props: ReportPanelProps) {
+  return (
+    <ValidationReportView
+      key={JSON.stringify([validationClientKey(props.client), props.reference])}
+      {...props}
+    />
+  )
+}
+
+function ValidationReportView({ client, reference, live = false }: ReportPanelProps) {
   const { t } = useTranslation(),
     [table, setTable] = useState<string | null>(null),
     [root, setRoot] = useState<string | null>(null),
-    [search, setSearch] = useState(''),
-    [page, setPage] = useState(1)
+    [positions, setPositions] = useState<Record<string, ListPosition>>({})
+  const location = JSON.stringify(table)
+  const { search, page } = positions[location] ?? initialPosition
+  const updatePosition = (change: Partial<ListPosition>) =>
+    setPositions((previous) => ({
+      ...previous,
+      [location]: { ...(previous[location] ?? initialPosition), ...change },
+    }))
+  const setPage = (page: number) => updatePosition({ page })
   const [drawerOpen, setDrawerOpen] = useState(false)
   const identity = JSON.stringify(reference)
   const report = useQuery({
@@ -188,8 +204,6 @@ export function ValidationReportPanel({
             onClick={() => {
               setTable(null)
               setRoot(null)
-              setSearch('')
-              setPage(1)
             }}
           >
             {t('dataValidation.report.backTables')}
@@ -201,8 +215,7 @@ export function ValidationReportPanel({
           placeholder={t(table ? 'dataValidation.report.searchKey' : 'dataValidation.bulk.search')}
           value={search}
           onChange={(event) => {
-            setSearch(event.target.value)
-            setPage(1)
+            updatePosition({ search: event.target.value, page: 1 })
           }}
         />
         {!table ? (
@@ -257,8 +270,6 @@ export function ValidationReportPanel({
                             onClick={() => {
                               setTable(mapping.id)
                               setRoot(null)
-                              setSearch('')
-                              setPage(1)
                             }}
                           >
                             {t('dataValidation.report.records')}

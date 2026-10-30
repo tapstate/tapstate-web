@@ -243,6 +243,137 @@ describe('actual report and original-run presentation', () => {
     expect(document.body.textContent).toContain(name)
     expect(button('dataValidation.report.fields')).toBeDefined()
   })
+  it('restores the record search and page after returning through the table list', async () => {
+    const read = vi.fn(async (path: RequestInfo | URL) => {
+      const url = new URL(String(path), 'https://test.invalid')
+      if (!url.pathname.endsWith('/roots')) return json({ ...report, rootCount: '21' })
+      const offset = Number(url.searchParams.get('offset'))
+      return json({
+        total: '21',
+        offset,
+        limit: 20,
+        items: Array.from({ length: Math.min(20, 21 - offset) }, (_, i) => ({
+          id: (offset + i + 1).toString(16).padStart(64, '0'),
+          root: {
+            mappingId: 'orders',
+            outputId: 'out',
+            ancestors: [],
+            key: [
+              { domain: 'TEXT', value: { type: 'text', value: `key-${offset + i}`, metadata: {} } },
+            ],
+          },
+          summary: { type: 'object', value: [], metadata: {} },
+        })),
+      })
+    })
+    await mount(<ValidationReportPanel client={createValidationClient(read)} reference={ref} />)
+    await settled(() =>
+      expect(read.mock.calls.some(([path]) => String(path).includes('offset=20'))).toBe(true),
+    )
+    await click('dataValidation.report.records')
+    const input = document.querySelector<HTMLInputElement>(
+      '[aria-label="dataValidation.report.searchKey"]',
+    )!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'key-')
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await act(async () =>
+      document.querySelector<HTMLButtonElement>('[aria-label="dataValidation.next"]')!.click(),
+    )
+    expect(document.body.textContent).toContain('key-20')
+    expect(document.body.textContent).not.toContain('key-0')
+    await click('dataValidation.report.backTables')
+    await click('dataValidation.report.records')
+    expect(
+      document.querySelector<HTMLInputElement>('[aria-label="dataValidation.report.searchKey"]')!
+        .value,
+    ).toBe('key-')
+    expect(document.body.textContent).toContain('key-20')
+    expect(document.body.textContent).not.toContain('key-0')
+  })
+  it('keeps table and record filters independent for each mapping and report', async () => {
+    const read = vi.fn(async (path: RequestInfo | URL) => {
+      const url = new URL(String(path), 'https://test.invalid')
+      if (!url.pathname.endsWith('/roots'))
+        return json({
+          ...report,
+          reference: url.pathname.includes('/new-run')
+            ? { ...ref, run: 'new-run', sequence: '2' }
+            : ref,
+          rootCount: '4',
+          mappings: [
+            report.mappings[0],
+            {
+              ...report.mappings[0],
+              id: 'items',
+              source: { ...table, table: 'items' },
+              target: { ...table, source: 'target', table: 'checked_items' },
+            },
+          ],
+        })
+      return json({
+        total: '4',
+        offset: 0,
+        limit: 20,
+        items: ['order-1', 'order-2', 'item-1', 'item-2'].map((key, i) => ({
+          id: (i + 1).toString(16).padStart(64, '0'),
+          root: {
+            mappingId: i < 2 ? 'orders' : 'items',
+            outputId: 'out',
+            ancestors: [],
+            key: [{ domain: 'TEXT', value: { type: 'text', value: key, metadata: {} } }],
+          },
+          summary: { type: 'object', value: [], metadata: {} },
+        })),
+      })
+    })
+    const client = createValidationClient(read)
+    const input = (label: string) =>
+      document.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!
+    const fill = async (label: string, value: string) =>
+      act(async () => {
+        const field = input(label)
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+          field,
+          value,
+        )
+        field.dispatchEvent(new Event('input', { bubbles: true }))
+      })
+    await mount(<ValidationReportPanel client={client} reference={ref} />)
+    await settled(() => expect(button('dataValidation.report.records')).toBeDefined())
+    await fill('dataValidation.bulk.search', 'orders')
+    await click('dataValidation.report.records')
+    await fill('dataValidation.report.searchKey', 'order-1')
+    await click('dataValidation.report.backTables')
+    expect(input('dataValidation.bulk.search').value).toBe('orders')
+    await fill('dataValidation.bulk.search', '')
+    const records = [...document.querySelectorAll<HTMLButtonElement>('button')].filter(
+      (node) => node.textContent === 'dataValidation.report.records',
+    )
+    await act(async () => records[1].click())
+    expect(input('dataValidation.report.searchKey').value).toBe('')
+    expect(document.body.textContent).toContain('item-2')
+    await fill('dataValidation.report.searchKey', 'item-2')
+    await click('dataValidation.report.backTables')
+    await click('dataValidation.report.records')
+    expect(input('dataValidation.report.searchKey').value).toBe('order-1')
+    expect(document.body.textContent).not.toContain('order-2')
+    await act(async () =>
+      root!.render(
+        <QueryClientProvider client={queries!}>
+          <ValidationReportPanel
+            client={client}
+            reference={{ ...ref, run: 'new-run', sequence: '2' }}
+          />
+        </QueryClientProvider>,
+      ),
+    )
+    await settled(() => expect(input('dataValidation.bulk.search')?.value).toBe(''))
+    await click('dataValidation.report.records')
+    expect(input('dataValidation.report.searchKey').value).toBe('')
+    expect(document.body.textContent).toContain('order-2')
+  })
   it('clamps nested value pagination when a cached record replaces a larger value', async () => {
     const value = (count: number): ValidationValue => ({
       type: 'array',
