@@ -30,7 +30,7 @@ function OnboardingRoute() {
     consoleOrganizationId,
   } = Route.useLoaderData()
   const navigate = useNavigate()
-  const { completeOnboarding, darkMode, setDarkMode, clearIdentity } = useCloudAppState()
+  const { completeOnboarding, darkMode, clearIdentity } = useCloudAppState()
   const { enterCluster, enteringId, entryError } = useClusterEntry()
 
   return (
@@ -58,7 +58,6 @@ function OnboardingRoute() {
       initialProgress={initialProgress}
       suggestedClusterName={suggestedName}
       resumeError={resumeError}
-      setDarkMode={setDarkMode}
       user={user}
       isOpeningCluster={enteringId !== null}
       entryError={entryError}

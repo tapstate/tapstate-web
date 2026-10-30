@@ -30,6 +30,9 @@ const {
 }))
 
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigate }))
+vi.mock('../../state/cloud-app-state', () => ({
+  useCloudAppState: () => ({ darkMode: false, setDarkMode: vi.fn() }),
+}))
 vi.mock('../billing/checkout-navigation', () => ({ navigateToCheckout }))
 
 vi.mock('../../service/cloud-api', async (importOriginal) => {
@@ -173,7 +176,6 @@ async function renderPage(
           onCreateWorkspace={onCreateWorkspace}
           currentOrganization={options.currentOrganization}
           createOrganization={options.createOrganization}
-          setDarkMode={() => undefined}
           user={{ email: 'user@example.com', displayName: 'Test User' }}
         />
       </I18nextProvider>,
@@ -205,7 +207,6 @@ async function renderReadyPage() {
           onLogout={() => undefined}
           onComplete={() => undefined}
           onCreateWorkspace={async () => readyWorkspace}
-          setDarkMode={() => undefined}
           user={{ email: 'user@example.com', displayName: 'Test User' }}
         />
       </I18nextProvider>,
@@ -254,7 +255,11 @@ describe('Cloud onboarding navigation', () => {
   it('offers logout to a user without an organization and no console link', async () => {
     const onLogout = vi.fn()
     await renderPage(vi.fn(), { onLogout })
-    const logout = buttonWithText('Log out')
+    const trigger = host?.querySelector<HTMLButtonElement>('button[title="Test User"]')
+    await act(async () => trigger?.click())
+    const logout = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((item) =>
+      item.textContent?.includes('Log out'),
+    )
     expect(logout).toBeDefined()
     await act(async () => logout?.click())
     expect(onLogout).toHaveBeenCalledOnce()
@@ -386,7 +391,7 @@ describe('Cloud onboarding payment', () => {
     })
 
     expect(onCreateWorkspace).not.toHaveBeenCalled()
-    expect(buttonWithText('Continue to secure payment')?.hasAttribute('disabled')).toBe(true)
+    expect(buttonWithText('Continue to checkout')?.hasAttribute('disabled')).toBe(true)
   })
 })
 
