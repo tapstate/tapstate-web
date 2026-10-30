@@ -511,9 +511,11 @@ export function AuthPage({
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           {mode === 'login' && (
-            <button
-              className="system-sm-medium text-components-button-secondary-accent-text underline"
+            <Button
+              className="w-full"
+              size="large"
               type="button"
+              variant="secondary"
               onClick={() => {
                 setLoginMethod(loginMethod === 'password' ? 'code' : 'password')
                 setVerificationSent(false)
@@ -523,7 +525,7 @@ export function AuthPage({
               }}
             >
               {t(loginMethod === 'password' ? 'auth.useEmailCode' : 'auth.usePassword')}
-            </button>
+            </Button>
           )}
 
           {mode === 'register' && (
