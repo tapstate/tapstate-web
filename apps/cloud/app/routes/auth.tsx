@@ -12,6 +12,7 @@ function AuthRoute() {
     invitationToken: string | null
     initialMode?: 'login' | 'register'
     oauthOutcome?: string
+    organizationSetupRequired?: boolean
   }>(() => {
     if (typeof window === 'undefined') return { invitationToken: null, oauthOutcome: undefined }
     const url = new URL(window.location.href)
@@ -22,7 +23,8 @@ function AuthRoute() {
       url.searchParams.get('invitationToken')
     const oauthOutcome = url.searchParams.get('oauth') ?? undefined
     const initialMode = url.searchParams.get('mode') === 'register' ? 'register' : undefined
-    return { invitationToken, initialMode, oauthOutcome }
+    const organizationSetupRequired = url.searchParams.get('onboarding') === 'organization'
+    return { invitationToken, initialMode, oauthOutcome, organizationSetupRequired }
   })
   const [trialCodeRequired, setTrialCodeRequired] = useState(true)
   const [registrationPolicyStatus, setRegistrationPolicyStatus] = useState<
@@ -51,6 +53,7 @@ function AuthRoute() {
       url.searchParams.has('invitationToken') ||
       url.searchParams.has('oauth') ||
       url.searchParams.has('mode') ||
+      url.searchParams.has('onboarding') ||
       url.hash.startsWith('#invite=')
     ) {
       url.searchParams.delete('invite')
@@ -72,23 +75,36 @@ function AuthRoute() {
       invitationToken={authContext.invitationToken}
       initialMode={authContext.initialMode}
       oauthOutcome={authContext.oauthOutcome}
+      organizationSetupRequired={authContext.organizationSetupRequired}
       registrationPolicyStatus={registrationPolicyStatus}
       trialCodeRequired={trialCodeRequired}
       onRetryRegistrationPolicy={() => void loadRegistrationPolicy()}
-      onAuthenticated={async (user) => {
+      onAuthenticated={async (user, organizationSetupRequired) => {
         setIdentity(user, [])
-        await navigate({ to: '/', search: { organizationId: undefined } })
+        if (organizationSetupRequired) {
+          await navigate({
+            to: '/onboarding',
+            search: {
+              organizationId: undefined,
+              subscriptionId: undefined,
+              createOrganization: true,
+            },
+          })
+        } else {
+          await navigate({ to: '/', search: { organizationId: undefined } })
+        }
       }}
       onAcceptInvitation={cloudApi.acceptInvitation}
       onAccessType={cloudApi.accessType}
       onCurrentSession={cloudApi.me}
       onLogin={(input) => cloudApi.login(input)}
-      onOAuth={async (provider, mode, invitationToken, organizationName) => {
+      onOAuth={async (provider, mode, invitationToken, deferOrganizationCreation) => {
         const authorizationUrl = await cloudApi.oauthStart(
           provider,
           mode === 'register' ? 'signup' : 'login',
           invitationToken ?? undefined,
-          organizationName,
+          undefined,
+          deferOrganizationCreation,
         )
         window.location.assign(authorizationUrl)
       }}

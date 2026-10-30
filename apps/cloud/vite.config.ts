@@ -2,8 +2,23 @@ import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
 import process from 'node:process'
-import { loadEnv } from 'vite'
+import { loadEnv, type ProxyOptions } from 'vite'
 import { defineConfig } from 'vitest/config'
+
+function rewriteLocalOrigin(
+  proxy: Parameters<NonNullable<ProxyOptions['configure']>>[0],
+  proxyOrigin: string,
+) {
+  proxy.on('proxyReq', (proxyReq, request) => {
+    const origin = request.headers.origin
+    const host = request.headers.host
+    if (typeof origin !== 'string' || typeof host !== 'string') return
+
+    const protocol =
+      'encrypted' in request.socket && request.socket.encrypted === true ? 'https' : 'http'
+    if (origin === `${protocol}://${host}`) proxyReq.setHeader('origin', proxyOrigin)
+  })
+}
 
 export default defineConfig(({ mode }) => {
   const envDir = process.env.TAPSTATE_LOCAL_PREVIEW_ENV_DIR ?? process.cwd()
@@ -16,6 +31,11 @@ export default defineConfig(({ mode }) => {
     legacyEnv.VITE_PROXY_TARGET ||
     'http://localhost:8080'
   const proxyOrigin = new URL(proxyTarget).origin
+  const apiProxy: ProxyOptions = {
+    target: proxyTarget,
+    changeOrigin: true,
+    configure: (proxy) => rewriteLocalOrigin(proxy, proxyOrigin),
+  }
 
   return {
     envDir,
@@ -34,24 +54,8 @@ export default defineConfig(({ mode }) => {
       port: 5174,
       strictPort: true,
       proxy: {
-        '/v1/api': {
-          target: proxyTarget,
-          changeOrigin: true,
-          configure: (proxy) => {
-            proxy.on('proxyReq', (proxyReq, request) => {
-              const origin = request.headers.origin
-              const host = request.headers.host
-              if (typeof origin !== 'string' || typeof host !== 'string') return
-
-              const protocol =
-                'encrypted' in request.socket && request.socket.encrypted === true
-                  ? 'https'
-                  : 'http'
-              const requestOrigin = `${protocol}://${host}`
-              if (origin === requestOrigin) proxyReq.setHeader('origin', proxyOrigin)
-            })
-          },
-        },
+        '/v1/api': apiProxy,
+        '/v2/api': apiProxy,
       },
     },
     test: {

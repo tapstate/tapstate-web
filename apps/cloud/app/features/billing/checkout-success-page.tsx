@@ -7,6 +7,7 @@ import type { Subscription } from '../../service/cloud-api'
 
 import { CloudApiError, cloudApi } from '../../service/cloud-api'
 import { useCloudAppState } from '../../state/cloud-app-state'
+import { clusterDnsLabel, suggestedClusterDisplayName } from '../clusters/cluster-name'
 import { newestFirst } from './billing-format'
 import {
   clearCheckoutAttempt,
@@ -21,34 +22,15 @@ interface ProvisioningTarget {
   region: string
 }
 
-function clusterSlug(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
-
-function uniqueClusterName(slug: string, existing: string[]): string {
-  const base = clusterSlug(slug).slice(0, 90).replace(/-+$/g, '') || 'tapstate'
-  const taken = new Set(existing.map((name) => name.toLowerCase()))
-  if (!taken.has(base)) return base
-  for (let suffix = 2; suffix < 1000; suffix += 1) {
-    const candidate = `${base}-${suffix}`.slice(0, 100)
-    if (!taken.has(candidate)) return candidate
-  }
-  return `${base.slice(0, 90)}-${Date.now().toString(36)}`
-}
-
 export function CheckoutSuccessPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { activeOrganization, organizations } = useCloudAppState()
   const attempt = useMemo(() => readCheckoutAttempt(), [])
   const organizationId = attempt?.orgId ?? activeOrganization?.id ?? null
-  const [resolvedSlug, setResolvedSlug] = useState<string | null>(null)
-  const organizationSlug =
-    organizations.find((item) => item.id === organizationId)?.slug ?? resolvedSlug
+  const [resolvedOrganizationName, setResolvedOrganizationName] = useState<string | null>(null)
+  const organizationName =
+    organizations.find((item) => item.id === organizationId)?.name ?? resolvedOrganizationName
 
   const [phase, setPhase] = useState<Phase>('resolving')
   const [subscription, setSubscription] = useState<Subscription | null>(null)
@@ -56,15 +38,15 @@ export function CheckoutSuccessPage() {
   const [errorKey, setErrorKey] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!organizationId || organizationSlug) return
+    if (!organizationId || organizationName) return
     let active = true
     const resolve = async () => {
       try {
         const list = await cloudApi.organizations()
         if (!active) return
-        const slug = list.find((item) => item.id === organizationId)?.slug
-        if (slug) {
-          setResolvedSlug(slug)
+        const name = list.find((item) => item.id === organizationId)?.name
+        if (name) {
+          setResolvedOrganizationName(name)
           return
         }
         setPhase('error')
@@ -83,10 +65,10 @@ export function CheckoutSuccessPage() {
     return () => {
       active = false
     }
-  }, [navigate, organizationId, organizationSlug])
+  }, [navigate, organizationId, organizationName])
 
   useEffect(() => {
-    if (!organizationId || !organizationSlug) return
+    if (!organizationId || !organizationName) return
     let active = true
     let timer: number | undefined
     let finalized = false
@@ -104,15 +86,15 @@ export function CheckoutSuccessPage() {
       const taken = new Set(
         clusters
           .filter((cluster) => cluster.state !== 'TERMINATED')
-          .map((cluster) => cluster.name.toLowerCase()),
+          .map((cluster) => clusterDnsLabel(cluster.name)),
       )
       const preferred = stored?.clusterName?.trim()
       return {
         region,
         clusterName:
-          preferred && !taken.has(preferred.toLowerCase())
+          preferred && !taken.has(clusterDnsLabel(preferred))
             ? preferred
-            : uniqueClusterName(organizationSlug, [...taken]),
+            : suggestedClusterDisplayName(organizationName, clusters),
       }
     }
 
@@ -147,7 +129,7 @@ export function CheckoutSuccessPage() {
       clearCheckoutAttempt()
       void navigate({
         to: '/onboarding',
-        search: { organizationId, subscriptionId },
+        search: { organizationId, subscriptionId, createOrganization: false },
         replace: true,
       })
     }
@@ -224,7 +206,7 @@ export function CheckoutSuccessPage() {
       active = false
       if (timer !== undefined) window.clearTimeout(timer)
     }
-  }, [navigate, organizationId, organizationSlug])
+  }, [navigate, organizationId, organizationName])
 
   const progress = Math.min(100, Math.max(0, subscription?.installProgress?.percent ?? 0))
   const backToPlans = () =>
