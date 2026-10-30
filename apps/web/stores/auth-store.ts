@@ -9,7 +9,7 @@ import {
   type LoginCredentials,
 } from '@/service/auth-client'
 import { browserAuthRequest, type BrowserAccessGrant } from '@/service/browser-auth-client'
-import { cloudConsoleUrl, replaceWithCloudConsole } from '@/utils/cloud-console'
+import { cloudConsoleUrl } from '@/utils/cloud-console'
 import { deploymentProfile, type DeploymentProfile } from '@/utils/deployment-profile'
 
 import { browserSessionStorage, clearStoredToken } from './auth-session'
@@ -20,6 +20,7 @@ interface AuthState {
   profile: DeploymentProfile
   token: string | null
   isAuthenticated: boolean
+  sessionRevision: number
   status: SessionStatus
   principal: string | null
   sessionId: string | null
@@ -76,6 +77,7 @@ export function createAuthStore(options: AuthStoreOptions = {}) {
         accessExpiresAt: 0,
         status,
         authEpoch: get().authEpoch + 1,
+        sessionRevision: get().sessionRevision + (get().isAuthenticated || get().sessionId ? 1 : 0),
       })
     }
     const accept = (grant: BrowserAccessGrant) => {
@@ -87,6 +89,7 @@ export function createAuthStore(options: AuthStoreOptions = {}) {
       )
         invalidate('checking')
       set({
+        sessionRevision: get().sessionRevision + (get().isAuthenticated ? 0 : 1),
         token: grant.token,
         principal: grant.principal,
         issuer: grant.issuer,
@@ -105,6 +108,7 @@ export function createAuthStore(options: AuthStoreOptions = {}) {
       issuer: null,
       sessionId: null,
       authEpoch: 0,
+      sessionRevision: 0,
       accessExpiresAt: 0,
       recoveryReason: 'network',
       clear: () => invalidate('anonymous'),
@@ -231,10 +235,15 @@ export function createAuthStore(options: AuthStoreOptions = {}) {
       },
       apiFetch: async (input, init = {}) => {
         if (profile === 'cloud') {
+          const originalSession = get().sessionRevision
           const response = await cloudSessionFetch(input, init, fetcher, options.origin)
-          if (response.status === 401) {
+          if (
+            response.status === 401 &&
+            originalSession === get().sessionRevision &&
+            get().isAuthenticated
+          ) {
             get().clear()
-            ;(options.redirectToCloudConsole ?? replaceWithCloudConsole)(consoleUrl)
+            // The storage entry gate preserves pending setup context before offering Cloud sign-in.
           }
           return response
         }

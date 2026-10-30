@@ -1,17 +1,32 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { AuthPage } from '../features/auth/auth-page'
+import {
+  clusterEntrySearch,
+  consumeOAuthClusterEntry,
+  rememberOAuthClusterEntry,
+  type ClusterEntrySearch,
+} from '../features/clusters/cluster-entry-intent'
 import { cloudApi } from '../service/cloud-api'
 import { useCloudAppState } from '../state/cloud-app-state'
 
 function AuthRoute() {
+  const active = useRef(true)
+  useEffect(() => {
+    active.current = true
+    return () => {
+      active.current = false
+    }
+  }, [])
   const navigate = useNavigate()
+  const search = Route.useSearch()
   const { darkMode, setDarkMode, setIdentity } = useCloudAppState()
   const [authContext] = useState<{
     invitationToken: string | null
     initialMode?: 'login' | 'register'
     oauthOutcome?: string
+    oauthTarget?: ClusterEntrySearch
     organizationSetupRequired?: boolean
   }>(() => {
     if (typeof window === 'undefined') return { invitationToken: null, oauthOutcome: undefined }
@@ -24,7 +39,13 @@ function AuthRoute() {
     const oauthOutcome = url.searchParams.get('oauth') ?? undefined
     const initialMode = url.searchParams.get('mode') === 'register' ? 'register' : undefined
     const organizationSetupRequired = url.searchParams.get('onboarding') === 'organization'
-    return { invitationToken, initialMode, oauthOutcome, organizationSetupRequired }
+    return {
+      invitationToken,
+      initialMode,
+      oauthOutcome,
+      organizationSetupRequired,
+      oauthTarget: consumeOAuthClusterEntry(oauthOutcome),
+    }
   })
   const [trialCodeRequired, setTrialCodeRequired] = useState(true)
   const [registrationPolicyStatus, setRegistrationPolicyStatus] = useState<
@@ -60,6 +81,7 @@ function AuthRoute() {
       url.searchParams.delete('invitationToken')
       url.searchParams.delete('oauth')
       url.searchParams.delete('mode')
+      url.searchParams.delete('onboarding')
       if (url.hash.startsWith('#invite=')) url.hash = ''
       window.history.replaceState(
         window.history.state,
@@ -80,6 +102,7 @@ function AuthRoute() {
       trialCodeRequired={trialCodeRequired}
       onRetryRegistrationPolicy={() => void loadRegistrationPolicy()}
       onAuthenticated={async (user, organizationSetupRequired) => {
+        if (!active.current) return
         setIdentity(user, [])
         if (organizationSetupRequired) {
           await navigate({
@@ -91,7 +114,11 @@ function AuthRoute() {
             },
           })
         } else {
-          await navigate({ to: '/', search: { organizationId: undefined } })
+          const target =
+            search.organizationId && search.enterClusterId
+              ? search
+              : (authContext.oauthTarget ?? search)
+          await navigate({ to: '/', search: target })
         }
       }}
       onAcceptInvitation={cloudApi.acceptInvitation}
@@ -106,6 +133,8 @@ function AuthRoute() {
           undefined,
           deferOrganizationCreation,
         )
+        if (!active.current) return
+        rememberOAuthClusterEntry(search)
         window.location.assign(authorizationUrl)
       }}
       onRegisterWithEmail={cloudApi.registerWithEmailCode}
@@ -115,4 +144,7 @@ function AuthRoute() {
   )
 }
 
-export const Route = createFileRoute('/auth')({ component: AuthRoute })
+export const Route = createFileRoute('/auth')({
+  validateSearch: clusterEntrySearch,
+  component: AuthRoute,
+})

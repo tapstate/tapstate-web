@@ -226,6 +226,11 @@ Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
 let root: Root | undefined
 let container: HTMLDivElement | undefined
+const originalScrollIntoView = Object.getOwnPropertyDescriptor(
+  HTMLElement.prototype,
+  'scrollIntoView',
+)
+const originalElementScrollTo = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollTo')
 
 const initialDraft: PipelineDraft = {
   pipelineId: 'wizard-ui-test',
@@ -253,9 +258,32 @@ const initialDraft: PipelineDraft = {
 }
 
 beforeEach(() => {
+  vi.stubGlobal('scrollTo', vi.fn())
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+    configurable: true,
+    value: vi.fn(),
+  })
+  Object.defineProperty(HTMLElement.prototype, 'scrollTo', {
+    configurable: true,
+    value: vi.fn(),
+  })
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn((media: string) => ({
+      matches: false,
+      media,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(() => true),
+    })),
+  )
   wizardRendering.real = false
   getDeploymentProfile.mockReturnValue('on-prem')
   vi.clearAllMocks()
+  wizardRendering.real = false
   listSources.mockResolvedValue([{ id: 'mysql', connector: 'mysql' }])
   listConnectors.mockResolvedValue([
     {
@@ -301,11 +329,97 @@ afterEach(() => {
   act(() => root?.unmount())
   container?.remove()
   vi.unstubAllEnvs()
+  vi.unstubAllGlobals()
+  if (originalScrollIntoView)
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', originalScrollIntoView)
+  else Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView')
+  if (originalElementScrollTo)
+    Object.defineProperty(HTMLElement.prototype, 'scrollTo', originalElementScrollTo)
+  else Reflect.deleteProperty(HTMLElement.prototype, 'scrollTo')
   root = undefined
   container = undefined
 })
 
 describe('WizardBuilder publish flow', () => {
+  it.each([false, true])(
+    'blocks every recovery-required Wizard launch (guided=%s)',
+    async (guided) => {
+      wizardRendering.real = true
+      const draft: PipelineDraft = {
+        ...initialDraft,
+        wizard: {
+          ...initialDraft.wizard!,
+          output: {
+            kind: 'source',
+            config: {
+              sourceId: 'mysql',
+              table: 'codex_wizard_component_test',
+              writeMode: 'append',
+              ...(guided ? { onboardingGuide: 'order-360-sample' } : {}),
+            },
+          },
+        },
+      }
+      if (guided) {
+        listSources.mockResolvedValue([
+          { id: 'mysql', connector: 'mysql', metadata: { labels: { sample: 'true' } } },
+        ])
+        getSourceSchema.mockResolvedValue({
+          tables: ['bmsql_customer', 'bmsql_oorder', 'bmsql_order_line'].map((name) => ({
+            name,
+            primaryKey: ['id'],
+            fields: [{ name: 'id' }],
+          })),
+        })
+      }
+      container = document.createElement('div')
+      document.body.append(container)
+      root = createRoot(container)
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      await act(async () =>
+        root?.render(
+          <QueryClientProvider client={queryClient}>
+            <WizardBuilder
+              pipelineId={draft.pipelineId}
+              draft={draft}
+              etag='"1"'
+              runtimeStatus="STOPPED"
+              lifecycleStatus="RECOVERY_REQUIRED"
+              stopAction={<a href="/settings">Review full recovery</a>}
+            />
+          </QueryClientProvider>,
+        ),
+      )
+      await vi.waitFor(() =>
+        expect(container?.querySelector('[data-testid="wizard-builder-shell"]')).not.toBeNull(),
+      )
+      if (guided) {
+        for (let step = 0; step < 4; step++) {
+          const next = Array.from(container!.querySelectorAll('button')).find(
+            (button) => button.textContent?.trim() === 'Next',
+          )
+          expect(next).toBeDefined()
+          await act(async () => next!.click())
+        }
+        await act(async () => {
+          await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
+        })
+      }
+      const launch = Array.from(container!.querySelectorAll('button')).filter((button) =>
+        /^(Save & start|Launch)/.test(button.textContent?.trim() || ''),
+      )
+      expect(launch).toHaveLength(guided ? 1 : 0)
+      expect(launch.every((button) => button.disabled)).toBe(true)
+      await act(async () => launch.forEach((button) => button.click()))
+      expect(container!.querySelector('a[href="/settings"]')).not.toBeNull()
+      // Candidate-bearing live previews inspect the draft; launch validation and execution remain blocked.
+      expect(previewPipelineDraft.mock.calls.filter((call) => call[4] === undefined)).toHaveLength(
+        0,
+      )
+      expect(publishPipelineDraft).not.toHaveBeenCalled()
+      expect(runPipeline).not.toHaveBeenCalled()
+    },
+  )
   it('places Save before the primary Save & start action', async () => {
     container = document.createElement('div')
     document.body.append(container)

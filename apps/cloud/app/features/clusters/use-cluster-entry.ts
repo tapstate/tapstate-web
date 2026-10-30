@@ -5,6 +5,7 @@ import type { Cluster } from '../../service/cloud-api'
 
 import { CloudApiError, cloudApi } from '../../service/cloud-api'
 import { isAllowedCloudClusterOrigin } from './cluster-entry-host'
+import { canEnterCluster } from './cluster-entry-state'
 
 const activeEntryCancellations = new Set<() => void>()
 
@@ -27,11 +28,13 @@ export function useClusterEntry() {
     activeEntryCancellations.add(cancelCurrentEntry)
     return () => {
       activeEntryCancellations.delete(cancelCurrentEntry)
+      cancelCurrentEntry()
     }
   }, [cancelCurrentEntry])
 
   const enterCluster = async (cluster: Cluster, orgId: string) => {
-    if (enteringId || cluster.state !== 'READY') return
+    if (enteringId || !canEnterCluster(cluster.state)) return
+    for (const cancel of activeEntryCancellations) if (cancel !== cancelCurrentEntry) cancel()
     const currentRequestId = ++requestId.current
     setEnteringId(cluster.id)
     setEntryError(null)
@@ -39,8 +42,8 @@ export function useClusterEntry() {
     try {
       const latestCluster = await cloudApi.cluster(orgId, cluster.id)
       if (currentRequestId !== requestId.current) return
-      if (latestCluster.state !== 'READY') {
-        throw new CloudApiError('This Cluster is no longer ready to open.', 409)
+      if (!canEnterCluster(latestCluster.state)) {
+        throw new CloudApiError('This Cluster is no longer available to open.', 409)
       }
 
       const { baseUri, exchangeCode, success } = await cloudApi.resolveCluster(cluster.id, orgId)
@@ -80,7 +83,10 @@ export function useClusterEntry() {
     } catch (error) {
       if (currentRequestId !== requestId.current) return
       if (error instanceof CloudApiError && error.status === 401) {
-        await navigate({ to: '/auth' })
+        await navigate({
+          to: '/auth',
+          search: { organizationId: orgId, enterClusterId: cluster.id },
+        })
         return
       }
       setEntryError(
@@ -90,5 +96,5 @@ export function useClusterEntry() {
     }
   }
 
-  return { enterCluster, enteringId, entryError }
+  return { enterCluster, enteringId, entryError, cancelEntry: cancelCurrentEntry }
 }

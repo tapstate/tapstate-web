@@ -1,9 +1,16 @@
 {
-  "notFound": {
-    "message": "此頁面無法使用。",
-    "back": "返回總覽"
-  },
   "app": {
+    "loading": "正在載入 Cloud…",
+    "brand": "Tapstate Cloud",
+    "console": "Cloud 主控台",
+    "organization": "組織",
+    "organizationPlaceholder": "選擇一個組織",
+    "cluster": "叢集",
+    "primaryNavigation": "主導覽",
+    "preview": "預覽",
+    "unauthenticated": "未連線",
+    "signedOut": "未登入",
+    "toggleTheme": "切換主題",
     "help": {
       "openMenu": "說明",
       "documentation": "文件",
@@ -17,65 +24,6 @@
       "themeLight": "淺色",
       "themeDark": "深色",
       "logOut": "登出"
-    },
-    "brand": "Tapstate Cloud",
-    "console": "Cloud 主控台",
-    "organization": "組織",
-    "organizationPlaceholder": "選擇一個組織",
-    "cluster": "叢集",
-    "primaryNavigation": "主導覽",
-    "preview": "預覽",
-    "unauthenticated": "未連線",
-    "signedOut": "未登入",
-    "toggleTheme": "切換主題"
-  },
-  "common": {
-    "close": "關閉",
-    "searchClusters": "搜尋叢集",
-    "searchOrganizations": "搜尋組織",
-    "organization": "組織",
-    "organizationBadge": "組織"
-  },
-  "organizationList": {
-    "current": "目前組織：",
-    "currentBadge": "目前",
-    "count_one": "{{count}} 個組織",
-    "count_other": "{{count}} 個組織",
-    "clearSearch": "清除組織搜尋",
-    "name": "組織",
-    "status": "狀態",
-    "owner": "擁有者",
-    "active": "運作中",
-    "suspended": "已暫停",
-    "noOrganizations": "此帳戶目前沒有可用的組織。",
-    "noMatches": "沒有符合搜尋條件的組織。"
-  },
-  "clusterList": {
-    "description": "管理不同 AWS 區域中的 Tapstate 叢集。",
-    "provision": "建立叢集",
-    "provisionDescription": "建立第一個 Cloud 叢集。",
-    "total": "總計：",
-    "count_one": "{{count}} 個叢集",
-    "count_other": "{{count}} 個叢集",
-    "clearSearch": "清除叢集搜尋",
-    "name": "叢集名稱",
-    "status": "狀態",
-    "runtimeVersion": "執行階段版本",
-    "runtimeVersionNotReported": "未回報",
-    "region": "區域",
-    "plan": "方案",
-    "created": "建立時間",
-    "noClusters": "尚無叢集。",
-    "noMatches": "沒有符合搜尋條件的叢集。",
-    "states": {
-      "PROVISIONING_PENDING": "等待建立",
-      "PROVISIONING": "建立中",
-      "READY": "就緒",
-      "PROVISIONING_FAILED": "建立失敗",
-      "DEGRADED": "效能下降",
-      "DRAINING": "排空中",
-      "DRAINED": "已排空",
-      "TERMINATED": "已終止"
     }
   },
   "access": {
@@ -84,6 +32,13 @@
     "description": "登入 Cloud 帳戶後即可存取你的組織和叢集。",
     "status": "目前沒有有效工作階段",
     "signInAction": "登入"
+  },
+  "clusterEntry": {
+    "title": "正在進入你的 Cluster",
+    "continuing": "正在透過原 Cloud 登入接續…",
+    "unavailable": "目前無法進入這個 Cluster，請返回控制台查看狀態。",
+    "retry": "重試",
+    "back": "返回控制台"
   },
   "auth": {
     "headerNote": "Cloud 叢集存取",
@@ -207,58 +162,6 @@
       "reauthenticationRequired": "請重新登入後再連結身分。"
     }
   },
-  "organizations": {
-    "invitationsTitle": "組織邀請",
-    "invitationsDescription": "建立一次性邀請連結。收到連結的人可在過期前使用一次。",
-    "inviteEmailPlaceholder": "受邀者電子郵件（選填）",
-    "createInvite": "建立邀請",
-    "creatingInvite": "正在建立…",
-    "inviteCreatedNotice": "請立即複製此連結。邀請權杖只會顯示一次。",
-    "inviteLink": "邀請連結",
-    "copyInvite": "複製連結",
-    "copied": "已複製",
-    "invitedEmail": "電子郵件",
-    "inviteExpires": "到期時間",
-    "inviteStatus": "狀態",
-    "inviteActions": "操作",
-    "anyEmail": "不限電子郵件",
-    "loadingInvites": "正在載入邀請…",
-    "noInvites": "目前沒有邀請。",
-    "revokingInvite": "正在撤銷…",
-    "revokeInvite": "撤銷",
-    "inviteLoadError": "無法載入邀請。",
-    "inviteCreateError": "無法建立邀請。",
-    "inviteRevokeError": "無法撤銷邀請。",
-    "ownerOnly": "只有組織擁有者可以管理邀請。",
-    "copyError": "無法複製連結，請手動選取並複製。",
-    "status": {
-      "active": "有效",
-      "revoked": "已撤銷",
-      "consumed": "已使用",
-      "expired": "已過期"
-    }
-  },
-  "settings": {
-    "tabAccount": "個人帳戶",
-    "tabOrganization": "組織與團隊",
-    "linkedIdentitiesTitle": "登入方式",
-    "linkedIdentitiesDescription": "重新驗證 Cloud 帳戶後即可連結 Google 或 GitHub。電子郵件相同不會自動連結。",
-    "provider": {
-      "google": "Google",
-      "github": "GitHub"
-    },
-    "loadingIdentities": "正在載入已連結身分…",
-    "identityLinked": "已連結：{{email}}",
-    "identityNotLinked": "尚未連結",
-    "linkIdentity": "連結帳戶",
-    "linkingIdentity": "正在開啟身分服務…",
-    "reauthenticationPasswordLabel": "目前密碼（近期登入後可留空）",
-    "reauthenticationPasswordPlaceholder": "輸入目前密碼",
-    "reauthenticationHint": "沒有密碼的帳戶請在五分鐘內重新登入，然後開始連結。",
-    "identityLoadError": "無法載入已連結身分。",
-    "reauthenticationError": "連結身分前請先重新驗證 Cloud 帳戶。",
-    "identityLinkStartError": "無法開始連結此登入方式，請重試。"
-  },
   "onboarding": {
     "eyebrow": "首次設定",
     "title": "建立 Cloud 叢集",
@@ -353,11 +256,6 @@
     "cancelSubscriptionError": "無法確認訂閱取消結果。請先查看目前部署狀態，再修改設定。",
     "cancelStatusError": "無法重新整理目前部署狀態，尚未送出取消請求；請重試。",
     "footnote": "叢集會在背景建立。主控台將顯示 Cloud 傳回的實際狀態。"
-  },
-  "clusters": {
-    "egress": {
-      "sourceAllowlistHint": "位址已穩定 · 可用於資料來源存取白名單。重新開啟 Cluster Console 後，資料來源設定會顯示此位址。"
-    }
   },
   "billing": {
     "title": "方案與帳單",
@@ -460,6 +358,145 @@
       "back": "返回方案"
     }
   },
+  "sections": {
+    "overview": {
+      "title": "總覽",
+      "description": "查看 Cloud 組織和代管叢集摘要。"
+    },
+    "clusters": {
+      "title": "叢集",
+      "description": "查看叢集狀態並開啟獲准存取的 Cluster Console。"
+    },
+    "alerts": {
+      "title": "告警",
+      "description": "監視關鍵事件、告警策略與通知投遞。"
+    },
+    "organizations": {
+      "title": "組織",
+      "description": "管理組織成員和存取權限。"
+    },
+    "billing": {
+      "cancelWarning": "取消後將終止對應 Cluster 並清理其資源，此操作無法復原。",
+      "title": "方案與帳單",
+      "description": "查看目前組織的資源用量。"
+    },
+    "settings": {
+      "title": "設定",
+      "description": "管理組織和帳戶偏好設定。"
+    },
+    "notConnectedTitle": "Cloud 服務尚未接通",
+    "notConnectedDescription": "此頁面屬於受保護路由。完成登入和 API 接線後，才會顯示 Cloud 資料。"
+  },
+  "notFound": {
+    "message": "此頁面無法使用。",
+    "back": "返回總覽"
+  },
+  "common": {
+    "close": "關閉",
+    "searchClusters": "搜尋叢集",
+    "searchOrganizations": "搜尋組織",
+    "organization": "組織",
+    "organizationBadge": "組織"
+  },
+  "organizationList": {
+    "current": "目前組織：",
+    "currentBadge": "目前",
+    "count_one": "{{count}} 個組織",
+    "count_other": "{{count}} 個組織",
+    "clearSearch": "清除組織搜尋",
+    "name": "組織",
+    "status": "狀態",
+    "owner": "擁有者",
+    "active": "運作中",
+    "suspended": "已暫停",
+    "noOrganizations": "此帳戶目前沒有可用的組織。",
+    "noMatches": "沒有符合搜尋條件的組織。"
+  },
+  "clusterList": {
+    "description": "管理不同 AWS 區域中的 Tapstate 叢集。",
+    "provision": "建立叢集",
+    "provisionDescription": "建立第一個 Cloud 叢集。",
+    "total": "總計：",
+    "count_one": "{{count}} 個叢集",
+    "count_other": "{{count}} 個叢集",
+    "clearSearch": "清除叢集搜尋",
+    "name": "叢集名稱",
+    "status": "狀態",
+    "runtimeVersion": "執行階段版本",
+    "runtimeVersionNotReported": "未回報",
+    "region": "區域",
+    "plan": "方案",
+    "created": "建立時間",
+    "noClusters": "尚無叢集。",
+    "noMatches": "沒有符合搜尋條件的叢集。",
+    "states": {
+      "PROVISIONING_PENDING": "等待建立",
+      "PROVISIONING": "建立中",
+      "READY": "就緒",
+      "PROVISIONING_FAILED": "建立失敗",
+      "DEGRADED": "效能下降",
+      "DRAINING": "排空中",
+      "DRAINED": "已排空",
+      "TERMINATED": "已終止"
+    }
+  },
+  "organizations": {
+    "invitationsTitle": "組織邀請",
+    "invitationsDescription": "建立一次性邀請連結。收到連結的人可在過期前使用一次。",
+    "inviteEmailPlaceholder": "受邀者電子郵件（選填）",
+    "createInvite": "建立邀請",
+    "creatingInvite": "正在建立…",
+    "inviteCreatedNotice": "請立即複製此連結。邀請權杖只會顯示一次。",
+    "inviteLink": "邀請連結",
+    "copyInvite": "複製連結",
+    "copied": "已複製",
+    "invitedEmail": "電子郵件",
+    "inviteExpires": "到期時間",
+    "inviteStatus": "狀態",
+    "inviteActions": "操作",
+    "anyEmail": "不限電子郵件",
+    "loadingInvites": "正在載入邀請…",
+    "noInvites": "目前沒有邀請。",
+    "revokingInvite": "正在撤銷…",
+    "revokeInvite": "撤銷",
+    "inviteLoadError": "無法載入邀請。",
+    "inviteCreateError": "無法建立邀請。",
+    "inviteRevokeError": "無法撤銷邀請。",
+    "ownerOnly": "只有組織擁有者可以管理邀請。",
+    "copyError": "無法複製連結，請手動選取並複製。",
+    "status": {
+      "active": "有效",
+      "revoked": "已撤銷",
+      "consumed": "已使用",
+      "expired": "已過期"
+    }
+  },
+  "settings": {
+    "tabAccount": "個人帳戶",
+    "tabOrganization": "組織與團隊",
+    "linkedIdentitiesTitle": "登入方式",
+    "linkedIdentitiesDescription": "重新驗證 Cloud 帳戶後即可連結 Google 或 GitHub。電子郵件相同不會自動連結。",
+    "provider": {
+      "google": "Google",
+      "github": "GitHub"
+    },
+    "loadingIdentities": "正在載入已連結身分…",
+    "identityLinked": "已連結：{{email}}",
+    "identityNotLinked": "尚未連結",
+    "linkIdentity": "連結帳戶",
+    "linkingIdentity": "正在開啟身分服務…",
+    "reauthenticationPasswordLabel": "目前密碼（近期登入後可留空）",
+    "reauthenticationPasswordPlaceholder": "輸入目前密碼",
+    "reauthenticationHint": "沒有密碼的帳戶請在五分鐘內重新登入，然後開始連結。",
+    "identityLoadError": "無法載入已連結身分。",
+    "reauthenticationError": "連結身分前請先重新驗證 Cloud 帳戶。",
+    "identityLinkStartError": "無法開始連結此登入方式，請重試。"
+  },
+  "clusters": {
+    "egress": {
+      "sourceAllowlistHint": "位址已穩定 · 可用於資料來源存取白名單。重新開啟 Cluster Console 後，資料來源設定會顯示此位址。"
+    }
+  },
   "events": {
     "title": "告警",
     "subtitle": "{{organization}} 的關鍵事件與告警投遞。",
@@ -548,35 +585,6 @@
     "errors": {
       "generic": "請求無法完成。"
     }
-  },
-  "sections": {
-    "overview": {
-      "title": "總覽",
-      "description": "查看 Cloud 組織和代管叢集摘要。"
-    },
-    "clusters": {
-      "title": "叢集",
-      "description": "查看叢集狀態並開啟獲准存取的 Cluster Console。"
-    },
-    "alerts": {
-      "title": "告警",
-      "description": "監視關鍵事件、告警策略與通知投遞。"
-    },
-    "organizations": {
-      "title": "組織",
-      "description": "管理組織成員和存取權限。"
-    },
-    "billing": {
-      "cancelWarning": "取消後將終止對應 Cluster 並清理其資源，此操作無法復原。",
-      "title": "方案與帳單",
-      "description": "查看目前組織的資源用量。"
-    },
-    "settings": {
-      "title": "設定",
-      "description": "管理組織和帳戶偏好設定。"
-    },
-    "notConnectedTitle": "Cloud 服務尚未接通",
-    "notConnectedDescription": "此頁面屬於受保護路由。完成登入和 API 接線後，才會顯示 Cloud 資料。"
   },
   "support": {
     "nav": "支援工單",

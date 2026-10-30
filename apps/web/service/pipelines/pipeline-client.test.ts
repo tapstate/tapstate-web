@@ -231,6 +231,22 @@ describe('Pipeline client', () => {
     expect(catalogItem.hasArtifact).toBe(false)
   })
 
+  it('projects required recovery without inventing an observed execution state', async () => {
+    const item = {
+      ...catalogItem,
+      status: {
+        ...catalogItem.status,
+        state: 'UNAVAILABLE',
+        displayState: 'RECOVERY_REQUIRED',
+        desiredState: 'STOPPED',
+      },
+    }
+
+    await expect(listPipelines(fetcherFor(jsonResponse({ items: [item] })))).resolves.toEqual([
+      { ...item, status: { ...item.status, state: 'RECOVERY_REQUIRED' } },
+    ])
+  })
+
   it('uses revision ETags for the durable draft contract', async () => {
     const listRequests: Request[] = []
     const { schemaVersion: _schemaVersion, graph: _graph, wizard: _wizard, ...summary } = draft

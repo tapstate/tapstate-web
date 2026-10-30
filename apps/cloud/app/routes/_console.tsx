@@ -1,14 +1,35 @@
 import { createFileRoute, Outlet, redirect, useNavigate } from '@tanstack/react-router'
+import { Loader2 } from 'lucide-react'
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 
+import { AutomaticClusterEntry } from '../features/clusters/automatic-cluster-entry'
+import { clusterEntrySearch } from '../features/clusters/cluster-entry-intent'
 import { CloudApiError, cloudApi } from '../service/cloud-api'
 import { CloudConsoleShell } from '../shell/cloud-console-shell'
 import { useCloudAppState } from '../state/cloud-app-state'
 
+function ConsolePending() {
+  const { t } = useTranslation()
+  return (
+    <div className="mx-auto flex max-w-xl items-center gap-2 p-6" role="status">
+      <Loader2 aria-hidden="true" className="size-5 animate-spin motion-reduce:animate-none" />
+      {t('app.loading')}
+    </div>
+  )
+}
+
 function ConsoleLayout() {
   const navigate = useNavigate()
   const { session, organizations, clusters } = Route.useLoaderData()
-  const { activeOrganization, user, setClusters, setIdentity } = useCloudAppState()
+  const { enterClusterId, organizationId } = Route.useSearch()
+  const {
+    activeOrganization,
+    user,
+    clusters: currentClusters,
+    setClusters,
+    setIdentity,
+  } = useCloudAppState()
 
   useEffect(() => {
     setIdentity(session, organizations, clusters)
@@ -26,7 +47,7 @@ function ConsoleLayout() {
         })
         .catch((error) => {
           if (active && error instanceof CloudApiError && error.status === 401) {
-            void navigate({ to: '/auth' })
+            void navigate({ to: '/auth', search: { organizationId, enterClusterId } })
           }
         })
     }, 10000)
@@ -34,7 +55,7 @@ function ConsoleLayout() {
       active = false
       window.clearInterval(timer)
     }
-  }, [activeOrganization?.id, navigate, setClusters])
+  }, [activeOrganization?.id, organizationId, enterClusterId, navigate, setClusters])
 
   return (
     <CloudConsoleShell
@@ -43,20 +64,34 @@ function ConsoleLayout() {
       organizations={organizations}
       clusters={clusters}
     >
-      <Outlet />
+      {enterClusterId && organizationId ? (
+        <AutomaticClusterEntry
+          key={`${organizationId}:${enterClusterId}`}
+          organizationId={organizationId}
+          cluster={(activeOrganization?.id === organizationId ? currentClusters : clusters).find(
+            (cluster) => cluster.id === enterClusterId && cluster.orgId === organizationId,
+          )}
+          onBack={() => void navigate({ to: '/', search: { organizationId }, replace: true })}
+        />
+      ) : (
+        <Outlet />
+      )}
     </CloudConsoleShell>
   )
 }
 
 export const Route = createFileRoute('/_console')({
-  validateSearch: (search: Record<string, unknown>) => ({
-    organizationId: typeof search.organizationId === 'string' ? search.organizationId : undefined,
+  validateSearch: clusterEntrySearch,
+  loaderDeps: ({ search }) => ({
+    organizationId: search.organizationId,
+    enterClusterId: search.enterClusterId,
   }),
-  loaderDeps: ({ search }) => ({ organizationId: search.organizationId }),
   loader: async ({ deps }) => {
     try {
       const [session, organizations] = await Promise.all([cloudApi.me(), cloudApi.organizations()])
       if (organizations.length === 0) {
+        if (deps.enterClusterId)
+          throw new CloudApiError('The requested Cluster is unavailable to this account.', 403)
         throw redirect({
           to: '/onboarding',
           search: {
@@ -67,6 +102,8 @@ export const Route = createFileRoute('/_console')({
         })
       }
       const selectedOrganization = organizations.find((item) => item.id === deps.organizationId)
+      if (deps.enterClusterId && !selectedOrganization)
+        throw new CloudApiError('The requested Cluster is unavailable to this account.', 403)
       const orderedOrganizations = selectedOrganization
         ? [
             selectedOrganization,
@@ -76,9 +113,13 @@ export const Route = createFileRoute('/_console')({
       const clusters = await cloudApi.activeClusters(orderedOrganizations[0].id)
       return { session, organizations: orderedOrganizations, clusters }
     } catch (error) {
-      if (error instanceof CloudApiError && error.status === 401) throw redirect({ to: '/auth' })
+      if (error instanceof CloudApiError && error.status === 401)
+        throw redirect({ to: '/auth', search: deps })
       throw error
     }
   },
   component: ConsoleLayout,
+  pendingComponent: ConsolePending,
+  pendingMs: 0,
+  pendingMinMs: 0,
 })

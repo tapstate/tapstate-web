@@ -1,9 +1,16 @@
 {
-  "notFound": {
-    "message": "This page is not available.",
-    "back": "Back to Overview"
-  },
   "app": {
+    "loading": "Loading Cloud…",
+    "brand": "Tapstate Cloud",
+    "console": "Cloud Console",
+    "organization": "ORGANIZATION",
+    "organizationPlaceholder": "Select an organization",
+    "cluster": "CLUSTER",
+    "primaryNavigation": "Primary navigation",
+    "preview": "Preview",
+    "unauthenticated": "Not connected",
+    "signedOut": "Signed out",
+    "toggleTheme": "Toggle theme",
     "help": {
       "openMenu": "Help",
       "documentation": "Documentation",
@@ -17,65 +24,6 @@
       "themeLight": "Light",
       "themeDark": "Dark",
       "logOut": "Log out"
-    },
-    "brand": "Tapstate Cloud",
-    "console": "Cloud Console",
-    "organization": "ORGANIZATION",
-    "organizationPlaceholder": "Select an organization",
-    "cluster": "CLUSTER",
-    "primaryNavigation": "Primary navigation",
-    "preview": "Preview",
-    "unauthenticated": "Not connected",
-    "signedOut": "Signed out",
-    "toggleTheme": "Toggle theme"
-  },
-  "common": {
-    "close": "Close",
-    "searchClusters": "Search clusters",
-    "searchOrganizations": "Search organizations",
-    "organization": "Organization",
-    "organizationBadge": "Org"
-  },
-  "organizationList": {
-    "current": "Current organization:",
-    "currentBadge": "Current",
-    "count_one": "{{count}} organization",
-    "count_other": "{{count}} organizations",
-    "clearSearch": "Clear organization search",
-    "name": "Organization",
-    "status": "Status",
-    "owner": "Owner",
-    "active": "Active",
-    "suspended": "Suspended",
-    "noOrganizations": "No organizations are available for this account.",
-    "noMatches": "No organizations match your search."
-  },
-  "clusterList": {
-    "description": "Manage Tapstate clusters across AWS regions.",
-    "provision": "Provision Cluster",
-    "provisionDescription": "Create your first Cloud cluster.",
-    "total": "Total:",
-    "count_one": "{{count}} cluster",
-    "count_other": "{{count}} clusters",
-    "clearSearch": "Clear cluster search",
-    "name": "Cluster name",
-    "status": "Status",
-    "runtimeVersion": "Runtime version",
-    "runtimeVersionNotReported": "Not reported",
-    "region": "Region",
-    "plan": "Plan",
-    "created": "Created",
-    "noClusters": "No clusters yet.",
-    "noMatches": "No clusters match your search.",
-    "states": {
-      "PROVISIONING_PENDING": "Provisioning pending",
-      "PROVISIONING": "Provisioning",
-      "READY": "Ready",
-      "PROVISIONING_FAILED": "Provisioning failed",
-      "DEGRADED": "Degraded",
-      "DRAINING": "Draining",
-      "DRAINED": "Drained",
-      "TERMINATED": "Terminated"
     }
   },
   "access": {
@@ -84,6 +32,13 @@
     "description": "Sign in with your Cloud account to continue to your organizations and clusters.",
     "status": "No active session",
     "signInAction": "Sign in"
+  },
+  "clusterEntry": {
+    "title": "Opening your Cluster",
+    "continuing": "Continuing through Cloud sign-in…",
+    "unavailable": "This Cluster is not available to open. Return to the console to check its status.",
+    "retry": "Try again",
+    "back": "Back to console"
   },
   "auth": {
     "headerNote": "Cloud cluster access",
@@ -207,58 +162,6 @@
       "reauthenticationRequired": "Sign in again before linking an identity."
     }
   },
-  "organizations": {
-    "invitationsTitle": "Organization invitations",
-    "invitationsDescription": "Create a single-use link for a new member. Anyone with the link can use it once before it expires.",
-    "inviteEmailPlaceholder": "Invitee email (optional)",
-    "createInvite": "Create invitation",
-    "creatingInvite": "Creating…",
-    "inviteCreatedNotice": "Copy this link now. The invitation token is shown only once.",
-    "inviteLink": "Invitation link",
-    "copyInvite": "Copy link",
-    "copied": "Copied",
-    "invitedEmail": "Email",
-    "inviteExpires": "Expires",
-    "inviteStatus": "Status",
-    "inviteActions": "Actions",
-    "anyEmail": "Any email",
-    "loadingInvites": "Loading invitations…",
-    "noInvites": "No invitations yet.",
-    "revokingInvite": "Revoking…",
-    "revokeInvite": "Revoke",
-    "inviteLoadError": "Invitations could not be loaded.",
-    "inviteCreateError": "The invitation could not be created.",
-    "inviteRevokeError": "The invitation could not be revoked.",
-    "ownerOnly": "Only the organization owner can manage invitations.",
-    "copyError": "The link could not be copied. Select and copy it manually.",
-    "status": {
-      "active": "Active",
-      "revoked": "Revoked",
-      "consumed": "Used",
-      "expired": "Expired"
-    }
-  },
-  "settings": {
-    "tabAccount": "Account",
-    "tabOrganization": "Organization & team",
-    "linkedIdentitiesTitle": "Sign-in methods",
-    "linkedIdentitiesDescription": "Link Google or GitHub after reauthenticating your Cloud account. Matching email addresses are never linked automatically.",
-    "provider": {
-      "google": "Google",
-      "github": "GitHub"
-    },
-    "loadingIdentities": "Loading linked identities…",
-    "identityLinked": "Linked as {{email}}",
-    "identityNotLinked": "Not linked",
-    "linkIdentity": "Link account",
-    "linkingIdentity": "Opening provider…",
-    "reauthenticationPasswordLabel": "Current password (optional after recent sign-in)",
-    "reauthenticationPasswordPlaceholder": "Enter your current password",
-    "reauthenticationHint": "For accounts without a password, sign in again within five minutes, then start linking.",
-    "identityLoadError": "Linked identities could not be loaded.",
-    "reauthenticationError": "Reauthenticate with your Cloud account before linking.",
-    "identityLinkStartError": "Could not start linking this sign-in method. Try again."
-  },
   "onboarding": {
     "eyebrow": "FIRST-TIME SETUP",
     "title": "Create your Cloud cluster",
@@ -353,11 +256,6 @@
     "cancelSubscriptionError": "Cancellation could not be confirmed. Review the deployment status before changing settings.",
     "cancelStatusError": "Could not refresh the current deployment status. The cancellation request was not sent; try again.",
     "footnote": "Cluster provisioning runs in the background. The console will show the status returned by Cloud."
-  },
-  "clusters": {
-    "egress": {
-      "sourceAllowlistHint": "Stable · use this IP in source allowlists. Reopen the Cluster console to refresh source setup."
-    }
   },
   "billing": {
     "title": "Plans & billing",
@@ -460,6 +358,145 @@
       "back": "Back to plans"
     }
   },
+  "sections": {
+    "overview": {
+      "title": "Overview",
+      "description": "A summary of your Cloud organization and managed clusters."
+    },
+    "clusters": {
+      "title": "Clusters",
+      "description": "Review cluster status and open an authorized Cluster Console."
+    },
+    "alerts": {
+      "title": "Alerts",
+      "description": "Monitor platform events, alert policies, and notification deliveries."
+    },
+    "organizations": {
+      "title": "Organization",
+      "description": "Manage organization membership and access."
+    },
+    "billing": {
+      "cancelWarning": "This will cancel the subscription, terminate its cluster, and remove its resources. This cannot be undone.",
+      "title": "Plans & billing",
+      "description": "Review usage for the current organization."
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "Manage organization and account preferences."
+    },
+    "notConnectedTitle": "Cloud services are not connected",
+    "notConnectedDescription": "This screen is a protected route. Cloud data will appear after sign-in and API integration are available."
+  },
+  "notFound": {
+    "message": "This page is not available.",
+    "back": "Back to Overview"
+  },
+  "common": {
+    "close": "Close",
+    "searchClusters": "Search clusters",
+    "searchOrganizations": "Search organizations",
+    "organization": "Organization",
+    "organizationBadge": "Org"
+  },
+  "organizationList": {
+    "current": "Current organization:",
+    "currentBadge": "Current",
+    "count_one": "{{count}} organization",
+    "count_other": "{{count}} organizations",
+    "clearSearch": "Clear organization search",
+    "name": "Organization",
+    "status": "Status",
+    "owner": "Owner",
+    "active": "Active",
+    "suspended": "Suspended",
+    "noOrganizations": "No organizations are available for this account.",
+    "noMatches": "No organizations match your search."
+  },
+  "clusterList": {
+    "description": "Manage Tapstate clusters across AWS regions.",
+    "provision": "Provision Cluster",
+    "provisionDescription": "Create your first Cloud cluster.",
+    "total": "Total:",
+    "count_one": "{{count}} cluster",
+    "count_other": "{{count}} clusters",
+    "clearSearch": "Clear cluster search",
+    "name": "Cluster name",
+    "status": "Status",
+    "runtimeVersion": "Runtime version",
+    "runtimeVersionNotReported": "Not reported",
+    "region": "Region",
+    "plan": "Plan",
+    "created": "Created",
+    "noClusters": "No clusters yet.",
+    "noMatches": "No clusters match your search.",
+    "states": {
+      "PROVISIONING_PENDING": "Provisioning pending",
+      "PROVISIONING": "Provisioning",
+      "READY": "Ready",
+      "PROVISIONING_FAILED": "Provisioning failed",
+      "DEGRADED": "Degraded",
+      "DRAINING": "Draining",
+      "DRAINED": "Drained",
+      "TERMINATED": "Terminated"
+    }
+  },
+  "organizations": {
+    "invitationsTitle": "Organization invitations",
+    "invitationsDescription": "Create a single-use link for a new member. Anyone with the link can use it once before it expires.",
+    "inviteEmailPlaceholder": "Invitee email (optional)",
+    "createInvite": "Create invitation",
+    "creatingInvite": "Creating…",
+    "inviteCreatedNotice": "Copy this link now. The invitation token is shown only once.",
+    "inviteLink": "Invitation link",
+    "copyInvite": "Copy link",
+    "copied": "Copied",
+    "invitedEmail": "Email",
+    "inviteExpires": "Expires",
+    "inviteStatus": "Status",
+    "inviteActions": "Actions",
+    "anyEmail": "Any email",
+    "loadingInvites": "Loading invitations…",
+    "noInvites": "No invitations yet.",
+    "revokingInvite": "Revoking…",
+    "revokeInvite": "Revoke",
+    "inviteLoadError": "Invitations could not be loaded.",
+    "inviteCreateError": "The invitation could not be created.",
+    "inviteRevokeError": "The invitation could not be revoked.",
+    "ownerOnly": "Only the organization owner can manage invitations.",
+    "copyError": "The link could not be copied. Select and copy it manually.",
+    "status": {
+      "active": "Active",
+      "revoked": "Revoked",
+      "consumed": "Used",
+      "expired": "Expired"
+    }
+  },
+  "settings": {
+    "tabAccount": "Account",
+    "tabOrganization": "Organization & team",
+    "linkedIdentitiesTitle": "Sign-in methods",
+    "linkedIdentitiesDescription": "Link Google or GitHub after reauthenticating your Cloud account. Matching email addresses are never linked automatically.",
+    "provider": {
+      "google": "Google",
+      "github": "GitHub"
+    },
+    "loadingIdentities": "Loading linked identities…",
+    "identityLinked": "Linked as {{email}}",
+    "identityNotLinked": "Not linked",
+    "linkIdentity": "Link account",
+    "linkingIdentity": "Opening provider…",
+    "reauthenticationPasswordLabel": "Current password (optional after recent sign-in)",
+    "reauthenticationPasswordPlaceholder": "Enter your current password",
+    "reauthenticationHint": "For accounts without a password, sign in again within five minutes, then start linking.",
+    "identityLoadError": "Linked identities could not be loaded.",
+    "reauthenticationError": "Reauthenticate with your Cloud account before linking.",
+    "identityLinkStartError": "Could not start linking this sign-in method. Try again."
+  },
+  "clusters": {
+    "egress": {
+      "sourceAllowlistHint": "Stable · use this IP in source allowlists. Reopen the Cluster console to refresh source setup."
+    }
+  },
   "events": {
     "title": "Alerts",
     "subtitle": "Key events and alert delivery for {{organization}}.",
@@ -548,35 +585,6 @@
     "errors": {
       "generic": "The request could not be completed."
     }
-  },
-  "sections": {
-    "overview": {
-      "title": "Overview",
-      "description": "A summary of your Cloud organization and managed clusters."
-    },
-    "clusters": {
-      "title": "Clusters",
-      "description": "Review cluster status and open an authorized Cluster Console."
-    },
-    "alerts": {
-      "title": "Alerts",
-      "description": "Monitor platform events, alert policies, and notification deliveries."
-    },
-    "organizations": {
-      "title": "Organization",
-      "description": "Manage organization membership and access."
-    },
-    "billing": {
-      "cancelWarning": "This will cancel the subscription, terminate its cluster, and remove its resources. This cannot be undone.",
-      "title": "Plans & billing",
-      "description": "Review usage for the current organization."
-    },
-    "settings": {
-      "title": "Settings",
-      "description": "Manage organization and account preferences."
-    },
-    "notConnectedTitle": "Cloud services are not connected",
-    "notConnectedDescription": "This screen is a protected route. Cloud data will appear after sign-in and API integration are available."
   },
   "support": {
     "nav": "Support",

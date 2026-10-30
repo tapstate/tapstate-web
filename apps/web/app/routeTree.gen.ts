@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as PipelineEditorRouteImport } from './routes/_pipeline-editor'
+import { Route as InstallationRouteImport } from './routes/installation'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SignedOutRouteImport } from './routes/signed-out'
 import { Route as UiKitRouteImport } from './routes/ui-kit'
@@ -46,6 +47,11 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
 } as any)
 const PipelineEditorRoute = PipelineEditorRouteImport.update({
   id: '/_pipeline-editor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstallationRoute = InstallationRouteImport.update({
+  id: '/installation',
+  path: '/installation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -184,6 +190,7 @@ const PipelineEditorPipelinesPipelineIdEditMonitoringRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/installation': typeof InstallationRoute
   '/login': typeof LoginRoute
   '/signed-out': typeof SignedOutRoute
   '/ui-kit': typeof UiKitRoute
@@ -209,6 +216,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/installation': typeof InstallationRoute
   '/login': typeof LoginRoute
   '/signed-out': typeof SignedOutRoute
   '/ui-kit': typeof UiKitRoute
@@ -232,6 +240,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_pipeline-editor': typeof PipelineEditorRouteWithChildren
+  '/installation': typeof InstallationRoute
   '/login': typeof LoginRoute
   '/signed-out': typeof SignedOutRoute
   '/ui-kit': typeof UiKitRoute
@@ -259,6 +268,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/installation'
     | '/login'
     | '/signed-out'
     | '/ui-kit'
@@ -284,6 +294,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/installation'
     | '/login'
     | '/signed-out'
     | '/ui-kit'
@@ -306,6 +317,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/_pipeline-editor'
+    | '/installation'
     | '/login'
     | '/signed-out'
     | '/ui-kit'
@@ -334,6 +346,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   PipelineEditorRoute: typeof PipelineEditorRouteWithChildren
+  InstallationRoute: typeof InstallationRoute
   LoginRoute: typeof LoginRoute
   SignedOutRoute: typeof SignedOutRoute
   UiKitRoute: typeof UiKitRoute
@@ -360,6 +373,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof PipelineEditorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/installation': {
+      id: '/installation'
+      path: '/installation'
+      fullPath: '/installation'
+      preLoaderRoute: typeof InstallationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -643,6 +663,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   PipelineEditorRoute: PipelineEditorRouteWithChildren,
+  InstallationRoute: InstallationRoute,
   LoginRoute: LoginRoute,
   SignedOutRoute: SignedOutRoute,
   UiKitRoute: UiKitRoute,

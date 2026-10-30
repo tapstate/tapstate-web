@@ -1,9 +1,16 @@
 {
-  "notFound": {
-    "message": "此页面不可用。",
-    "back": "返回概览"
-  },
   "app": {
+    "loading": "正在加载 Cloud…",
+    "brand": "Tapstate Cloud",
+    "console": "Cloud 控制台",
+    "organization": "组织",
+    "organizationPlaceholder": "选择一个组织",
+    "cluster": "集群",
+    "primaryNavigation": "主导航",
+    "preview": "预览",
+    "unauthenticated": "未连接",
+    "signedOut": "未登录",
+    "toggleTheme": "切换主题",
     "help": {
       "openMenu": "帮助",
       "documentation": "文档",
@@ -17,65 +24,6 @@
       "themeLight": "浅色",
       "themeDark": "深色",
       "logOut": "退出登录"
-    },
-    "brand": "Tapstate Cloud",
-    "console": "Cloud 控制台",
-    "organization": "组织",
-    "organizationPlaceholder": "选择一个组织",
-    "cluster": "集群",
-    "primaryNavigation": "主导航",
-    "preview": "预览",
-    "unauthenticated": "未连接",
-    "signedOut": "未登录",
-    "toggleTheme": "切换主题"
-  },
-  "common": {
-    "close": "关闭",
-    "searchClusters": "搜索集群",
-    "searchOrganizations": "搜索组织",
-    "organization": "组织",
-    "organizationBadge": "组织"
-  },
-  "organizationList": {
-    "current": "当前组织：",
-    "currentBadge": "当前",
-    "count_one": "{{count}} 个组织",
-    "count_other": "{{count}} 个组织",
-    "clearSearch": "清除组织搜索",
-    "name": "组织",
-    "status": "状态",
-    "owner": "所有者",
-    "active": "活跃",
-    "suspended": "已暂停",
-    "noOrganizations": "此账户暂无可用组织。",
-    "noMatches": "没有匹配搜索条件的组织。"
-  },
-  "clusterList": {
-    "description": "管理不同 AWS 区域中的 Tapstate 集群。",
-    "provision": "创建集群",
-    "provisionDescription": "创建第一个 Cloud 集群。",
-    "total": "总计：",
-    "count_one": "{{count}} 个集群",
-    "count_other": "{{count}} 个集群",
-    "clearSearch": "清除集群搜索",
-    "name": "集群名称",
-    "status": "状态",
-    "runtimeVersion": "运行版本",
-    "runtimeVersionNotReported": "未上报",
-    "region": "区域",
-    "plan": "套餐",
-    "created": "创建时间",
-    "noClusters": "还没有集群。",
-    "noMatches": "没有匹配搜索条件的集群。",
-    "states": {
-      "PROVISIONING_PENDING": "等待创建",
-      "PROVISIONING": "创建中",
-      "READY": "就绪",
-      "PROVISIONING_FAILED": "创建失败",
-      "DEGRADED": "性能下降",
-      "DRAINING": "排空中",
-      "DRAINED": "已排空",
-      "TERMINATED": "已终止"
     }
   },
   "access": {
@@ -84,6 +32,13 @@
     "description": "登录 Cloud 账户后即可访问你的组织和集群。",
     "status": "当前没有有效会话",
     "signInAction": "登录"
+  },
+  "clusterEntry": {
+    "title": "正在进入你的 Cluster",
+    "continuing": "正在通过原 Cloud 登录接续…",
+    "unavailable": "当前无法进入这个 Cluster，请返回控制台查看状态。",
+    "retry": "重试",
+    "back": "返回控制台"
   },
   "auth": {
     "headerNote": "Cloud 集群访问",
@@ -207,58 +162,6 @@
       "reauthenticationRequired": "请重新登录后再关联身份。"
     }
   },
-  "organizations": {
-    "invitationsTitle": "组织邀请",
-    "invitationsDescription": "创建一次性邀请链接。收到链接的人可以在过期前使用一次。",
-    "inviteEmailPlaceholder": "受邀人邮箱（可选）",
-    "createInvite": "创建邀请",
-    "creatingInvite": "正在创建…",
-    "inviteCreatedNotice": "请立即复制此链接。邀请令牌只显示一次。",
-    "inviteLink": "邀请链接",
-    "copyInvite": "复制链接",
-    "copied": "已复制",
-    "invitedEmail": "邮箱",
-    "inviteExpires": "过期时间",
-    "inviteStatus": "状态",
-    "inviteActions": "操作",
-    "anyEmail": "不限邮箱",
-    "loadingInvites": "正在加载邀请…",
-    "noInvites": "暂无邀请。",
-    "revokingInvite": "正在撤销…",
-    "revokeInvite": "撤销",
-    "inviteLoadError": "无法加载邀请。",
-    "inviteCreateError": "无法创建邀请。",
-    "inviteRevokeError": "无法撤销邀请。",
-    "ownerOnly": "只有组织所有者可以管理邀请。",
-    "copyError": "无法复制链接，请手动选择并复制。",
-    "status": {
-      "active": "有效",
-      "revoked": "已撤销",
-      "consumed": "已使用",
-      "expired": "已过期"
-    }
-  },
-  "settings": {
-    "tabAccount": "个人账户",
-    "tabOrganization": "组织与团队",
-    "linkedIdentitiesTitle": "登录方式",
-    "linkedIdentitiesDescription": "重新验证 Cloud 账户后即可关联 Google 或 GitHub。邮箱相同不会触发自动关联。",
-    "provider": {
-      "google": "Google",
-      "github": "GitHub"
-    },
-    "loadingIdentities": "正在加载已关联身份…",
-    "identityLinked": "已关联：{{email}}",
-    "identityNotLinked": "尚未关联",
-    "linkIdentity": "关联账户",
-    "linkingIdentity": "正在打开身份服务…",
-    "reauthenticationPasswordLabel": "当前密码（近期登录后可留空）",
-    "reauthenticationPasswordPlaceholder": "输入当前密码",
-    "reauthenticationHint": "没有密码的账户请在五分钟内重新登录，然后开始关联。",
-    "identityLoadError": "无法加载已关联身份。",
-    "reauthenticationError": "关联身份前请先重新验证 Cloud 账户。",
-    "identityLinkStartError": "无法开始关联此登录方式，请重试。"
-  },
   "onboarding": {
     "eyebrow": "首次设置",
     "title": "创建 Cloud 集群",
@@ -353,11 +256,6 @@
     "cancelSubscriptionError": "无法确认订阅取消结果。请先查看当前部署状态，再修改设置。",
     "cancelStatusError": "无法刷新当前部署状态，尚未发送取消请求；请重试。",
     "footnote": "集群会在后台创建。控制台将显示 Cloud 返回的实际状态。"
-  },
-  "clusters": {
-    "egress": {
-      "sourceAllowlistHint": "地址已稳定 · 可用于数据源访问白名单。重新打开 Cluster Console 后，数据源设置会显示此地址。"
-    }
   },
   "billing": {
     "title": "套餐与账单",
@@ -460,6 +358,145 @@
       "back": "返回套餐"
     }
   },
+  "sections": {
+    "overview": {
+      "title": "概览",
+      "description": "查看 Cloud 组织和托管集群摘要。"
+    },
+    "clusters": {
+      "title": "集群",
+      "description": "查看集群状态并打开获准访问的 Cluster Console。"
+    },
+    "alerts": {
+      "title": "告警",
+      "description": "监控关键事件、告警策略与通知投递。"
+    },
+    "organizations": {
+      "title": "组织",
+      "description": "管理组织成员和访问权限。"
+    },
+    "billing": {
+      "cancelWarning": "取消后将终止对应 Cluster 并清理其资源，此操作无法撤销。",
+      "title": "套餐与账单",
+      "description": "查看当前组织的资源用量。"
+    },
+    "settings": {
+      "title": "设置",
+      "description": "管理组织和账户偏好。"
+    },
+    "notConnectedTitle": "Cloud 服务尚未接通",
+    "notConnectedDescription": "此页面属于受保护路由。完成登录和 API 接入后，才会显示 Cloud 数据。"
+  },
+  "notFound": {
+    "message": "此页面不可用。",
+    "back": "返回概览"
+  },
+  "common": {
+    "close": "关闭",
+    "searchClusters": "搜索集群",
+    "searchOrganizations": "搜索组织",
+    "organization": "组织",
+    "organizationBadge": "组织"
+  },
+  "organizationList": {
+    "current": "当前组织：",
+    "currentBadge": "当前",
+    "count_one": "{{count}} 个组织",
+    "count_other": "{{count}} 个组织",
+    "clearSearch": "清除组织搜索",
+    "name": "组织",
+    "status": "状态",
+    "owner": "所有者",
+    "active": "活跃",
+    "suspended": "已暂停",
+    "noOrganizations": "此账户暂无可用组织。",
+    "noMatches": "没有匹配搜索条件的组织。"
+  },
+  "clusterList": {
+    "description": "管理不同 AWS 区域中的 Tapstate 集群。",
+    "provision": "创建集群",
+    "provisionDescription": "创建第一个 Cloud 集群。",
+    "total": "总计：",
+    "count_one": "{{count}} 个集群",
+    "count_other": "{{count}} 个集群",
+    "clearSearch": "清除集群搜索",
+    "name": "集群名称",
+    "status": "状态",
+    "runtimeVersion": "运行版本",
+    "runtimeVersionNotReported": "未上报",
+    "region": "区域",
+    "plan": "套餐",
+    "created": "创建时间",
+    "noClusters": "还没有集群。",
+    "noMatches": "没有匹配搜索条件的集群。",
+    "states": {
+      "PROVISIONING_PENDING": "等待创建",
+      "PROVISIONING": "创建中",
+      "READY": "就绪",
+      "PROVISIONING_FAILED": "创建失败",
+      "DEGRADED": "性能下降",
+      "DRAINING": "排空中",
+      "DRAINED": "已排空",
+      "TERMINATED": "已终止"
+    }
+  },
+  "organizations": {
+    "invitationsTitle": "组织邀请",
+    "invitationsDescription": "创建一次性邀请链接。收到链接的人可以在过期前使用一次。",
+    "inviteEmailPlaceholder": "受邀人邮箱（可选）",
+    "createInvite": "创建邀请",
+    "creatingInvite": "正在创建…",
+    "inviteCreatedNotice": "请立即复制此链接。邀请令牌只显示一次。",
+    "inviteLink": "邀请链接",
+    "copyInvite": "复制链接",
+    "copied": "已复制",
+    "invitedEmail": "邮箱",
+    "inviteExpires": "过期时间",
+    "inviteStatus": "状态",
+    "inviteActions": "操作",
+    "anyEmail": "不限邮箱",
+    "loadingInvites": "正在加载邀请…",
+    "noInvites": "暂无邀请。",
+    "revokingInvite": "正在撤销…",
+    "revokeInvite": "撤销",
+    "inviteLoadError": "无法加载邀请。",
+    "inviteCreateError": "无法创建邀请。",
+    "inviteRevokeError": "无法撤销邀请。",
+    "ownerOnly": "只有组织所有者可以管理邀请。",
+    "copyError": "无法复制链接，请手动选择并复制。",
+    "status": {
+      "active": "有效",
+      "revoked": "已撤销",
+      "consumed": "已使用",
+      "expired": "已过期"
+    }
+  },
+  "settings": {
+    "tabAccount": "个人账户",
+    "tabOrganization": "组织与团队",
+    "linkedIdentitiesTitle": "登录方式",
+    "linkedIdentitiesDescription": "重新验证 Cloud 账户后即可关联 Google 或 GitHub。邮箱相同不会触发自动关联。",
+    "provider": {
+      "google": "Google",
+      "github": "GitHub"
+    },
+    "loadingIdentities": "正在加载已关联身份…",
+    "identityLinked": "已关联：{{email}}",
+    "identityNotLinked": "尚未关联",
+    "linkIdentity": "关联账户",
+    "linkingIdentity": "正在打开身份服务…",
+    "reauthenticationPasswordLabel": "当前密码（近期登录后可留空）",
+    "reauthenticationPasswordPlaceholder": "输入当前密码",
+    "reauthenticationHint": "没有密码的账户请在五分钟内重新登录，然后开始关联。",
+    "identityLoadError": "无法加载已关联身份。",
+    "reauthenticationError": "关联身份前请先重新验证 Cloud 账户。",
+    "identityLinkStartError": "无法开始关联此登录方式，请重试。"
+  },
+  "clusters": {
+    "egress": {
+      "sourceAllowlistHint": "地址已稳定 · 可用于数据源访问白名单。重新打开 Cluster Console 后，数据源设置会显示此地址。"
+    }
+  },
   "events": {
     "title": "告警",
     "subtitle": "{{organization}} 的关键事件与告警投递。",
@@ -548,35 +585,6 @@
     "errors": {
       "generic": "请求无法完成。"
     }
-  },
-  "sections": {
-    "overview": {
-      "title": "概览",
-      "description": "查看 Cloud 组织和托管集群摘要。"
-    },
-    "clusters": {
-      "title": "集群",
-      "description": "查看集群状态并打开获准访问的 Cluster Console。"
-    },
-    "alerts": {
-      "title": "告警",
-      "description": "监控关键事件、告警策略与通知投递。"
-    },
-    "organizations": {
-      "title": "组织",
-      "description": "管理组织成员和访问权限。"
-    },
-    "billing": {
-      "cancelWarning": "取消后将终止对应 Cluster 并清理其资源，此操作无法撤销。",
-      "title": "套餐与账单",
-      "description": "查看当前组织的资源用量。"
-    },
-    "settings": {
-      "title": "设置",
-      "description": "管理组织和账户偏好。"
-    },
-    "notConnectedTitle": "Cloud 服务尚未接通",
-    "notConnectedDescription": "此页面属于受保护路由。完成登录和 API 接入后，才会显示 Cloud 数据。"
   },
   "support": {
     "nav": "支持工单",
