@@ -92,6 +92,27 @@ afterEach(async () => {
 })
 
 describe('Cloud invitation authentication', () => {
+  it('offers sign-in for a registered email and preserves the entered address', async () => {
+    await renderPage({
+      invitationToken: null,
+      initialMode: 'register',
+      trialCodeRequired: false,
+      onRequestCode: vi
+        .fn()
+        .mockRejectedValue(
+          new CloudApiError('Already registered', 409, 'auth.email-already-registered'),
+        ),
+    })
+    await act(async () => changeInput('#auth-email', 'member@example.com'))
+    await clickButton('Email me a verification code')
+
+    const alert = host?.querySelector('[role="alert"]')
+    expect(alert?.textContent).toContain('An account with this email already exists')
+    await act(async () => alert?.querySelector('button')?.click())
+    expect(host?.querySelector('h1')?.textContent).toContain('Sign in to Tapstate Cloud')
+    expect(host?.querySelector<HTMLInputElement>('#auth-email')?.value).toBe('member@example.com')
+  })
+
   it('continues Google signup with an invitation after an invite-required callback', async () => {
     const token = 'A2B3C4D5E6F7'
     const link = new URL('/auth', window.location.origin)

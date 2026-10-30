@@ -365,7 +365,14 @@ export function AuthPage({
           role="alert"
         >
           <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-          <span className="leading-snug">{t(error)}</span>
+          <span className="leading-snug">
+            {t(error)}
+            {error === 'auth.errors.emailExists' && mode === 'register' && (
+              <button className="ml-1 underline" onClick={() => switchMode('login')} type="button">
+                {t('auth.goLogin')}
+              </button>
+            )}
+          </span>
         </div>
       )}
 
