@@ -268,6 +268,8 @@ describe('Cloud onboarding navigation', () => {
 
   it('returns existing organization users to their console', async () => {
     await renderPage(vi.fn(), { currentOrganization: organization })
+    expect(host?.textContent).toContain('Creating a cluster in Acme Data')
+    expect(host?.querySelector('input[name="organization"]')).toBeNull()
     const back = buttonWithText('Back to console')
     expect(back).toBeDefined()
     await act(async () => back?.click())

@@ -171,7 +171,7 @@
     "eyebrow": "首次設定",
     "title": "建立 Cloud 叢集",
     "description": "選擇組織名稱和開放區域。設定完成後，系統會開始建立第一個叢集。",
-    "existingOrganizationDescription": "為此組織中的新叢集選擇名稱和區域。",
+    "existingOrganizationDescription": "正在 {{organization}} 中建立叢集，請選擇名稱和區域。",
     "organizationLabel": "組織名稱",
     "organizationPlaceholder": "範例資料平台",
     "organizationNameRequired": "請輸入組織名稱。",

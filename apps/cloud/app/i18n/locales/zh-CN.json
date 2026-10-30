@@ -171,7 +171,7 @@
     "eyebrow": "首次设置",
     "title": "创建 Cloud 集群",
     "description": "选择组织名称和开放区域。设置完成后，系统会开始创建第一个集群。",
-    "existingOrganizationDescription": "为此组织中的新集群选择名称和区域。",
+    "existingOrganizationDescription": "正在 {{organization}} 中创建集群，请选择名称和区域。",
     "organizationLabel": "组织名称",
     "organizationPlaceholder": "示例数据平台",
     "organizationNameRequired": "请输入组织名称。",

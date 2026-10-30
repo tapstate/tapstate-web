@@ -171,7 +171,7 @@
     "eyebrow": "FIRST-TIME SETUP",
     "title": "Create your Cloud cluster",
     "description": "Choose an organization name and an open region. Your first cluster will begin provisioning after setup.",
-    "existingOrganizationDescription": "Choose a name and region for a new cluster in this organization.",
+    "existingOrganizationDescription": "Creating a cluster in {{organization}}. Choose a name and region.",
     "organizationLabel": "Organization name",
     "organizationPlaceholder": "Acme Data",
     "organizationNameRequired": "Enter an organization name to continue.",

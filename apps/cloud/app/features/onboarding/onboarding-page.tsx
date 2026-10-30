@@ -653,6 +653,7 @@ export function OnboardingPage({
                   organization
                     ? 'onboarding.existingOrganizationDescription'
                     : 'onboarding.description',
+                  { organization: organization?.name },
                 )}
               </p>
             </div>
@@ -676,10 +677,6 @@ export function OnboardingPage({
             <form className="space-y-6" onSubmit={handleSubmit}>
               {organization ? (
                 <>
-                  <Field name="organization">
-                    <FieldLabel>{t('onboarding.organizationLabel')}</FieldLabel>
-                    <Input className={inputSurface} disabled value={organization.name} />
-                  </Field>
                   <Field
                     name="clusterName"
                     invalid={Boolean(clusterNameInput && !clusterNameIsValid)}
