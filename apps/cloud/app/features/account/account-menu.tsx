@@ -114,9 +114,18 @@ export interface AccountMenuProps {
   organizationId?: string
   onLogout: () => void | Promise<void>
   compact?: boolean
+  showProfile?: boolean
+  placement?: 'top-start' | 'bottom-end'
 }
 
-export function AccountMenu({ user, organizationId, onLogout, compact = false }: AccountMenuProps) {
+export function AccountMenu({
+  user,
+  organizationId,
+  onLogout,
+  compact = false,
+  showProfile = true,
+  placement = 'top-start',
+}: AccountMenuProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const displayName = user.displayName?.trim() || user.email.split('@')[0]
@@ -156,7 +165,7 @@ export function AccountMenu({ user, organizationId, onLogout, compact = false }:
       />
       <DropdownMenuContent
         className="w-60 max-w-80 overflow-hidden p-0"
-        placement="top-start"
+        placement={placement}
         sideOffset={8}
       >
         <DropdownMenuGroup className="p-1">
@@ -181,17 +190,19 @@ export function AccountMenu({ user, organizationId, onLogout, compact = false }:
           </div>
         </DropdownMenuGroup>
         <DropdownMenuGroup className="p-1">
-          <DropdownMenuItem
-            className="mx-0 h-8 cursor-pointer gap-1 px-3 py-1"
-            onClick={() => {
-              void navigate({
-                to: '/settings',
-                search: { organizationId: organizationId ?? undefined, tab: 'account' },
-              })
-            }}
-          >
-            <MenuItemContent iconClassName="i-ri-user-line" label={t('app.account.profile')} />
-          </DropdownMenuItem>
+          {showProfile && (
+            <DropdownMenuItem
+              className="mx-0 h-8 cursor-pointer gap-1 px-3 py-1"
+              onClick={() => {
+                void navigate({
+                  to: '/settings',
+                  search: { organizationId: organizationId ?? undefined, tab: 'account' },
+                })
+              }}
+            >
+              <MenuItemContent iconClassName="i-ri-user-line" label={t('app.account.profile')} />
+            </DropdownMenuItem>
+          )}
           <AppearanceSubmenu />
         </DropdownMenuGroup>
         <DropdownMenuSeparator className="my-0" />

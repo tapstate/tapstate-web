@@ -30,6 +30,9 @@ const {
 }))
 
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigate }))
+vi.mock('../../state/cloud-app-state', () => ({
+  useCloudAppState: () => ({ darkMode: false, setDarkMode: vi.fn() }),
+}))
 vi.mock('../billing/checkout-navigation', () => ({ navigateToCheckout }))
 
 vi.mock('../../service/cloud-api', async (importOriginal) => {
@@ -151,7 +154,11 @@ type CreateWorkspace = (
 
 async function renderPage(
   onCreateWorkspace: CreateWorkspace,
-  options: { currentOrganization?: Organization | null; createOrganization?: boolean } = {},
+  options: {
+    currentOrganization?: Organization | null
+    createOrganization?: boolean
+    onLogout?: () => void
+  } = {},
 ) {
   host = document.createElement('div')
   document.body.append(host)
@@ -164,11 +171,11 @@ async function renderPage(
           darkMode={false}
           entryError={null}
           isOpeningCluster={false}
+          onLogout={options.onLogout ?? (() => undefined)}
           onComplete={() => undefined}
           onCreateWorkspace={onCreateWorkspace}
           currentOrganization={options.currentOrganization}
           createOrganization={options.createOrganization}
-          setDarkMode={() => undefined}
           user={{ email: 'user@example.com', displayName: 'Test User' }}
         />
       </I18nextProvider>,
@@ -197,9 +204,9 @@ async function renderReadyPage() {
           entryError={null}
           initialWorkspace={readyWorkspace}
           isOpeningCluster={false}
+          onLogout={() => undefined}
           onComplete={() => undefined}
           onCreateWorkspace={async () => readyWorkspace}
-          setDarkMode={() => undefined}
           user={{ email: 'user@example.com', displayName: 'Test User' }}
         />
       </I18nextProvider>,
@@ -242,6 +249,32 @@ afterEach(async () => {
   host = undefined
   root = undefined
   vi.clearAllMocks()
+})
+
+describe('Cloud onboarding navigation', () => {
+  it('offers logout to a user without an organization and no console link', async () => {
+    const onLogout = vi.fn()
+    await renderPage(vi.fn(), { onLogout })
+    const trigger = host?.querySelector<HTMLButtonElement>('button[title="Test User"]')
+    await act(async () => trigger?.click())
+    const logout = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((item) =>
+      item.textContent?.includes('Log out'),
+    )
+    expect(logout).toBeDefined()
+    await act(async () => logout?.click())
+    expect(onLogout).toHaveBeenCalledOnce()
+    expect(buttonWithText('Back to console')).toBeUndefined()
+  })
+
+  it('returns existing organization users to their console', async () => {
+    await renderPage(vi.fn(), { currentOrganization: organization })
+    expect(host?.textContent).toContain('Creating a cluster in Acme Data')
+    expect(host?.querySelector('input[name="organization"]')).toBeNull()
+    const back = buttonWithText('Back to console')
+    expect(back).toBeDefined()
+    await act(async () => back?.click())
+    expect(navigate).toHaveBeenCalledWith({ to: '/', search: { organizationId: organization.id } })
+  })
 })
 
 describe('Cloud onboarding payment', () => {
@@ -360,7 +393,7 @@ describe('Cloud onboarding payment', () => {
     })
 
     expect(onCreateWorkspace).not.toHaveBeenCalled()
-    expect(buttonWithText('Continue to secure payment')?.hasAttribute('disabled')).toBe(true)
+    expect(buttonWithText('Continue to checkout')?.hasAttribute('disabled')).toBe(true)
   })
 })
 
