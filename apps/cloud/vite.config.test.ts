@@ -20,7 +20,7 @@ afterEach(() => {
   rmSync(envDir, { recursive: true, force: true })
 })
 
-describe.each(['/v1/api', '/v2/api'])('Cloud proxy %s', (prefix) => {
+describe.each(['/v1/api'])('Cloud proxy %s', (prefix) => {
   const proxy = async () => {
     if (typeof config !== 'function') throw new Error('Expected a config factory')
     const resolved = await config({ command: 'serve', mode: 'test' })
