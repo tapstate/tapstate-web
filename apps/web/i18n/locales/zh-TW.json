@@ -2840,10 +2840,11 @@
         "ambiguous-input": "輸入表身分不明確。"
       },
       "candidates": "兩端獨立中繼資料候選鍵",
-      "writeKeyUnknown": "Pipeline 寫入鍵未知，請明確選擇實際欄位對應。"
+      "writeKeyUnknown": "Pipeline 寫入鍵未知，請明確選擇實際欄位對應。",
+      "nextRun": "儲存的修改對後續全量生效；已有輪次及報告保留原定義。"
     },
     "run": {
-      "title": "本輪全量校驗",
+      "title": "全量輪次狀態",
       "stop": "停止本輪",
       "independent": "停止本輪不會關閉排程。控制讀取只核對原操作，不會發起新啟動。",
       "unknown": "原輪次結果未知，繼續核對原操作狀態。",
@@ -2863,7 +2864,10 @@
         "CAPACITY": "容量不足",
         "REJECTED": "已拒絕",
         "BUSY": "全量槽忙碌"
-      }
+      },
+      "notAdmitted": "原啟動未進場；該請求沒有已完成的校驗結論。",
+      "slotBusy": "全量槽忙碌或原啟動尚未確認，暫不能發起新一輪。",
+      "otherAdmitted": "該啟動序號已由另一請求佔有；原請求未進場，目前顯示儲存記錄中的輪次。"
     },
     "report": {
       "title": "全量校驗報告",
@@ -2887,7 +2891,9 @@
         "INCOMPLETE": "校驗未完成，僅保留觀察",
         "COMPLETE_NO_ISSUES_OBSERVED": "本次完整全量未發現差異",
         "COMPLETE_WITH_OBSERVATIONS": "本次完整全量發現差異"
-      }
+      },
+      "open": "檢視輪次報告",
+      "run": "報告輪次：{{run}}"
     },
     "history": {
       "title": "全量報告歷史",
@@ -2897,6 +2903,64 @@
       "open": "開啟報告"
     },
     "retryOriginalOff": "重試原關閉排程操作",
-    "retryOriginalStart": "重試原啟動操作"
+    "retryOriginalStart": "重試原啟動操作",
+    "record": {
+      "title": "記錄詳情",
+      "close": "關閉詳情",
+      "readOnly": "僅展示保留的讀取觀察，不代表跨庫同一時點快照或已確認同步故障。",
+      "findings": "保留觀察項：{{count}}",
+      "search": "搜尋欄位路徑",
+      "filter": "觀察類別",
+      "field": "欄位 / 路徑",
+      "sourceValue": "來源讀取值",
+      "targetValue": "目標讀取值",
+      "finding": "發現的問題",
+      "wholeRow": "整筆記錄",
+      "actualIdentity": "實際保留樣本身分",
+      "readId": "讀取編號",
+      "occurrences": "觀察到的次數：{{count}}",
+      "atLeast": "至少觀察到 {{count}} 次",
+      "samplesTruncated": "僅保留有界診斷樣本。未保留樣本不代表記錄缺失、值相同或全部欄位已展示。",
+      "noMatchingFindings": "沒有符合此篩選的保留觀察，不代表校驗無問題。",
+      "notCompared": "未比較的檢查與路徑",
+      "fullKey": "完整關聯身分",
+      "keyMeaning": "此處為完整規範化定位分量及本輪固定的實際欄位名。實際返回身分隨上方各側樣本保留；沒有樣本時不補造返回身分。",
+      "matchValue": "規範化定位值",
+      "valueUnavailable": "保留值暫無法在結構化視圖中展示，原始帶類型載荷仍可檢視。",
+      "mappingUnavailable": "記錄無法符合本報告凍結的映射。",
+      "fragment": "顯示文字 UTF-16 位置 {{position}} 附近的差異片段（先來源、後目標）",
+      "waitForEnd": "本輪結束後可瀏覽保留記錄；目前尚無最終結論。",
+      "categories": {
+        "all": "全部觀察",
+        "values": "值 / 類型",
+        "presence": "缺少 / 多餘",
+        "identity": "身分 / 結構",
+        "source": "來源問題"
+      },
+      "kinds": {
+        "TARGET_MISSING": "本次讀取未找到目標列",
+        "TARGET_EXTRA": "目標列未找到配對來源列",
+        "TARGET_DUPLICATE": "目標身分重複",
+        "TARGET_ROW_DUPLICATE": "目標列重複",
+        "TARGET_IDENTITY": "目標身分不同",
+        "TARGET_KEY_INVALID": "目標鍵無效",
+        "TARGET_STRUCTURE": "目標結構不同",
+        "TARGET_VALUE": "值不同",
+        "TARGET_TYPE": "類型不同",
+        "SOURCE_DUPLICATE": "來源身分重複",
+        "SOURCE_ROW_DUPLICATE": "來源列重複",
+        "SOURCE_CARDINALITY": "來源基數不符合要求",
+        "SOURCE_REFERENCE_MISSING": "來源參照缺少",
+        "SOURCE_FIELD_MISSING": "來源欄位缺少",
+        "SOURCE_FIELD_CONFLICT": "來源欄位衝突",
+        "SOURCE_FIELD_INVALID": "來源欄位無效"
+      },
+      "cells": {
+        "MISSING_FIELD": "保留列中欄位缺少",
+        "NOT_RETAINED": "未保留值樣本"
+      },
+      "findingCount": "該觀察項次數：{{value}}",
+      "findingCountUnknown": "該觀察項次數未知"
+    }
   }
 }

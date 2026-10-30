@@ -6,12 +6,17 @@ import { useTranslation } from 'react-i18next'
 import type {
   createValidationClient,
   ValidationOperation,
+  ValidationExecution,
+  ValidationReference,
   ValidationTask,
 } from '@/service/pipelines/validation-client'
 
-import { validationControlSelection, validationReportReference } from './validation-operation'
+import {
+  validationControlSelection,
+  validationReportReference,
+  validationOperationSettled,
+} from './validation-operation'
 import { validationClientKey } from './validation-query-key'
-import { ValidationReportPanel } from './validation-report-panel'
 import { ValidationRequestError } from './validation-view-parts'
 
 type Client = ReturnType<typeof createValidationClient>
@@ -20,11 +25,13 @@ export function ValidationRunPanel({
   task,
   original,
   onTerminal,
+  onReportOpen,
 }: {
   client: Client
   task: ValidationTask | null
   original: ValidationOperation | null
-  onTerminal: () => void
+  onTerminal: (execution: ValidationExecution) => void
+  onReportOpen: (reference: ValidationReference) => void
 }) {
   const { t } = useTranslation(),
     [stopError, setStopError] = useState<unknown>(null),
@@ -50,18 +57,11 @@ export function ValidationRunPanel({
   })
   const state = progress.data
   useEffect(() => {
-    if (
-      original &&
-      state &&
-      (state.retired ||
-        (state.state && ['COMPLETED', 'FAILED', 'STOPPED'].includes(state.state))) &&
-      state.drain === 'DRAINED' &&
-      notified.current !== identity
-    ) {
+    if (operation && state && validationOperationSettled(state) && notified.current !== identity) {
       notified.current = identity
-      onTerminal()
+      onTerminal(state)
     }
-  }, [original, state, identity, onTerminal])
+  }, [operation, state, identity, onTerminal])
   const reference = state
     ? {
         pipeline: state.original.pipeline,
@@ -141,14 +141,16 @@ export function ValidationRunPanel({
           {progress.isPending ? t('dataValidation.loading') : t('dataValidation.run.unknown')}
         </p>
       )}
-      {reference && (
-        <ValidationReportPanel
-          key={JSON.stringify(reference)}
-          client={client}
-          reference={reference}
-          live
-        />
-      )}
+      <Button
+        variant="secondary"
+        size="small"
+        disabled={reference === null}
+        onClick={() => {
+          if (reference) onReportOpen(reference)
+        }}
+      >
+        {t('dataValidation.report.open')}
+      </Button>
     </section>
   )
 }

@@ -33,6 +33,7 @@ interface Props {
   task: ValidationTask | null
   hints: readonly ValidationMappingHint[]
   pending: boolean
+  startBlocked?: boolean
   onSave: (request: ValidationSave, comparisonFingerprint: string) => Promise<void>
   onStart: () => Promise<void>
   onSchedule: () => void
@@ -46,6 +47,7 @@ export function ValidationBulkSettings({
   task,
   hints,
   pending,
+  startBlocked = false,
   onSave,
   onStart,
   onSchedule,
@@ -236,6 +238,12 @@ export function ValidationBulkSettings({
         </SegmentedControl>
       </div>
       <p className="system-sm-regular text-text-secondary">{t('dataValidation.premise')}</p>
+      <p className="system-xs-regular text-text-tertiary">{t('dataValidation.bulk.nextRun')}</p>
+      {startBlocked && (
+        <p role="status" className="system-sm-regular text-text-secondary">
+          {t('dataValidation.run.slotBusy')}
+        </p>
+      )}
       {unresolved && (
         <p role="alert" className="system-sm-medium text-text-warning">
           {t('dataValidation.bulk.unresolved')}
@@ -489,7 +497,7 @@ export function ValidationBulkSettings({
             {t('dataValidation.bulk.save')}
           </Button>
           <Button
-            disabled={!task || dirty || pending || busy || task.closed}
+            disabled={!task || dirty || pending || busy || task.closed || startBlocked}
             onClick={() => void perform(onStart)}
           >
             {t('dataValidation.bulk.start')}

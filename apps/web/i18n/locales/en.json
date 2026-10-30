@@ -2840,10 +2840,11 @@
         "ambiguous-input": "Input table identity is ambiguous."
       },
       "candidates": "Independent metadata key candidates",
-      "writeKeyUnknown": "The Pipeline write key is unknown. Select the actual correspondence explicitly."
+      "writeKeyUnknown": "The Pipeline write key is unknown. Select the actual correspondence explicitly.",
+      "nextRun": "Saved changes apply to later full runs. Existing runs and reports retain their original definition."
     },
     "run": {
-      "title": "Current full run",
+      "title": "Full run status",
       "stop": "Stop this run",
       "independent": "Stopping this run does not disable its schedule. Control reads retain the original operation; they never dispatch a new start.",
       "unknown": "The original run outcome is unconfirmed. Continue reading its original state.",
@@ -2863,7 +2864,10 @@
         "CAPACITY": "Capacity unavailable",
         "REJECTED": "Rejected",
         "BUSY": "Full slot busy"
-      }
+      },
+      "notAdmitted": "The original start was not admitted. No completed result is asserted for that request.",
+      "slotBusy": "The FULL slot is busy or the original start is still unconfirmed.",
+      "otherAdmitted": "Another command owns that exact start sequence. The original request did not win; controls show the stored run."
     },
     "report": {
       "title": "Full validation report",
@@ -2887,7 +2891,9 @@
         "INCOMPLETE": "Incomplete; retained observations only",
         "COMPLETE_NO_ISSUES_OBSERVED": "No differences observed in this completed full run",
         "COMPLETE_WITH_OBSERVATIONS": "Differences observed in this completed full run"
-      }
+      },
+      "open": "View run report",
+      "run": "Report run: {{run}}"
     },
     "history": {
       "title": "FULL report history",
@@ -2897,6 +2903,64 @@
       "open": "Open report"
     },
     "retryOriginalOff": "Retry original schedule OFF",
-    "retryOriginalStart": "Retry original start"
+    "retryOriginalStart": "Retry original start",
+    "record": {
+      "title": "Record details",
+      "close": "Close details",
+      "readOnly": "Retained read observations only. These facts do not establish a common-time snapshot or a confirmed synchronization fault.",
+      "findings": "Retained finding entries: {{count}}",
+      "search": "Search field paths",
+      "filter": "Finding category",
+      "field": "Field / path",
+      "sourceValue": "Source read value",
+      "targetValue": "Destination read value",
+      "finding": "Observed finding",
+      "wholeRow": "Whole record",
+      "actualIdentity": "Actual retained sample identity",
+      "readId": "Read ID",
+      "occurrences": "Observed occurrences: {{count}}",
+      "atLeast": "At least {{count}} observed occurrences",
+      "samplesTruncated": "Only bounded diagnostic samples are retained. Missing samples do not mean missing records, equal values or complete field coverage.",
+      "noMatchingFindings": "No retained findings match this filter. This is not a clean-result conclusion.",
+      "notCompared": "Checks and paths not compared",
+      "fullKey": "Complete association identity",
+      "keyMeaning": "These are the complete normalized matching components and frozen physical field names. Actual returned identities remain attached to each retained side sample above; no returned identity is invented for absent samples.",
+      "matchValue": "Normalized matching value",
+      "valueUnavailable": "The retained value cannot be shown in this structured view. Its original typed payload remains available.",
+      "mappingUnavailable": "The record does not match this report’s frozen mapping.",
+      "fragment": "Differing fragment near displayed UTF-16 position {{position}} (source, then destination)",
+      "waitForEnd": "Retained record browsing is available after this run ends. The current run has no final conclusion.",
+      "categories": {
+        "all": "All findings",
+        "values": "Values / types",
+        "presence": "Missing / extra",
+        "identity": "Identity / structure",
+        "source": "Source problems"
+      },
+      "kinds": {
+        "TARGET_MISSING": "Destination row not found in this read",
+        "TARGET_EXTRA": "Destination row without a matching source row",
+        "TARGET_DUPLICATE": "Duplicate destination identity",
+        "TARGET_ROW_DUPLICATE": "Duplicate destination rows",
+        "TARGET_IDENTITY": "Destination identity differs",
+        "TARGET_KEY_INVALID": "Invalid destination key",
+        "TARGET_STRUCTURE": "Destination structure differs",
+        "TARGET_VALUE": "Values differ",
+        "TARGET_TYPE": "Types differ",
+        "SOURCE_DUPLICATE": "Duplicate source identity",
+        "SOURCE_ROW_DUPLICATE": "Duplicate source rows",
+        "SOURCE_CARDINALITY": "Source cardinality is invalid",
+        "SOURCE_REFERENCE_MISSING": "Source reference is missing",
+        "SOURCE_FIELD_MISSING": "Source field is missing",
+        "SOURCE_FIELD_CONFLICT": "Source fields conflict",
+        "SOURCE_FIELD_INVALID": "Source field is invalid"
+      },
+      "cells": {
+        "MISSING_FIELD": "Field missing in retained row",
+        "NOT_RETAINED": "Value sample not retained"
+      },
+      "findingCount": "Finding count: {{value}}",
+      "findingCountUnknown": "Finding count is unavailable"
+    }
   }
 }

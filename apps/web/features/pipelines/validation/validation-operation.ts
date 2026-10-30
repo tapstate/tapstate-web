@@ -1,5 +1,6 @@
 import type {
   ValidationOperation,
+  ValidationExecution,
   ValidationReference,
   ValidationTask,
 } from '@/service/pipelines/validation-client'
@@ -89,4 +90,61 @@ export function validationControlSelection(
       command: permission.command,
     },
   }
+}
+
+export function sameValidationOperation(
+  left: ValidationOperation | null | undefined,
+  right: ValidationOperation | null | undefined,
+): boolean {
+  if (!left || !right) return false
+  return (
+    left.pipeline === right.pipeline &&
+    left.task === right.task &&
+    left.taskGeneration === right.taskGeneration &&
+    left.revision === right.revision &&
+    left.sequence === right.sequence &&
+    left.command === right.command &&
+    (['cluster', 'node', 'boot', 'member', 'incarnation'] as const).every(
+      (name) => left.context[name] === right.context[name],
+    )
+  )
+}
+export function validationOperationSettled(
+  receipt: ValidationExecution | null | undefined,
+): boolean {
+  return (
+    !!receipt &&
+    !receipt.controlUnknown &&
+    receipt.drain === 'DRAINED' &&
+    (receipt.retired ||
+      (receipt.state !== null && ['STOPPED', 'COMPLETED', 'FAILED'].includes(receipt.state)))
+  )
+}
+/** UI admission guard only. The backend still owns the atomic FULL slot. */
+export function validationStartBusy(
+  task: ValidationTask,
+  receipt: ValidationExecution | null = null,
+): boolean {
+  if (
+    task.closed ||
+    (task.permission &&
+      (task.permission.taskGeneration !== task.taskGeneration ||
+        task.permission.phase !== 'CLOSED'))
+  )
+    return true
+  const selected = validationControlSelection(task)
+  if (selected?.source === 'ENTRY_OBSERVATION')
+    return !(
+      validationOperationSettled(receipt) &&
+      sameValidationOperation(receipt?.original, selected.operation)
+    )
+  const observed = task.scheduleObservation
+  return (
+    selected === null &&
+    observed !== null &&
+    observed.command !== null &&
+    observed.sequence !== null &&
+    observed.run !== null &&
+    ['START_REQUESTED', 'UNKNOWN', 'FAILED'].includes(observed.state)
+  )
 }

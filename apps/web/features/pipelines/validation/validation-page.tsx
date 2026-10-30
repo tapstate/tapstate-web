@@ -1,12 +1,14 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@tapstate-web/ui/button'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { getPipeline } from '@/service/pipelines/pipeline-client'
 import {
   createValidationClient,
   type ValidationOperation,
+  type ValidationReference,
+  type ValidationExecution,
   type ValidationDisable,
   type ValidationSave,
   type ValidationSchedule,
@@ -17,6 +19,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { ValidationBulkSettings } from './validation-bulk-settings'
 import { ValidationHistoryPanel } from './validation-history-panel'
 import { validationMappingHints, type ValidationMappingHint } from './validation-mapping-hints'
+import { sameValidationOperation, validationStartBusy } from './validation-operation'
 import { validationClientKey } from './validation-query-key'
 import { ValidationRunPanel } from './validation-run-panel'
 import { ValidationScheduleSettings } from './validation-schedule-settings'
@@ -108,18 +111,52 @@ function ValidationWorkspace({
   const offOriginal = useRef<ValidationDisable | null>(null)
   const [offUnknown, setOffUnknown] = useState(false)
   const [operation, setOperation] = useState<ValidationOperation | null>(null)
+  const [terminalReceipt, setTerminalReceipt] = useState<ValidationExecution | null>(null)
+  const [historyReference, setHistoryReference] = useState<ValidationReference | null>(null)
+  const queryClient = useQueryClient()
+  const taskKey = [
+    'validation',
+    'live',
+    pipelineId,
+    initialTask?.taskGeneration ?? 'new',
+    validationClientKey(client),
+  ] as const
   const taskQuery = useQuery({
-    queryKey: [
-      'validation',
-      'live',
-      pipelineId,
-      initialTask?.taskGeneration ?? 'new',
-      validationClientKey(client),
-    ],
+    queryKey: taskKey,
     queryFn: ({ signal }) => client.task(pipelineId, 'full', signal),
     retry: false,
     refetchInterval: 3000,
   })
+  useEffect(() => {
+    if (!operation) return
+    const live = taskQuery.data,
+      permission = live?.permission
+    const anotherWinner =
+      live?.taskGeneration === operation.taskGeneration &&
+      permission?.taskGeneration === operation.taskGeneration &&
+      permission.sequence === operation.sequence &&
+      permission.command !== operation.command &&
+      BigInt(live.nextStartSequence) > BigInt(operation.sequence)
+    if (anotherWinner) {
+      setNotice(t('dataValidation.run.otherAdmitted'))
+      setOperation(null)
+      setTerminalReceipt(null)
+      return
+    }
+    if (!terminalReceipt || !sameValidationOperation(terminalReceipt.original, operation)) return
+    const reflected =
+      live?.taskGeneration === operation.taskGeneration &&
+      (BigInt(live.nextStartSequence) > BigInt(operation.sequence) ||
+        (permission?.command === operation.command &&
+          permission.sequence === operation.sequence &&
+          permission.revision === operation.revision))
+    if (!terminalReceipt.admitted || reflected) {
+      setOperation(null)
+      setTerminalReceipt(null)
+    }
+  }, [operation, terminalReceipt, taskQuery.data, t])
+  const liveTask = taskQuery.data ?? basis
+  const startBusy = liveTask !== null && validationStartBusy(liveTask, terminalReceipt)
   const changed =
     needsReload ||
     (taskQuery.data !== undefined &&
@@ -265,13 +302,18 @@ function ValidationWorkspace({
     }
   }
   async function start() {
-    if (!basis || blocked || operation) return
+    if (!basis || blocked || operation || startBusy) return
     const input = savedValidationSelection(basis)
     if (!input) refuse('dataValidation.definitionChanged')
     setPending(true)
     setError(null)
     try {
-      const latest = await client.task(pipelineId, basis.taskId)
+      await queryClient.cancelQueries({ queryKey: taskKey, exact: true })
+      const latest = await queryClient.fetchQuery({
+        queryKey: taskKey,
+        queryFn: ({ signal }) => client.task(pipelineId, basis.taskId, signal),
+        staleTime: 0,
+      })
       if (
         !latest ||
         latest.taskGeneration !== basis.taskGeneration ||
@@ -279,6 +321,10 @@ function ValidationWorkspace({
         latest.comparisonFingerprint !== basis.comparisonFingerprint
       )
         refuse('dataValidation.definitionChanged')
+      if (validationStartBusy(latest, terminalReceipt)) {
+        setNotice(t('dataValidation.run.slotBusy'))
+        return
+      }
       const evaluated = await client.evaluate(input)
       if (
         !evaluated.context ||
@@ -296,6 +342,7 @@ function ValidationWorkspace({
         sequence: latest.nextStartSequence,
         command: crypto.randomUUID(),
       }
+      setTerminalReceipt(null)
       setOperation(original)
       // Retain the original selector before submitting. Reading it never dispatches another START.
       await client.start(original)
@@ -365,11 +412,15 @@ function ValidationWorkspace({
           client={client}
           task={basis}
           hints={hints}
-          pending={blocked || operation !== null}
+          pending={blocked}
+          startBlocked={operation !== null || startBusy}
           onSave={commit}
           onStart={start}
           onSchedule={() => setSection('schedule')}
-          onHistory={() => setSection('history')}
+          onHistory={() => {
+            setHistoryReference(null)
+            setSection('history')
+          }}
           onDefinitionConflict={() => setNeedsReload(true)}
         />
       )}
@@ -384,17 +435,26 @@ function ValidationWorkspace({
           onBack={() => setSection('bulk')}
         />
       )}
-      <ValidationRunPanel
-        client={client}
-        task={taskQuery.data ?? basis}
-        original={operation}
-        onTerminal={() => {
-          setOperation(null)
-          void taskQuery.refetch()
-        }}
-      />
+      {section !== 'history' && (
+        <ValidationRunPanel
+          client={client}
+          task={liveTask}
+          original={operation}
+          onTerminal={(receipt) => {
+            setTerminalReceipt(receipt)
+            if (!receipt.admitted) setNotice(t('dataValidation.run.notAdmitted'))
+            void taskQuery.refetch()
+          }}
+          onReportOpen={(reference) => {
+            setHistoryReference(reference)
+            setSection('history')
+          }}
+        />
+      )}
       {section === 'history' && (
         <ValidationHistoryPanel
+          key={historyReference ? JSON.stringify(historyReference) : 'list'}
+          initialReference={historyReference}
           client={client}
           pipelineId={pipelineId}
           taskId="full"

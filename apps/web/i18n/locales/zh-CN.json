@@ -2840,10 +2840,11 @@
         "ambiguous-input": "输入表身份不明确。"
       },
       "candidates": "两端独立元数据候选键",
-      "writeKeyUnknown": "Pipeline 写入键未知，请明确选择实际字段对应。"
+      "writeKeyUnknown": "Pipeline 写入键未知，请明确选择实际字段对应。",
+      "nextRun": "保存的修改对后续全量生效；已有轮次及报告保留原定义。"
     },
     "run": {
-      "title": "本轮全量校验",
+      "title": "全量轮次状态",
       "stop": "停止本轮",
       "independent": "停止本轮不会关闭定时。控制读取只核对原操作，不会发起新启动。",
       "unknown": "原轮次结果未知，继续核对原操作状态。",
@@ -2863,7 +2864,10 @@
         "CAPACITY": "容量不足",
         "REJECTED": "已拒绝",
         "BUSY": "全量槽忙碌"
-      }
+      },
+      "notAdmitted": "原启动未入场；该请求没有已完成的校验结论。",
+      "slotBusy": "全量槽忙碌或原启动尚未确认，暂不能发起新一轮。",
+      "otherAdmitted": "该启动序号已由另一请求占有；原请求未入场，当前展示存储记录中的轮次。"
     },
     "report": {
       "title": "全量校验报告",
@@ -2887,7 +2891,9 @@
         "INCOMPLETE": "校验未完成，仅保留观察",
         "COMPLETE_NO_ISSUES_OBSERVED": "本次完整全量未发现差异",
         "COMPLETE_WITH_OBSERVATIONS": "本次完整全量发现差异"
-      }
+      },
+      "open": "查看轮次报告",
+      "run": "报告轮次：{{run}}"
     },
     "history": {
       "title": "全量报告历史",
@@ -2897,6 +2903,64 @@
       "open": "打开报告"
     },
     "retryOriginalOff": "重试原关闭定时操作",
-    "retryOriginalStart": "重试原启动操作"
+    "retryOriginalStart": "重试原启动操作",
+    "record": {
+      "title": "记录详情",
+      "close": "关闭详情",
+      "readOnly": "仅展示保留的读取观察，不代表跨库同一时点快照或已确认同步故障。",
+      "findings": "保留观察项：{{count}}",
+      "search": "搜索字段路径",
+      "filter": "观察类别",
+      "field": "字段 / 路径",
+      "sourceValue": "源读取值",
+      "targetValue": "目标读取值",
+      "finding": "发现的问题",
+      "wholeRow": "整条记录",
+      "actualIdentity": "实际保留样本身份",
+      "readId": "读取编号",
+      "occurrences": "观察到的次数：{{count}}",
+      "atLeast": "至少观察到 {{count}} 次",
+      "samplesTruncated": "仅保留有界诊断样本。未保留样本不代表记录缺失、值相同或全部字段已展示。",
+      "noMatchingFindings": "没有匹配此筛选的保留观察，不代表校验无问题。",
+      "notCompared": "未比较的检查与路径",
+      "fullKey": "完整关联身份",
+      "keyMeaning": "此处为完整规范化定位分量及本轮固定的实际字段名。实际返回身份随上方各侧样本保留；没有样本时不补造返回身份。",
+      "matchValue": "规范化定位值",
+      "valueUnavailable": "保留值暂无法在结构化视图中展示，原始带类型载荷仍可查看。",
+      "mappingUnavailable": "记录无法匹配本报告冻结的映射。",
+      "fragment": "显示文本 UTF-16 位置 {{position}} 附近的差异片段（先源、后目标）",
+      "waitForEnd": "本轮结束后可浏览保留记录；当前尚无最终结论。",
+      "categories": {
+        "all": "全部观察",
+        "values": "值 / 类型",
+        "presence": "缺少 / 多余",
+        "identity": "身份 / 结构",
+        "source": "源问题"
+      },
+      "kinds": {
+        "TARGET_MISSING": "本次读取未找到目标行",
+        "TARGET_EXTRA": "目标行未找到配对源行",
+        "TARGET_DUPLICATE": "目标身份重复",
+        "TARGET_ROW_DUPLICATE": "目标行重复",
+        "TARGET_IDENTITY": "目标身份不同",
+        "TARGET_KEY_INVALID": "目标键无效",
+        "TARGET_STRUCTURE": "目标结构不同",
+        "TARGET_VALUE": "值不同",
+        "TARGET_TYPE": "类型不同",
+        "SOURCE_DUPLICATE": "源身份重复",
+        "SOURCE_ROW_DUPLICATE": "源行重复",
+        "SOURCE_CARDINALITY": "源基数不满足要求",
+        "SOURCE_REFERENCE_MISSING": "源引用缺失",
+        "SOURCE_FIELD_MISSING": "源字段缺失",
+        "SOURCE_FIELD_CONFLICT": "源字段冲突",
+        "SOURCE_FIELD_INVALID": "源字段无效"
+      },
+      "cells": {
+        "MISSING_FIELD": "保留行中字段缺失",
+        "NOT_RETAINED": "未保留值样本"
+      },
+      "findingCount": "该观察项次数：{{value}}",
+      "findingCountUnknown": "该观察项次数未知"
+    }
   }
 }

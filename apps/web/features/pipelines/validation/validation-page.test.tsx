@@ -365,4 +365,311 @@ describe('real validation page mutation boundaries', () => {
     await settled(() => expect(button('dataValidation.reloadDefinition').disabled).toBe(false))
     expect(read.mock.calls.some(([path]) => String(path).endsWith(':save'))).toBe(false)
   })
+  it('does not create a manual selector when the fresh task read discovers a scheduled permission', async () => {
+    let taskReads = 0
+    const command = '40000000-0000-4000-8000-000000000001',
+      occupied = {
+        ...saved,
+        nextStartSequence: '2',
+        permission: {
+          phase: 'BORN',
+          taskGeneration: generation,
+          revision: '1',
+          sequence: '1',
+          command,
+          run: 'scheduled-live',
+        },
+      }
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path),
+        body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':evaluate')) return json(evaluate(body))
+      if (action.endsWith(':progress') || action.endsWith(':stop') || action.endsWith(':start'))
+        return json({
+          original: body,
+          run: 'scheduled-live',
+          outcome: 'ACCEPTED',
+          state: 'RUNNING',
+          admitted: true,
+          waiting: false,
+          controlUnknown: false,
+          retired: false,
+          drain: 'NOT_DRAINED',
+          reason: null,
+          tables: [],
+          premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+          conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+        })
+      taskReads++
+      return json(taskReads >= 3 ? occupied : saved)
+    })
+    useAuthStore.setState({ apiFetch: read, sessionRevision: 7 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(taskReads).toBe(2))
+    await click('dataValidation.bulk.start')
+    await settled(() => expect(taskReads).toBeGreaterThanOrEqual(3))
+    expect(
+      read.mock.calls.some(
+        ([path]) => String(path).endsWith(':evaluate') || String(path).endsWith(':start'),
+      ),
+    ).toBe(false)
+    await settled(() => expect(button('dataValidation.run.stop').disabled).toBe(false))
+    await click('dataValidation.run.stop')
+    const stopped = read.mock.calls.find(([path]) => String(path).endsWith(':stop'))
+    expect(JSON.parse(String(stopped?.[1]?.body)).command).toBe(command)
+  })
+  it('allows a new manual run after an unused scheduled entry is explicitly stopped and fully drained', async () => {
+    const command = '50000000-0000-4000-8000-000000000001',
+      observed = {
+        ...saved,
+        scheduleObservation: {
+          node: context.node,
+          boot: context.boot,
+          member: context.member,
+          context: context.incarnation,
+          observedAt: '2026-10-30T00:00:00Z',
+          nextDue: null,
+          lastDue: null,
+          state: 'START_REQUESTED',
+          reason: null,
+          command,
+          run: 'unused-entry',
+          sequence: '1',
+        },
+      }
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) =>
+      String(path).endsWith(':progress')
+        ? json({
+            original: JSON.parse(String(init?.body)),
+            run: 'unused-entry',
+            outcome: 'ACCEPTED',
+            state: 'STOPPED',
+            admitted: false,
+            waiting: false,
+            controlUnknown: false,
+            retired: false,
+            drain: 'DRAINED',
+            reason: null,
+            tables: [],
+            premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+            conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+          })
+        : json(observed),
+    )
+    useAuthStore.setState({ apiFetch: read, sessionRevision: 8 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+    expect(read.mock.calls.some(([path]) => String(path).endsWith(':start'))).toBe(false)
+  })
+  it('keeps an explicitly opened report fixed while the next scheduled permission appears', async () => {
+    const oldCommand = '60000000-0000-4000-8000-000000000001',
+      newCommand = '70000000-0000-4000-8000-000000000001'
+    let current = {
+      ...saved,
+      nextStartSequence: '2',
+      permission: {
+        phase: 'CLOSED',
+        taskGeneration: generation,
+        revision: '1',
+        sequence: '1',
+        command: oldCommand,
+        run: 'old-report',
+      },
+    }
+    const boundary = {
+      readId: 'read',
+      contractVersion: 'native-count-v1',
+      startedAt: '2026-10-30T00:00:00Z',
+      finishedAt: '2026-10-30T00:00:01Z',
+    }
+    const table = {
+      node: 'input',
+      source: 'source',
+      database: null,
+      schema: null,
+      table: 'orders',
+      modelVersion: null,
+      codecBinding: null,
+    }
+    const report = {
+      reference: { pipeline: 'flow', task: 'full', generation, sequence: '1', run: 'old-report' },
+      method: 'COUNT',
+      mappingRevision: '1',
+      rulesVersion: 'direct-full-v1',
+      fingerprint,
+      mappings: [
+        {
+          id: 'orders',
+          outputKind: 'SYNC',
+          output: 'out',
+          source: table,
+          target: { ...table, node: 'out', source: 'target', table: 'checked_orders' },
+          keys: null,
+        },
+      ],
+      closed: true,
+      terminal: 'COMPLETED',
+      terminalKnownAt: boundary.finishedAt,
+      endedAt: boundary.finishedAt,
+      window: { startedAt: boundary.startedAt, finishedAt: boundary.finishedAt },
+      failure: null,
+      rootCount: '0',
+      retainedBytes: '1',
+      counts: [
+        {
+          mapping: 'orders',
+          output: 'out',
+          source: '1',
+          target: '1',
+          difference: '0',
+          sourceRead: boundary,
+          targetRead: boundary,
+        },
+      ],
+      result: 'COMPLETE_NO_ISSUES_OBSERVED',
+      premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+      premiseVerifiedBySystem: false,
+      conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+      physicalDrain: 'UNKNOWN',
+    }
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path),
+        body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':progress'))
+        return json({
+          original: body,
+          run: body.command === oldCommand ? 'old-report' : 'next-report',
+          outcome: 'ACCEPTED',
+          state: body.command === oldCommand ? 'COMPLETED' : 'RUNNING',
+          admitted: true,
+          waiting: false,
+          controlUnknown: false,
+          retired: body.command === oldCommand,
+          drain: body.command === oldCommand ? 'DRAINED' : 'NOT_DRAINED',
+          reason: null,
+          tables: [],
+          premise: report.premise,
+          conclusionScope: report.conclusionScope,
+        })
+      if (action.includes('/reports/old-report')) return json(report)
+      return json(current)
+    })
+    useAuthStore.setState({ apiFetch: read, sessionRevision: 9 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.report.open').disabled).toBe(false))
+    await click('dataValidation.report.open')
+    await settled(() =>
+      expect(document.body.textContent).toContain(
+        'dataValidation.report.results.COMPLETE_NO_ISSUES_OBSERVED',
+      ),
+    )
+    current = {
+      ...current,
+      nextStartSequence: '3',
+      permission: {
+        ...current.permission,
+        phase: 'BORN',
+        sequence: '2',
+        command: newCommand,
+        run: 'next-report',
+      },
+    }
+    await act(async () => {
+      await queries!.invalidateQueries()
+    })
+    await settled(() =>
+      expect(
+        read.mock.calls.filter(([path]) => String(path).endsWith('/validation-tasks/full')).length,
+      ).toBeGreaterThan(2),
+    )
+    expect(document.body.textContent).toContain(
+      'dataValidation.report.results.COMPLETE_NO_ISSUES_OBSERVED',
+    )
+    expect(read.mock.calls.some(([path]) => String(path).includes('/reports/next-report'))).toBe(
+      false,
+    )
+    expect(document.querySelector('[aria-label="dataValidation.run.title"]')).toBeNull()
+  })
+  it('keeps schedule OFF available during an admitted manual run and preserves its original revision', async () => {
+    const schedule = {
+      kind: 'CRON',
+      every: null,
+      unit: null,
+      anchor: null,
+      expression: '0 2 * * *',
+      zoneId: 'UTC',
+    }
+    let current = { ...saved, schedule, scheduleEnabled: true }
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path),
+        body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':evaluate')) return json(evaluate(body))
+      if (action.endsWith(':start'))
+        current = {
+          ...current,
+          nextStartSequence: '2',
+          permission: {
+            phase: 'BORN',
+            taskGeneration: generation,
+            revision: '1',
+            sequence: '1',
+            command: body.command,
+            run: 'manual-run',
+          },
+        } as typeof current
+      if (action.endsWith(':progress') || action.endsWith(':start'))
+        return json({
+          original: body,
+          run: 'manual-run',
+          outcome: 'ACCEPTED',
+          state: 'RUNNING',
+          admitted: true,
+          waiting: false,
+          controlUnknown: false,
+          retired: false,
+          drain: 'NOT_DRAINED',
+          reason: null,
+          tables: [],
+          premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+          conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+        })
+      if (action.endsWith(':schedule-disable')) {
+        current = { ...current, revision: '2', scheduleEnabled: false }
+        return json({
+          outcome: 'APPLIED',
+          taskGeneration: generation,
+          receiptRevision: '2',
+          command: body.command,
+          scheduleEnabled: false,
+        })
+      }
+      if (action.endsWith(':schedule-preview'))
+        return json({
+          base: '2026-10-30T00:00:00Z',
+          inputRevision: body.inputRevision,
+          zoneId: body.schedule.zoneId,
+          rulesVersion: 'validation-unix-v1',
+          occurrences: Array.from({ length: 5 }, (_, i) => ({
+            at: `2026-11-0${i + 1}T00:00:00Z`,
+            local: `2026-11-0${i + 1}T00:00`,
+            offset: '+00:00',
+            weekday: 'MONDAY',
+          })),
+        })
+      return json(current)
+    })
+    useAuthStore.setState({ apiFetch: read, sessionRevision: 10 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+    await click('dataValidation.bulk.start')
+    await settled(() => expect(button('dataValidation.run.stop').disabled).toBe(false))
+    expect(button('dataValidation.schedule.title').disabled).toBe(false)
+    await click('dataValidation.schedule.title')
+    await click('dataValidation.schedule.disable')
+    await settled(() => expect(document.body.textContent).toContain('dataValidation.schedule.off'))
+    expect(read.mock.calls.filter(([path]) => String(path).endsWith(':start'))).toHaveLength(1)
+    expect(read.mock.calls.some(([path]) => String(path).endsWith(':stop'))).toBe(false)
+    const progress = read.mock.calls.find(([path]) => String(path).endsWith(':progress'))
+    expect(JSON.parse(String(progress?.[1]?.body)).revision).toBe('1')
+  })
 })

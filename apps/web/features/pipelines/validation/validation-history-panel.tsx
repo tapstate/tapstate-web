@@ -19,20 +19,23 @@ export function ValidationHistoryPanel({
   pipelineId,
   taskId,
   onBack,
+  initialReference,
 }: {
   client: Client
   pipelineId: string
   taskId: string
   onBack: () => void
+  initialReference?: ValidationReference | null
 }) {
   const { t } = useTranslation(),
     [page, setPage] = useState(1),
-    [selected, setSelected] = useState<ValidationReference | null>(null)
+    [selected, setSelected] = useState<ValidationReference | null>(initialReference ?? null)
   const history = useQuery({
     queryKey: ['validation', 'history', validationClientKey(client), pipelineId, taskId, page],
     queryFn: ({ signal }) =>
       client.history(pipelineId, taskId, { offset: (page - 1) * 10, limit: 10 }, signal),
     retry: false,
+    enabled: selected === null,
   })
   const lastPage = history.data ? Math.max(1, Math.ceil(Number(history.data.total) / 10)) : page
   const moving = page > lastPage
@@ -50,7 +53,7 @@ export function ValidationHistoryPanel({
       </Button>
       <h2 className="system-lg-semibold text-text-primary">{t('dataValidation.history.title')}</h2>
       {selected ? (
-        <ValidationReportPanel client={client} reference={selected} />
+        <ValidationReportPanel client={client} reference={selected} live />
       ) : (
         <>
           {(history.isPending || moving) && <p role="status">{t('dataValidation.loading')}</p>}

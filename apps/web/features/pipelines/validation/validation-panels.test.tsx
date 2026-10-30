@@ -180,6 +180,7 @@ describe('actual report and original-run presentation', () => {
           }
           original={kind === 'manual' ? original : null}
           onTerminal={() => {}}
+          onReportOpen={() => {}}
         />,
       )
       await settled(() => expect(read).toHaveBeenCalled())
