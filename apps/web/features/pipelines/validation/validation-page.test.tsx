@@ -12,6 +12,7 @@ import { useAuthStore } from '@/stores/auth-store'
 
 import { ValidationBulkSettings } from './validation-bulk-settings'
 import { ValidationPage } from './validation-page'
+import { ValidationRunPanel } from './validation-run-panel'
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
 vi.mock('@/service/pipelines/pipeline-client', async (importOriginal) => ({
@@ -145,6 +146,97 @@ afterEach(async () => {
 })
 
 describe('real validation page mutation boundaries', () => {
+  it.each(['NOT_LIVE', 'LIVE', 'UNKNOWN'] as const)(
+    'keeps a recorded successor pinned across lease changes, including a fresh %s view',
+    async (initialLease) => {
+      const command = '40000000-0000-4000-8000-000000000001'
+      const successor = '50000000-0000-4000-8000-000000000001'
+      const value: ValidationTask = {
+        ...saved,
+        nextStartSequence: '2',
+        permission: {
+          phase: 'BORN',
+          taskGeneration: generation,
+          revision: '1',
+          sequence: '1',
+          command,
+          run: 'old-born',
+          ownerLease: initialLease,
+        },
+        scheduleObservation: {
+          node: 'entry',
+          boot: 'entry-boot',
+          member: generation,
+          context: '60000000-0000-4000-8000-000000000001',
+          observedAt: '2026-10-31T00:00:00Z',
+          nextDue: null,
+          lastDue: '2026-10-31T00:00:00Z',
+          state: 'UNKNOWN',
+          reason: null,
+          command: successor,
+          run: 'pending-successor',
+          sequence: '2',
+        },
+      }
+      const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) => {
+        const original = JSON.parse(String(init?.body))
+        return json({
+          original,
+          run: 'pending-successor',
+          outcome: 'UNKNOWN',
+          state: null,
+          admitted: false,
+          waiting: false,
+          controlUnknown: true,
+          retired: false,
+          drain: 'UNKNOWN',
+          reason: null,
+          tables: [],
+          premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+          conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+        })
+      })
+      const client = createValidationClient(read)
+      const view = (ownerLease: typeof initialLease) => (
+        <ValidationRunPanel
+          client={client}
+          task={{ ...value, permission: { ...value.permission!, ownerLease } }}
+          original={null}
+          onTerminal={() => {}}
+          onReportOpen={() => {}}
+        />
+      )
+      await mount(view(initialLease))
+      await settled(() =>
+        expect(read.mock.calls.some(([path]) => String(path).endsWith(':progress'))).toBe(true),
+      )
+      const first = read.mock.calls.find(([path]) => String(path).endsWith(':progress'))!
+      const original = JSON.parse(String(first[1]?.body))
+      expect(original.command).toBe(successor)
+      for (const ownerLease of ['LIVE', 'UNKNOWN'] as const) {
+        await act(async () =>
+          root!.render(
+            <QueryClientProvider client={queries!}>{view(ownerLease)}</QueryClientProvider>,
+          ),
+        )
+        await act(async () => {
+          await queries!.invalidateQueries({ queryKey: ['validation', 'progress'] })
+        })
+        await click('dataValidation.run.stop')
+        await settled(() =>
+          expect(read.mock.calls.some(([path]) => String(path).endsWith(':stop'))).toBe(true),
+        )
+        const latest = read.mock.calls.filter(([path]) => String(path).endsWith(':stop')).at(-1)!
+        expect(JSON.parse(String(latest[1]?.body))).toEqual(original)
+        expect(
+          read.mock.calls
+            .filter(([path]) => String(path).endsWith(':progress'))
+            .every(([, init]) => JSON.parse(String(init?.body)).command === successor),
+        ).toBe(true)
+      }
+      expect(read.mock.calls.some(([path]) => String(path).endsWith(':start'))).toBe(false)
+    },
+  )
   it('offers loaded model fields in an editable dropdown while absent models stay blank', async () => {
     const read = vi.fn(async () => {
       throw new Error('no independent precheck was requested')

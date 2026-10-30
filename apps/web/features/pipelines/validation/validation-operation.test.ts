@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest'
 
 import type { ValidationTask } from '@/service/pipelines/validation-client'
 
-import { validationControlSelection, validationReportReference } from './validation-operation'
+import {
+  validationControlSelection,
+  validationReportReference,
+  validationStartBusy,
+} from './validation-operation'
 const generation = '10000000-0000-4000-8000-000000000001'
 const current = {
   cluster: 'cluster',
@@ -55,6 +59,58 @@ function observation(): NonNullable<ValidationTask['scheduleObservation']> {
   }
 }
 describe('original validation control selectors', () => {
+  it('permits a successor attempt only after the bound owner lease is explicitly observed inactive', () => {
+    const value = task({
+      nextStartSequence: (BigInt(task().permission!.sequence) + 1n).toString(),
+      permission: { ...task().permission!, ownerLease: 'NOT_LIVE' },
+    })
+    expect(validationStartBusy(value)).toBe(false)
+    expect(validationReportReference(value)?.run).toBe('original-run')
+    for (const ownerLease of ['LIVE', 'UNKNOWN', undefined] as const) {
+      expect(
+        validationStartBusy(task({ ...value, permission: { ...value.permission!, ownerLease } })),
+      ).toBe(true)
+    }
+  })
+  it('keeps inconsistent or unavailable task coordinates busy despite an inactive lease hint', () => {
+    const permission = { ...task().permission!, ownerLease: 'NOT_LIVE' as const }
+    const nextStartSequence = (BigInt(permission.sequence) + 1n).toString()
+    for (const patch of [
+      { context: null },
+      { closed: true },
+      { nextStartSequence: permission.sequence },
+      { nextStartSequence: (BigInt(permission.sequence) + 2n).toString() },
+      { taskGeneration: '80000000-0000-4000-8000-000000000001' },
+      { revision: '1' },
+    ]) {
+      expect(validationStartBusy(task({ permission, nextStartSequence, ...patch }))).toBe(true)
+    }
+    expect(
+      validationStartBusy(
+        task({
+          nextStartSequence: '9007199254740993',
+          permission: { ...permission, sequence: '9007199254740992' },
+        }),
+      ),
+    ).toBe(false)
+  })
+  it('retains a newer original attempt while the old durable permission has an inactive owner', () => {
+    const value = task({
+      nextStartSequence: (BigInt(task().permission!.sequence) + 1n).toString(),
+      permission: { ...task().permission!, ownerLease: 'NOT_LIVE' },
+      scheduleObservation: { ...observation(), state: 'UNKNOWN' },
+    })
+    expect(validationControlSelection(value)?.source).toBe('ENTRY_OBSERVATION')
+    expect(validationStartBusy(value)).toBe(true)
+    expect(validationReportReference(value)?.run).toBe('original-run')
+    const original = validationControlSelection(value)!.operation
+    for (const ownerLease of ['LIVE', 'UNKNOWN'] as const) {
+      const updated = task({ ...value, permission: { ...value.permission!, ownerLease } })
+      expect(validationControlSelection(updated)?.operation).toEqual(original)
+      expect(validationStartBusy(updated)).toBe(true)
+      expect(validationReportReference(updated)?.run).toBe('original-run')
+    }
+  })
   it('pins durable generation/revision/sequence/command while using the current descriptor only as a carrier', () => {
     const value = task(),
       selected = validationControlSelection(value)!

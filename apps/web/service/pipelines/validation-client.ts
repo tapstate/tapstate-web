@@ -114,7 +114,7 @@ const schedule = shape({
   zoneId: text,
 })
 export type ValidationSchedule = Decoded<typeof schedule>
-const permission = shape({
+const permissionFields = shape({
   phase: oneOf('OPEN', 'BORN', 'CLOSED'),
   taskGeneration: uuid,
   revision: positive,
@@ -122,6 +122,15 @@ const permission = shape({
   command: uuid,
   run: text,
 })
+const ownerLease = oneOf('LIVE', 'NOT_LIVE', 'UNKNOWN')
+type Permission = Decoded<typeof permissionFields> & {
+  readonly ownerLease?: Decoded<typeof ownerLease>
+}
+const permission: Check<Permission> = (value, budget): value is Permission =>
+  record(value) &&
+  permissionFields(value, budget) &&
+  (!('ownerLease' in value) ||
+    (Object.hasOwn(value, 'ownerLease') && ownerLease(value.ownerLease, budget)))
 const scheduleObservation = shape({
   node: text,
   boot: text,

@@ -13,6 +13,33 @@ export interface ValidationControlSelection {
   readonly report: ValidationReference | null
 }
 
+function permissionCoordinatesMatch(task: ValidationTask): boolean {
+  const permission = task.permission
+  return (
+    !task.closed &&
+    task.context !== null &&
+    permission !== null &&
+    permission.taskGeneration === task.taskGeneration &&
+    permission.run.trim().length > 0 &&
+    BigInt(permission.sequence) + 1n === BigInt(task.nextStartSequence) &&
+    BigInt(permission.revision) <= BigInt(task.revision)
+  )
+}
+
+/** This observation permits a request; the backend must still acquire a successor fence. */
+function mayRequestFencedSuccessor(task: ValidationTask): boolean {
+  return (
+    permissionCoordinatesMatch(task) &&
+    task.permission?.phase !== 'CLOSED' &&
+    task.permission?.ownerLease === 'NOT_LIVE'
+  )
+}
+
+/** Lease changes must not redirect read/stop away from a recorded newer original request. */
+function maySelectRecordedSuccessor(task: ValidationTask): boolean {
+  return permissionCoordinatesMatch(task) && task.permission?.ownerLease !== undefined
+}
+
 export function validationReportReference(task: ValidationTask): ValidationReference | null {
   const permission = task.permission
   if (!permission || permission.taskGeneration !== task.taskGeneration || !permission.run.trim())
@@ -49,7 +76,7 @@ export function validationControlSelection(
   const newerEntry =
     entry &&
     (!permission ||
-      (permission.phase === 'CLOSED' &&
+      ((permission.phase === 'CLOSED' || maySelectRecordedSuccessor(task)) &&
         BigInt(entry.sequence!) > BigInt(permission.sequence) &&
         entry.command !== permission.command &&
         entry.run !== permission.run))
@@ -129,7 +156,7 @@ export function validationStartBusy(
     task.closed ||
     (task.permission &&
       (task.permission.taskGeneration !== task.taskGeneration ||
-        task.permission.phase !== 'CLOSED'))
+        (task.permission.phase !== 'CLOSED' && !mayRequestFencedSuccessor(task))))
   )
     return true
   const selected = validationControlSelection(task)

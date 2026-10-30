@@ -316,6 +316,16 @@ describe('direct full validation client', () => {
     expect(canceled).toBe(true)
   })
 
+  it('retains bound owner lease observations, accepts older responses and rejects malformed hints', async () => {
+    const f = fixture([
+      json({ ...task, permission: { ...task.permission, ownerLease: 'NOT_LIVE' } }),
+      json(task),
+      json({ ...task, permission: { ...task.permission, ownerLease: 'ASSUME_EXPIRED' } }),
+    ])
+    expect((await f.client.task('flow', 'task'))?.permission?.ownerLease).toBe('NOT_LIVE')
+    expect((await f.client.task('flow', 'task'))?.permission?.ownerLease).toBeUndefined()
+    await expect(f.client.task('flow', 'task')).rejects.toMatchObject({ kind: 'protocol' })
+  })
   it('connects the actual authenticated endpoints without ETags, local persistence or numeric coercion', async () => {
     const occurrence = {
       at: boundary.startedAt,
