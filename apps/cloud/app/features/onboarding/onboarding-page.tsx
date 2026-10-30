@@ -7,7 +7,7 @@ import { Input } from '@tapstate-web/ui/input'
 import RadioCard from '@tapstate-web/ui/radio-card'
 import { RadioGroup } from '@tapstate-web/ui/radio-group'
 import { SkeletonRectangle } from '@tapstate-web/ui/skeleton'
-import { AlertCircle, Check, CreditCard, MapPin, RefreshCw } from 'lucide-react'
+import { AlertCircle, Check, Copy, CreditCard, MapPin, RefreshCw } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -156,6 +156,7 @@ export function OnboardingPage({
   const [isLoadingSpecs, setIsLoadingSpecs] = useState(true)
   const [hasSpecsError, setHasSpecsError] = useState(false)
   const [consent, setConsent] = useState(false)
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle')
   const hasRedirectedToAuth = useRef(false)
   const organization = resolvedOrganization ?? currentOrganization
 
@@ -596,16 +597,46 @@ export function OnboardingPage({
 
   const inputSurface =
     'bg-white hover:bg-white focus:bg-white disabled:bg-white disabled:hover:bg-white dark:bg-components-input-bg-normal dark:hover:bg-components-input-bg-hover dark:focus:bg-components-input-bg-active dark:disabled:bg-components-input-bg-disabled dark:disabled:hover:bg-components-input-bg-disabled'
+  useEffect(() => {
+    setCopyState('idle')
+  }, [addressPreview])
   const clusterAddressDescription = (
-    <FieldDescription className="grid gap-1">
-      <span>{t('onboarding.clusterAddressHint')}</span>
+    <>
+      <FieldDescription>{t('onboarding.clusterAddressHint')}</FieldDescription>
       {addressPreview && (
-        <span className="grid gap-1">
-          <span>{t('onboarding.clusterAddressPreviewLabel')}</span>
-          <code className="text-text-secondary block font-mono break-all">{addressPreview}</code>
-        </span>
+        <div className="mt-2 rounded-lg border border-black/[0.06] bg-white/60 p-3 dark:border-white/[0.08] dark:bg-white/[0.04]">
+          <div className="mb-1 flex items-center justify-between gap-3">
+            <span className="text-text-tertiary text-xs font-medium">
+              {t('onboarding.clusterAddressPreviewLabel')}
+            </span>
+            <button
+              aria-label={t('onboarding.copyAddress')}
+              className="text-text-tertiary hover:text-text-primary focus-visible:ring-state-accent-solid inline-flex shrink-0 items-center gap-1 rounded px-1 py-0.5 text-xs focus-visible:ring-2"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(addressPreview)
+                  setCopyState('copied')
+                } catch {
+                  setCopyState('error')
+                }
+              }}
+              type="button"
+            >
+              <Copy aria-hidden="true" className="size-3.5" />
+              {t(copyState === 'copied' ? 'organizations.copied' : 'onboarding.copyAddress')}
+            </button>
+          </div>
+          <code className="text-text-secondary block font-mono text-xs break-all">
+            {addressPreview}
+          </code>
+          {copyState === 'error' && (
+            <p role="status" className="text-text-destructive mt-1 text-xs">
+              {t('organizations.copyError')}
+            </p>
+          )}
+        </div>
       )}
-    </FieldDescription>
+    </>
   )
 
   return (

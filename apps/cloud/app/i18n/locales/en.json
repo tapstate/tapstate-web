@@ -179,6 +179,7 @@
     "clusterNamePlaceholder": "acme-data-2",
     "clusterNameHint": "Use a name that can form a valid hostname. Spaces and punctuation become hyphens.",
     "clusterAddressHint": "The normalized Cluster name is the hostname.",
+    "copyAddress": "Copy",
     "clusterAddressPreviewLabel": "Cluster URL preview",
     "clusterAddressLabel": "Cluster address",
     "regionLabel": "Region",
