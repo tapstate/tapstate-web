@@ -2062,7 +2062,11 @@
     },
     "footnote": "狀態綜合了 pipeline 的狀態與檢視落後於來源的程度。檢視是建立出的文件；副本是一張表的鏡像。",
     "browseCollections": "瀏覽集合",
-    "createView": "建立檢視"
+    "createView": "建立檢視",
+    "outputs": {
+      "unresolved": "輸出位置尚未解析",
+      "help": "請探索來源結構或檢查管線的輸出設定。其他已解析的輸出仍會正常顯示。"
+    }
   },
   "notFound": {
     "back": "返回工作區",

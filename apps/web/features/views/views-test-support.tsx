@@ -55,6 +55,7 @@ export async function renderPage(node: ReactNode) {
     })
   }
   return {
+    client,
     container,
     unmount: () => {
       act(() => root.unmount())

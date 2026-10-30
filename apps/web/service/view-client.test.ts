@@ -42,3 +42,24 @@ describe('listViews', () => {
     ).rejects.toBeInstanceOf(ViewClientError)
   })
 })
+
+it('preserves output diagnostics returned alongside resolved views', async () => {
+  const unresolved = [
+    {
+      pipelineId: 'orders',
+      code: 'actuation.source-schema-not-discovered',
+      params: { source: 'source' },
+    },
+  ]
+  const fetcher = async () =>
+    new Response(JSON.stringify({ items: [], unresolved }), { status: 200 })
+  await expect(listViews(fetcher)).resolves.toEqual({ available: true, views: [], unresolved })
+})
+
+it('rejects malformed output diagnostics rather than silently hiding them', async () => {
+  const fetcher = async () =>
+    new Response(JSON.stringify({ items: [], unresolved: [{ pipelineId: 'orders' }] }), {
+      status: 200,
+    })
+  await expect(listViews(fetcher)).rejects.toThrow('malformed')
+})

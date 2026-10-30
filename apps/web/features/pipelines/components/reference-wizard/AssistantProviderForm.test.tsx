@@ -30,6 +30,12 @@ async function mount(apiFetch: typeof fetch) {
       </QueryClientProvider>,
     ),
   )
+  await vi.waitFor(async () => {
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(container.querySelector<HTMLInputElement>('input[type="url"]')?.disabled).toBe(false)
+  })
 }
 async function inputKey(value: string) {
   const input = container.querySelector<HTMLInputElement>('input[type="password"]')!
@@ -78,8 +84,27 @@ describe('Builder assistant provider configuration', () => {
     expect(container.querySelector<HTMLInputElement>('input[type="password"]')?.value).toBe('')
     expect(container.textContent).toContain('rejected the credentials')
   })
-  it('requires a key for a connection check even with saved metadata', async () => {
-    const apiFetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(settings)))
+  it('checks a configured provider without exposing or requiring its saved key', async () => {
+    const apiFetch = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(settings)))
+      .mockResolvedValueOnce(new Response('{}'))
+    await mount(apiFetch)
+    expect(button('Check connection').disabled).toBe(false)
+    expect(container.querySelector<HTMLInputElement>('input[type="password"]')?.required).toBe(
+      false,
+    )
+    expect(container.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true)
+    await act(async () => button('Check connection').click())
+    const check = apiFetch.mock.calls.find((call) => call[1]?.method === 'POST')!
+    expect(JSON.parse(check[1].body)).toMatchObject({
+      baseUrl: settings.baseUrl,
+      model: settings.model,
+      apiKey: '',
+    })
+  })
+  it('requires a new key when no provider has been configured', async () => {
+    const apiFetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ configured: false })))
     await mount(apiFetch)
     expect(button('Check connection').disabled).toBe(true)
     expect(container.querySelector<HTMLInputElement>('input[type="password"]')?.required).toBe(true)

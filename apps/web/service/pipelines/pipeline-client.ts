@@ -1,5 +1,7 @@
 import type { ApiFetcher } from '../source-client'
 
+import { isUnresolvedOutput, type UnresolvedOutput } from '../view-client'
+
 export type PipelineDagNodeType = 'source' | 'transform' | 'view' | 'serve' | 'target'
 
 export interface PipelineDagNode {
@@ -93,6 +95,16 @@ export interface PipelineView {
   dag: PipelineDag
   contentHash: string
   status?: PipelineStatus | null
+  outputTargets?: {
+    outputs: {
+      element: string
+      kind: string
+      connection: string
+      table: string
+      identity: string
+    }[]
+    unresolved: UnresolvedOutput[]
+  } | null
 }
 
 /** Structured write payload; layout and DAG geometry intentionally stay out of this contract. */
@@ -794,7 +806,20 @@ function isPipelineView(value: unknown): value is PipelineView {
     (value.experimental === undefined ||
       value.experimental === null ||
       isJsonObject(value.experimental)) &&
-    (value.status === undefined || value.status === null || isPipelineStatus(value.status))
+    (value.status === undefined || value.status === null || isPipelineStatus(value.status)) &&
+    (value.outputTargets === undefined ||
+      value.outputTargets === null ||
+      (isRecord(value.outputTargets) &&
+        Array.isArray(value.outputTargets.outputs) &&
+        value.outputTargets.outputs.every(
+          (output: unknown) =>
+            isRecord(output) &&
+            ['element', 'kind', 'connection', 'table', 'identity'].every(
+              (key) => typeof output[key] === 'string',
+            ),
+        ) &&
+        Array.isArray(value.outputTargets.unresolved) &&
+        value.outputTargets.unresolved.every(isUnresolvedOutput)))
   )
 }
 
