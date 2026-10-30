@@ -115,6 +115,27 @@ describe('Cloud invitation authentication', () => {
     expect(props.onLoginWithCode).toHaveBeenCalledWith('member@example.com', '123456')
     expect(props.onAuthenticated).toHaveBeenCalledWith(user)
   })
+  it.each(['email', 'mode'])('ignores a login-code response after changing %s', async (change) => {
+    let resolveRequest!: () => void
+    const onRequestLoginCode = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveRequest = resolve
+        }),
+    )
+    await renderPage({ invitationToken: null, trialCodeRequired: false, onRequestLoginCode })
+    await act(async () => changeInput('#auth-email', 'first@example.com'))
+    await clickButton('Sign in with an email code')
+    await clickButton('Email me a verification code')
+    if (change === 'email') await act(async () => changeInput('#auth-email', 'second@example.com'))
+    else await clickButton('Sign up')
+    await act(async () => resolveRequest())
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300))
+    })
+    expect(host?.querySelector('#auth-login-code')).toBeNull()
+    expect(host?.querySelector('#auth-code')).toBeNull()
+  })
   it('offers sign-in for a registered email and preserves the entered address', async () => {
     await renderPage({
       invitationToken: null,

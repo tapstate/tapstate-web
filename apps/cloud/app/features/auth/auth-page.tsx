@@ -145,6 +145,7 @@ export function AuthPage({
   const [error, setError] = useState<string | null>(null)
   const [oauthCompleting, setOauthCompleting] = useState(false)
   const oauthHandled = useRef(false)
+  const codeRequestGeneration = useRef(0)
   const emailParts = email.trim().split('@')
   const workspaceDomain = emailParts.length === 2 ? emailParts[1]?.trim() || undefined : undefined
   const isAuthenticating = isSubmitting || isSendingCode || isStartingOAuth || oauthCompleting
@@ -256,12 +257,14 @@ export function AuthPage({
     if (mode === 'login' && loginMethod === 'code') {
       setError(null)
       setIsSendingCode(true)
+      const generation = ++codeRequestGeneration.current
       try {
         await onRequestLoginCode(email.trim())
+        if (generation !== codeRequestGeneration.current) return
         setVerificationSent(true)
         setResendAvailableIn(emailCodeCooldownSeconds)
       } catch (cause) {
-        setError(errorMessageKey(cause))
+        if (generation === codeRequestGeneration.current) setError(errorMessageKey(cause))
       } finally {
         setIsSendingCode(false)
       }
@@ -278,12 +281,14 @@ export function AuthPage({
     if (activeInvitationToken && !accessType) return
     setError(null)
     setIsSendingCode(true)
+    const generation = ++codeRequestGeneration.current
     try {
       await onRequestCode(email.trim(), activeInvitationToken)
+      if (generation !== codeRequestGeneration.current) return
       setVerificationSent(true)
       setResendAvailableIn(emailCodeCooldownSeconds)
     } catch (cause) {
-      setError(errorMessageKey(cause))
+      if (generation === codeRequestGeneration.current) setError(errorMessageKey(cause))
     } finally {
       setIsSendingCode(false)
     }
@@ -312,6 +317,7 @@ export function AuthPage({
   }
 
   const switchMode = (nextMode: AuthMode) => {
+    codeRequestGeneration.current += 1
     setMode(nextMode)
     setVerificationSent(false)
     setVerificationCode('')
@@ -345,6 +351,7 @@ export function AuthPage({
       return
     }
     token = token.toUpperCase()
+    codeRequestGeneration.current += 1
     setActiveInvitationToken(token)
     setAccessType(null)
     setVerificationSent(false)
@@ -357,6 +364,7 @@ export function AuthPage({
 
   const updateEmail = (value: string) => {
     if (email.trim().toLowerCase() !== value.trim().toLowerCase()) {
+      codeRequestGeneration.current += 1
       setVerificationSent(false)
       setVerificationCode('')
     }
@@ -620,6 +628,7 @@ export function AuthPage({
                     type="button"
                     variant="secondary"
                     onClick={() => {
+                      codeRequestGeneration.current += 1
                       setLoginMethod(loginMethod === 'password' ? 'code' : 'password')
                       setVerificationSent(false)
                       setVerificationCode('')
