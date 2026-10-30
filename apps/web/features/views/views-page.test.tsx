@@ -1,6 +1,5 @@
 import '@/i18n/index'
-import type { ReactNode } from 'react'
-
+import { act, type ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { renderPage, sourceEntry, viewEntry } from './views-test-support'
@@ -55,6 +54,72 @@ afterEach(() => {
 })
 
 describe('ViewsPage', () => {
+  it('removes every recovered diagnostic when one pipeline had multiple errors', async () => {
+    const diagnostic = (pipelineId: string, code: string) => ({ pipelineId, code, params: {} })
+    const q = diagnostic('q', 'q-error')
+    listViews.mockResolvedValue({
+      available: true,
+      views: [],
+      unresolved: [diagnostic('p', 'view-error'), diagnostic('p', 'sync-error'), q],
+    })
+    page = await renderPage(<ViewsPage />)
+    expect(page.container.textContent).toContain('view-error')
+    expect(page.container.textContent).toContain('sync-error')
+
+    await act(async () => {
+      page!.client.setQueryData(['views'], { available: true, views: [], unresolved: [q] })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(page.container.textContent).not.toContain('view-error')
+    expect(page.container.textContent).not.toContain('sync-error')
+    expect(page.container.querySelectorAll('.views-page__state li')).toHaveLength(1)
+    expect(page.container.textContent).toContain('q-error')
+
+    await act(async () => {
+      page!.client.setQueryData(['views'], { available: true, views: [], unresolved: [] })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(page.container.textContent).not.toContain('q-error')
+    expect(page.container.textContent).toContain('No views yet')
+  })
+
+  it('shows unresolved pipelines without presenting them as an empty collection list', async () => {
+    listViews.mockResolvedValue({
+      available: true,
+      views: [],
+      unresolved: [
+        {
+          pipelineId: 'orders-pipeline',
+          code: 'actuation.source-schema-not-discovered',
+          params: { source: 'orders' },
+        },
+      ],
+    })
+    page = await renderPage(<ViewsPage />)
+    expect(page.container.textContent).toContain('Output location not yet resolved')
+    expect(page.container.textContent).toContain('orders-pipeline')
+    expect(page.container.textContent).toContain('actuation.source-schema-not-discovered')
+    expect(page.container.textContent).not.toContain('No views yet')
+    expect(page.container.querySelector('table')).toBeNull()
+  })
+
+  it('keeps known outputs beside an unresolved pipeline', async () => {
+    listViews.mockResolvedValue({
+      available: true,
+      views: [viewEntry('orders', 'replica', 'healthy', { state: 'not-loaded' })],
+      unresolved: [
+        {
+          pipelineId: 'unresolved-pipeline',
+          code: 'actuation.source-schema-not-discovered',
+          params: {},
+        },
+      ],
+    })
+    page = await renderPage(<ViewsPage />)
+    expect(page.container.querySelector('table')).not.toBeNull()
+    expect(page.container.textContent).toContain('unresolved-pipeline')
+  })
+
   it('shows a loading state, then an error with a retry', async () => {
     listViews.mockReturnValue(new Promise(() => undefined))
     page = await renderPage(<ViewsPage />)

@@ -373,6 +373,14 @@ export function ProvisioningView({
             <span className="text-neutral-400">{t('onboarding.clusterNameLabel')}</span>
             <span className="font-semibold text-[#111827] dark:text-white">{cluster.name}</span>
           </div>
+          {cluster.publicDns && (
+            <div className="grid gap-1">
+              <span className="text-neutral-400">{t('onboarding.clusterAddressLabel')}</span>
+              <code className="block font-mono break-all text-[#111827] select-all dark:text-white">
+                https://{cluster.publicDns}
+              </code>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-4">
             <span className="text-neutral-400">{t('onboarding.regionLabel')}</span>
             <span className="font-medium text-[#111827] dark:text-white">{regionName}</span>

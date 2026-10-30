@@ -58,10 +58,9 @@ beforeEach(async () => {
     activeOrganization: {
       id: 'org-1',
       name: 'Acme',
-      slug: 'acme',
       ownerEmail: 'member@example.com',
     },
-    organizations: [{ id: 'org-1', name: 'Acme', slug: 'acme', ownerEmail: 'member@example.com' }],
+    organizations: [{ id: 'org-1', name: 'Acme', ownerEmail: 'member@example.com' }],
     user: { id: 'user-1', email: 'member@example.com', displayName: 'Member' },
   })
   identities.mockResolvedValue([
@@ -140,7 +139,7 @@ describe('Cloud linked identity settings', () => {
 
     expect(onTabChange).toHaveBeenCalledWith('organization')
     expect(host?.textContent).toContain('Acme')
-    expect(host?.textContent).toContain('acme')
+    expect(host?.textContent).not.toContain('acme')
     expect(host?.textContent).toContain('Organization invitations')
   })
 })

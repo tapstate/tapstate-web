@@ -40,7 +40,7 @@ import { cancelPendingClusterEntries, useClusterEntry } from './use-cluster-entr
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
-const organization: Organization = { id: 'org-a', name: 'Org A', slug: 'org-a' }
+const organization: Organization = { id: 'org-a', name: 'Org A' }
 const blockedStates: ClusterState[] = [
   'PROVISIONING_PENDING',
   'PROVISIONING',
@@ -138,6 +138,27 @@ describe('Cluster recovery entry', () => {
     expect(assign).toHaveBeenCalledExactlyOnceWith(
       'http://localhost:28443/auth/exchange?code=single-use-code',
     )
+  })
+
+  it('enters when the same Cluster becomes available', async () => {
+    await render(
+      <AutomaticClusterEntry
+        cluster={cluster('PROVISIONING')}
+        organizationId={organization.id}
+        onBack={() => {}}
+      />,
+    )
+    expect(mocks.resolveCluster).not.toHaveBeenCalled()
+    await act(async () =>
+      root.render(
+        <AutomaticClusterEntry
+          cluster={cluster('READY')}
+          organizationId={organization.id}
+          onBack={() => {}}
+        />,
+      ),
+    )
+    expect(mocks.resolveCluster).toHaveBeenCalledExactlyOnceWith('cluster-a', organization.id)
   })
 
   it('does not automatically retry a failed C1 return as the page rerenders', async () => {

@@ -207,6 +207,58 @@ afterEach(async () => {
 })
 
 describe('PipelinesPage', () => {
+  it('shows resolved physical outputs instead of a renamed transform step', async () => {
+    listPipelineArtifacts.mockResolvedValue([
+      {
+        id: 'orders_to_warehouse',
+        sources: [],
+        contentHash: 'hash',
+        dag: { nodes: [{ id: 'target', type: 'target', label: 'nest_order_doc' }], edges: [] },
+        outputTargets: {
+          outputs: [
+            {
+              element: 'sink',
+              kind: 'view',
+              connection: 'store',
+              table: 'nest_orders',
+              identity: 'sink:orders',
+            },
+          ],
+          unresolved: [],
+        },
+      },
+    ])
+    await renderPage()
+    await vi.waitFor(() => expect(container?.textContent).toContain('nest_orders'))
+    expect(container?.textContent).not.toContain('nest_order_doc')
+  })
+
+  it('shows an unresolved target explicitly without falling back to a step label', async () => {
+    listPipelineArtifacts.mockResolvedValue([
+      {
+        id: 'orders_to_warehouse',
+        sources: [],
+        contentHash: 'hash',
+        dag: { nodes: [{ id: 'target', type: 'target', label: 'nest_order_doc' }], edges: [] },
+        outputTargets: {
+          outputs: [],
+          unresolved: [
+            {
+              pipelineId: 'orders_to_warehouse',
+              code: 'actuation.source-schema-not-discovered',
+              params: {},
+            },
+          ],
+        },
+      },
+    ])
+    await renderPage()
+    await vi.waitFor(() =>
+      expect(container?.textContent).toContain('Output location not yet resolved'),
+    )
+    expect(container?.textContent).not.toContain('nest_order_doc')
+  })
+
   it('lists stored Pipeline artifacts and makes each resource name the standalone editor entry', async () => {
     await renderPage()
 
