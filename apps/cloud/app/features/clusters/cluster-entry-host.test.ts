@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { isAllowedCloudClusterHostname, isAllowedCloudClusterOrigin } from './cluster-entry-host'
+import {
+  clusterDomainForConsoleHost,
+  isAllowedCloudClusterHostname,
+  isAllowedCloudClusterOrigin,
+} from './cluster-entry-host'
 
 describe('isAllowedCloudClusterHostname', () => {
   it.each([
@@ -20,6 +24,29 @@ describe('isAllowedCloudClusterHostname', () => {
     ['feynman.dev.cloud.tapstate.com', 'feynman.dev.cloud.tapstate.com'],
   ])('rejects %s from the %s console', (clusterHostname, consoleHostname) => {
     expect(isAllowedCloudClusterHostname(clusterHostname, consoleHostname)).toBe(false)
+  })
+})
+
+describe('clusterDomainForConsoleHost', () => {
+  it.each([
+    { consoleHost: 'cloud.tapstate.com', expectedDomain: 'cloud.tapstate.com' },
+    { consoleHost: 'dev.cloud.tapstate.com', expectedDomain: 'dev.cloud.tapstate.com' },
+    { consoleHost: 'localhost', expectedDomain: 'dev.cloud.tapstate.com' },
+    { consoleHost: '127.0.0.1', expectedDomain: 'dev.cloud.tapstate.com' },
+    {
+      consoleHost: 'localhost',
+      expectedDomain: 'cloud.tapstate.com',
+      configuredDomain: 'cloud.tapstate.com',
+    },
+    { consoleHost: 'console.example.com', expectedDomain: null },
+  ])(
+    'maps $consoleHost to the Cluster address domain $expectedDomain',
+    ({ consoleHost, expectedDomain, configuredDomain }) => {
+      expect(clusterDomainForConsoleHost(consoleHost, configuredDomain)).toBe(expectedDomain)
+    },
+  )
+  it('omits the preview domain when a local proxy selects an unsupported Cloud host', () => {
+    expect(clusterDomainForConsoleHost('localhost', 'console.example.com')).toBeNull()
   })
 })
 

@@ -27,7 +27,7 @@ import {
 } from '../../service/cloud-api'
 import { formatPrice } from '../billing/billing-format'
 import { navigateToCheckout } from '../billing/checkout-navigation'
-import { hasValidClusterDnsLabel } from '../clusters/cluster-name'
+import { clusterAddressPreview, hasValidClusterDnsLabel } from '../clusters/cluster-name'
 import {
   isProvisioningCancelled,
   isProvisioningFailed,
@@ -177,6 +177,11 @@ export function OnboardingPage({
     ? clusterNameInput.trim().slice(0, 100)
     : (clusterNameInput.trim() || organizationDisplayName).slice(0, 100)
   const clusterNameIsValid = hasValidClusterDnsLabel(clusterName)
+  const addressPreview = clusterAddressPreview(
+    clusterName,
+    window.location.hostname,
+    import.meta.env.VITE_CLUSTER_ADDRESS_DOMAIN,
+  )
 
   useEffect(() => {
     if (!organization || !suggestedClusterName) return
@@ -587,6 +592,17 @@ export function OnboardingPage({
   }
 
   const accountName = user.displayName?.trim() || user.email
+  const clusterAddressDescription = (
+    <>
+      <FieldDescription>{t('onboarding.clusterAddressHint')}</FieldDescription>
+      {addressPreview && (
+        <FieldDescription className="grid gap-1">
+          <span>{t('onboarding.clusterAddressPreviewLabel')}</span>
+          <code className="text-text-secondary block font-mono break-all">{addressPreview}</code>
+        </FieldDescription>
+      )}
+    </>
+  )
 
   return (
     <div
@@ -670,6 +686,7 @@ export function OnboardingPage({
                       required
                       value={clusterNameInput}
                     />
+                    {clusterAddressDescription}
                     <FieldError>{t('onboarding.clusterNameHint')}</FieldError>
                   </Field>
                 </>
@@ -703,6 +720,7 @@ export function OnboardingPage({
                       required
                       value={clusterName}
                     />
+                    {clusterAddressDescription}
                     <FieldError>{t('onboarding.clusterNameHint')}</FieldError>
                   </Field>
                 </>

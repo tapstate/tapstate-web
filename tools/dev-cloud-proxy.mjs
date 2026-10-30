@@ -277,6 +277,7 @@ async function main() {
 
   launch('cloud', cloudRoot, viteArguments.cloud, {
     CLOUD_PROXY_TARGET: cloudOrigin,
+    VITE_CLUSTER_ADDRESS_DOMAIN: new URL(cloudOrigin).hostname,
     VITE_LOCAL_CLUSTER_PROXY_ORIGIN: clusterOrigin,
   })
   launch('web', webRoot, viteArguments.web, {
