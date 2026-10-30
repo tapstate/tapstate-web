@@ -23,6 +23,7 @@ let detailReads = 0
 let managed = false
 let receiptSource: string | undefined = undefined
 let unavailableType = false
+let unavailableFormat = false
 beforeEach(() => {
   vi.useFakeTimers()
   focusManager.setFocused(true)
@@ -30,6 +31,7 @@ beforeEach(() => {
   managed = false
   receiptSource = undefined
   unavailableType = false
+  unavailableFormat = false
   detailReads = 0
   route.search = { key: 'original-key', episode: 1 }
   route.navigate.mockReset()
@@ -77,10 +79,13 @@ beforeEach(() => {
           canRetry: !unavailableType,
           capability: unavailableType
             ? {
-                reason: 'UNSUPPORTED_TYPE_VERSION',
+                reason: unavailableFormat
+                  ? 'UNSUPPORTED_RECORD_VERSION'
+                  : 'UNSUPPORTED_TYPE_VERSION',
                 typeId: 'test.pipeline-condition',
-                typeVersion: 2,
-                availableVersion: 1,
+                typeVersion: unavailableFormat ? null : 2,
+                availableVersion: unavailableFormat ? null : 1,
+                recordVersion: unavailableFormat ? 999 : null,
               }
             : undefined,
           attempts: 1,
@@ -196,4 +201,20 @@ it('explains a missing type version without offering another attempt or changing
     ),
   ).toBe(false)
   expect(route.navigate).not.toHaveBeenCalled()
+})
+
+it('distinguishes an unreadable rule record from an unsupported alarm type version', async () => {
+  unavailableType = true
+  unavailableFormat = true
+  route.search = { view: 'deliveries', delivery: 'delivery-original' }
+  await render()
+  expect(node.textContent).toContain(
+    'This node cannot read saved rule format 999 for test.pipeline-condition.',
+  )
+  expect(node.textContent).not.toContain('this node supports version 1')
+  expect(
+    [...node.querySelectorAll('button')].some(
+      (b) => b.textContent === 'Authorize another bounded cycle',
+    ),
+  ).toBe(false)
 })

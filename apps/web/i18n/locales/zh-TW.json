@@ -2259,6 +2259,7 @@
     "deadline": "原始截止時間",
     "nextAttempt": "下次可尝試時間",
     "capabilities": {
+      "UNSUPPORTED_RECORD_VERSION": "目前節點不支援 {{typeId}} 關聯規則的記錄格式 {{recordVersion}}，恢復相符能力後才能再次嘗試。",
       "UNKNOWN_TYPE": "目前節點未安裝告警類型 {{typeId}}，恢復支援後才能再次嘗試。",
       "UNSUPPORTED_TYPE_VERSION": "此任務需要 {{typeId}} 版本 {{typeVersion}}，目前節點支援版本 {{availableVersion}}；恢復支援後才能再次嘗試。"
     },

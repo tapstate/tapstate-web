@@ -2259,6 +2259,7 @@
     "deadline": "Original deadline",
     "nextAttempt": "Next eligible attempt",
     "capabilities": {
+      "UNSUPPORTED_RECORD_VERSION": "This node cannot read saved rule format {{recordVersion}} for {{typeId}}. Restore matching support before another attempt.",
       "UNKNOWN_TYPE": "The alarm type {{typeId}} is not installed on this node. Restore support before another attempt.",
       "UNSUPPORTED_TYPE_VERSION": "This task needs {{typeId}} version {{typeVersion}}; this node supports version {{availableVersion}}. Restore support before another attempt."
     },

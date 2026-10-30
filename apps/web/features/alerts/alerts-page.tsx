@@ -471,6 +471,7 @@ function AlertsContent() {
                       typeId: delivery.data.capability.typeId,
                       typeVersion: delivery.data.capability.typeVersion,
                       availableVersion: delivery.data.capability.availableVersion,
+                      recordVersion: delivery.data.capability.recordVersion,
                     })}
                   </p>
                 )}

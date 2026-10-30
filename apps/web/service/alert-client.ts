@@ -43,10 +43,11 @@ export interface DeliveryRow {
   eventId?: string
   diagnostic?: { phase: string; action: string; status: number } | null
   capability?: {
-    reason: 'UNKNOWN_TYPE' | 'UNSUPPORTED_TYPE_VERSION'
+    reason: 'UNKNOWN_TYPE' | 'UNSUPPORTED_TYPE_VERSION' | 'UNSUPPORTED_RECORD_VERSION'
     typeId: string
     typeVersion: number | null
     availableVersion: number | null
+    recordVersion?: number | null
   }
   attemptHistory?: {
     number: number
