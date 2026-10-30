@@ -80,6 +80,7 @@ async function submitForm() {
 }
 
 beforeEach(async () => {
+  document.elementFromPoint = () => null
   await i18n.changeLanguage('en')
 })
 
@@ -99,10 +100,14 @@ describe('Cloud invitation authentication', () => {
     await act(async () => changeInput('#auth-email', 'member@example.com'))
     await clickButton('Sign in with an email code')
     await clickButton('Email me a verification code')
-    await act(async () => changeInput('#auth-code', '123456'))
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300))
+    })
+    expect(host?.querySelector('#auth-email')).toBeNull()
+    await act(async () => changeInput('#auth-login-code', '123456'))
     await act(async () => {
       host
-        ?.querySelector('#auth-email')
+        ?.querySelector('#auth-login-code')
         ?.closest('form')
         ?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     })

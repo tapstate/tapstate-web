@@ -128,6 +128,7 @@
     "haveInviteAccount": "Already have an account?",
     "goRegister": "Sign up",
     "goLogin": "Sign in",
+    "changeEmail": "Change email",
     "sendCode": "Email me a verification code",
     "resendCode": "Send another code",
     "resendCodeIn": "Send another code in {{count}} seconds",

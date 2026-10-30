@@ -128,6 +128,7 @@
     "haveInviteAccount": "已经有账户？",
     "goRegister": "注册",
     "goLogin": "登录",
+    "changeEmail": "更改邮箱",
     "sendCode": "发送邮箱验证码",
     "resendCode": "重新发送验证码",
     "resendCodeIn": "{{count}} 秒后可重新发送",
