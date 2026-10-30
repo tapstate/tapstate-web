@@ -1,9 +1,12 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 
 import type { Organization } from '../service/cloud-api'
 import type { UserProfile } from '../types'
 
-import { useClusterEntry } from '../features/clusters/use-cluster-entry'
+import {
+  cancelPendingClusterEntries,
+  useClusterEntry,
+} from '../features/clusters/use-cluster-entry'
 import { OnboardingPage } from '../features/onboarding/onboarding-page'
 import {
   findProvisioningWorkspace,
@@ -24,13 +27,26 @@ function OnboardingRoute() {
     initialProgress,
     resumeError,
     createOrganization,
+    consoleOrganizationId,
   } = Route.useLoaderData()
-  const { completeOnboarding, darkMode, setDarkMode } = useCloudAppState()
+  const navigate = useNavigate()
+  const { completeOnboarding, darkMode, clearIdentity } = useCloudAppState()
   const { enterCluster, enteringId, entryError } = useClusterEntry()
 
   return (
     <OnboardingPage
       darkMode={darkMode}
+      consoleOrganizationId={consoleOrganizationId}
+      onLogout={async () => {
+        cancelPendingClusterEntries()
+        try {
+          await cloudApi.logout()
+        } catch (error) {
+          if (!(error instanceof CloudApiError) || error.status !== 401) return
+        }
+        clearIdentity()
+        await navigate({ to: '/auth' })
+      }}
       onComplete={(organization, cluster) => {
         completeOnboarding(user, organization, cluster)
         void enterCluster(cluster, organization.id)
@@ -42,7 +58,6 @@ function OnboardingRoute() {
       initialProgress={initialProgress}
       suggestedClusterName={suggestedName}
       resumeError={resumeError}
-      setDarkMode={setDarkMode}
       user={user}
       isOpeningCluster={enteringId !== null}
       entryError={entryError}
@@ -71,6 +86,7 @@ export const Route = createFileRoute('/onboarding')({
     initialProgress: Awaited<ReturnType<typeof cloudApi.deploymentProgress>> | null
     resumeError: boolean
     createOrganization: boolean
+    consoleOrganizationId?: string
   }> => {
     try {
       const user = await cloudApi.me()
@@ -123,6 +139,7 @@ export const Route = createFileRoute('/onboarding')({
         initialProgress,
         resumeError,
         createOrganization: deps.createOrganization,
+        consoleOrganizationId: organization?.id ?? organizations[0]?.id,
       }
     } catch (error) {
       if (error instanceof CloudApiError && error.status === 401) {
