@@ -8,6 +8,12 @@ const mocks = vi.hoisted(() => ({
   clusters: vi.fn(),
   navigate: vi.fn(),
   identity: vi.fn(),
+  currentClusters: [{ id: 'cluster-b', orgId: 'org-b', state: 'PROVISIONING' }] as Array<{
+    id: string
+    orgId: string
+    state: string
+  }>,
+  entryCluster: vi.fn(),
   oauthStart: vi.fn(),
   authenticated: undefined as undefined | ((user: unknown, setup?: boolean) => Promise<void>),
 }))
@@ -37,6 +43,7 @@ vi.mock('../../state/cloud-app-state', () => ({
     setDarkMode: vi.fn(),
     setIdentity: mocks.identity,
     activeOrganization: { id: 'org-b' },
+    clusters: mocks.currentClusters,
     setClusters: vi.fn(),
   }),
 }))
@@ -46,7 +53,10 @@ vi.mock('../../shell/cloud-console-shell', () => ({
   ),
 }))
 vi.mock('./automatic-cluster-entry', () => ({
-  AutomaticClusterEntry: () => <div>Continuing entry</div>,
+  AutomaticClusterEntry: ({ cluster }: { cluster: unknown }) => {
+    mocks.entryCluster(cluster)
+    return <div>Continuing entry</div>
+  },
 }))
 vi.mock('../auth/auth-page', () => ({
   AuthPage: ({
@@ -93,6 +103,7 @@ beforeEach(() => {
   window.sessionStorage.clear()
   window.history.replaceState({}, '', '/auth')
   mocks.authenticated = undefined
+  mocks.currentClusters = [{ id: 'cluster-b', orgId: 'org-b', state: 'PROVISIONING' }]
   mocks.oauthStart.mockResolvedValue('https://provider.example/authorize')
   mocks.me.mockResolvedValue({ email: 'tester@example.invalid' })
   mocks.organizations.mockResolvedValue([
@@ -108,6 +119,30 @@ afterEach(() => {
 })
 
 describe('Cloud initialization return routing', () => {
+  it('supplies the refreshed Cluster to automatic entry', async () => {
+    vi.spyOn(ConsoleRoute, 'useSearch').mockReturnValue(intent)
+    vi.spyOn(ConsoleRoute, 'useLoaderData').mockReturnValue({
+      session: { email: 'tester@example.invalid' },
+      organizations: [{ id: 'org-b', name: 'B' }],
+      clusters: [{ id: 'cluster-b', orgId: 'org-b', state: 'PROVISIONING' }],
+    } as never)
+    const host = document.createElement('div')
+    document.body.append(host)
+    const root = createRoot(host)
+    const Console = ConsoleRoute.options.component as ComponentType
+    try {
+      await act(async () => root.render(<Console />))
+      mocks.currentClusters = [{ id: 'cluster-b', orgId: 'org-b', state: 'READY' }]
+      await act(async () => root.render(<Console />))
+      expect(mocks.entryCluster).toHaveBeenLastCalledWith(
+        expect.objectContaining({ state: 'READY' }),
+      )
+    } finally {
+      await act(async () => root.unmount())
+      host.remove()
+    }
+  })
+
   it('preserves the target when the mounted Console session expires during entry', async () => {
     vi.useFakeTimers()
     vi.spyOn(ConsoleRoute, 'useSearch').mockReturnValue(intent)

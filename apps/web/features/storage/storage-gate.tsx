@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
+import { safeLoginReturn } from '@/features/auth/login-return'
 import {
   setupOperationScope,
   snapshotScope,
@@ -48,6 +49,7 @@ export function StorageBoundary({ children }: { children: ReactNode }) {
 export function StorageGate({ children }: { children: ReactNode }) {
   const { t, i18n } = useTranslation()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const returnTo = useRouterState({ select: (state) => state.location.href })
   const {
     entry,
     snapshot,
@@ -260,6 +262,7 @@ export function StorageGate({ children }: { children: ReactNode }) {
           <LoginAction
             cloud={entry ? entry.mode === 'CLOUD' : cloudProfile}
             cloudTarget={pendingHandoff ? cloudSetupContinuationUrl(pendingHandoff) : undefined}
+            returnTo={returnTo}
           />
         )}
       </StorageFrame>
@@ -444,19 +447,31 @@ export function StorageGate({ children }: { children: ReactNode }) {
     <StorageFrame>
       <h1 className="font-semibold">{t('storage.loginTitle')}</h1>
       <p className="text-muted-foreground text-sm">{t('storage.loginHelp')}</p>
-      <LoginAction cloud={entry.mode === 'CLOUD'} />
+      <LoginAction cloud={entry.mode === 'CLOUD'} returnTo={returnTo} />
     </StorageFrame>
   )
 }
 
-function LoginAction({ cloud, cloudTarget }: { cloud: boolean; cloudTarget?: string }) {
+function LoginAction({
+  cloud,
+  cloudTarget,
+  returnTo,
+}: {
+  cloud: boolean
+  cloudTarget?: string
+  returnTo?: string
+}) {
   const { t } = useTranslation()
   return cloud ? (
     <Button className="min-h-11 sm:min-h-8" onClick={() => replaceWithCloudConsole(cloudTarget)}>
       {t('storage.cloudLogin')}
     </Button>
   ) : (
-    <Link className="text-sm underline underline-offset-4" to="/login">
+    <Link
+      className="text-sm underline underline-offset-4"
+      to="/login"
+      search={{ redirect: safeLoginReturn(returnTo) }}
+    >
       {t('storage.opLogin')}
     </Link>
   )

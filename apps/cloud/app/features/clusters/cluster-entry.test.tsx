@@ -140,6 +140,27 @@ describe('Cluster recovery entry', () => {
     )
   })
 
+  it('enters when the same Cluster becomes available', async () => {
+    await render(
+      <AutomaticClusterEntry
+        cluster={cluster('PROVISIONING')}
+        organizationId={organization.id}
+        onBack={() => {}}
+      />,
+    )
+    expect(mocks.resolveCluster).not.toHaveBeenCalled()
+    await act(async () =>
+      root.render(
+        <AutomaticClusterEntry
+          cluster={cluster('READY')}
+          organizationId={organization.id}
+          onBack={() => {}}
+        />,
+      ),
+    )
+    expect(mocks.resolveCluster).toHaveBeenCalledExactlyOnceWith('cluster-a', organization.id)
+  })
+
   it('does not automatically retry a failed C1 return as the page rerenders', async () => {
     mocks.resolveCluster.mockRejectedValue(new CloudApiError('Dependency unavailable', 503))
     const element = (

@@ -20,6 +20,12 @@ describe('tab-scoped OAuth Cluster navigation', () => {
       expect(consumeOAuthClusterEntry('success')).toEqual({})
     },
   )
+  it('continues sign-in if tab storage is unavailable', () => {
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError')
+    })
+    expect(() => rememberOAuthClusterEntry(target)).not.toThrow()
+  })
   it('does not revive an expired provider target', () => {
     const clock = vi.spyOn(Date, 'now').mockReturnValue(1000)
     rememberOAuthClusterEntry(target)

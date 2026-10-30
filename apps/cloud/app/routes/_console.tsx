@@ -23,7 +23,13 @@ function ConsoleLayout() {
   const navigate = useNavigate()
   const { session, organizations, clusters } = Route.useLoaderData()
   const { enterClusterId, organizationId } = Route.useSearch()
-  const { activeOrganization, user, setClusters, setIdentity } = useCloudAppState()
+  const {
+    activeOrganization,
+    user,
+    clusters: currentClusters,
+    setClusters,
+    setIdentity,
+  } = useCloudAppState()
 
   useEffect(() => {
     setIdentity(session, organizations, clusters)
@@ -62,7 +68,7 @@ function ConsoleLayout() {
         <AutomaticClusterEntry
           key={`${organizationId}:${enterClusterId}`}
           organizationId={organizationId}
-          cluster={clusters.find(
+          cluster={(activeOrganization?.id === organizationId ? currentClusters : clusters).find(
             (cluster) => cluster.id === enterClusterId && cluster.orgId === organizationId,
           )}
           onBack={() => void navigate({ to: '/', search: { organizationId }, replace: true })}

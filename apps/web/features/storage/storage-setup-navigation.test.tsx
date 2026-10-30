@@ -11,7 +11,7 @@ import { createAuthStore, useAuthStore } from '@/stores/auth-store'
 import { ConfigurationTransfer } from './configuration-transfer'
 import { StorageBoundary } from './storage-gate'
 
-const route = vi.hoisted(() => ({ pathname: '/overview' }))
+const route = vi.hoisted(() => ({ pathname: '/overview', href: '/overview' }))
 const cloudNavigation = vi.hoisted(() => ({ redirect: vi.fn() }))
 const installationNavigation = vi.hoisted(() => ({ redirect: vi.fn() }))
 vi.mock('@/utils/installation-navigation', async (original) => ({
@@ -28,7 +28,19 @@ vi.mock('@tanstack/react-router', () => ({
   }: {
     select: (state: { location: { pathname: string } }) => unknown
   }) => select({ location: route }),
-  Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
+  Link: ({
+    children,
+    to,
+    search,
+  }: {
+    children: ReactNode
+    to: string
+    search?: { redirect?: string }
+  }) => (
+    <a href={search?.redirect ? `${to}?redirect=${encodeURIComponent(search.redirect)}` : to}>
+      {children}
+    </a>
+  ),
 }))
 let root: Root
 let container: HTMLDivElement
@@ -100,6 +112,7 @@ beforeEach(() => {
     apiFetch: fetcher,
   })
   route.pathname = '/overview'
+  route.href = '/overview'
 })
 afterEach(() => {
   act(() => root.unmount())
@@ -110,6 +123,16 @@ afterEach(() => {
 })
 
 describe('whole-site storage boundary', () => {
+  it('preserves an OP deep link for sign-in', async () => {
+    useAuthStore.setState({ isAuthenticated: false })
+    route.pathname = '/pipelines/orders/edit'
+    route.href = '/pipelines/orders/edit?tab=logs'
+    await render()
+    const link = container.querySelector('a[href^="/login"]')
+    expect(link?.getAttribute('href')).toBe(
+      '/login?redirect=%2Fpipelines%2Forders%2Fedit%3Ftab%3Dlogs',
+    )
+  })
   it('automatically leaves the installation listener after the first administrator is complete', async () => {
     useAuthStore.setState({ isAuthenticated: false })
     fetcher.mockImplementation(async () =>

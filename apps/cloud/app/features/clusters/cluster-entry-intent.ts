@@ -26,11 +26,15 @@ export function rememberOAuthClusterEntry(search: ClusterEntrySearch) {
     }
     return
   }
-  window.sessionStorage.removeItem(OAUTH_ENTRY_KEY)
-  window.sessionStorage.setItem(
-    OAUTH_ENTRY_KEY,
-    JSON.stringify({ version: 1, target, createdAt: Date.now() }),
-  )
+  try {
+    window.sessionStorage.removeItem(OAUTH_ENTRY_KEY)
+    window.sessionStorage.setItem(
+      OAUTH_ENTRY_KEY,
+      JSON.stringify({ version: 1, target, createdAt: Date.now() }),
+    )
+  } catch {
+    // Authentication remains available when the browser blocks tab storage.
+  }
 }
 
 /** A callback consumes its hint once; cancellation and unrelated sign-ins discard it. */
