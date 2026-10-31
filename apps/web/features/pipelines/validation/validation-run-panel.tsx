@@ -221,7 +221,9 @@ export function ValidationRunPanel({
                 : t('dataValidation.run.unknown')}
             </p>
             {state.reason && <p className="font-mono text-xs break-words">{state.reason}</p>}
-            {state.controlUnknown && <p>{t('dataValidation.run.unknown')}</p>}
+            {state.controlUnknown && state.state !== null && (
+              <p>{t('dataValidation.run.unknown')}</p>
+            )}
             {state.drain !== 'DRAINED' && (
               <p className="text-xs">
                 {t('dataValidation.run.drain')}: {state.drain}

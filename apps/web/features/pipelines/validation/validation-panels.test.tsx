@@ -141,6 +141,43 @@ afterEach(async () => {
 })
 
 describe('actual report and original-run presentation', () => {
+  it.each([null, 'RUNNING'] as const)(
+    'shows an unconfirmed original outcome once for %s while keeping recovery and drain facts',
+    async (state) => {
+      const read = vi.fn(async () =>
+        json({
+          original,
+          run: 'new-run',
+          outcome: 'UNKNOWN',
+          state,
+          admitted: false,
+          waiting: false,
+          controlUnknown: true,
+          retired: false,
+          drain: 'UNKNOWN',
+          reason: null,
+          tables: [],
+          premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+          conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+        }),
+      )
+      await mount(
+        <ValidationRunPanel
+          client={createValidationClient(read)}
+          task={task}
+          original={original}
+          onTerminal={() => {}}
+          onReportOpen={() => {}}
+        />,
+      )
+      await settled(() => expect(document.querySelector('[role="status"]')).not.toBeNull())
+      const status = document.querySelector('[role="status"]')!
+      expect(status.textContent?.split('dataValidation.run.unknown').length).toBe(2)
+      expect(status.textContent).toContain('UNKNOWN')
+      expect(button('dataValidation.run.refresh').disabled).toBe(false)
+    },
+  )
+
   it.each(['manual', 'scheduled'] as const)(
     'does not show the prior report while a distinct %s start has no progress receipt',
     async (kind) => {
