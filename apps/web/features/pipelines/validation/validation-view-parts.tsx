@@ -12,6 +12,17 @@ export function validationMetadataBusy(error: unknown): error is PipelineClientE
   )
 }
 
+/** Only fresh save attempts may use these refusals to disprove a write; replay/readback stays uncertain. */
+export function validationSavePrewriteRefusal(error: unknown): boolean {
+  return (
+    validationMetadataBusy(error) ||
+    (error instanceof PipelineClientError &&
+      error.kind === 'server' &&
+      error.status === 400 &&
+      error.code === 'validation.rule-unsupported')
+  )
+}
+
 export function ValidationRequestError({ error }: { error: unknown }) {
   const { t } = useTranslation()
   const known = error instanceof PipelineClientError ? error : null

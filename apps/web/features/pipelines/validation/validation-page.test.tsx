@@ -159,6 +159,68 @@ afterEach(async () => {
 })
 
 describe('real validation page mutation boundaries', () => {
+  it('keeps association-key drafts editable after a definite pre-write rule refusal', async () => {
+    let current: ValidationTask = {
+      ...saved,
+      method: 'UNIQUE_KEY',
+      mappings: [
+        {
+          ...mapping,
+          keys: { confirmationId: generation, fields: [{ source: ['id'], target: ['id'] }] },
+        },
+      ],
+    }
+    const saves: ValidationSave[] = []
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path),
+        body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':evaluate')) return json(evaluate(body))
+      if (action.endsWith(':save')) {
+        saves.push(body)
+        if (saves.length === 1)
+          return json(
+            {
+              code: 'validation.rule-unsupported',
+              params: { node: 'orders', field: 'removed_field', rule: 'key-field-missing' },
+              message: 'The confirmed field is unavailable.',
+            },
+            400,
+          )
+        current = { ...current, revision: '2' }
+        return json({ outcome: 'APPLIED', fingerprint, taskGeneration: generation })
+      }
+      return json(current)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 146 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(document.querySelectorAll('input[role="combobox"]')).toHaveLength(2))
+    const source = () =>
+      document.querySelector<HTMLInputElement>('tbody tr input[role="combobox"]')!
+    const edit = async (value: string) =>
+      act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+          source(),
+          value,
+        )
+        source().dispatchEvent(new Event('input', { bubbles: true }))
+      })
+    await edit('removed_field')
+    await click('dataValidation.bulk.save')
+    await settled(() => expect(document.querySelectorAll('[role="alert"]')).toHaveLength(1))
+    expect(source().disabled).toBe(false)
+    expect(source().value).toBe('removed_field')
+    expect(button('dataValidation.bulk.save').disabled).toBe(false)
+    expect(document.body.textContent).not.toContain('dataValidation.retryOriginalSave')
+    expect(document.body.textContent).not.toContain('dataValidation.unknownSave')
+    expect(button('dataValidation.bulk.start').disabled).toBe(true)
+    await edit('id')
+    await click('dataValidation.bulk.save')
+    await settled(() => expect(document.body.textContent).toContain('dataValidation.saved'))
+    expect(saves).toHaveLength(2)
+    expect(saves[1].commandId).not.toBe(saves[0].commandId)
+    expect(saves[1].input.confirmations.orders.fields[0].source).toBe('id')
+  })
+
   it('unblocks another manual start from durable CLOSED admission after the entry restarts without certifying physical drain', async () => {
     let current = saved
     let retired = false
@@ -872,7 +934,15 @@ describe('real validation page mutation boundaries', () => {
         expect(button('dataValidation.retryOriginalOff').disabled).toBe(false)
     },
   )
-  it.each(['evaluate', 'save', 'readback', 'network', 'replay-capacity'] as const)(
+  it.each([
+    'evaluate',
+    'save',
+    'readback',
+    'network',
+    'replay-capacity',
+    'readback-rule',
+    'replay-rule',
+  ] as const)(
     'shows one error and preserves the correct recovery after %s failure',
     async (stage) => {
       let recover = false,
@@ -900,13 +970,29 @@ describe('real validation page mutation boundaries', () => {
           const outcome = accepted ? 'DUPLICATE' : 'APPLIED'
           accepted = true
           current = { ...saved, method: 'COUNT', revision: '2' }
-          if (!recover && stage === 'replay-capacity') {
+          if (!recover && (stage === 'replay-capacity' || stage === 'replay-rule')) {
             if (saves.length === 1) throw new TypeError('committed save reply lost')
-            return capacity()
+            return stage === 'replay-rule'
+              ? json(
+                  {
+                    code: 'validation.rule-unsupported',
+                    params: { node: 'orders', field: 'id', rule: 'key-field-missing' },
+                  },
+                  400,
+                )
+              : capacity()
           }
           return json({ outcome, fingerprint, taskGeneration: generation })
         }
         if (accepted && stage === 'readback' && !recover) return capacity()
+        if (accepted && stage === 'readback-rule' && !recover)
+          return json(
+            {
+              code: 'validation.rule-unsupported',
+              params: { node: 'orders', field: 'id', rule: 'key-field-missing' },
+            },
+            400,
+          )
         return json(current)
       })
       useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 90 })
@@ -941,7 +1027,7 @@ describe('real validation page mutation boundaries', () => {
       } else {
         expect(button('dataValidation.bulk.save').disabled).toBe(true)
         expect(document.body.textContent).toContain('dataValidation.unknownSave')
-        if (stage === 'replay-capacity') {
+        if (stage === 'replay-capacity' || stage === 'replay-rule') {
           await click('dataValidation.retryOriginalSave')
           await settled(() => expect(saves).toHaveLength(2))
           expect(saves[1]).toEqual(saves[0])
@@ -950,7 +1036,11 @@ describe('real validation page mutation boundaries', () => {
         }
         recover = true
         await click('dataValidation.retryOriginalSave')
-        await settled(() => expect(saves).toHaveLength(stage === 'replay-capacity' ? 3 : 2))
+        await settled(() =>
+          expect(saves).toHaveLength(
+            stage === 'replay-capacity' || stage === 'replay-rule' ? 3 : 2,
+          ),
+        )
         expect(saves.at(-1)).toEqual(saves[0])
         await settled(() => expect(document.querySelectorAll('[role="alert"]')).toHaveLength(0))
       }

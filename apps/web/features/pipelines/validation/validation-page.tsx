@@ -30,7 +30,7 @@ import { ValidationRunPanel } from './validation-run-panel'
 import { ValidationScheduleSettings } from './validation-schedule-settings'
 import { savedValidationSelection, sameValidationSchedule } from './validation-selection'
 import { validationSessionFetcher } from './validation-session-fetcher'
-import { ValidationRequestError, validationMetadataBusy } from './validation-view-parts'
+import { ValidationRequestError, validationSavePrewriteRefusal } from './validation-view-parts'
 
 type Client = ReturnType<typeof createValidationClient>
 export function ValidationPage({ pipelineId }: { pipelineId: string }) {
@@ -317,9 +317,9 @@ function ValidationWorkspace({
     } catch (failed) {
       setError(failed)
       if (!acknowledged) {
-        // A fresh metadata admission refusal precedes the write. A recovery attempt may
-        // already have committed, and a failed readback never disproves that receipt.
-        if (!recoveringOriginal && !acceptedReceipt && validationMetadataBusy(failed)) {
+        // Fresh metadata/rule refusals precede the write. A recovery attempt may already
+        // have committed, and a failed readback never disproves that receipt.
+        if (!recoveringOriginal && !acceptedReceipt && validationSavePrewriteRefusal(failed)) {
           setUncertain(null)
         } else setNotice(t('dataValidation.unknownSave'))
       }
