@@ -2872,7 +2872,10 @@
       },
       "notAdmitted": "原启动未入场；该请求没有已完成的校验结论。",
       "slotBusy": "全量槽忙碌或原启动尚未确认，暂不能发起新一轮。",
-      "otherAdmitted": "该启动序号已由另一请求占有；原请求未入场，当前展示存储记录中的轮次。"
+      "otherAdmitted": "该启动序号已由另一请求占有；原请求未入场，当前展示存储记录中的轮次。",
+      "startNotSent": "本次启动请求未发出，没有因此启动新一轮校验。",
+      "previousRun": "上一轮校验 · 保存的配置版本 {{revision}}",
+      "configurationRevision": "保存的配置版本 {{revision}}"
     },
     "report": {
       "title": "全量校验报告",

@@ -2872,7 +2872,10 @@
       },
       "notAdmitted": "原啟動未進場；該請求沒有已完成的校驗結論。",
       "slotBusy": "全量槽忙碌或原啟動尚未確認，暫不能發起新一輪。",
-      "otherAdmitted": "該啟動序號已由另一請求佔有；原請求未進場，目前顯示儲存記錄中的輪次。"
+      "otherAdmitted": "該啟動序號已由另一請求佔有；原請求未進場，目前顯示儲存記錄中的輪次。",
+      "startNotSent": "本次啟動請求未送出，沒有因此啟動新一輪校驗。",
+      "previousRun": "上一輪校驗 · 儲存的設定版本 {{revision}}",
+      "configurationRevision": "儲存的設定版本 {{revision}}"
     },
     "report": {
       "title": "全量校驗報告",

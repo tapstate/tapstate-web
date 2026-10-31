@@ -119,6 +119,7 @@ function ValidationWorkspace({
   } | null>(null)
   const offOriginal = useRef<ValidationDisable | null>(null)
   const [offUnknown, setOffUnknown] = useState(false)
+  const [startNotSent, setStartNotSent] = useState(false)
   const [operation, setOperation] = useState<ValidationOperation | null>(null)
   const [terminalReceipt, setTerminalReceipt] = useState<ValidationExecution | null>(null)
   const [historyReference, setHistoryReference] = useState<ValidationReference | null>(null)
@@ -322,6 +323,8 @@ function ValidationWorkspace({
     if (!basis || blocked || operation || startBusy) return
     const input = savedValidationSelection(basis)
     if (!input) refuse('dataValidation.definitionChanged')
+    let originalCreated = false
+    setStartNotSent(false)
     setPending(true)
     setError(null)
     try {
@@ -339,6 +342,7 @@ function ValidationWorkspace({
       )
         refuse('dataValidation.definitionChanged')
       if (validationStartBusy(latest, terminalReceipt)) {
+        setStartNotSent(true)
         setNotice(t('dataValidation.run.slotBusy'))
         return
       }
@@ -361,10 +365,12 @@ function ValidationWorkspace({
       }
       setTerminalReceipt(null)
       setOperation(original)
+      originalCreated = true
       // Retain the original selector before submitting. Reading it never dispatches another START.
       await client.start(original)
       void taskQuery.refetch()
     } catch (failed) {
+      if (!originalCreated) setStartNotSent(true)
       setError(failed)
       throw failed
     } finally {
@@ -383,6 +389,11 @@ function ValidationWorkspace({
       {notice && (
         <p role="status" className="system-sm-regular text-text-secondary">
           {notice}
+        </p>
+      )}
+      {startNotSent && (
+        <p role="status" className="system-sm-regular text-text-secondary">
+          {t('dataValidation.run.startNotSent')}
         </p>
       )}
       {uncertain && (

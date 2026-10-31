@@ -50,7 +50,8 @@ export function ValidationRunPanel({
       const result = query.state.data
       return result?.state &&
         ['COMPLETED', 'FAILED', 'STOPPED'].includes(result.state) &&
-        result.drain === 'DRAINED'
+        (result.drain === 'DRAINED' ||
+          (result.retired && !result.controlUnknown && result.drain === 'UNKNOWN'))
         ? false
         : 2000
     },
@@ -112,6 +113,18 @@ export function ValidationRunPanel({
         )}
       </div>
       <p className="system-sm-regular text-text-secondary">{t('dataValidation.run.independent')}</p>
+      {operation && (
+        <p className="system-sm-regular text-text-secondary">
+          {t(
+            !original &&
+              selection?.source === 'DURABLE_PERMISSION' &&
+              task?.permission?.phase === 'CLOSED'
+              ? 'dataValidation.run.previousRun'
+              : 'dataValidation.run.configurationRevision',
+            { revision: operation.revision },
+          )}
+        </p>
+      )}
       {progress.isError && <ValidationRequestError error={progress.error} />}
       {stopError != null && <ValidationRequestError error={stopError} />}
       {state && (

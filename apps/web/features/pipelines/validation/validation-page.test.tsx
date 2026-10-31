@@ -142,6 +142,7 @@ afterEach(async () => {
   root = undefined
   container = undefined
   queries = undefined
+  vi.useRealTimers()
   vi.restoreAllMocks()
 })
 
@@ -290,16 +291,21 @@ describe('real validation page mutation boundaries', () => {
       }
     },
   )
-  it.each(['NOT_LIVE', 'LIVE', 'UNKNOWN'] as const)(
-    'keeps a recorded successor pinned across lease changes, including a fresh %s view',
-    async (initialLease) => {
+  it.each([
+    ['NOT_LIVE', 'BORN'],
+    ['LIVE', 'BORN'],
+    ['UNKNOWN', 'BORN'],
+    ['UNKNOWN', 'CLOSED'],
+  ] as const)(
+    'keeps a recorded successor pinned across lease changes, including a fresh %s/%s view',
+    async (initialLease, phase) => {
       const command = '40000000-0000-4000-8000-000000000001'
       const successor = '50000000-0000-4000-8000-000000000001'
       const value: ValidationTask = {
         ...saved,
         nextStartSequence: '2',
         permission: {
-          phase: 'BORN',
+          phase,
           taskGeneration: generation,
           revision: '1',
           sequence: '1',
@@ -357,6 +363,8 @@ describe('real validation page mutation boundaries', () => {
       const first = read.mock.calls.find(([path]) => String(path).endsWith(':progress'))!
       const original = JSON.parse(String(first[1]?.body))
       expect(original.command).toBe(successor)
+      expect(document.body.textContent).not.toContain('dataValidation.run.previousRun')
+      expect(document.body.textContent).toContain('dataValidation.run.configurationRevision')
       for (const ownerLease of ['LIVE', 'UNKNOWN'] as const) {
         await act(async () =>
           root!.render(
@@ -544,6 +552,118 @@ describe('real validation page mutation boundaries', () => {
     expect(targets.every((input) => input.value === '')).toBe(true)
     expect(button('dataValidation.bulk.save').disabled).toBe(true)
   })
+  it('identifies the previous completed revision when a new start precheck is refused', async () => {
+    const task: ValidationTask = {
+      ...saved,
+      revision: '6',
+      nextStartSequence: '4',
+      permission: {
+        phase: 'CLOSED',
+        taskGeneration: generation,
+        revision: '5',
+        sequence: '3',
+        command: '40000000-0000-4000-8000-000000000001',
+        run: 'previous-full',
+      },
+    }
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path)
+      if (action.endsWith(':evaluate'))
+        return json(
+          {
+            code: 'validation.value-limit-exceeded',
+            params: { limit: 'validation.metadataFrames' },
+            message: 'Metadata busy.',
+          },
+          429,
+        )
+      if (action.endsWith(':progress'))
+        return json({
+          original: JSON.parse(String(init?.body)),
+          run: 'previous-full',
+          outcome: 'ACCEPTED',
+          state: 'COMPLETED',
+          admitted: true,
+          waiting: false,
+          controlUnknown: false,
+          retired: true,
+          drain: 'UNKNOWN',
+          reason: null,
+          tables: [],
+          premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+          conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+        })
+      return json(task)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 101 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+    await click('dataValidation.bulk.start')
+    await settled(() => expect(document.querySelectorAll('[role="alert"]')).toHaveLength(1))
+    expect(document.body.textContent).toContain('dataValidation.run.startNotSent')
+    expect(document.body.textContent).toContain('dataValidation.run.previousRun')
+    expect(read.mock.calls.some(([path]) => String(path).endsWith(':start'))).toBe(false)
+    expect(document.body.textContent).not.toContain('dataValidation.retryOriginalStart')
+    expect(button('dataValidation.bulk.start').disabled).toBe(false)
+    expect(button('dataValidation.report.open').disabled).toBe(false)
+  })
+  it.each([
+    { state: 'COMPLETED', retired: true, controlUnknown: false, drain: 'UNKNOWN', polling: false },
+    {
+      state: 'COMPLETED',
+      retired: true,
+      controlUnknown: false,
+      drain: 'NOT_DRAINED',
+      polling: true,
+    },
+    { state: 'COMPLETED', retired: true, controlUnknown: true, drain: 'UNKNOWN', polling: true },
+    { state: 'RUNNING', retired: true, controlUnknown: false, drain: 'UNKNOWN', polling: true },
+    { state: 'COMPLETED', retired: false, controlUnknown: false, drain: 'UNKNOWN', polling: true },
+  ])('keeps terminal report polling separate from resource settlement: %j', async (observation) => {
+    const task: ValidationTask = {
+      ...saved,
+      nextStartSequence: '2',
+      permission: {
+        phase: 'CLOSED',
+        taskGeneration: generation,
+        revision: '1',
+        sequence: '1',
+        command: '40000000-0000-4000-8000-000000000001',
+        run: 'retained',
+      },
+    }
+    const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) =>
+      json({
+        original: JSON.parse(String(init?.body)),
+        run: 'retained',
+        outcome: 'ACCEPTED',
+        ...observation,
+        admitted: true,
+        waiting: false,
+        reason: null,
+        tables: [],
+        premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+        conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+      }),
+    )
+    const onTerminal = vi.fn()
+    await mount(
+      <ValidationRunPanel
+        client={createValidationClient(read)}
+        task={task}
+        original={null}
+        onTerminal={onTerminal}
+        onReportOpen={() => {}}
+      />,
+    )
+    await settled(() => expect(document.body.textContent).toContain(observation.drain))
+    expect(read).toHaveBeenCalledTimes(1)
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 2100))
+    })
+    expect(read).toHaveBeenCalledTimes(observation.polling ? 2 : 1)
+    expect(onTerminal).not.toHaveBeenCalled()
+  })
   it('retries only the original START after a lost request before entry dispatch', async () => {
     const starts: unknown[] = [],
       read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
@@ -583,6 +703,7 @@ describe('real validation page mutation boundaries', () => {
     await click('dataValidation.retryOriginalStart')
     await settled(() => expect(starts).toHaveLength(2))
     expect(starts[1]).toEqual(starts[0])
+    expect(document.body.textContent).not.toContain('dataValidation.run.startNotSent')
   })
   it('unlocks explicit reload after original-save conflict, including a concurrent fresh creation', async () => {
     const saves: unknown[] = [],
@@ -651,6 +772,7 @@ describe('real validation page mutation boundaries', () => {
     await click('dataValidation.schedule.save')
     await settled(() => expect(document.body.textContent).toContain('dataValidation.saved'))
     expect(document.body.textContent).not.toContain('dataValidation.unknownSave')
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
   it('offers explicit reload when another writer creates the task before the fresh evaluation', async () => {

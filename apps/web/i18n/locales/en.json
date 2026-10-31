@@ -2872,7 +2872,10 @@
       },
       "notAdmitted": "The original start was not admitted. No completed result is asserted for that request.",
       "slotBusy": "The FULL slot is busy or the original start is still unconfirmed.",
-      "otherAdmitted": "Another command owns that exact start sequence. The original request did not win; controls show the stored run."
+      "otherAdmitted": "Another command owns that exact start sequence. The original request did not win; controls show the stored run.",
+      "startNotSent": "This Start request was not sent. No new run was started by this request.",
+      "previousRun": "Previous run — saved configuration revision {{revision}}",
+      "configurationRevision": "Saved configuration revision {{revision}}"
     },
     "report": {
       "title": "Full validation report",
