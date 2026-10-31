@@ -43,7 +43,8 @@ export function ValidationPage({ pipelineId }: { pipelineId: string }) {
   const client = useMemo(() => createValidationClient(scopedFetch), [scopedFetch])
   const [reload, setReload] = useState(0)
   const initial = useQuery({
-    queryKey: ['validation', session, pipelineId, 'initial', reload],
+    // The reviewed snapshot belongs to this workspace lifetime, not a later visit.
+    queryKey: ['validation', session, pipelineId, 'initial', reload, validationClientKey(client)],
     queryFn: async ({ signal }) => {
       const [pipeline, task] = await Promise.all([
         getPipeline(pipelineId, scopedFetch),
@@ -65,6 +66,7 @@ export function ValidationPage({ pipelineId }: { pipelineId: string }) {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     staleTime: Infinity,
+    gcTime: 0,
   })
   const { t } = useTranslation()
   if (initial.isPending)

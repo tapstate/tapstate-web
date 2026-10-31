@@ -108,11 +108,11 @@ function noLoadedModels(read: typeof fetch): typeof fetch {
   return (path, init) =>
     String(path).endsWith('/schema') ? Promise.resolve(json(null, 404)) : read(path, init)
 }
-async function mount(view: React.ReactNode) {
+async function mount(view: React.ReactNode, gcTime = 0) {
   container = document.createElement('div')
   document.body.append(container)
   root = createRoot(container)
-  queries = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } })
+  queries = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime } } })
   await act(async () =>
     root!.render(<QueryClientProvider client={queries!}>{view}</QueryClientProvider>),
   )
@@ -148,6 +148,45 @@ afterEach(async () => {
 })
 
 describe('real validation page mutation boundaries', () => {
+  it('loads a fresh reviewed definition after saving and returning to the workspace', async () => {
+    let current = saved
+    let taskReads = 0
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path)
+      const body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':evaluate')) return json(evaluate(body))
+      if (action.endsWith(':save')) {
+        current = { ...saved, revision: '2' }
+        return json({ outcome: 'APPLIED', fingerprint, taskGeneration: generation })
+      }
+      taskReads++
+      return json(current)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 127 })
+    await mount(<ValidationPage pipelineId="flow" />, 5 * 60 * 1000)
+    await settled(() => expect(button('dataValidation.bulk.save').disabled).toBe(false))
+    await click('dataValidation.bulk.save')
+    await settled(() => expect(document.body.textContent).toContain('dataValidation.saved'))
+    await act(async () =>
+      root!.render(
+        <QueryClientProvider client={queries!}>
+          <p>Outside workspace</p>
+        </QueryClientProvider>,
+      ),
+    )
+    const previousReads = taskReads
+    await act(async () =>
+      root!.render(
+        <QueryClientProvider client={queries!}>
+          <ValidationPage pipelineId="flow" />
+        </QueryClientProvider>,
+      ),
+    )
+    await settled(() => expect(taskReads).toBeGreaterThan(previousReads))
+    await settled(() => expect(button('dataValidation.bulk.save').disabled).toBe(false))
+    expect(document.body.textContent).not.toContain('dataValidation.definitionChanged')
+  })
+
   it('submits confirmed configuration through its native form without starting a run', async () => {
     let current = saved
     const writes: string[] = []
