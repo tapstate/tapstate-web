@@ -148,6 +148,36 @@ afterEach(async () => {
 })
 
 describe('real validation page mutation boundaries', () => {
+  it('submits confirmed configuration through its native form without starting a run', async () => {
+    let current = saved
+    const writes: string[] = []
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path)
+      const body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':evaluate')) return json(evaluate(body))
+      if (action.endsWith(':save')) {
+        writes.push(action)
+        current = { ...saved, revision: '2' }
+        return json({ outcome: 'APPLIED', fingerprint, taskGeneration: generation })
+      }
+      if (action.endsWith(':start')) writes.push(action)
+      return json(current)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 126 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.bulk.save').disabled).toBe(false))
+    const save = button('dataValidation.bulk.save')
+    expect(save.form).not.toBeNull()
+    expect(save.type).toBe('submit')
+    expect(
+      document.querySelector<HTMLInputElement>('[aria-label="dataValidation.bulk.search"]')?.form,
+    ).toBeNull()
+    await act(async () => save.form!.requestSubmit(save))
+    await settled(() => expect(document.body.textContent).toContain('dataValidation.saved'))
+    expect(writes.filter((path) => path.endsWith(':save'))).toHaveLength(1)
+    expect(writes.some((path) => path.endsWith(':start'))).toBe(false)
+  })
+
   it.each(['save-precheck', 'disable', 'preview'] as const)(
     'keeps one visible schedule error after %s failure',
     async (stage) => {

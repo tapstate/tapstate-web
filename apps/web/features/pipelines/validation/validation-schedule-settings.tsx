@@ -180,7 +180,14 @@ export function ValidationScheduleSettings({
   }
 
   return (
-    <div className="space-y-6">
+    <form
+      className="space-y-6"
+      aria-label={t('dataValidation.schedule.title')}
+      onSubmit={(event) => {
+        event.preventDefault()
+        save(task.scheduleEnabled)
+      }}
+    >
       <Button variant="ghost-accent" size="small" onClick={onBack} disabled={pending}>
         {t('dataValidation.schedule.back')}
       </Button>
@@ -394,7 +401,7 @@ export function ValidationScheduleSettings({
               variant={dirty ? 'primary' : 'secondary'}
               className={validationPrimaryActionClass}
               disabled={!canSave}
-              onClick={() => save(task.scheduleEnabled)}
+              type="submit"
             >
               {t('dataValidation.schedule.save')}
             </Button>
@@ -546,6 +553,6 @@ export function ValidationScheduleSettings({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </form>
   )
 }

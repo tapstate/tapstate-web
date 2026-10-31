@@ -128,6 +128,23 @@ async function fixture(
 const saveButton = () => button('dataValidation.schedule.save')
 
 describe('real schedule form control boundaries', () => {
+  it('submits the native schedule form without enabling an OFF rule', async () => {
+    const f = await fixture({ ...task(), scheduleEnabled: false })
+    await settled(() => expect(saveButton().disabled).toBe(false))
+    const save = saveButton()
+    expect(save.form).not.toBeNull()
+    expect(save.type).toBe('submit')
+    await act(async () => save.form!.requestSubmit(save))
+    await settled(() => expect(f.onSave).toHaveBeenCalledTimes(1))
+    expect(f.onSave).toHaveBeenCalledWith(schedule, false, 10)
+    expect(f.onDisable).not.toHaveBeenCalled()
+    await change('dataValidation.schedule.retention', '0')
+    await act(async () =>
+      save.form!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })),
+    )
+    expect(f.onSave).toHaveBeenCalledTimes(1)
+  })
+
   it('does not publish an older preview after the explicit zone changes', async () => {
     let resolveOld!: (value: ValidationPreview) => void,
       resolveNew!: (value: ValidationPreview) => void

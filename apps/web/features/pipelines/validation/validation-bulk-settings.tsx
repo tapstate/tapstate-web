@@ -260,7 +260,14 @@ export function ValidationBulkSettings({
   const included = requestRows.length
   const excluded = rows.length - included
   return (
-    <div className="validation-bulk space-y-5">
+    <form
+      className="validation-bulk space-y-5"
+      aria-label={t('dataValidation.bulk.title')}
+      onSubmit={(event) => {
+        event.preventDefault()
+        void save()
+      }}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="system-lg-semibold text-text-primary">{t('dataValidation.bulk.title')}</h2>
@@ -380,6 +387,7 @@ export function ValidationBulkSettings({
         <Input
           className="max-w-64"
           aria-label={t('dataValidation.bulk.search')}
+          form=""
           placeholder={t('dataValidation.bulk.search')}
           value={search}
           onChange={(event) => {
@@ -709,7 +717,7 @@ export function ValidationBulkSettings({
             variant={ready && (!task || dirty) ? 'primary' : 'secondary'}
             className={validationPrimaryActionClass}
             disabled={!ready}
-            onClick={() => void save()}
+            type="submit"
           >
             {t('dataValidation.bulk.save')}
           </Button>
@@ -754,6 +762,6 @@ export function ValidationBulkSettings({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </form>
   )
 }
