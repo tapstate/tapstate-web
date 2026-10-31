@@ -182,14 +182,28 @@ export function ValidationBulkSettings({
           const mapping = evaluated.mappings.find(
             (value) => value.id === row.hint.choice?.mappingId,
           )
-          if (!mapping || row.pairs.some((pair) => pair.source || pair.target)) return row
+          if (!mapping) return row
+          const targetNames = new Map<string, number>()
+          for (const name of row.hint.targetFields ?? [])
+            targetNames.set(name, (targetNames.get(name) ?? 0) + 1)
+          const targetFor = (name: string) => (targetNames.get(name) === 1 ? name : '')
+          // Exact loaded-model names are editable hints, never an independent uniqueness claim.
+          if (row.pairs.some((pair) => pair.source || pair.target)) {
+            const pairs = row.pairs.map((pair) =>
+              pair.target || !pair.source ? pair : { ...pair, target: targetFor(pair.source) },
+            )
+            return { ...row, pairs }
+          }
           const candidates = mapping.source.candidates.filter(
             (candidate) => candidate.issues.length === 0,
           )
           const source = candidates.length === 1 ? candidates[0] : null
           if (!source) return row
-          // Source candidates are independent hints. A cross-side pairing requires explicit user input.
-          return { ...row, pairs: source.fields.map((field) => ({ source: field, target: '' })) }
+          // Preserve source order; never zip independently ordered source and destination keys.
+          return {
+            ...row,
+            pairs: source.fields.map((field) => ({ source: field, target: targetFor(field) })),
+          }
         }),
       )
     })
@@ -540,11 +554,10 @@ export function ValidationBulkSettings({
                               emptyLabel={t('wizard.search.noResults')}
                               placeholder={t('dataValidation.bulk.fieldPlaceholder')}
                               value={pair.source}
-                              options={(
-                                mapping?.source.fields.map((field) => field.name) ??
-                                row.hint.sourceFields ??
-                                []
-                              ).map((name) => ({ value: name, label: name }))}
+                              options={(row.hint.sourceFields ?? []).map((name) => ({
+                                value: name,
+                                label: name,
+                              }))}
                               disabled={!row.included || pending || busy}
                               onValueChange={(field) =>
                                 change(index, (value) => ({
@@ -600,11 +613,10 @@ export function ValidationBulkSettings({
                               emptyLabel={t('wizard.search.noResults')}
                               placeholder={t('dataValidation.bulk.fieldPlaceholder')}
                               value={pair.target}
-                              options={(
-                                mapping?.target.fields.map((field) => field.name) ??
-                                row.hint.targetFields ??
-                                []
-                              ).map((name) => ({ value: name, label: name }))}
+                              options={(row.hint.targetFields ?? []).map((name) => ({
+                                value: name,
+                                label: name,
+                              }))}
                               disabled={!row.included || pending || busy}
                               onValueChange={(field) =>
                                 change(index, (value) => ({

@@ -552,75 +552,123 @@ describe('real validation page mutation boundaries', () => {
     })
     expect(read.mock.calls.some(([path]) => String(path).endsWith(':save'))).toBe(false)
   })
-  it('leaves a manual pairing blank rather than zipping independently reversed composite candidates', async () => {
-    const fields = [
-      { name: 'customer_id', type: 'NUMBER', keyDomain: 'EXACT_NUMBER', unavailableReason: null },
-      { name: 'region', type: 'NUMBER', keyDomain: 'EXACT_NUMBER', unavailableReason: null },
-    ]
-    const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) => {
-      const input = JSON.parse(String(init?.body)) as ValidationSelection
-      return json({
-        ...evaluate(input),
-        fingerprint: null,
-        comparisonFingerprint: null,
-        mappingRevision: null,
-        mappings: [
-          {
-            id: 'orders',
-            source: {
-              ...side,
-              fields,
-              candidates: [
-                { origin: 'PRIMARY_KEY', fields: ['customer_id', 'region'], issues: [] },
-              ],
+  it.each([
+    { model: [], expected: ['', ''] },
+    { model: ['region', 'customer_id'], expected: ['customer_id', 'region'] },
+    { model: ['customer_id', 'different_region'], expected: ['customer_id', ''] },
+  ])(
+    'recommends only exact loaded destination names without zipping independent candidates: $model',
+    async ({ model, expected }) => {
+      const fields = [
+        { name: 'customer_id', type: 'NUMBER', keyDomain: 'EXACT_NUMBER', unavailableReason: null },
+        { name: 'region', type: 'NUMBER', keyDomain: 'EXACT_NUMBER', unavailableReason: null },
+      ]
+      const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) => {
+        const input = JSON.parse(String(init?.body)) as ValidationSelection
+        return json({
+          ...evaluate(input),
+          fingerprint: null,
+          comparisonFingerprint: null,
+          mappingRevision: null,
+          mappings: [
+            {
+              id: 'orders',
+              source: {
+                ...side,
+                fields,
+                candidates: [
+                  { origin: 'PRIMARY_KEY', fields: ['customer_id', 'region'], issues: [] },
+                ],
+              },
+              target: {
+                ...side,
+                sourceId: 'target',
+                fields,
+                candidates: [
+                  { origin: 'PRIMARY_KEY', fields: ['region', 'customer_id'], issues: [] },
+                ],
+              },
             },
-            target: {
-              ...side,
-              sourceId: 'target',
-              fields,
-              candidates: [
-                { origin: 'PRIMARY_KEY', fields: ['region', 'customer_id'], issues: [] },
-              ],
-            },
-          },
-        ],
+          ],
+        })
       })
-    })
-    await mount(
-      <ValidationBulkSettings
-        pipelineId="flow"
-        client={createValidationClient(read)}
-        task={null}
-        hints={[
-          {
-            key: 'orders',
-            outputId: 'out',
-            sourceId: 'source',
-            table: 'orders',
-            targetSourceId: 'target',
-            choice: { mappingId: 'orders', outputId: 'out', sourceId: 'source', table: 'orders' },
-            reason: null,
-            retainedDiscoveryAt: null,
-          },
-        ]}
-        pending={false}
-        onSave={async () => {}}
-        onStart={async () => {}}
-        onSchedule={() => {}}
-        onHistory={() => {}}
-      />,
-    )
-    await click('dataValidation.bulk.inspect')
-    await settled(() => expect(read).toHaveBeenCalled())
-    const targets = [
-      ...document.querySelectorAll<HTMLInputElement>(
-        'tbody td:nth-child(5) input[role="combobox"]',
-      ),
-    ]
-    expect(targets).toHaveLength(2)
-    expect(targets.every((input) => input.value === '')).toBe(true)
-    expect(button('dataValidation.bulk.save').disabled).toBe(true)
-  })
+      await mount(
+        <ValidationBulkSettings
+          pipelineId="flow"
+          client={createValidationClient(read)}
+          task={null}
+          hints={[
+            {
+              key: 'orders',
+              outputId: 'out',
+              sourceId: 'source',
+              table: 'orders',
+              targetSourceId: 'target',
+              choice: { mappingId: 'orders', outputId: 'out', sourceId: 'source', table: 'orders' },
+              reason: null,
+              retainedDiscoveryAt: null,
+              targetFields: model,
+            },
+          ]}
+          pending={false}
+          onSave={async () => {}}
+          onStart={async () => {}}
+          onSchedule={() => {}}
+          onHistory={() => {}}
+        />,
+      )
+      await click('dataValidation.bulk.inspect')
+      await settled(() => expect(read).toHaveBeenCalled())
+      const targets = [
+        ...document.querySelectorAll<HTMLInputElement>(
+          'tbody td:nth-child(5) input[role="combobox"]',
+        ),
+      ]
+      expect(targets).toHaveLength(2)
+      expect(targets.map((input) => input.value)).toEqual(expected)
+      expect(button('dataValidation.bulk.save').disabled).toBe(expected.some((value) => !value))
+      const sources = [
+        ...document.querySelectorAll<HTMLInputElement>(
+          'tbody td:nth-child(3) input[role="combobox"]',
+        ),
+      ]
+      expect(sources.map((input) => input.value)).toEqual(['customer_id', 'region'])
+      if (!model.length) {
+        await act(async () =>
+          document
+            .querySelector<HTMLButtonElement>(
+              '[aria-label="wizard.search.openOptions · dataValidation.bulk.target · orders · 1"]',
+            )!
+            .click(),
+        )
+        expect(document.querySelectorAll('[role="option"]')).toHaveLength(0)
+      }
+      if (expected.every(Boolean)) {
+        await act(async () => {
+          Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+            targets[0],
+            'manual_customer',
+          )
+          targets[0].dispatchEvent(new Event('input', { bubbles: true }))
+          Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+            targets[1],
+            '',
+          )
+          targets[1].dispatchEvent(new Event('input', { bubbles: true }))
+        })
+        await click('dataValidation.bulk.inspect')
+        await settled(() => expect(read).toHaveBeenCalledTimes(2))
+        expect(
+          [
+            ...document.querySelectorAll<HTMLInputElement>(
+              'tbody td:nth-child(5) input[role="combobox"]',
+            ),
+          ].map((input) => input.value),
+        ).toEqual(['manual_customer', 'region'])
+      }
+      expect(read.mock.calls.every(([path]) => String(path).endsWith(':evaluate'))).toBe(true)
+    },
+  )
   it.each([false, true])(
     'distinguishes a busy progress read from run failure, cached=%s',
     async (cached) => {
