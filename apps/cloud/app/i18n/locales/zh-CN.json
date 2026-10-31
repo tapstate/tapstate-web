@@ -660,5 +660,10 @@
       "submissionUncertain": "Cloud 无法确认工单是否创建成功。请先检查“我的工单”，再提交新请求。{{opId}}"
     },
     "organizationBadge": "组织"
+  },
+  "startup": {
+    "title": "正在载入 Tapstate Cloud",
+    "help": "正在连接 Tapstate，请保持页面打开。如等待时间较长，请重新加载页面。",
+    "retry": "重新加载页面"
   }
 }

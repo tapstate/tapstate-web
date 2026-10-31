@@ -2719,5 +2719,10 @@
       "confirm": "确认",
       "close": "关闭"
     }
+  },
+  "startup": {
+    "title": "正在载入 Cluster",
+    "help": "正在连接 Tapstate，请保持页面打开。如等待时间较长，请重新加载页面。",
+    "retry": "重新加载页面"
   }
 }

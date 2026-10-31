@@ -759,6 +759,53 @@ describe('whole-site storage boundary', () => {
     )
   })
 
+  it('restores server progress after a fresh document without replaying the original submission', async () => {
+    const setup = await startPendingCloudSetup()
+    setup.snapshot = initializing({ stateVersion: 11 })
+    await click('Refresh status')
+    expect(container.textContent).toContain('1 of 4 steps completed')
+    await act(async () => root.unmount())
+    client.clear()
+    root = createRoot(container)
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    useAuthStore.setState({ isAuthenticated: false, sessionRevision: 1 })
+    let finishEntry!: (response: Response) => void
+    const original = fetcher.getMockImplementation()!
+    fetcher.mockImplementation(async (url, init) =>
+      String(url) === '/auth/storage-entry'
+        ? new Promise<Response>((resolve) => {
+            finishEntry = resolve
+          })
+        : original(url, init),
+    )
+    const statusReads = fetcher.mock.calls.filter(([url]) => url === '/api/storage/status').length
+    await render()
+    expect(container.textContent).toContain('Loading your Cluster')
+    expect(container.textContent).not.toContain('1 of 4 steps completed')
+    await act(async () =>
+      finishEntry(Response.json({ mode: 'CLOUD', management: false, entry: 'LOGIN' })),
+    )
+    await settle()
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/status')).toHaveLength(
+      statusReads,
+    )
+    fetcher.mockImplementation(original)
+    await act(async () => useAuthStore.setState({ isAuthenticated: true, sessionRevision: 2 }))
+    await settle()
+    expect(container.textContent).toContain('1 of 4 steps completed')
+    expect(container.querySelector('[data-testid="business"]')).toBeNull()
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')).toHaveLength(
+      1,
+    )
+    setup.snapshot = initializing({ stateVersion: 12, businessPhase: 'READY' })
+    await click('Refresh status')
+    expect(container.querySelector('[data-testid="business"]')).not.toBeNull()
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')).toHaveLength(
+      1,
+    )
+    await act(async () => setup.complete(Response.json(setup.snapshot)))
+  })
+
   it.each(['automatic retry', 'manual return'])(
     'retains continuation progress during an entry outage and preserves the target on %s',
     async (recovery) => {
