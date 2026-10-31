@@ -2803,7 +2803,9 @@
       "savedRetention": "保留{{count}}次已结束FULL运行",
       "dirty": "存在未保存修改。保存成功前仍按已保存方案执行。",
       "unchanged": "草稿与已保存方案一致。",
-      "discard": "撤销修改"
+      "discard": "撤销修改",
+      "pristine": "草稿尚无修改。",
+      "newDraft": "草稿尚未保存，保存并开启成功前不会自动触发。"
     },
     "submitting": "正在提交原操作…",
     "loading": "正在读取校验…",

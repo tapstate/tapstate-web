@@ -264,3 +264,16 @@ it('discards only the local schedule draft and retains the saved enabled plan', 
   expect(view.onSave).not.toHaveBeenCalled()
   expect(view.onDisable).not.toHaveBeenCalled()
 })
+
+it('returns a never-saved schedule to a pristine empty draft after discard', async () => {
+  const view = await fixture({ ...task(), schedule: null, scheduleEnabled: false })
+  expect(button('dataValidation.schedule.discard').disabled).toBe(true)
+  expect(document.body.textContent).toContain('dataValidation.schedule.pristine')
+  await click('dataValidation.schedule.exampleInterval')
+  expect(button('dataValidation.schedule.discard').disabled).toBe(false)
+  await click('dataValidation.schedule.discard')
+  expect(field('dataValidation.schedule.every').value).toBe('')
+  expect(button('dataValidation.schedule.discard').disabled).toBe(true)
+  expect(document.body.textContent).not.toContain('dataValidation.schedule.dirty')
+  expect(view.onSave).not.toHaveBeenCalled()
+})

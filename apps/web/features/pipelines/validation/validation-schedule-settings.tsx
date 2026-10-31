@@ -146,12 +146,18 @@ export function ValidationScheduleSettings({
     }
   }, [client, signature, kind, intervalValid, expression, zone, previewAttempt])
 
+  const baselineSchedule: ValidationSchedule = task.schedule ?? {
+    kind: 'INTERVAL',
+    every: '',
+    unit: 'MINUTES',
+    anchor: initialAnchor.current,
+    expression: null,
+    zoneId: defaultZone.current,
+  }
   const dirty =
-    !task.schedule ||
     (Object.keys(schedule) as (keyof ValidationSchedule)[]).some(
-      (key) => schedule[key] !== task.schedule?.[key],
-    ) ||
-    history !== String(task.historyLimit)
+      (key) => schedule[key] !== baselineSchedule[key],
+    ) || history !== String(task.historyLimit)
   function discard() {
     if (pending) return
     setKind(task.schedule?.kind ?? 'INTERVAL')
@@ -222,7 +228,17 @@ export function ValidationScheduleSettings({
         ) : (
           <p>{t('dataValidation.schedule.noSavedPlan')}</p>
         )}
-        <p>{t(dirty ? 'dataValidation.schedule.dirty' : 'dataValidation.schedule.unchanged')}</p>
+        <p>
+          {t(
+            dirty
+              ? task.schedule
+                ? 'dataValidation.schedule.dirty'
+                : 'dataValidation.schedule.newDraft'
+              : task.schedule
+                ? 'dataValidation.schedule.unchanged'
+                : 'dataValidation.schedule.pristine',
+          )}
+        </p>
       </section>
       {!onError && submissionError != null && <ValidationRequestError error={submissionError} />}
       {submitting && (
