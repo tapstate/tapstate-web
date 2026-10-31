@@ -148,7 +148,9 @@ it('shows table findings and problem-first named-key rows from retained facts', 
   await wait(() =>
     expect(document.body.textContent).toContain('dataValidation.report.problemSummary'),
   )
-  expect(document.body.textContent).toContain('dataValidation.record.kinds.TARGET_VALUE')
+  await wait(() =>
+    expect(document.body.textContent).toContain('dataValidation.record.kinds.TARGET_VALUE'),
+  )
   await act(async () => button('dataValidation.report.records').click())
   await wait(() =>
     expect(document.querySelector('th')?.textContent).toContain('dataValidation.report.problem'),

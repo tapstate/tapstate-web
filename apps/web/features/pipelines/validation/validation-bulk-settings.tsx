@@ -273,7 +273,20 @@ export function ValidationBulkSettings({
           (filter === 'included' && row.included) ||
           (filter === 'excluded' && !row.included) ||
           (filter === 'pending' && row.included && needs)) &&
-        `${row.hint.table ?? ''} ${row.hint.outputId} ${row.hint.sourceId ?? ''}`
+        [
+          row.hint.table,
+          row.hint.outputId,
+          row.hint.sourceId,
+          row.hint.targetSourceId,
+          task?.mappings.find((mapping) => mapping.mappingId === row.hint.choice?.mappingId)
+            ?.targetTable,
+          metadata?.mappings.find((mapping) => mapping.id === row.hint.choice?.mappingId)?.target
+            .table,
+          metadata?.mappings.find((mapping) => mapping.id === row.hint.choice?.mappingId)?.target
+            .sourceId,
+        ]
+          .filter(Boolean)
+          .join(' ')
           .toLowerCase()
           .includes(search.toLowerCase())
       )

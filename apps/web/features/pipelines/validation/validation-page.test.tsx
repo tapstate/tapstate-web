@@ -159,6 +159,119 @@ afterEach(async () => {
 })
 
 describe('real validation page mutation boundaries', () => {
+  it('unblocks another manual start from durable CLOSED admission after the entry restarts without certifying physical drain', async () => {
+    let current = saved
+    let retired = false
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path),
+        body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':evaluate')) return json(evaluate(body))
+      if (action.endsWith(':start'))
+        current = {
+          ...saved,
+          nextStartSequence: '2',
+          permission: {
+            phase: 'BORN',
+            taskGeneration: generation,
+            revision: '1',
+            sequence: '1',
+            command: body.command,
+            run: 'manual-run',
+            ownerLease: 'LIVE',
+          },
+        }
+      if (action.endsWith(':start') || action.endsWith(':progress'))
+        return json({
+          original: body,
+          run: 'manual-run',
+          outcome: 'ACCEPTED',
+          state: retired ? 'COMPLETED' : 'RUNNING',
+          admitted: true,
+          waiting: false,
+          controlUnknown: false,
+          retired,
+          drain: retired ? 'UNKNOWN' : 'NOT_DRAINED',
+          reason: null,
+          tables: [],
+          premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+          conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+        })
+      return json(current)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 145 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+    await click('dataValidation.bulk.start')
+    await settled(() =>
+      expect(document.body.textContent).toContain('dataValidation.run.states.RUNNING'),
+    )
+    retired = true
+    current = {
+      ...current,
+      context: { ...context, boot: 'replacement-boot' },
+      permission: { ...current.permission!, phase: 'CLOSED', ownerLease: 'UNKNOWN' },
+    }
+    await act(async () => {
+      await queries!.invalidateQueries()
+    })
+    await settled(() => expect(document.body.textContent).toContain('UNKNOWN'))
+    expect(document.body.textContent).not.toMatch(/(?:^|[^_])DRAINED(?:$|[^_])/)
+    await click('dataValidation.run.backSettings')
+    await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+    expect(read.mock.calls.filter(([path]) => String(path).endsWith(':start'))).toHaveLength(1)
+  })
+
+  it.each(['saved', 'evaluated'])(
+    'finds renamed destination tables and connections from %s mappings',
+    async (mode) => {
+      const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) =>
+        json(evaluate(JSON.parse(String(init?.body)))),
+      )
+      await mount(
+        <ValidationBulkSettings
+          pipelineId="flow"
+          client={createValidationClient(read)}
+          task={mode === 'saved' ? saved : null}
+          hints={[
+            {
+              key: 'orders',
+              outputId: 'out',
+              sourceId: 'source',
+              table: 'orders',
+              targetSourceId: 'target',
+              choice: { mappingId: 'orders', outputId: 'out', sourceId: 'source', table: 'orders' },
+              reason: null,
+              retainedDiscoveryAt: null,
+            },
+          ]}
+          pending={false}
+          onSave={async () => {}}
+          onStart={async () => {}}
+          onSchedule={() => {}}
+          onHistory={() => {}}
+        />,
+      )
+      if (mode === 'evaluated') {
+        await click('dataValidation.methods.COUNT')
+        await click('dataValidation.bulk.inspect')
+        await settled(() => expect(read).toHaveBeenCalledTimes(1))
+      }
+      const search = document.querySelector<HTMLInputElement>(
+        '[aria-label="dataValidation.bulk.search"]',
+      )!
+      for (const text of ['checked_orders', 'target']) {
+        await act(async () => {
+          Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+            search,
+            text,
+          )
+          search.dispatchEvent(new Event('input', { bubbles: true }))
+        })
+        expect(document.querySelectorAll('tbody tr')).toHaveLength(1)
+      }
+    },
+  )
+
   it.each(['failed', 'pending', 'oversized'])(
     'keeps a saved whole-Source active task controllable with %s scope discovery',
     async (mode) => {
@@ -602,19 +715,21 @@ describe('real validation page mutation boundaries', () => {
         ),
       ][initialCount - 1]!
       await act(async () => remove.click())
-      for (let index = initialCount - 1; index < 32; index++) {
-        expect(button('dataValidation.bulk.addKey').disabled).toBe(false)
-        await click('dataValidation.bulk.addKey')
+      expect(button('dataValidation.bulk.addKey').disabled).toBe(false)
+      await act(async () => {
+        for (let index = initialCount - 1; index < 32; index++)
+          button('dataValidation.bulk.addKey').click()
+      })
+      await act(async () => {
         for (const side of [3, 5])
-          await act(async () => {
-            const input = inputs(side)[index]!
+          for (const [index, input] of inputs(side).entries()) {
             Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
               input,
               names[index],
             )
             input.dispatchEvent(new Event('input', { bubbles: true }))
-          })
-      }
+          }
+      })
       expect(inputs(3).map((x) => x.value)).toEqual(names)
       expect(inputs(5).map((x) => x.value)).toEqual(names)
       expect(button('dataValidation.bulk.addKey').disabled).toBe(true)
@@ -624,6 +739,8 @@ describe('real validation page mutation boundaries', () => {
         names.map((name) => ({ source: name, target: name })),
       )
     },
+    // This multi-step fixture edits both sides of 32 components; its assertions do not depend on elapsed time.
+    15_000,
   )
 
   it('loads a fresh reviewed definition after saving and returning to the workspace', async () => {
@@ -2163,6 +2280,10 @@ it('returns keyboard focus to settings after an unadmitted original loses its ru
   ).toBe(false)
   await click('dataValidation.run.backSettings')
   expect(document.activeElement?.getAttribute('aria-label')).toBe('dataValidation.bulk.title')
+  await act(async () => {
+    button('dataValidation.bulk.start').click()
+  })
+  expect(document.body.textContent).not.toContain('dataValidation.run.notAdmitted')
 })
 
 it('updates live schedule admission observations without overwriting an unsaved rule', async () => {
