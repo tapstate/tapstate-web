@@ -304,45 +304,60 @@ function ValidationReportView({ client, reference, live = false }: ReportPanelPr
       </div>
     )
   }
+  const reportSummary = (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="system-lg-semibold text-text-primary">{t('dataValidation.report.title')}</h3>
+        <span className="system-xs-medium text-text-secondary border-divider-subtle rounded-md border px-2 py-1">
+          {t(`dataValidation.methods.${data.method}`)}
+        </span>
+      </div>
+      <p className="system-xs-regular text-text-tertiary break-all">
+        {t('dataValidation.report.run', { run: reference.run })}
+      </p>
+      <p className="system-sm-regular text-text-secondary">{t('dataValidation.premise')}</p>
+      {data.method !== 'COUNT' && !data.closed && (
+        <p role="status" className="system-sm-regular text-text-secondary">
+          {t('dataValidation.record.waitForEnd')}
+        </p>
+      )}
+      <div
+        className="bg-background-section-burn system-sm-regular text-text-primary space-y-2 rounded-lg p-4"
+        role="status"
+      >
+        <p className="system-md-semibold">{t(`dataValidation.report.results.${data.result}`)}</p>
+        <p>
+          {t('dataValidation.report.window', {
+            start: data.window?.startedAt ?? t('dataValidation.unknown'),
+            end: data.window?.finishedAt ?? t('dataValidation.unknown'),
+          })}
+        </p>
+        <p>{t('dataValidation.report.premiseUnknown')}</p>
+        {data.method === 'COUNT' && <p>{t('dataValidation.report.countOnly')}</p>}
+        <div className="border-divider-subtle flex flex-wrap gap-x-8 gap-y-2 border-t pt-3">
+          <span>{t('dataValidation.report.scopeTables', { count: data.mappings.length })}</span>
+          <span>{t('dataValidation.concurrencyOne')}</span>
+          <span>{t('dataValidation.report.rootCount', { count: data.rootCount })}</span>
+        </div>
+      </div>
+    </>
+  )
   return (
     <Drawer open={drawerOpen} onOpenChange={setDrawerOpen} swipeDirection="right">
       <div className="validation-report space-y-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="system-lg-semibold text-text-primary">
-            {t('dataValidation.report.title')}
-          </h3>
-          <span className="system-xs-medium text-text-secondary border-divider-subtle rounded-md border px-2 py-1">
-            {t(`dataValidation.methods.${data.method}`)}
-          </span>
-        </div>
-        <p className="system-xs-regular text-text-tertiary break-all">
-          {t('dataValidation.report.run', { run: reference.run })}
-        </p>
-        <p className="system-sm-regular text-text-secondary">{t('dataValidation.premise')}</p>
-        {data.method !== 'COUNT' && !data.closed && (
-          <p role="status" className="system-sm-regular text-text-secondary">
-            {t('dataValidation.record.waitForEnd')}
-          </p>
+        {table ? (
+          <>
+            <details className="system-xs-regular text-text-secondary">
+              <summary className="cursor-pointer">{t('dataValidation.report.title')}</summary>
+              <div className="mt-3 space-y-3">{reportSummary}</div>
+            </details>
+            <p className="system-sm-regular text-text-secondary">
+              {t('dataValidation.report.premiseUnknown')}
+            </p>
+          </>
+        ) : (
+          reportSummary
         )}
-        <div
-          className="bg-background-section-burn system-sm-regular text-text-primary space-y-2 rounded-lg p-4"
-          role="status"
-        >
-          <p className="system-md-semibold">{t(`dataValidation.report.results.${data.result}`)}</p>
-          <p>
-            {t('dataValidation.report.window', {
-              start: data.window?.startedAt ?? t('dataValidation.unknown'),
-              end: data.window?.finishedAt ?? t('dataValidation.unknown'),
-            })}
-          </p>
-          <p>{t('dataValidation.report.premiseUnknown')}</p>
-          {data.method === 'COUNT' && <p>{t('dataValidation.report.countOnly')}</p>}
-          <div className="border-divider-subtle flex flex-wrap gap-x-8 gap-y-2 border-t pt-3">
-            <span>{t('dataValidation.report.scopeTables', { count: data.mappings.length })}</span>
-            <span>{t('dataValidation.concurrencyOne')}</span>
-            <span>{t('dataValidation.report.rootCount', { count: data.rootCount })}</span>
-          </div>
-        </div>
         {data.failure && <ValidationFailureDetails failure={data.failure} />}
         {roots.isError && <ValidationRequestError error={roots.error} />}
         {previews.isError && (layout === 'expanded' || previews.error !== detail.error) && (
@@ -685,7 +700,13 @@ function KindSummary({ roots }: { roots: readonly ValidationRootSummary[] }) {
     <div className="flex flex-wrap gap-x-3 gap-y-1">
       {kinds.map(([kind, count]) => (
         <span className="text-text-warning" key={kind}>
-          {t(`dataValidation.record.kinds.${kind}`, { defaultValue: kind })} · {count.toString()}
+          {t(
+            kind === 'TARGET_MISSING' || kind === 'TARGET_EXTRA'
+              ? `dataValidation.report.summaryKinds.${kind}`
+              : `dataValidation.record.kinds.${kind}`,
+            { defaultValue: kind },
+          )}{' '}
+          · {count.toString()}
         </span>
       ))}
     </div>

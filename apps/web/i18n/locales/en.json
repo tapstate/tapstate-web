@@ -2931,6 +2931,10 @@
       "open": "View run report",
       "run": "Report run: {{run}}",
       "problemSummary": "Problem summary",
+      "summaryKinds": {
+        "TARGET_MISSING": "Destination row or field absent in this read",
+        "TARGET_EXTRA": "Destination row or field without a corresponding source"
+      },
       "affectedRecords": "Retained problem identities",
       "problem": "Observed problem",
       "previewUnavailable": "Value preview is not available; open retained details.",

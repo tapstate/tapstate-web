@@ -2931,6 +2931,10 @@
       "open": "查看轮次报告",
       "run": "报告轮次：{{run}}",
       "problemSummary": "问题摘要",
+      "summaryKinds": {
+        "TARGET_MISSING": "本次读取未找到目标行或字段",
+        "TARGET_EXTRA": "目标行或字段未找到对应源项"
+      },
       "affectedRecords": "已保留问题键组",
       "problem": "发现的问题",
       "previewUnavailable": "未取得值预览，可打开保留详情查看。",

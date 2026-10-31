@@ -77,9 +77,12 @@ const object = (fields: Record<string, ValidationValue>): ValidationValue => ({
   metadata: {},
 })
 let host: HTMLDivElement, root: ReturnType<typeof createRoot>, queries: QueryClient
-async function mount(data: ValidationReport) {
+async function mount(
+  data: ValidationReport,
+  counts: Record<string, ValidationValue> = { TARGET_VALUE: atom('int64', '3') },
+) {
   const summary = object({
-    counts: object({ TARGET_VALUE: atom('int64', '3') }),
+    counts: object(counts),
     samplesTruncated: atom('boolean', false),
   })
   const client = {
@@ -153,6 +156,16 @@ it('shows table findings and problem-first named-key rows from retained facts', 
   expect([...document.querySelectorAll('th')].some((n) => n.textContent === 'id')).toBe(true)
   expect(document.body.textContent).toContain('9007199254740993')
   expect(document.body.textContent).toContain('dataValidation.record.categories.values')
+})
+it('does not describe mixed row and field presence summaries as row-only facts', async () => {
+  await mount(report, { TARGET_MISSING: atom('int64', '2'), TARGET_EXTRA: atom('int64', '1') })
+  await wait(() =>
+    expect(document.body.textContent).toContain(
+      'dataValidation.report.summaryKinds.TARGET_MISSING',
+    ),
+  )
+  expect(document.body.textContent).toContain('dataValidation.report.summaryKinds.TARGET_EXTRA')
+  expect(document.body.textContent).not.toContain('dataValidation.record.kinds.TARGET_MISSING')
 })
 it('keeps an absent retained stack explicit and non-copyable', async () => {
   await mount({

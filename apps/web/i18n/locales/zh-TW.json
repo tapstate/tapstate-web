@@ -2931,6 +2931,10 @@
       "open": "檢視輪次報告",
       "run": "報告輪次：{{run}}",
       "problemSummary": "問題摘要",
+      "summaryKinds": {
+        "TARGET_MISSING": "本次讀取未找到目標列或欄位",
+        "TARGET_EXTRA": "目標列或欄位未找到對應來源項"
+      },
       "affectedRecords": "已保留問題鍵組",
       "problem": "發現的問題",
       "previewUnavailable": "未取得值預覽，可開啟保留詳情查看。",
