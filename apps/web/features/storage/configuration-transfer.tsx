@@ -9,13 +9,19 @@ import {
   type ImportReceipt,
   type ImportStatus,
 } from '@/service/storage-client'
+import { releaseFeatures } from '@/utils/release-features'
 
 import { useStorage } from './storage-context'
 import { splitIds } from './storage-recovery'
 import { inputClass, StorageError } from './storage-ui'
 import { useStorageAction } from './use-storage-action'
 
-export function ConfigurationTransfer({ defaultSourceId }: { defaultSourceId?: string }) {
+export function ConfigurationTransfer(props: { defaultSourceId?: string }) {
+  if (!releaseFeatures.configurationTransfer) return null
+  return <ConfigurationTransferForm {...props} />
+}
+
+function ConfigurationTransferForm({ defaultSourceId }: { defaultSourceId?: string }) {
   const { t } = useTranslation()
   const { snapshot, fetcher, refresh } = useStorage()
   const action = useStorageAction()
