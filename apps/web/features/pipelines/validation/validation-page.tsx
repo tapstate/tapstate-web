@@ -384,7 +384,21 @@ function ValidationWorkspace({
   return (
     <div className="space-y-6 pb-8" data-testid="validation-workspace">
       <header className="border-divider-subtle border-b pb-5">
-        <h1 className="system-xl-semibold text-text-primary">{t('dataValidation.title')}</h1>
+        <p className="system-xs-regular text-text-tertiary mb-3 break-words">
+          {pipelineId}{' '}
+          <span aria-hidden="true" className="mx-2">
+            /
+          </span>{' '}
+          {t('dataValidation.title')}
+        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="system-xl-semibold text-text-primary">{t('dataValidation.title')}</h1>
+          {basis && (
+            <span className="system-xs-regular text-text-secondary bg-background-section-burn rounded-md px-2 py-1">
+              {t('dataValidation.configurationRevision', { revision: basis.revision })}
+            </span>
+          )}
+        </div>
         <p className="system-sm-regular text-text-secondary mt-2">
           {t('dataValidation.description')}
         </p>

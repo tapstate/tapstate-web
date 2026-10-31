@@ -2846,7 +2846,32 @@
       },
       "candidates": "兩端獨立中繼資料候選鍵",
       "writeKeyUnknown": "Pipeline 寫入鍵未知，請明確選擇實際欄位對應。",
-      "nextRun": "儲存的修改對後續全量生效；已有輪次及報告保留原定義。"
+      "nextRun": "儲存的修改對後續全量生效；已有輪次及報告保留原定義。",
+      "description": "表映射來自已儲存的 Pipeline，各表對獨立檢查。",
+      "selectPage": "選擇目前頁面全部表",
+      "selectRow": "選擇 {{table}}",
+      "selectionCount": "已選 {{count}} 張表",
+      "selectFiltered": "選擇篩選結果全部 {{count}} 張表",
+      "excludeSelected": "設為不參與",
+      "restoreSelected": "恢復參與",
+      "clearSelection": "清空選擇",
+      "selectionHelp": "選擇表列以調整校驗範圍，勾選本身不改變參與狀態。",
+      "editableFields": "可選擇已載入模型欄位，也可輸入實體欄位名稱",
+      "participation": "參與範圍",
+      "excludeRow": "排除 {{table}}",
+      "restoreRow": "恢復 {{table}} 參與",
+      "exclude": "不參與",
+      "restore": "恢復參與",
+      "excludedRow": "下一輪不檢查",
+      "fieldPlaceholder": "選擇或輸入欄位",
+      "scopeSummary": "{{included}} 張參與 · {{excluded}} 張不參與 · {{needs}} 張待設定",
+      "excludeTitle": "將這些表設為不參與校驗？",
+      "excludeDescription": "儲存後，所選 {{count}} 張表不參與後續校驗，不改變 Pipeline 同步。可在「不參與」中恢復。",
+      "cancelScope": "取消",
+      "confirmExclude": "確認不參與",
+      "needsCount": "還有 {{count}} 張參與表需要設定關聯欄位",
+      "readyCount": "{{count}} 對表已具備本方式所需設定",
+      "showPending": "只看待設定"
     },
     "run": {
       "title": "全量輪次狀態",
@@ -2904,7 +2929,33 @@
         "COMPLETE_WITH_OBSERVATIONS": "本次完整全量發現差異"
       },
       "open": "檢視輪次報告",
-      "run": "報告輪次：{{run}}"
+      "run": "報告輪次：{{run}}",
+      "problemSummary": "問題摘要",
+      "affectedRecords": "已保留問題鍵組",
+      "problem": "發現的問題",
+      "previewUnavailable": "未取得值預覽，可開啟保留詳情查看。",
+      "summaryUnavailable": "未保留問題分類",
+      "scopeTables": "檢查範圍：{{count}} 對表",
+      "retainedRecords": "個已保留問題鍵組",
+      "expandRecords": "展開記錄清單",
+      "splitRecords": "返回左右配置",
+      "categories": "結果分類",
+      "selectRecord": "查看記錄",
+      "filters": {
+        "issues": "需要關注",
+        "clear": "未發現差異",
+        "incomplete": "未完成",
+        "all": "全部表"
+      },
+      "tableStates": {
+        "issues": "發現差異",
+        "clear": "本次未發現差異",
+        "incomplete": "全量檢查未完成",
+        "unknown": "正在讀取保留結果"
+      },
+      "countEqual": "數量相同，未檢查鍵與內容",
+      "countDifferent": "來源端與目標端數量不同",
+      "countEqualFilter": "數量相同"
     },
     "history": {
       "title": "全量報告歷史",
@@ -2976,6 +3027,16 @@
       },
       "findingCount": "該觀察項次數：{{value}}",
       "findingCountUnknown": "該觀察項次數未知"
+    },
+    "configurationRevision": "設定版本 {{revision}}",
+    "failure": {
+      "title": "執行錯誤",
+      "stack": "保留診斷 / 例外堆疊",
+      "stackText": "已保留診斷原文",
+      "copy": "複製保留原文",
+      "unavailable": "未保留例外堆疊，目前僅有上方診斷摘要。",
+      "done": "已保留原格式複製。",
+      "failed": "瀏覽器未允許複製，請選取保留原文手動複製。"
     }
   },
   "startup": {

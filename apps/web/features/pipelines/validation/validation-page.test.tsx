@@ -7,6 +7,7 @@ import {
   createValidationClient,
   type ValidationSelection,
   type ValidationTask,
+  type ValidationSave,
 } from '@/service/pipelines/validation-client'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -389,6 +390,73 @@ describe('real validation page mutation boundaries', () => {
       expect(read.mock.calls.some(([path]) => String(path).endsWith(':start'))).toBe(false)
     },
   )
+  it('keeps page and filtered selection separate from participation until exclusion is confirmed', async () => {
+    const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) =>
+      json(evaluate(JSON.parse(String(init?.body)))),
+    )
+    const saves = vi.fn(async (_request: ValidationSave, _comparison: string) => {})
+    const hints = Array.from({ length: 22 }, (_, index) => ({
+      key: `table_${index + 1}`,
+      outputId: 'out',
+      sourceId: 'source',
+      table: `table_${index + 1}`,
+      targetSourceId: 'target',
+      choice: {
+        mappingId: `table_${index + 1}`,
+        outputId: 'out',
+        sourceId: 'source',
+        table: `table_${index + 1}`,
+      },
+      reason: null,
+      retainedDiscoveryAt: null,
+      sourceFields: [],
+      targetFields: [],
+    }))
+    await mount(
+      <ValidationBulkSettings
+        pipelineId="flow"
+        client={createValidationClient(read)}
+        task={null}
+        hints={hints}
+        pending={false}
+        onSave={saves}
+        onStart={async () => {}}
+        onSchedule={() => {}}
+        onHistory={() => {}}
+      />,
+    )
+    await click('dataValidation.methods.COUNT')
+    const selectPage = document.querySelector<HTMLInputElement>(
+      '[aria-label="dataValidation.bulk.selectPage"]',
+    )!
+    expect(selectPage).not.toBeNull()
+    await act(async () => selectPage.click())
+    expect(
+      [...document.querySelectorAll<HTMLInputElement>('tbody input[type="checkbox"]')].filter(
+        (input) => input.checked,
+      ),
+    ).toHaveLength(20)
+    expect(read).not.toHaveBeenCalled()
+    await click('dataValidation.bulk.excludeSelected')
+    await settled(() => expect(button('dataValidation.bulk.cancelScope')).toBeDefined())
+    await click('dataValidation.bulk.cancelScope')
+    await click('dataValidation.bulk.save')
+    await settled(() => expect(saves).toHaveBeenCalledTimes(1))
+    expect(saves.mock.calls[0][0].input.mappings).toHaveLength(22)
+    await click('dataValidation.bulk.excludeSelected')
+    await click('dataValidation.bulk.confirmExclude')
+    await click('dataValidation.bulk.save')
+    await settled(() => expect(saves).toHaveBeenCalledTimes(2))
+    expect(
+      saves.mock.calls[1][0].input.mappings.map((m: { mappingId: string }) => m.mappingId),
+    ).toEqual(['table_21', 'table_22'])
+    await act(async () => selectPage.click())
+    await click('dataValidation.bulk.selectFiltered')
+    await click('dataValidation.bulk.restoreSelected')
+    await click('dataValidation.bulk.save')
+    await settled(() => expect(saves).toHaveBeenCalledTimes(3))
+    expect(saves.mock.calls[2][0].input.mappings).toHaveLength(22)
+  })
   it('offers loaded model fields in an editable dropdown while absent models stay blank', async () => {
     const read = vi.fn(async () => {
       throw new Error('no independent precheck was requested')

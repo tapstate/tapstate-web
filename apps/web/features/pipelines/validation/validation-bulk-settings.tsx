@@ -1,3 +1,13 @@
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancelButton,
+  AlertDialogConfirmButton,
+} from '@tapstate-web/ui/alert-dialog'
 import { Button } from '@tapstate-web/ui/button'
 import { Input } from '@tapstate-web/ui/input'
 import { Pagination } from '@tapstate-web/ui/pagination'
@@ -81,6 +91,9 @@ export function ValidationBulkSettings({
   const [busy, setBusy] = useState(false),
     [error, setError] = useState<unknown>(null),
     [dirty, setDirty] = useState(!task)
+  const [selected, setSelected] = useState<Set<string>>(() => new Set())
+  const [excluding, setExcluding] = useState<readonly string[] | null>(null)
+  const pageSelection = useRef<HTMLInputElement>(null)
   const inFlight = useRef(false)
   const reportError = (value: unknown) => {
     setError(value)
@@ -110,6 +123,29 @@ export function ValidationBulkSettings({
             ]),
     ),
   })
+  function participate(keys: readonly string[], included: boolean) {
+    if (pending || busy) return
+    const affected = new Set(keys)
+    setRows((values) =>
+      values.map((row) => (affected.has(row.hint.key) ? { ...row, included } : row)),
+    )
+    setSelected(new Set())
+    setExcluding(null)
+    setDirty(true)
+    reportError(null)
+  }
+  function exclude(keys: readonly string[]) {
+    if (pending || busy) return
+    const affected = keys.filter((key) => rows.some((row) => row.hint.key === key && row.included))
+    if (affected.length) setExcluding(affected)
+  }
+  function toggleSelection(keys: readonly string[], checked: boolean) {
+    setSelected((previous) => {
+      const next = new Set(previous)
+      keys.forEach((key) => (checked ? next.add(key) : next.delete(key)))
+      return next
+    })
+  }
   function change(index: number, update: (row: Row) => Row) {
     setRows((values) => values.map((row, i) => (i === index ? update(row) : row)))
     setDirty(true)
@@ -197,13 +233,24 @@ export function ValidationBulkSettings({
     })
   const pages = Math.ceil(visible.length / 20),
     safePage = Math.min(page, Math.max(1, pages))
+  const pageRows = visible.slice((safePage - 1) * 20, safePage * 20)
+  const selectedPage = pageRows.filter(({ row }) => selected.has(row.hint.key)).length
+  const needs = rows.filter(
+    (row) =>
+      row.included &&
+      (!row.hint.choice ||
+        (method !== 'COUNT' &&
+          row.pairs.some((pair) => !pair.source.trim() || !pair.target.trim()))),
+  ).length
+  const included = requestRows.length
+  const excluded = rows.length - included
   return (
-    <div className="space-y-5">
+    <div className="validation-bulk space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="system-lg-semibold text-text-primary">{t('dataValidation.bulk.title')}</h2>
           <p className="system-sm-regular text-text-secondary mt-2">
-            {t('dataValidation.description')}
+            {t('dataValidation.bulk.description')}
           </p>
         </div>
         <div className="flex gap-2">
@@ -232,20 +279,53 @@ export function ValidationBulkSettings({
           disabled={pending || busy}
           onValueChange={(value) => {
             setMethod(value)
+            setSelected(new Set())
             setMetadata(null)
             setDirty(true)
           }}
           aria-label={t('dataValidation.method')}
+          className="gap-3 bg-transparent p-0"
         >
           {(['FULL_COLUMN', 'UNIQUE_KEY', 'COUNT'] as const).map((value) => (
-            <SegmentedControlItem value={value} key={value}>
+            <SegmentedControlItem
+              value={value}
+              key={value}
+              className="gap-2 border-none bg-transparent shadow-none data-checked:bg-transparent data-checked:shadow-none"
+            >
+              <span
+                aria-hidden="true"
+                className={`h-3.5 w-3.5 rounded-full border ${method === value ? 'border-text-accent bg-text-accent' : 'border-divider-regular'}`}
+              />
               {t(`dataValidation.methods.${value}`)}
             </SegmentedControlItem>
           ))}
         </SegmentedControl>
       </div>
-      <p className="system-sm-regular text-text-secondary">{t('dataValidation.premise')}</p>
-      <p className="system-xs-regular text-text-tertiary">{t('dataValidation.bulk.nextRun')}</p>
+      <div
+        role="status"
+        className={`system-sm-regular rounded-lg border p-4 ${needs ? 'border-divider-subtle bg-background-section-burn text-text-warning' : 'border-divider-subtle text-text-secondary'}`}
+      >
+        <p className="font-semibold">
+          {t(needs ? 'dataValidation.bulk.needsCount' : 'dataValidation.bulk.readyCount', {
+            count: needs || included,
+          })}
+        </p>
+        <p className="system-xs-regular mt-1">{t('dataValidation.bulk.nextRun')}</p>
+        {needs > 0 && (
+          <Button
+            size="small"
+            variant="ghost-accent"
+            onClick={() => {
+              setFilter('pending')
+              setSelected(new Set())
+              setPage(1)
+            }}
+          >
+            {t('dataValidation.bulk.showPending')}
+          </Button>
+        )}
+      </div>
+      <p className="system-xs-regular text-text-secondary">{t('dataValidation.premise')}</p>
       {startBlocked && (
         <p role="status" className="system-sm-regular text-text-secondary">
           {t('dataValidation.run.slotBusy')}
@@ -262,13 +342,23 @@ export function ValidationBulkSettings({
           value={filter}
           onValueChange={(value) => {
             setFilter(value)
+            setSelected(new Set())
             setPage(1)
           }}
           aria-label={t('dataValidation.bulk.filter')}
         >
           {['pending', 'included', 'excluded', 'all'].map((value) => (
             <SegmentedControlItem key={value} value={value}>
-              {t(`dataValidation.bulk.${value}`)}
+              {t(`dataValidation.bulk.${value}`)}{' '}
+              <span className="ml-1 tabular-nums">
+                {value === 'pending'
+                  ? needs
+                  : value === 'included'
+                    ? included
+                    : value === 'excluded'
+                      ? excluded
+                      : rows.length}
+              </span>
             </SegmentedControlItem>
           ))}
         </SegmentedControl>
@@ -279,23 +369,84 @@ export function ValidationBulkSettings({
           value={search}
           onChange={(event) => {
             setSearch(event.target.value)
+            setSelected(new Set())
             setPage(1)
           }}
         />
       </div>
-      <div className="border-divider-subtle overflow-x-auto rounded-lg border">
-        <table className="system-sm-regular w-full min-w-[700px] text-left">
+      <div className="system-xs-regular text-text-secondary flex min-h-9 flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {selected.size ? (
+            <>
+              <span>{t('dataValidation.bulk.selectionCount', { count: selected.size })}</span>
+              {selectedPage === pageRows.length && visible.length > selected.size && (
+                <Button
+                  size="small"
+                  variant="ghost-accent"
+                  disabled={pending || busy}
+                  onClick={() => setSelected(new Set(visible.map(({ row }) => row.hint.key)))}
+                >
+                  {t('dataValidation.bulk.selectFiltered', { count: visible.length })}
+                </Button>
+              )}
+              <Button
+                size="small"
+                variant="ghost-accent"
+                disabled={pending || busy}
+                onClick={() => exclude([...selected])}
+              >
+                {t('dataValidation.bulk.excludeSelected')}
+              </Button>
+              <Button
+                size="small"
+                variant="ghost-accent"
+                disabled={pending || busy}
+                onClick={() => participate([...selected], true)}
+              >
+                {t('dataValidation.bulk.restoreSelected')}
+              </Button>
+              <Button size="small" variant="ghost" onClick={() => setSelected(new Set())}>
+                {t('dataValidation.bulk.clearSelection')}
+              </Button>
+            </>
+          ) : (
+            <span>{t('dataValidation.bulk.selectionHelp')}</span>
+          )}
+        </div>
+        <span>{t('dataValidation.bulk.editableFields')}</span>
+      </div>
+      <div className="border-divider-subtle max-h-[430px] overflow-auto rounded-lg border">
+        <table className="system-xs-regular w-full min-w-[880px] table-fixed text-left">
           <thead className="bg-background-section-burn text-text-secondary">
             <tr>
-              {['include', 'source', 'sourceKeys', 'target', 'targetKeys'].map((label) => (
-                <th key={label} className="px-4 py-3">
+              <th className="bg-background-section-burn sticky top-0 z-10 w-10 px-3 py-2">
+                <input
+                  ref={(node) => {
+                    pageSelection.current = node
+                    if (node)
+                      node.indeterminate = selectedPage > 0 && selectedPage < pageRows.length
+                  }}
+                  type="checkbox"
+                  aria-label={t('dataValidation.bulk.selectPage')}
+                  checked={pageRows.length > 0 && selectedPage === pageRows.length}
+                  disabled={!pageRows.length || pending || busy}
+                  onChange={(event) =>
+                    toggleSelection(
+                      pageRows.map(({ row }) => row.hint.key),
+                      event.target.checked,
+                    )
+                  }
+                />
+              </th>
+              {['source', 'sourceKeys', 'target', 'targetKeys', 'participation'].map((label) => (
+                <th key={label} className="bg-background-section-burn sticky top-0 z-10 px-3 py-2">
                   {t(`dataValidation.bulk.${label}`)}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {visible.slice((safePage - 1) * 20, safePage * 20).map(({ row, index }) => {
+            {pageRows.map(({ row, index }) => {
               const mapping = metadata?.mappings.find(
                   (value) => value.id === row.hint.choice?.mappingId,
                 ),
@@ -303,22 +454,25 @@ export function ValidationBulkSettings({
                   (value) => value.mappingId === row.hint.choice?.mappingId,
                 )
               return (
-                <tr key={row.hint.key} className="border-divider-subtle border-t align-top">
-                  <td className="p-4">
+                <tr
+                  key={row.hint.key}
+                  className={`border-divider-subtle border-t align-top ${row.included ? '' : 'text-text-tertiary bg-background-section-burn/30'}`}
+                >
+                  <td className="px-3 py-2.5">
                     <input
                       type="checkbox"
-                      checked={row.included}
+                      checked={selected.has(row.hint.key)}
                       disabled={pending || busy}
-                      aria-label={t('dataValidation.bulk.includeRow', {
+                      aria-label={t('dataValidation.bulk.selectRow', {
                         table: row.hint.table ?? row.hint.outputId,
                       })}
-                      onChange={(event) =>
-                        change(index, (value) => ({ ...value, included: event.target.checked }))
-                      }
+                      onChange={(event) => toggleSelection([row.hint.key], event.target.checked)}
                     />
                   </td>
-                  <td className="max-w-64 p-4 break-words">
-                    <span className="system-sm-semibold text-text-primary">
+                  <td className="max-w-64 px-3 py-2.5 break-words">
+                    <span
+                      className={`system-xs-semibold font-mono ${row.included ? 'text-text-primary' : 'text-text-tertiary line-through'}`}
+                    >
                       {row.hint.table ?? row.hint.outputId}
                     </span>
                     <p className="system-xs-regular text-text-tertiary">{row.hint.sourceId}</p>
@@ -346,6 +500,18 @@ export function ValidationBulkSettings({
                         ))}
                       </details>
                     )}
+                    {!row.included && (
+                      <p className="system-xs-regular mt-1">
+                        {t('dataValidation.bulk.excludedRow')}
+                      </p>
+                    )}
+                    {row.included &&
+                      method !== 'COUNT' &&
+                      row.pairs.some((pair) => !pair.source.trim() || !pair.target.trim()) && (
+                        <p className="system-xs-regular text-text-warning mt-1">
+                          {t('dataValidation.bulk.keysRequired')}
+                        </p>
+                      )}
                     {row.hint.reason && (
                       <p className="text-text-warning mt-2">
                         {t(`dataValidation.bulk.reasons.${row.hint.reason}`)}
@@ -359,7 +525,7 @@ export function ValidationBulkSettings({
                       </p>
                     )}
                   </td>
-                  <td className="space-y-2 p-4">
+                  <td className="space-y-2 px-3 py-2.5">
                     {method === 'COUNT'
                       ? '—'
                       : row.pairs.map((pair, i) => (
@@ -372,7 +538,7 @@ export function ValidationBulkSettings({
                               })}
                               openLabel={`${t('wizard.search.openOptions')} · ${t('dataValidation.bulk.source')} · ${row.hint.table ?? row.hint.outputId} · ${i + 1}`}
                               emptyLabel={t('wizard.search.noResults')}
-                              placeholder=""
+                              placeholder={t('dataValidation.bulk.fieldPlaceholder')}
                               value={pair.source}
                               options={(
                                 mapping?.source.fields.map((field) => field.name) ??
@@ -409,7 +575,7 @@ export function ValidationBulkSettings({
                       </Button>
                     )}
                   </td>
-                  <td className="max-w-64 p-4 break-words">
+                  <td className="max-w-64 px-3 py-2.5 break-words">
                     <span className="system-sm-semibold text-text-primary">
                       {mapping?.target.table ??
                         saved?.targetTable ??
@@ -419,7 +585,7 @@ export function ValidationBulkSettings({
                       {mapping?.target.sourceId ?? row.hint.targetSourceId}
                     </p>
                   </td>
-                  <td className="space-y-2 p-4">
+                  <td className="space-y-2 px-3 py-2.5">
                     {method === 'COUNT'
                       ? '—'
                       : row.pairs.map((pair, i) => (
@@ -432,7 +598,7 @@ export function ValidationBulkSettings({
                               })}
                               openLabel={`${t('wizard.search.openOptions')} · ${t('dataValidation.bulk.target')} · ${row.hint.table ?? row.hint.outputId} · ${i + 1}`}
                               emptyLabel={t('wizard.search.noResults')}
-                              placeholder=""
+                              placeholder={t('dataValidation.bulk.fieldPlaceholder')}
                               value={pair.target}
                               options={(
                                 mapping?.target.fields.map((field) => field.name) ??
@@ -470,6 +636,26 @@ export function ValidationBulkSettings({
                           </div>
                         ))}
                   </td>
+                  <td className="p-3">
+                    <Button
+                      size="small"
+                      variant="ghost-accent"
+                      disabled={pending || busy}
+                      aria-label={t(
+                        row.included
+                          ? 'dataValidation.bulk.excludeRow'
+                          : 'dataValidation.bulk.restoreRow',
+                        { table: row.hint.table ?? row.hint.outputId },
+                      )}
+                      onClick={() => participate([row.hint.key], !row.included)}
+                    >
+                      {t(
+                        row.included
+                          ? 'dataValidation.bulk.exclude'
+                          : 'dataValidation.bulk.restore',
+                      )}
+                    </Button>
+                  </td>
                 </tr>
               )
             })}
@@ -491,6 +677,8 @@ export function ValidationBulkSettings({
       />
       <div className="border-divider-subtle flex flex-wrap items-center justify-between gap-4 border-t pt-4">
         <p className="system-sm-regular text-text-secondary">
+          {t('dataValidation.bulk.scopeSummary', { included, excluded, needs })}
+          <br />
           {t('dataValidation.bulk.selected', {
             count: requestRows.filter((row) => row.hint.choice).length,
           })}
@@ -518,6 +706,34 @@ export function ValidationBulkSettings({
       <p className="system-xs-regular text-text-tertiary">
         {t('dataValidation.bulk.keyConfirmation')}
       </p>
+      <AlertDialog
+        open={excluding !== null}
+        onOpenChange={(open) => {
+          if (!open) setExcluding(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('dataValidation.bulk.excludeTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('dataValidation.bulk.excludeDescription', { count: excluding?.length ?? 0 })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancelButton onClick={() => setExcluding(null)}>
+              {t('dataValidation.bulk.cancelScope')}
+            </AlertDialogCancelButton>
+            <AlertDialogConfirmButton
+              disabled={pending || busy}
+              onClick={() => {
+                if (excluding) participate(excluding, false)
+              }}
+            >
+              {t('dataValidation.bulk.confirmExclude')}
+            </AlertDialogConfirmButton>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

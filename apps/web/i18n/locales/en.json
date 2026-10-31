@@ -2846,7 +2846,32 @@
       },
       "candidates": "Independent metadata key candidates",
       "writeKeyUnknown": "The Pipeline write key is unknown. Select the actual correspondence explicitly.",
-      "nextRun": "Saved changes apply to later full runs. Existing runs and reports retain their original definition."
+      "nextRun": "Saved changes apply to later full runs. Existing runs and reports retain their original definition.",
+      "description": "Table mappings come from the saved Pipeline. Each pair is checked independently.",
+      "selectPage": "Select all tables on this page",
+      "selectRow": "Select {{table}}",
+      "selectionCount": "{{count}} tables selected",
+      "selectFiltered": "Select all {{count}} filtered tables",
+      "excludeSelected": "Exclude selected tables",
+      "restoreSelected": "Restore participation",
+      "clearSelection": "Clear selection",
+      "selectionHelp": "Select rows to review their validation scope. Selection does not change participation.",
+      "editableFields": "Choose loaded model fields or enter a physical field name",
+      "participation": "Participation",
+      "excludeRow": "Exclude {{table}} from validation",
+      "restoreRow": "Restore {{table}} to validation",
+      "exclude": "Exclude",
+      "restore": "Restore",
+      "excludedRow": "Not checked in the next run",
+      "fieldPlaceholder": "Choose or enter a field",
+      "scopeSummary": "{{included}} participating · {{excluded}} excluded · {{needs}} need configuration",
+      "excludeTitle": "Exclude these tables from validation?",
+      "excludeDescription": "{{count}} selected tables will be excluded from the next validation after you save. Pipeline synchronization is unchanged. Restore them from Excluded at any time.",
+      "cancelScope": "Cancel",
+      "confirmExclude": "Exclude from validation",
+      "needsCount": "{{count}} participating tables need association fields",
+      "readyCount": "{{count}} table pairs are configured for this method",
+      "showPending": "Review tables needing configuration"
     },
     "run": {
       "title": "Full run status",
@@ -2904,7 +2929,33 @@
         "COMPLETE_WITH_OBSERVATIONS": "Differences observed in this completed full run"
       },
       "open": "View run report",
-      "run": "Report run: {{run}}"
+      "run": "Report run: {{run}}",
+      "problemSummary": "Problem summary",
+      "affectedRecords": "Retained problem identities",
+      "problem": "Observed problem",
+      "previewUnavailable": "Value preview is not available; open retained details.",
+      "summaryUnavailable": "Problem classification was not retained",
+      "scopeTables": "Scope: {{count}} table pairs",
+      "retainedRecords": "retained problem identities",
+      "expandRecords": "Expand record list",
+      "splitRecords": "Return to split view",
+      "categories": "Result categories",
+      "selectRecord": "Inspect record",
+      "filters": {
+        "issues": "Needs attention",
+        "clear": "No differences observed",
+        "incomplete": "Incomplete",
+        "all": "All tables"
+      },
+      "tableStates": {
+        "issues": "Differences observed",
+        "clear": "No differences observed",
+        "incomplete": "Full check incomplete",
+        "unknown": "Loading retained result"
+      },
+      "countEqual": "Equal counts; keys and contents were not checked",
+      "countDifferent": "Source and destination counts differ",
+      "countEqualFilter": "Equal counts"
     },
     "history": {
       "title": "FULL report history",
@@ -2976,6 +3027,16 @@
       },
       "findingCount": "Finding count: {{value}}",
       "findingCountUnknown": "Finding count is unavailable"
+    },
+    "configurationRevision": "Configuration revision {{revision}}",
+    "failure": {
+      "title": "Run failure",
+      "stack": "Retained diagnostic / exception stack",
+      "stackText": "Retained diagnostic text",
+      "copy": "Copy retained text",
+      "unavailable": "No diagnostic stack was retained. Only the summary above is available.",
+      "done": "Copied with original formatting.",
+      "failed": "Copy was not allowed. Select the retained text and copy it manually."
     }
   },
   "startup": {

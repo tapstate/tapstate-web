@@ -2846,7 +2846,32 @@
       },
       "candidates": "两端独立元数据候选键",
       "writeKeyUnknown": "Pipeline 写入键未知，请明确选择实际字段对应。",
-      "nextRun": "保存的修改对后续全量生效；已有轮次及报告保留原定义。"
+      "nextRun": "保存的修改对后续全量生效；已有轮次及报告保留原定义。",
+      "description": "表映射来自已保存的 Pipeline，各表对独立检查。",
+      "selectPage": "选择当前页全部表",
+      "selectRow": "选择 {{table}}",
+      "selectionCount": "已选 {{count}} 张表",
+      "selectFiltered": "选择筛选结果全部 {{count}} 张表",
+      "excludeSelected": "设为不参与",
+      "restoreSelected": "恢复参与",
+      "clearSelection": "清空选择",
+      "selectionHelp": "选择表行以调整校验范围，勾选本身不改变参与状态。",
+      "editableFields": "可选择已加载模型字段，也可输入物理字段名",
+      "participation": "参与范围",
+      "excludeRow": "排除 {{table}}",
+      "restoreRow": "恢复 {{table}} 参与",
+      "exclude": "不参与",
+      "restore": "恢复参与",
+      "excludedRow": "下一轮不检查",
+      "fieldPlaceholder": "选择或输入字段",
+      "scopeSummary": "{{included}} 张参与 · {{excluded}} 张不参与 · {{needs}} 张待配置",
+      "excludeTitle": "将这些表设为不参与校验？",
+      "excludeDescription": "保存后，所选 {{count}} 张表不参与后续校验，不改变 Pipeline 同步。可在“不参与”中恢复。",
+      "cancelScope": "取消",
+      "confirmExclude": "确认不参与",
+      "needsCount": "还有 {{count}} 张参与表需要配置关联字段",
+      "readyCount": "{{count}} 对表已具备本方式所需配置",
+      "showPending": "只看待配置"
     },
     "run": {
       "title": "全量轮次状态",
@@ -2904,7 +2929,33 @@
         "COMPLETE_WITH_OBSERVATIONS": "本次完整全量发现差异"
       },
       "open": "查看轮次报告",
-      "run": "报告轮次：{{run}}"
+      "run": "报告轮次：{{run}}",
+      "problemSummary": "问题摘要",
+      "affectedRecords": "已保留问题键组",
+      "problem": "发现的问题",
+      "previewUnavailable": "未取得值预览，可打开保留详情查看。",
+      "summaryUnavailable": "未保留问题分类",
+      "scopeTables": "检查范围：{{count}} 对表",
+      "retainedRecords": "个已保留问题键组",
+      "expandRecords": "展开记录列表",
+      "splitRecords": "返回左右布局",
+      "categories": "结果分类",
+      "selectRecord": "查看记录",
+      "filters": {
+        "issues": "需要关注",
+        "clear": "未发现差异",
+        "incomplete": "未完成",
+        "all": "全部表"
+      },
+      "tableStates": {
+        "issues": "发现差异",
+        "clear": "本次未发现差异",
+        "incomplete": "全量检查未完成",
+        "unknown": "正在读取保留结果"
+      },
+      "countEqual": "数量相同，未检查键与内容",
+      "countDifferent": "源端与目标端数量不同",
+      "countEqualFilter": "数量相同"
     },
     "history": {
       "title": "全量报告历史",
@@ -2976,6 +3027,16 @@
       },
       "findingCount": "该观察项次数：{{value}}",
       "findingCountUnknown": "该观察项次数未知"
+    },
+    "configurationRevision": "配置版本 {{revision}}",
+    "failure": {
+      "title": "运行错误",
+      "stack": "保留诊断 / 异常堆栈",
+      "stackText": "已保留诊断原文",
+      "copy": "复制保留原文",
+      "unavailable": "未保留异常堆栈，当前仅有上方诊断摘要。",
+      "done": "已保留原格式复制。",
+      "failed": "浏览器未允许复制，请选中保留原文手动复制。"
     }
   },
   "startup": {

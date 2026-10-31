@@ -51,7 +51,11 @@ export function ValidationHistoryPanel({
       >
         {t(selected ? 'dataValidation.history.backList' : 'dataValidation.schedule.back')}
       </Button>
-      <h2 className="system-lg-semibold text-text-primary">{t('dataValidation.history.title')}</h2>
+      {!selected && (
+        <h2 className="system-lg-semibold text-text-primary">
+          {t('dataValidation.history.title')}
+        </h2>
+      )}
       {selected ? (
         <ValidationReportPanel client={client} reference={selected} live />
       ) : (
