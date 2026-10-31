@@ -2885,7 +2885,10 @@
       "confirmExclude": "Exclude from validation",
       "needsCount": "{{count}} participating tables need association fields",
       "readyCount": "{{count}} table pairs are configured for this method",
-      "showPending": "Review tables needing configuration"
+      "showPending": "Review tables needing configuration",
+      "suggestionsUnavailable": "Field suggestions are unavailable",
+      "suggestionsHelp": "You can enter physical fields manually. Run controls and history remain available; precheck still validates confirmed keys.",
+      "retrySuggestions": "Retry field suggestions"
     },
     "run": {
       "title": "Full run status",

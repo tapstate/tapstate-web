@@ -42,9 +42,17 @@ export function ValidationPage({ pipelineId }: { pipelineId: string }) {
   )
   const client = useMemo(() => createValidationClient(scopedFetch), [scopedFetch])
   const [reload, setReload] = useState(0)
+  const initialKey = [
+    'validation',
+    session,
+    pipelineId,
+    'initial',
+    reload,
+    validationClientKey(client),
+  ] as const
   const initial = useQuery({
     // The reviewed snapshot belongs to this workspace lifetime, not a later visit.
-    queryKey: ['validation', session, pipelineId, 'initial', reload, validationClientKey(client)],
+    queryKey: initialKey,
     queryFn: async ({ signal }) => {
       const [pipeline, task] = await Promise.all([
         getPipeline(pipelineId, scopedFetch),
@@ -55,12 +63,30 @@ export function ValidationPage({ pipelineId }: { pipelineId: string }) {
         (source) => client.sourceHints(source, signal),
         task,
       )
-      return {
-        task,
-        hints: await validationLoadedFieldHints(pipeline, hints, (source) =>
-          client.sourceFieldHints(source, signal),
-        ),
-      }
+      return { pipeline, task, hints }
+    },
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    staleTime: Infinity,
+    gcTime: 0,
+  })
+  const fields = useQuery({
+    queryKey: [...initialKey, 'field-suggestions'],
+    enabled: initial.isSuccess,
+    queryFn: async ({ signal }) => {
+      const base = initial.data!
+      let firstError: unknown = null
+      const hints = await validationLoadedFieldHints(base.pipeline, base.hints, async (source) => {
+        try {
+          return await client.sourceFieldHints(source, signal)
+        } catch (error) {
+          if (signal.aborted) throw error
+          firstError ??= error
+          return null
+        }
+      })
+      return { hints, error: firstError }
     },
     retry: false,
     refetchOnWindowFocus: false,
@@ -89,6 +115,10 @@ export function ValidationPage({ pipelineId }: { pipelineId: string }) {
       client={client}
       initialTask={initial.data.task}
       hints={initial.data.hints}
+      fieldHints={fields.data?.hints ?? initial.data.hints}
+      fieldError={fields.isError ? fields.error : fields.data?.error}
+      fieldHintsLoading={fields.isFetching}
+      onRetryFields={() => void fields.refetch()}
       onReload={() => setReload((value) => value + 1)}
     />
   )
@@ -98,12 +128,20 @@ function ValidationWorkspace({
   client,
   initialTask,
   hints,
+  fieldHints,
+  fieldError,
+  fieldHintsLoading,
+  onRetryFields,
   onReload,
 }: {
   pipelineId: string
   client: Client
   initialTask: ValidationTask | null
   hints: readonly ValidationMappingHint[]
+  fieldHints: readonly ValidationMappingHint[]
+  fieldError: unknown
+  fieldHintsLoading: boolean
+  onRetryFields: () => void
   onReload: () => void
 }) {
   const { t } = useTranslation()
@@ -495,12 +533,30 @@ function ValidationWorkspace({
           aria-label={t('dataValidation.bulk.title')}
           hidden={section !== 'bulk'}
         >
+          {fieldError != null && (
+            <details className="system-xs-regular text-text-secondary mb-4">
+              <summary className="cursor-pointer">
+                {t('dataValidation.bulk.suggestionsUnavailable')}
+              </summary>
+              <p className="my-2">{t('dataValidation.bulk.suggestionsHelp')}</p>
+              <Button
+                size="small"
+                variant="secondary"
+                disabled={fieldHintsLoading}
+                onClick={onRetryFields}
+              >
+                {t('dataValidation.bulk.retrySuggestions')}
+              </Button>
+              <ValidationRequestError error={fieldError} />
+            </details>
+          )}
           <ValidationBulkSettings
             key={version}
             pipelineId={pipelineId}
             client={client}
             task={basis}
             hints={hints}
+            fieldHints={fieldHints}
             pending={blocked}
             startBlocked={operation !== null || startBusy}
             onSave={commit}

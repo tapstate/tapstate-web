@@ -148,6 +148,217 @@ afterEach(async () => {
 })
 
 describe('real validation page mutation boundaries', () => {
+  it.each([false, true])(
+    'keeps saved COUNT controls and history usable with oversized optional discovery (active=%s)',
+    async (active) => {
+      const value: ValidationTask = active
+        ? {
+            ...saved,
+            nextStartSequence: '2',
+            permission: {
+              phase: 'BORN',
+              taskGeneration: generation,
+              revision: '1',
+              sequence: '1',
+              command: '40000000-0000-4000-8000-000000000001',
+              run: 'current-run',
+              ownerLease: 'LIVE',
+            },
+          }
+        : saved
+      const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+        const action = String(path)
+        if (action.endsWith('/schema'))
+          return json({
+            connectionId: 'source',
+            tables: Array.from({ length: 1025 }, (_, i) => ({
+              name: i === 0 ? 'orders' : `table_${i}`,
+              fields: [{ name: 'id' }],
+            })),
+          })
+        if (action.endsWith(':progress'))
+          return json({
+            original: JSON.parse(String(init?.body)),
+            run: 'current-run',
+            outcome: 'ACCEPTED',
+            state: 'RUNNING',
+            admitted: true,
+            waiting: false,
+            controlUnknown: false,
+            retired: false,
+            drain: 'NOT_DRAINED',
+            reason: null,
+            tables: [],
+            premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+            conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+          })
+        if (new URL(action, 'https://test.invalid').pathname.endsWith('/reports'))
+          return json({ items: [], total: '0', offset: 0, limit: 10 })
+        return json(value)
+      })
+      useAuthStore.setState({ apiFetch: read, sessionRevision: active ? 129 : 128 })
+      await mount(<ValidationPage pipelineId="flow" />)
+      if (active) {
+        await settled(() => expect(button('dataValidation.run.stop').disabled).toBe(false))
+        await click('dataValidation.run.backSettings')
+      } else await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+      await settled(() =>
+        expect(document.body.textContent).toContain('dataValidation.bulk.suggestionsUnavailable'),
+      )
+      expect(button('dataValidation.history.title').disabled).toBe(false)
+      await click('dataValidation.history.title')
+      await settled(() =>
+        expect(document.body.textContent).toContain('dataValidation.history.empty'),
+      )
+      expect(
+        read.mock.calls.some(
+          ([path]) =>
+            String(path).endsWith(':start') ||
+            String(path).endsWith(':stop') ||
+            String(path).endsWith(':save'),
+        ),
+      ).toBe(false)
+    },
+  )
+
+  it('accepts late field menus without replacing an edited physical key', async () => {
+    let finish!: (response: Response) => void
+    const schema = new Promise<Response>((resolve) => {
+      finish = resolve
+    })
+    const value: ValidationTask = {
+      ...saved,
+      method: 'UNIQUE_KEY',
+      mappings: [
+        {
+          ...mapping,
+          keys: { confirmationId: generation, fields: [{ source: ['id'], target: ['id'] }] },
+        },
+      ],
+    }
+    const read = vi.fn(async (path: RequestInfo | URL) =>
+      String(path).endsWith('/schema') ? schema : json(value),
+    )
+    useAuthStore.setState({ apiFetch: read, sessionRevision: 130 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() =>
+      expect(container!.querySelectorAll('input[role="combobox"]')).toHaveLength(2),
+    )
+    const target = container!.querySelectorAll<HTMLInputElement>('input[role="combobox"]')[1]!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+        target,
+        'hand_entered',
+      )
+      target.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await act(async () =>
+      finish(
+        json({
+          connectionId: 'source',
+          tables: [{ name: 'orders', fields: [{ name: 'id' }, { name: 'loaded_source' }] }],
+        }),
+      ),
+    )
+    const trigger = document.querySelector<HTMLButtonElement>(
+      '[aria-label="wizard.search.openOptions · dataValidation.bulk.source · orders · 1"]',
+    )!
+    await act(async () => trigger.click())
+    await settled(() =>
+      expect(
+        [...document.querySelectorAll('[role="option"]')].some(
+          (x) => x.textContent === 'loaded_source',
+        ),
+      ).toBe(true),
+    )
+    expect(target.value).toBe('hand_entered')
+    expect(read.mock.calls.some(([path]) => String(path).endsWith(':save'))).toBe(false)
+  })
+
+  it.each([16, 17])(
+    'restores a saved %s-component key and edits all32 supported components',
+    async (initialCount) => {
+      const names = Array.from({ length: 32 }, (_, i) => `field_${i}`)
+      const value: ValidationTask = {
+        ...saved,
+        method: 'UNIQUE_KEY',
+        mappings: [
+          {
+            ...mapping,
+            keys: {
+              confirmationId: generation,
+              fields: names
+                .slice(0, initialCount)
+                .map((name) => ({ source: [name], target: [name] })),
+            },
+          },
+        ],
+      }
+      const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) =>
+        json(evaluate(JSON.parse(String(init?.body)))),
+      )
+      const save = vi.fn<(request: ValidationSave, comparison: string) => Promise<void>>(
+        async () => {},
+      )
+      await mount(
+        <ValidationBulkSettings
+          pipelineId="flow"
+          client={createValidationClient(read)}
+          task={value}
+          hints={[
+            {
+              key: 'orders',
+              outputId: 'out',
+              sourceId: 'source',
+              table: 'orders',
+              targetSourceId: 'target',
+              choice: { mappingId: 'orders', outputId: 'out', sourceId: 'source', table: 'orders' },
+              reason: null,
+              retainedDiscoveryAt: null,
+            },
+          ]}
+          pending={false}
+          onSave={save}
+          onStart={async () => {}}
+          onSchedule={() => {}}
+          onHistory={() => {}}
+        />,
+      )
+      const inputs = (side: number) => [
+        ...container!.querySelectorAll<HTMLInputElement>(
+          `tbody tr td:nth-child(${side}) input[role="combobox"]`,
+        ),
+      ]
+      const remove = [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '[aria-label="dataValidation.bulk.removeKey"]',
+        ),
+      ][initialCount - 1]!
+      await act(async () => remove.click())
+      for (let index = initialCount - 1; index < 32; index++) {
+        expect(button('dataValidation.bulk.addKey').disabled).toBe(false)
+        await click('dataValidation.bulk.addKey')
+        for (const side of [3, 5])
+          await act(async () => {
+            const input = inputs(side)[index]!
+            Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+              input,
+              names[index],
+            )
+            input.dispatchEvent(new Event('input', { bubbles: true }))
+          })
+      }
+      expect(inputs(3).map((x) => x.value)).toEqual(names)
+      expect(inputs(5).map((x) => x.value)).toEqual(names)
+      expect(button('dataValidation.bulk.addKey').disabled).toBe(true)
+      await click('dataValidation.bulk.save')
+      await settled(() => expect(save).toHaveBeenCalledTimes(1))
+      expect(save.mock.calls[0]![0].input.confirmations.orders!.fields).toEqual(
+        names.map((name) => ({ source: name, target: name })),
+      )
+    },
+  )
+
   it('loads a fresh reviewed definition after saving and returning to the workspace', async () => {
     let current = saved
     let taskReads = 0

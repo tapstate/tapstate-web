@@ -2885,7 +2885,10 @@
       "confirmExclude": "确认不参与",
       "needsCount": "还有 {{count}} 张参与表需要配置关联字段",
       "readyCount": "{{count}} 对表已具备本方式所需配置",
-      "showPending": "只看待配置"
+      "showPending": "只看待配置",
+      "suggestionsUnavailable": "字段建议暂不可用",
+      "suggestionsHelp": "可手动输入物理字段，运行控制与历史仍可使用；预检仍会核验确认的键。",
+      "retrySuggestions": "重试字段建议"
     },
     "run": {
       "title": "全量轮次状态",

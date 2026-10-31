@@ -2885,7 +2885,10 @@
       "confirmExclude": "確認不參與",
       "needsCount": "還有 {{count}} 張參與表需要設定關聯欄位",
       "readyCount": "{{count}} 對表已具備本方式所需設定",
-      "showPending": "只看待設定"
+      "showPending": "只看待設定",
+      "suggestionsUnavailable": "欄位建議暫不可用",
+      "suggestionsHelp": "可手動輸入實體欄位，執行控制與歷史仍可使用；預檢仍會核驗確認的鍵。",
+      "retrySuggestions": "重試欄位建議"
     },
     "run": {
       "title": "全量輪次狀態",

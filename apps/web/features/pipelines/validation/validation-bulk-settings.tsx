@@ -12,7 +12,7 @@ import { Button } from '@tapstate-web/ui/button'
 import { Input } from '@tapstate-web/ui/input'
 import { Pagination } from '@tapstate-web/ui/pagination'
 import { SegmentedControl, SegmentedControlItem } from '@tapstate-web/ui/segmented-control'
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type {
@@ -32,6 +32,7 @@ import { validationPrimaryActionClass } from './validation-presentation'
 import { ValidationRequestError } from './validation-view-parts'
 
 type Client = ReturnType<typeof createValidationClient>
+const MAX_KEY_COMPONENTS = 32
 type Pair = { source: string; target: string }
 interface Row {
   hint: ValidationMappingHint
@@ -44,6 +45,7 @@ interface Props {
   client: Client
   task: ValidationTask | null
   hints: readonly ValidationMappingHint[]
+  fieldHints?: readonly ValidationMappingHint[]
   pending: boolean
   startBlocked?: boolean
   onSave: (request: ValidationSave, comparisonFingerprint: string) => Promise<void>
@@ -59,6 +61,7 @@ export function ValidationBulkSettings({
   client,
   task,
   hints,
+  fieldHints = hints,
   pending,
   startBlocked = false,
   onSave,
@@ -69,6 +72,12 @@ export function ValidationBulkSettings({
   onError,
 }: Props) {
   const { t } = useTranslation()
+  const fieldsByKey = useMemo(
+    () => new Map(fieldHints.map((hint) => [hint.key, hint])),
+    [fieldHints],
+  )
+  const fieldsForInspect = useRef(fieldsByKey)
+  fieldsForInspect.current = fieldsByKey
   const [method, setMethod] = useState<ValidationMethod>(task?.method ?? 'FULL_COLUMN')
   const [rows, setRows] = useState<Row[]>(() =>
     hints.map((hint) => {
@@ -185,7 +194,9 @@ export function ValidationBulkSettings({
           )
           if (!mapping) return row
           const targetNames = new Map<string, number>()
-          for (const name of row.hint.targetFields ?? [])
+          for (const name of fieldsForInspect.current.get(row.hint.key)?.targetFields ??
+            row.hint.targetFields ??
+            [])
             targetNames.set(name, (targetNames.get(name) ?? 0) + 1)
           const targetFor = (name: string) => (targetNames.get(name) === 1 ? name : '')
           // Exact loaded-model names are editable hints, never an independent uniqueness claim.
@@ -476,6 +487,15 @@ export function ValidationBulkSettings({
                 saved = task?.mappings.find(
                   (value) => value.mappingId === row.hint.choice?.mappingId,
                 )
+              const fields = fieldsByKey.get(row.hint.key) ?? row.hint
+              const sourceOptions = (fields.sourceFields ?? []).map((name) => ({
+                value: name,
+                label: name,
+              }))
+              const targetOptions = (fields.targetFields ?? []).map((name) => ({
+                value: name,
+                label: name,
+              }))
               return (
                 <tr
                   key={row.hint.key}
@@ -563,10 +583,7 @@ export function ValidationBulkSettings({
                               emptyLabel={t('wizard.search.noResults')}
                               placeholder={t('dataValidation.bulk.fieldPlaceholder')}
                               value={pair.source}
-                              options={(row.hint.sourceFields ?? []).map((name) => ({
-                                value: name,
-                                label: name,
-                              }))}
+                              options={sourceOptions}
                               disabled={!row.included || pending || busy}
                               onValueChange={(field) =>
                                 change(index, (value) => ({
@@ -584,7 +601,9 @@ export function ValidationBulkSettings({
                       <Button
                         size="small"
                         variant="ghost-accent"
-                        disabled={!row.included || pending || busy || row.pairs.length >= 16}
+                        disabled={
+                          !row.included || pending || busy || row.pairs.length >= MAX_KEY_COMPONENTS
+                        }
                         onClick={() =>
                           change(index, (value) => ({
                             ...value,
@@ -622,10 +641,7 @@ export function ValidationBulkSettings({
                               emptyLabel={t('wizard.search.noResults')}
                               placeholder={t('dataValidation.bulk.fieldPlaceholder')}
                               value={pair.target}
-                              options={(row.hint.targetFields ?? []).map((name) => ({
-                                value: name,
-                                label: name,
-                              }))}
+                              options={targetOptions}
                               disabled={!row.included || pending || busy}
                               onValueChange={(field) =>
                                 change(index, (value) => ({
