@@ -1071,6 +1071,7 @@ describe('storage connection failure guidance', () => {
     ['io.store-unauthorized', 'The database rejected these credentials'],
     ['store.database-access-failed', 'required database permissions'],
     ['store.unreachable', 'DNS, network access'],
+    ['io.store-quota-exceeded', 'Atlas storage space quota reached'],
   ])('distinguishes database failure %s from the Cloud session', async (causeCode, guidance) => {
     const error = await storageRequest(
       async () =>

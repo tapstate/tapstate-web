@@ -2439,7 +2439,8 @@
       "network": "無法確認回應，請檢查連接並核對原操作結果。",
       "databaseCredentials": "資料庫拒絕了這些憑證。請檢查資料庫使用者名稱、密碼和驗證資料庫。",
       "databasePermissions": "此帳號缺少所需的資料庫權限。請檢查所選資料庫的讀取、寫入、索引和交易權限。",
-      "databaseConnection": "無法連線至資料庫。請檢查 DNS、網路存取、Atlas IP 存取清單和 TLS 設定。"
+      "databaseConnection": "無法連線至資料庫。請檢查 DNS、網路存取、Atlas IP 存取清單和 TLS 設定。",
+      "quota": "Atlas 儲存空間已達配額"
     },
     "recovery": {
       "title": "恢復執行儲存與 Pipeline",
@@ -2551,7 +2552,9 @@
     "setupSavedHelp": "資料庫設定已儲存，叢集正在初始化執行環境。",
     "resumeSetupTitle": "繼續已儲存的儲存設定",
     "resumeSetupHelp": "資料庫繫結已儲存。請使用原連線資訊繼續；若上次結果仍不確定，請先重新整理狀態。",
-    "resumeSetup": "繼續原設定"
+    "resumeSetup": "繼續原設定",
+    "quotaRecovery": "請由 Atlas 管理員恢復可用容量，再檢查原操作狀態。請保留已儲存的設定和 Tapstate 資料庫，不要重複提交初始化。",
+    "quotaDocs": "查看 Atlas 儲存說明"
   },
   "pipelineDetails": {
     "backToPipelines": "Pipelines",
