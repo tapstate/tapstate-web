@@ -17,7 +17,11 @@ import {
   validationOperationSettled,
 } from './validation-operation'
 import { validationClientKey } from './validation-query-key'
-import { ValidationRequestError } from './validation-view-parts'
+import {
+  ValidationRequestError,
+  ValidationProgressReadError,
+  validationMetadataBusy,
+} from './validation-view-parts'
 
 type Client = ReturnType<typeof createValidationClient>
 export function ValidationRunPanel({
@@ -47,6 +51,7 @@ export function ValidationRunPanel({
     enabled: operation !== null,
     retry: false,
     refetchInterval: (query) => {
+      if (validationMetadataBusy(query.state.error)) return 5000
       const result = query.state.data
       return result?.state &&
         ['COMPLETED', 'FAILED', 'STOPPED'].includes(result.state) &&
@@ -125,10 +130,13 @@ export function ValidationRunPanel({
           )}
         </p>
       )}
-      {progress.isError && <ValidationRequestError error={progress.error} />}
+      {progress.isError && (
+        <ValidationProgressReadError error={progress.error} hasObservation={state != null} />
+      )}
       {stopError != null && <ValidationRequestError error={stopError} />}
       {state && (
         <div className="system-sm-regular text-text-secondary space-y-2" role="status">
+          {progress.isError && <p>{t('dataValidation.run.staleObservation')}</p>}
           <p>
             {state.state
               ? t(`dataValidation.run.states.${state.state}`)

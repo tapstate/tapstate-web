@@ -2875,7 +2875,10 @@
       "otherAdmitted": "該啟動序號已由另一請求佔有；原請求未進場，目前顯示儲存記錄中的輪次。",
       "startNotSent": "本次啟動請求未送出，沒有因此啟動新一輪校驗。",
       "previousRun": "上一輪校驗 · 儲存的設定版本 {{revision}}",
-      "configurationRevision": "儲存的設定版本 {{revision}}"
+      "configurationRevision": "儲存的設定版本 {{revision}}",
+      "refreshBusy": "進度更新暫時繁忙，將自動重試。目前顯示上次收到的觀察。",
+      "waitingBusy": "進度更新暫時繁忙，將自動重試。尚未收到進度觀察；本次讀取不代表校驗結果。",
+      "staleObservation": "上次收到的觀察；最新更新尚未成功。"
     },
     "report": {
       "title": "全量校驗報告",

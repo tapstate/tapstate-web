@@ -43,3 +43,32 @@ export function ValidationRequestError({ error }: { error: unknown }) {
     </div>
   )
 }
+
+export function ValidationProgressReadError({
+  error,
+  hasObservation,
+}: {
+  error: unknown
+  hasObservation: boolean
+}) {
+  const { t } = useTranslation()
+  if (!validationMetadataBusy(error)) return <ValidationRequestError error={error} />
+  return (
+    <div
+      role="status"
+      className="system-sm-regular text-text-secondary border-divider-subtle my-3 space-y-2 rounded-lg border p-3 break-words"
+    >
+      <p>
+        {t(hasObservation ? 'dataValidation.run.refreshBusy' : 'dataValidation.run.waitingBusy')}
+      </p>
+      <details className="system-xs-regular">
+        <summary className="cursor-pointer">{t('dataValidation.technicalDetails')}</summary>
+        <p className="mt-2 font-mono">
+          {error.code} · HTTP {error.status}
+        </p>
+        <p className="mt-2 font-mono">{String(error.params.limit)}</p>
+        <p className="mt-2 whitespace-pre-wrap">{error.message}</p>
+      </details>
+    </div>
+  )
+}

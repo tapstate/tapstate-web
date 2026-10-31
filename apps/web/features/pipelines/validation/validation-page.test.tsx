@@ -552,6 +552,281 @@ describe('real validation page mutation boundaries', () => {
     expect(targets.every((input) => input.value === '')).toBe(true)
     expect(button('dataValidation.bulk.save').disabled).toBe(true)
   })
+  it.each([false, true])(
+    'distinguishes a busy progress read from run failure, cached=%s',
+    async (cached) => {
+      let reads = 0
+      const value: ValidationTask = {
+        ...saved,
+        nextStartSequence: '2',
+        permission: {
+          phase: 'BORN',
+          taskGeneration: generation,
+          revision: '1',
+          sequence: '1',
+          command: '40000000-0000-4000-8000-000000000001',
+          run: 'current-run',
+        },
+      }
+      const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) => {
+        if (cached && ++reads === 1)
+          return json({
+            original: JSON.parse(String(init?.body)),
+            run: 'current-run',
+            outcome: 'ACCEPTED',
+            state: 'RUNNING',
+            admitted: true,
+            waiting: false,
+            controlUnknown: false,
+            retired: false,
+            drain: 'NOT_DRAINED',
+            reason: null,
+            tables: [],
+            premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+            conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+          })
+        return json(
+          {
+            code: 'validation.value-limit-exceeded',
+            params: { limit: 'validation.metadataFrames' },
+            message: 'Metadata busy.',
+          },
+          429,
+        )
+      })
+      const onTerminal = vi.fn()
+      await mount(
+        <ValidationRunPanel
+          client={createValidationClient(read)}
+          task={value}
+          original={null}
+          onTerminal={onTerminal}
+          onReportOpen={() => {}}
+        />,
+      )
+      if (cached) {
+        await settled(() =>
+          expect(document.body.textContent).toContain('dataValidation.run.states.RUNNING'),
+        )
+        await act(async () => {
+          await queries!.refetchQueries({ queryKey: ['validation', 'progress'] })
+        })
+      }
+      await settled(() => expect(document.body.textContent).toContain('HTTP 429'))
+      expect(document.querySelectorAll('[role="alert"]')).toHaveLength(0)
+      expect(document.body.textContent).toContain(
+        cached ? 'dataValidation.run.refreshBusy' : 'dataValidation.run.waitingBusy',
+      )
+      expect(document.body.textContent?.includes('dataValidation.run.staleObservation')).toBe(
+        cached,
+      )
+      expect(document.body.textContent).toContain('validation.metadataFrames')
+      expect(button('dataValidation.run.stop').disabled).toBe(false)
+      expect(onTerminal).not.toHaveBeenCalled()
+      expect(read.mock.calls.every(([path]) => String(path).endsWith(':progress'))).toBe(true)
+    },
+  )
+  it('backs off a capacity read and restores normal polling after a successful observation', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    let recover = false
+    const value: ValidationTask = {
+      ...saved,
+      nextStartSequence: '2',
+      permission: {
+        phase: 'BORN',
+        taskGeneration: generation,
+        revision: '1',
+        sequence: '1',
+        command: '40000000-0000-4000-8000-000000000001',
+        run: 'current-run',
+      },
+    }
+    const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) =>
+      recover
+        ? json({
+            original: JSON.parse(String(init?.body)),
+            run: 'current-run',
+            outcome: 'ACCEPTED',
+            state: 'RUNNING',
+            admitted: true,
+            waiting: false,
+            controlUnknown: false,
+            retired: false,
+            drain: 'NOT_DRAINED',
+            reason: null,
+            tables: [],
+            premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+            conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+          })
+        : json(
+            {
+              code: 'validation.value-limit-exceeded',
+              params: { limit: 'validation.metadataFrames' },
+              message: 'Metadata busy.',
+            },
+            429,
+          ),
+    )
+    await mount(
+      <ValidationRunPanel
+        client={createValidationClient(read)}
+        task={value}
+        original={null}
+        onTerminal={() => {}}
+        onReportOpen={() => {}}
+      />,
+    )
+    await settled(() => expect(document.body.textContent).toContain('HTTP 429'))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2100)
+    })
+    expect(read).toHaveBeenCalledTimes(1)
+    recover = true
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000)
+    })
+    await settled(() =>
+      expect(document.body.textContent).toContain('dataValidation.run.states.RUNNING'),
+    )
+    expect(read).toHaveBeenCalledTimes(2)
+    expect(document.body.textContent).not.toContain('dataValidation.run.waitingBusy')
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2100)
+    })
+    expect(read).toHaveBeenCalledTimes(3)
+    expect(read.mock.calls.every(([path]) => String(path).endsWith(':progress'))).toBe(true)
+  })
+  it('refreshes a stale terminal after capacity refusal without inventing physical settlement', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    let reads = 0
+    const value: ValidationTask = {
+      ...saved,
+      nextStartSequence: '2',
+      permission: {
+        phase: 'CLOSED',
+        taskGeneration: generation,
+        revision: '1',
+        sequence: '1',
+        command: '40000000-0000-4000-8000-000000000001',
+        run: 'stored-run',
+      },
+    }
+    const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) =>
+      ++reads === 2
+        ? json(
+            {
+              code: 'validation.value-limit-exceeded',
+              params: { limit: 'validation.metadataFrames' },
+              message: 'Metadata busy.',
+            },
+            429,
+          )
+        : json({
+            original: JSON.parse(String(init?.body)),
+            run: 'stored-run',
+            outcome: 'ACCEPTED',
+            state: 'COMPLETED',
+            admitted: true,
+            waiting: false,
+            controlUnknown: false,
+            retired: true,
+            drain: 'UNKNOWN',
+            reason: null,
+            tables: [],
+            premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+            conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+          }),
+    )
+    const onTerminal = vi.fn()
+    await mount(
+      <ValidationRunPanel
+        client={createValidationClient(read)}
+        task={value}
+        original={null}
+        onTerminal={onTerminal}
+        onReportOpen={() => {}}
+      />,
+    )
+    await settled(() =>
+      expect(document.body.textContent).toContain('dataValidation.run.states.COMPLETED'),
+    )
+    await act(async () => {
+      await queries!.refetchQueries({ queryKey: ['validation', 'progress'] })
+    })
+    await settled(() =>
+      expect(document.body.textContent).toContain('dataValidation.run.staleObservation'),
+    )
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5100)
+    })
+    expect(read).toHaveBeenCalledTimes(3)
+    expect(document.body.textContent).not.toContain('dataValidation.run.staleObservation')
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5100)
+    })
+    expect(read).toHaveBeenCalledTimes(3)
+    expect(document.body.textContent).toContain('UNKNOWN')
+    expect(onTerminal).not.toHaveBeenCalled()
+  })
+  it('retains other progress errors and marks their cached observation stale', async () => {
+    let reads = 0
+    const value: ValidationTask = {
+      ...saved,
+      nextStartSequence: '2',
+      permission: {
+        phase: 'BORN',
+        taskGeneration: generation,
+        revision: '1',
+        sequence: '1',
+        command: '40000000-0000-4000-8000-000000000001',
+        run: 'current-run',
+      },
+    }
+    const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) =>
+      ++reads === 1
+        ? json({
+            original: JSON.parse(String(init?.body)),
+            run: 'current-run',
+            outcome: 'ACCEPTED',
+            state: 'RUNNING',
+            admitted: true,
+            waiting: false,
+            controlUnknown: false,
+            retired: false,
+            drain: 'NOT_DRAINED',
+            reason: null,
+            tables: [],
+            premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+            conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+          })
+        : json(
+            {
+              code: 'validation.value-limit-exceeded',
+              params: { limit: 'validation.cursorBytes' },
+              message: 'Another limit.',
+            },
+            429,
+          ),
+    )
+    await mount(
+      <ValidationRunPanel
+        client={createValidationClient(read)}
+        task={value}
+        original={null}
+        onTerminal={() => {}}
+        onReportOpen={() => {}}
+      />,
+    )
+    await settled(() =>
+      expect(document.body.textContent).toContain('dataValidation.run.states.RUNNING'),
+    )
+    await act(async () => {
+      await queries!.refetchQueries({ queryKey: ['validation', 'progress'] })
+    })
+    await settled(() => expect(document.querySelectorAll('[role="alert"]')).toHaveLength(1))
+    expect(document.body.textContent).toContain('dataValidation.run.staleObservation')
+    expect(document.body.textContent).not.toContain('dataValidation.run.refreshBusy')
+  })
   it('pauses ambient reads only while preparing a new start and resumes monitoring before its reply', async () => {
     let releaseEvaluation!: () => void
     let releaseStart!: () => void

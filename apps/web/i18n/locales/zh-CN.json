@@ -2875,7 +2875,10 @@
       "otherAdmitted": "该启动序号已由另一请求占有；原请求未入场，当前展示存储记录中的轮次。",
       "startNotSent": "本次启动请求未发出，没有因此启动新一轮校验。",
       "previousRun": "上一轮校验 · 保存的配置版本 {{revision}}",
-      "configurationRevision": "保存的配置版本 {{revision}}"
+      "configurationRevision": "保存的配置版本 {{revision}}",
+      "refreshBusy": "进度刷新暂时繁忙，将自动重试。当前显示上次收到的观察。",
+      "waitingBusy": "进度刷新暂时繁忙，将自动重试。尚未收到进度观察；本次读取不代表校验结果。",
+      "staleObservation": "上次收到的观察；最新刷新尚未成功。"
     },
     "report": {
       "title": "全量校验报告",

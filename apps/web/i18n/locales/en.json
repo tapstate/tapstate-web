@@ -2875,7 +2875,10 @@
       "otherAdmitted": "Another command owns that exact start sequence. The original request did not win; controls show the stored run.",
       "startNotSent": "This Start request was not sent. No new run was started by this request.",
       "previousRun": "Previous run — saved configuration revision {{revision}}",
-      "configurationRevision": "Saved configuration revision {{revision}}"
+      "configurationRevision": "Saved configuration revision {{revision}}",
+      "refreshBusy": "Progress refresh is temporarily busy and will retry. The last received observation is shown.",
+      "waitingBusy": "Progress refresh is temporarily busy and will retry. No progress observation is available yet; this read does not determine the run result.",
+      "staleObservation": "Last received observation; the latest refresh did not succeed."
     },
     "report": {
       "title": "Full validation report",
