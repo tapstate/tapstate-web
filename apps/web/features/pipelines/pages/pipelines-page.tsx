@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate, useSearch } from '@tanstack/react-router'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import FilterEmptyState from '@tapstate-web/ui/filter-empty-state'
 import { FirstEmptyActionCard } from '@tapstate-web/ui/first-empty-action-card'
 import { GitMerge, Plus, Search } from 'lucide-react'
@@ -461,13 +461,10 @@ function PipelineTableRow({
   return (
     <tr className="group relative border-b border-gray-100/60 transition-colors focus-within:bg-gray-50/50 hover:bg-gray-50/50">
       <td className="px-4 py-3">
-        <a
+        <Link
           className="inline-flex min-h-9 max-w-full items-center gap-2.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-          href={
-            pipeline.hasArtifact
-              ? `/pipelines/${encodeURIComponent(pipeline.id)}`
-              : `/pipelines/${encodeURIComponent(pipeline.id)}/edit`
-          }
+          to={pipeline.hasArtifact ? '/pipelines/$pipelineId' : '/pipelines/$pipelineId/edit'}
+          params={{ pipelineId: pipeline.id }}
           aria-label={t(
             pipeline.hasArtifact
               ? 'pipelines.actions.viewPipeline'
@@ -484,7 +481,7 @@ function PipelineTableRow({
           >
             {pipeline.name}
           </span>
-        </a>
+        </Link>
       </td>
       <td className="hidden px-4 py-3 text-[13px] text-gray-500 sm:table-cell">{modeLabel}</td>
       <td className="hidden max-w-64 px-4 py-3 text-[13px] text-gray-500 lg:table-cell">
