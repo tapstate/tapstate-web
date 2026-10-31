@@ -160,6 +160,77 @@ async function receiver() {
   await input('SMTP host', 'smtp.example.test')
   await input('From address', 'alerts@example.test')
 }
+it('shows an elapsed one-time silence as ended while its configuration remains active', async () => {
+  vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-31T08:50:05.917Z'))
+  const original = fetcher.getMockImplementation()!
+  fetcher.mockImplementation(async (url, init) => {
+    if (
+      String(url).endsWith('/configuration/list') &&
+      JSON.parse(String(init?.body)).kind === 'SILENCE'
+    )
+      return Response.json({
+        rows: [
+          {
+            id: 'elapsed',
+            kind: 'SILENCE',
+            active: true,
+            reason: 'Elapsed silence',
+            allResources: true,
+            startsAt: '2026-10-31T08:45:05.917Z',
+            durationSeconds: 300,
+            periodSeconds: null,
+            endsAt: null,
+          },
+        ],
+        nextCursor: null,
+      })
+    return original(url, init)
+  })
+  await render()
+  await click('Silence & inhibition')
+  expect(container.textContent).toContain('Elapsed silence')
+  expect(container.textContent).toContain('Ended')
+})
+it('updates a mounted silence status and removes its clock when leaving the list', async () => {
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-31T08:50:04.917Z'))
+  const intervals = vi.spyOn(globalThis, 'setInterval')
+  const clears = vi.spyOn(globalThis, 'clearInterval')
+  const original = fetcher.getMockImplementation()!
+  fetcher.mockImplementation(async (url, init) => {
+    if (
+      String(url).endsWith('/configuration/list') &&
+      JSON.parse(String(init?.body)).kind === 'SILENCE'
+    )
+      return Response.json({
+        rows: [
+          {
+            id: 'ending',
+            kind: 'SILENCE',
+            active: true,
+            reason: 'Ending silence',
+            allResources: true,
+            startsAt: '2026-10-31T08:45:05.917Z',
+            durationSeconds: 300,
+          },
+        ],
+        nextCursor: null,
+      })
+    return original(url, init)
+  })
+  await render()
+  await click('Silence & inhibition')
+  expect(container.textContent).toContain('Active now')
+  const index = intervals.mock.calls.findIndex(([, delay]) => delay === 1000)
+  expect(index).toBeGreaterThanOrEqual(0)
+  const tick = intervals.mock.calls[index][0]
+  clock.mockReturnValue(Date.parse('2026-10-31T08:50:05.917Z'))
+  await act(async () => {
+    if (typeof tick === 'function') tick()
+  })
+  expect(container.textContent).toContain('Ended')
+  await click('Rules')
+  expect(clears).toHaveBeenCalledWith(intervals.mock.results[index].value)
+})
 describe('current receiver candidate', () => {
   it('tests the chosen current recipient and invalidates results when the target changes', async () => {
     await receiver()

@@ -30,6 +30,7 @@ import { useAuthStore } from '@/stores/auth-store'
 
 import { AlertSelect } from './alert-select'
 import { Severity, Time } from './alert-shared'
+import { silenceStatus } from './silence-status'
 import './alerts.css'
 
 function previewChannelId(format: string) {
@@ -1826,6 +1827,13 @@ function ConfigTable({
   onEdit: (row: AlertForm) => void
 }) {
   const { t } = useTranslation()
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    if (kind !== 'SILENCE') return
+    setNow(Date.now())
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [kind])
   const columns =
     kind === 'RULE'
       ? ['ruleType', 'resourceScope', 'typeDefault', 'effectiveSeverity', 'state', 'actions']
@@ -1967,13 +1975,13 @@ function ConfigTable({
               )}
               <td>
                 <span
-                  className={`alert-state ${r.enabled === false || (kind === 'SILENCE' && !r.active) ? '' : 'alert-state--good'}`}
+                  className={`alert-state ${kind === 'SILENCE' ? (silenceStatus(r, now) === 'silenceActive' ? 'alert-state--good' : '') : r.enabled === false ? '' : 'alert-state--good'}`}
                 >
                   {t(
                     r.enabled === false
                       ? 'alerts.disabled'
                       : kind === 'SILENCE'
-                        ? 'alerts.scheduled'
+                        ? `alerts.${silenceStatus(r, now)}`
                         : 'alerts.enabled',
                   )}
                 </span>
