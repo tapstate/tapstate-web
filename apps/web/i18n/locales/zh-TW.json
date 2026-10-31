@@ -2732,6 +2732,7 @@
     "mappingCount": "{{count}} 對資料表",
     "concurrencyOne": "最大並行資料表數：1",
     "requestFailed": "校驗請求未完成，請先核對原操作狀態後重試。",
+    "metadataBusy": "校驗準備資源暫時忙碌，請稍後重試。",
     "technicalDetails": "技術詳情",
     "cancel": "取消",
     "confirm": "確認",

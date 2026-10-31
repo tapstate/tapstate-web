@@ -2732,6 +2732,7 @@
     "mappingCount": "{{count}} table pairs",
     "concurrencyOne": "Maximum concurrent tables: 1",
     "requestFailed": "The validation request did not complete. Check its original state before retrying.",
+    "metadataBusy": "Validation preparation is temporarily busy. Try again shortly.",
     "technicalDetails": "Technical details",
     "cancel": "Cancel",
     "confirm": "Confirm",

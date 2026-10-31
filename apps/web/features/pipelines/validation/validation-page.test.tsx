@@ -146,6 +146,150 @@ afterEach(async () => {
 })
 
 describe('real validation page mutation boundaries', () => {
+  it.each(['save-precheck', 'disable', 'preview'] as const)(
+    'keeps one visible schedule error after %s failure',
+    async (stage) => {
+      const scheduled: ValidationTask = {
+        ...saved,
+        scheduleEnabled: true,
+        schedule: {
+          kind: 'INTERVAL',
+          every: '1',
+          unit: 'MINUTES',
+          anchor: '2026-10-31T00:00:00Z',
+          expression: null,
+          zoneId: 'UTC',
+        },
+      }
+      const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+        const action = String(path),
+          body = init?.body ? JSON.parse(String(init.body)) : null
+        if (
+          action.endsWith(':evaluate') ||
+          (action.endsWith(':schedule-preview') && stage === 'preview')
+        )
+          return json(
+            {
+              code: 'validation.value-limit-exceeded',
+              params: { limit: 'validation.metadataFrames' },
+              message: 'Metadata busy.',
+            },
+            429,
+          )
+        if (action.endsWith(':schedule-disable')) throw new TypeError('disable reply lost')
+        if (action.endsWith(':schedule-preview'))
+          return json({
+            base: '2026-10-31T00:00:00Z',
+            inputRevision: body.inputRevision,
+            zoneId: 'UTC',
+            rulesVersion: 'validation-unix-v1',
+            occurrences: Array.from({ length: 5 }, (_, i) => ({
+              at: `2026-10-31T00:0${i + 1}:00Z`,
+              local: `2026-10-31T00:0${i + 1}:00`,
+              offset: 'Z',
+              weekday: 'SATURDAY',
+            })),
+          })
+        return json(scheduled)
+      })
+      useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 91 })
+      await mount(<ValidationPage pipelineId="flow" />)
+      await settled(() => expect(button('dataValidation.schedule.title')).toBeDefined())
+      await click('dataValidation.schedule.title')
+      if (stage === 'save-precheck') {
+        await settled(() => expect(button('dataValidation.schedule.save').disabled).toBe(false))
+        await click('dataValidation.schedule.save')
+      } else if (stage === 'disable') await click('dataValidation.schedule.disable')
+      await settled(() => expect(document.querySelectorAll('[role="alert"]')).toHaveLength(1))
+      if (stage === 'preview') expect(button('dataValidation.schedule.save').disabled).toBe(true)
+      if (stage === 'disable')
+        expect(button('dataValidation.retryOriginalOff').disabled).toBe(false)
+    },
+  )
+  it.each(['evaluate', 'save', 'readback', 'network', 'replay-capacity'] as const)(
+    'shows one error and preserves the correct recovery after %s failure',
+    async (stage) => {
+      let recover = false,
+        accepted = false
+      let current: ValidationTask = { ...saved, method: 'FULL_COLUMN' }
+      const saves: unknown[] = []
+      const capacity = () =>
+        json(
+          {
+            code: 'validation.value-limit-exceeded',
+            params: { limit: 'validation.metadataFrames' },
+            message: 'Validation metadata frames are busy.',
+          },
+          429,
+        )
+      const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+        const action = String(path),
+          body = init?.body ? JSON.parse(String(init.body)) : null
+        if (action.endsWith(':evaluate'))
+          return stage === 'evaluate' && !recover ? capacity() : json(evaluate(body))
+        if (action.endsWith(':save')) {
+          saves.push(body)
+          if (!recover && stage === 'save') return capacity()
+          if (!recover && stage === 'network') throw new TypeError('save reply lost')
+          const outcome = accepted ? 'DUPLICATE' : 'APPLIED'
+          accepted = true
+          current = { ...saved, method: 'COUNT', revision: '2' }
+          if (!recover && stage === 'replay-capacity') {
+            if (saves.length === 1) throw new TypeError('committed save reply lost')
+            return capacity()
+          }
+          return json({ outcome, fingerprint, taskGeneration: generation })
+        }
+        if (accepted && stage === 'readback' && !recover) return capacity()
+        return json(current)
+      })
+      useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 90 })
+      await mount(<ValidationPage pipelineId="flow" />)
+      await settled(() => expect(button('dataValidation.bulk.save')).toBeDefined())
+      await click('dataValidation.methods.COUNT')
+      await click('dataValidation.bulk.save')
+      if (stage === 'save') expect(button('dataValidation.bulk.save').disabled).toBe(false)
+      await settled(() => expect(document.querySelectorAll('[role="alert"]')).toHaveLength(1))
+      if (stage === 'evaluate' || stage === 'save') {
+        expect(button('dataValidation.bulk.save').disabled).toBe(false)
+        expect(document.body.textContent).not.toContain('dataValidation.unknownSave')
+        expect(document.body.textContent).not.toContain('dataValidation.retryOriginalSave')
+        expect(
+          document.querySelector<HTMLButtonElement>('[role="radio"][aria-checked="true"]')
+            ?.textContent,
+        ).toContain('dataValidation.methods.COUNT')
+        if (stage === 'evaluate') expect(saves).toHaveLength(0)
+        else expect(saves).toHaveLength(1)
+        recover = true
+        await click('dataValidation.bulk.save')
+        await settled(() => expect(document.body.textContent).toContain('dataValidation.saved'))
+        if (stage === 'save') {
+          expect(saves).toHaveLength(2)
+          expect((saves[1] as { commandId: string }).commandId).not.toBe(
+            (saves[0] as { commandId: string }).commandId,
+          )
+          expect((saves[1] as { input: unknown }).input).toEqual(
+            (saves[0] as { input: unknown }).input,
+          )
+        }
+      } else {
+        expect(button('dataValidation.bulk.save').disabled).toBe(true)
+        expect(document.body.textContent).toContain('dataValidation.unknownSave')
+        if (stage === 'replay-capacity') {
+          await click('dataValidation.retryOriginalSave')
+          await settled(() => expect(saves).toHaveLength(2))
+          expect(saves[1]).toEqual(saves[0])
+          expect(button('dataValidation.bulk.save').disabled).toBe(true)
+          expect(document.body.textContent).toContain('dataValidation.unknownSave')
+        }
+        recover = true
+        await click('dataValidation.retryOriginalSave')
+        await settled(() => expect(saves).toHaveLength(stage === 'replay-capacity' ? 3 : 2))
+        expect(saves.at(-1)).toEqual(saves[0])
+        await settled(() => expect(document.querySelectorAll('[role="alert"]')).toHaveLength(0))
+      }
+    },
+  )
   it.each(['NOT_LIVE', 'LIVE', 'UNKNOWN'] as const)(
     'keeps a recorded successor pinned across lease changes, including a fresh %s view',
     async (initialLease) => {
@@ -435,6 +579,7 @@ describe('real validation page mutation boundaries', () => {
     await click('dataValidation.bulk.start')
     await settled(() => expect(starts).toHaveLength(1))
     await settled(() => expect(button('dataValidation.retryOriginalStart')).toBeDefined())
+    expect(document.querySelectorAll('[role="alert"]')).toHaveLength(1)
     await click('dataValidation.retryOriginalStart')
     await settled(() => expect(starts).toHaveLength(2))
     expect(starts[1]).toEqual(starts[0])

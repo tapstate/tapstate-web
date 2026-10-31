@@ -40,6 +40,7 @@ interface Props {
   onSchedule: () => void
   onHistory: () => void
   onDefinitionConflict?: () => void
+  onError?: (error: unknown) => void
 }
 
 export function ValidationBulkSettings({
@@ -54,6 +55,7 @@ export function ValidationBulkSettings({
   onSchedule,
   onHistory,
   onDefinitionConflict,
+  onError,
 }: Props) {
   const { t } = useTranslation()
   const [method, setMethod] = useState<ValidationMethod>(task?.method ?? 'FULL_COLUMN')
@@ -80,6 +82,10 @@ export function ValidationBulkSettings({
     [error, setError] = useState<unknown>(null),
     [dirty, setDirty] = useState(!task)
   const inFlight = useRef(false)
+  const reportError = (value: unknown) => {
+    setError(value)
+    onError?.(value)
+  }
   const requestRows = rows.filter((row) => row.included)
   const unresolved = requestRows.some((row) => !row.hint.choice)
   const missingKeys =
@@ -107,13 +113,13 @@ export function ValidationBulkSettings({
   function change(index: number, update: (row: Row) => Row) {
     setRows((values) => values.map((row, i) => (i === index ? update(row) : row)))
     setDirty(true)
-    setError(null)
+    reportError(null)
   }
   async function perform(action: () => Promise<void>) {
     if (inFlight.current || pending) return
     inFlight.current = true
     setBusy(true)
-    setError(null)
+    reportError(null)
     try {
       await action()
     } catch (failed) {
@@ -123,7 +129,7 @@ export function ValidationBulkSettings({
         failed.params.field === 'configuration.taskRevision'
       )
         onDefinitionConflict?.()
-      setError(failed)
+      reportError(failed)
     } finally {
       inFlight.current = false
       setBusy(false)
@@ -250,7 +256,7 @@ export function ValidationBulkSettings({
           {t('dataValidation.bulk.unresolved')}
         </p>
       )}
-      {error != null && <ValidationRequestError error={error} />}
+      {!onError && error != null && <ValidationRequestError error={error} />}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SegmentedControl
           value={filter}

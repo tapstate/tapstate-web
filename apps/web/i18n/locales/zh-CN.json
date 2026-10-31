@@ -2732,6 +2732,7 @@
     "mappingCount": "{{count}} 对表",
     "concurrencyOne": "最大并发表数：1",
     "requestFailed": "校验请求未完成，请核对原操作状态后重试。",
+    "metadataBusy": "校验准备资源暂时繁忙，请稍后重试。",
     "technicalDetails": "技术详情",
     "cancel": "取消",
     "confirm": "确认",

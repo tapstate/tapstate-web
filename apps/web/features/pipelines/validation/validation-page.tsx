@@ -29,7 +29,7 @@ import { ValidationRunPanel } from './validation-run-panel'
 import { ValidationScheduleSettings } from './validation-schedule-settings'
 import { savedValidationSelection, sameValidationSchedule } from './validation-selection'
 import { validationSessionFetcher } from './validation-session-fetcher'
-import { ValidationRequestError } from './validation-view-parts'
+import { ValidationRequestError, validationMetadataBusy } from './validation-view-parts'
 
 type Client = ReturnType<typeof createValidationClient>
 export function ValidationPage({ pipelineId }: { pipelineId: string }) {
@@ -179,13 +179,14 @@ function ValidationWorkspace({
     setNotice(t(key))
     throw new Error('Validation action requires explicit review of the saved definition.')
   }
-  async function commit(request: ValidationSave, comparison: string) {
+  async function commit(request: ValidationSave, comparison: string, recoveringOriginal = false) {
     if (mutation.current) return
     mutation.current = true
     setPending(true)
     setError(null)
     setNotice('')
     let acknowledged = false
+    let acceptedReceipt = false
     try {
       setUncertain({ request, comparison })
       const receipt = await client.save(request)
@@ -197,6 +198,7 @@ function ValidationWorkspace({
       }
       if (receipt.fingerprint !== request.fingerprint || !receipt.taskGeneration)
         refuse('dataValidation.readbackRequired')
+      acceptedReceipt = true
       const read = await client.task(pipelineId, 'full')
       if (
         !read ||
@@ -217,7 +219,13 @@ function ValidationWorkspace({
       setNotice(t('dataValidation.saved'))
     } catch (failed) {
       setError(failed)
-      if (!acknowledged) setNotice(t('dataValidation.unknownSave'))
+      if (!acknowledged) {
+        // A fresh metadata admission refusal precedes the write. A recovery attempt may
+        // already have committed, and a failed readback never disproves that receipt.
+        if (!recoveringOriginal && !acceptedReceipt && validationMetadataBusy(failed)) {
+          setUncertain(null)
+        } else setNotice(t('dataValidation.unknownSave'))
+      }
       throw failed
     } finally {
       mutation.current = false
@@ -381,7 +389,7 @@ function ValidationWorkspace({
         <Button
           disabled={pending}
           variant="secondary"
-          onClick={() => void commit(uncertain.request, uncertain.comparison).catch(() => {})}
+          onClick={() => void commit(uncertain.request, uncertain.comparison, true).catch(() => {})}
         >
           {t('dataValidation.retryOriginalSave')}
         </Button>
@@ -431,6 +439,7 @@ function ValidationWorkspace({
             setSection('history')
           }}
           onDefinitionConflict={() => setNeedsReload(true)}
+          onError={setError}
         />
       )}
       {section === 'schedule' && basis && (
@@ -442,6 +451,7 @@ function ValidationWorkspace({
           onSave={saveSchedule}
           onDisable={disable}
           onBack={() => setSection('bulk')}
+          onError={setError}
         />
       )}
       {section !== 'history' && (

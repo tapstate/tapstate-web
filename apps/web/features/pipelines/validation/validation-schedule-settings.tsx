@@ -42,6 +42,7 @@ export interface ScheduleSettingsProps {
   onSave: (schedule: ValidationSchedule, enabled: boolean, historyLimit: number) => Promise<void>
   onDisable: () => Promise<void>
   onBack: () => void
+  onError?: (error: unknown) => void
 }
 
 export function ValidationScheduleSettings({
@@ -51,6 +52,7 @@ export function ValidationScheduleSettings({
   onSave,
   onDisable,
   onBack,
+  onError,
 }: ScheduleSettingsProps) {
   const { t } = useTranslation()
   const [submitting, setSubmitting] = useState(false)
@@ -62,10 +64,12 @@ export function ValidationScheduleSettings({
     inFlight.current = true
     setSubmitting(true)
     setSubmissionError(null)
+    onError?.(null)
     try {
       await action()
     } catch (failed) {
       setSubmissionError(failed)
+      onError?.(failed)
     } finally {
       inFlight.current = false
       setSubmitting(false)
@@ -175,7 +179,7 @@ export function ValidationScheduleSettings({
         <span>{t('dataValidation.mappingCount', { count: task.mappings.length })}</span>
         <span>{t('dataValidation.concurrencyOne')}</span>
       </div>
-      {submissionError != null && <ValidationRequestError error={submissionError} />}
+      {!onError && submissionError != null && <ValidationRequestError error={submissionError} />}
       {submitting && (
         <p role="status" className="system-sm-regular text-text-secondary">
           {t('dataValidation.submitting')}
