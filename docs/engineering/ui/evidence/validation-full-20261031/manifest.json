@@ -1,0 +1,241 @@
+{
+  "date": "2026-10-31",
+  "scope": "Direct one-to-one FULL validation, actual retained OP account/data; no mocked API or prototype runtime",
+  "currentRuntime": "28066b32c7c43e76b45c565512c0c429943fb5b2",
+  "currentCode": "c8338d6de48db36495faebc16ac34ed43be135a1",
+  "theme": "Shipped normal Web entry is light; no product theme selector. Dark token source inspection is not a dark business-page execution.",
+  "images": [
+    {
+      "file": "before-record-wide-1600.png",
+      "sha256": "23cc6c465cad49fd2f63d503c3f92e5da8f0e7f36ef2cb4713c66c3c7d9e6bc2",
+      "pixels": [1600, 1000],
+      "cssViewport": [1600, 1000],
+      "web": "7861a3b91042bf3299e3a99683602c2330bb2c0e",
+      "runtime": "0fc25ff9e3e627662937c353540879c9d4dbf715"
+    },
+    {
+      "file": "after-record-wide-1600.png",
+      "sha256": "997dc8f1911bc31e4a840ddc66fe872526bd0e7d697cd59db2b42d4ec5d378d6",
+      "pixels": [1600, 1000],
+      "cssViewport": [1600, 1000],
+      "web": "285f487b0e2806d6303644cdfa2f8facd01e4ada",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "after-failed-wide-1600.png",
+      "sha256": "800e0554afa14018ca42d41f5c71e5e5cf44a3220d1a08d6fba41ff47dd91870",
+      "pixels": [1600, 1000],
+      "cssViewport": [1600, 1000],
+      "web": "285f487b0e2806d6303644cdfa2f8facd01e4ada",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "after-legacy-failure-missing.png",
+      "sha256": "0f622871115f7d9b47f56c27a1aba5504993b81323207c8261f6be03ab667b9f",
+      "pixels": [1728, 885],
+      "cssViewport": null,
+      "web": "285f487b0e2806d6303644cdfa2f8facd01e4ada",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "after-stopped-neutral.png",
+      "sha256": "377a2ea84dd696e877df5ba9e8b5abc2a2522ea777b4693b2bfeadc1542df0a3",
+      "pixels": [1600, 1000],
+      "cssViewport": null,
+      "web": "285f487b0e2806d6303644cdfa2f8facd01e4ada",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "after-no-issues-final.png",
+      "sha256": "0e5b377d901a003e8a265d98e111f79f8c5a0487aac04b6d74fb76bf77ae60c8",
+      "pixels": [1728, 885],
+      "cssViewport": null,
+      "web": "285f487b0e2806d6303644cdfa2f8facd01e4ada",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "current-settings-en-1280x800.png",
+      "sha256": "e3044d343a0637c9e9da93e8be88e96c73a975ec93407486771f985023158a8e",
+      "pixels": [1280, 800],
+      "cssViewport": [1280, 800],
+      "web": "c8338d6de48db36495faebc16ac34ed43be135a1",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "current-settings-en-375x812.png",
+      "sha256": "c9f637664fd6145ecfa1b53d064737534a8f94a888ee5b0b96ed80f512cf2340",
+      "pixels": [375, 812],
+      "cssViewport": [375, 812],
+      "web": "c8338d6de48db36495faebc16ac34ed43be135a1",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "final-settings-zh-CN-1280x800.png",
+      "sha256": "8bf96ce287a81cc32070348f20b9891b29d49cdde43ac903d0d2d4681862c984",
+      "pixels": [1280, 800],
+      "cssViewport": [1280, 800],
+      "web": "ff47866fd5acd035629f365949deb9b36689c9a4",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "final-settings-zh-CN-375x812.png",
+      "sha256": "230593f3319f7221a267d1af44d605933aafde994ed704a98e85cb0f74fe9603",
+      "pixels": [375, 812],
+      "cssViewport": [375, 812],
+      "web": "ff47866fd5acd035629f365949deb9b36689c9a4",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "final-report-zh-CN-1280x800.png",
+      "sha256": "dcd483391a11c3396136ad4abe4a488c524d93b490f09984b7e1e65b054f3aa7",
+      "pixels": [1280, 800],
+      "cssViewport": [1280, 800],
+      "web": "ff47866fd5acd035629f365949deb9b36689c9a4",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "final-drawer-zh-CN-375x812.png",
+      "sha256": "2040c10d56149226c024d78d245252605bee55ee0faf6d0c4abc2995b20b6697",
+      "pixels": [375, 812],
+      "cssViewport": [375, 812],
+      "web": "ff47866fd5acd035629f365949deb9b36689c9a4",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "final-schedule-zh-CN-1280x800.png",
+      "sha256": "6a39b68870e1278949783d606436536dfb19dbbb7d3bccdc6827258067be60b5",
+      "pixels": [1280, 800],
+      "cssViewport": [1280, 800],
+      "web": "ff47866fd5acd035629f365949deb9b36689c9a4",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "final-schedule-zh-CN-375x812.png",
+      "sha256": "2b913e46f0106237b2683896a17f40c00226732525cb617d717b376f866212dd",
+      "pixels": [375, 812],
+      "cssViewport": [375, 812],
+      "web": "ff47866fd5acd035629f365949deb9b36689c9a4",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "final-cache-return-c8338d6.png",
+      "sha256": "4f8458e73e504e99a60b1fd90148ca8b31179eb937c48f6799ee0bad7b3c65d1",
+      "pixels": [1280, 800],
+      "cssViewport": [1280, 800],
+      "web": "c8338d6de48db36495faebc16ac34ed43be135a1",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "final-settings-zh-TW-375x812.png",
+      "sha256": "931862b1eb074207998dafe1baa0b4a95c8885e38a4d28363724651d757aeaf3",
+      "pixels": [375, 812],
+      "cssViewport": [375, 812],
+      "web": "c8338d6de48db36495faebc16ac34ed43be135a1",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "final-report-zh-TW-1280x800.png",
+      "sha256": "b22db973ebcf7e30552c3da131ad696d6adfb33003be1058df1335a283874b9d",
+      "pixels": [1280, 800],
+      "cssViewport": [1280, 800],
+      "web": "ff47866fd5acd035629f365949deb9b36689c9a4",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "final-report-zh-TW-375x812.png",
+      "sha256": "b423bc55c2bdfbc47e13590a6827ebdacd9d2178a22430935b01f5f077d0f8c5",
+      "pixels": [375, 812],
+      "cssViewport": [375, 812],
+      "web": "ff47866fd5acd035629f365949deb9b36689c9a4",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "final-drawer-zh-TW-375x812.png",
+      "sha256": "120dc6fa21e1bcd80700f32d3c9c8954f8f0f5feb90bad8093ecf322e10e77ae",
+      "pixels": [375, 812],
+      "cssViewport": [375, 812],
+      "web": "c8338d6de48db36495faebc16ac34ed43be135a1",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "final-schedule-zh-TW-1280x800.png",
+      "sha256": "eea944b5e8e4dc2b491752984d09f9f2c17ec0bad8b3b7c055b11583ec1f070d",
+      "pixels": [1280, 800],
+      "cssViewport": [1280, 800],
+      "web": "c8338d6de48db36495faebc16ac34ed43be135a1",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "final-schedule-zh-TW-375x812.png",
+      "sha256": "45b25ce7a8febd7e9ffe3b5893dfe5a5230e1e5ec79e10953134e56364acf33b",
+      "pixels": [375, 812],
+      "cssViewport": [375, 812],
+      "web": "c8338d6de48db36495faebc16ac34ed43be135a1",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "final-field-popup-mobile-375x812.png",
+      "sha256": "86ed2354e918f130162f988369252ed77bf7f71d5c5a27f90ce3851a8f10684a",
+      "pixels": [375, 812],
+      "cssViewport": [375, 812],
+      "web": "5ca8f0ba8016b47f43887d0a50aa6ebfff0fb80d",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "after-keyboard-focus-compact.png",
+      "sha256": "d2930b94c94dc24ec9248148757607d8f09958eeb06a49f5314da355d5e06287",
+      "pixels": [1280, 900],
+      "cssViewport": [1280, 900],
+      "web": "285f487b0e2806d6303644cdfa2f8facd01e4ada",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "final-never-run-history-5ca8f0b.png",
+      "sha256": "936491c33308213c3cf41d3cd5ff7c7f3002c3cb3c566f8723b4475dbfafce3d",
+      "pixels": [1728, 885],
+      "cssViewport": null,
+      "web": "5ca8f0ba8016b47f43887d0a50aa6ebfff0fb80d",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "after-pagination-return.png",
+      "sha256": "308cdcca3689aba617639f6d1067589769f3e3ed136308ebac700bd138847b44",
+      "pixels": [1728, 885],
+      "cssViewport": null,
+      "web": "285f487b0e2806d6303644cdfa2f8facd01e4ada",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "after-history-no-match.png",
+      "sha256": "512c1c01891b84d435a9efba716727b2fe13389b69dad6c296a365f2ecdc02f8",
+      "pixels": [1600, 1000],
+      "cssViewport": null,
+      "web": "285f487b0e2806d6303644cdfa2f8facd01e4ada",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "final-pg-count-mobile-375x812.png",
+      "sha256": "bd9adf240e89ee1a59a0cdfb83034405637e811cdb24b244a64552130cc6637f",
+      "pixels": [375, 812],
+      "cssViewport": [375, 812],
+      "web": "5ca8f0ba8016b47f43887d0a50aa6ebfff0fb80d",
+      "runtime": "28066b32c7c43e76b45c565512c0c429943fb5b2"
+    },
+    {
+      "file": "reference-bulk-713926b3.png",
+      "sha256": "e47e4b2abfac267250fa4fd12c42a042ddbccc9d81ba493ee720da23cd6665a5",
+      "pixels": [1879, 1304],
+      "cssViewport": null,
+      "reference": "713926b3e4359c9e5661eb8e09fb9c01ae93ee9c",
+      "scope": "Genuine design-reference image; fictional data, original CSS viewport and DPR unknown. Not a running product."
+    },
+    {
+      "file": "reference-record-values-713926b3.png",
+      "sha256": "f0b50dd95d89c0b57f30cbf811c7e1d3901f0feb2857b1bedef5dbf6c425cf04",
+      "pixels": [1879, 1304],
+      "cssViewport": null,
+      "reference": "713926b3e4359c9e5661eb8e09fb9c01ae93ee9c",
+      "scope": "Genuine design-reference image; fictional data, original CSS viewport and DPR unknown. Not a running product."
+    }
+  ]
+}
