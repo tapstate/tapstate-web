@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { safeLoginReturn } from '@/features/auth/login-return'
 import {
   setupOperationScope,
+  isStorageQuotaCode,
   snapshotScope,
   StorageClientError,
   type InitializationProgress,
@@ -231,8 +232,14 @@ export function StorageGate({ children }: { children: ReactNode }) {
     return (
       <StorageFrame>
         <StorageError error={error} />
-        {(authenticated ? lastKnownSnapshot?.initializationProgress : pendingHandoff?.progress)
-          ?.state === 'RUNNING' &&
+        {(authenticated ? lastKnownSnapshot?.initializationProgress : pendingHandoff?.progress) &&
+          ((authenticated ? lastKnownSnapshot?.initializationProgress : pendingHandoff?.progress)
+            ?.state === 'RUNNING' ||
+            (authenticated &&
+              lastKnownSnapshot?.initializationProgress?.state === 'FAILED' &&
+              lastKnownSnapshot.initializationProgress.milestones.some((step) =>
+                isStorageQuotaCode(step.errorCode),
+              ))) &&
           (error instanceof TypeError ||
             (error instanceof StorageClientError && error.status >= 500)) && (
             <InitializationMilestones

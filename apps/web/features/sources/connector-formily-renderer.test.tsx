@@ -322,10 +322,12 @@ describe('ConnectorFormily', () => {
       await new Promise((resolve) => setTimeout(resolve, 30))
     })
 
-    expect(changes.at(-1)).toMatchObject({
-      sslCa: 'Y2VydA==',
-      sslCAFile: 'ca.pem',
-    })
+    await vi.waitFor(() =>
+      expect(changes.at(-1)).toMatchObject({
+        sslCa: 'Y2VydA==',
+        sslCAFile: 'ca.pem',
+      }),
+    )
 
     await act(async () => {
       tlsToggle?.dispatchEvent(new MouseEvent('click', { bubbles: true }))

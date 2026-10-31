@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, redirect, useNavigate } from '@tanstack/react-router'
-import { Loader2 } from 'lucide-react'
+import { SkeletonRectangle } from '@tapstate-web/ui/skeleton'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -12,9 +12,40 @@ import { useCloudAppState } from '../state/cloud-app-state'
 function ConsolePending() {
   const { t } = useTranslation()
   return (
-    <div className="mx-auto flex max-w-xl items-center gap-2 p-6" role="status">
-      <Loader2 aria-hidden="true" className="size-5 animate-spin motion-reduce:animate-none" />
-      {t('app.loading')}
+    <div
+      className="app-shell flex min-h-screen gap-2 p-2 font-sans"
+      role="status"
+      aria-label={t('app.loading')}
+    >
+      <span className="sr-only">{t('app.loading')}</span>
+      <aside
+        aria-hidden="true"
+        className="hidden w-[240px] shrink-0 flex-col gap-4 px-4 py-5 md:flex"
+      >
+        <SkeletonRectangle className="h-6 w-28 rounded-lg" />
+        <SkeletonRectangle className="h-9 w-full rounded-lg" />
+        {Array.from({ length: 6 }, (_, index) => (
+          <SkeletonRectangle key={index} className="h-7 w-36 rounded-lg" />
+        ))}
+      </aside>
+      <main
+        aria-hidden="true"
+        className="bg-background-default min-w-0 flex-1 rounded-xl p-6 sm:p-8"
+      >
+        <div className="flex items-center justify-between gap-4">
+          <SkeletonRectangle className="h-6 w-36 rounded-md" />
+          <SkeletonRectangle className="h-8 w-28 rounded-lg" />
+        </div>
+        <SkeletonRectangle className="mt-8 h-4 w-44 rounded-md" />
+        <div className="mt-4 space-y-3">
+          {Array.from({ length: 3 }, (_, index) => (
+            <div key={index} className="border-divider-subtle rounded-xl border p-5">
+              <SkeletonRectangle className="h-4 w-40 max-w-full rounded-md" />
+              <SkeletonRectangle className="mt-3 h-3 w-56 max-w-full rounded-md" />
+            </div>
+          ))}
+        </div>
+      </main>
     </div>
   )
 }

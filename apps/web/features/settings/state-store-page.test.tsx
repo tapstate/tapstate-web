@@ -82,6 +82,8 @@ beforeEach(() => {
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
+  mockState.apiFetch.mockReset()
+  mockState.apiFetch.mockResolvedValue(Response.json({ version: 'test' }))
   mockState.listSources.mockReset()
   mockState.getSource.mockReset()
   mockState.testConnection.mockReset()
@@ -120,6 +122,33 @@ describe('StateStorePage', () => {
     mockState.listSources.mockResolvedValue([managed])
     return managed
   }
+  it.each(['on-prem', 'cloud'] as const)(
+    'hides Transfer while preserving storage settings and recovery in %s',
+    async (profile) => {
+      mockState.profile = profile
+      ready([
+        'connection.test',
+        'configuration.export',
+        'configuration.import.preflight',
+        'configuration.import.commit',
+        'configuration.import.status',
+        'storage.recovery.plan',
+        'storage.recovery.status',
+      ])
+      mockState.snapshot!.mode = profile === 'cloud' ? 'CLOUD' : 'OP'
+      await render()
+      expect(container.textContent).not.toContain('Transfer configuration')
+      expect(container.querySelector('input[type="file"]')).toBeNull()
+      expect(container.textContent).toContain('Recover runtime storage and pipelines')
+      expect(container.textContent).toContain('Refresh status')
+      const recovery = container.querySelector('summary')!
+      await act(async () => recovery.click())
+      expect(recovery.parentElement?.getAttribute('open')).not.toBeNull()
+      expect(
+        mockState.apiFetch.mock.calls.some(([url]) => String(url).includes('/configuration/')),
+      ).toBe(false)
+    },
+  )
   it('checks the freshly loaded default Source only on explicit refresh', async () => {
     const managed = ready()
     const fresh = { ...managed, config: { uri: 'mongodb://<redacted>@current/views' } }

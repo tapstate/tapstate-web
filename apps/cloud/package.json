@@ -16,7 +16,9 @@
     "@tanstack/react-router": "^1.170.18",
     "@tapstate-web/ui": "workspace:*",
     "i18next": "^26.3.6",
+    "input-otp": "^1.5.0",
     "lucide-react": "^1.26.0",
+    "motion": "^12.42.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-i18next": "^17.0.11"

@@ -1,13 +1,13 @@
 import { useNavigate } from '@tanstack/react-router'
 import { Button } from '@tapstate-web/ui/button'
+import { Checkbox } from '@tapstate-web/ui/checkbox'
 import { Field, FieldDescription, FieldError, FieldLabel } from '@tapstate-web/ui/field'
 import { Fieldset, FieldsetLegend } from '@tapstate-web/ui/fieldset'
-import { IconButton } from '@tapstate-web/ui/icon-button'
 import { Input } from '@tapstate-web/ui/input'
 import RadioCard from '@tapstate-web/ui/radio-card'
 import { RadioGroup } from '@tapstate-web/ui/radio-group'
 import { SkeletonRectangle } from '@tapstate-web/ui/skeleton'
-import { AlertCircle, Check, CreditCard, MapPin, Moon, RefreshCw, Sun } from 'lucide-react'
+import { AlertCircle, Check, Copy, CreditCard, MapPin, RefreshCw } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -25,9 +25,10 @@ import {
   type Spec,
   type Subscription,
 } from '../../service/cloud-api'
+import { AccountMenu } from '../account/account-menu'
 import { formatPrice } from '../billing/billing-format'
 import { navigateToCheckout } from '../billing/checkout-navigation'
-import { hasValidClusterDnsLabel } from '../clusters/cluster-name'
+import { clusterAddressPreview, hasValidClusterDnsLabel } from '../clusters/cluster-name'
 import {
   isProvisioningCancelled,
   isProvisioningFailed,
@@ -38,8 +39,9 @@ export type { OnboardingInput } from './onboarding-types'
 
 interface OnboardingPageProps {
   darkMode: boolean
-  setDarkMode: (enabled: boolean) => void
   user: UserProfile
+  onLogout: () => void | Promise<void>
+  consoleOrganizationId?: string
   currentOrganization?: Organization | null
   createOrganization?: boolean
   initialWorkspace?: OnboardingWorkspace | null
@@ -104,8 +106,9 @@ function workspaceScreen(workspace: OnboardingWorkspace): OnboardingScreen {
 
 export function OnboardingPage({
   darkMode,
-  setDarkMode,
   user,
+  onLogout,
+  consoleOrganizationId,
   currentOrganization = null,
   createOrganization = false,
   initialWorkspace = null,
@@ -153,6 +156,7 @@ export function OnboardingPage({
   const [isLoadingSpecs, setIsLoadingSpecs] = useState(true)
   const [hasSpecsError, setHasSpecsError] = useState(false)
   const [consent, setConsent] = useState(false)
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle')
   const hasRedirectedToAuth = useRef(false)
   const organization = resolvedOrganization ?? currentOrganization
 
@@ -177,6 +181,11 @@ export function OnboardingPage({
     ? clusterNameInput.trim().slice(0, 100)
     : (clusterNameInput.trim() || organizationDisplayName).slice(0, 100)
   const clusterNameIsValid = hasValidClusterDnsLabel(clusterName)
+  const addressPreview = clusterAddressPreview(
+    clusterName,
+    window.location.hostname,
+    import.meta.env.VITE_CLUSTER_ADDRESS_DOMAIN,
+  )
 
   useEffect(() => {
     if (!organization || !suggestedClusterName) return
@@ -586,11 +595,53 @@ export function OnboardingPage({
     })
   }
 
-  const accountName = user.displayName?.trim() || user.email
+  const inputSurface =
+    'bg-white hover:bg-white focus:bg-white disabled:bg-white disabled:hover:bg-white dark:bg-components-input-bg-normal dark:hover:bg-components-input-bg-hover dark:focus:bg-components-input-bg-active dark:disabled:bg-components-input-bg-disabled dark:disabled:hover:bg-components-input-bg-disabled'
+  useEffect(() => {
+    setCopyState('idle')
+  }, [addressPreview])
+  const clusterAddressDescription = (
+    <>
+      <FieldDescription>{t('onboarding.clusterAddressHint')}</FieldDescription>
+      {addressPreview && (
+        <div className="mt-2 rounded-lg border border-black/[0.06] bg-white/60 p-3 dark:border-white/[0.08] dark:bg-white/[0.04]">
+          <div className="mb-1 flex items-center justify-between gap-3">
+            <span className="text-text-tertiary text-xs font-medium">
+              {t('onboarding.clusterAddressPreviewLabel')}
+            </span>
+            <button
+              aria-label={t('onboarding.copyAddress')}
+              className="text-text-tertiary hover:text-text-primary focus-visible:ring-state-accent-solid inline-flex shrink-0 items-center gap-1 rounded px-1 py-0.5 text-xs focus-visible:ring-2"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(addressPreview)
+                  setCopyState('copied')
+                } catch {
+                  setCopyState('error')
+                }
+              }}
+              type="button"
+            >
+              <Copy aria-hidden="true" className="size-3.5" />
+              {t(copyState === 'copied' ? 'organizations.copied' : 'onboarding.copyAddress')}
+            </button>
+          </div>
+          <code className="text-text-secondary block font-mono text-xs break-all">
+            {addressPreview}
+          </code>
+          {copyState === 'error' && (
+            <p role="status" className="text-text-destructive mt-1 text-xs">
+              {t('organizations.copyError')}
+            </p>
+          )}
+        </div>
+      )}
+    </>
+  )
 
   return (
     <div
-      className={`flex min-h-screen w-full flex-col justify-between font-sans transition-colors duration-200 ${darkMode ? 'dark bg-[#111215] text-[#f0f1f3]' : 'bg-[#fafafa] text-[#111827]'}`}
+      className={`app-shell flex min-h-screen w-full flex-col justify-between font-sans transition-colors duration-200 ${darkMode ? 'dark text-[#f0f1f3]' : 'text-[#111827]'}`}
     >
       <header className="flex h-16 w-full items-center justify-between border-b border-black/[0.05] bg-transparent px-6 sm:px-12 dark:border-white/[0.06]">
         <div className="flex items-center gap-2.5">
@@ -603,21 +654,24 @@ export function OnboardingPage({
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="hidden max-w-56 truncate text-xs text-neutral-500 sm:block dark:text-neutral-400">
-            {accountName}
-          </span>
-          <IconButton
-            aria-label={t('app.toggleTheme')}
-            onClick={() => setDarkMode(!darkMode)}
-            size="md"
-            title={t('app.toggleTheme')}
-          >
-            {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </IconButton>
-        </div>
+        <AccountMenu user={user} onLogout={onLogout} showProfile={false} placement="bottom-end" />
       </header>
 
+      {(consoleOrganizationId ?? currentOrganization?.id) && (
+        <button
+          className="text-text-tertiary hover:text-text-primary mx-6 mt-6 inline-flex w-fit items-center gap-2 text-sm transition-colors sm:mx-12"
+          onClick={() =>
+            void navigate({
+              to: '/',
+              search: { organizationId: consoleOrganizationId ?? currentOrganization?.id },
+            })
+          }
+          type="button"
+        >
+          <span aria-hidden="true">←</span>
+          {t('clusterEntry.back')}
+        </button>
+      )}
       <main className="flex w-full flex-1 flex-col items-center justify-center px-4 py-12 sm:px-6">
         {screen === 'form' ? (
           <div className="mx-auto w-full max-w-[480px] space-y-8">
@@ -630,6 +684,7 @@ export function OnboardingPage({
                   organization
                     ? 'onboarding.existingOrganizationDescription'
                     : 'onboarding.description',
+                  { organization: organization?.name },
                 )}
               </p>
             </div>
@@ -653,16 +708,13 @@ export function OnboardingPage({
             <form className="space-y-6" onSubmit={handleSubmit}>
               {organization ? (
                 <>
-                  <Field name="organization">
-                    <FieldLabel>{t('onboarding.organizationLabel')}</FieldLabel>
-                    <Input disabled value={organization.name} />
-                  </Field>
                   <Field
                     name="clusterName"
                     invalid={Boolean(clusterNameInput && !clusterNameIsValid)}
                   >
                     <FieldLabel>{t('onboarding.newClusterLabel')}</FieldLabel>
                     <Input
+                      className={inputSurface}
                       autoComplete="off"
                       maxLength={100}
                       onValueChange={setClusterNameInput}
@@ -670,6 +722,7 @@ export function OnboardingPage({
                       required
                       value={clusterNameInput}
                     />
+                    {clusterAddressDescription}
                     <FieldError>{t('onboarding.clusterNameHint')}</FieldError>
                   </Field>
                 </>
@@ -681,6 +734,7 @@ export function OnboardingPage({
                   >
                     <FieldLabel>{t('onboarding.organizationLabel')}</FieldLabel>
                     <Input
+                      className={inputSurface}
                       autoComplete="organization"
                       maxLength={100}
                       onValueChange={(value) => {
@@ -696,6 +750,7 @@ export function OnboardingPage({
                   <Field name="clusterName" invalid={Boolean(clusterName && !clusterNameIsValid)}>
                     <FieldLabel>{t('onboarding.clusterLabel')}</FieldLabel>
                     <Input
+                      className={inputSurface}
                       autoComplete="off"
                       maxLength={100}
                       onValueChange={setClusterNameInput}
@@ -703,6 +758,7 @@ export function OnboardingPage({
                       required
                       value={clusterName}
                     />
+                    {clusterAddressDescription}
                     <FieldError>{t('onboarding.clusterNameHint')}</FieldError>
                   </Field>
                 </>
@@ -881,12 +937,11 @@ export function OnboardingPage({
 
               {canManage ? (
                 <label className="flex cursor-pointer items-start gap-2.5 text-[12.5px] leading-relaxed text-neutral-700 dark:text-neutral-300">
-                  <input
+                  <Checkbox
                     checked={consent}
-                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-black/[0.2] accent-neutral-900 dark:accent-white"
+                    className="mt-0.5"
                     disabled={isSubmitting}
-                    onChange={(event) => setConsent(event.target.checked)}
-                    type="checkbox"
+                    onCheckedChange={setConsent}
                   />
                   <span>{t('billing.consent')}</span>
                 </label>
@@ -898,34 +953,6 @@ export function OnboardingPage({
                   {t('billing.ownerOnly')}
                 </p>
               )}
-
-              <section aria-labelledby="onboarding-cluster-summary" className="grid gap-2 pt-1">
-                <div className="flex items-center justify-between">
-                  <h2
-                    className="system-sm-medium text-text-secondary m-0"
-                    id="onboarding-cluster-summary"
-                  >
-                    {t(organization ? 'onboarding.newClusterLabel' : 'onboarding.clusterLabel')}
-                  </h2>
-                  <span className="system-xs-regular text-text-tertiary">
-                    {selectedSpec?.key ?? t('onboarding.regionDefault')}
-                  </span>
-                </div>
-
-                <div className="border-components-panel-border bg-components-panel-bg shadow-shadow-shadow-3 space-y-2.5 rounded-xl border-[0.5px] p-3.5 shadow-xs">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="system-sm-semibold text-text-primary">
-                      {clusterName || t('onboarding.clusterPreviewEmpty')}
-                    </span>
-                    <span className="system-xs-regular text-text-tertiary">
-                      {selectedRegion?.code}
-                    </span>
-                  </div>
-                  <p className="body-xs-regular text-text-tertiary m-0">
-                    {t('onboarding.clusterPendingNote')}
-                  </p>
-                </div>
-              </section>
 
               <Button
                 aria-labelledby="onboarding-submit-label"
@@ -957,12 +984,10 @@ export function OnboardingPage({
                   </span>
                 )}
               </Button>
+              <p className="text-text-tertiary text-center text-xs leading-relaxed">
+                {t('onboarding.checkoutRedirectNote')}
+              </p>
             </form>
-
-            <div className="flex items-center justify-between border-t border-black/[0.05] pt-4 text-[11px] text-neutral-400 dark:border-white/[0.06]">
-              <span>{t('onboarding.footnote')}</span>
-              <span className="hidden sm:inline">{accountName}</span>
-            </div>
           </div>
         ) : screen === 'starting' ? (
           <div className="mx-auto w-full max-w-[480px] space-y-7 text-center">

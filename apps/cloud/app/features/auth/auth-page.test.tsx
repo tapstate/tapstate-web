@@ -45,6 +45,8 @@ async function renderPage(props: Partial<ComponentProps<typeof AuthPage>> = {}) 
     onRetryRegistrationPolicy: vi.fn(),
     onAccessType: vi.fn().mockResolvedValue({ type: 'organization' }),
     onLogin: vi.fn().mockResolvedValue(user),
+    onRequestLoginCode: vi.fn().mockResolvedValue(undefined),
+    onLoginWithCode: vi.fn().mockResolvedValue(user),
     onRequestCode: vi.fn().mockResolvedValue(undefined),
     onRegisterWithEmail: vi.fn().mockResolvedValue(user),
     onAcceptInvitation: vi.fn().mockResolvedValue(user),
@@ -78,6 +80,7 @@ async function submitForm() {
 }
 
 beforeEach(async () => {
+  document.elementFromPoint = () => null
   await i18n.changeLanguage('en')
 })
 
@@ -92,6 +95,68 @@ afterEach(async () => {
 })
 
 describe('Cloud invitation authentication', () => {
+  it('signs in using an email code', async () => {
+    const props = await renderPage({ invitationToken: null })
+    await act(async () => changeInput('#auth-email', 'member@example.com'))
+    await clickButton('Sign in with an email code')
+    await clickButton('Email me a verification code')
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300))
+    })
+    expect(host?.querySelector('#auth-email')).toBeNull()
+    await act(async () => changeInput('#auth-login-code', '123456'))
+    await act(async () => {
+      host
+        ?.querySelector('#auth-login-code')
+        ?.closest('form')
+        ?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    })
+    expect(props.onRequestLoginCode).toHaveBeenCalledWith('member@example.com')
+    expect(props.onLoginWithCode).toHaveBeenCalledWith('member@example.com', '123456')
+    expect(props.onAuthenticated).toHaveBeenCalledWith(user)
+  })
+  it.each(['email', 'mode'])('ignores a login-code response after changing %s', async (change) => {
+    let resolveRequest!: () => void
+    const onRequestLoginCode = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveRequest = resolve
+        }),
+    )
+    await renderPage({ invitationToken: null, trialCodeRequired: false, onRequestLoginCode })
+    await act(async () => changeInput('#auth-email', 'first@example.com'))
+    await clickButton('Sign in with an email code')
+    await clickButton('Email me a verification code')
+    if (change === 'email') await act(async () => changeInput('#auth-email', 'second@example.com'))
+    else await clickButton('Sign up')
+    await act(async () => resolveRequest())
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300))
+    })
+    expect(host?.querySelector('#auth-login-code')).toBeNull()
+    expect(host?.querySelector('#auth-code')).toBeNull()
+  })
+  it('offers sign-in for a registered email and preserves the entered address', async () => {
+    await renderPage({
+      invitationToken: null,
+      initialMode: 'register',
+      trialCodeRequired: false,
+      onRequestCode: vi
+        .fn()
+        .mockRejectedValue(
+          new CloudApiError('Already registered', 409, 'auth.email-already-registered'),
+        ),
+    })
+    await act(async () => changeInput('#auth-email', 'member@example.com'))
+    await clickButton('Email me a verification code')
+
+    const alert = host?.querySelector('[role="alert"]')
+    expect(alert?.textContent).toContain('An account with this email already exists')
+    await act(async () => alert?.querySelector('button')?.click())
+    expect(host?.querySelector('h1')?.textContent).toContain('Sign in to Tapstate Cloud')
+    expect(host?.querySelector<HTMLInputElement>('#auth-email')?.value).toBe('member@example.com')
+  })
+
   it('continues Google signup with an invitation after an invite-required callback', async () => {
     const token = 'A2B3C4D5E6F7'
     const link = new URL('/auth', window.location.origin)

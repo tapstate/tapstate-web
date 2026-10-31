@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { ArrowRight, Database, GitMerge, HardDrive, Layers, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import type { ViewSummary } from '@/service/view-client'
+import type { UnresolvedOutput, ViewSummary } from '@/service/view-client'
 
 import { ResourceListHeader } from '@/components/resource-list-header'
 import { Badge } from '@/components/ui/badge'
@@ -53,13 +53,46 @@ export function ViewsPage() {
           </p>
         ) : !result.available ? (
           <ViewsExplainer notice={t('views.states.notReported')} />
-        ) : result.views.length === 0 ? (
-          <ViewsExplainer notice={null} />
         ) : (
-          <ViewsList views={result.views} />
+          <>
+            <UnresolvedOutputs outputs={result.unresolved ?? []} />
+            {result.views.length > 0 ? (
+              <ViewsList views={result.views} />
+            ) : !result.unresolved?.length ? (
+              <ViewsExplainer notice={null} />
+            ) : null}
+          </>
         )}
       </div>
     </section>
+  )
+}
+
+function UnresolvedOutputs({ outputs }: { outputs: UnresolvedOutput[] }) {
+  const { t } = useTranslation()
+  if (!outputs.length) return null
+  const byPipeline = new Map<string, Set<string>>()
+  for (const output of outputs) {
+    const codes = byPipeline.get(output.pipelineId) ?? new Set<string>()
+    codes.add(output.code)
+    byPipeline.set(output.pipelineId, codes)
+  }
+  return (
+    <div className="views-page__state" role="status">
+      <p>{t('views.outputs.unresolved')}</p>
+      <p>{t('views.outputs.help')}</p>
+      <ul>
+        {[...byPipeline].map(([pipelineId, codes]) => (
+          <li key={pipelineId} className="break-words">
+            <Link to="/pipelines/$pipelineId" params={{ pipelineId }} className="views-link">
+              {pipelineId}
+            </Link>
+            {' · '}
+            {[...codes].join(' · ')}
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 

@@ -2068,7 +2068,11 @@
     "footnote": "Status separates current observations from target-confirmed event age. A View is a built document; a Replica is a mirrored copy of one table.",
     "browseCollections": "Browse collections",
     "measurementNote": "Event age is seconds since the last target-confirmed source event, using the maximum across this output’s inputs and no rolling window. It grows during source idleness and does not measure end-to-end lag. Observation age is separate; this page refreshes every 5 seconds.",
-    "createView": "Create view"
+    "createView": "Create view",
+    "outputs": {
+      "unresolved": "Output location not yet resolved",
+      "help": "Discover the source schema or review the pipeline output configuration. Other resolved outputs remain listed."
+    }
   },
   "notFound": {
     "back": "Back to workspace",
@@ -2441,7 +2445,8 @@
       "network": "The response could not be verified. Check the connection and the original operation result.",
       "databaseCredentials": "The database rejected these credentials. Check the database username, password and authentication database.",
       "databasePermissions": "This account does not have the required database permissions. Check read, write, index and transaction access on the selected database.",
-      "databaseConnection": "The database could not be reached. Check DNS, network access, the Atlas IP access list and TLS settings."
+      "databaseConnection": "The database could not be reached. Check DNS, network access, the Atlas IP access list and TLS settings.",
+      "quota": "Atlas storage space quota reached"
     },
     "recovery": {
       "title": "Recover runtime storage and pipelines",
@@ -2553,7 +2558,9 @@
     "setupSavedHelp": "The database settings are saved. The cluster is preparing its runtime.",
     "resumeSetupTitle": "Continue saved storage setup",
     "resumeSetupHelp": "These databases are already bound. Use the original connection details to continue. If the previous result is uncertain, refresh its status first.",
-    "resumeSetup": "Continue original setup"
+    "resumeSetup": "Continue original setup",
+    "quotaRecovery": "Ask the Atlas administrator to restore available capacity, then check the original operation. Preserve saved settings and Tapstate databases. Do not submit initialization again.",
+    "quotaDocs": "View Atlas storage guidance"
   },
   "alerts": {
     "center": "Alert center",
@@ -3133,5 +3140,10 @@
       "confirm": "Confirm",
       "close": "Close"
     }
+  },
+  "startup": {
+    "title": "Loading your Cluster",
+    "help": "Connecting to Tapstate. Keep this page open. If it takes longer, reload the page.",
+    "retry": "Reload page"
   }
 }

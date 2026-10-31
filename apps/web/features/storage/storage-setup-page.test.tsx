@@ -15,6 +15,10 @@ const storage = vi.hoisted(() => ({
   authorityRevision: 0,
 }))
 vi.mock('./storage-context', () => ({ useStorage: () => storage }))
+// Keep the retained Transfer contract covered independently of release visibility.
+vi.mock('@/utils/release-features', () => ({
+  releaseFeatures: { configurationTransfer: true },
+}))
 import { ConfigurationTransfer } from './configuration-transfer'
 import { StorageRecovery } from './storage-recovery'
 import { StorageSetupForm } from './storage-setup-form'
@@ -1067,6 +1071,7 @@ describe('storage connection failure guidance', () => {
     ['io.store-unauthorized', 'The database rejected these credentials'],
     ['store.database-access-failed', 'required database permissions'],
     ['store.unreachable', 'DNS, network access'],
+    ['io.store-quota-exceeded', 'Atlas storage space quota reached'],
   ])('distinguishes database failure %s from the Cloud session', async (causeCode, guidance) => {
     const error = await storageRequest(
       async () =>

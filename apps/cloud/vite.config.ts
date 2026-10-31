@@ -8,6 +8,9 @@ import process from 'node:process'
 import { loadEnv, type ProxyOptions } from 'vite'
 import { defineConfig } from 'vitest/config'
 
+import { startupShell } from '../web/build/startup-shell'
+import startupLocale from './app/i18n/locales/en.json'
+
 function rewriteLocalOrigin(
   proxy: Parameters<NonNullable<ProxyOptions['configure']>>[0],
   proxyOrigin: string,
@@ -47,6 +50,7 @@ export default defineConfig(({ mode }) => {
   return {
     envDir,
     plugins: [
+      startupShell(startupLocale.startup),
       tanstackRouter({
         generatedRouteTree: './app/routeTree.gen.ts',
         routesDirectory: './app/routes',
@@ -62,7 +66,6 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       proxy: {
         '/v1/api': apiProxy,
-        '/v2/api': apiProxy,
       },
     },
     test: {

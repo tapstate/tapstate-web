@@ -1,5 +1,7 @@
 import type { Cluster } from '../../service/cloud-api'
 
+import { clusterDomainForConsoleHost } from './cluster-entry-host'
+
 export function clusterDnsLabel(name: string) {
   return name
     .trim()
@@ -10,6 +12,19 @@ export function clusterDnsLabel(name: string) {
 
 export function hasValidClusterDnsLabel(name: string) {
   return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(clusterDnsLabel(name))
+}
+
+export function clusterAddressPreview(
+  name: string,
+  consoleHost: string,
+  configuredDomain?: string,
+) {
+  if (!hasValidClusterDnsLabel(name)) return null
+
+  const domain = clusterDomainForConsoleHost(consoleHost, configuredDomain)
+  if (!domain) return null
+
+  return `https://${clusterDnsLabel(name)}.${domain}`
 }
 
 export function suggestedClusterDisplayName(organizationName: string, clusters: Cluster[]) {

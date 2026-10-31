@@ -174,12 +174,6 @@ export function ClustersPage() {
         )}
         {clusters.length === 0 ? (
           <div className="relative min-h-130 flex-1 overflow-hidden">
-            <div className="pointer-events-none absolute inset-x-8 inset-y-2 grid grid-cols-[repeat(auto-fill,minmax(296px,1fr))] grid-rows-4 gap-3">
-              {Array.from({ length: 16 }, (_, index) => (
-                <div key={index} className="bg-background-default-lighter rounded-xl opacity-75" />
-              ))}
-            </div>
-            <div className="from-background-body/0 to-background-body pointer-events-none absolute inset-0 bg-linear-to-b" />
             <section className="absolute inset-0 flex items-center justify-center overflow-hidden p-2">
               <div className="flex w-full max-w-130 flex-col items-center gap-6">
                 <div className="flex flex-col items-center gap-3">

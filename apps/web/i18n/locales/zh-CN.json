@@ -2068,7 +2068,11 @@
     "footnote": "状态将当前观测与目标确认事件的年龄分开呈现。视图是构建出的文档；副本是一张表的镜像。",
     "browseCollections": "浏览集合",
     "measurementNote": "事件年龄以秒计，从最后一条目标确认写入的源事件起算，取当前输出各输入表的最大值，无滑动窗口。源端空闲时也会增长，不代表端到端延迟。观测年龄另行判断；页面每 5 秒刷新。",
-    "createView": "创建视图"
+    "createView": "创建视图",
+    "outputs": {
+      "unresolved": "输出位置尚未解析",
+      "help": "请发现源端结构或检查管道的输出配置。其他已解析的输出仍会正常显示。"
+    }
   },
   "notFound": {
     "back": "返回工作区",
@@ -2441,7 +2445,8 @@
       "network": "无法确认响应，请检查连接并核对原操作结果。",
       "databaseCredentials": "数据库拒绝了这些凭据。请检查数据库用户名、密码和认证数据库。",
       "databasePermissions": "此账号缺少所需的数据库权限。请检查所选数据库的读、写、索引和事务权限。",
-      "databaseConnection": "无法连接数据库。请检查 DNS、网络访问、Atlas IP 访问列表和 TLS 设置。"
+      "databaseConnection": "无法连接数据库。请检查 DNS、网络访问、Atlas IP 访问列表和 TLS 设置。",
+      "quota": "Atlas 存储空间已达配额"
     },
     "recovery": {
       "title": "恢复运行存储与 Pipeline",
@@ -2553,7 +2558,9 @@
     "setupSavedHelp": "数据库设置已保存，集群正在初始化运行环境。",
     "resumeSetupTitle": "继续已保存的存储设置",
     "resumeSetupHelp": "数据库绑定已保存。请使用原连接信息继续；若上次结果仍不确定，请先刷新状态。",
-    "resumeSetup": "继续原设置"
+    "resumeSetup": "继续原设置",
+    "quotaRecovery": "请由 Atlas 管理员恢复可用容量，再检查原操作状态。请保留已保存的设置和 Tapstate 数据库，不要重复提交初始化。",
+    "quotaDocs": "查看 Atlas 存储说明"
   },
   "alerts": {
     "center": "告警中心",
@@ -3133,5 +3140,10 @@
       "confirm": "确认",
       "close": "关闭"
     }
+  },
+  "startup": {
+    "title": "正在载入 Cluster",
+    "help": "正在连接 Tapstate，请保持页面打开。如等待时间较长，请重新加载页面。",
+    "retry": "重新加载页面"
   }
 }
