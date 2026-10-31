@@ -2888,7 +2888,10 @@
       "showPending": "Review tables needing configuration",
       "suggestionsUnavailable": "Field suggestions are unavailable",
       "suggestionsHelp": "You can enter physical fields manually. Run controls and history remain available; precheck still validates confirmed keys.",
-      "retrySuggestions": "Retry field suggestions"
+      "retrySuggestions": "Retry field suggestions",
+      "scopeLoading": "Refreshing available table suggestions…",
+      "scopeUnavailable": "Table suggestions are unavailable",
+      "scopeHelp": "Saved mappings and run controls remain available. Saving rechecks every selected table with the server. Retry discovery to see newly available tables."
     },
     "run": {
       "title": "Full run status",

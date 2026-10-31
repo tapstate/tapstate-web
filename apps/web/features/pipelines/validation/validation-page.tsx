@@ -20,6 +20,7 @@ import { ValidationBulkSettings } from './validation-bulk-settings'
 import { ValidationHistoryPanel } from './validation-history-panel'
 import {
   validationLoadedFieldHints,
+  savedValidationMappingHints,
   validationMappingHints,
   type ValidationMappingHint,
 } from './validation-mapping-hints'
@@ -58,12 +59,7 @@ export function ValidationPage({ pipelineId }: { pipelineId: string }) {
         getPipeline(pipelineId, scopedFetch),
         client.task(pipelineId, 'full', signal),
       ])
-      const hints = await validationMappingHints(
-        pipeline,
-        (source) => client.sourceHints(source, signal),
-        task,
-      )
-      return { pipeline, task, hints }
+      return { pipeline, task, hints: savedValidationMappingHints(task) }
     },
     retry: false,
     refetchOnWindowFocus: false,
@@ -71,21 +67,41 @@ export function ValidationPage({ pipelineId }: { pipelineId: string }) {
     staleTime: Infinity,
     gcTime: 0,
   })
-  const fields = useQuery({
-    queryKey: [...initialKey, 'field-suggestions'],
+  const mappings = useQuery({
+    queryKey: [...initialKey, 'mapping-suggestions'],
     enabled: initial.isSuccess,
+    queryFn: ({ signal }) =>
+      validationMappingHints(
+        initial.data!.pipeline,
+        (source) => client.sourceHints(source, signal),
+        initial.data!.task,
+      ),
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    staleTime: Infinity,
+    gcTime: 0,
+  })
+  const mappingHints = mappings.data ?? initial.data?.hints ?? []
+  const fields = useQuery({
+    queryKey: [...initialKey, 'field-suggestions', mappings.data],
+    enabled: initial.isSuccess && !mappings.isPending,
     queryFn: async ({ signal }) => {
       const base = initial.data!
       let firstError: unknown = null
-      const hints = await validationLoadedFieldHints(base.pipeline, base.hints, async (source) => {
-        try {
-          return await client.sourceFieldHints(source, signal)
-        } catch (error) {
-          if (signal.aborted) throw error
-          firstError ??= error
-          return null
-        }
-      })
+      const hints = await validationLoadedFieldHints(
+        base.pipeline,
+        mappingHints,
+        async (source) => {
+          try {
+            return await client.sourceFieldHints(source, signal)
+          } catch (error) {
+            if (signal.aborted) throw error
+            firstError ??= error
+            return null
+          }
+        },
+      )
       return { hints, error: firstError }
     },
     retry: false,
@@ -114,8 +130,11 @@ export function ValidationPage({ pipelineId }: { pipelineId: string }) {
       pipelineId={pipelineId}
       client={client}
       initialTask={initial.data.task}
-      hints={initial.data.hints}
-      fieldHints={fields.data?.hints ?? initial.data.hints}
+      hints={mappingHints}
+      fieldHints={fields.data?.hints ?? mappingHints}
+      mappingError={mappings.error}
+      mappingHintsLoading={mappings.isFetching}
+      onRetryMappings={() => void mappings.refetch()}
       fieldError={fields.isError ? fields.error : fields.data?.error}
       fieldHintsLoading={fields.isFetching}
       onRetryFields={() => void fields.refetch()}
@@ -130,6 +149,9 @@ function ValidationWorkspace({
   hints,
   fieldHints,
   fieldError,
+  mappingError,
+  mappingHintsLoading,
+  onRetryMappings,
   fieldHintsLoading,
   onRetryFields,
   onReload,
@@ -140,6 +162,9 @@ function ValidationWorkspace({
   hints: readonly ValidationMappingHint[]
   fieldHints: readonly ValidationMappingHint[]
   fieldError: unknown
+  mappingError: unknown
+  mappingHintsLoading: boolean
+  onRetryMappings: () => void
   fieldHintsLoading: boolean
   onRetryFields: () => void
   onReload: () => void
@@ -526,13 +551,35 @@ function ValidationWorkspace({
             {t('dataValidation.run.view')}
           </Button>
         )}
-      {(section === 'bulk' || section === 'run') && (
+      {
         <div
           ref={bulkFocus}
           tabIndex={-1}
           aria-label={t('dataValidation.bulk.title')}
           hidden={section !== 'bulk'}
         >
+          {mappingHintsLoading && (
+            <p role="status" className="system-xs-regular text-text-secondary mb-4">
+              {t('dataValidation.bulk.scopeLoading')}
+            </p>
+          )}
+          {mappingError != null && (
+            <details className="system-xs-regular text-text-secondary mb-4">
+              <summary className="cursor-pointer">
+                {t('dataValidation.bulk.scopeUnavailable')}
+              </summary>
+              <p className="my-2">{t('dataValidation.bulk.scopeHelp')}</p>
+              <Button
+                size="small"
+                variant="secondary"
+                disabled={mappingHintsLoading}
+                onClick={onRetryMappings}
+              >
+                {t('dataValidation.retryRead')}
+              </Button>
+              <ValidationRequestError error={mappingError} />
+            </details>
+          )}
           {fieldError != null && (
             <details className="system-xs-regular text-text-secondary mb-4">
               <summary className="cursor-pointer">
@@ -570,7 +617,7 @@ function ValidationWorkspace({
             onError={setError}
           />
         </div>
-      )}
+      }
       {section === 'schedule' && basis && (
         <ValidationScheduleSettings
           key={version}

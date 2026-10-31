@@ -2888,7 +2888,10 @@
       "showPending": "只看待配置",
       "suggestionsUnavailable": "字段建议暂不可用",
       "suggestionsHelp": "可手动输入物理字段，运行控制与历史仍可使用；预检仍会核验确认的键。",
-      "retrySuggestions": "重试字段建议"
+      "retrySuggestions": "重试字段建议",
+      "scopeLoading": "正在更新可用表建议…",
+      "scopeUnavailable": "表建议暂不可用",
+      "scopeHelp": "已保存的映射和运行控制仍可使用。保存时服务端会重新核查每个选中表；重试发现可查看新表。"
     },
     "run": {
       "title": "全量轮次状态",

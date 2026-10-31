@@ -2888,7 +2888,10 @@
       "showPending": "只看待設定",
       "suggestionsUnavailable": "欄位建議暫不可用",
       "suggestionsHelp": "可手動輸入實體欄位，執行控制與歷史仍可使用；預檢仍會核驗確認的鍵。",
-      "retrySuggestions": "重試欄位建議"
+      "retrySuggestions": "重試欄位建議",
+      "scopeLoading": "正在更新可用資料表建議…",
+      "scopeUnavailable": "資料表建議暫不可用",
+      "scopeHelp": "已儲存的映射和執行控制仍可使用。儲存時伺服器會重新核查每個選取資料表；重試探索可查看新表。"
     },
     "run": {
       "title": "全量輪次狀態",

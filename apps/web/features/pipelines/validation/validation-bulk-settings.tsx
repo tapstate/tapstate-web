@@ -12,7 +12,7 @@ import { Button } from '@tapstate-web/ui/button'
 import { Input } from '@tapstate-web/ui/input'
 import { Pagination } from '@tapstate-web/ui/pagination'
 import { SegmentedControl, SegmentedControlItem } from '@tapstate-web/ui/segmented-control'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type {
@@ -79,21 +79,42 @@ export function ValidationBulkSettings({
   const fieldsForInspect = useRef(fieldsByKey)
   fieldsForInspect.current = fieldsByKey
   const [method, setMethod] = useState<ValidationMethod>(task?.method ?? 'FULL_COLUMN')
-  const [rows, setRows] = useState<Row[]>(() =>
-    hints.map((hint) => {
-      const saved = task?.mappings.find((mapping) => mapping.mappingId === hint.choice?.mappingId)
-      const pairs = saved?.keys?.fields.map((pair) => ({
-        source: pair.source.length === 1 ? pair.source[0]! : '',
-        target: pair.target.length === 1 ? pair.target[0]! : '',
-      }))
-      return {
-        hint,
-        included: task ? Boolean(saved) : true,
-        confirmation: saved?.keys?.confirmationId ?? crypto.randomUUID(),
-        pairs: pairs?.length ? pairs : [{ source: '', target: '' }],
-      }
-    }),
-  )
+  const initialRow = (hint: ValidationMappingHint): Row => {
+    const saved = task?.mappings.find((mapping) => mapping.mappingId === hint.choice?.mappingId)
+    const pairs = saved?.keys?.fields.map((pair) => ({
+      source: pair.source.length === 1 ? pair.source[0]! : '',
+      target: pair.target.length === 1 ? pair.target[0]! : '',
+    }))
+    return {
+      hint,
+      included: task ? Boolean(saved) : true,
+      confirmation: saved?.keys?.confirmationId ?? crypto.randomUUID(),
+      pairs: pairs?.length ? pairs : [{ source: '', target: '' }],
+    }
+  }
+  const [rows, setRows] = useState<Row[]>(() => hints.map(initialRow))
+  useEffect(() => {
+    setRows((previous) => {
+      const byKey = new Map(previous.map((row) => [row.hint.key, row]))
+      const next = hints.map((hint) => {
+        const row = byKey.get(hint.key)
+        if (!row) return initialRow(hint)
+        byKey.delete(hint.key)
+        // Retain user choices and their confirmation identity when advisory discovery arrives late.
+        return {
+          ...row,
+          hint: {
+            ...hint,
+            choice:
+              row.hint.choice && hint.choice
+                ? { ...hint.choice, mappingId: row.hint.choice.mappingId }
+                : hint.choice,
+          },
+        }
+      })
+      return [...next, ...byKey.values()]
+    })
+  }, [hints])
   const [metadata, setMetadata] = useState<ValidationEvaluation | null>(null)
   const [search, setSearch] = useState(''),
     [filter, setFilter] = useState('all'),

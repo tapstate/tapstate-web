@@ -130,12 +130,53 @@ const names = (value: unknown): string[] | null => {
   return values?.every((item): item is string => typeof item === 'string') ? values : null
 }
 
+/** Saved scope remains editable even when advisory discovery fails or no longer lists a table. */
+export function savedValidationMappingHints(
+  saved: ValidationTask | null,
+): readonly ValidationMappingHint[] {
+  return (saved?.mappings ?? []).map((mapping) => ({
+    key: JSON.stringify([mapping.outputId, mapping.sourceId, mapping.sourceTable]),
+    outputId: mapping.outputId,
+    sourceId: mapping.sourceId,
+    table: mapping.sourceTable,
+    targetSourceId: mapping.targetSourceId,
+    choice: {
+      mappingId: mapping.mappingId,
+      outputId: mapping.outputId,
+      sourceId: mapping.sourceId,
+      table: mapping.sourceTable,
+    },
+    reason: null,
+    retainedDiscoveryAt: null,
+  }))
+}
+
 /** Saved graph coordinates and retained schema names are hints; only server evaluation can admit a selection. */
 export async function validationMappingHints(
   pipeline: PipelineView,
   readHints: HintsReader,
   saved: ValidationTask | null,
   newId: () => string = () => crypto.randomUUID(),
+): Promise<readonly ValidationMappingHint[]> {
+  const discovered = await discoverMappingHints(pipeline, readHints, saved, newId)
+  const retained = savedValidationMappingHints(saved)
+  const byKey = new Map(discovered.map((hint) => [hint.key, hint]))
+  const result = retained.map(
+    (hint) => byKey.get(hint.key) ?? { ...hint, reason: 'missing-discovery' as const },
+  )
+  const savedKeys = new Set(retained.map((hint) => hint.key))
+  result.push(...discovered.filter((hint) => !savedKeys.has(hint.key)))
+  // Preserve every saved mapping rather than retaining a truncated discovered subset.
+  if (saved && result.length > MAX_MAPPINGS)
+    return retained.map((hint) => ({ ...hint, reason: 'mapping-limit' }))
+  return result
+}
+
+async function discoverMappingHints(
+  pipeline: PipelineView,
+  readHints: HintsReader,
+  saved: ValidationTask | null,
+  newId: () => string,
 ): Promise<readonly ValidationMappingHint[]> {
   const unavailable = (outputId: string, reason: MappingHintReason): ValidationMappingHint => ({
     key: JSON.stringify([outputId, reason]),
