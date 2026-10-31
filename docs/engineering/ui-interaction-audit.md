@@ -41,3 +41,7 @@ The [page source mapping and actual images](ui-page-audit.md#validation-full-che
 | Return/navigation         | Account language choice → Pipeline list row/menu/name router link → workspace/Validation retains the current language. Save revision13 → leave/return reads revision13 without a false changed-definition warning. Active external revision changes still require explicit reload; no persistence or auth policy changed. |
 
 These observations close the changed validation slice only. Existing family-wide and other-page limitations above retain their stated scope. Initial-render/reference-only evidence is not promoted to real runtime behavior; normal Web remains light-only at its current entry.
+
+### Full-check narrow-choice follow-up
+
+The earlier narrow method group was clipped and is superseded by the [scoped correction and evidence](ui-page-audit.md#narrow-full-check-choices-follow-up-correction). At375×812 all three methods were selected in en/zh-CN/zh-TW without saving, then the original language, viewport and saved two-component key were restored. Searching the renamed target returned its row. An edited destination key survived history → report → history → settings; Start remained disabled and Save remained available. Explicit reload discarded that test draft. This review covers those actual controls and does not infer native resource exit or global schedule uniqueness from layout results.
