@@ -221,67 +221,129 @@ describe('real validation page mutation boundaries', () => {
     expect(saves[1].input.confirmations.orders.fields[0].source).toBe('id')
   })
 
-  it('unblocks another manual start from durable CLOSED admission after the entry restarts without certifying physical drain', async () => {
-    let current = saved
-    let retired = false
-    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
-      const action = String(path),
-        body = init?.body ? JSON.parse(String(init.body)) : null
-      if (action.endsWith(':evaluate')) return json(evaluate(body))
-      if (action.endsWith(':start'))
-        current = {
-          ...saved,
-          nextStartSequence: '2',
-          permission: {
-            phase: 'BORN',
-            taskGeneration: generation,
-            revision: '1',
-            sequence: '1',
-            command: body.command,
-            run: 'manual-run',
-            ownerLease: 'LIVE',
-          },
+  it.each([
+    { phase: 'CLOSED', lease: 'UNKNOWN', later: false, reserved: false, blocked: false },
+    { phase: 'BORN', lease: 'NOT_LIVE', later: false, reserved: false, blocked: false },
+    { phase: 'OPEN', lease: 'NOT_LIVE', later: false, reserved: true, blocked: false },
+    { phase: 'CLOSED', lease: 'UNKNOWN', later: true, reserved: false, blocked: false },
+    { phase: 'BORN', lease: 'NOT_LIVE', later: true, reserved: false, blocked: false },
+    { phase: 'BORN', lease: 'LIVE', later: true, reserved: false, blocked: true },
+    { phase: 'BORN', lease: 'LIVE', later: false, reserved: false, blocked: true },
+    { phase: 'BORN', lease: 'UNKNOWN', later: false, reserved: false, blocked: true },
+  ] as const)(
+    'reconciles manual admission separately from UNKNOWN physical drain: %j',
+    async (scenario) => {
+      let current = saved,
+        retired = false,
+        firstCommand: string | null = null
+      const starts: Record<string, unknown>[] = []
+      const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+        const action = String(path),
+          body = init?.body ? JSON.parse(String(init.body)) : null
+        if (action.endsWith(':evaluate'))
+          return json({ ...evaluate(body), context: current.context })
+        if (action.endsWith(':start')) {
+          starts.push(body)
+          firstCommand ??= body.command
+          current = {
+            ...saved,
+            context: current.context,
+            nextStartSequence: (BigInt(body.sequence) + 1n).toString(),
+            permission: {
+              phase: starts.length === 1 && scenario.reserved ? 'OPEN' : 'BORN',
+              taskGeneration: generation,
+              revision: '1',
+              sequence: body.sequence,
+              command: body.command,
+              run: `manual-run-${body.sequence}`,
+              ownerLease: 'LIVE',
+            },
+          }
         }
-      if (action.endsWith(':start') || action.endsWith(':progress'))
-        return json({
-          original: body,
-          run: 'manual-run',
-          outcome: 'ACCEPTED',
-          state: retired ? 'COMPLETED' : 'RUNNING',
-          admitted: true,
-          waiting: false,
-          controlUnknown: false,
-          retired,
-          drain: retired ? 'UNKNOWN' : 'NOT_DRAINED',
-          reason: null,
-          tables: [],
-          premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
-          conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
-        })
-      return json(current)
-    })
-    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 145 })
-    await mount(<ValidationPage pipelineId="flow" />)
-    await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
-    await click('dataValidation.bulk.start')
-    await settled(() =>
-      expect(document.body.textContent).toContain('dataValidation.run.states.RUNNING'),
-    )
-    retired = true
-    current = {
-      ...current,
-      context: { ...context, boot: 'replacement-boot' },
-      permission: { ...current.permission!, phase: 'CLOSED', ownerLease: 'UNKNOWN' },
-    }
-    await act(async () => {
-      await queries!.invalidateQueries()
-    })
-    await settled(() => expect(document.body.textContent).toContain('UNKNOWN'))
-    expect(document.body.textContent).not.toMatch(/(?:^|[^_])DRAINED(?:$|[^_])/)
-    await click('dataValidation.run.backSettings')
-    await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
-    expect(read.mock.calls.filter(([path]) => String(path).endsWith(':start'))).toHaveLength(1)
-  })
+        if (action.endsWith(':start') || action.endsWith(':progress')) {
+          const old = body.command === firstCommand,
+            pending = old && scenario.reserved
+          return json({
+            original: body,
+            run: `manual-run-${body.sequence}`,
+            outcome: 'ACCEPTED',
+            state:
+              old && retired ? (pending ? null : 'COMPLETED') : pending ? 'STARTING' : 'RUNNING',
+            admitted: !pending,
+            waiting: false,
+            controlUnknown: pending && retired,
+            retired: old && retired && !pending,
+            drain: old && retired ? 'UNKNOWN' : 'NOT_DRAINED',
+            reason: null,
+            tables: [],
+            premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+            conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+          })
+        }
+        return json(current)
+      })
+      useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 145 })
+      await mount(<ValidationPage pipelineId="flow" />)
+      await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+      await click('dataValidation.bulk.start')
+      await settled(() =>
+        expect(document.body.textContent).toContain(
+          scenario.reserved
+            ? 'dataValidation.run.states.STARTING'
+            : 'dataValidation.run.states.RUNNING',
+        ),
+      )
+      retired = true
+      await act(async () => {
+        await queries!.refetchQueries({ queryKey: ['validation', 'progress'] })
+      })
+      await settled(() => expect(document.body.textContent).toContain('UNKNOWN'))
+      expect(document.body.textContent).not.toMatch(/(?:^|[^_])DRAINED(?:$|[^_])/)
+      current = {
+        ...current,
+        context: { ...context, boot: 'replacement-boot' },
+        nextStartSequence: scenario.later ? '3' : '2',
+        permission: {
+          ...current.permission!,
+          phase: scenario.phase,
+          ownerLease: scenario.lease,
+          ...(scenario.later
+            ? {
+                sequence: '2',
+                command: '50000000-0000-4000-8000-000000000001',
+                run: 'successor-run',
+              }
+            : {}),
+        },
+      }
+      await act(async () => {
+        await queries!.invalidateQueries()
+      })
+      expect(document.body.textContent).not.toMatch(/(?:^|[^_])DRAINED(?:$|[^_])/)
+      await click('dataValidation.run.backSettings')
+      await settled(() =>
+        expect(button('dataValidation.bulk.start').disabled).toBe(scenario.blocked),
+      )
+      if (!scenario.blocked) {
+        const sequence = current.nextStartSequence
+        await click('dataValidation.bulk.start')
+        await settled(() => expect(starts).toHaveLength(2))
+        expect(starts[1].sequence).toBe(sequence)
+        expect(starts[1].command).not.toBe(starts[0].command)
+        expect(starts[1].context).toEqual(current.context)
+      } else expect(starts).toHaveLength(1)
+      if (scenario.later && scenario.blocked)
+        await settled(() =>
+          expect(
+            read.mock.calls.some(
+              ([path, init]) =>
+                String(path).endsWith(':progress') &&
+                JSON.parse(String(init?.body)).command === '50000000-0000-4000-8000-000000000001',
+            ),
+          ).toBe(true),
+        )
+    },
+  )
 
   it.each(['saved', 'evaluated'])(
     'finds renamed destination tables and connections from %s mappings',

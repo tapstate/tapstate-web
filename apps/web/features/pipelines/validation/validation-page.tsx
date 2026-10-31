@@ -252,18 +252,26 @@ function ValidationWorkspace({
       setTerminalReceipt(null)
       return
     }
-    // Durable admission can reopen after an entry restart without a physical-drain observation.
-    // This permits only a fresh request; it never upgrades UNKNOWN resource exit to DRAINED.
-    const admissionClosed =
+    // Durable admission can permit a fenced successor or identify a later round without
+    // certifying this request's physical drain. The backend still owns every fresh admission.
+    const comparable =
       live?.taskGeneration === operation.taskGeneration &&
       permission?.taskGeneration === operation.taskGeneration &&
-      permission.phase === 'CLOSED' &&
+      BigInt(live.nextStartSequence) > BigInt(operation.sequence) &&
+      BigInt(permission.sequence) < BigInt(live.nextStartSequence) &&
+      BigInt(permission.revision) <= BigInt(live.revision)
+    const laterAdmission = comparable && BigInt(permission.sequence) > BigInt(operation.sequence)
+    const originalReopened =
+      comparable &&
       permission.command === operation.command &&
       permission.sequence === operation.sequence &&
       permission.revision === operation.revision &&
-      BigInt(live.nextStartSequence) > BigInt(operation.sequence) &&
       !validationStartBusy(live)
-    if (admissionClosed) {
+    if (laterAdmission || originalReopened) {
+      if (laterAdmission) {
+        setNotice(t('dataValidation.run.otherAdmitted'))
+        setAdmissionRefusal(null)
+      }
       setOperation(null)
       setTerminalReceipt(null)
       return
