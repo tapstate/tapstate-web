@@ -2926,7 +2926,9 @@
         "READING": "Reading",
         "PENDING": "Waiting for reading",
         "READ_COMPLETE": "Reads completed"
-      }
+      },
+      "view": "View full run status",
+      "backSettings": "Back to full validation settings"
     },
     "report": {
       "title": "Full validation report",

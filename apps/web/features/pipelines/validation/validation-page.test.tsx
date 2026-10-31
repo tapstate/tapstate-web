@@ -1510,6 +1510,10 @@ describe('real validation page mutation boundaries', () => {
     await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
     await click('dataValidation.bulk.start')
     await settled(() => expect(button('dataValidation.run.stop').disabled).toBe(false))
+    expect(document.querySelector('.validation-bulk')?.closest('[hidden]')).not.toBeNull()
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('dataValidation.run.title')
+    await click('dataValidation.run.backSettings')
+    expect(document.querySelector('.validation-bulk')?.closest('[hidden]')).toBeNull()
     expect(button('dataValidation.schedule.title').disabled).toBe(false)
     await click('dataValidation.schedule.title')
     await click('dataValidation.schedule.disable')
@@ -1519,4 +1523,41 @@ describe('real validation page mutation boundaries', () => {
     const progress = read.mock.calls.find(([path]) => String(path).endsWith(':progress'))
     expect(JSON.parse(String(progress?.[1]?.body)).revision).toBe('1')
   })
+})
+
+it('returns keyboard focus to settings after an unadmitted original loses its run link', async () => {
+  const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+    const action = String(path),
+      body = init?.body ? JSON.parse(String(init.body)) : null
+    if (action.endsWith(':evaluate')) return json(evaluate(body))
+    if (action.endsWith(':start') || action.endsWith(':progress'))
+      return json({
+        original: body,
+        run: 'not-admitted',
+        outcome: 'REJECTED',
+        state: null,
+        admitted: false,
+        waiting: false,
+        controlUnknown: false,
+        retired: true,
+        drain: 'DRAINED',
+        reason: null,
+        tables: [],
+        premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+        conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+      })
+    return json(saved)
+  })
+  useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 115 })
+  await mount(<ValidationPage pipelineId="flow" />)
+  await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+  await click('dataValidation.bulk.start')
+  await settled(() => expect(document.body.textContent).toContain('dataValidation.run.notAdmitted'))
+  expect(
+    [...document.querySelectorAll('button')].some(
+      (node) => node.textContent === 'dataValidation.run.view',
+    ),
+  ).toBe(false)
+  await click('dataValidation.run.backSettings')
+  expect(document.activeElement?.getAttribute('aria-label')).toBe('dataValidation.bulk.title')
 })

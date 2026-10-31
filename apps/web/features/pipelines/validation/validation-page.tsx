@@ -107,7 +107,20 @@ function ValidationWorkspace({
   const { t } = useTranslation()
   const [basis, setBasis] = useState(initialTask),
     [version, setVersion] = useState(0)
-  const [section, setSection] = useState<'bulk' | 'schedule' | 'history'>('bulk')
+  const [section, setSection] = useState<'bulk' | 'run' | 'schedule' | 'history'>(
+    initialTask && validationStartBusy(initialTask, null) ? 'run' : 'bulk',
+  )
+  const runLink = useRef<HTMLButtonElement | null>(null),
+    bulkFocus = useRef<HTMLDivElement | null>(null),
+    runFocus = useRef<HTMLDivElement | null>(null),
+    returningFromRun = useRef(false)
+  useEffect(() => {
+    if (section === 'run') runFocus.current?.focus()
+    if (section === 'bulk' && returningFromRun.current) {
+      returningFromRun.current = false
+      ;(runLink.current ?? bulkFocus.current)?.focus()
+    }
+  }, [section])
   const [pending, setPending] = useState(false),
     [error, setError] = useState<unknown>(null),
     [notice, setNotice] = useState('')
@@ -307,6 +320,7 @@ function ValidationWorkspace({
   }
   async function retryStart() {
     if (!operation || pending || mutation.current) return
+    setSection('run')
     mutation.current = true
     setPending(true)
     setError(null)
@@ -367,6 +381,7 @@ function ValidationWorkspace({
       }
       setTerminalReceipt(null)
       setOperation(original)
+      setSection('run')
       originalCreated = true
       setPreparingStart(false)
       // Retain the original selector before submitting. Reading it never dispatches another START.
@@ -451,25 +466,44 @@ function ValidationWorkspace({
           </Button>
         </div>
       )}
-      {section === 'bulk' && (
-        <ValidationBulkSettings
-          key={version}
-          pipelineId={pipelineId}
-          client={client}
-          task={basis}
-          hints={hints}
-          pending={blocked}
-          startBlocked={operation !== null || startBusy}
-          onSave={commit}
-          onStart={start}
-          onSchedule={() => setSection('schedule')}
-          onHistory={() => {
-            setHistoryReference(null)
-            setSection('history')
-          }}
-          onDefinitionConflict={() => setNeedsReload(true)}
-          onError={setError}
-        />
+      {section === 'bulk' &&
+        (operation || liveTask?.permission || liveTask?.scheduleObservation?.command) && (
+          <Button
+            ref={runLink}
+            size="small"
+            variant="ghost-accent"
+            disabled={pending}
+            onClick={() => setSection('run')}
+          >
+            {t('dataValidation.run.view')}
+          </Button>
+        )}
+      {(section === 'bulk' || section === 'run') && (
+        <div
+          ref={bulkFocus}
+          tabIndex={-1}
+          aria-label={t('dataValidation.bulk.title')}
+          hidden={section !== 'bulk'}
+        >
+          <ValidationBulkSettings
+            key={version}
+            pipelineId={pipelineId}
+            client={client}
+            task={basis}
+            hints={hints}
+            pending={blocked}
+            startBlocked={operation !== null || startBusy}
+            onSave={commit}
+            onStart={start}
+            onSchedule={() => setSection('schedule')}
+            onHistory={() => {
+              setHistoryReference(null)
+              setSection('history')
+            }}
+            onDefinitionConflict={() => setNeedsReload(true)}
+            onError={setError}
+          />
+        </div>
       )}
       {section === 'schedule' && basis && (
         <ValidationScheduleSettings
@@ -483,21 +517,41 @@ function ValidationWorkspace({
           onError={setError}
         />
       )}
+      {section === 'run' && (
+        <Button
+          variant="ghost-accent"
+          size="small"
+          disabled={pending}
+          onClick={() => {
+            returningFromRun.current = true
+            setSection('bulk')
+          }}
+        >
+          {t('dataValidation.run.backSettings')}
+        </Button>
+      )}
       {section !== 'history' && (
-        <ValidationRunPanel
-          client={client}
-          task={liveTask}
-          original={operation}
-          onTerminal={(receipt) => {
-            setTerminalReceipt(receipt)
-            if (!receipt.admitted) setNotice(t('dataValidation.run.notAdmitted'))
-            void taskQuery.refetch()
-          }}
-          onReportOpen={(reference) => {
-            setHistoryReference(reference)
-            setSection('history')
-          }}
-        />
+        <div
+          ref={runFocus}
+          tabIndex={-1}
+          aria-label={t('dataValidation.run.title')}
+          hidden={section !== 'run'}
+        >
+          <ValidationRunPanel
+            client={client}
+            task={liveTask}
+            original={operation}
+            onTerminal={(receipt) => {
+              setTerminalReceipt(receipt)
+              if (!receipt.admitted) setNotice(t('dataValidation.run.notAdmitted'))
+              void taskQuery.refetch()
+            }}
+            onReportOpen={(reference) => {
+              setHistoryReference(reference)
+              setSection('history')
+            }}
+          />
+        </div>
       )}
       {section === 'history' && (
         <ValidationHistoryPanel

@@ -2926,7 +2926,9 @@
         "READING": "讀取中",
         "PENDING": "等待讀取",
         "READ_COMPLETE": "讀取完成"
-      }
+      },
+      "view": "查看全量執行狀態",
+      "backSettings": "返回全量設定"
     },
     "report": {
       "title": "全量校驗報告",
