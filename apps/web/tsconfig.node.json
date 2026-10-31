@@ -6,12 +6,15 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "types": ["node"],
-    "outDir": "./node_modules/.tmp/node"
+    "outDir": "./node_modules/.tmp/node",
+    "rootDir": ".."
   },
   "include": [
     "vite.config.ts",
     "build/**/*.ts",
     "utils/cloud-console-url.ts",
-    "utils/deployment-mode.ts"
+    "utils/deployment-mode.ts",
+    "i18n/locales/en.json",
+    "../startup-retry.ts"
   ]
 }

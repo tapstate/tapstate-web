@@ -660,5 +660,10 @@
       "submissionUncertain": "Cloud could not confirm whether the ticket was created. Check My tickets before submitting again. {{opId}}"
     },
     "organizationBadge": "Org"
+  },
+  "startup": {
+    "title": "Loading Tapstate Cloud",
+    "help": "Connecting to Tapstate. Keep this page open. If it takes longer, reload the page.",
+    "retry": "Reload page"
   }
 }
