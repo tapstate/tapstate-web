@@ -419,12 +419,13 @@ describe('actual report and original-run presentation', () => {
     }
     const read = vi.fn(async (path: RequestInfo | URL) => {
       const url = new URL(String(path), 'https://test.invalid'),
-        offset = Number(url.searchParams.get('offset'))
+        offset = Number(url.searchParams.get('offset')),
+        limit = Number(url.searchParams.get('limit'))
       return json({
         total: String(total),
         offset,
-        limit: 10,
-        items: Array.from({ length: Math.max(0, Math.min(10, total - offset)) }, (_, i) => ({
+        limit,
+        items: Array.from({ length: Math.max(0, Math.min(limit, total - offset)) }, (_, i) => ({
           ...item,
           reference: { ...ref, sequence: String(offset + i + 1), run: `run-${offset + i + 1}` },
         })),
@@ -438,11 +439,11 @@ describe('actual report and original-run presentation', () => {
         onBack={() => {}}
       />,
     )
-    await settled(() => expect(document.querySelectorAll('ul.space-y-2 > li')).toHaveLength(10))
+    await settled(() => expect(document.querySelectorAll('table tbody > tr')).toHaveLength(10))
     await act(async () =>
       document.querySelector<HTMLButtonElement>('[aria-label="dataValidation.next"]')!.click(),
     )
-    await settled(() => expect(document.querySelectorAll('ul.space-y-2 > li')).toHaveLength(1))
+    await settled(() => expect(document.querySelectorAll('table tbody > tr')).toHaveLength(1))
     const previousReads = read.mock.calls.length
     total = 1
     await act(async () => {
@@ -452,7 +453,7 @@ describe('actual report and original-run presentation', () => {
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 20))
     })
-    await settled(() => expect(document.querySelectorAll('ul.space-y-2 > li')).toHaveLength(1))
+    await settled(() => expect(document.querySelectorAll('table tbody > tr')).toHaveLength(1))
     expect(document.body.textContent).not.toContain('dataValidation.history.empty')
   })
 })

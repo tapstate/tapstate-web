@@ -376,6 +376,7 @@ describe('real validation page mutation boundaries', () => {
           await queries!.invalidateQueries({ queryKey: ['validation', 'progress'] })
         })
         await click('dataValidation.run.stop')
+        await click('dataValidation.run.confirmStop')
         await settled(() =>
           expect(read.mock.calls.some(([path]) => String(path).endsWith(':stop'))).toBe(true),
         )
@@ -1260,6 +1261,7 @@ describe('real validation page mutation boundaries', () => {
     ).toBe(false)
     await settled(() => expect(button('dataValidation.run.stop').disabled).toBe(false))
     await click('dataValidation.run.stop')
+    await click('dataValidation.run.confirmStop')
     const stopped = read.mock.calls.find(([path]) => String(path).endsWith(':stop'))
     expect(JSON.parse(String(stopped?.[1]?.body)).command).toBe(command)
   })

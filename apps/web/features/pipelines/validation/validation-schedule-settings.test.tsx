@@ -235,3 +235,32 @@ describe('real schedule form control boundaries', () => {
     expect(f.onSave).not.toHaveBeenCalled()
   })
 })
+
+it('retries a failed schedule preview without changing the draft or publishing it', async () => {
+  const read = vi
+    .fn(async (input: { schedule: ValidationSchedule; inputRevision: string }) => preview(input))
+    .mockRejectedValueOnce(new Error('temporary read failure'))
+  const view = await fixture(task(), read)
+  await settled(() => expect(document.body.textContent).toContain('dataValidation.requestFailed'))
+  expect(saveButton().disabled).toBe(true)
+  await click('dataValidation.schedule.retryPreview')
+  await settled(() => expect(read).toHaveBeenCalledTimes(2))
+  await settled(() => expect(saveButton().disabled).toBe(false))
+  expect(read.mock.calls[1][0].schedule).toEqual(read.mock.calls[0][0].schedule)
+  expect(read.mock.calls[1][0].inputRevision).not.toBe(read.mock.calls[0][0].inputRevision)
+  expect(view.onSave).not.toHaveBeenCalled()
+})
+
+it('discards only the local schedule draft and retains the saved enabled plan', async () => {
+  const view = await fixture()
+  await settled(() => expect(saveButton().disabled).toBe(false))
+  await change('dataValidation.schedule.expression', '0 3 * * *')
+  await change('dataValidation.schedule.retention', '9')
+  expect(document.body.textContent).toContain('dataValidation.schedule.dirty')
+  await click('dataValidation.schedule.discard')
+  expect(field('dataValidation.schedule.expression').value).toBe('0 2 * * *')
+  expect(field('dataValidation.schedule.retention').value).toBe('10')
+  expect(document.body.textContent).toContain('dataValidation.schedule.unchanged')
+  expect(view.onSave).not.toHaveBeenCalled()
+  expect(view.onDisable).not.toHaveBeenCalled()
+})

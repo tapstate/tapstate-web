@@ -85,13 +85,16 @@ export function ValidationScheduleSettings({
   const [zone, setZone] = useState(
     task.schedule?.zoneId ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
   )
-  const [anchor] = useState(task.schedule?.anchor ?? new Date().toISOString())
+  const initialAnchor = useRef(new Date().toISOString())
+  const defaultZone = useRef(Intl.DateTimeFormat().resolvedOptions().timeZone)
+  const [anchor, setAnchor] = useState(task.schedule?.anchor ?? initialAnchor.current)
   const [history, setHistory] = useState(String(task.historyLimit))
   const [previewState, setPreview] = useState<{
     signature: string
     result: ValidationPreview
   } | null>(null)
   const [error, setError] = useState<unknown>(null)
+  const [previewAttempt, setPreviewAttempt] = useState(0)
   const [loading, setLoading] = useState(false)
   const [confirming, setConfirming] = useState<{
     schedule: ValidationSchedule
@@ -141,8 +144,25 @@ export function ValidationScheduleSettings({
       clearTimeout(timer)
       controller.abort()
     }
-  }, [client, signature, kind, intervalValid, expression, zone])
+  }, [client, signature, kind, intervalValid, expression, zone, previewAttempt])
 
+  const dirty =
+    !task.schedule ||
+    (Object.keys(schedule) as (keyof ValidationSchedule)[]).some(
+      (key) => schedule[key] !== task.schedule?.[key],
+    ) ||
+    history !== String(task.historyLimit)
+  function discard() {
+    if (pending) return
+    setKind(task.schedule?.kind ?? 'INTERVAL')
+    setEvery(task.schedule?.every ?? '')
+    setUnit(task.schedule?.unit ?? 'MINUTES')
+    setExpression(task.schedule?.expression ?? '')
+    setZone(task.schedule?.zoneId ?? defaultZone.current)
+    setAnchor(task.schedule?.anchor ?? initialAnchor.current)
+    setHistory(String(task.historyLimit))
+    setConfirming(null)
+  }
   const savedObservation = task.scheduleObservation
   const canSave = !pending && historyValid && preview !== null && !loading && !error
   function save(enabled: boolean) {
@@ -179,6 +199,31 @@ export function ValidationScheduleSettings({
         <span>{t('dataValidation.mappingCount', { count: task.mappings.length })}</span>
         <span>{t('dataValidation.concurrencyOne')}</span>
       </div>
+      <section
+        className="system-sm-regular text-text-secondary bg-background-section-burn space-y-2 rounded-lg p-4"
+        aria-label={t('dataValidation.schedule.savedPlan')}
+      >
+        <h3 className="system-sm-semibold">{t('dataValidation.schedule.savedPlan')}</h3>
+        {task.schedule ? (
+          <>
+            <p className="font-mono">
+              {task.schedule.kind === 'CRON'
+                ? task.schedule.expression
+                : `${task.schedule.every} ${t(`dataValidation.schedule.units.${task.schedule.unit}`)}`}{' '}
+              · {task.schedule.zoneId}
+            </p>
+            <p>
+              {task.scheduleEnabled
+                ? t('dataValidation.schedule.on')
+                : t('dataValidation.schedule.off')}{' '}
+              · {t('dataValidation.schedule.savedRetention', { count: task.historyLimit })}
+            </p>
+          </>
+        ) : (
+          <p>{t('dataValidation.schedule.noSavedPlan')}</p>
+        )}
+        <p>{t(dirty ? 'dataValidation.schedule.dirty' : 'dataValidation.schedule.unchanged')}</p>
+      </section>
       {!onError && submissionError != null && <ValidationRequestError error={submissionError} />}
       {submitting && (
         <p role="status" className="system-sm-regular text-text-secondary">
@@ -346,6 +391,9 @@ export function ValidationScheduleSettings({
               {t('dataValidation.schedule.disable')}
             </Button>
           </div>
+          <Button variant="ghost" disabled={pending || !dirty} onClick={discard}>
+            {t('dataValidation.schedule.discard')}
+          </Button>
           {!canSave && (
             <p className="system-xs-regular text-text-tertiary">
               {!historyValid
@@ -370,7 +418,19 @@ export function ValidationScheduleSettings({
               {t('dataValidation.schedule.previewLoading')}
             </p>
           )}
-          {error != null && <ValidationRequestError error={error} />}
+          {error != null && (
+            <div>
+              <ValidationRequestError error={error} />
+              <Button
+                variant="secondary"
+                size="small"
+                disabled={pending || loading}
+                onClick={() => setPreviewAttempt((value) => value + 1)}
+              >
+                {t('dataValidation.schedule.retryPreview')}
+              </Button>
+            </div>
+          )}
           {preview && (
             <ol className="divide-divider-subtle my-4 divide-y">
               {preview.occurrences.map((time, index) => (

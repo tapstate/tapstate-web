@@ -2793,7 +2793,14 @@
         "SKIPPED_LATE": "已错过周期，未补跑",
         "FAILED": "定时启动失败",
         "UNKNOWN": "定时启动结果未确认"
-      }
+      },
+      "retryPreview": "重新预览",
+      "savedPlan": "已保存的定时方案",
+      "noSavedPlan": "尚未保存定时方案。",
+      "savedRetention": "保留{{count}}次已结束FULL运行",
+      "dirty": "存在未保存修改。保存成功前仍按已保存方案执行。",
+      "unchanged": "草稿与已保存方案一致。",
+      "discard": "撤销修改"
     },
     "submitting": "正在提交原操作…",
     "loading": "正在读取校验…",
@@ -2828,7 +2835,7 @@
       "keyLabel": "{{side}} · {{table}} · 分量 {{index}}",
       "evaluateTarget": "预检后确认真实目标",
       "noRows": "没有匹配项。",
-      "selected": "已选择 {{count}} 个已知表对",
+      "selected": "{{count}}对已知表",
       "keysRequired": "请确认两端全部键分量。",
       "inspect": "预检与推荐键",
       "save": "保存并确认配对键",
@@ -2903,7 +2910,23 @@
       "configurationRevision": "保存的配置版本 {{revision}}",
       "refreshBusy": "进度刷新暂时繁忙，将自动重试。当前显示上次收到的观察。",
       "waitingBusy": "进度刷新暂时繁忙，将自动重试。尚未收到进度观察；本次读取不代表校验结果。",
-      "staleObservation": "上次收到的观察；最新刷新尚未成功。"
+      "staleObservation": "上次收到的观察；最新刷新尚未成功。",
+      "refresh": "刷新进度",
+      "tableProgress": "表级读取进度",
+      "tableStage": "当前读取阶段",
+      "receivedAt": "最近收到：{{time}}",
+      "readProgressOnly": "这里是读取阶段观察。读取完成不表示结果保存完成、资源已退出或整轮成功。",
+      "definitionUnavailable": "当前配置不能提供该轮定义",
+      "noTableObservations": "没有匹配的表级进度观察。",
+      "stopTitle": "停止本次全量校验？",
+      "stopDescription": "仅停止当前显示的原轮次，报告仍为未完成。Pipeline同步与已保存定时计划不变。",
+      "confirmStop": "确认停止",
+      "phases": {
+        "all": "全部已观察表",
+        "READING": "读取中",
+        "PENDING": "等待读取",
+        "READ_COMPLETE": "读取完成"
+      }
     },
     "report": {
       "title": "全量校验报告",
@@ -2966,7 +2989,19 @@
       "backList": "返回报告列表",
       "retention": "已结束全量包含失败、停止及待归档轮次；按保存的 1～100 条上限保留。",
       "empty": "暂无保留全量报告。",
-      "open": "打开报告"
+      "open": "打开报告",
+      "refresh": "刷新历史",
+      "filters": "历史状态",
+      "search": "搜索日期、方式或保留轮次标识",
+      "partial": "仅显示已加载的保留摘要，不是完整历史索引。",
+      "endedAt": "结束时间",
+      "observations": "保留观察",
+      "action": "报告",
+      "countObservations": "行数不同：{{count}}对表",
+      "allStates": "全部结束状态",
+      "noMatches": "已加载的保留报告中没有匹配项。",
+      "unavailable": "保留报告摘要不可用，不表示没有历史。",
+      "clearFilters": "清除筛选"
     },
     "retryOriginalOff": "重试原关闭定时操作",
     "retryOriginalStart": "重试原启动操作",

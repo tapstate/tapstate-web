@@ -2793,7 +2793,14 @@
         "SKIPPED_LATE": "已錯過週期，未補跑",
         "FAILED": "定時啟動失敗",
         "UNKNOWN": "定時啟動結果未確認"
-      }
+      },
+      "retryPreview": "重新預覽",
+      "savedPlan": "已儲存的排程方案",
+      "noSavedPlan": "尚未儲存排程方案。",
+      "savedRetention": "保留{{count}}次已結束FULL執行",
+      "dirty": "存在未儲存修改。儲存成功前仍按已儲存方案執行。",
+      "unchanged": "草稿與已儲存方案一致。",
+      "discard": "撤銷修改"
     },
     "submitting": "正在提交原操作…",
     "loading": "正在讀取校驗…",
@@ -2828,7 +2835,7 @@
       "keyLabel": "{{side}} · {{table}} · 分量 {{index}}",
       "evaluateTarget": "預檢後確認真實目標",
       "noRows": "沒有符合項目。",
-      "selected": "已選擇 {{count}} 個已知表對",
+      "selected": "{{count}}對已知表",
       "keysRequired": "請確認兩端全部鍵分量。",
       "inspect": "預檢與推薦鍵",
       "save": "儲存並確認配對鍵",
@@ -2903,7 +2910,23 @@
       "configurationRevision": "儲存的設定版本 {{revision}}",
       "refreshBusy": "進度更新暫時繁忙，將自動重試。目前顯示上次收到的觀察。",
       "waitingBusy": "進度更新暫時繁忙，將自動重試。尚未收到進度觀察；本次讀取不代表校驗結果。",
-      "staleObservation": "上次收到的觀察；最新更新尚未成功。"
+      "staleObservation": "上次收到的觀察；最新更新尚未成功。",
+      "refresh": "重新整理進度",
+      "tableProgress": "表級讀取進度",
+      "tableStage": "目前讀取階段",
+      "receivedAt": "最近收到：{{time}}",
+      "readProgressOnly": "這裡是讀取階段觀察。讀取完成不表示結果儲存完成、資源已退出或整輪成功。",
+      "definitionUnavailable": "目前設定不能提供該輪定義",
+      "noTableObservations": "沒有符合的表級進度觀察。",
+      "stopTitle": "停止本次全量校驗？",
+      "stopDescription": "僅停止目前顯示的原輪次，報告仍為未完成。Pipeline同步與已儲存排程不變。",
+      "confirmStop": "確認停止",
+      "phases": {
+        "all": "全部已觀察表",
+        "READING": "讀取中",
+        "PENDING": "等待讀取",
+        "READ_COMPLETE": "讀取完成"
+      }
     },
     "report": {
       "title": "全量校驗報告",
@@ -2966,7 +2989,19 @@
       "backList": "返回報告清單",
       "retention": "已結束全量包含失敗、停止及待歸檔輪次；按儲存的 1～100 筆上限保留。",
       "empty": "暫無保留全量報告。",
-      "open": "開啟報告"
+      "open": "開啟報告",
+      "refresh": "重新整理歷史",
+      "filters": "歷史狀態",
+      "search": "搜尋日期、方式或保留輪次識別碼",
+      "partial": "僅顯示已載入的保留摘要，不是完整歷史索引。",
+      "endedAt": "結束時間",
+      "observations": "保留觀察",
+      "action": "報告",
+      "countObservations": "列數不同：{{count}}對表",
+      "allStates": "全部結束狀態",
+      "noMatches": "已載入的保留報告中沒有符合項目。",
+      "unavailable": "保留報告摘要無法使用，不表示沒有歷史。",
+      "clearFilters": "清除篩選"
     },
     "retryOriginalOff": "重試原關閉排程操作",
     "retryOriginalStart": "重試原啟動操作",

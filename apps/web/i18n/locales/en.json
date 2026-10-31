@@ -2793,7 +2793,14 @@
         "SKIPPED_LATE": "Missed occurrence skipped",
         "FAILED": "Scheduled start failed",
         "UNKNOWN": "Scheduled start outcome is unconfirmed"
-      }
+      },
+      "retryPreview": "Preview again",
+      "savedPlan": "Saved schedule",
+      "noSavedPlan": "No schedule has been saved.",
+      "savedRetention": "Retain {{count}} ended FULL runs",
+      "dirty": "Unsaved changes. The saved schedule remains effective until saving succeeds.",
+      "unchanged": "The draft matches the saved schedule.",
+      "discard": "Discard changes"
     },
     "submitting": "Submitting the original operation…",
     "loading": "Loading validation…",
@@ -2828,7 +2835,7 @@
       "keyLabel": "{{side}} · {{table}} · component {{index}}",
       "evaluateTarget": "Precheck to resolve destination",
       "noRows": "No matching entries.",
-      "selected": "{{count}} known table pairs selected",
+      "selected": "{{count}} known table pairs",
       "keysRequired": "Confirm every source and destination key component.",
       "inspect": "Precheck and recommend keys",
       "save": "Save and confirm keys",
@@ -2903,7 +2910,23 @@
       "configurationRevision": "Saved configuration revision {{revision}}",
       "refreshBusy": "Progress refresh is temporarily busy and will retry. The last received observation is shown.",
       "waitingBusy": "Progress refresh is temporarily busy and will retry. No progress observation is available yet; this read does not determine the run result.",
-      "staleObservation": "Last received observation; the latest refresh did not succeed."
+      "staleObservation": "Last received observation; the latest refresh did not succeed.",
+      "refresh": "Refresh progress",
+      "tableProgress": "Table read progress",
+      "tableStage": "Current read stage",
+      "receivedAt": "Last received: {{time}}",
+      "readProgressOnly": "These are read-stage observations. Read completion does not confirm saved results, physical resource exit or a successful run.",
+      "definitionUnavailable": "This run definition is unavailable in the current configuration",
+      "noTableObservations": "No matching table progress observation is available.",
+      "stopTitle": "Stop this full run?",
+      "stopDescription": "This stops only the displayed original run. Its report remains incomplete. Pipeline synchronization and its saved schedule are unchanged.",
+      "confirmStop": "Confirm stop",
+      "phases": {
+        "all": "All observed tables",
+        "READING": "Reading",
+        "PENDING": "Waiting for reading",
+        "READ_COMPLETE": "Reads completed"
+      }
     },
     "report": {
       "title": "Full validation report",
@@ -2966,7 +2989,19 @@
       "backList": "Back to report list",
       "retention": "Ended FULL runs include failures, stops and pending archival. Retention follows the saved 1–100 limit.",
       "empty": "No retained FULL reports.",
-      "open": "Open report"
+      "open": "Open report",
+      "refresh": "Refresh history",
+      "filters": "History status",
+      "search": "Search dates, methods or retained run IDs",
+      "partial": "Only the loaded retained summaries are shown. This is not the full history index.",
+      "endedAt": "End time",
+      "observations": "Retained observations",
+      "action": "Report",
+      "countObservations": "Count differences: {{count}} table pairs",
+      "allStates": "All end states",
+      "noMatches": "No loaded retained reports match these filters.",
+      "unavailable": "Retained report summaries are unavailable; this does not mean no history exists.",
+      "clearFilters": "Clear filters"
     },
     "retryOriginalOff": "Retry original schedule OFF",
     "retryOriginalStart": "Retry original start",
