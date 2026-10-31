@@ -35,6 +35,7 @@ import { Route as PipelineEditorPipelinesPipelineIdEditRouteImport } from './rou
 import { Route as PipelineEditorPipelinesPipelineIdEditIndexRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit.index'
 import { Route as PipelineEditorPipelinesPipelineIdEditLogsRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit.logs'
 import { Route as PipelineEditorPipelinesPipelineIdEditMonitoringRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit.monitoring'
+import { Route as PipelineEditorPipelinesPipelineIdEditValidationRouteImport } from './routes/_pipeline-editor.pipelines.$pipelineId.edit.validation'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -187,6 +188,12 @@ const PipelineEditorPipelinesPipelineIdEditMonitoringRoute =
     path: '/monitoring',
     getParentRoute: () => PipelineEditorPipelinesPipelineIdEditRoute,
   } as any)
+const PipelineEditorPipelinesPipelineIdEditValidationRoute =
+  PipelineEditorPipelinesPipelineIdEditValidationRouteImport.update({
+    id: '/validation',
+    path: '/validation',
+    getParentRoute: () => PipelineEditorPipelinesPipelineIdEditRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -212,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/sources/$sourceId/': typeof AuthenticatedSourcesSourceIdIndexRoute
   '/pipelines/$pipelineId/edit/logs': typeof PipelineEditorPipelinesPipelineIdEditLogsRoute
   '/pipelines/$pipelineId/edit/monitoring': typeof PipelineEditorPipelinesPipelineIdEditMonitoringRoute
+  '/pipelines/$pipelineId/edit/validation': typeof PipelineEditorPipelinesPipelineIdEditValidationRoute
   '/pipelines/$pipelineId/edit/': typeof PipelineEditorPipelinesPipelineIdEditIndexRoute
 }
 export interface FileRoutesByTo {
@@ -233,6 +241,7 @@ export interface FileRoutesByTo {
   '/sources/$sourceId': typeof AuthenticatedSourcesSourceIdIndexRoute
   '/pipelines/$pipelineId/edit/logs': typeof PipelineEditorPipelinesPipelineIdEditLogsRoute
   '/pipelines/$pipelineId/edit/monitoring': typeof PipelineEditorPipelinesPipelineIdEditMonitoringRoute
+  '/pipelines/$pipelineId/edit/validation': typeof PipelineEditorPipelinesPipelineIdEditValidationRoute
   '/pipelines/$pipelineId/edit': typeof PipelineEditorPipelinesPipelineIdEditIndexRoute
 }
 export interface FileRoutesById {
@@ -262,6 +271,7 @@ export interface FileRoutesById {
   '/_authenticated/sources/$sourceId/': typeof AuthenticatedSourcesSourceIdIndexRoute
   '/_pipeline-editor/pipelines/$pipelineId/edit/logs': typeof PipelineEditorPipelinesPipelineIdEditLogsRoute
   '/_pipeline-editor/pipelines/$pipelineId/edit/monitoring': typeof PipelineEditorPipelinesPipelineIdEditMonitoringRoute
+  '/_pipeline-editor/pipelines/$pipelineId/edit/validation': typeof PipelineEditorPipelinesPipelineIdEditValidationRoute
   '/_pipeline-editor/pipelines/$pipelineId/edit/': typeof PipelineEditorPipelinesPipelineIdEditIndexRoute
 }
 export interface FileRouteTypes {
@@ -290,6 +300,7 @@ export interface FileRouteTypes {
     | '/sources/$sourceId/'
     | '/pipelines/$pipelineId/edit/logs'
     | '/pipelines/$pipelineId/edit/monitoring'
+    | '/pipelines/$pipelineId/edit/validation'
     | '/pipelines/$pipelineId/edit/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -311,6 +322,7 @@ export interface FileRouteTypes {
     | '/sources/$sourceId'
     | '/pipelines/$pipelineId/edit/logs'
     | '/pipelines/$pipelineId/edit/monitoring'
+    | '/pipelines/$pipelineId/edit/validation'
     | '/pipelines/$pipelineId/edit'
   id:
     | '__root__'
@@ -339,6 +351,7 @@ export interface FileRouteTypes {
     | '/_authenticated/sources/$sourceId/'
     | '/_pipeline-editor/pipelines/$pipelineId/edit/logs'
     | '/_pipeline-editor/pipelines/$pipelineId/edit/monitoring'
+    | '/_pipeline-editor/pipelines/$pipelineId/edit/validation'
     | '/_pipeline-editor/pipelines/$pipelineId/edit/'
   fileRoutesById: FileRoutesById
 }
@@ -536,6 +549,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PipelineEditorPipelinesPipelineIdEditMonitoringRouteImport
       parentRoute: typeof PipelineEditorPipelinesPipelineIdEditRoute
     }
+    '/_pipeline-editor/pipelines/$pipelineId/edit/validation': {
+      id: '/_pipeline-editor/pipelines/$pipelineId/edit/validation'
+      path: '/validation'
+      fullPath: '/pipelines/$pipelineId/edit/validation'
+      preLoaderRoute: typeof PipelineEditorPipelinesPipelineIdEditValidationRouteImport
+      parentRoute: typeof PipelineEditorPipelinesPipelineIdEditRoute
+    }
   }
 }
 
@@ -628,6 +648,7 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 interface PipelineEditorPipelinesPipelineIdEditRouteChildren {
   PipelineEditorPipelinesPipelineIdEditLogsRoute: typeof PipelineEditorPipelinesPipelineIdEditLogsRoute
   PipelineEditorPipelinesPipelineIdEditMonitoringRoute: typeof PipelineEditorPipelinesPipelineIdEditMonitoringRoute
+  PipelineEditorPipelinesPipelineIdEditValidationRoute: typeof PipelineEditorPipelinesPipelineIdEditValidationRoute
   PipelineEditorPipelinesPipelineIdEditIndexRoute: typeof PipelineEditorPipelinesPipelineIdEditIndexRoute
 }
 
@@ -637,6 +658,8 @@ const PipelineEditorPipelinesPipelineIdEditRouteChildren: PipelineEditorPipeline
       PipelineEditorPipelinesPipelineIdEditLogsRoute,
     PipelineEditorPipelinesPipelineIdEditMonitoringRoute:
       PipelineEditorPipelinesPipelineIdEditMonitoringRoute,
+    PipelineEditorPipelinesPipelineIdEditValidationRoute:
+      PipelineEditorPipelinesPipelineIdEditValidationRoute,
     PipelineEditorPipelinesPipelineIdEditIndexRoute:
       PipelineEditorPipelinesPipelineIdEditIndexRoute,
   }

@@ -1,0 +1,2667 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { act } from 'react'
+import { createRoot, type Root } from 'react-dom/client'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+import {
+  createValidationClient,
+  type ValidationSelection,
+  type ValidationTask,
+  type ValidationSave,
+} from '@/service/pipelines/validation-client'
+import { useAuthStore } from '@/stores/auth-store'
+
+import { ValidationBulkSettings } from './validation-bulk-settings'
+import { ValidationPage } from './validation-page'
+import { ValidationRunPanel } from './validation-run-panel'
+
+const graphMode = vi.hoisted(() => ({ whole: false }))
+vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
+vi.mock('@/service/pipelines/pipeline-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/service/pipelines/pipeline-client')>()),
+  getPipeline: async () => ({
+    id: 'flow',
+    contentHash: 'hash',
+    sources: [{ id: 'source', metadata: null, connector: 'mysql' }],
+    transforms: [],
+    serve: {
+      id: 'serve',
+      from: graphMode.whole ? 'source' : ['source.orders'],
+      sync: [{ id: 'out', source: 'target' }],
+    },
+    dag: {
+      nodes: [
+        {
+          id: 'orders',
+          type: 'source',
+          label: graphMode.whole ? 'source' : 'orders',
+          detail: graphMode.whole ? null : 'source',
+        },
+        { id: 'target', type: 'target', label: 'target', detail: 'target' },
+      ],
+      edges: [{ id: 'e', source: 'orders', target: 'target', label: 'out' }],
+    },
+  }),
+}))
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
+let root: Root | undefined, container: HTMLDivElement | undefined, queries: QueryClient | undefined
+const generation = '10000000-0000-4000-8000-000000000001',
+  fingerprint = 'a'.repeat(64),
+  comparison = 'b'.repeat(64)
+const context = {
+  cluster: 'cluster',
+  node: 'node',
+  boot: 'boot',
+  member: generation,
+  incarnation: '20000000-0000-4000-8000-000000000001',
+}
+const mapping = {
+  mappingId: 'orders',
+  outputId: 'out',
+  sourceId: 'source',
+  sourceTable: 'orders',
+  targetSourceId: 'target',
+  targetTable: 'checked_orders',
+  keys: null,
+}
+const saved: ValidationTask = {
+  pipelineId: 'flow',
+  taskId: 'full',
+  taskGeneration: generation,
+  revision: '1',
+  nextStartSequence: '1',
+  closed: false,
+  method: 'COUNT',
+  comparisonFingerprint: comparison,
+  historyLimit: 10,
+  schedule: null,
+  scheduleEnabled: false,
+  mappings: [mapping],
+  context,
+  permission: null,
+  scheduleObservation: null,
+}
+const side = {
+  nodeId: 'source',
+  sourceId: 'source',
+  database: null,
+  schema: null,
+  table: 'orders',
+  modelVersion: 'model',
+  codecBinding: 'codec',
+  countOperation: 'native-count',
+  fields: [],
+  candidates: [],
+  pipelineWriteKeyUnknown: true,
+}
+const evaluate = (input: ValidationSelection) => ({
+  method: input.method,
+  configurationRevision: input.expectedRevision,
+  mappingRevision: '1',
+  fingerprint,
+  comparisonFingerprint: comparison,
+  mappings: input.mappings.map((choice) => ({
+    id: choice.mappingId,
+    source: side,
+    target: { ...side, nodeId: 'out', sourceId: 'target', table: 'checked_orders' },
+  })),
+  premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+  conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+  context,
+})
+const json = (value: unknown, status = 200) =>
+  new Response(value === null ? '' : JSON.stringify(value), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  })
+function noLoadedModels(read: typeof fetch): typeof fetch {
+  return (path, init) =>
+    String(path).endsWith('/schema') ? Promise.resolve(json(null, 404)) : read(path, init)
+}
+async function mount(view: React.ReactNode, gcTime = 0) {
+  container = document.createElement('div')
+  document.body.append(container)
+  root = createRoot(container)
+  queries = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime } } })
+  await act(async () =>
+    root!.render(<QueryClientProvider client={queries!}>{view}</QueryClientProvider>),
+  )
+}
+async function settled(assertion: () => void) {
+  await vi.waitFor(
+    async () => {
+      await act(async () => {})
+      assertion()
+    },
+    { timeout: 2000, interval: 10 },
+  )
+}
+function button(label: string) {
+  const found = [...document.querySelectorAll<HTMLButtonElement>('button')].find(
+    (node) => node.textContent === label,
+  )
+  if (!found) throw new Error(`missing button ${label}`)
+  return found
+}
+async function click(label: string) {
+  await act(async () => button(label).click())
+}
+afterEach(async () => {
+  graphMode.whole = false
+  await act(async () => root?.unmount())
+  queries?.clear()
+  container?.remove()
+  root = undefined
+  container = undefined
+  queries = undefined
+  vi.useRealTimers()
+  vi.restoreAllMocks()
+})
+
+describe('real validation page mutation boundaries', () => {
+  it('keeps association-key drafts editable after a definite pre-write rule refusal', async () => {
+    let current: ValidationTask = {
+      ...saved,
+      method: 'UNIQUE_KEY',
+      mappings: [
+        {
+          ...mapping,
+          keys: { confirmationId: generation, fields: [{ source: ['id'], target: ['id'] }] },
+        },
+      ],
+    }
+    const saves: ValidationSave[] = []
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path),
+        body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':evaluate')) return json(evaluate(body))
+      if (action.endsWith(':save')) {
+        saves.push(body)
+        if (saves.length === 1)
+          return json(
+            {
+              code: 'validation.rule-unsupported',
+              params: { node: 'orders', field: 'removed_field', rule: 'key-field-missing' },
+              message: 'The confirmed field is unavailable.',
+            },
+            400,
+          )
+        current = { ...current, revision: '2' }
+        return json({ outcome: 'APPLIED', fingerprint, taskGeneration: generation })
+      }
+      return json(current)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 146 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(document.querySelectorAll('input[role="combobox"]')).toHaveLength(2))
+    const source = () =>
+      document.querySelector<HTMLInputElement>('tbody tr input[role="combobox"]')!
+    const edit = async (value: string) =>
+      act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+          source(),
+          value,
+        )
+        source().dispatchEvent(new Event('input', { bubbles: true }))
+      })
+    await edit('removed_field')
+    await click('dataValidation.bulk.save')
+    await settled(() => expect(document.querySelectorAll('[role="alert"]')).toHaveLength(1))
+    expect(source().disabled).toBe(false)
+    expect(source().value).toBe('removed_field')
+    expect(button('dataValidation.bulk.save').disabled).toBe(false)
+    expect(document.body.textContent).not.toContain('dataValidation.retryOriginalSave')
+    expect(document.body.textContent).not.toContain('dataValidation.unknownSave')
+    expect(button('dataValidation.bulk.start').disabled).toBe(true)
+    await edit('id')
+    await click('dataValidation.bulk.save')
+    await settled(() => expect(document.body.textContent).toContain('dataValidation.saved'))
+    expect(saves).toHaveLength(2)
+    expect(saves[1].commandId).not.toBe(saves[0].commandId)
+    expect(saves[1].input.confirmations.orders.fields[0].source).toBe('id')
+  })
+
+  it.each([
+    { phase: 'CLOSED', lease: 'UNKNOWN', later: false, reserved: false, blocked: false },
+    { phase: 'BORN', lease: 'NOT_LIVE', later: false, reserved: false, blocked: false },
+    { phase: 'OPEN', lease: 'NOT_LIVE', later: false, reserved: true, blocked: false },
+    { phase: 'CLOSED', lease: 'UNKNOWN', later: true, reserved: false, blocked: false },
+    { phase: 'BORN', lease: 'NOT_LIVE', later: true, reserved: false, blocked: false },
+    { phase: 'BORN', lease: 'LIVE', later: true, reserved: false, blocked: true },
+    { phase: 'BORN', lease: 'LIVE', later: false, reserved: false, blocked: true },
+    { phase: 'BORN', lease: 'UNKNOWN', later: false, reserved: false, blocked: true },
+  ] as const)(
+    'reconciles manual admission separately from UNKNOWN physical drain: %j',
+    async (scenario) => {
+      let current = saved,
+        retired = false,
+        firstCommand: string | null = null
+      const starts: Record<string, unknown>[] = []
+      const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+        const action = String(path),
+          body = init?.body ? JSON.parse(String(init.body)) : null
+        if (action.endsWith(':evaluate'))
+          return json({ ...evaluate(body), context: current.context })
+        if (action.endsWith(':start')) {
+          starts.push(body)
+          firstCommand ??= body.command
+          current = {
+            ...saved,
+            context: current.context,
+            nextStartSequence: (BigInt(body.sequence) + 1n).toString(),
+            permission: {
+              phase: starts.length === 1 && scenario.reserved ? 'OPEN' : 'BORN',
+              taskGeneration: generation,
+              revision: '1',
+              sequence: body.sequence,
+              command: body.command,
+              run: `manual-run-${body.sequence}`,
+              ownerLease: 'LIVE',
+            },
+          }
+        }
+        if (action.endsWith(':start') || action.endsWith(':progress')) {
+          const old = body.command === firstCommand,
+            pending = old && scenario.reserved
+          return json({
+            original: body,
+            run: `manual-run-${body.sequence}`,
+            outcome: 'ACCEPTED',
+            state:
+              old && retired ? (pending ? null : 'COMPLETED') : pending ? 'STARTING' : 'RUNNING',
+            admitted: !pending,
+            waiting: false,
+            controlUnknown: pending && retired,
+            retired: old && retired && !pending,
+            drain: old && retired ? 'UNKNOWN' : 'NOT_DRAINED',
+            reason: null,
+            tables: [],
+            premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+            conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+          })
+        }
+        return json(current)
+      })
+      useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 145 })
+      await mount(<ValidationPage pipelineId="flow" />)
+      await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+      await click('dataValidation.bulk.start')
+      await settled(() =>
+        expect(document.body.textContent).toContain(
+          scenario.reserved
+            ? 'dataValidation.run.states.STARTING'
+            : 'dataValidation.run.states.RUNNING',
+        ),
+      )
+      retired = true
+      await act(async () => {
+        await queries!.refetchQueries({ queryKey: ['validation', 'progress'] })
+      })
+      await settled(() => expect(document.body.textContent).toContain('UNKNOWN'))
+      expect(document.body.textContent).not.toMatch(/(?:^|[^_])DRAINED(?:$|[^_])/)
+      current = {
+        ...current,
+        context: { ...context, boot: 'replacement-boot' },
+        nextStartSequence: scenario.later ? '3' : '2',
+        permission: {
+          ...current.permission!,
+          phase: scenario.phase,
+          ownerLease: scenario.lease,
+          ...(scenario.later
+            ? {
+                sequence: '2',
+                command: '50000000-0000-4000-8000-000000000001',
+                run: 'successor-run',
+              }
+            : {}),
+        },
+      }
+      await act(async () => {
+        await queries!.invalidateQueries()
+      })
+      expect(document.body.textContent).not.toMatch(/(?:^|[^_])DRAINED(?:$|[^_])/)
+      await click('dataValidation.run.backSettings')
+      await settled(() =>
+        expect(button('dataValidation.bulk.start').disabled).toBe(scenario.blocked),
+      )
+      if (!scenario.blocked) {
+        const sequence = current.nextStartSequence
+        await click('dataValidation.bulk.start')
+        await settled(() => expect(starts).toHaveLength(2))
+        expect(starts[1].sequence).toBe(sequence)
+        expect(starts[1].command).not.toBe(starts[0].command)
+        expect(starts[1].context).toEqual(current.context)
+      } else expect(starts).toHaveLength(1)
+      if (scenario.later && scenario.blocked)
+        await settled(() =>
+          expect(
+            read.mock.calls.some(
+              ([path, init]) =>
+                String(path).endsWith(':progress') &&
+                JSON.parse(String(init?.body)).command === '50000000-0000-4000-8000-000000000001',
+            ),
+          ).toBe(true),
+        )
+    },
+  )
+
+  it.each(['saved', 'evaluated'])(
+    'finds renamed destination tables and connections from %s mappings',
+    async (mode) => {
+      const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) =>
+        json(evaluate(JSON.parse(String(init?.body)))),
+      )
+      await mount(
+        <ValidationBulkSettings
+          pipelineId="flow"
+          client={createValidationClient(read)}
+          task={mode === 'saved' ? saved : null}
+          hints={[
+            {
+              key: 'orders',
+              outputId: 'out',
+              sourceId: 'source',
+              table: 'orders',
+              targetSourceId: 'target',
+              choice: { mappingId: 'orders', outputId: 'out', sourceId: 'source', table: 'orders' },
+              reason: null,
+              retainedDiscoveryAt: null,
+            },
+          ]}
+          pending={false}
+          onSave={async () => {}}
+          onStart={async () => {}}
+          onSchedule={() => {}}
+          onHistory={() => {}}
+        />,
+      )
+      if (mode === 'evaluated') {
+        await click('dataValidation.methods.COUNT')
+        await click('dataValidation.bulk.inspect')
+        await settled(() => expect(read).toHaveBeenCalledTimes(1))
+      }
+      const search = document.querySelector<HTMLInputElement>(
+        '[aria-label="dataValidation.bulk.search"]',
+      )!
+      for (const text of ['checked_orders', 'target']) {
+        await act(async () => {
+          Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+            search,
+            text,
+          )
+          search.dispatchEvent(new Event('input', { bubbles: true }))
+        })
+        expect(document.querySelectorAll('tbody tr')).toHaveLength(1)
+      }
+    },
+  )
+
+  it.each(['failed', 'pending', 'oversized'])(
+    'keeps a saved whole-Source active task controllable with %s scope discovery',
+    async (mode) => {
+      graphMode.whole = true
+      const value: ValidationTask = {
+        ...saved,
+        nextStartSequence: '2',
+        permission: {
+          phase: 'BORN',
+          taskGeneration: generation,
+          revision: '1',
+          sequence: '1',
+          command: '40000000-0000-4000-8000-000000000001',
+          run: 'current-run',
+          ownerLease: 'LIVE',
+        },
+      }
+      const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+        const action = String(path)
+        if (action.endsWith('/schema')) {
+          if (mode === 'pending') return new Promise<Response>(() => {})
+          if (mode === 'failed') throw new TypeError('scope discovery unavailable')
+          return json({
+            connectionId: 'source',
+            connectorId: 'mysql',
+            discoveredAt: 100,
+            tables: Array.from({ length: 1025 }, (_, i) => ({ name: `table_${i}`, fields: [] })),
+          })
+        }
+        if (action.endsWith(':progress') || action.endsWith(':stop'))
+          return json({
+            original: JSON.parse(String(init?.body)),
+            run: 'current-run',
+            outcome: 'ACCEPTED',
+            state: 'RUNNING',
+            admitted: true,
+            waiting: false,
+            controlUnknown: false,
+            retired: false,
+            drain: 'NOT_DRAINED',
+            reason: null,
+            tables: [],
+            premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+            conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+          })
+        if (new URL(action, 'https://test.invalid').pathname.endsWith('/reports'))
+          return json({ items: [], total: '0', offset: 0, limit: 10 })
+        return json(value)
+      })
+      useAuthStore.setState({ apiFetch: read, sessionRevision: 141 })
+      await mount(<ValidationPage pipelineId="flow" />)
+      await settled(() => expect(button('dataValidation.run.stop').disabled).toBe(false))
+      await click('dataValidation.run.stop')
+      await settled(() => expect(button('dataValidation.run.confirmStop')).toBeDefined())
+      await click('dataValidation.run.confirmStop')
+      await settled(() =>
+        expect(read.mock.calls.filter(([path]) => String(path).endsWith(':stop'))).toHaveLength(1),
+      )
+      const original = JSON.parse(
+        String(read.mock.calls.find(([path]) => String(path).endsWith(':stop'))![1]!.body),
+      )
+      expect(original).toMatchObject({ taskGeneration: generation, revision: '1', sequence: '1' })
+      await click('dataValidation.run.backSettings')
+      await click('dataValidation.history.title')
+      await settled(() =>
+        expect(document.body.textContent).toContain('dataValidation.history.empty'),
+      )
+    },
+  )
+
+  it('cannot silently shrink a saved whole-Source mapping when refreshed discovery omits its table', async () => {
+    graphMode.whole = true
+    const value = {
+      ...saved,
+      mappings: [
+        mapping,
+        { ...mapping, mappingId: 'items', sourceTable: 'items', targetTable: 'checked_items' },
+      ],
+    }
+    const selections: ValidationSelection[] = []
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path)
+      if (action.endsWith('/schema'))
+        return json({
+          connectionId: 'source',
+          connectorId: 'mysql',
+          discoveredAt: 100,
+          tables: [{ name: 'orders', fields: [] }],
+        })
+      if (action.endsWith(':evaluate')) {
+        const input = JSON.parse(String(init?.body))
+        selections.push(input)
+        return json(evaluate(input))
+      }
+      if (action.endsWith(':save'))
+        return json({ outcome: 'CONFLICT', fingerprint: null, taskGeneration: null }, 409)
+      return json(value)
+    })
+    useAuthStore.setState({ apiFetch: read, sessionRevision: 142 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(document.querySelectorAll('tbody tr')).toHaveLength(2))
+    await click('dataValidation.bulk.save')
+    await settled(() => expect(selections).toHaveLength(1))
+    expect(selections[0].mappings.map((x) => x.mappingId)).toEqual(['orders', 'items'])
+  })
+
+  it('keeps edited keys and explicit exclusions when late discovery adds a table and omits a saved one', async () => {
+    graphMode.whole = true
+    const keys = { confirmationId: generation, fields: [{ source: ['id'], target: ['id'] }] }
+    const value: ValidationTask = {
+      ...saved,
+      method: 'UNIQUE_KEY',
+      mappings: [
+        { ...mapping, keys },
+        {
+          ...mapping,
+          keys,
+          mappingId: 'items',
+          sourceTable: 'items',
+          targetTable: 'checked_items',
+        },
+      ],
+    }
+    let finish!: (response: Response) => void
+    const schema = new Promise<Response>((resolve) => {
+      finish = resolve
+    })
+    const selections: ValidationSelection[] = []
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path)
+      if (action.endsWith('/schema')) return schema
+      if (action.endsWith(':evaluate')) {
+        const input = JSON.parse(String(init?.body))
+        selections.push(input)
+        return json(evaluate(input))
+      }
+      if (action.endsWith(':save'))
+        return json({ outcome: 'CONFLICT', fingerprint: null, taskGeneration: null }, 409)
+      return json(value)
+    })
+    useAuthStore.setState({ apiFetch: read, sessionRevision: 144 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(document.querySelectorAll('tbody tr')).toHaveLength(2))
+    const field = document.querySelector<HTMLInputElement>(
+      'tbody tr:first-child input[role="combobox"]',
+    )!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+        field,
+        'edited_source',
+      )
+      field.dispatchEvent(new Event('input', { bubbles: true }))
+      document
+        .querySelector<HTMLButtonElement>(
+          'tbody tr:nth-child(2) [aria-label="dataValidation.bulk.excludeRow"]',
+        )!
+        .click()
+    })
+    await act(async () =>
+      finish(
+        json({
+          connectionId: 'source',
+          connectorId: 'mysql',
+          discoveredAt: 100,
+          tables: [
+            { name: 'orders', fields: [] },
+            { name: 'new_table', fields: [] },
+          ],
+        }),
+      ),
+    )
+    await settled(() => expect(document.querySelectorAll('tbody tr')).toHaveLength(3))
+    expect(
+      document.querySelector<HTMLInputElement>('tbody tr:first-child input[role="combobox"]')!
+        .value,
+    ).toBe('edited_source')
+    expect(document.querySelectorAll('[aria-label="dataValidation.bulk.restoreRow"]')).toHaveLength(
+      2,
+    )
+    expect(button('dataValidation.bulk.start').disabled).toBe(true)
+    await click('dataValidation.bulk.save')
+    await settled(() => expect(selections).toHaveLength(1))
+    expect(selections[0].mappings.map((x) => x.mappingId)).toEqual(['orders'])
+    expect(selections[0].confirmations.orders.fields).toEqual([
+      { source: 'edited_source', target: 'id' },
+    ])
+  })
+
+  it('retains dirty method, keys and exclusions through history navigation', async () => {
+    graphMode.whole = true
+    const value = {
+      ...saved,
+      mappings: [
+        mapping,
+        { ...mapping, mappingId: 'items', sourceTable: 'items', targetTable: 'checked_items' },
+      ],
+    }
+    const read = vi.fn(async (path: RequestInfo | URL) => {
+      const action = String(path)
+      if (action.endsWith('/schema'))
+        return json({
+          connectionId: 'source',
+          connectorId: 'mysql',
+          discoveredAt: 100,
+          tables: [
+            { name: 'orders', fields: [] },
+            { name: 'items', fields: [] },
+          ],
+        })
+      if (new URL(action, 'https://test.invalid').pathname.endsWith('/reports'))
+        return json({ items: [], total: '0', offset: 0, limit: 10 })
+      return json(value)
+    })
+    useAuthStore.setState({ apiFetch: read, sessionRevision: 143 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(document.querySelectorAll('tbody tr')).toHaveLength(2))
+    await click('dataValidation.methods.UNIQUE_KEY')
+    const fields = [
+      ...document.querySelectorAll<HTMLInputElement>('tbody tr:first-child input[role="combobox"]'),
+    ]
+    await act(async () => {
+      for (const [i, field] of fields.entries()) {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+          field,
+          i === 0 ? 'edited_source' : 'edited_target',
+        )
+        field.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+    })
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>(
+          'tbody tr:nth-child(2) [aria-label="dataValidation.bulk.excludeRow"]',
+        )!
+        .click(),
+    )
+    await click('dataValidation.history.title')
+    await settled(() => expect(document.body.textContent).toContain('dataValidation.history.empty'))
+    await click('dataValidation.schedule.back')
+    await settled(() => expect(document.querySelectorAll('input[role="combobox"]')).toHaveLength(4))
+    expect(
+      [
+        ...document.querySelectorAll<HTMLInputElement>(
+          'tbody tr:first-child input[role="combobox"]',
+        ),
+      ].map((x) => x.value),
+    ).toEqual(['edited_source', 'edited_target'])
+    expect(
+      document.querySelector('tbody tr:nth-child(2) [aria-label="dataValidation.bulk.restoreRow"]'),
+    ).not.toBeNull()
+    expect(button('dataValidation.bulk.start').disabled).toBe(true)
+    expect(read.mock.calls.some(([path]) => /:(save|start|evaluate)$/.test(String(path)))).toBe(
+      false,
+    )
+  })
+
+  it.each([false, true])(
+    'keeps saved COUNT controls and history usable with oversized optional discovery (active=%s)',
+    async (active) => {
+      const value: ValidationTask = active
+        ? {
+            ...saved,
+            nextStartSequence: '2',
+            permission: {
+              phase: 'BORN',
+              taskGeneration: generation,
+              revision: '1',
+              sequence: '1',
+              command: '40000000-0000-4000-8000-000000000001',
+              run: 'current-run',
+              ownerLease: 'LIVE',
+            },
+          }
+        : saved
+      const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+        const action = String(path)
+        if (action.endsWith('/schema'))
+          return json({
+            connectionId: 'source',
+            tables: Array.from({ length: 1025 }, (_, i) => ({
+              name: i === 0 ? 'orders' : `table_${i}`,
+              fields: [{ name: 'id' }],
+            })),
+          })
+        if (action.endsWith(':progress'))
+          return json({
+            original: JSON.parse(String(init?.body)),
+            run: 'current-run',
+            outcome: 'ACCEPTED',
+            state: 'RUNNING',
+            admitted: true,
+            waiting: false,
+            controlUnknown: false,
+            retired: false,
+            drain: 'NOT_DRAINED',
+            reason: null,
+            tables: [],
+            premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+            conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+          })
+        if (new URL(action, 'https://test.invalid').pathname.endsWith('/reports'))
+          return json({ items: [], total: '0', offset: 0, limit: 10 })
+        return json(value)
+      })
+      useAuthStore.setState({ apiFetch: read, sessionRevision: active ? 129 : 128 })
+      await mount(<ValidationPage pipelineId="flow" />)
+      if (active) {
+        await settled(() => expect(button('dataValidation.run.stop').disabled).toBe(false))
+        await click('dataValidation.run.backSettings')
+      } else await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+      await settled(() =>
+        expect(document.body.textContent).toContain('dataValidation.bulk.suggestionsUnavailable'),
+      )
+      expect(button('dataValidation.history.title').disabled).toBe(false)
+      await click('dataValidation.history.title')
+      await settled(() =>
+        expect(document.body.textContent).toContain('dataValidation.history.empty'),
+      )
+      expect(
+        read.mock.calls.some(
+          ([path]) =>
+            String(path).endsWith(':start') ||
+            String(path).endsWith(':stop') ||
+            String(path).endsWith(':save'),
+        ),
+      ).toBe(false)
+    },
+  )
+
+  it('accepts late field menus without replacing an edited physical key', async () => {
+    let finish!: (response: Response) => void
+    const schema = new Promise<Response>((resolve) => {
+      finish = resolve
+    })
+    const value: ValidationTask = {
+      ...saved,
+      method: 'UNIQUE_KEY',
+      mappings: [
+        {
+          ...mapping,
+          keys: { confirmationId: generation, fields: [{ source: ['id'], target: ['id'] }] },
+        },
+      ],
+    }
+    const read = vi.fn(async (path: RequestInfo | URL) =>
+      String(path).endsWith('/schema') ? schema : json(value),
+    )
+    useAuthStore.setState({ apiFetch: read, sessionRevision: 130 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() =>
+      expect(container!.querySelectorAll('input[role="combobox"]')).toHaveLength(2),
+    )
+    const target = container!.querySelectorAll<HTMLInputElement>('input[role="combobox"]')[1]!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+        target,
+        'hand_entered',
+      )
+      target.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await act(async () =>
+      finish(
+        json({
+          connectionId: 'source',
+          tables: [{ name: 'orders', fields: [{ name: 'id' }, { name: 'loaded_source' }] }],
+        }),
+      ),
+    )
+    const trigger = document.querySelector<HTMLButtonElement>(
+      '[aria-label="wizard.search.openOptions · dataValidation.bulk.source · orders · 1"]',
+    )!
+    await act(async () => trigger.click())
+    await settled(() =>
+      expect(
+        [...document.querySelectorAll('[role="option"]')].some(
+          (x) => x.textContent === 'loaded_source',
+        ),
+      ).toBe(true),
+    )
+    expect(target.value).toBe('hand_entered')
+    expect(read.mock.calls.some(([path]) => String(path).endsWith(':save'))).toBe(false)
+  })
+
+  it.each([16, 17])(
+    'restores a saved %s-component key and edits all32 supported components',
+    async (initialCount) => {
+      const names = Array.from({ length: 32 }, (_, i) => `field_${i}`)
+      const value: ValidationTask = {
+        ...saved,
+        method: 'UNIQUE_KEY',
+        mappings: [
+          {
+            ...mapping,
+            keys: {
+              confirmationId: generation,
+              fields: names
+                .slice(0, initialCount)
+                .map((name) => ({ source: [name], target: [name] })),
+            },
+          },
+        ],
+      }
+      const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) =>
+        json(evaluate(JSON.parse(String(init?.body)))),
+      )
+      const save = vi.fn<(request: ValidationSave, comparison: string) => Promise<void>>(
+        async () => {},
+      )
+      await mount(
+        <ValidationBulkSettings
+          pipelineId="flow"
+          client={createValidationClient(read)}
+          task={value}
+          hints={[
+            {
+              key: 'orders',
+              outputId: 'out',
+              sourceId: 'source',
+              table: 'orders',
+              targetSourceId: 'target',
+              choice: { mappingId: 'orders', outputId: 'out', sourceId: 'source', table: 'orders' },
+              reason: null,
+              retainedDiscoveryAt: null,
+            },
+          ]}
+          pending={false}
+          onSave={save}
+          onStart={async () => {}}
+          onSchedule={() => {}}
+          onHistory={() => {}}
+        />,
+      )
+      const inputs = (side: number) => [
+        ...container!.querySelectorAll<HTMLInputElement>(
+          `tbody tr td:nth-child(${side}) input[role="combobox"]`,
+        ),
+      ]
+      const remove = [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '[aria-label="dataValidation.bulk.removeKey"]',
+        ),
+      ][initialCount - 1]!
+      await act(async () => remove.click())
+      expect(button('dataValidation.bulk.addKey').disabled).toBe(false)
+      await act(async () => {
+        for (let index = initialCount - 1; index < 32; index++)
+          button('dataValidation.bulk.addKey').click()
+      })
+      await act(async () => {
+        for (const side of [3, 5])
+          for (const [index, input] of inputs(side).entries()) {
+            Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+              input,
+              names[index],
+            )
+            input.dispatchEvent(new Event('input', { bubbles: true }))
+          }
+      })
+      expect(inputs(3).map((x) => x.value)).toEqual(names)
+      expect(inputs(5).map((x) => x.value)).toEqual(names)
+      expect(button('dataValidation.bulk.addKey').disabled).toBe(true)
+      await click('dataValidation.bulk.save')
+      await settled(() => expect(save).toHaveBeenCalledTimes(1))
+      expect(save.mock.calls[0]![0].input.confirmations.orders!.fields).toEqual(
+        names.map((name) => ({ source: name, target: name })),
+      )
+    },
+    // This multi-step fixture edits both sides of 32 components; its assertions do not depend on elapsed time.
+    15_000,
+  )
+
+  it('loads a fresh reviewed definition after saving and returning to the workspace', async () => {
+    let current = saved
+    let taskReads = 0
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path)
+      const body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':evaluate')) return json(evaluate(body))
+      if (action.endsWith(':save')) {
+        current = { ...saved, revision: '2' }
+        return json({ outcome: 'APPLIED', fingerprint, taskGeneration: generation })
+      }
+      taskReads++
+      return json(current)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 127 })
+    await mount(<ValidationPage pipelineId="flow" />, 5 * 60 * 1000)
+    await settled(() => expect(button('dataValidation.bulk.save').disabled).toBe(false))
+    await click('dataValidation.bulk.save')
+    await settled(() => expect(document.body.textContent).toContain('dataValidation.saved'))
+    await act(async () =>
+      root!.render(
+        <QueryClientProvider client={queries!}>
+          <p>Outside workspace</p>
+        </QueryClientProvider>,
+      ),
+    )
+    const previousReads = taskReads
+    await act(async () =>
+      root!.render(
+        <QueryClientProvider client={queries!}>
+          <ValidationPage pipelineId="flow" />
+        </QueryClientProvider>,
+      ),
+    )
+    await settled(() => expect(taskReads).toBeGreaterThan(previousReads))
+    await settled(() => expect(button('dataValidation.bulk.save').disabled).toBe(false))
+    expect(document.body.textContent).not.toContain('dataValidation.definitionChanged')
+  })
+
+  it('submits confirmed configuration through its native form without starting a run', async () => {
+    let current = saved
+    const writes: string[] = []
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path)
+      const body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':evaluate')) return json(evaluate(body))
+      if (action.endsWith(':save')) {
+        writes.push(action)
+        current = { ...saved, revision: '2' }
+        return json({ outcome: 'APPLIED', fingerprint, taskGeneration: generation })
+      }
+      if (action.endsWith(':start')) writes.push(action)
+      return json(current)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 126 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.bulk.save').disabled).toBe(false))
+    const save = button('dataValidation.bulk.save')
+    expect(save.form).not.toBeNull()
+    expect(save.type).toBe('submit')
+    expect(
+      document.querySelector<HTMLInputElement>('[aria-label="dataValidation.bulk.search"]')?.form,
+    ).toBeNull()
+    await act(async () => save.form!.requestSubmit(save))
+    await settled(() => expect(document.body.textContent).toContain('dataValidation.saved'))
+    expect(writes.filter((path) => path.endsWith(':save'))).toHaveLength(1)
+    expect(writes.some((path) => path.endsWith(':start'))).toBe(false)
+  })
+
+  it.each(['save-precheck', 'disable', 'preview'] as const)(
+    'keeps one visible schedule error after %s failure',
+    async (stage) => {
+      const scheduled: ValidationTask = {
+        ...saved,
+        scheduleEnabled: true,
+        schedule: {
+          kind: 'INTERVAL',
+          every: '1',
+          unit: 'MINUTES',
+          anchor: '2026-10-31T00:00:00Z',
+          expression: null,
+          zoneId: 'UTC',
+        },
+      }
+      const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+        const action = String(path),
+          body = init?.body ? JSON.parse(String(init.body)) : null
+        if (
+          action.endsWith(':evaluate') ||
+          (action.endsWith(':schedule-preview') && stage === 'preview')
+        )
+          return json(
+            {
+              code: 'validation.value-limit-exceeded',
+              params: { limit: 'validation.metadataFrames' },
+              message: 'Metadata busy.',
+            },
+            429,
+          )
+        if (action.endsWith(':schedule-disable')) throw new TypeError('disable reply lost')
+        if (action.endsWith(':schedule-preview'))
+          return json({
+            base: '2026-10-31T00:00:00Z',
+            inputRevision: body.inputRevision,
+            zoneId: 'UTC',
+            rulesVersion: 'validation-unix-v1',
+            occurrences: Array.from({ length: 5 }, (_, i) => ({
+              at: `2026-10-31T00:0${i + 1}:00Z`,
+              local: `2026-10-31T00:0${i + 1}:00`,
+              offset: 'Z',
+              weekday: 'SATURDAY',
+            })),
+          })
+        return json(scheduled)
+      })
+      useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 91 })
+      await mount(<ValidationPage pipelineId="flow" />)
+      await settled(() => expect(button('dataValidation.schedule.title')).toBeDefined())
+      await click('dataValidation.schedule.title')
+      if (stage === 'save-precheck') {
+        await settled(() => expect(button('dataValidation.schedule.save').disabled).toBe(false))
+        await click('dataValidation.schedule.save')
+      } else if (stage === 'disable') await click('dataValidation.schedule.disable')
+      await settled(() => expect(document.querySelectorAll('[role="alert"]')).toHaveLength(1))
+      if (stage === 'preview') expect(button('dataValidation.schedule.save').disabled).toBe(true)
+      if (stage === 'disable')
+        expect(button('dataValidation.retryOriginalOff').disabled).toBe(false)
+    },
+  )
+  it.each([
+    'evaluate',
+    'save',
+    'readback',
+    'network',
+    'replay-capacity',
+    'readback-rule',
+    'replay-rule',
+  ] as const)(
+    'shows one error and preserves the correct recovery after %s failure',
+    async (stage) => {
+      let recover = false,
+        accepted = false
+      let current: ValidationTask = { ...saved, method: 'FULL_COLUMN' }
+      const saves: unknown[] = []
+      const capacity = () =>
+        json(
+          {
+            code: 'validation.value-limit-exceeded',
+            params: { limit: 'validation.metadataFrames' },
+            message: 'Validation metadata frames are busy.',
+          },
+          429,
+        )
+      const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+        const action = String(path),
+          body = init?.body ? JSON.parse(String(init.body)) : null
+        if (action.endsWith(':evaluate'))
+          return stage === 'evaluate' && !recover ? capacity() : json(evaluate(body))
+        if (action.endsWith(':save')) {
+          saves.push(body)
+          if (!recover && stage === 'save') return capacity()
+          if (!recover && stage === 'network') throw new TypeError('save reply lost')
+          const outcome = accepted ? 'DUPLICATE' : 'APPLIED'
+          accepted = true
+          current = { ...saved, method: 'COUNT', revision: '2' }
+          if (!recover && (stage === 'replay-capacity' || stage === 'replay-rule')) {
+            if (saves.length === 1) throw new TypeError('committed save reply lost')
+            return stage === 'replay-rule'
+              ? json(
+                  {
+                    code: 'validation.rule-unsupported',
+                    params: { node: 'orders', field: 'id', rule: 'key-field-missing' },
+                  },
+                  400,
+                )
+              : capacity()
+          }
+          return json({ outcome, fingerprint, taskGeneration: generation })
+        }
+        if (accepted && stage === 'readback' && !recover) return capacity()
+        if (accepted && stage === 'readback-rule' && !recover)
+          return json(
+            {
+              code: 'validation.rule-unsupported',
+              params: { node: 'orders', field: 'id', rule: 'key-field-missing' },
+            },
+            400,
+          )
+        return json(current)
+      })
+      useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 90 })
+      await mount(<ValidationPage pipelineId="flow" />)
+      await settled(() => expect(button('dataValidation.bulk.save')).toBeDefined())
+      await click('dataValidation.methods.COUNT')
+      await click('dataValidation.bulk.save')
+      if (stage === 'save') expect(button('dataValidation.bulk.save').disabled).toBe(false)
+      await settled(() => expect(document.querySelectorAll('[role="alert"]')).toHaveLength(1))
+      if (stage === 'evaluate' || stage === 'save') {
+        expect(button('dataValidation.bulk.save').disabled).toBe(false)
+        expect(document.body.textContent).not.toContain('dataValidation.unknownSave')
+        expect(document.body.textContent).not.toContain('dataValidation.retryOriginalSave')
+        expect(
+          document.querySelector<HTMLButtonElement>('[role="radio"][aria-checked="true"]')
+            ?.textContent,
+        ).toContain('dataValidation.methods.COUNT')
+        if (stage === 'evaluate') expect(saves).toHaveLength(0)
+        else expect(saves).toHaveLength(1)
+        recover = true
+        await click('dataValidation.bulk.save')
+        await settled(() => expect(document.body.textContent).toContain('dataValidation.saved'))
+        if (stage === 'save') {
+          expect(saves).toHaveLength(2)
+          expect((saves[1] as { commandId: string }).commandId).not.toBe(
+            (saves[0] as { commandId: string }).commandId,
+          )
+          expect((saves[1] as { input: unknown }).input).toEqual(
+            (saves[0] as { input: unknown }).input,
+          )
+        }
+      } else {
+        expect(button('dataValidation.bulk.save').disabled).toBe(true)
+        expect(document.body.textContent).toContain('dataValidation.unknownSave')
+        if (stage === 'replay-capacity' || stage === 'replay-rule') {
+          await click('dataValidation.retryOriginalSave')
+          await settled(() => expect(saves).toHaveLength(2))
+          expect(saves[1]).toEqual(saves[0])
+          expect(button('dataValidation.bulk.save').disabled).toBe(true)
+          expect(document.body.textContent).toContain('dataValidation.unknownSave')
+        }
+        recover = true
+        await click('dataValidation.retryOriginalSave')
+        await settled(() =>
+          expect(saves).toHaveLength(
+            stage === 'replay-capacity' || stage === 'replay-rule' ? 3 : 2,
+          ),
+        )
+        expect(saves.at(-1)).toEqual(saves[0])
+        await settled(() => expect(document.querySelectorAll('[role="alert"]')).toHaveLength(0))
+      }
+    },
+  )
+  it.each([
+    ['NOT_LIVE', 'BORN'],
+    ['LIVE', 'BORN'],
+    ['UNKNOWN', 'BORN'],
+    ['UNKNOWN', 'CLOSED'],
+  ] as const)(
+    'keeps a recorded successor pinned across lease changes, including a fresh %s/%s view',
+    async (initialLease, phase) => {
+      const command = '40000000-0000-4000-8000-000000000001'
+      const successor = '50000000-0000-4000-8000-000000000001'
+      const value: ValidationTask = {
+        ...saved,
+        nextStartSequence: '2',
+        permission: {
+          phase,
+          taskGeneration: generation,
+          revision: '1',
+          sequence: '1',
+          command,
+          run: 'old-born',
+          ownerLease: initialLease,
+        },
+        scheduleObservation: {
+          node: 'entry',
+          boot: 'entry-boot',
+          member: generation,
+          context: '60000000-0000-4000-8000-000000000001',
+          observedAt: '2026-10-31T00:00:00Z',
+          nextDue: null,
+          lastDue: '2026-10-31T00:00:00Z',
+          state: 'UNKNOWN',
+          reason: null,
+          command: successor,
+          run: 'pending-successor',
+          sequence: '2',
+        },
+      }
+      const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) => {
+        const original = JSON.parse(String(init?.body))
+        return json({
+          original,
+          run: 'pending-successor',
+          outcome: 'UNKNOWN',
+          state: null,
+          admitted: false,
+          waiting: false,
+          controlUnknown: true,
+          retired: false,
+          drain: 'UNKNOWN',
+          reason: null,
+          tables: [],
+          premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+          conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+        })
+      })
+      const client = createValidationClient(read)
+      const view = (ownerLease: typeof initialLease) => (
+        <ValidationRunPanel
+          client={client}
+          task={{ ...value, permission: { ...value.permission!, ownerLease } }}
+          original={null}
+          onTerminal={() => {}}
+          onReportOpen={() => {}}
+        />
+      )
+      await mount(view(initialLease))
+      await settled(() =>
+        expect(read.mock.calls.some(([path]) => String(path).endsWith(':progress'))).toBe(true),
+      )
+      const first = read.mock.calls.find(([path]) => String(path).endsWith(':progress'))!
+      const original = JSON.parse(String(first[1]?.body))
+      expect(original.command).toBe(successor)
+      expect(document.body.textContent).not.toContain('dataValidation.run.previousRun')
+      expect(document.body.textContent).toContain('dataValidation.run.configurationRevision')
+      for (const ownerLease of ['LIVE', 'UNKNOWN'] as const) {
+        await act(async () =>
+          root!.render(
+            <QueryClientProvider client={queries!}>{view(ownerLease)}</QueryClientProvider>,
+          ),
+        )
+        await act(async () => {
+          await queries!.invalidateQueries({ queryKey: ['validation', 'progress'] })
+        })
+        await click('dataValidation.run.stop')
+        await click('dataValidation.run.confirmStop')
+        await settled(() =>
+          expect(read.mock.calls.some(([path]) => String(path).endsWith(':stop'))).toBe(true),
+        )
+        const latest = read.mock.calls.filter(([path]) => String(path).endsWith(':stop')).at(-1)!
+        expect(JSON.parse(String(latest[1]?.body))).toEqual(original)
+        expect(
+          read.mock.calls
+            .filter(([path]) => String(path).endsWith(':progress'))
+            .every(([, init]) => JSON.parse(String(init?.body)).command === successor),
+        ).toBe(true)
+      }
+      expect(read.mock.calls.some(([path]) => String(path).endsWith(':start'))).toBe(false)
+    },
+  )
+  it('keeps page and filtered selection separate from participation until exclusion is confirmed', async () => {
+    const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) =>
+      json(evaluate(JSON.parse(String(init?.body)))),
+    )
+    const saves = vi.fn(async (_request: ValidationSave, _comparison: string) => {})
+    const hints = Array.from({ length: 22 }, (_, index) => ({
+      key: `table_${index + 1}`,
+      outputId: 'out',
+      sourceId: 'source',
+      table: `table_${index + 1}`,
+      targetSourceId: 'target',
+      choice: {
+        mappingId: `table_${index + 1}`,
+        outputId: 'out',
+        sourceId: 'source',
+        table: `table_${index + 1}`,
+      },
+      reason: null,
+      retainedDiscoveryAt: null,
+      sourceFields: [],
+      targetFields: [],
+    }))
+    await mount(
+      <ValidationBulkSettings
+        pipelineId="flow"
+        client={createValidationClient(read)}
+        task={null}
+        hints={hints}
+        pending={false}
+        onSave={saves}
+        onStart={async () => {}}
+        onSchedule={() => {}}
+        onHistory={() => {}}
+      />,
+    )
+    await click('dataValidation.methods.COUNT')
+    const selectPage = document.querySelector<HTMLInputElement>(
+      '[aria-label="dataValidation.bulk.selectPage"]',
+    )!
+    expect(selectPage).not.toBeNull()
+    await act(async () => selectPage.click())
+    expect(
+      [...document.querySelectorAll<HTMLInputElement>('tbody input[type="checkbox"]')].filter(
+        (input) => input.checked,
+      ),
+    ).toHaveLength(20)
+    expect(read).not.toHaveBeenCalled()
+    await click('dataValidation.bulk.excludeSelected')
+    await settled(() => expect(button('dataValidation.bulk.cancelScope')).toBeDefined())
+    await click('dataValidation.bulk.cancelScope')
+    await click('dataValidation.bulk.save')
+    await settled(() => expect(saves).toHaveBeenCalledTimes(1))
+    expect(saves.mock.calls[0][0].input.mappings).toHaveLength(22)
+    await click('dataValidation.bulk.excludeSelected')
+    await click('dataValidation.bulk.confirmExclude')
+    await click('dataValidation.bulk.save')
+    await settled(() => expect(saves).toHaveBeenCalledTimes(2))
+    expect(
+      saves.mock.calls[1][0].input.mappings.map((m: { mappingId: string }) => m.mappingId),
+    ).toEqual(['table_21', 'table_22'])
+    await act(async () => selectPage.click())
+    await click('dataValidation.bulk.selectFiltered')
+    await click('dataValidation.bulk.restoreSelected')
+    await click('dataValidation.bulk.save')
+    await settled(() => expect(saves).toHaveBeenCalledTimes(3))
+    expect(saves.mock.calls[2][0].input.mappings).toHaveLength(22)
+  })
+  it('offers loaded model fields in an editable dropdown while absent models stay blank', async () => {
+    const read = vi.fn(async () => {
+      throw new Error('no independent precheck was requested')
+    })
+    const hints = [
+      {
+        key: 'orders',
+        outputId: 'out',
+        sourceId: 'source',
+        table: 'orders',
+        targetSourceId: 'target',
+        choice: { mappingId: 'orders', outputId: 'out', sourceId: 'source', table: 'orders' },
+        reason: null,
+        retainedDiscoveryAt: 100,
+        sourceFields: ['tenant_id', 'id'],
+        targetFields: [],
+      },
+    ] as const
+    const view = (pending: boolean) => (
+      <ValidationBulkSettings
+        pipelineId="flow"
+        client={createValidationClient(read)}
+        task={null}
+        hints={hints}
+        pending={pending}
+        onSave={async () => {}}
+        onStart={async () => {}}
+        onSchedule={() => {}}
+        onHistory={() => {}}
+      />
+    )
+    await mount(view(false))
+    const inputs = [...container!.querySelectorAll<HTMLInputElement>('input[role="combobox"]')]
+    expect(inputs).toHaveLength(2)
+    expect(inputs.map((input) => input.value)).toEqual(['', ''])
+    const trigger = (side: string) =>
+      document.querySelector<HTMLButtonElement>(
+        `[aria-label="wizard.search.openOptions · dataValidation.bulk.${side} · orders · 1"]`,
+      )!
+    await act(async () => trigger('source').click())
+    await settled(() => expect(document.querySelectorAll('[role="option"]')).toHaveLength(2))
+    const option = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find(
+      (node) => node.textContent === 'tenant_id',
+    )!
+    await act(async () => option.click())
+    expect(inputs[0].value).toBe('tenant_id')
+    await act(async () => trigger('target').click())
+    expect(document.querySelectorAll('[role="option"]')).toHaveLength(0)
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+        inputs[1],
+        'manual_id',
+      )
+      inputs[1].dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect(inputs[1].value).toBe('manual_id')
+    expect(button('dataValidation.bulk.save').disabled).toBe(false)
+    expect(read).not.toHaveBeenCalled()
+    await act(async () => root!.render(view(true)))
+    expect(
+      [...container!.querySelectorAll<HTMLInputElement>('input[role="combobox"]')].every(
+        (input) => input.disabled,
+      ),
+    ).toBe(true)
+    expect(trigger('source').disabled).toBe(true)
+  })
+  it('does not save under a successor auth session when an old evaluation completes', async () => {
+    let complete!: (response: Response) => void, input!: ValidationSelection
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      if (String(path).endsWith(':evaluate')) {
+        input = JSON.parse(String(init?.body))
+        return new Promise<Response>((resolve) => {
+          complete = resolve
+        })
+      }
+      if (String(path).endsWith(':save'))
+        return json({ outcome: 'APPLIED', fingerprint, taskGeneration: generation })
+      return json(null, 404)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 1 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.bulk.save')).toBeDefined())
+    await click('dataValidation.methods.COUNT')
+    await click('dataValidation.bulk.save')
+    await settled(() => expect(input).toBeDefined())
+    await act(async () => {
+      useAuthStore.setState({ sessionRevision: 2 })
+      complete(json(evaluate(input)))
+    })
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+    expect(read.mock.calls.some(([path]) => String(path).endsWith(':save'))).toBe(false)
+  })
+  it.each([
+    { model: [], expected: ['', ''] },
+    { model: ['region', 'customer_id'], expected: ['customer_id', 'region'] },
+    { model: ['customer_id', 'different_region'], expected: ['customer_id', ''] },
+  ])(
+    'recommends only exact loaded destination names without zipping independent candidates: $model',
+    async ({ model, expected }) => {
+      const fields = [
+        { name: 'customer_id', type: 'NUMBER', keyDomain: 'EXACT_NUMBER', unavailableReason: null },
+        { name: 'region', type: 'NUMBER', keyDomain: 'EXACT_NUMBER', unavailableReason: null },
+      ]
+      const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) => {
+        const input = JSON.parse(String(init?.body)) as ValidationSelection
+        return json({
+          ...evaluate(input),
+          fingerprint: null,
+          comparisonFingerprint: null,
+          mappingRevision: null,
+          mappings: [
+            {
+              id: 'orders',
+              source: {
+                ...side,
+                fields,
+                candidates: [
+                  { origin: 'PRIMARY_KEY', fields: ['customer_id', 'region'], issues: [] },
+                ],
+              },
+              target: {
+                ...side,
+                sourceId: 'target',
+                fields,
+                candidates: [
+                  { origin: 'PRIMARY_KEY', fields: ['region', 'customer_id'], issues: [] },
+                ],
+              },
+            },
+          ],
+        })
+      })
+      await mount(
+        <ValidationBulkSettings
+          pipelineId="flow"
+          client={createValidationClient(read)}
+          task={null}
+          hints={[
+            {
+              key: 'orders',
+              outputId: 'out',
+              sourceId: 'source',
+              table: 'orders',
+              targetSourceId: 'target',
+              choice: { mappingId: 'orders', outputId: 'out', sourceId: 'source', table: 'orders' },
+              reason: null,
+              retainedDiscoveryAt: null,
+              targetFields: model,
+            },
+          ]}
+          pending={false}
+          onSave={async () => {}}
+          onStart={async () => {}}
+          onSchedule={() => {}}
+          onHistory={() => {}}
+        />,
+      )
+      await click('dataValidation.bulk.inspect')
+      await settled(() => expect(read).toHaveBeenCalled())
+      const targets = [
+        ...document.querySelectorAll<HTMLInputElement>(
+          'tbody td:nth-child(5) input[role="combobox"]',
+        ),
+      ]
+      expect(targets).toHaveLength(2)
+      expect(targets.map((input) => input.value)).toEqual(expected)
+      expect(button('dataValidation.bulk.save').disabled).toBe(expected.some((value) => !value))
+      const sources = [
+        ...document.querySelectorAll<HTMLInputElement>(
+          'tbody td:nth-child(3) input[role="combobox"]',
+        ),
+      ]
+      expect(sources.map((input) => input.value)).toEqual(['customer_id', 'region'])
+      if (!model.length) {
+        await act(async () =>
+          document
+            .querySelector<HTMLButtonElement>(
+              '[aria-label="wizard.search.openOptions · dataValidation.bulk.target · orders · 1"]',
+            )!
+            .click(),
+        )
+        expect(document.querySelectorAll('[role="option"]')).toHaveLength(0)
+      }
+      if (expected.every(Boolean)) {
+        await act(async () => {
+          Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+            targets[0],
+            'manual_customer',
+          )
+          targets[0].dispatchEvent(new Event('input', { bubbles: true }))
+          Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+            targets[1],
+            '',
+          )
+          targets[1].dispatchEvent(new Event('input', { bubbles: true }))
+        })
+        await click('dataValidation.bulk.inspect')
+        await settled(() => expect(read).toHaveBeenCalledTimes(2))
+        expect(
+          [
+            ...document.querySelectorAll<HTMLInputElement>(
+              'tbody td:nth-child(5) input[role="combobox"]',
+            ),
+          ].map((input) => input.value),
+        ).toEqual(['manual_customer', 'region'])
+      }
+      expect(read.mock.calls.every(([path]) => String(path).endsWith(':evaluate'))).toBe(true)
+    },
+  )
+  it.each([false, true])(
+    'distinguishes a busy progress read from run failure, cached=%s',
+    async (cached) => {
+      let reads = 0
+      const value: ValidationTask = {
+        ...saved,
+        nextStartSequence: '2',
+        permission: {
+          phase: 'BORN',
+          taskGeneration: generation,
+          revision: '1',
+          sequence: '1',
+          command: '40000000-0000-4000-8000-000000000001',
+          run: 'current-run',
+        },
+      }
+      const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) => {
+        if (cached && ++reads === 1)
+          return json({
+            original: JSON.parse(String(init?.body)),
+            run: 'current-run',
+            outcome: 'ACCEPTED',
+            state: 'RUNNING',
+            admitted: true,
+            waiting: false,
+            controlUnknown: false,
+            retired: false,
+            drain: 'NOT_DRAINED',
+            reason: null,
+            tables: [],
+            premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+            conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+          })
+        return json(
+          {
+            code: 'validation.value-limit-exceeded',
+            params: { limit: 'validation.metadataFrames' },
+            message: 'Metadata busy.',
+          },
+          429,
+        )
+      })
+      const onTerminal = vi.fn()
+      await mount(
+        <ValidationRunPanel
+          client={createValidationClient(read)}
+          task={value}
+          original={null}
+          onTerminal={onTerminal}
+          onReportOpen={() => {}}
+        />,
+      )
+      if (cached) {
+        await settled(() =>
+          expect(document.body.textContent).toContain('dataValidation.run.states.RUNNING'),
+        )
+        await act(async () => {
+          await queries!.refetchQueries({ queryKey: ['validation', 'progress'] })
+        })
+      }
+      await settled(() => expect(document.body.textContent).toContain('HTTP 429'))
+      expect(document.querySelectorAll('[role="alert"]')).toHaveLength(0)
+      expect(document.body.textContent).toContain(
+        cached ? 'dataValidation.run.refreshBusy' : 'dataValidation.run.waitingBusy',
+      )
+      expect(document.body.textContent?.includes('dataValidation.run.staleObservation')).toBe(
+        cached,
+      )
+      expect(document.body.textContent).toContain('validation.metadataFrames')
+      expect(button('dataValidation.run.stop').disabled).toBe(false)
+      expect(onTerminal).not.toHaveBeenCalled()
+      expect(read.mock.calls.every(([path]) => String(path).endsWith(':progress'))).toBe(true)
+    },
+  )
+  it('backs off a capacity read and restores normal polling after a successful observation', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    let recover = false
+    const value: ValidationTask = {
+      ...saved,
+      nextStartSequence: '2',
+      permission: {
+        phase: 'BORN',
+        taskGeneration: generation,
+        revision: '1',
+        sequence: '1',
+        command: '40000000-0000-4000-8000-000000000001',
+        run: 'current-run',
+      },
+    }
+    const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) =>
+      recover
+        ? json({
+            original: JSON.parse(String(init?.body)),
+            run: 'current-run',
+            outcome: 'ACCEPTED',
+            state: 'RUNNING',
+            admitted: true,
+            waiting: false,
+            controlUnknown: false,
+            retired: false,
+            drain: 'NOT_DRAINED',
+            reason: null,
+            tables: [],
+            premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+            conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+          })
+        : json(
+            {
+              code: 'validation.value-limit-exceeded',
+              params: { limit: 'validation.metadataFrames' },
+              message: 'Metadata busy.',
+            },
+            429,
+          ),
+    )
+    await mount(
+      <ValidationRunPanel
+        client={createValidationClient(read)}
+        task={value}
+        original={null}
+        onTerminal={() => {}}
+        onReportOpen={() => {}}
+      />,
+    )
+    await settled(() => expect(document.body.textContent).toContain('HTTP 429'))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2100)
+    })
+    expect(read).toHaveBeenCalledTimes(1)
+    recover = true
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000)
+    })
+    await settled(() =>
+      expect(document.body.textContent).toContain('dataValidation.run.states.RUNNING'),
+    )
+    expect(read).toHaveBeenCalledTimes(2)
+    expect(document.body.textContent).not.toContain('dataValidation.run.waitingBusy')
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2100)
+    })
+    expect(read).toHaveBeenCalledTimes(3)
+    expect(read.mock.calls.every(([path]) => String(path).endsWith(':progress'))).toBe(true)
+  })
+  it('refreshes a stale terminal after capacity refusal without inventing physical settlement', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    let reads = 0
+    const value: ValidationTask = {
+      ...saved,
+      nextStartSequence: '2',
+      permission: {
+        phase: 'CLOSED',
+        taskGeneration: generation,
+        revision: '1',
+        sequence: '1',
+        command: '40000000-0000-4000-8000-000000000001',
+        run: 'stored-run',
+      },
+    }
+    const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) =>
+      ++reads === 2
+        ? json(
+            {
+              code: 'validation.value-limit-exceeded',
+              params: { limit: 'validation.metadataFrames' },
+              message: 'Metadata busy.',
+            },
+            429,
+          )
+        : json({
+            original: JSON.parse(String(init?.body)),
+            run: 'stored-run',
+            outcome: 'ACCEPTED',
+            state: 'COMPLETED',
+            admitted: true,
+            waiting: false,
+            controlUnknown: false,
+            retired: true,
+            drain: 'UNKNOWN',
+            reason: null,
+            tables: [],
+            premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+            conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+          }),
+    )
+    const onTerminal = vi.fn()
+    await mount(
+      <ValidationRunPanel
+        client={createValidationClient(read)}
+        task={value}
+        original={null}
+        onTerminal={onTerminal}
+        onReportOpen={() => {}}
+      />,
+    )
+    await settled(() =>
+      expect(document.body.textContent).toContain('dataValidation.run.states.COMPLETED'),
+    )
+    await act(async () => {
+      await queries!.refetchQueries({ queryKey: ['validation', 'progress'] })
+    })
+    await settled(() =>
+      expect(document.body.textContent).toContain('dataValidation.run.staleObservation'),
+    )
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5100)
+    })
+    expect(read).toHaveBeenCalledTimes(3)
+    expect(document.body.textContent).not.toContain('dataValidation.run.staleObservation')
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5100)
+    })
+    expect(read).toHaveBeenCalledTimes(3)
+    expect(document.body.textContent).toContain('UNKNOWN')
+    expect(onTerminal).not.toHaveBeenCalled()
+  })
+  it('retains other progress errors and marks their cached observation stale', async () => {
+    let reads = 0
+    const value: ValidationTask = {
+      ...saved,
+      nextStartSequence: '2',
+      permission: {
+        phase: 'BORN',
+        taskGeneration: generation,
+        revision: '1',
+        sequence: '1',
+        command: '40000000-0000-4000-8000-000000000001',
+        run: 'current-run',
+      },
+    }
+    const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) =>
+      ++reads === 1
+        ? json({
+            original: JSON.parse(String(init?.body)),
+            run: 'current-run',
+            outcome: 'ACCEPTED',
+            state: 'RUNNING',
+            admitted: true,
+            waiting: false,
+            controlUnknown: false,
+            retired: false,
+            drain: 'NOT_DRAINED',
+            reason: null,
+            tables: [],
+            premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+            conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+          })
+        : json(
+            {
+              code: 'validation.value-limit-exceeded',
+              params: { limit: 'validation.cursorBytes' },
+              message: 'Another limit.',
+            },
+            429,
+          ),
+    )
+    await mount(
+      <ValidationRunPanel
+        client={createValidationClient(read)}
+        task={value}
+        original={null}
+        onTerminal={() => {}}
+        onReportOpen={() => {}}
+      />,
+    )
+    await settled(() =>
+      expect(document.body.textContent).toContain('dataValidation.run.states.RUNNING'),
+    )
+    await act(async () => {
+      await queries!.refetchQueries({ queryKey: ['validation', 'progress'] })
+    })
+    await settled(() => expect(document.querySelectorAll('[role="alert"]')).toHaveLength(1))
+    expect(document.body.textContent).toContain('dataValidation.run.staleObservation')
+    expect(document.body.textContent).not.toContain('dataValidation.run.refreshBusy')
+  })
+  it('pauses ambient reads only while preparing a new start and resumes monitoring before its reply', async () => {
+    let releaseEvaluation!: () => void
+    let releaseStart!: () => void
+    const preparing = new Promise<void>((resolve) => {
+      releaseEvaluation = resolve
+    })
+    const submitting = new Promise<void>((resolve) => {
+      releaseStart = resolve
+    })
+    let evaluating = false
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path),
+        body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':evaluate')) {
+        evaluating = true
+        await preparing
+        return json(evaluate(body))
+      }
+      if (action.endsWith(':start')) {
+        await submitting
+        throw new TypeError('start reply lost')
+      }
+      if (action.endsWith(':progress'))
+        return json({
+          original: body,
+          run: 'unconfirmed-run',
+          outcome: 'UNKNOWN',
+          state: null,
+          admitted: false,
+          waiting: false,
+          controlUnknown: true,
+          retired: false,
+          drain: 'UNKNOWN',
+          reason: null,
+          tables: [],
+          premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+          conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+        })
+      return json(saved)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 102 })
+    try {
+      await mount(<ValidationPage pipelineId="flow" />)
+      await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+      await click('dataValidation.bulk.start')
+      await settled(() => expect(evaluating).toBe(true))
+      const tasks = () =>
+        read.mock.calls.filter(([path]) => String(path).endsWith('/validation-tasks/full')).length
+      const before = tasks()
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 3100))
+      })
+      expect(tasks()).toBe(before)
+      await act(async () => {
+        releaseEvaluation()
+      })
+      await settled(() =>
+        expect(read.mock.calls.some(([path]) => String(path).endsWith(':start'))).toBe(true),
+      )
+      // A possibly admitted START must remain observable even before its transport reply returns.
+      await settled(() =>
+        expect(read.mock.calls.some(([path]) => String(path).endsWith(':progress'))).toBe(true),
+      )
+      expect(button('dataValidation.run.stop').disabled).toBe(false)
+    } finally {
+      await act(async () => {
+        releaseEvaluation()
+        releaseStart()
+      })
+    }
+  })
+  it('identifies the previous completed revision when a new start precheck is refused', async () => {
+    const task: ValidationTask = {
+      ...saved,
+      revision: '6',
+      nextStartSequence: '4',
+      permission: {
+        phase: 'CLOSED',
+        taskGeneration: generation,
+        revision: '5',
+        sequence: '3',
+        command: '40000000-0000-4000-8000-000000000001',
+        run: 'previous-full',
+      },
+    }
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path)
+      if (action.endsWith(':evaluate'))
+        return json(
+          {
+            code: 'validation.value-limit-exceeded',
+            params: { limit: 'validation.metadataFrames' },
+            message: 'Metadata busy.',
+          },
+          429,
+        )
+      if (action.endsWith(':progress'))
+        return json({
+          original: JSON.parse(String(init?.body)),
+          run: 'previous-full',
+          outcome: 'ACCEPTED',
+          state: 'COMPLETED',
+          admitted: true,
+          waiting: false,
+          controlUnknown: false,
+          retired: true,
+          drain: 'UNKNOWN',
+          reason: null,
+          tables: [],
+          premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+          conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+        })
+      return json(task)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 101 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+    await click('dataValidation.bulk.start')
+    await settled(() => expect(document.querySelectorAll('[role="alert"]')).toHaveLength(1))
+    expect(document.body.textContent).toContain('dataValidation.run.startNotSent')
+    expect(document.body.textContent).toContain('dataValidation.run.previousRun')
+    expect(read.mock.calls.some(([path]) => String(path).endsWith(':start'))).toBe(false)
+    expect(document.body.textContent).not.toContain('dataValidation.retryOriginalStart')
+    expect(button('dataValidation.bulk.start').disabled).toBe(false)
+    expect(button('dataValidation.report.open').disabled).toBe(false)
+  })
+  it.each([
+    { state: 'COMPLETED', retired: true, controlUnknown: false, drain: 'UNKNOWN', polling: false },
+    {
+      state: 'COMPLETED',
+      retired: true,
+      controlUnknown: false,
+      drain: 'NOT_DRAINED',
+      polling: true,
+    },
+    { state: 'COMPLETED', retired: true, controlUnknown: true, drain: 'UNKNOWN', polling: true },
+    { state: 'RUNNING', retired: true, controlUnknown: false, drain: 'UNKNOWN', polling: true },
+    { state: 'COMPLETED', retired: false, controlUnknown: false, drain: 'UNKNOWN', polling: true },
+  ])('keeps terminal report polling separate from resource settlement: %j', async (observation) => {
+    const task: ValidationTask = {
+      ...saved,
+      nextStartSequence: '2',
+      permission: {
+        phase: 'CLOSED',
+        taskGeneration: generation,
+        revision: '1',
+        sequence: '1',
+        command: '40000000-0000-4000-8000-000000000001',
+        run: 'retained',
+      },
+    }
+    const read = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) =>
+      json({
+        original: JSON.parse(String(init?.body)),
+        run: 'retained',
+        outcome: 'ACCEPTED',
+        ...observation,
+        admitted: true,
+        waiting: false,
+        reason: null,
+        tables: [],
+        premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+        conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+      }),
+    )
+    const onTerminal = vi.fn()
+    await mount(
+      <ValidationRunPanel
+        client={createValidationClient(read)}
+        task={task}
+        original={null}
+        onTerminal={onTerminal}
+        onReportOpen={() => {}}
+      />,
+    )
+    await settled(() => expect(document.body.textContent).toContain(observation.drain))
+    expect(read).toHaveBeenCalledTimes(1)
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 2100))
+    })
+    expect(read).toHaveBeenCalledTimes(observation.polling ? 2 : 1)
+    expect(onTerminal).not.toHaveBeenCalled()
+  })
+  it('retries only the original START after a lost request before entry dispatch', async () => {
+    const starts: unknown[] = [],
+      read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+        const action = String(path),
+          body = init?.body ? JSON.parse(String(init.body)) : null
+        if (action.endsWith(':evaluate')) return json(evaluate(body))
+        if (action.endsWith(':start')) {
+          starts.push(body)
+          throw new TypeError('wire failed before entry')
+        }
+        if (action.endsWith(':progress'))
+          return json({
+            original: body,
+            run: 'unconfirmed-run',
+            outcome: 'UNKNOWN',
+            state: null,
+            admitted: false,
+            waiting: false,
+            controlUnknown: true,
+            retired: false,
+            drain: 'UNKNOWN',
+            reason: null,
+            tables: [],
+            premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+            conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+          })
+        if (action.includes('/reports/')) return json(null, 404)
+        return json(saved)
+      })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 3 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+    await click('dataValidation.bulk.start')
+    await settled(() => expect(starts).toHaveLength(1))
+    await settled(() => expect(button('dataValidation.retryOriginalStart')).toBeDefined())
+    expect(document.querySelectorAll('[role="alert"]')).toHaveLength(1)
+    await click('dataValidation.retryOriginalStart')
+    await settled(() => expect(starts).toHaveLength(2))
+    expect(starts[1]).toEqual(starts[0])
+    expect(document.body.textContent).not.toContain('dataValidation.run.startNotSent')
+  })
+  it('unlocks explicit reload after original-save conflict, including a concurrent fresh creation', async () => {
+    const saves: unknown[] = [],
+      read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+        const action = String(path),
+          body = init?.body ? JSON.parse(String(init.body)) : null
+        if (action.endsWith(':evaluate')) return json(evaluate(body))
+        if (action.endsWith(':save')) {
+          saves.push(body)
+          if (saves.length === 1) throw new TypeError('save response lost')
+          return json({ outcome: 'CONFLICT', fingerprint: null, taskGeneration: null }, 409)
+        }
+        return saves.length ? json({ ...saved, revision: '2' }) : json(null, 404)
+      })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 4 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.bulk.save')).toBeDefined())
+    await click('dataValidation.methods.COUNT')
+    await click('dataValidation.bulk.save')
+    await settled(() => expect(button('dataValidation.retryOriginalSave')).toBeDefined())
+    await click('dataValidation.retryOriginalSave')
+    await settled(() => expect(saves).toHaveLength(2))
+    expect(saves[1]).toEqual(saves[0])
+    await settled(() => expect(button('dataValidation.reloadDefinition').disabled).toBe(false))
+  })
+  it('accepts the canonical saved whole-second anchor without treating a successful save as unknown', async () => {
+    vi.spyOn(Date.prototype, 'toISOString').mockReturnValue('2026-10-30T00:00:00.000Z')
+    let current = saved
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path),
+        body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':evaluate')) return json(evaluate(body))
+      if (action.endsWith(':schedule-preview'))
+        return json({
+          base: '2026-10-30T00:00:00Z',
+          inputRevision: body.inputRevision,
+          zoneId: body.schedule.zoneId,
+          rulesVersion: 'validation-unix-v1',
+          occurrences: Array.from({ length: 5 }, (_, i) => ({
+            at: `2026-11-0${i + 1}T00:00:00Z`,
+            local: `2026-11-0${i + 1}T08:00`,
+            offset: '+08:00',
+            weekday: 'MONDAY',
+          })),
+        })
+      if (action.endsWith(':save')) {
+        current = {
+          ...saved,
+          revision: '2',
+          schedule: { ...body.schedule, anchor: body.schedule.anchor.replace('.000Z', 'Z') },
+        }
+        return json({ outcome: 'APPLIED', fingerprint, taskGeneration: generation })
+      }
+      return json(current)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 5 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.schedule.title').disabled).toBe(false))
+    await click('dataValidation.schedule.title')
+    const every = document.getElementById('validation-every') as HTMLInputElement
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(every, '1')
+      every.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await settled(() => expect(button('dataValidation.schedule.save').disabled).toBe(false))
+    await click('dataValidation.schedule.save')
+    await settled(() => expect(document.body.textContent).toContain('dataValidation.saved'))
+    expect(document.body.textContent).not.toContain('dataValidation.unknownSave')
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+  it('offers explicit reload when another writer creates the task before the fresh evaluation', async () => {
+    const read = vi.fn(async (path: RequestInfo | URL) =>
+      String(path).endsWith(':evaluate')
+        ? json(
+            {
+              code: 'validation.invalid-contract',
+              message: 'Task revision changed.',
+              params: { field: 'configuration.taskRevision' },
+            },
+            409,
+          )
+        : json(null, 404),
+    )
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 6 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.bulk.save')).toBeDefined())
+    await click('dataValidation.methods.COUNT')
+    await click('dataValidation.bulk.save')
+    await settled(() => expect(button('dataValidation.reloadDefinition').disabled).toBe(false))
+    expect(read.mock.calls.some(([path]) => String(path).endsWith(':save'))).toBe(false)
+  })
+  it('does not create a manual selector when the fresh task read discovers a scheduled permission', async () => {
+    let taskReads = 0
+    const command = '40000000-0000-4000-8000-000000000001',
+      occupied = {
+        ...saved,
+        nextStartSequence: '2',
+        permission: {
+          phase: 'BORN',
+          taskGeneration: generation,
+          revision: '1',
+          sequence: '1',
+          command,
+          run: 'scheduled-live',
+        },
+      }
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path),
+        body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':evaluate')) return json(evaluate(body))
+      if (action.endsWith(':progress') || action.endsWith(':stop') || action.endsWith(':start'))
+        return json({
+          original: body,
+          run: 'scheduled-live',
+          outcome: 'ACCEPTED',
+          state: 'RUNNING',
+          admitted: true,
+          waiting: false,
+          controlUnknown: false,
+          retired: false,
+          drain: 'NOT_DRAINED',
+          reason: null,
+          tables: [],
+          premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+          conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+        })
+      taskReads++
+      return json(taskReads >= 3 ? occupied : saved)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 7 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(taskReads).toBe(2))
+    await click('dataValidation.bulk.start')
+    await settled(() => expect(taskReads).toBeGreaterThanOrEqual(3))
+    expect(
+      read.mock.calls.some(
+        ([path]) => String(path).endsWith(':evaluate') || String(path).endsWith(':start'),
+      ),
+    ).toBe(false)
+    await settled(() => expect(button('dataValidation.run.stop').disabled).toBe(false))
+    await click('dataValidation.run.stop')
+    await click('dataValidation.run.confirmStop')
+    const stopped = read.mock.calls.find(([path]) => String(path).endsWith(':stop'))
+    expect(JSON.parse(String(stopped?.[1]?.body)).command).toBe(command)
+  })
+  it('allows a new manual run after an unused scheduled entry is explicitly stopped and fully drained', async () => {
+    const command = '50000000-0000-4000-8000-000000000001',
+      observed = {
+        ...saved,
+        scheduleObservation: {
+          node: context.node,
+          boot: context.boot,
+          member: context.member,
+          context: context.incarnation,
+          observedAt: '2026-10-30T00:00:00Z',
+          nextDue: null,
+          lastDue: null,
+          state: 'START_REQUESTED',
+          reason: null,
+          command,
+          run: 'unused-entry',
+          sequence: '1',
+        },
+      }
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) =>
+      String(path).endsWith(':progress')
+        ? json({
+            original: JSON.parse(String(init?.body)),
+            run: 'unused-entry',
+            outcome: 'ACCEPTED',
+            state: 'STOPPED',
+            admitted: false,
+            waiting: false,
+            controlUnknown: false,
+            retired: false,
+            drain: 'DRAINED',
+            reason: null,
+            tables: [],
+            premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+            conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+          })
+        : json(observed),
+    )
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 8 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+    expect(read.mock.calls.some(([path]) => String(path).endsWith(':start'))).toBe(false)
+  })
+  it('keeps an explicitly opened report fixed while the next scheduled permission appears', async () => {
+    const oldCommand = '60000000-0000-4000-8000-000000000001',
+      newCommand = '70000000-0000-4000-8000-000000000001'
+    let current = {
+      ...saved,
+      nextStartSequence: '2',
+      permission: {
+        phase: 'CLOSED',
+        taskGeneration: generation,
+        revision: '1',
+        sequence: '1',
+        command: oldCommand,
+        run: 'old-report',
+      },
+    }
+    const boundary = {
+      readId: 'read',
+      contractVersion: 'native-count-v1',
+      startedAt: '2026-10-30T00:00:00Z',
+      finishedAt: '2026-10-30T00:00:01Z',
+    }
+    const table = {
+      node: 'input',
+      source: 'source',
+      database: null,
+      schema: null,
+      table: 'orders',
+      modelVersion: null,
+      codecBinding: null,
+    }
+    const report = {
+      reference: { pipeline: 'flow', task: 'full', generation, sequence: '1', run: 'old-report' },
+      method: 'COUNT',
+      mappingRevision: '1',
+      rulesVersion: 'direct-full-v1',
+      fingerprint,
+      mappings: [
+        {
+          id: 'orders',
+          outputKind: 'SYNC',
+          output: 'out',
+          source: table,
+          target: { ...table, node: 'out', source: 'target', table: 'checked_orders' },
+          keys: null,
+        },
+      ],
+      closed: true,
+      terminal: 'COMPLETED',
+      terminalKnownAt: boundary.finishedAt,
+      endedAt: boundary.finishedAt,
+      window: { startedAt: boundary.startedAt, finishedAt: boundary.finishedAt },
+      failure: null,
+      rootCount: '0',
+      retainedBytes: '1',
+      counts: [
+        {
+          mapping: 'orders',
+          output: 'out',
+          source: '1',
+          target: '1',
+          difference: '0',
+          sourceRead: boundary,
+          targetRead: boundary,
+        },
+      ],
+      result: 'COMPLETE_NO_ISSUES_OBSERVED',
+      premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+      premiseVerifiedBySystem: false,
+      conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+      physicalDrain: 'UNKNOWN',
+    }
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path),
+        body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':progress'))
+        return json({
+          original: body,
+          run: body.command === oldCommand ? 'old-report' : 'next-report',
+          outcome: 'ACCEPTED',
+          state: body.command === oldCommand ? 'COMPLETED' : 'RUNNING',
+          admitted: true,
+          waiting: false,
+          controlUnknown: false,
+          retired: body.command === oldCommand,
+          drain: body.command === oldCommand ? 'DRAINED' : 'NOT_DRAINED',
+          reason: null,
+          tables: [],
+          premise: report.premise,
+          conclusionScope: report.conclusionScope,
+        })
+      if (action.includes('/reports/old-report')) return json(report)
+      return json(current)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 9 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.report.open').disabled).toBe(false))
+    await click('dataValidation.report.open')
+    await settled(() =>
+      expect(document.body.textContent).toContain(
+        'dataValidation.report.results.COMPLETE_NO_ISSUES_OBSERVED',
+      ),
+    )
+    current = {
+      ...current,
+      nextStartSequence: '3',
+      permission: {
+        ...current.permission,
+        phase: 'BORN',
+        sequence: '2',
+        command: newCommand,
+        run: 'next-report',
+      },
+    }
+    await act(async () => {
+      await queries!.invalidateQueries()
+    })
+    await settled(() =>
+      expect(
+        read.mock.calls.filter(([path]) => String(path).endsWith('/validation-tasks/full')).length,
+      ).toBeGreaterThan(2),
+    )
+    expect(document.body.textContent).toContain(
+      'dataValidation.report.results.COMPLETE_NO_ISSUES_OBSERVED',
+    )
+    expect(read.mock.calls.some(([path]) => String(path).includes('/reports/next-report'))).toBe(
+      false,
+    )
+    expect(document.querySelector('[aria-label="dataValidation.run.title"]')).toBeNull()
+  })
+  it('keeps schedule OFF available during an admitted manual run and preserves its original revision', async () => {
+    const schedule = {
+      kind: 'CRON',
+      every: null,
+      unit: null,
+      anchor: null,
+      expression: '0 2 * * *',
+      zoneId: 'UTC',
+    }
+    let current = { ...saved, schedule, scheduleEnabled: true }
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path),
+        body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':evaluate')) return json(evaluate(body))
+      if (action.endsWith(':start'))
+        current = {
+          ...current,
+          nextStartSequence: '2',
+          permission: {
+            phase: 'BORN',
+            taskGeneration: generation,
+            revision: '1',
+            sequence: '1',
+            command: body.command,
+            run: 'manual-run',
+          },
+        } as typeof current
+      if (action.endsWith(':progress') || action.endsWith(':start'))
+        return json({
+          original: body,
+          run: 'manual-run',
+          outcome: 'ACCEPTED',
+          state: 'RUNNING',
+          admitted: true,
+          waiting: false,
+          controlUnknown: false,
+          retired: false,
+          drain: 'NOT_DRAINED',
+          reason: null,
+          tables: [],
+          premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+          conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+        })
+      if (action.endsWith(':schedule-disable')) {
+        current = { ...current, revision: '2', scheduleEnabled: false }
+        return json({
+          outcome: 'APPLIED',
+          taskGeneration: generation,
+          receiptRevision: '2',
+          command: body.command,
+          scheduleEnabled: false,
+        })
+      }
+      if (action.endsWith(':schedule-preview'))
+        return json({
+          base: '2026-10-30T00:00:00Z',
+          inputRevision: body.inputRevision,
+          zoneId: body.schedule.zoneId,
+          rulesVersion: 'validation-unix-v1',
+          occurrences: Array.from({ length: 5 }, (_, i) => ({
+            at: `2026-11-0${i + 1}T00:00:00Z`,
+            local: `2026-11-0${i + 1}T00:00`,
+            offset: '+00:00',
+            weekday: 'MONDAY',
+          })),
+        })
+      return json(current)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 10 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+    await click('dataValidation.bulk.start')
+    await settled(() => expect(button('dataValidation.run.stop').disabled).toBe(false))
+    expect(document.querySelector('.validation-bulk')?.closest('[hidden]')).not.toBeNull()
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('dataValidation.run.title')
+    await settled(() =>
+      expect(document.body.textContent).toContain('dataValidation.run.states.RUNNING'),
+    )
+    expect(
+      [...document.querySelectorAll('button')].some(
+        (node) => node.textContent === 'dataValidation.retryOriginalStart',
+      ),
+    ).toBe(false)
+    await click('dataValidation.run.backSettings')
+    expect(document.querySelector('.validation-bulk')?.closest('[hidden]')).toBeNull()
+    expect(button('dataValidation.schedule.title').disabled).toBe(false)
+    await click('dataValidation.schedule.title')
+    await click('dataValidation.schedule.disable')
+    await settled(() => expect(document.body.textContent).toContain('dataValidation.schedule.off'))
+    expect(read.mock.calls.filter(([path]) => String(path).endsWith(':start'))).toHaveLength(1)
+    expect(read.mock.calls.some(([path]) => String(path).endsWith(':stop'))).toBe(false)
+    const progress = read.mock.calls.find(([path]) => String(path).endsWith(':progress'))
+    expect(JSON.parse(String(progress?.[1]?.body)).revision).toBe('1')
+  })
+})
+
+it.each(['DRAINED', 'UNKNOWN'])(
+  'returns keyboard focus after a definite unadmitted original (drain=%s)',
+  async (drain) => {
+    let allowStart = false
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path),
+        body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':evaluate')) return json(evaluate(body))
+      if (action.endsWith(':start') || action.endsWith(':progress'))
+        return json({
+          original: body,
+          run: 'not-admitted',
+          outcome: allowStart ? 'ACCEPTED' : 'REJECTED',
+          state: allowStart ? 'RUNNING' : null,
+          admitted: allowStart,
+          waiting: false,
+          controlUnknown: false,
+          retired: !allowStart,
+          drain: allowStart ? 'NOT_DRAINED' : drain,
+          reason: null,
+          tables: [],
+          premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+          conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+        })
+      return json(saved)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 115 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+    await click('dataValidation.bulk.start')
+    await settled(() =>
+      expect(document.body.textContent).toContain('dataValidation.run.notAdmitted'),
+    )
+    expect(
+      [...document.querySelectorAll('button')].some(
+        (node) => node.textContent === 'dataValidation.run.view',
+      ),
+    ).toBe(false)
+    await click('dataValidation.run.backSettings')
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('dataValidation.bulk.title')
+    allowStart = true
+    await act(async () => {
+      button('dataValidation.bulk.start').click()
+    })
+    expect(document.body.textContent).not.toContain('dataValidation.run.notAdmitted')
+  },
+)
+
+it.each(['START_REQUESTED', 'UNKNOWN'] as const)(
+  'retains the original scheduled %s selector after schedule OFF and history return',
+  async (state) => {
+    const command = '80000000-0000-4000-8000-000000000001'
+    let stopped = false
+    let current: ValidationTask = {
+      ...saved,
+      scheduleEnabled: true,
+      schedule: {
+        kind: 'INTERVAL',
+        every: '30',
+        unit: 'MINUTES',
+        anchor: '2026-10-31T00:00:00Z',
+        expression: null,
+        zoneId: 'Asia/Shanghai',
+      },
+      scheduleObservation: {
+        node: context.node,
+        boot: context.boot,
+        member: context.member,
+        context: context.incarnation,
+        observedAt: '2026-10-31T00:01:00Z',
+        nextDue: null,
+        lastDue: '2026-10-31T00:00:00Z',
+        state,
+        reason: null,
+        command,
+        run: 'pending-scheduled-entry',
+        sequence: '1',
+      },
+    }
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path),
+        body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':schedule-disable')) {
+        current = {
+          ...current,
+          revision: '2',
+          scheduleEnabled: false,
+          scheduleObservation: null,
+          context: { ...context, node: 'another-node', boot: 'another-boot' },
+        }
+        return json({
+          outcome: 'APPLIED',
+          taskGeneration: generation,
+          receiptRevision: '2',
+          command: body.command,
+          scheduleEnabled: false,
+        })
+      }
+      if (action.endsWith(':progress') || action.endsWith(':stop')) {
+        if (action.endsWith(':stop')) stopped = true
+        return json({
+          original: body,
+          run: 'pending-scheduled-entry',
+          outcome: stopped ? 'ACCEPTED' : 'UNKNOWN',
+          state: stopped ? 'STOPPED' : null,
+          admitted: false,
+          waiting: false,
+          controlUnknown: !stopped,
+          retired: stopped,
+          drain: stopped ? 'DRAINED' : 'UNKNOWN',
+          reason: null,
+          tables: [],
+          premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+          conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+        })
+      }
+      if (action.includes('/reports?')) return json({ items: [], total: '0', offset: 0, limit: 20 })
+      return json(current)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 117 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.run.stop').disabled).toBe(false))
+    await click('dataValidation.run.backSettings')
+    await click('dataValidation.schedule.title')
+    await click('dataValidation.schedule.disable')
+    await settled(() => expect(document.body.textContent).toContain('dataValidation.schedule.off'))
+    expect(button('dataValidation.run.stop').disabled).toBe(false)
+    await act(async () => {
+      await queries!.refetchQueries({ queryKey: ['validation', 'progress'], type: 'active' })
+    })
+    const progress = read.mock.calls.filter(([path]) => String(path).endsWith(':progress')).at(-1)!
+    const original = JSON.parse(String(progress[1]?.body))
+    expect(original).toEqual({
+      context,
+      pipeline: 'flow',
+      task: 'full',
+      taskGeneration: generation,
+      revision: '1',
+      sequence: '1',
+      command,
+    })
+    expect(button('dataValidation.bulk.start').disabled).toBe(true)
+    expect(document.body.textContent).not.toContain('dataValidation.retryOriginalStart')
+    await click('dataValidation.schedule.back')
+    await click('dataValidation.history.title')
+    await click('dataValidation.schedule.back')
+    await click('dataValidation.run.view')
+    await click('dataValidation.run.stop')
+    await click('dataValidation.run.confirmStop')
+    await settled(() => expect(stopped).toBe(true))
+    const stop = read.mock.calls.find(([path]) => String(path).endsWith(':stop'))!
+    expect(JSON.parse(String(stop[1]?.body))).toEqual(original)
+    await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+    expect(read.mock.calls.some(([path]) => String(path).endsWith(':start'))).toBe(false)
+  },
+)
+
+it.each([false, true])(
+  'reconciles only a definite unused scheduled admission while physical drain stays UNKNOWN (controlUnknown=%s)',
+  async (controlUnknown) => {
+    const command = '90000000-0000-4000-8000-000000000001'
+    const observed: ValidationTask = {
+      ...saved,
+      scheduleObservation: {
+        node: context.node,
+        boot: context.boot,
+        member: context.member,
+        context: context.incarnation,
+        observedAt: '2026-10-31T00:01:00Z',
+        nextDue: null,
+        lastDue: '2026-10-31T00:00:00Z',
+        state: 'UNKNOWN',
+        reason: null,
+        command,
+        run: 'unused-scheduled-entry',
+        sequence: '1',
+      },
+    }
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) =>
+      String(path).endsWith(':progress')
+        ? json({
+            original: JSON.parse(String(init?.body)),
+            run: 'unused-scheduled-entry',
+            outcome: controlUnknown ? 'UNKNOWN' : 'REJECTED',
+            state: null,
+            admitted: false,
+            waiting: false,
+            controlUnknown,
+            retired: true,
+            drain: 'UNKNOWN',
+            reason: null,
+            tables: [],
+            premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+            conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+          })
+        : json(observed),
+    )
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 118 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(document.body.textContent).toContain('UNKNOWN'))
+    await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(controlUnknown))
+    expect(document.body.textContent).not.toContain('dataValidation.retryOriginalStart')
+    expect(read.mock.calls.some(([path]) => String(path).endsWith(':start'))).toBe(false)
+  },
+)
+
+it('updates live schedule admission observations without overwriting an unsaved rule', async () => {
+  let observation: ValidationTask['scheduleObservation'] = null
+  const planned: ValidationTask = {
+    ...saved,
+    schedule: {
+      kind: 'INTERVAL',
+      every: '30',
+      unit: 'MINUTES',
+      anchor: '2026-10-31T00:00:00Z',
+      expression: null,
+      zoneId: 'Asia/Shanghai',
+    },
+    scheduleEnabled: true,
+  }
+  const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+    if (String(path).endsWith(':schedule-preview')) {
+      const body = JSON.parse(String(init?.body))
+      return json({
+        base: '2026-10-31T00:00:00Z',
+        inputRevision: body.inputRevision,
+        zoneId: body.schedule.zoneId,
+        rulesVersion: 'validation-unix-v1',
+        occurrences: Array.from({ length: 5 }, (_, i) => ({
+          at: `2026-11-0${i + 1}T00:00:00Z`,
+          local: `2026-11-0${i + 1}T08:00:00`,
+          offset: '+08:00',
+          weekday: 'MONDAY',
+        })),
+      })
+    }
+    return json({ ...planned, scheduleObservation: observation })
+  })
+  useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 116 })
+  await mount(<ValidationPage pipelineId="flow" />)
+  await settled(() => expect(button('dataValidation.schedule.title').disabled).toBe(false))
+  await click('dataValidation.schedule.title')
+  const every = document.getElementById('validation-every') as HTMLInputElement
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(every, '7')
+    every.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  observation = {
+    node: context.node,
+    boot: context.boot,
+    member: context.member,
+    context: context.incarnation,
+    observedAt: '2026-10-31T00:01:00Z',
+    nextDue: '2026-10-31T00:30:00Z',
+    lastDue: '2026-10-31T00:00:00Z',
+    state: 'SKIPPED_BUSY',
+    reason: 'controlled-full-slot-busy',
+    command: null,
+    run: null,
+    sequence: null,
+  }
+  await act(async () => {
+    await queries!.refetchQueries({ queryKey: ['validation', 'live'] })
+  })
+  await settled(() => expect(document.body.textContent).toContain('controlled-full-slot-busy'))
+  expect((document.getElementById('validation-every') as HTMLInputElement).value).toBe('7')
+  expect(document.body.textContent).not.toContain('dataValidation.definitionChanged')
+})

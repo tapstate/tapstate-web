@@ -1,0 +1,123 @@
+{
+  "date": "2026-11-01",
+  "scope": "Actual retained OP account/data and production APIs; temporary viewport/language restored, no validation draft saved by these checks.",
+  "runtime": "cad461990d466a5483dd479f46bc441791da8cbc",
+  "web": "757cf6300761f63aabbb5230c0d3b9657e000765",
+  "artifactSha256": "181664a483731e2d41c12396a2ebbdb4dd0ee39ae7645fa1168dbb93e8e65573",
+  "methodBounds": {
+    "en": {
+      "beforeMaxRight": 516.1171875,
+      "afterMaxRight": 332.3046875
+    },
+    "zh-CN": {
+      "afterMaxRight": 281
+    },
+    "zh-TW": {
+      "afterMaxRight": 294
+    }
+  },
+  "interactions": {
+    "allNineMethodChoicesSelected": true,
+    "draftsNotSaved": true,
+    "originalEnglishAndViewportRestored": true,
+    "renamedTargetSearchReturnsOneRow": true,
+    "dirtyKeySurvivesHistoryAndReport": true,
+    "dirtyStartDisabledAfterHistory": true,
+    "savedKeyRestoredByExplicitReload": "tenant_id",
+    "mySqlRevision": "13",
+    "mySqlNextSequence": "11",
+    "schedulesOff": true
+  },
+  "pgManualFull": {
+    "revision": "8",
+    "sequence": "9",
+    "run": "full-d7634281a3fa8c89e9cbf134976c164f27242743bd42f77994322bc7c994eaa5",
+    "state": "COMPLETED",
+    "drain": "DRAINED",
+    "roots": 4
+  },
+  "images": [
+    {
+      "file": "before-en-375x812.png",
+      "sha256": "e93aba0984d62c5bc607f561b16f168b3e553f6a012c676c257f697162f1b8b7",
+      "pixels": [375, 812],
+      "cssViewport": [375, 812],
+      "runtime": "4680a70c57af8269198525b3f15b58b84b75823a",
+      "web": "738e6f67450c474b54e795673eea41d60296ceef",
+      "mediaType": "image/jpeg"
+    },
+    {
+      "file": "after-en-375x812.png",
+      "sha256": "a9f988ed9801288752d9da69c3ee4bb7a03e56576ae90a4fb0a692c1c6333aca",
+      "pixels": [375, 812],
+      "cssViewport": [375, 812],
+      "runtime": "cad461990d466a5483dd479f46bc441791da8cbc",
+      "web": "757cf6300761f63aabbb5230c0d3b9657e000765",
+      "mediaType": "image/jpeg"
+    },
+    {
+      "file": "after-zh-CN-375x812.png",
+      "sha256": "ed50dbfd8db494d2428b2a46316d455147cd381cf38cca696bf194f0c5d0b28e",
+      "pixels": [375, 812],
+      "cssViewport": [375, 812],
+      "runtime": "cad461990d466a5483dd479f46bc441791da8cbc",
+      "web": "757cf6300761f63aabbb5230c0d3b9657e000765",
+      "mediaType": "image/jpeg"
+    },
+    {
+      "file": "after-zh-TW-375x812.png",
+      "sha256": "326672aebfaf30843ffacabc705528c572c624c30a36cec928b5ac3c476fdf56",
+      "pixels": [375, 812],
+      "cssViewport": [375, 812],
+      "runtime": "cad461990d466a5483dd479f46bc441791da8cbc",
+      "web": "757cf6300761f63aabbb5230c0d3b9657e000765",
+      "mediaType": "image/jpeg"
+    },
+    {
+      "file": "renamed-destination-search.png",
+      "sha256": "dc857464d1454a00246144348324ced5fbaa9b7c015288e75a6d845fc2c663b5",
+      "pixels": [1728, 885],
+      "cssViewport": [1728, 885],
+      "runtime": "cad461990d466a5483dd479f46bc441791da8cbc",
+      "web": "757cf6300761f63aabbb5230c0d3b9657e000765",
+      "mediaType": "image/jpeg"
+    },
+    {
+      "file": "dirty-key-preserved-after-report.png",
+      "sha256": "71a7ef2520c0cf2bd0234373d03ee72daf1e68220f8bef9d1802c6af3d17750c",
+      "pixels": [1728, 885],
+      "cssViewport": [1728, 885],
+      "runtime": "cad461990d466a5483dd479f46bc441791da8cbc",
+      "web": "757cf6300761f63aabbb5230c0d3b9657e000765",
+      "mediaType": "image/jpeg"
+    },
+    {
+      "file": "dirty-key-start-disabled-after-history.png",
+      "sha256": "71a7ef2520c0cf2bd0234373d03ee72daf1e68220f8bef9d1802c6af3d17750c",
+      "pixels": [1728, 885],
+      "cssViewport": [1728, 885],
+      "runtime": "cad461990d466a5483dd479f46bc441791da8cbc",
+      "web": "757cf6300761f63aabbb5230c0d3b9657e000765",
+      "mediaType": "image/jpeg"
+    },
+    {
+      "file": "candidate-pg-full-complete.png",
+      "sha256": "50a8184d8a48fb4bbfce69109149cdceb92b907530fd9fa6e839ab3bf1c3eef8",
+      "pixels": [1728, 885],
+      "cssViewport": [1728, 885],
+      "runtime": "cad461990d466a5483dd479f46bc441791da8cbc",
+      "web": "757cf6300761f63aabbb5230c0d3b9657e000765",
+      "mediaType": "image/jpeg"
+    },
+    {
+      "file": "candidate-pg-full-report.png",
+      "sha256": "58652bca9a3290d1d5eb2015e3cd874507d2975608aeb9f08aef12d3fb483cc9",
+      "pixels": [1728, 885],
+      "cssViewport": [1728, 885],
+      "runtime": "cad461990d466a5483dd479f46bc441791da8cbc",
+      "web": "757cf6300761f63aabbb5230c0d3b9657e000765",
+      "mediaType": "image/jpeg"
+    }
+  ],
+  "captureEncoding": "Browser captures are JPEG bytes with legacy .png filenames. Pixel dimensions were read by the image decoder; no image content or capture hash changed."
+}

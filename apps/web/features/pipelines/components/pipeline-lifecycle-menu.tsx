@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import { Button as SharedUIButton } from '@tapstate-web/ui/button'
 import { Copy, LoaderCircle, MoreHorizontal, Pencil, Play, Square, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState, type RefObject } from 'react'
@@ -261,7 +262,6 @@ export function PipelineLifecycleMenu({
   )
   const actionButtonLabel = resolvedAction ? `${actionLabel} pipeline ${pipelineId}` : null
   const editLabel = t('pipelines.actions.editPipeline', { id: pipelineId })
-  const editHref = `/pipelines/${encodeURIComponent(pipelineId)}/edit`
   const ActionIcon = resolvedAction === 'start' ? Play : Square
 
   function requestAction(
@@ -334,7 +334,9 @@ export function PipelineLifecycleMenu({
                 {t('pipelines.lifecycle.clearState')}
               </DropdownMenuItem>
             ) : null}
-            <DropdownMenuItem onClick={() => window.location.assign(editHref)}>
+            <DropdownMenuItem
+              render={<Link to="/pipelines/$pipelineId/edit" params={{ pipelineId }} />}
+            >
               <Pencil className="size-4 shrink-0" aria-hidden="true" />
               {editLabel}
             </DropdownMenuItem>
@@ -411,14 +413,15 @@ export function PipelineLifecycleMenu({
                 )}
               </button>
             )}
-            <a
-              href={editHref}
+            <Link
+              to="/pipelines/$pipelineId/edit"
+              params={{ pipelineId }}
               className="pipeline-list__action-button border-r border-gray-200 px-2.5 py-1.5 text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900"
               aria-label={editLabel}
               title={editLabel}
             >
               <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-            </a>
+            </Link>
             {renderLifecycleDropdown({
               triggerRef: moreTriggerRef,
               triggerLabel: t('pipelines.actions.morePipeline', { id: pipelineId }),

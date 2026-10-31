@@ -41,6 +41,20 @@ vi.mock('@tanstack/react-router', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@tanstack/react-router')>()),
   useNavigate: () => navigate,
   useSearch: () => ({}),
+  Link: ({
+    to,
+    params,
+    children,
+    ...props
+  }: {
+    to: string
+    params?: { pipelineId: string }
+    children?: React.ReactNode
+  }) => (
+    <a {...props} href={to.replace('$pipelineId', encodeURIComponent(params?.pipelineId ?? ''))}>
+      {children}
+    </a>
+  ),
 }))
 
 vi.mock('@/service/source-client', () => ({ listSources }))
