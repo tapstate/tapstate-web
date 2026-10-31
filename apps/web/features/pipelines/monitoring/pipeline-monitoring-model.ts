@@ -1,4 +1,8 @@
-import type { PipelineMetrics, PipelineStatus } from '@/service/pipelines/pipeline-client'
+import type {
+  PipelineMetrics,
+  PipelineStatus,
+  PipelineView,
+} from '@/service/pipelines/pipeline-client'
 import type {
   PipelineExplain,
   PipelineInitialLoadStage,
@@ -51,8 +55,15 @@ export interface MonitoringHealth {
 
 export type TablePhase = 'pending' | 'loading' | 'streaming' | 'loaded' | 'unknown'
 
+/** Where a source table sits in a nest document: its root, or an embed at a document path. */
+export type TableRole = { kind: 'root' } | { kind: 'embed'; path: string }
+
 export interface MonitoringTableRow {
   table: string
+  /** Empty unless a nest of the running definition reads this table. */
+  roles: TableRole[]
+  /** The sources this table is read from, per the running definition. */
+  sources: string[]
   phase: TablePhase
   rowsRead: number | null
   rowsTotal: number | null
@@ -178,10 +189,71 @@ function recordsInByTable(metrics: PipelineMetrics | undefined) {
   return totals
 }
 
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/** The table a `source.table` input reference names; null for an input that is another step. */
+function tableOfReference(reference: unknown, sourceIds: ReadonlySet<string>) {
+  if (typeof reference !== 'string') return null
+  const dot = reference.indexOf('.')
+  if (dot <= 0 || !sourceIds.has(reference.slice(0, dot))) return null
+  return reference.slice(dot + 1)
+}
+
+function nestRoles(
+  step: Record<string, unknown>,
+  sourceIds: ReadonlySet<string>,
+  roles: Map<string, TableRole[]>,
+) {
+  const aliases = isObject(step.from) ? step.from : {}
+  const tableOf = (from: unknown) =>
+    tableOfReference(typeof from === 'string' && from in aliases ? aliases[from] : from, sourceIds)
+  const add = (table: string | null, role: TableRole) => {
+    if (table !== null) roles.set(table, [...(roles.get(table) ?? []), role])
+  }
+  const visit = (embeds: unknown, parentPath: string) => {
+    if (!Array.isArray(embeds)) return
+    for (const embed of embeds) {
+      if (!isObject(embed) || typeof embed.path !== 'string') continue
+      const segment = String(embed.as).toUpperCase() === 'ARRAY' ? `${embed.path}[]` : embed.path
+      const path = parentPath ? `${parentPath}.${segment}` : segment
+      add(tableOf(embed.from), { kind: 'embed', path })
+      visit(embed.embed, path)
+    }
+  }
+  if (!isObject(step.root)) return
+  add(tableOf(step.root.from ?? step.from), { kind: 'root' })
+  visit(step.root.embed, '')
+}
+
+/** Nest roles and sources per source table, read from the running pipeline definition. */
+export function deriveTableOrigins(definition: PipelineView | undefined) {
+  const roles = new Map<string, TableRole[]>()
+  const sources = new Map<string, string[]>()
+  for (const node of definition?.dag.nodes ?? []) {
+    if (node.type !== 'source' || !node.detail) continue
+    const known = sources.get(node.label) ?? []
+    if (!known.includes(node.detail)) sources.set(node.label, [...known, node.detail])
+  }
+  const sourceIds = new Set([...sources.values()].flat())
+  for (const step of definition?.transforms ?? []) {
+    if (step.type === 'nest') nestRoles(step, sourceIds, roles)
+  }
+  return { roles, sources, multiSource: sourceIds.size > 1 }
+}
+
 export function deriveTables(
   metrics: PipelineMetrics | undefined,
   snapshot: PipelineSnapshot | undefined,
-): { rows: MonitoringTableRow[]; outputs: MonitoringOutput[] } {
+  definition?: PipelineView,
+): {
+  rows: MonitoringTableRow[]
+  outputs: MonitoringOutput[]
+  showRole: boolean
+  showSource: boolean
+} {
+  const origins = deriveTableOrigins(definition)
   const flat = metrics?.metrics ?? {}
   const stalled = byPrefix(flat, STALLED_PREFIX)
   const gaps = byPrefix(flat, GAP_PREFIX)
@@ -201,6 +273,8 @@ export function deriveTables(
     const done = snapshot?.snapshot[table]
     return {
       table,
+      roles: origins.roles.get(table) ?? [],
+      sources: origins.sources.get(table) ?? [],
       phase: phaseOf(loaded?.stage, load?.readMode),
       rowsRead: loaded?.rowsRead ?? done?.rowsDone ?? null,
       rowsTotal: loaded?.rowsTotalEstimate ?? done?.rowsTotal ?? null,
@@ -218,7 +292,12 @@ export function deriveTables(
     .filter(([output]) => !names.has(output))
     .map(([output, newestChangeSeconds]) => ({ output, newestChangeSeconds }))
     .sort((left, right) => left.output.localeCompare(right.output))
-  return { rows, outputs }
+  return {
+    rows,
+    outputs,
+    showRole: rows.some((row) => row.roles.length > 0),
+    showSource: origins.multiSource,
+  }
 }
 
 function attentionRank(row: MonitoringTableRow) {

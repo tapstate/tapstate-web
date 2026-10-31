@@ -1423,7 +1423,9 @@
               "initialLoad": "初始加载",
               "newestChange": "距最新变更",
               "notAdvancing": "未推进时长",
-              "gap": "位点差距"
+              "gap": "位点差距",
+              "source": "来源",
+              "role": "角色"
             },
             "phase": {
               "pending": "等待加载",
@@ -1431,6 +1433,10 @@
               "streaming": "CDC",
               "loaded": "已加载",
               "unknown": "—"
+            },
+            "role": {
+              "root": "根",
+              "embed": "嵌入 · {{path}}"
             }
           },
           "transform": {

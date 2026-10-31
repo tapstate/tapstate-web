@@ -41,7 +41,7 @@ export function PipelineMonitoringPage({
 }) {
   const { i18n, t } = useTranslation()
   const queryClient = useQueryClient()
-  const { status, metrics, snapshot, explain } = usePipelineMonitoringQueries(
+  const { status, metrics, snapshot, explain, definition } = usePipelineMonitoringQueries(
     pipelineId,
     hasArtifact,
   )
@@ -131,7 +131,11 @@ export function PipelineMonitoringPage({
   }
 
   const health = deriveHealth(status.data, explain.data, snapshot.data)
-  const { rows, outputs } = deriveTables(metrics.data, snapshot.data)
+  const { rows, outputs, showRole, showSource } = deriveTables(
+    metrics.data,
+    snapshot.data,
+    definition.data,
+  )
 
   return (
     <section className={`${styles.page} pipeline-monitoring mt-6`}>
@@ -167,7 +171,12 @@ export function PipelineMonitoringPage({
         figures={deriveKeyFigures(metrics.data, snapshot.data)}
         recordsOutRate={recordsOutRate}
       />
-      <MonitoringTablesSection rows={rows} outputs={outputs} />
+      <MonitoringTablesSection
+        rows={rows}
+        outputs={outputs}
+        showRole={showRole}
+        showSource={showSource}
+      />
       <PipelineReadSurface
         pipelineId={pipelineId}
         tables={lagOutputs(metrics.data)}

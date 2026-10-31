@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 
 import {
+  getPipeline,
   getPipelineMetrics,
   getPipelineStatus,
   type PipelineMetrics,
   type PipelineStatus,
+  type PipelineView,
 } from '@/service/pipelines/pipeline-client'
 import {
   getPipelineExplain,
@@ -50,5 +52,13 @@ export function usePipelineMonitoringQueries(pipelineId: string, enabled = true)
     ...manual,
   })
 
-  return { status, metrics, snapshot, explain }
+  // The running definition only labels table rows with their nest role and source.
+  const definition = useQuery<PipelineView>({
+    queryKey: ['pipelines', pipelineId],
+    queryFn: () => getPipeline(pipelineId, apiFetch),
+    enabled,
+    ...manual,
+  })
+
+  return { status, metrics, snapshot, explain, definition }
 }

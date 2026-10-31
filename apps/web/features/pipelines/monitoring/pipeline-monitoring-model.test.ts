@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import type { PipelineMetrics, PipelineStatus } from '@/service/pipelines/pipeline-client'
+import type {
+  PipelineMetrics,
+  PipelineStatus,
+  PipelineView,
+} from '@/service/pipelines/pipeline-client'
 import type {
   PipelineExplain,
   PipelineSnapshot,
@@ -11,6 +15,7 @@ import {
   deriveHealth,
   deriveKeyFigures,
   deriveNestStages,
+  deriveTableOrigins,
   deriveTables,
   groupMetrics,
   lagOutputs,
@@ -160,6 +165,76 @@ describe('deriveTables', () => {
 
     expect(rows).toEqual([expect.objectContaining({ table: 'orders', newestChangeSeconds: 4 })])
     expect(outputs).toEqual([])
+  })
+})
+
+function definition(overrides: Partial<PipelineView>): PipelineView {
+  return { id: 'p', dag: { nodes: [], edges: [] }, contentHash: 'h', ...overrides }
+}
+
+function sourceNode(source: string, table: string) {
+  return { id: `source:${source}:${table}`, type: 'source' as const, label: table, detail: source }
+}
+
+describe('deriveTableOrigins', () => {
+  it('names each nest input by its document path through the step aliases, nested embeds included', () => {
+    const origins = deriveTableOrigins(
+      definition({
+        dag: {
+          nodes: [
+            sourceNode('core', 'bmsql_oorder'),
+            sourceNode('core', 'bmsql_customer'),
+            sourceNode('core', 'bmsql_order_line'),
+            sourceNode('core', 'bmsql_item'),
+          ],
+          edges: [],
+        },
+        transforms: [
+          {
+            id: 'p__nest',
+            type: 'nest',
+            from: {
+              root: 'core.bmsql_oorder',
+              cust: 'core.bmsql_customer',
+              lines: 'core.bmsql_order_line',
+              item: 'core.bmsql_item',
+            },
+            root: {
+              from: 'root',
+              embed: [
+                { from: 'cust', as: 'OBJECT', path: 'customer' },
+                {
+                  from: 'lines',
+                  as: 'ARRAY',
+                  path: 'lines',
+                  embed: [{ from: 'item', as: 'OBJECT', path: 'item' }],
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    )
+
+    expect(Object.fromEntries(origins.roles)).toEqual({
+      bmsql_oorder: [{ kind: 'root' }],
+      bmsql_customer: [{ kind: 'embed', path: 'customer' }],
+      bmsql_order_line: [{ kind: 'embed', path: 'lines[]' }],
+      bmsql_item: [{ kind: 'embed', path: 'lines[].item' }],
+    })
+    expect(origins.multiSource).toBe(false)
+  })
+
+  it('gives a copy no roles and reports a second source', () => {
+    const origins = deriveTableOrigins(
+      definition({
+        dag: { nodes: [sourceNode('mysql', 'orders'), sourceNode('pg', 'orders')], edges: [] },
+      }),
+    )
+
+    expect(origins.roles.size).toBe(0)
+    expect(origins.sources.get('orders')).toEqual(['mysql', 'pg'])
+    expect(origins.multiSource).toBe(true)
   })
 })
 

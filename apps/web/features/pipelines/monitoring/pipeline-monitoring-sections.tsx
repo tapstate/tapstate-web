@@ -282,9 +282,13 @@ function loadCell(
 export function MonitoringTablesSection({
   rows,
   outputs,
+  showRole = false,
+  showSource = false,
 }: {
   rows: MonitoringTableRow[]
   outputs: MonitoringOutput[]
+  showRole?: boolean
+  showSource?: boolean
 }) {
   const { i18n, t } = useTranslation()
   const locale = i18n.language
@@ -343,6 +347,8 @@ export function MonitoringTablesSection({
             <thead>
               <tr>
                 <th scope="col">{t(`${T}.tables.columns.table`)}</th>
+                {showSource && <th scope="col">{t(`${T}.tables.columns.source`)}</th>}
+                {showRole && <th scope="col">{t(`${T}.tables.columns.role`)}</th>}
                 <th scope="col">{t(`${T}.tables.columns.phase`)}</th>
                 <th scope="col" data-align="end">
                   {t(`${T}.tables.columns.initialLoad`)}
@@ -366,6 +372,18 @@ export function MonitoringTablesSection({
                     <th scope="row" className="pipeline-monitoring__table-name" title={row.table}>
                       {row.table}
                     </th>
+                    {showSource && <td>{row.sources.join(', ') || '—'}</td>}
+                    {showRole && (
+                      <td>
+                        {row.roles
+                          .map((role) =>
+                            role.kind === 'root'
+                              ? t(`${T}.tables.role.root`)
+                              : t(`${T}.tables.role.embed`, { path: role.path }),
+                          )
+                          .join(', ') || '—'}
+                      </td>
+                    )}
                     <td>{t(`${T}.tables.phase.${row.phase}`)}</td>
                     <td data-align="end">{loadCell(row, locale, t)}</td>
                     <td data-align="end">

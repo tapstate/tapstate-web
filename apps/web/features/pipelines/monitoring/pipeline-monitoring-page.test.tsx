@@ -5,12 +5,14 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
+  getPipeline,
   getPipelineMetrics,
   getPipelineStatus,
   getPipelineSnapshot,
   getPipelineExplain,
   getPipelineMetricsHistory,
 } = vi.hoisted(() => ({
+  getPipeline: vi.fn(),
   getPipelineMetrics: vi.fn(),
   getPipelineStatus: vi.fn(),
   getPipelineSnapshot: vi.fn(),
@@ -19,6 +21,7 @@ const {
 }))
 
 vi.mock('@/service/pipelines/pipeline-client', () => ({
+  getPipeline,
   getPipelineMetrics,
   getPipelineStatus,
   PipelineClientError: class PipelineClientError extends Error {
@@ -124,6 +127,42 @@ const nestMetrics = {
   ],
 }
 
+const nestDefinition = {
+  id: ID,
+  contentHash: 'h',
+  dag: {
+    nodes: ['bmsql_oorder', 'bmsql_customer', 'bmsql_order_line'].map((table) => ({
+      id: `source:core:${table}`,
+      type: 'source',
+      label: table,
+      detail: 'core',
+    })),
+    edges: [],
+  },
+  transforms: [
+    {
+      id: 'order_360__nest',
+      type: 'nest',
+      from: {
+        root: 'core.bmsql_oorder',
+        customer: 'core.bmsql_customer',
+        lines: 'core.bmsql_order_line',
+      },
+      root: {
+        from: 'root',
+        embed: [
+          { from: 'customer', as: 'OBJECT', path: 'customer' },
+          { from: 'lines', as: 'ARRAY', path: 'lines' },
+        ],
+      },
+    },
+  ],
+}
+
+function columnHeaders() {
+  return [...(container?.querySelectorAll('thead th') ?? [])].map((cell) => cell.textContent)
+}
+
 function rowNames() {
   return [...(container?.querySelectorAll('tbody th[scope="row"]') ?? [])].map(
     (cell) => cell.textContent,
@@ -131,6 +170,7 @@ function rowNames() {
 }
 
 beforeEach(() => {
+  getPipeline.mockResolvedValue(nestDefinition)
   getPipelineStatus.mockResolvedValue({ pipelineId: ID, state: 'RUNNING' })
   getPipelineMetrics.mockResolvedValue(nestMetrics)
   getPipelineSnapshot.mockResolvedValue(snapshot('READING'))
@@ -170,6 +210,15 @@ describe('PipelineMonitoringPage', () => {
     expect(container?.textContent).not.toContain('not advancing for')
   })
 
+  it('labels each table with its place in the nest document from the running definition', async () => {
+    await renderPage()
+
+    await vi.waitFor(() => expect(columnHeaders()).toContain('Role'))
+    const firstRow = container?.querySelector('tbody tr')
+    expect(firstRow?.textContent).toContain('embed · lines[]')
+    expect(columnHeaders()).not.toContain('Source')
+  })
+
   it('shows a stall the server diagnosed once every table has loaded', async () => {
     getPipelineSnapshot.mockResolvedValue(snapshot('LANDED'))
     getPipelineExplain.mockResolvedValue(
@@ -206,16 +255,31 @@ describe('PipelineMonitoringPage', () => {
     expect(rowNames()).not.toContain('nest.ab.run.cd')
   })
 
-  it('omits the transform section for a pipeline with no nest or join state', async () => {
+  it('omits the transform section and role column without a nest, and adds a source column for two sources', async () => {
     getPipelineMetrics.mockResolvedValue({
       pipelineId: ID,
       metrics: { 'lag.orders': 4, 'frontierGap.orders': 0, 'records.in': 10 },
     })
     getPipelineSnapshot.mockResolvedValue({ pipelineId: ID, snapshot: {} })
+    getPipeline.mockResolvedValue({
+      id: ID,
+      contentHash: 'h',
+      dag: {
+        nodes: [
+          { id: 'source:mysql:orders', type: 'source', label: 'orders', detail: 'mysql' },
+          { id: 'source:pg:orders', type: 'source', label: 'orders', detail: 'pg' },
+        ],
+        edges: [],
+      },
+      transforms: [],
+    })
     await renderPage()
 
     await vi.waitFor(() => expect(container?.textContent).toContain('Sync healthy'))
     expect(container?.textContent).not.toContain('Advanced · transform state')
+    expect(columnHeaders()).not.toContain('Role')
+    expect(columnHeaders()).toContain('Source')
+    expect(container?.querySelector('tbody tr')?.textContent).toContain('mysql, pg')
   })
 
   it('pages a copy of many tables 25 at a time', async () => {

@@ -1423,7 +1423,9 @@
               "initialLoad": "Initial load",
               "newestChange": "Time since newest change",
               "notAdvancing": "Not advancing for",
-              "gap": "Frontier gap"
+              "gap": "Frontier gap",
+              "source": "Source",
+              "role": "Role"
             },
             "phase": {
               "pending": "Waiting to load",
@@ -1431,6 +1433,10 @@
               "streaming": "CDC",
               "loaded": "Loaded",
               "unknown": "—"
+            },
+            "role": {
+              "root": "root",
+              "embed": "embed · {{path}}"
             }
           },
           "transform": {
