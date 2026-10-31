@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { SUPPORTED_LOCALES } from '@/i18n'
 import {
   StorageClientError,
+  isStorageQuotaCode,
   type StorageLayer,
   type StorageSnapshot,
 } from '@/service/storage-client'
@@ -72,6 +73,12 @@ export function StorageFrame({ children }: { children: ReactNode }) {
 }
 export function StorageError({ error }: { error: unknown }) {
   const { t } = useTranslation()
+  const quota =
+    error instanceof StorageClientError &&
+    (isStorageQuotaCode(error.code) ||
+      (error.status === 400 &&
+        error.code === 'control.storage-test-failed' &&
+        isStorageQuotaCode(error.causeCode)))
   const connectionKind =
     error instanceof StorageClientError &&
     error.status === 400 &&
@@ -104,7 +111,20 @@ export function StorageError({ error }: { error: unknown }) {
       role="alert"
       className="border-destructive/30 bg-destructive/5 rounded-md border p-3 text-sm"
     >
-      <p>{t(`storage.errors.${kind}`)}</p>
+      <p>{t(quota ? 'storage.errors.quota' : `storage.errors.${kind}`)}</p>
+      {quota && (
+        <div className="mt-2 space-y-2">
+          <p>{t('storage.quotaRecovery')}</p>
+          <a
+            className="inline-flex min-h-11 items-center underline underline-offset-4"
+            href="https://www.mongodb.com/docs/atlas/reference/faq/storage/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t('storage.quotaDocs')}
+          </a>
+        </div>
+      )}
       {error instanceof StorageClientError && error.code.includes('.') && (
         <code className="mt-1 block text-xs">{error.code}</code>
       )}

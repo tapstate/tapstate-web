@@ -2439,7 +2439,8 @@
       "network": "The response could not be verified. Check the connection and the original operation result.",
       "databaseCredentials": "The database rejected these credentials. Check the database username, password and authentication database.",
       "databasePermissions": "This account does not have the required database permissions. Check read, write, index and transaction access on the selected database.",
-      "databaseConnection": "The database could not be reached. Check DNS, network access, the Atlas IP access list and TLS settings."
+      "databaseConnection": "The database could not be reached. Check DNS, network access, the Atlas IP access list and TLS settings.",
+      "quota": "Atlas storage space quota reached"
     },
     "recovery": {
       "title": "Recover runtime storage and pipelines",
@@ -2551,7 +2552,9 @@
     "setupSavedHelp": "The database settings are saved. The cluster is preparing its runtime.",
     "resumeSetupTitle": "Continue saved storage setup",
     "resumeSetupHelp": "These databases are already bound. Use the original connection details to continue. If the previous result is uncertain, refresh its status first.",
-    "resumeSetup": "Continue original setup"
+    "resumeSetup": "Continue original setup",
+    "quotaRecovery": "Ask the Atlas administrator to restore available capacity, then check the original operation. Preserve saved settings and Tapstate databases. Do not submit initialization again.",
+    "quotaDocs": "View Atlas storage guidance"
   },
   "pipelineDetails": {
     "backToPipelines": "Pipelines",

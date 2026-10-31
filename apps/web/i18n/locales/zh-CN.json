@@ -2439,7 +2439,8 @@
       "network": "无法确认响应，请检查连接并核对原操作结果。",
       "databaseCredentials": "数据库拒绝了这些凭据。请检查数据库用户名、密码和认证数据库。",
       "databasePermissions": "此账号缺少所需的数据库权限。请检查所选数据库的读、写、索引和事务权限。",
-      "databaseConnection": "无法连接数据库。请检查 DNS、网络访问、Atlas IP 访问列表和 TLS 设置。"
+      "databaseConnection": "无法连接数据库。请检查 DNS、网络访问、Atlas IP 访问列表和 TLS 设置。",
+      "quota": "Atlas 存储空间已达配额"
     },
     "recovery": {
       "title": "恢复运行存储与 Pipeline",
@@ -2551,7 +2552,9 @@
     "setupSavedHelp": "数据库设置已保存，集群正在初始化运行环境。",
     "resumeSetupTitle": "继续已保存的存储设置",
     "resumeSetupHelp": "数据库绑定已保存。请使用原连接信息继续；若上次结果仍不确定，请先刷新状态。",
-    "resumeSetup": "继续原设置"
+    "resumeSetup": "继续原设置",
+    "quotaRecovery": "请由 Atlas 管理员恢复可用容量，再检查原操作状态。请保留已保存的设置和 Tapstate 数据库，不要重复提交初始化。",
+    "quotaDocs": "查看 Atlas 存储说明"
   },
   "pipelineDetails": {
     "backToPipelines": "Pipelines",

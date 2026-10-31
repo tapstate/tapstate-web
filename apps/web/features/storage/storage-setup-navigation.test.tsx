@@ -845,6 +845,47 @@ describe('whole-site storage boundary', () => {
     },
   )
 
+  it('explains quota refusal and refreshes only the original status without resubmitting setup', async () => {
+    const setup = await startPendingCloudSetup()
+    const snapshot = initializing({ stateVersion: 11 })
+    snapshot.initializationProgress!.state = 'FAILED'
+    snapshot.initializationProgress!.milestones[1] = {
+      id: 'PREPARE_STORAGE',
+      state: 'FAILED',
+      elapsedMillis: 4000,
+      errorCode: 'io.store-quota-exceeded',
+    }
+    setup.snapshot = snapshot
+    await click('Refresh status')
+    expect(container.textContent).toContain('Atlas storage space quota reached')
+    expect(container.textContent).toContain('Do not submit initialization again')
+    expect(
+      container.querySelector(
+        'a[href="https://www.mongodb.com/docs/atlas/reference/faq/storage/"]',
+      ),
+    ).not.toBeNull()
+    setup.statusFailure = true
+    await click('Refresh status')
+    expect(container.textContent).toContain('Atlas storage space quota reached')
+    expect(container.querySelector('[data-testid="business"]')).toBeNull()
+    expect(fetcher.mock.calls.filter(([url]) => url === '/api/storage/setup/commit')).toHaveLength(
+      1,
+    )
+    await act(async () =>
+      setup.complete(
+        Response.json(
+          {
+            code: 'control.storage-quota-exceeded',
+            params: { secret: 'server-private-credential-sentinel' },
+          },
+          { status: 503 },
+        ),
+      ),
+    )
+    await settle()
+    expect(container.textContent).not.toContain('server-private-credential-sentinel')
+  })
+
   it('shows failed server work and retains explicit continuation instead of an endless waiting form', async () => {
     vi.useFakeTimers()
     const setup = await startPendingCloudSetup()
