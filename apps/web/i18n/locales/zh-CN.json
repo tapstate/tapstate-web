@@ -2748,7 +2748,7 @@
       "SATURDAY": "周六",
       "SUNDAY": "周日"
     },
-    "premise": "初始同步结束且源和目标稳定时，完整全量检查才适用于可靠结论。否则只展示读取观察，不保证跨库同一时点一致。",
+    "premise": "可靠结论以初始同步结束、源目标数据稳定为前提；否则仅为读取观察，不是跨库同一时点快照。",
     "schedule": {
       "back": "返回全量校验",
       "title": "定时全量校验",
@@ -2805,7 +2805,9 @@
       "unchanged": "草稿与已保存方案一致。",
       "discard": "撤销修改",
       "pristine": "草稿尚无修改。",
-      "newDraft": "草稿尚未保存，保存并开启成功前不会自动触发。"
+      "newDraft": "草稿尚未保存，保存并开启成功前不会自动触发。",
+      "basisLabel": "预览基准",
+      "nextDueLabel": "下次到期"
     },
     "submitting": "正在提交原操作…",
     "loading": "正在读取校验…",
@@ -2888,7 +2890,7 @@
     "run": {
       "title": "全量轮次状态",
       "stop": "停止本轮",
-      "independent": "停止本轮不会关闭定时。控制读取只核对原操作，不会发起新启动。",
+      "independent": "停止只影响本轮，不改变定时计划或Pipeline同步。",
       "unknown": "原轮次结果未知，继续核对原操作状态。",
       "drain": "资源退出观察",
       "states": {
@@ -2933,13 +2935,15 @@
         "READ_COMPLETE": "读取完成"
       },
       "view": "查看全量运行状态",
-      "backSettings": "返回全量设置"
+      "backSettings": "返回全量设置",
+      "diagnostics": "请求与资源详情",
+      "receivedAtLabel": "最近收到"
     },
     "report": {
       "title": "全量校验报告",
       "absent": "报告尚未出生或已不再保留；不存在不代表无问题。",
       "window": "读取窗口：{{start}} → {{end}}",
-      "premiseUnknown": "系统不自动证明数据稳定前提。本报告为读取观察；可靠结论须确认初始同步完成且两端稳定。",
+      "premiseUnknown": "以下仅为读取观察，系统不自动验证稳定性。可靠结论须初始同步结束、两端数据稳定，不代表跨库同一时点快照。",
       "countOnly": "计数相同不证明键或内容一致。",
       "rootCount": "保留问题根：{{count}}",
       "backTables": "返回表列表",
@@ -2989,7 +2993,10 @@
       },
       "countEqual": "数量相同，未检查键与内容",
       "countDifferent": "源端与目标端数量不同",
-      "countEqualFilter": "数量相同"
+      "countEqualFilter": "数量相同",
+      "runDetails": "运行标识",
+      "openDetails": "展开详情",
+      "windowLabel": "读取窗口"
     },
     "history": {
       "title": "全量报告历史",
@@ -3072,17 +3079,22 @@
         "NOT_RETAINED": "未保留值样本"
       },
       "findingCount": "该观察项次数：{{value}}",
-      "findingCountUnknown": "该观察项次数未知"
+      "findingCountUnknown": "该观察项次数未知",
+      "valueTypeDetails": "类型信息",
+      "provenance": "读取来源",
+      "comparison": "字段对照"
     },
     "configurationRevision": "配置版本 {{revision}}",
     "failure": {
-      "title": "运行错误",
+      "title": "执行详情",
       "stack": "保留诊断 / 异常堆栈",
       "stackText": "已保留诊断原文",
       "copy": "复制保留原文",
       "unavailable": "未保留异常堆栈，当前仅有上方诊断摘要。",
       "done": "已保留原格式复制。",
-      "failed": "浏览器未允许复制，请选中保留原文手动复制。"
+      "failed": "浏览器未允许复制，请选中保留原文手动复制。",
+      "missingDetails": "本轮执行失败，未保留具体异常详情。",
+      "cancelled": "本轮已停止，结果未完成。下方可查看已保留的取消诊断。"
     }
   },
   "startup": {

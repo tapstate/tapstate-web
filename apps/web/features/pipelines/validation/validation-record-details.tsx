@@ -43,7 +43,7 @@ function Cell({ cell }: { cell: CellValue }) {
   if (cell.state === 'UNAVAILABLE')
     return (
       <div className="space-y-2">
-        <p className="text-text-warning">{t('dataValidation.record.valueUnavailable')}</p>
+        <p className="text-text-primary">{t('dataValidation.record.valueUnavailable')}</p>
         <details>
           <summary>{t('dataValidation.technicalDetails')}</summary>
           <ValidationValueView value={cell.raw} />
@@ -130,19 +130,18 @@ export function ValidationRecordDetails({
     return t(`dataValidation.record.${scope}.${finding.kind}`, { defaultValue: finding.kind })
   }
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div>
         <p className="system-sm-semibold text-text-primary">
-          {mapping.source.source} · {mapping.source.table} → {mapping.target.source} ·{' '}
-          {mapping.target.table}
+          {mapping.source.table} → {mapping.target.table}
         </p>
-        <p className="system-sm-regular text-text-secondary mt-2">
+        <p className="text-text-secondary mt-2 text-xs leading-5">
           {t('dataValidation.record.readOnly')}
         </p>
       </div>
       {!observation ? (
         <>
-          <p role="alert" className="text-text-warning">
+          <p role="alert" className="text-text-primary">
             {t('dataValidation.record.valueUnavailable')}
           </p>
           <ValidationValueView value={detail.observation} />
@@ -179,12 +178,16 @@ export function ValidationRecordDetails({
             ))}
           </SegmentedControl>
           {observation.samplesTruncated && (
-            <p role="status" className="system-sm-regular text-text-warning">
+            <p role="status" className="text-text-secondary text-xs leading-5">
               {t('dataValidation.record.samplesTruncated')}
             </p>
           )}
-          <div className="border-divider-subtle overflow-x-auto rounded-lg border">
-            <table className="system-sm-regular w-full min-w-[650px] text-left">
+          <div
+            className="border-divider-subtle overflow-x-auto rounded-xl border"
+            tabIndex={0}
+            aria-label={t('dataValidation.record.comparison')}
+          >
+            <table className="w-full min-w-[650px] text-left text-[13px] leading-5">
               <thead className="text-text-secondary bg-background-section-burn">
                 <tr>
                   {['field', 'sourceValue', 'targetValue', 'finding'].map((label) => (
@@ -205,8 +208,8 @@ export function ValidationRecordDetails({
                         key={(safePage - 1) * 20 + index}
                         className="border-divider-subtle border-t align-top"
                       >
-                        <td className="max-w-48 px-3 py-4 break-all">
-                          <code>
+                        <td className="w-32 min-w-28 px-3 py-4">
+                          <code className="block max-w-56 overflow-x-auto text-xs leading-5 whitespace-pre">
                             {finding.path.length
                               ? fieldPath(finding.path)
                               : t('dataValidation.record.wholeRow')}
@@ -214,34 +217,12 @@ export function ValidationRecordDetails({
                         </td>
                         <td className="max-w-64 space-y-3 px-3 py-4">
                           <Cell cell={source} />
-                          {sample?.source && (
-                            <details>
-                              <summary className="system-xs-regular text-text-secondary">
-                                {t('dataValidation.record.actualIdentity')}
-                              </summary>
-                              <p className="system-xs-regular my-2 break-all">
-                                {t('dataValidation.record.readId')}: {sample.source.readId}
-                              </p>
-                              <ValidationValueView value={sample.source.identity} />
-                            </details>
-                          )}
                         </td>
                         <td className="bg-background-section-burn max-w-64 space-y-3 px-3 py-4">
                           <Cell cell={target} />
-                          {sample?.target && (
-                            <details>
-                              <summary className="system-xs-regular text-text-secondary">
-                                {t('dataValidation.record.actualIdentity')}
-                              </summary>
-                              <p className="system-xs-regular my-2 break-all">
-                                {t('dataValidation.record.readId')}: {sample.target.readId}
-                              </p>
-                              <ValidationValueView value={sample.target.identity} />
-                            </details>
-                          )}
                         </td>
                         <td className="max-w-56 px-3 py-4">
-                          <span className="text-text-warning system-xs-medium">
+                          <span className="text-text-primary text-xs leading-5 font-medium">
                             {issue(finding)}
                           </span>
                           <p className="system-xs-regular text-text-secondary mt-2">
@@ -260,6 +241,33 @@ export function ValidationRecordDetails({
                             </p>
                           )}
                           <DifferenceSnippet source={source} target={target} />
+                          {(sample?.source || sample?.target) && (
+                            <details className="text-text-secondary mt-3 text-xs leading-5">
+                              <summary className="cursor-pointer">
+                                {t('dataValidation.record.provenance')}
+                              </summary>
+                              {(['source', 'target'] as const).map((side) => {
+                                const retained = sample?.[side]
+                                return (
+                                  retained && (
+                                    <div key={side} className="mt-3 space-y-2">
+                                      <p className="font-medium">
+                                        {t(
+                                          side === 'source'
+                                            ? 'dataValidation.record.sourceValue'
+                                            : 'dataValidation.record.targetValue',
+                                        )}
+                                      </p>
+                                      <p className="font-mono break-all">
+                                        {t('dataValidation.record.readId')}: {retained.readId}
+                                      </p>
+                                      <ValidationValueView value={retained.identity} />
+                                    </div>
+                                  )
+                                )
+                              })}
+                            </details>
+                          )}
                         </td>
                       </tr>
                     )
@@ -272,16 +280,20 @@ export function ValidationRecordDetails({
               {t('dataValidation.record.noMatchingFindings')}
             </p>
           )}
-          <Pagination
-            page={safePage}
-            totalPages={pages}
-            onPageChange={setPage}
-            labels={{
-              previous: t('dataValidation.previous'),
-              next: t('dataValidation.next'),
-              pageNumberInput: t('dataValidation.pageNumber'),
-            }}
-          />
+          {pages > 1 && (
+            <>
+              <Pagination
+                page={safePage}
+                totalPages={pages}
+                onPageChange={setPage}
+                labels={{
+                  previous: t('dataValidation.previous'),
+                  next: t('dataValidation.next'),
+                  pageNumberInput: t('dataValidation.pageNumber'),
+                }}
+              />
+            </>
+          )}
           {observation.notCompared && (
             <details className="border-divider-subtle border-t pt-4">
               <summary className="system-sm-medium text-text-secondary">
@@ -296,6 +308,9 @@ export function ValidationRecordDetails({
         <summary className="system-sm-medium text-text-secondary">
           {t('dataValidation.record.fullKey')}
         </summary>
+        <p className="text-text-secondary my-3 text-xs leading-5 break-words">
+          {mapping.source.source} → {mapping.target.source} · {detail.id}
+        </p>
         <p className="system-xs-regular text-text-tertiary my-3">
           {t('dataValidation.record.keyMeaning')}
         </p>

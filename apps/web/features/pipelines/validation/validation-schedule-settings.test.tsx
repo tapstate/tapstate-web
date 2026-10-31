@@ -151,10 +151,18 @@ describe('real schedule form control boundaries', () => {
     await change('dataValidation.schedule.zone', 'UTC')
     await settled(() => expect(read).toHaveBeenCalledTimes(2))
     await act(async () => resolveOld(preview(read.mock.calls[0][0], 'old')))
-    expect(document.body.textContent).not.toContain('old-0')
+    expect(
+      [...document.querySelectorAll('aside li strong')]
+        .map((node) => node.getAttribute('title'))
+        .join(' '),
+    ).not.toContain('old-0')
     expect(saveButton().hasAttribute('disabled')).toBe(true)
     await act(async () => resolveNew(preview(read.mock.calls[1][0], 'new')))
-    expect(document.body.textContent).toContain('new-0')
+    expect(
+      [...document.querySelectorAll('aside li strong')]
+        .map((node) => node.getAttribute('title'))
+        .join(' '),
+    ).toContain('new-0')
     expect(saveButton().hasAttribute('disabled')).toBe(false)
   })
   it('keeps OFF independent of an invalid draft and waits for a real saved state before showing OFF', async () => {

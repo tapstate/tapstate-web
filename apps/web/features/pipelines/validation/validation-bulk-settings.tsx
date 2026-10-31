@@ -28,6 +28,7 @@ import { PipelineClientError } from '@/service/pipelines/pipeline-client'
 import type { ValidationMappingHint } from './validation-mapping-hints'
 
 import { FieldAutocomplete } from '../components/reference-wizard/searchable-picker'
+import { validationPrimaryActionClass } from './validation-presentation'
 import { ValidationRequestError } from './validation-view-parts'
 
 type Client = ReturnType<typeof createValidationClient>
@@ -317,7 +318,7 @@ export function ValidationBulkSettings({
       </div>
       <div
         role="status"
-        className={`system-sm-regular rounded-lg border p-4 ${needs ? 'border-divider-subtle bg-background-section-burn text-text-warning' : 'border-divider-subtle text-text-secondary'}`}
+        className={`system-sm-regular rounded-lg border p-4 ${needs ? 'border-divider-subtle bg-background-section-burn text-text-primary' : 'border-divider-subtle text-text-secondary'}`}
       >
         <p className="font-semibold">
           {t(needs ? 'dataValidation.bulk.needsCount' : 'dataValidation.bulk.readyCount', {
@@ -346,7 +347,7 @@ export function ValidationBulkSettings({
         </p>
       )}
       {unresolved && (
-        <p role="alert" className="system-sm-medium text-text-warning">
+        <p role="alert" className="system-sm-medium text-text-primary">
           {t('dataValidation.bulk.unresolved')}
         </p>
       )}
@@ -522,12 +523,12 @@ export function ValidationBulkSettings({
                     {row.included &&
                       method !== 'COUNT' &&
                       row.pairs.some((pair) => !pair.source.trim() || !pair.target.trim()) && (
-                        <p className="system-xs-regular text-text-warning mt-1">
+                        <p className="system-xs-regular text-text-primary mt-1">
                           {t('dataValidation.bulk.keysRequired')}
                         </p>
                       )}
                     {row.hint.reason && (
-                      <p className="text-text-warning mt-2">
+                      <p className="text-text-primary mt-2">
                         {t(`dataValidation.bulk.reasons.${row.hint.reason}`)}
                       </p>
                     )}
@@ -704,10 +705,17 @@ export function ValidationBulkSettings({
           >
             {t('dataValidation.bulk.inspect')}
           </Button>
-          <Button variant="secondary" disabled={!ready} onClick={() => void save()}>
+          <Button
+            variant={ready && (!task || dirty) ? 'primary' : 'secondary'}
+            className={validationPrimaryActionClass}
+            disabled={!ready}
+            onClick={() => void save()}
+          >
             {t('dataValidation.bulk.save')}
           </Button>
           <Button
+            variant={task && !dirty ? 'primary' : 'secondary'}
+            className={validationPrimaryActionClass}
             disabled={!task || dirty || pending || busy || task.closed || startBlocked}
             onClick={() => void perform(onStart)}
           >

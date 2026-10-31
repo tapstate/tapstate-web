@@ -26,6 +26,7 @@ import type {
 } from '@/service/pipelines/validation-client'
 
 import { ValidationFailureDetails } from './validation-failure-details'
+import { useValidationWideLayout, ValidationTimestamp } from './validation-presentation'
 import { validationClientKey } from './validation-query-key'
 import { ValidationRecordDetails } from './validation-record-details'
 import { validationRecordObservation, validationSampleCell } from './validation-record-view'
@@ -79,6 +80,8 @@ function ValidationReportView({ client, reference, live = false }: ReportPanelPr
     [root, setRoot] = useState<string | null>(null),
     [positions, setPositions] = useState<Record<string, ListPosition>>({}),
     [layout, setLayout] = useState<'split' | 'expanded'>('split')
+  const wide = useValidationWideLayout()
+  const splitLayout = layout === 'split' && wide
   const queryClient = useQueryClient()
   const readTail = useRef<Promise<unknown>>(Promise.resolve())
   const selectedForRead = useRef<string | null>(null)
@@ -184,7 +187,7 @@ function ValidationReportView({ client, reference, live = false }: ReportPanelPr
   const detail = useQuery({
     queryKey: detailKey(selectedRoot),
     queryFn: ({ signal }) => readRoot(selectedRoot!, signal),
-    enabled: selectedRoot !== null && (drawerOpen || (table !== null && layout === 'split')),
+    enabled: selectedRoot !== null && (drawerOpen || (table !== null && splitLayout)),
     retry: false,
     staleTime: Infinity,
     gcTime: 30000,
@@ -270,11 +273,12 @@ function ValidationReportView({ client, reference, live = false }: ReportPanelPr
         ? (detail.data ?? previews.data?.get(record.id))
         : previews.data?.get(record.id)
     const observed = value ? validationRecordObservation(value.observation) : null
-    const finding = observed?.findings[0],
+    const finding =
+        observed?.findings.find((item) => item.path.length > 0 && item.samples.length > 0) ??
+        observed?.findings[0],
       sample = finding?.samples[0]
     return (
       <div className="space-y-1">
-        <KindSummary roots={[record]} />
         {finding && (
           <p className="system-xs-regular text-text-secondary font-mono break-words">
             {validationFieldPath(finding.path) || t('dataValidation.record.wholeRow')}
@@ -307,30 +311,35 @@ function ValidationReportView({ client, reference, live = false }: ReportPanelPr
   const reportSummary = (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="system-lg-semibold text-text-primary">{t('dataValidation.report.title')}</h3>
+        <h3 className="text-text-primary text-base leading-6 font-semibold">
+          {t('dataValidation.report.title')}
+        </h3>
         <span className="system-xs-medium text-text-secondary border-divider-subtle rounded-md border px-2 py-1">
           {t(`dataValidation.methods.${data.method}`)}
         </span>
       </div>
-      <p className="system-xs-regular text-text-tertiary break-all">
-        {t('dataValidation.report.run', { run: reference.run })}
-      </p>
-      <p className="system-sm-regular text-text-secondary">{t('dataValidation.premise')}</p>
+      <details className="text-text-secondary text-xs">
+        <summary className="cursor-pointer">{t('dataValidation.report.runDetails')}</summary>
+        <p className="mt-2 font-mono break-all">
+          {t('dataValidation.report.run', { run: reference.run })}
+        </p>
+      </details>
       {data.method !== 'COUNT' && !data.closed && (
         <p role="status" className="system-sm-regular text-text-secondary">
           {t('dataValidation.record.waitForEnd')}
         </p>
       )}
       <div
-        className="bg-background-section-burn system-sm-regular text-text-primary space-y-2 rounded-lg p-4"
+        className="border-divider-subtle bg-background-section text-text-primary space-y-3 rounded-xl border p-4 text-[13px] leading-5"
         role="status"
       >
-        <p className="system-md-semibold">{t(`dataValidation.report.results.${data.result}`)}</p>
+        <p className="text-base leading-6 font-semibold">
+          {t(`dataValidation.report.results.${data.result}`)}
+        </p>
         <p>
-          {t('dataValidation.report.window', {
-            start: data.window?.startedAt ?? t('dataValidation.unknown'),
-            end: data.window?.finishedAt ?? t('dataValidation.unknown'),
-          })}
+          <span className="text-text-secondary">{t('dataValidation.report.windowLabel')}: </span>
+          <ValidationTimestamp value={data.window?.startedAt} showZone={false} /> →{' '}
+          <ValidationTimestamp value={data.window?.finishedAt} />
         </p>
         <p>{t('dataValidation.report.premiseUnknown')}</p>
         {data.method === 'COUNT' && <p>{t('dataValidation.report.countOnly')}</p>}
@@ -347,7 +356,7 @@ function ValidationReportView({ client, reference, live = false }: ReportPanelPr
       <div className="validation-report space-y-5">
         {table ? (
           <>
-            <details className="system-xs-regular text-text-secondary">
+            <details className="text-text-secondary text-xs leading-5">
               <summary className="cursor-pointer">{t('dataValidation.report.title')}</summary>
               <div className="mt-3 space-y-3">{reportSummary}</div>
             </details>
@@ -358,9 +367,11 @@ function ValidationReportView({ client, reference, live = false }: ReportPanelPr
         ) : (
           reportSummary
         )}
-        {data.failure && <ValidationFailureDetails failure={data.failure} />}
+        {(data.failure || data.terminal === 'FAILED') && (
+          <ValidationFailureDetails failure={data.failure} terminal={data.terminal} />
+        )}
         {roots.isError && <ValidationRequestError error={roots.error} />}
-        {previews.isError && (layout === 'expanded' || previews.error !== detail.error) && (
+        {previews.isError && (!splitLayout || previews.error !== detail.error) && (
           <div>
             <ValidationRequestError error={previews.error} />
             <Button size="small" variant="secondary" onClick={() => void previews.refetch()}>
@@ -383,23 +394,28 @@ function ValidationReportView({ client, reference, live = false }: ReportPanelPr
         {table && (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="system-lg-semibold font-mono">{mapping?.source.table}</h3>
-              <p className="system-xs-regular text-text-secondary">
-                {mapping?.source.source} → {mapping?.target.source} · {records.length}{' '}
-                {t('dataValidation.report.retainedRecords')}
+              <h3 className="font-mono text-base leading-6 font-semibold">
+                {mapping?.source.table} → {mapping?.target.table}
+              </h3>
+              <p className="text-text-secondary text-xs leading-5">
+                {records.length} {t('dataValidation.report.retainedRecords')}
               </p>
             </div>
-            <Button
-              variant="secondary"
-              size="small"
-              onClick={() => setLayout(layout === 'split' ? 'expanded' : 'split')}
-            >
-              {t(
-                layout === 'split'
-                  ? 'dataValidation.report.expandRecords'
-                  : 'dataValidation.report.splitRecords',
-              )}
-            </Button>
+            {wide && (
+              <>
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={() => setLayout(layout === 'split' ? 'expanded' : 'split')}
+                >
+                  {t(
+                    layout === 'split'
+                      ? 'dataValidation.report.expandRecords'
+                      : 'dataValidation.report.splitRecords',
+                  )}
+                </Button>
+              </>
+            )}
           </div>
         )}
         <div
@@ -412,6 +428,7 @@ function ValidationReportView({ client, reference, live = false }: ReportPanelPr
           ).map((value) => (
             <Button
               key={value}
+              aria-pressed={filter === value}
               variant={filter === value ? 'secondary-accent' : 'secondary'}
               size="small"
               onClick={() => {
@@ -511,7 +528,7 @@ function ValidationReportView({ client, reference, live = false }: ReportPanelPr
                             <p
                               className={
                                 tableState(mapping.id) === 'issues'
-                                  ? 'text-text-warning'
+                                  ? 'bg-state-warning-hover text-text-primary inline-flex rounded-md px-2 py-1 text-xs font-medium'
                                   : 'text-text-secondary'
                               }
                             >
@@ -560,24 +577,23 @@ function ValidationReportView({ client, reference, live = false }: ReportPanelPr
           </div>
         ) : (
           <div
-            className={`grid min-w-0 gap-5 ${layout === 'split' ? 'min-[1150px]:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)]' : ''}`}
+            className={`grid min-w-0 gap-5 ${splitLayout ? 'grid-cols-[minmax(420px,0.9fr)_minmax(0,1.5fr)]' : ''}`}
           >
             <div className="min-w-0">
               {roots.isPending && <p role="status">{t('dataValidation.loading')}</p>}
               {roots.data === null && <p>{t('dataValidation.report.absent')}</p>}
               <div className="border-divider-subtle max-h-[600px] overflow-auto rounded-lg border">
-                <table className="system-xs-regular w-full min-w-[540px] text-left">
+                <table className="w-full min-w-[440px] text-left text-[13px] leading-5">
                   <thead className="bg-background-section-burn text-text-secondary">
                     <tr>
-                      <th className="bg-background-section-burn sticky left-0 z-10 min-w-64 p-3">
+                      <th className="bg-background-section-burn sticky top-0 left-0 z-10 w-56 min-w-56 p-3">
                         {t('dataValidation.report.problem')}
                       </th>
                       {keys.map((key, index) => (
-                        <th className="min-w-36 p-3 font-mono" key={index}>
+                        <th className="min-w-24 p-3 font-mono" key={index}>
                           {validationFieldPath(key.path)}
                         </th>
                       ))}
-                      <th className="p-3">{t('dataValidation.report.fields')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -587,33 +603,29 @@ function ValidationReportView({ client, reference, live = false }: ReportPanelPr
                         data-validation-record={record.id}
                         className={`border-divider-subtle border-t align-top ${selectedRoot === record.id ? 'bg-state-accent-hover' : ''}`}
                       >
-                        <td className="bg-background-default sticky left-0 p-3">
+                        <td
+                          className={`sticky left-0 p-3 ${selectedRoot === record.id ? 'bg-state-accent-hover' : 'bg-background-default'}`}
+                        >
                           <Button
                             size="small"
                             variant="ghost-accent"
-                            className="mb-2"
+                            className="h-auto min-h-6 w-full cursor-pointer justify-start px-0 py-1 text-left whitespace-normal underline-offset-4 hover:bg-transparent hover:underline"
+                            aria-label={t('dataValidation.report.selectRecord')}
+                            aria-pressed={selectedRoot === record.id}
                             onClick={() => {
                               setRoot(record.id)
-                              if (layout === 'expanded') setDrawerOpen(true)
+                              if (!splitLayout) setDrawerOpen(true)
                             }}
                           >
-                            {t('dataValidation.report.selectRecord')}
+                            <KindSummary roots={[record]} interactive />
                           </Button>
                           {preview(record)}
                         </td>
                         {record.root.key.map((part, index) => (
                           <td className="max-w-56 p-3" key={index}>
-                            <ValidationValueView value={part.value} literalText />
+                            <ValidationValueView value={part.value} showTypeInfo={false} />
                           </td>
                         ))}
-                        <td className="p-3">
-                          <DrawerTrigger
-                            render={<Button size="small" variant="secondary" />}
-                            onClick={() => setRoot(record.id)}
-                          >
-                            {t('dataValidation.report.fields')}
-                          </DrawerTrigger>
-                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -625,15 +637,15 @@ function ValidationReportView({ client, reference, live = false }: ReportPanelPr
                 </p>
               )}
             </div>
-            {layout === 'split' && selectedRoot && (
-              <section className="border-divider-subtle min-w-0 rounded-lg border p-4">
+            {splitLayout && selectedRoot && (
+              <section className="border-divider-subtle min-w-0 rounded-xl border p-4">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <h4 className="system-sm-semibold">{t('dataValidation.record.title')}</h4>
                   <DrawerTrigger
                     render={<Button size="small" variant="secondary" />}
                     onClick={() => setRoot(selectedRoot)}
                   >
-                    {t('dataValidation.report.fields')}
+                    {t('dataValidation.report.openDetails')}
                   </DrawerTrigger>
                 </div>
                 <ValidationRecordDetails
@@ -647,28 +659,32 @@ function ValidationReportView({ client, reference, live = false }: ReportPanelPr
             )}
           </div>
         )}
-        <Pagination
-          page={safePage}
-          totalPages={pages}
-          onPageChange={setPage}
-          labels={{
-            previous: t('dataValidation.previous'),
-            next: t('dataValidation.next'),
-            pageNumberInput: t('dataValidation.pageNumber'),
-          }}
-        />
+        {pages > 1 && (
+          <>
+            <Pagination
+              page={safePage}
+              totalPages={pages}
+              onPageChange={setPage}
+              labels={{
+                previous: t('dataValidation.previous'),
+                next: t('dataValidation.next'),
+                pageNumberInput: t('dataValidation.pageNumber'),
+              }}
+            />
+          </>
+        )}
       </div>
       <DrawerPortal>
         <DrawerBackdrop />
         <DrawerViewport>
-          <DrawerPopup className="data-[swipe-direction=right]:w-[min(940px,calc(100vw-2rem))]">
+          <DrawerPopup className="data-[swipe-direction=right]:w-[min(1100px,calc(100vw-1.5rem))]">
             <div className="border-divider-subtle flex items-start justify-between gap-3 border-b px-6 py-5">
               <div className="min-w-0">
                 <DrawerTitle className="system-lg-semibold text-text-primary">
                   {t('dataValidation.record.title')}
                 </DrawerTitle>
                 <DrawerDescription className="system-xs-regular text-text-secondary mt-2 break-all">
-                  {detail.data?.root.mappingId ?? root}
+                  {mapping ? `${mapping.source.table} → ${mapping.target.table}` : root}
                 </DrawerDescription>
               </div>
               <DrawerClose render={<Button variant="secondary" size="small" />}>
@@ -691,7 +707,13 @@ function ValidationReportView({ client, reference, live = false }: ReportPanelPr
   )
 }
 
-function KindSummary({ roots }: { roots: readonly ValidationRootSummary[] }) {
+function KindSummary({
+  roots,
+  interactive = false,
+}: {
+  roots: readonly ValidationRootSummary[]
+  interactive?: boolean
+}) {
   const { t } = useTranslation()
   const kinds = [...validationRootKinds(roots)].filter(([, count]) => count > 0n)
   if (!roots.length) return <span>{t('dataValidation.report.noRetainedRecords')}</span>
@@ -699,7 +721,10 @@ function KindSummary({ roots }: { roots: readonly ValidationRootSummary[] }) {
   return (
     <div className="flex flex-wrap gap-x-3 gap-y-1">
       {kinds.map(([kind, count]) => (
-        <span className="text-text-warning" key={kind}>
+        <span
+          className={interactive ? 'text-text-accent font-medium' : 'text-text-primary font-medium'}
+          key={kind}
+        >
           {t(
             kind === 'TARGET_MISSING' || kind === 'TARGET_EXTRA'
               ? `dataValidation.report.summaryKinds.${kind}`
@@ -727,7 +752,7 @@ function PreviewCell({ cell }: { cell: ReturnType<typeof validationSampleCell> }
   if (cell.state !== 'PRESENT') return <span>{t(`dataValidation.record.cells.${cell.state}`)}</span>
   return (
     <div className="max-h-12 max-w-44 overflow-auto">
-      <ValidationValueView value={cell.value} literalText />
+      <ValidationValueView value={cell.value} showTypeInfo={false} />
     </div>
   )
 }

@@ -2748,7 +2748,7 @@
       "SATURDAY": "週六",
       "SUNDAY": "週日"
     },
-    "premise": "初始同步結束且來源與目標穩定時，完整全量檢查才適用於可靠結論。否則僅顯示讀取觀察，不保證跨資料庫同一時點一致。",
+    "premise": "可靠結論以初始同步結束、來源與目標資料穩定為前提；否則僅為讀取觀察，不是跨庫同一時點快照。",
     "schedule": {
       "back": "返回全量校驗",
       "title": "定時全量校驗",
@@ -2805,7 +2805,9 @@
       "unchanged": "草稿與已儲存方案一致。",
       "discard": "撤銷修改",
       "pristine": "草稿尚無修改。",
-      "newDraft": "草稿尚未儲存，儲存並開啟成功前不會自動觸發。"
+      "newDraft": "草稿尚未儲存，儲存並開啟成功前不會自動觸發。",
+      "basisLabel": "預覽基準",
+      "nextDueLabel": "下次到期"
     },
     "submitting": "正在提交原操作…",
     "loading": "正在讀取校驗…",
@@ -2888,7 +2890,7 @@
     "run": {
       "title": "全量輪次狀態",
       "stop": "停止本輪",
-      "independent": "停止本輪不會關閉排程。控制讀取只核對原操作，不會發起新啟動。",
+      "independent": "停止只影響本輪，不改變排程或Pipeline同步。",
       "unknown": "原輪次結果未知，繼續核對原操作狀態。",
       "drain": "資源退出觀察",
       "states": {
@@ -2933,13 +2935,15 @@
         "READ_COMPLETE": "讀取完成"
       },
       "view": "查看全量執行狀態",
-      "backSettings": "返回全量設定"
+      "backSettings": "返回全量設定",
+      "diagnostics": "請求與資源詳細資訊",
+      "receivedAtLabel": "最近收到"
     },
     "report": {
       "title": "全量校驗報告",
       "absent": "報告尚未建立或已不再保留；不存在不代表無問題。",
       "window": "讀取視窗：{{start}} → {{end}}",
-      "premiseUnknown": "系統不自動證明資料穩定前提。本報告為讀取觀察；可靠結論須確認初始同步完成且兩端穩定。",
+      "premiseUnknown": "以下僅為讀取觀察，系統不自動驗證穩定性。可靠結論須初始同步結束、兩端資料穩定，不代表跨庫同一時點快照。",
       "countOnly": "計數相同不證明鍵或內容一致。",
       "rootCount": "保留問題根：{{count}}",
       "backTables": "返回表清單",
@@ -2989,7 +2993,10 @@
       },
       "countEqual": "數量相同，未檢查鍵與內容",
       "countDifferent": "來源端與目標端數量不同",
-      "countEqualFilter": "數量相同"
+      "countEqualFilter": "數量相同",
+      "runDetails": "執行識別碼",
+      "openDetails": "展開詳細資訊",
+      "windowLabel": "讀取視窗"
     },
     "history": {
       "title": "全量報告歷史",
@@ -3072,17 +3079,22 @@
         "NOT_RETAINED": "未保留值樣本"
       },
       "findingCount": "該觀察項次數：{{value}}",
-      "findingCountUnknown": "該觀察項次數未知"
+      "findingCountUnknown": "該觀察項次數未知",
+      "valueTypeDetails": "類型資訊",
+      "provenance": "讀取來源",
+      "comparison": "欄位對照"
     },
     "configurationRevision": "設定版本 {{revision}}",
     "failure": {
-      "title": "執行錯誤",
+      "title": "執行詳細資訊",
       "stack": "保留診斷 / 例外堆疊",
       "stackText": "已保留診斷原文",
       "copy": "複製保留原文",
       "unavailable": "未保留例外堆疊，目前僅有上方診斷摘要。",
       "done": "已保留原格式複製。",
-      "failed": "瀏覽器未允許複製，請選取保留原文手動複製。"
+      "failed": "瀏覽器未允許複製，請選取保留原文手動複製。",
+      "missingDetails": "本輪執行失敗，未保留具體異常詳細資訊。",
+      "cancelled": "本輪已停止，結果未完成。下方可查看已保留的取消診斷。"
     }
   },
   "startup": {

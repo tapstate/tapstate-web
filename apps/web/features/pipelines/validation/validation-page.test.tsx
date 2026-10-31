@@ -1560,6 +1560,14 @@ describe('real validation page mutation boundaries', () => {
     await settled(() => expect(button('dataValidation.run.stop').disabled).toBe(false))
     expect(document.querySelector('.validation-bulk')?.closest('[hidden]')).not.toBeNull()
     expect(document.activeElement?.getAttribute('aria-label')).toBe('dataValidation.run.title')
+    await settled(() =>
+      expect(document.body.textContent).toContain('dataValidation.run.states.RUNNING'),
+    )
+    expect(
+      [...document.querySelectorAll('button')].some(
+        (node) => node.textContent === 'dataValidation.retryOriginalStart',
+      ),
+    ).toBe(false)
     await click('dataValidation.run.backSettings')
     expect(document.querySelector('.validation-bulk')?.closest('[hidden]')).toBeNull()
     expect(button('dataValidation.schedule.title').disabled).toBe(false)
@@ -1608,4 +1616,67 @@ it('returns keyboard focus to settings after an unadmitted original loses its ru
   ).toBe(false)
   await click('dataValidation.run.backSettings')
   expect(document.activeElement?.getAttribute('aria-label')).toBe('dataValidation.bulk.title')
+})
+
+it('updates live schedule admission observations without overwriting an unsaved rule', async () => {
+  let observation: ValidationTask['scheduleObservation'] = null
+  const planned: ValidationTask = {
+    ...saved,
+    schedule: {
+      kind: 'INTERVAL',
+      every: '30',
+      unit: 'MINUTES',
+      anchor: '2026-10-31T00:00:00Z',
+      expression: null,
+      zoneId: 'Asia/Shanghai',
+    },
+    scheduleEnabled: true,
+  }
+  const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+    if (String(path).endsWith(':schedule-preview')) {
+      const body = JSON.parse(String(init?.body))
+      return json({
+        base: '2026-10-31T00:00:00Z',
+        inputRevision: body.inputRevision,
+        zoneId: body.schedule.zoneId,
+        rulesVersion: 'validation-unix-v1',
+        occurrences: Array.from({ length: 5 }, (_, i) => ({
+          at: `2026-11-0${i + 1}T00:00:00Z`,
+          local: `2026-11-0${i + 1}T08:00:00`,
+          offset: '+08:00',
+          weekday: 'MONDAY',
+        })),
+      })
+    }
+    return json({ ...planned, scheduleObservation: observation })
+  })
+  useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 116 })
+  await mount(<ValidationPage pipelineId="flow" />)
+  await settled(() => expect(button('dataValidation.schedule.title').disabled).toBe(false))
+  await click('dataValidation.schedule.title')
+  const every = document.getElementById('validation-every') as HTMLInputElement
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(every, '7')
+    every.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  observation = {
+    node: context.node,
+    boot: context.boot,
+    member: context.member,
+    context: context.incarnation,
+    observedAt: '2026-10-31T00:01:00Z',
+    nextDue: '2026-10-31T00:30:00Z',
+    lastDue: '2026-10-31T00:00:00Z',
+    state: 'SKIPPED_BUSY',
+    reason: 'controlled-full-slot-busy',
+    command: null,
+    run: null,
+    sequence: null,
+  }
+  await act(async () => {
+    await queries!.refetchQueries({ queryKey: ['validation', 'live'] })
+  })
+  await settled(() => expect(document.body.textContent).toContain('controlled-full-slot-busy'))
+  expect((document.getElementById('validation-every') as HTMLInputElement).value).toBe('7')
+  expect(document.body.textContent).not.toContain('dataValidation.definitionChanged')
 })

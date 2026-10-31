@@ -6,12 +6,16 @@ import type { ValidationReport } from '@/service/pipelines/validation-client'
 
 export function ValidationFailureDetails({
   failure,
+  terminal,
 }: {
-  failure: NonNullable<ValidationReport['failure']>
+  failure: ValidationReport['failure']
+  terminal?: ValidationReport['terminal']
 }) {
   const { t } = useTranslation()
   const [copied, setCopied] = useState<'done' | 'failed' | null>(null)
-  const text = failure.technical
+  const cancelled =
+    terminal === 'STOPPED' && failure?.code === 'validation.execution-cancelled' && !failure.fatal
+  const text = failure?.technical ?? null
   const available = text !== null && text.length > 0
   async function copy() {
     if (!available) return
@@ -28,15 +32,21 @@ export function ValidationFailureDetails({
       aria-label={t('dataValidation.failure.title')}
     >
       <div
-        role="alert"
-        className="border-divider-subtle text-text-destructive rounded-lg border p-4"
+        role={cancelled ? 'status' : 'alert'}
+        className={`border-divider-subtle rounded-xl border p-4 ${cancelled ? 'text-text-secondary bg-background-section' : 'text-text-destructive'}`}
       >
         <h3 className="system-sm-semibold">
-          {failure.message ?? failure.code ?? failure.exceptionType}
+          {cancelled
+            ? t('dataValidation.failure.cancelled')
+            : failure
+              ? (failure.message ?? failure.code ?? failure.exceptionType)
+              : t('dataValidation.failure.missingDetails')}
         </h3>
-        <p className="system-xs-regular mt-2">
-          {failure.code} · {failure.exceptionType}
-        </p>
+        {failure && (
+          <p className="system-xs-regular mt-2 break-words">
+            {failure.code} · {failure.exceptionType}
+          </p>
+        )}
       </div>
       <div className="border-divider-subtle relative border-y py-3">
         <Button

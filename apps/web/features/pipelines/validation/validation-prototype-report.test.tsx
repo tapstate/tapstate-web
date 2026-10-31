@@ -131,7 +131,7 @@ async function wait(check: () => void) {
 }
 function button(text: string) {
   const node = [...document.querySelectorAll<HTMLButtonElement>('button')].find(
-    (n) => n.textContent === text,
+    (n) => n.textContent === text || n.getAttribute('aria-label') === text,
   )
   if (!node) throw new Error(`missing ${text}`)
   return node
@@ -445,5 +445,39 @@ it('hands a prefetched record to the selected inspector without aborting it', as
     expect(calls.filter((id) => id === records[1].id)).toHaveLength(1)
   } finally {
     release?.()
+  }
+})
+
+it('makes missing retained diagnostics explicit for a failed legacy report', async () => {
+  await mount({
+    ...report,
+    rootCount: '0',
+    terminal: 'FAILED',
+    result: 'INCOMPLETE',
+    failure: null,
+  })
+  await wait(() =>
+    expect(document.body.textContent).toContain('dataValidation.failure.missingDetails'),
+  )
+  expect(button('dataValidation.failure.copy').disabled).toBe(true)
+})
+
+it('uses a record drawer at compact widths instead of squeezing a second pane', async () => {
+  const original = Object.getOwnPropertyDescriptor(window, 'matchMedia')
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: () => ({ matches: false, addEventListener: () => {}, removeEventListener: () => {} }),
+  })
+  try {
+    await mount(report)
+    await wait(() => expect(button('dataValidation.report.records')).toBeDefined())
+    await act(async () => button('dataValidation.report.records').click())
+    await wait(() => expect(button('dataValidation.report.selectRecord')).toBeDefined())
+    expect(document.querySelector('h4')).toBeNull()
+    await act(async () => button('dataValidation.report.selectRecord').click())
+    await wait(() => expect(document.querySelector('[role="dialog"]')).not.toBeNull())
+  } finally {
+    if (original) Object.defineProperty(window, 'matchMedia', original)
+    else Reflect.deleteProperty(window, 'matchMedia')
   }
 })

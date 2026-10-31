@@ -136,6 +136,7 @@ function ValidationWorkspace({
   const [startNotSent, setStartNotSent] = useState(false)
   const [operation, setOperation] = useState<ValidationOperation | null>(null)
   const [terminalReceipt, setTerminalReceipt] = useState<ValidationExecution | null>(null)
+  const [executionObservation, setExecutionObservation] = useState<ValidationExecution | null>(null)
   const [historyReference, setHistoryReference] = useState<ValidationReference | null>(null)
   const queryClient = useQueryClient()
   const taskKey = [
@@ -380,6 +381,7 @@ function ValidationWorkspace({
         command: crypto.randomUUID(),
       }
       setTerminalReceipt(null)
+      setExecutionObservation(null)
       setOperation(original)
       setSection('run')
       originalCreated = true
@@ -397,7 +399,7 @@ function ValidationWorkspace({
     }
   }
   return (
-    <div className="space-y-6 pb-8" data-testid="validation-workspace">
+    <div className="space-y-5 pb-8" data-testid="validation-workspace">
       <header className="border-divider-subtle border-b pb-5">
         <p className="system-xs-regular text-text-tertiary mb-3 break-words">
           {pipelineId}{' '}
@@ -407,7 +409,9 @@ function ValidationWorkspace({
           {t('dataValidation.title')}
         </p>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="system-xl-semibold text-text-primary">{t('dataValidation.title')}</h1>
+          <h1 className="text-text-primary text-lg leading-7 font-semibold">
+            {t('dataValidation.title')}
+          </h1>
           {basis && (
             <span className="system-xs-regular text-text-secondary bg-background-section-burn rounded-md px-2 py-1">
               {t('dataValidation.configurationRevision', { revision: basis.revision })}
@@ -447,14 +451,18 @@ function ValidationWorkspace({
           {t('dataValidation.retryOriginalOff')}
         </Button>
       )}
-      {operation && (
-        <Button disabled={pending} variant="secondary" onClick={() => void retryStart()}>
-          {t('dataValidation.retryOriginalStart')}
-        </Button>
-      )}
+      {operation &&
+        (!executionObservation ||
+          !sameValidationOperation(executionObservation.original, operation) ||
+          !executionObservation.admitted ||
+          executionObservation.controlUnknown) && (
+          <Button disabled={pending} variant="secondary" onClick={() => void retryStart()}>
+            {t('dataValidation.retryOriginalStart')}
+          </Button>
+        )}
       {changed && (
         <div className="space-y-2">
-          <p role="alert" className="system-sm-regular text-text-warning">
+          <p role="alert" className="text-text-primary text-sm leading-5">
             {t('dataValidation.definitionChanged')}
           </p>
           <Button
@@ -509,7 +517,14 @@ function ValidationWorkspace({
         <ValidationScheduleSettings
           key={version}
           client={client}
-          task={basis}
+          task={{
+            ...basis,
+            scheduleObservation:
+              liveTask?.taskGeneration === basis.taskGeneration &&
+              liveTask.revision === basis.revision
+                ? liveTask.scheduleObservation
+                : basis.scheduleObservation,
+          }}
           pending={blocked}
           onSave={saveSchedule}
           onDisable={disable}
@@ -541,6 +556,7 @@ function ValidationWorkspace({
             client={client}
             task={liveTask}
             original={operation}
+            onObservation={setExecutionObservation}
             onTerminal={(receipt) => {
               setTerminalReceipt(receipt)
               if (!receipt.admitted) setNotice(t('dataValidation.run.notAdmitted'))

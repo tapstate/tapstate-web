@@ -41,79 +41,122 @@ export function validationScalarText(value: ValidationValue): string {
   return value.value === null ? 'null' : String(value.value)
 }
 
-/** Exact wire values stay typed; large branches mount only when opened and are paged. */
+function displayValue(value: ValidationValue): Exclude<ValidationValue, { type: 'typed' }> {
+  let current = value
+  while (current.type === 'typed') current = current.value
+  return current
+}
+
+function ValueTypeInformation({ value }: { value: ValidationValue }) {
+  const { t } = useTranslation(),
+    [open, setOpen] = useState(false)
+  const layers: ValidationValue[] = []
+  let current = value
+  for (;;) {
+    layers.push(current)
+    if (current.type !== 'typed') break
+    current = current.value
+  }
+  return (
+    <details
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+      className="text-text-secondary mt-2"
+    >
+      <summary className="cursor-pointer text-xs leading-4">
+        {t('dataValidation.record.valueTypeDetails')}
+      </summary>
+      {open && (
+        <div className="border-divider-subtle mt-2 space-y-3 border-l pl-3">
+          {layers.map((layer, index) => (
+            <div key={index}>
+              <p className="font-mono text-xs font-medium">{layer.type}</p>
+              {Object.entries(layer.metadata).length > 0 && (
+                <dl className="mt-1 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs leading-5">
+                  {Object.entries(layer.metadata).map(([name, text]) => (
+                    <div key={name} className="contents">
+                      <dt>{name}</dt>
+                      <dd className="min-w-0 font-mono break-all whitespace-pre-wrap">{text}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </details>
+  )
+}
+
+/** Exact values lead the comparison; metadata and large branches remain optional and bounded. */
 export function ValidationValueView({
   value,
   literalText = false,
+  showTypeInfo = true,
 }: {
   value: ValidationValue
   literalText?: boolean
+  showTypeInfo?: boolean
 }) {
   const { t } = useTranslation(),
     [open, setOpen] = useState(false),
     [page, setPage] = useState(1),
     [characters, setCharacters] = useState(512)
+  const visual = displayValue(value)
   const children =
-    value.type === 'array'
-      ? value.value.map((child, index) => ({ name: String(index), value: child }))
-      : value.type === 'object'
-        ? value.value
-        : value.type === 'typed'
-          ? [{ name: value.metadata.logicalType ?? 'typed', value: value.value }]
-          : null
+    visual.type === 'array'
+      ? visual.value.map((child, index) => ({ name: String(index), value: child }))
+      : visual.type === 'object'
+        ? visual.value
+        : null
   const safePage = Math.min(page, Math.max(1, Math.ceil((children?.length ?? 0) / 20)))
   if (children)
     return (
       <details
         open={open}
         onToggle={(event) => setOpen(event.currentTarget.open)}
-        className="border-divider-subtle my-1 rounded border p-2"
+        className="border-divider-subtle my-1 rounded-lg border px-3 py-2"
       >
-        <summary className="system-xs-medium text-text-secondary cursor-pointer break-words">
-          {value.metadata.observedType ?? value.type} · {children.length}
+        <summary className="text-text-secondary cursor-pointer text-xs leading-5 font-medium break-words">
+          {value.metadata.logicalType ?? visual.metadata.observedType ?? visual.type} ·{' '}
+          {children.length}
         </summary>
         {open && (
-          <div className="mt-2 space-y-2 pl-2">
-            {Object.entries(value.metadata).map(([name, text]) => (
-              <p key={name} className="system-xs-regular text-text-tertiary break-all">
-                {name}: {text}
-              </p>
-            ))}
+          <div className="mt-3 space-y-3 pl-1">
+            {showTypeInfo && <ValueTypeInformation value={value} />}
             {children.slice((safePage - 1) * 20, safePage * 20).map((child, index) => (
               <div key={(safePage - 1) * 20 + index} className="min-w-0">
-                <p className="system-xs-semibold text-text-primary font-mono break-all whitespace-pre-wrap">
-                  {value.type === 'object' ? validationLiteralName(child.name) : child.name}
+                <p className="text-text-primary font-mono text-xs font-medium break-all whitespace-pre-wrap">
+                  {visual.type === 'object' ? validationLiteralName(child.name) : child.name}
                 </p>
-                <ValidationValueView value={child.value} literalText={literalText} />
+                <ValidationValueView
+                  value={child.value}
+                  literalText={literalText}
+                  showTypeInfo={showTypeInfo}
+                />
               </div>
             ))}
-            <Pagination
-              page={safePage}
-              totalPages={Math.ceil(children.length / 20)}
-              onPageChange={setPage}
-              labels={{
-                previous: t('dataValidation.previous'),
-                next: t('dataValidation.next'),
-                pageNumberInput: t('dataValidation.pageNumber'),
-              }}
-            />
+            {children.length > 20 && (
+              <Pagination
+                page={safePage}
+                totalPages={Math.ceil(children.length / 20)}
+                onPageChange={setPage}
+                labels={{
+                  previous: t('dataValidation.previous'),
+                  next: t('dataValidation.next'),
+                  pageNumberInput: t('dataValidation.pageNumber'),
+                }}
+              />
+            )}
           </div>
         )}
       </details>
     )
-  const text = literalText && value.type === 'text' ? value.value : validationScalarText(value)
+  const text = literalText && visual.type === 'text' ? visual.value : validationScalarText(visual)
   return (
     <div className="min-w-0 space-y-1">
-      <p className="system-xs-regular text-text-tertiary">
-        {value.type}
-        {Object.entries(value.metadata).map(([name, text]) => (
-          <span key={name}>
-            {' '}
-            · {name}: {text}
-          </span>
-        ))}
-      </p>
-      <pre className="system-xs-regular text-text-primary max-h-64 overflow-auto font-mono break-all whitespace-pre-wrap">
+      <pre className="text-text-primary max-h-64 overflow-auto font-mono text-sm leading-5 break-all whitespace-pre-wrap">
         {text.slice(0, characters)}
       </pre>
       {text.length > characters && (
@@ -125,6 +168,7 @@ export function ValidationValueView({
           {t('dataValidation.showMore', { shown: characters, total: text.length })}
         </Button>
       )}
+      {showTypeInfo && <ValueTypeInformation value={value} />}
     </div>
   )
 }

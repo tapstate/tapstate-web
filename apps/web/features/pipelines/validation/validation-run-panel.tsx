@@ -28,6 +28,7 @@ import {
   validationReportReference,
   validationOperationSettled,
 } from './validation-operation'
+import { ValidationTimestamp, validationPrimaryActionClass } from './validation-presentation'
 import { validationClientKey } from './validation-query-key'
 import {
   ValidationRequestError,
@@ -41,12 +42,14 @@ export function ValidationRunPanel({
   task,
   original,
   onTerminal,
+  onObservation,
   onReportOpen,
 }: {
   client: Client
   task: ValidationTask | null
   original: ValidationOperation | null
   onTerminal: (execution: ValidationExecution) => void
+  onObservation?: (execution: ValidationExecution) => void
   onReportOpen: (reference: ValidationReference) => void
 }) {
   const { t } = useTranslation(),
@@ -78,6 +81,9 @@ export function ValidationRunPanel({
     },
   })
   const state = progress.data
+  useEffect(() => {
+    if (state) onObservation?.(state)
+  }, [state, onObservation])
   useEffect(() => {
     if (operation && state && validationOperationSettled(state) && notified.current !== identity) {
       notified.current = identity
@@ -142,16 +148,32 @@ export function ValidationRunPanel({
       setStopping(false)
     }
   }
+  const terminal = !!state?.state && ['COMPLETED', 'FAILED', 'STOPPED'].includes(state.state)
   return (
-    <section
-      className="border-divider-subtle space-y-4 border-t pt-5"
-      aria-label={t('dataValidation.run.title')}
-    >
-      <div className="flex flex-wrap justify-between gap-3">
-        <h2 className="system-lg-semibold text-text-primary">{t('dataValidation.run.title')}</h2>
-        <div className="flex gap-2">
+    <section className="space-y-4" aria-label={t('dataValidation.run.title')}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-text-primary text-base leading-6 font-semibold">
+            {t('dataValidation.run.title')}
+          </h2>
+          {operation && (
+            <p className="text-text-secondary mt-1 text-xs leading-5">
+              {t(
+                !original &&
+                  selection?.source === 'DURABLE_PERMISSION' &&
+                  task?.permission?.phase === 'CLOSED' &&
+                  operation.revision !== task.revision
+                  ? 'dataValidation.run.previousRun'
+                  : 'dataValidation.run.configurationRevision',
+                { revision: operation.revision },
+              )}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="secondary"
+            size="small"
             disabled={!operation || progress.isFetching}
             onClick={() => void progress.refetch()}
           >
@@ -160,146 +182,175 @@ export function ValidationRunPanel({
           {operation && (
             <Button
               variant="secondary"
+              tone="destructive"
+              size="small"
               disabled={!canStop}
               onClick={() => setConfirming(operation)}
             >
               {t('dataValidation.run.stop')}
             </Button>
           )}
+          <Button
+            variant={terminal ? 'primary' : 'secondary'}
+            className={validationPrimaryActionClass}
+            size="small"
+            disabled={reference === null}
+            onClick={() => {
+              if (reference) onReportOpen(reference)
+            }}
+          >
+            {t('dataValidation.report.open')}
+          </Button>
         </div>
       </div>
-      <p className="system-sm-regular text-text-secondary">{t('dataValidation.run.independent')}</p>
-      {operation && (
-        <p className="system-sm-regular text-text-secondary">
-          {t(
-            !original &&
-              selection?.source === 'DURABLE_PERMISSION' &&
-              task?.permission?.phase === 'CLOSED'
-              ? 'dataValidation.run.previousRun'
-              : 'dataValidation.run.configurationRevision',
-            { revision: operation.revision },
-          )}
-        </p>
-      )}
+      <p className="text-text-secondary text-xs leading-5">{t('dataValidation.premise')}</p>
+      <p className="text-text-secondary text-xs leading-5">{t('dataValidation.run.independent')}</p>
       {progress.isError && (
         <ValidationProgressReadError error={progress.error} hasObservation={state != null} />
       )}
       {stopError != null && <ValidationRequestError error={stopError} />}
       {state && (
-        <div className="system-sm-regular text-text-secondary space-y-2" role="status">
+        <div className="border-divider-subtle bg-background-section text-text-secondary rounded-xl border p-4 text-[13px] leading-5">
           {progress.isError && <p>{t('dataValidation.run.staleObservation')}</p>}
-          <p>
-            {state.state
-              ? t(`dataValidation.run.states.${state.state}`)
-              : t('dataValidation.run.unknown')}{' '}
-            · {t(`dataValidation.run.outcomes.${state.outcome}`)}
-          </p>
-          {state.reason && <p className="break-words">{state.reason}</p>}
-          {state.controlUnknown && <p>{t('dataValidation.run.unknown')}</p>}
-          <p>
-            {t('dataValidation.run.drain')}: {state.drain}
-          </p>
-          <div className="border-divider-subtle space-y-3 border-t pt-4">
-            <div className="flex flex-wrap justify-between gap-2">
-              <h3 className="system-sm-semibold">{t('dataValidation.run.tableProgress')}</h3>
-              <span className="system-xs-regular">
-                {t('dataValidation.run.receivedAt', {
-                  time: progress.dataUpdatedAt
-                    ? new Date(progress.dataUpdatedAt).toISOString()
-                    : t('dataValidation.unknown'),
-                })}
-              </span>
-            </div>
-            <p className="system-xs-regular">{t('dataValidation.run.readProgressOnly')}</p>
-            <div className="flex flex-wrap items-center gap-2">
-              {['all', 'READING', 'PENDING', 'READ_COMPLETE'].map((value) => (
-                <Button
-                  key={value}
-                  size="small"
-                  variant={phase === value ? 'secondary-accent' : 'secondary'}
-                  onClick={() => {
-                    setPhase(value)
-                    setPage(1)
-                  }}
-                >
-                  {t(`dataValidation.run.phases.${value}`)} ·{' '}
-                  {value === 'all' ? rows.length : rows.filter((row) => row.phase === value).length}
-                </Button>
-              ))}
-              <Input
-                className="ml-auto max-w-80"
-                aria-label={t('dataValidation.bulk.search')}
-                placeholder={t('dataValidation.bulk.search')}
-                value={search}
-                onChange={(event) => {
-                  setSearch(event.target.value)
-                  setPage(1)
-                }}
-              />
-            </div>
-            <div className="border-divider-subtle max-h-[520px] overflow-auto rounded-lg border">
-              <table className="system-sm-regular w-full min-w-[540px] text-left">
-                <thead className="bg-background-section-burn">
-                  <tr>
-                    <th className="p-3">{t('dataValidation.bulk.source')}</th>
-                    <th className="p-3">{t('dataValidation.bulk.target')}</th>
-                    <th className="p-3">{t('dataValidation.run.tableStage')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.slice((safePage - 1) * 20, safePage * 20).map((row) => (
-                    <tr key={row.id} className="border-divider-subtle border-t">
-                      <td className="p-3">
-                        <strong className="font-mono">{row.mapping?.sourceTable ?? row.id}</strong>
-                        <p className="system-xs-regular text-text-tertiary">
-                          {row.mapping?.sourceId ?? t('dataValidation.run.definitionUnavailable')}
-                        </p>
-                      </td>
-                      <td className="p-3">
-                        <strong className="font-mono">
-                          {row.mapping?.targetTable ?? t('dataValidation.unknown')}
-                        </strong>
-                        <p className="system-xs-regular text-text-tertiary">
-                          {row.mapping?.targetSourceId}
-                        </p>
-                      </td>
-                      <td className="p-3">
-                        {t(`dataValidation.run.phases.${row.phase}`, { defaultValue: row.phase })}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {!filtered.length && <p>{t('dataValidation.run.noTableObservations')}</p>}
-            <Pagination
-              page={safePage}
-              totalPages={pages}
-              onPageChange={setPage}
-              labels={{
-                previous: t('dataValidation.previous'),
-                next: t('dataValidation.next'),
-                pageNumberInput: t('dataValidation.pageNumber'),
-              }}
-            />
+          <div role="status" className="space-y-2">
+            <p
+              className={`text-base leading-6 font-semibold ${state.state === 'FAILED' ? 'text-text-destructive' : 'text-text-primary'}`}
+            >
+              {state.state
+                ? t(`dataValidation.run.states.${state.state}`)
+                : t('dataValidation.run.unknown')}
+            </p>
+            {state.reason && <p className="font-mono text-xs break-words">{state.reason}</p>}
+            {state.controlUnknown && <p>{t('dataValidation.run.unknown')}</p>}
+            {state.drain !== 'DRAINED' && (
+              <p className="text-xs">
+                {t('dataValidation.run.drain')}: {state.drain}
+              </p>
+            )}
           </div>
+          <details className="mt-3 text-xs leading-5">
+            <summary className="cursor-pointer">{t('dataValidation.run.diagnostics')}</summary>
+            <div className="mt-2 space-y-1">
+              <p>{t(`dataValidation.run.outcomes.${state.outcome}`)}</p>
+              <p>
+                {t('dataValidation.run.drain')}: {state.drain}
+              </p>
+              <p className="font-mono break-all">{state.run}</p>
+            </div>
+          </details>
+          {rows.length > 0 ? (
+            <>
+              <div className="border-divider-subtle space-y-3 border-t pt-4">
+                <div className="flex flex-wrap justify-between gap-2">
+                  <h3 className="system-sm-semibold">{t('dataValidation.run.tableProgress')}</h3>
+                  <span className="text-text-secondary text-xs">
+                    <ValidationTimestamp
+                      value={
+                        progress.dataUpdatedAt
+                          ? new Date(progress.dataUpdatedAt).toISOString()
+                          : null
+                      }
+                    />
+                  </span>
+                </div>
+                <p className="system-xs-regular">{t('dataValidation.run.readProgressOnly')}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {['all', 'READING', 'PENDING', 'READ_COMPLETE'].map((value) => (
+                    <Button
+                      key={value}
+                      aria-pressed={phase === value}
+                      size="small"
+                      variant={phase === value ? 'secondary-accent' : 'secondary'}
+                      onClick={() => {
+                        setPhase(value)
+                        setPage(1)
+                      }}
+                    >
+                      {t(`dataValidation.run.phases.${value}`)} ·{' '}
+                      {value === 'all'
+                        ? rows.length
+                        : rows.filter((row) => row.phase === value).length}
+                    </Button>
+                  ))}
+                  <Input
+                    className="ml-auto max-w-80"
+                    aria-label={t('dataValidation.bulk.search')}
+                    placeholder={t('dataValidation.bulk.search')}
+                    value={search}
+                    onChange={(event) => {
+                      setSearch(event.target.value)
+                      setPage(1)
+                    }}
+                  />
+                </div>
+                <div className="border-divider-subtle max-h-[520px] overflow-auto rounded-lg border">
+                  <table className="system-sm-regular w-full min-w-[540px] text-left">
+                    <thead className="bg-background-section-burn">
+                      <tr>
+                        <th className="p-3">{t('dataValidation.bulk.source')}</th>
+                        <th className="p-3">{t('dataValidation.bulk.target')}</th>
+                        <th className="p-3">{t('dataValidation.run.tableStage')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.slice((safePage - 1) * 20, safePage * 20).map((row) => (
+                        <tr key={row.id} className="border-divider-subtle border-t">
+                          <td className="p-3">
+                            <strong className="font-mono">
+                              {row.mapping?.sourceTable ?? row.id}
+                            </strong>
+                            <p className="system-xs-regular text-text-tertiary">
+                              {row.mapping?.sourceId ??
+                                t('dataValidation.run.definitionUnavailable')}
+                            </p>
+                          </td>
+                          <td className="p-3">
+                            <strong className="font-mono">
+                              {row.mapping?.targetTable ?? t('dataValidation.unknown')}
+                            </strong>
+                            <p className="system-xs-regular text-text-tertiary">
+                              {row.mapping?.targetSourceId}
+                            </p>
+                          </td>
+                          <td className="p-3">
+                            {t(`dataValidation.run.phases.${row.phase}`, {
+                              defaultValue: row.phase,
+                            })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {!filtered.length && <p>{t('dataValidation.run.noTableObservations')}</p>}
+                {pages > 1 && (
+                  <>
+                    <Pagination
+                      page={safePage}
+                      totalPages={pages}
+                      onPageChange={setPage}
+                      labels={{
+                        previous: t('dataValidation.previous'),
+                        next: t('dataValidation.next'),
+                        pageNumberInput: t('dataValidation.pageNumber'),
+                      }}
+                    />
+                  </>
+                )}
+              </div>
+            </>
+          ) : (
+            <p className="border-divider-subtle mt-4 border-t pt-3 text-xs leading-5">
+              {t('dataValidation.run.noTableObservations')}
+            </p>
+          )}
         </div>
       )}
       {!state && operation && (
-        <p className="system-sm-regular text-text-secondary">
+        <p className="text-text-secondary text-[13px] leading-5">
           {progress.isPending ? t('dataValidation.loading') : t('dataValidation.run.unknown')}
         </p>
       )}
-      <Button
-        variant="secondary"
-        size="small"
-        disabled={reference === null}
-        onClick={() => {
-          if (reference) onReportOpen(reference)
-        }}
-      >
-        {t('dataValidation.report.open')}
-      </Button>
       <AlertDialog
         open={confirming !== null}
         onOpenChange={(open) => {

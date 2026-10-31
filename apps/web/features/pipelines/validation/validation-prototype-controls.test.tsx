@@ -168,7 +168,9 @@ it('shows the actual end time and restores focus from report to its history row'
     <ValidationHistoryPanel client={client} pipelineId="flow" taskId="full" onBack={() => {}} />,
   )
   await wait(() => expect(document.querySelector('table')).not.toBeNull())
-  expect(document.querySelector('table')?.textContent).toContain('2026-10-30T02:00:00Z')
+  expect(document.querySelector('table time')?.getAttribute('datetime')).toBe(
+    '2026-10-30T02:00:00Z',
+  )
   expect(document.querySelector('table')?.textContent).not.toContain('2026-10-30T01:00:00Z')
   await click('dataValidation.history.open')
   await click('dataValidation.history.backList')

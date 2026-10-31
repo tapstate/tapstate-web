@@ -21,6 +21,7 @@ import type {
   ValidationReference,
 } from '@/service/pipelines/validation-client'
 
+import { ValidationTimestamp } from './validation-presentation'
 import { validationClientKey } from './validation-query-key'
 import { ValidationReportPanel } from './validation-report-panel'
 import { ValidationRequestError } from './validation-view-parts'
@@ -206,8 +207,8 @@ export function ValidationHistoryPanel({
                         key={historyKey(item.reference)}
                         className="border-divider-subtle border-t"
                       >
-                        <td className="p-3 font-mono">
-                          {item.endedAt ?? t('dataValidation.unknown')}
+                        <td className="p-3 text-xs leading-5">
+                          <ValidationTimestamp value={item.endedAt} />
                         </td>
                         <td className="p-3">{t(`dataValidation.methods.${item.method}`)}</td>
                         <td className="p-3">

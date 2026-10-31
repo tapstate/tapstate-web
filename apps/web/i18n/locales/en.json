@@ -2748,7 +2748,7 @@
       "SATURDAY": "Sat",
       "SUNDAY": "Sun"
     },
-    "premise": "Reliable full-check conclusions require completed initial synchronization and stable source and destination data. Otherwise results are read observations and do not establish a common-time snapshot.",
+    "premise": "Reliable results require finished initial sync and stable source and destination data. Otherwise these are read observations, not a common-time snapshot.",
     "schedule": {
       "back": "Back to full validation",
       "title": "Scheduled full validation",
@@ -2805,7 +2805,9 @@
       "unchanged": "The draft matches the saved schedule.",
       "discard": "Discard changes",
       "pristine": "No draft changes.",
-      "newDraft": "Unsaved draft. No schedule will trigger until saving and enabling succeeds."
+      "newDraft": "Unsaved draft. No schedule will trigger until saving and enabling succeeds.",
+      "basisLabel": "Preview basis",
+      "nextDueLabel": "Next due"
     },
     "submitting": "Submitting the original operation…",
     "loading": "Loading validation…",
@@ -2888,7 +2890,7 @@
     "run": {
       "title": "Full run status",
       "stop": "Stop this run",
-      "independent": "Stopping this run does not disable its schedule. Control reads retain the original operation; they never dispatch a new start.",
+      "independent": "Stopping affects this run only; its schedule and Pipeline synchronization are unchanged.",
       "unknown": "The original run outcome is unconfirmed. Continue reading its original state.",
       "drain": "Resource-exit observation",
       "states": {
@@ -2933,13 +2935,15 @@
         "READ_COMPLETE": "Reads completed"
       },
       "view": "View full run status",
-      "backSettings": "Back to full validation settings"
+      "backSettings": "Back to full validation settings",
+      "diagnostics": "Request and resource details",
+      "receivedAtLabel": "Last received"
     },
     "report": {
       "title": "Full validation report",
       "absent": "This report is not yet born or is no longer retained. Absence is not a clean result.",
       "window": "Read window: {{start}} → {{end}}",
-      "premiseUnknown": "The system does not verify the stable-data premise. These are read observations; confirm completed initial sync and both sides stable before drawing a reliability conclusion.",
+      "premiseUnknown": "Read observations only; stability is not verified automatically. Reliable conclusions require finished initial sync and stable data on both sides. No common-time snapshot is established.",
       "countOnly": "Equal counts do not prove equal keys or contents.",
       "rootCount": "Retained problem roots: {{count}}",
       "backTables": "Back to tables",
@@ -2989,7 +2993,10 @@
       },
       "countEqual": "Equal counts; keys and contents were not checked",
       "countDifferent": "Source and destination counts differ",
-      "countEqualFilter": "Equal counts"
+      "countEqualFilter": "Equal counts",
+      "runDetails": "Run identity",
+      "openDetails": "Open details",
+      "windowLabel": "Read window"
     },
     "history": {
       "title": "FULL report history",
@@ -3072,17 +3079,22 @@
         "NOT_RETAINED": "Value sample not retained"
       },
       "findingCount": "Finding count: {{value}}",
-      "findingCountUnknown": "Finding count is unavailable"
+      "findingCountUnknown": "Finding count is unavailable",
+      "valueTypeDetails": "Type information",
+      "provenance": "Read provenance",
+      "comparison": "Field comparison"
     },
     "configurationRevision": "Configuration revision {{revision}}",
     "failure": {
-      "title": "Run failure",
+      "title": "Execution details",
       "stack": "Retained diagnostic / exception stack",
       "stackText": "Retained diagnostic text",
       "copy": "Copy retained text",
       "unavailable": "No diagnostic stack was retained. Only the summary above is available.",
       "done": "Copied with original formatting.",
-      "failed": "Copy was not allowed. Select the retained text and copy it manually."
+      "failed": "Copy was not allowed. Select the retained text and copy it manually.",
+      "missingDetails": "This run failed. No execution-error details were retained.",
+      "cancelled": "Stopped before completion. Retained cancellation details are available below."
     }
   },
   "startup": {

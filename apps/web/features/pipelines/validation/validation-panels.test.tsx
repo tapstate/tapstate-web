@@ -236,12 +236,18 @@ describe('actual report and original-run presentation', () => {
     const input = document.querySelector<HTMLInputElement>(
       '[aria-label="dataValidation.report.searchKey"]',
     )!
-    await act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, name)
-      input.dispatchEvent(new Event('input', { bubbles: true }))
-    })
-    expect(document.body.textContent).toContain(name)
-    expect(button('dataValidation.report.fields')).toBeDefined()
+    for (const query of [name, JSON.stringify(name)]) {
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+          input,
+          query,
+        )
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+      })
+      expect(document.querySelectorAll('[data-validation-record]')).toHaveLength(1)
+      expect(document.body.textContent).toContain(JSON.stringify(name))
+      expect(button('dataValidation.report.openDetails')).toBeDefined()
+    }
   })
   it('restores the record search and page after returning through the table list', async () => {
     const read = vi.fn(async (path: RequestInfo | URL) => {

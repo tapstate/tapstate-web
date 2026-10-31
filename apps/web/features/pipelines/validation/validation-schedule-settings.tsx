@@ -32,6 +32,7 @@ import type {
   ValidationTask,
 } from '@/service/pipelines/validation-client'
 
+import { ValidationTimestamp, validationPrimaryActionClass } from './validation-presentation'
 import { ValidationRequestError } from './validation-view-parts'
 
 type Client = ReturnType<typeof createValidationClient>
@@ -290,7 +291,7 @@ export function ValidationScheduleSettings({
                   disabled={pending}
                 >
                   <SelectTrigger aria-label={t('dataValidation.schedule.unit')} className="w-32">
-                    <SelectValue />
+                    <SelectValue>{t(`dataValidation.schedule.units.${unit}`)}</SelectValue>
                   </SelectTrigger>
                   <SelectPortal>
                     <SelectPositioner>
@@ -390,13 +391,19 @@ export function ValidationScheduleSettings({
           </section>
           <div className="flex flex-wrap gap-3">
             <Button
-              variant="secondary"
+              variant={dirty ? 'primary' : 'secondary'}
+              className={validationPrimaryActionClass}
               disabled={!canSave}
               onClick={() => save(task.scheduleEnabled)}
             >
               {t('dataValidation.schedule.save')}
             </Button>
-            <Button disabled={!canSave} onClick={() => save(true)}>
+            <Button
+              variant={task.scheduleEnabled ? 'secondary' : 'primary'}
+              className={validationPrimaryActionClass}
+              disabled={!canSave}
+              onClick={() => save(true)}
+            >
               {t('dataValidation.schedule.enable')}
             </Button>
             <Button
@@ -425,37 +432,44 @@ export function ValidationScheduleSettings({
           className="border-divider-subtle bg-background-section min-w-0 rounded-[10px] border p-4.5"
           aria-label={t('dataValidation.schedule.nextFive')}
         >
-          <h3 className="system-sm-semibold text-text-primary">
-            {t('dataValidation.schedule.nextFive')}
-          </h3>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-text-primary text-sm font-semibold">
+              {t('dataValidation.schedule.nextFive')}
+            </h3>
+            <Button
+              size="small"
+              variant="secondary"
+              disabled={
+                pending ||
+                loading ||
+                !zone.trim() ||
+                (kind === 'INTERVAL' ? !intervalValid : !expression.trim())
+              }
+              onClick={() => setPreviewAttempt((value) => value + 1)}
+            >
+              {t('dataValidation.schedule.retryPreview')}
+            </Button>
+          </div>
           <p className="system-xs-regular text-text-secondary mt-2 break-words">{zone}</p>
           {loading && (
             <p role="status" className="system-sm-regular text-text-secondary py-5">
               {t('dataValidation.schedule.previewLoading')}
             </p>
           )}
-          {error != null && (
-            <div>
-              <ValidationRequestError error={error} />
-              <Button
-                variant="secondary"
-                size="small"
-                disabled={pending || loading}
-                onClick={() => setPreviewAttempt((value) => value + 1)}
-              >
-                {t('dataValidation.schedule.retryPreview')}
-              </Button>
-            </div>
-          )}
+          {error != null && <ValidationRequestError error={error} />}
           {preview && (
             <ol className="divide-divider-subtle my-4 divide-y">
               {preview.occurrences.map((time, index) => (
                 <li key={time.at} className="system-xs-regular text-text-secondary flex gap-3 py-3">
                   <span>{index + 1}</span>
                   <span>
-                    <strong className="text-text-primary block font-medium">{time.local}</strong>
+                    <strong
+                      className="text-text-primary block font-medium"
+                      title={`${time.local} ${time.offset}`}
+                    >
+                      <ValidationTimestamp value={time.at} zone={preview.zoneId} showZone={false} />
+                    </strong>
                     <span>
-                      {time.offset} ·{' '}
                       {t(`dataValidation.weekdays.${time.weekday}`, { defaultValue: time.weekday })}
                     </span>
                   </span>
@@ -473,7 +487,8 @@ export function ValidationScheduleSettings({
           </p>
           {preview && (
             <p className="system-xs-regular text-text-tertiary border-divider-subtle mt-3 border-t pt-3">
-              {t('dataValidation.schedule.basis', { time: preview.base })}
+              {t('dataValidation.schedule.basisLabel')}:{' '}
+              <ValidationTimestamp value={preview.base} showZone={false} />
             </p>
           )}
         </aside>
@@ -483,10 +498,13 @@ export function ValidationScheduleSettings({
           <h3 className="font-medium">{t('dataValidation.schedule.observation')}</h3>
           <p className="mt-1 break-words">
             {t(`dataValidation.schedule.states.${savedObservation.state}`)} ·{' '}
-            {savedObservation.observedAt}
+            <ValidationTimestamp value={savedObservation.observedAt} />
           </p>
           {savedObservation.nextDue && (
-            <p>{t('dataValidation.schedule.nextDue', { time: savedObservation.nextDue })}</p>
+            <p>
+              {t('dataValidation.schedule.nextDueLabel')}:{' '}
+              <ValidationTimestamp value={savedObservation.nextDue} />
+            </p>
           )}
           {savedObservation.reason && <p className="mt-1 break-words">{savedObservation.reason}</p>}
         </section>
