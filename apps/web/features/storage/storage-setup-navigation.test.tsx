@@ -11,6 +11,8 @@ import { createAuthStore, useAuthStore } from '@/stores/auth-store'
 import { ConfigurationTransfer } from './configuration-transfer'
 import { StorageBoundary } from './storage-gate'
 
+const features = vi.hoisted(() => ({ configurationTransfer: false }))
+vi.mock('@/utils/release-features', () => ({ releaseFeatures: features }))
 const route = vi.hoisted(() => ({ pathname: '/overview', href: '/overview' }))
 const cloudNavigation = vi.hoisted(() => ({ redirect: vi.fn() }))
 const installationNavigation = vi.hoisted(() => ({ redirect: vi.fn() }))
@@ -94,6 +96,7 @@ async function input(element: HTMLInputElement, value: string) {
   })
 }
 beforeEach(() => {
+  features.configurationTransfer = false
   cloudNavigation.redirect.mockClear()
   installationNavigation.redirect.mockClear()
   container = document.createElement('div')
@@ -123,6 +126,48 @@ afterEach(() => {
 })
 
 describe('whole-site storage boundary', () => {
+  it.each(['OP', 'CLOUD'] as const)(
+    'hides Transfer throughout %s setup, initialization and recovery',
+    async (mode) => {
+      useAuthStore.setState({ profile: mode === 'CLOUD' ? 'cloud' : 'on-prem' })
+      let snapshot = state({ mode })
+      fetcher.mockImplementation(async (url) =>
+        String(url) === '/auth/storage-entry'
+          ? Response.json({ mode, management: false, entry: 'LOGIN' })
+          : Response.json(snapshot),
+      )
+      for (const businessPhase of [
+        'NOT_CONFIGURED',
+        'PREPARING',
+        'AWAITING_REBUILD_CONFIRMATION',
+      ] as const) {
+        snapshot = state({
+          mode,
+          stateVersion: snapshot.stateVersion + 1,
+          setupPhase: 'STORAGE_BOUND',
+          businessPhase,
+          allowedActions: [
+            'storage.setup.commit',
+            'configuration.export',
+            'configuration.import.preflight',
+            'configuration.import.commit',
+            'configuration.import.status',
+            ...(businessPhase === 'AWAITING_REBUILD_CONFIRMATION' ? ['storage.recovery.plan'] : []),
+          ],
+        })
+        if (businessPhase === 'NOT_CONFIGURED') await render()
+        else await click('Refresh status')
+        expect(container.textContent).not.toContain('Transfer configuration')
+        expect(container.querySelector('input[type="file"]')).toBeNull()
+        expect(container.querySelector('h1')).toBeTruthy()
+        if (businessPhase === 'AWAITING_REBUILD_CONFIRMATION')
+          expect(container.textContent).toContain('Recover runtime storage and pipelines')
+      }
+      expect(fetcher.mock.calls.some(([url]) => String(url).includes('/configuration/'))).toBe(
+        false,
+      )
+    },
+  )
   it('preserves an OP deep link for sign-in', async () => {
     useAuthStore.setState({ isAuthenticated: false })
     route.pathname = '/pipelines/orders/edit'
@@ -1378,6 +1423,7 @@ describe('whole-site storage boundary', () => {
       expect(healthCard(name).textContent).not.toContain('Connection checks passed')
   })
   it('refreshes cached configuration projections when original import status proves committed', async () => {
+    features.configurationTransfer = true
     client.setQueryData(['sources'], ['old-source'])
     function Catalog() {
       const query = useQuery({

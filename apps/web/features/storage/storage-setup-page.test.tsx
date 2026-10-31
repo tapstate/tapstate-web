@@ -15,6 +15,10 @@ const storage = vi.hoisted(() => ({
   authorityRevision: 0,
 }))
 vi.mock('./storage-context', () => ({ useStorage: () => storage }))
+// Keep the retained Transfer contract covered independently of release visibility.
+vi.mock('@/utils/release-features', () => ({
+  releaseFeatures: { configurationTransfer: true },
+}))
 import { ConfigurationTransfer } from './configuration-transfer'
 import { StorageRecovery } from './storage-recovery'
 import { StorageSetupForm } from './storage-setup-form'
