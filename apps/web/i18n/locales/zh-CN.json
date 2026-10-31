@@ -2971,5 +2971,10 @@
       "findingCount": "该观察项次数：{{value}}",
       "findingCountUnknown": "该观察项次数未知"
     }
+  },
+  "startup": {
+    "title": "正在载入 Cluster",
+    "help": "正在连接 Tapstate，请保持页面打开。如等待时间较长，请重新加载页面。",
+    "retry": "重新加载页面"
   }
 }

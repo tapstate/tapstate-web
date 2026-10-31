@@ -2971,5 +2971,10 @@
       "findingCount": "Finding count: {{value}}",
       "findingCountUnknown": "Finding count is unavailable"
     }
+  },
+  "startup": {
+    "title": "Loading your Cluster",
+    "help": "Connecting to Tapstate. Keep this page open. If it takes longer, reload the page.",
+    "retry": "Reload page"
   }
 }

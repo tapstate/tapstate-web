@@ -5,7 +5,9 @@ import process from 'node:process'
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig, loadEnv, type ProxyOptions } from 'vite'
 
+import { startupShell } from './build/startup-shell'
 import { getWebBuildInputs } from './build/web-build-inputs'
+import startupLocale from './i18n/locales/en.json'
 
 function rewriteLocalOrigin(
   proxy: Parameters<NonNullable<ProxyOptions['configure']>>[0],
@@ -36,6 +38,7 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_CLOUD_CONSOLE_URL': JSON.stringify(build.cloudConsoleUrl ?? ''),
     },
     plugins: [
+      startupShell(startupLocale.startup),
       {
         name: 'tapstate-web-build-marker',
         generateBundle() {
