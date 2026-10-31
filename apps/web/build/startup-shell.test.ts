@@ -12,10 +12,16 @@ describe('document startup before application scripts', () => {
       const server = await createServer({
         root,
         configFile: resolve(root, 'vite.config.ts'),
-        server: { middlewareMode: true },
+        server: { middlewareMode: true, preTransformRequests: false },
+        // This test transforms the document without loading the application modules.
+        optimizeDeps: { noDiscovery: true, include: [] },
       })
-      const transformed = await server.transformIndexHtml('/', html)
-      await server.close()
+      let transformed: string
+      try {
+        transformed = await server.transformIndexHtml('/', html)
+      } finally {
+        await server.close()
+      }
       const template = document.createElement('template')
       template.innerHTML = transformed
       const waiting = template.content.querySelector('#root [role="status"]')
