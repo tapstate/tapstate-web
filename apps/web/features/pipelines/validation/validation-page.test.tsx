@@ -2335,46 +2335,53 @@ describe('real validation page mutation boundaries', () => {
   })
 })
 
-it('returns keyboard focus to settings after an unadmitted original loses its run link', async () => {
-  const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
-    const action = String(path),
-      body = init?.body ? JSON.parse(String(init.body)) : null
-    if (action.endsWith(':evaluate')) return json(evaluate(body))
-    if (action.endsWith(':start') || action.endsWith(':progress'))
-      return json({
-        original: body,
-        run: 'not-admitted',
-        outcome: 'REJECTED',
-        state: null,
-        admitted: false,
-        waiting: false,
-        controlUnknown: false,
-        retired: true,
-        drain: 'DRAINED',
-        reason: null,
-        tables: [],
-        premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
-        conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
-      })
-    return json(saved)
-  })
-  useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 115 })
-  await mount(<ValidationPage pipelineId="flow" />)
-  await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
-  await click('dataValidation.bulk.start')
-  await settled(() => expect(document.body.textContent).toContain('dataValidation.run.notAdmitted'))
-  expect(
-    [...document.querySelectorAll('button')].some(
-      (node) => node.textContent === 'dataValidation.run.view',
-    ),
-  ).toBe(false)
-  await click('dataValidation.run.backSettings')
-  expect(document.activeElement?.getAttribute('aria-label')).toBe('dataValidation.bulk.title')
-  await act(async () => {
-    button('dataValidation.bulk.start').click()
-  })
-  expect(document.body.textContent).not.toContain('dataValidation.run.notAdmitted')
-})
+it.each(['DRAINED', 'UNKNOWN'])(
+  'returns keyboard focus after a definite unadmitted original (drain=%s)',
+  async (drain) => {
+    let allowStart = false
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path),
+        body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':evaluate')) return json(evaluate(body))
+      if (action.endsWith(':start') || action.endsWith(':progress'))
+        return json({
+          original: body,
+          run: 'not-admitted',
+          outcome: allowStart ? 'ACCEPTED' : 'REJECTED',
+          state: allowStart ? 'RUNNING' : null,
+          admitted: allowStart,
+          waiting: false,
+          controlUnknown: false,
+          retired: !allowStart,
+          drain: allowStart ? 'NOT_DRAINED' : drain,
+          reason: null,
+          tables: [],
+          premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+          conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+        })
+      return json(saved)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 115 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+    await click('dataValidation.bulk.start')
+    await settled(() =>
+      expect(document.body.textContent).toContain('dataValidation.run.notAdmitted'),
+    )
+    expect(
+      [...document.querySelectorAll('button')].some(
+        (node) => node.textContent === 'dataValidation.run.view',
+      ),
+    ).toBe(false)
+    await click('dataValidation.run.backSettings')
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('dataValidation.bulk.title')
+    allowStart = true
+    await act(async () => {
+      button('dataValidation.bulk.start').click()
+    })
+    expect(document.body.textContent).not.toContain('dataValidation.run.notAdmitted')
+  },
+)
 
 it('updates live schedule admission observations without overwriting an unsaved rule', async () => {
   let observation: ValidationTask['scheduleObservation'] = null

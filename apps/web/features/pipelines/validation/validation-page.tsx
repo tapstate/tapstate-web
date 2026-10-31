@@ -189,6 +189,7 @@ function ValidationWorkspace({
   const [pending, setPending] = useState(false),
     [error, setError] = useState<unknown>(null),
     [notice, setNotice] = useState('')
+  const [admissionRefusal, setAdmissionRefusal] = useState<ValidationExecution | null>(null)
   const [needsReload, setNeedsReload] = useState(false)
   const mutation = useRef(false)
   const [uncertain, setUncertain] = useState<{
@@ -219,6 +220,24 @@ function ValidationWorkspace({
   })
   useEffect(() => {
     if (!operation) return
+    const refused = executionObservation
+    if (
+      refused &&
+      sameValidationOperation(refused.original, operation) &&
+      !refused.admitted &&
+      refused.retired &&
+      !refused.controlUnknown &&
+      refused.state === null &&
+      ['REJECTED', 'CAPACITY', 'BUSY'].includes(refused.outcome)
+    ) {
+      // A definite admission refusal ends this request, without certifying native resource exit.
+      setNotice(t('dataValidation.run.notAdmitted'))
+      setAdmissionRefusal(refused)
+      setOperation(null)
+      setTerminalReceipt(null)
+      void taskQuery.refetch()
+      return
+    }
     const live = taskQuery.data,
       permission = live?.permission
     const anotherWinner =
@@ -260,7 +279,7 @@ function ValidationWorkspace({
       setOperation(null)
       setTerminalReceipt(null)
     }
-  }, [operation, terminalReceipt, taskQuery.data, t])
+  }, [operation, terminalReceipt, taskQuery.data, executionObservation, t])
   const liveTask = taskQuery.data ?? basis
   const startBusy = liveTask !== null && validationStartBusy(liveTask, terminalReceipt)
   const changed =
@@ -282,6 +301,7 @@ function ValidationWorkspace({
     setPending(true)
     setError(null)
     setNotice('')
+    setAdmissionRefusal(null)
     let acknowledged = false
     let acceptedReceipt = false
     try {
@@ -362,6 +382,7 @@ function ValidationWorkspace({
     setPending(true)
     setError(null)
     setNotice('')
+    setAdmissionRefusal(null)
     try {
       const request = offOriginal.current ?? {
         pipeline: pipelineId,
@@ -423,6 +444,7 @@ function ValidationWorkspace({
     let originalCreated = false
     setPreparingStart(true)
     setNotice('')
+    setAdmissionRefusal(null)
     setStartNotSent(false)
     setPending(true)
     setError(null)
@@ -506,9 +528,22 @@ function ValidationWorkspace({
       </header>
       {error != null && <ValidationRequestError error={error} />}
       {notice && (
-        <p role="status" className="system-sm-regular text-text-secondary">
-          {notice}
-        </p>
+        <div role="status" className="system-sm-regular text-text-secondary space-y-2">
+          <p>{notice}</p>
+          {admissionRefusal && (
+            <details className="system-xs-regular">
+              <summary className="cursor-pointer">{t('dataValidation.run.diagnostics')}</summary>
+              <p className="mt-2">{t(`dataValidation.run.outcomes.${admissionRefusal.outcome}`)}</p>
+              {admissionRefusal.reason && (
+                <code className="break-all">{admissionRefusal.reason}</code>
+              )}
+              <p>
+                {t('dataValidation.run.drain')}: {admissionRefusal.drain}
+              </p>
+              <code className="break-all">{admissionRefusal.original.command}</code>
+            </details>
+          )}
+        </div>
       )}
       {startNotSent && (
         <p role="status" className="system-sm-regular text-text-secondary">
@@ -681,7 +716,10 @@ function ValidationWorkspace({
             onObservation={setExecutionObservation}
             onTerminal={(receipt) => {
               setTerminalReceipt(receipt)
-              if (!receipt.admitted) setNotice(t('dataValidation.run.notAdmitted'))
+              if (!receipt.admitted) {
+                setNotice(t('dataValidation.run.notAdmitted'))
+                setAdmissionRefusal(receipt)
+              }
               void taskQuery.refetch()
             }}
             onReportOpen={(reference) => {
