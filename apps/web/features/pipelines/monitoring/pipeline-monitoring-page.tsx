@@ -1,36 +1,35 @@
 import { useQueryClient } from '@tanstack/react-query'
 import FilterEmptyState from '@tapstate-web/ui/filter-empty-state'
 import { Spinner } from '@tapstate-web/ui/spinner'
-import { StatusDot, type StatusDotStatus } from '@tapstate-web/ui/status-dot'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { PipelineClientError, type PipelineCatalogState } from '@/service/pipelines/pipeline-client'
+import { PipelineClientError } from '@/service/pipelines/pipeline-client'
 
 import { PipelineRefreshButton } from '../components/pipeline-refresh-controls'
-import { PipelineMetricChart } from './pipeline-metric-chart'
+import {
+  deriveHealth,
+  deriveJoinRecomputes,
+  deriveKeyFigures,
+  deriveNestStages,
+  deriveTables,
+  groupMetrics,
+  lagOutputs,
+  runStartedAt,
+} from './pipeline-monitoring-model'
 import styles from './pipeline-monitoring-page.module.css'
 import { usePipelineMonitoringQueries } from './pipeline-monitoring-queries'
+import {
+  MonitoringAllMetrics,
+  MonitoringHealthBanner,
+  MonitoringKeyFigures,
+  MonitoringTablesSection,
+  MonitoringTransformState,
+} from './pipeline-monitoring-sections'
 import { PipelineReadSurface } from './pipeline-read-surface'
 
 function isObservationUnavailable(error: unknown) {
   return error instanceof PipelineClientError && error.status === 404
-}
-
-const stateDotStatus: Record<PipelineCatalogState, StatusDotStatus> = {
-  DRAFT: 'disabled',
-  RECOVERY_REQUIRED: 'warning',
-  NOT_STARTED: 'normal',
-  NEW: 'normal',
-  STARTING: 'normal',
-  RUNNING: 'success',
-  PAUSING: 'warning',
-  PAUSED: 'warning',
-  RESUMING: 'normal',
-  STOPPING: 'warning',
-  STOPPED: 'disabled',
-  COMPLETED: 'success',
-  FAILED: 'error',
-  UNAVAILABLE: 'disabled',
 }
 
 export function PipelineMonitoringPage({
@@ -42,21 +41,24 @@ export function PipelineMonitoringPage({
 }) {
   const { i18n, t } = useTranslation()
   const queryClient = useQueryClient()
-  const { status, metrics } = usePipelineMonitoringQueries(pipelineId, hasArtifact)
+  const { status, metrics, snapshot, explain } = usePipelineMonitoringQueries(
+    pipelineId,
+    hasArtifact,
+  )
+  const [recordsOutRate, setRecordsOutRate] = useState<number | null>(null)
   const isLoading = status.isLoading || metrics.isLoading
   const error = status.error ?? metrics.error
   const hasError = status.isError || metrics.isError
   const lastUpdated = Math.max(status.dataUpdatedAt, metrics.dataUpdatedAt)
-  const offsetEntries = Object.entries(
-    metrics.data?.targetAckedPosition ?? metrics.data?.perTableOffset ?? {},
-  )
-  const metricCount = Object.keys(metrics.data?.metrics ?? {}).length
   const refreshMonitoring = () => {
     void status.refetch()
     void metrics.refetch()
+    void snapshot.refetch()
+    void explain.refetch()
     void queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId, 'metrics-history'] })
-    void queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId, 'explain'] })
   }
+  const isFetching =
+    status.isFetching || metrics.isFetching || snapshot.isFetching || explain.isFetching
   const refreshLabels = {
     refresh: t('pipelines.workspace.runtime.monitoring.refresh'),
     refreshAria: t('pipelines.workspace.runtime.monitoring.refreshAria'),
@@ -118,7 +120,7 @@ export function PipelineMonitoringPage({
         </p>
         <div className="mt-4">
           <PipelineRefreshButton
-            isFetching={status.isFetching || metrics.isFetching}
+            isFetching={isFetching}
             label={refreshLabels.refresh}
             ariaLabel={refreshLabels.refreshAria}
             onRefresh={refreshMonitoring}
@@ -127,6 +129,9 @@ export function PipelineMonitoringPage({
       </section>
     )
   }
+
+  const health = deriveHealth(status.data, explain.data, snapshot.data)
+  const { rows, outputs } = deriveTables(metrics.data, snapshot.data)
 
   return (
     <section className={`${styles.page} pipeline-monitoring mt-6`}>
@@ -149,7 +154,7 @@ export function PipelineMonitoringPage({
         </div>
         <div className="pipeline-monitoring__actions">
           <PipelineRefreshButton
-            isFetching={status.isFetching || metrics.isFetching}
+            isFetching={isFetching}
             label={refreshLabels.refresh}
             ariaLabel={refreshLabels.refreshAria}
             onRefresh={refreshMonitoring}
@@ -157,84 +162,23 @@ export function PipelineMonitoringPage({
         </div>
       </div>
 
-      <div className="pipeline-monitoring__summary">
-        <div className="pipeline-monitoring__summary-copy">
-          <span className="pipeline-monitoring__summary-label">
-            {t('pipelines.workspace.runtime.state')}
-          </span>
-          <span className="pipeline-monitoring__summary-pipeline">{pipelineId}</span>
-        </div>
-        {status.data && (
-          <span className="system-xs-medium text-text-secondary inline-flex shrink-0 items-center gap-1.5">
-            <StatusDot
-              className="rounded-full"
-              size="small"
-              status={stateDotStatus[status.data.state]}
-            />
-            {t(`pipelines.workspace.runtime.states.${status.data.state}`)}
-          </span>
-        )}
-      </div>
-
-      {status.data?.failure && (
-        <div className="pipeline-monitoring__failure">
-          <p className="pipeline-monitoring__failure-code">{status.data.failure.code}</p>
-          <p className="pipeline-monitoring__failure-message">{status.data.failure.message}</p>
-        </div>
-      )}
-
-      <div className="pipeline-monitoring__grid">
-        <section className="pipeline-monitoring__card pipeline-monitoring__card--metrics">
-          <div className="pipeline-monitoring__card-header">
-            <div>
-              <h2 className="pipeline-monitoring__card-title">
-                {t('pipelines.workspace.runtime.monitoring.metricsTitle')}
-              </h2>
-              <p className="pipeline-monitoring__card-description">
-                {t('pipelines.workspace.runtime.monitoring.metricsBody')}
-              </p>
-            </div>
-            <span className="pipeline-monitoring__count">
-              {t('pipelines.workspace.runtime.monitoring.metricCount', { count: metricCount })}
-            </span>
-          </div>
-          <PipelineMetricChart metrics={metrics.data} />
-        </section>
-
-        <section className="pipeline-monitoring__card">
-          <div className="pipeline-monitoring__card-header">
-            <div>
-              <h2 className="pipeline-monitoring__card-title">
-                {t('pipelines.workspace.runtime.monitoring.offsetsTitle')}
-              </h2>
-              <p className="pipeline-monitoring__card-description">
-                {t('pipelines.workspace.runtime.monitoring.offsetsBody')}
-              </p>
-            </div>
-          </div>
-          {offsetEntries.length === 0 ? (
-            <p className="pipeline-monitoring__empty-inline">
-              {t('pipelines.workspace.runtime.monitoring.noOffsets')}
-            </p>
-          ) : (
-            <dl className="pipeline-monitoring__offset-list">
-              {offsetEntries.map(([table, offset]) => (
-                <div key={table} className="pipeline-monitoring__offset-row">
-                  <dt title={table}>{table}</dt>
-                  <dd title={offset}>{offset}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
-        </section>
-      </div>
-
+      <MonitoringHealthBanner health={health} explain={explain.data} />
+      <MonitoringKeyFigures
+        figures={deriveKeyFigures(metrics.data, snapshot.data)}
+        recordsOutRate={recordsOutRate}
+      />
+      <MonitoringTablesSection rows={rows} outputs={outputs} />
       <PipelineReadSurface
         pipelineId={pipelineId}
-        tables={Object.keys(
-          metrics.data?.targetAckedPosition ?? metrics.data?.perTableOffset ?? {},
-        ).sort()}
+        tables={lagOutputs(metrics.data)}
+        startedAt={runStartedAt(metrics.data)}
+        onRecordsOutRate={setRecordsOutRate}
       />
+      <MonitoringTransformState
+        stages={deriveNestStages(metrics.data)}
+        joins={deriveJoinRecomputes(metrics.data)}
+      />
+      <MonitoringAllMetrics groups={groupMetrics(metrics.data)} />
     </section>
   )
 }

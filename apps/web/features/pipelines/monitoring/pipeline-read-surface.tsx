@@ -1,32 +1,41 @@
 import { Button } from '@tapstate-web/ui/button'
 import { Spinner } from '@tapstate-web/ui/spinner'
-import { useId, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type {
-  PipelineExplain,
   PipelineHistoryPoint,
   PipelineHistorySegment,
   PipelineMetricsHistory,
 } from '@/service/pipelines/pipeline-observability-client'
 
+import { formatDuration } from './pipeline-monitoring-format'
 import {
   usePipelineReadSurfaceQueries,
   type PipelineHistoryWindow,
 } from './pipeline-read-surface-queries'
 
-type Range = '1h' | '6h' | '24h' | '7d'
+type Range = 'since' | '1h' | '6h' | '24h' | '7d'
 
-const RANGE_MS: Record<Range, number> = {
+const RANGE_MS: Record<Exclude<Range, 'since'>, number> = {
   '1h': 60 * 60 * 1000,
   '6h': 6 * 60 * 60 * 1000,
   '24h': 24 * 60 * 60 * 1000,
   '7d': 7 * 24 * 60 * 60 * 1000,
 }
 
-function createWindow(range: Range): PipelineHistoryWindow {
+function createWindow(range: Range, startedAt: number | null): PipelineHistoryWindow {
   const to = new Date()
-  return { from: new Date(to.getTime() - RANGE_MS[range]).toISOString(), to: to.toISOString() }
+  const from =
+    range === 'since' && startedAt !== null
+      ? startedAt
+      : to.getTime() - RANGE_MS[range === 'since' ? '24h' : range]
+  return { from: new Date(from).toISOString(), to: to.toISOString() }
+}
+
+/** A run younger than a day is shown from its start, so its history is not one spike at the right edge. */
+function initialRange(startedAt: number | null): Range {
+  return startedAt !== null && Date.now() - startedAt < RANGE_MS['24h'] ? 'since' : '24h'
 }
 
 function pathForSegments(
@@ -210,13 +219,8 @@ function RateChart({
   )
 }
 
-function LagSummary({
-  history,
-  formatter,
-}: {
-  history: PipelineMetricsHistory
-  formatter: Intl.NumberFormat
-}) {
+function LagSummary({ history }: { history: PipelineMetricsHistory }) {
+  const { i18n, t } = useTranslation()
   const latestByTable = new Map<string, { observedAt: string; last: number; max: number }>()
   for (const segment of history.segments) {
     for (const point of segment.points) {
@@ -241,96 +245,36 @@ function LagSummary({
       {rows.map(([table, lag]) => (
         <div className="pipeline-monitoring__lag-row" key={table}>
           <dt title={table}>{table}</dt>
-          <dd>{formatter.format(lag.last)} s</dd>
-          <dd className="pipeline-monitoring__lag-max">max {formatter.format(lag.max)} s</dd>
+          <dd>{formatDuration(lag.last * 1_000, i18n.language)}</dd>
+          <dd className="pipeline-monitoring__lag-max">
+            {t('pipelines.workspace.runtime.monitoring.lagMax', {
+              duration: formatDuration(lag.max * 1_000, i18n.language),
+            })}
+          </dd>
         </div>
       ))}
     </dl>
   )
 }
 
-function ExplainPanel({ explain }: { explain: PipelineExplain | undefined }) {
-  const { t } = useTranslation()
-  if (!explain) return null
-
-  return (
-    <section className="pipeline-monitoring__card pipeline-monitoring__diagnosis">
-      <div className="pipeline-monitoring__card-header">
-        <div>
-          <h2 className="pipeline-monitoring__card-title">
-            {t('pipelines.workspace.runtime.monitoring.explainTitle')}
-          </h2>
-          <p className="pipeline-monitoring__card-description">
-            {t(`pipelines.workspace.runtime.monitoring.freshness.${explain.freshness}`)}
-            {explain.observedAgeMillis !== undefined &&
-              ` · ${t('pipelines.workspace.runtime.monitoring.observationAge', {
-                seconds: Math.round(explain.observedAgeMillis / 1000),
-              })}`}
-          </p>
-        </div>
-        <span className="pipeline-monitoring__count">
-          {t(`pipelines.workspace.runtime.monitoring.explainKind.${explain.kind}`)}
-        </span>
-      </div>
-      <div className="pipeline-monitoring__diagnosis-body">
-        <p className="pipeline-monitoring__diagnosis-message">{explain.message}</p>
-        {explain.evidence.length > 0 && (
-          <div>
-            <h3 className="pipeline-monitoring__detail-heading">
-              {t('pipelines.workspace.runtime.monitoring.evidence')}
-            </h3>
-            <dl className="pipeline-monitoring__evidence-list">
-              {explain.evidence.map((item, index) => (
-                <div key={`${item.source}-${item.field}-${index}`}>
-                  <dt>
-                    {item.source} · {item.field}
-                  </dt>
-                  <dd>
-                    {typeof item.value === 'string' ? item.value : JSON.stringify(item.value)}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-        )}
-        {explain.cannotSay.length > 0 && (
-          <div>
-            <h3 className="pipeline-monitoring__detail-heading">
-              {t('pipelines.workspace.runtime.monitoring.cannotSay')}
-            </h3>
-            <ul className="pipeline-monitoring__cannot-say">
-              {explain.cannotSay.map((reason, index) => (
-                <li key={`${index}-${reason}`}>{reason}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {explain.next && (
-          <p className="pipeline-monitoring__next-action">
-            <span>{t('pipelines.workspace.runtime.monitoring.nextAction')}</span>
-            {explain.next.message}
-          </p>
-        )}
-      </div>
-    </section>
-  )
-}
-
 export function PipelineReadSurface({
   pipelineId,
   tables,
+  startedAt = null,
+  onRecordsOutRate,
 }: {
   pipelineId: string
+  /** The outputs lag is reported under; lag is keyed by output, not by source table. */
   tables: string[]
+  /** When the current run began counting, if known. */
+  startedAt?: number | null
+  /** Receives the latest records-out rate the history holds, for the page's key figures. */
+  onRecordsOutRate?: (rate: number | null) => void
 }) {
   const { i18n, t } = useTranslation()
-  const [selectedRange, setSelectedRange] = useState<Range>('24h')
-  const [window, setWindow] = useState(() => createWindow('24h'))
-  const { history, explain, requestedTableCount } = usePipelineReadSurfaceQueries(
-    pipelineId,
-    window,
-    tables,
-  )
+  const [selectedRange, setSelectedRange] = useState<Range>(() => initialRange(startedAt))
+  const [window, setWindow] = useState(() => createWindow(initialRange(startedAt), startedAt))
+  const { history, requestedTableCount } = usePipelineReadSurfaceQueries(pipelineId, window, tables)
   const pages = history.data?.pages ?? []
   const firstPage = pages[0]
   const segments = pages.flatMap((page) => page.segments)
@@ -343,31 +287,20 @@ export function PipelineReadSurface({
   ]
   const resetCount =
     chartHistory?.segments.filter((segment) => segment.startReason === 'COUNTER_RESET').length ?? 0
+  const latestRecordsOut =
+    segments
+      .flatMap((segment) => segment.points)
+      .findLast((point) => point.recordsOut !== undefined)?.recordsOut?.averageRate ?? null
+  useEffect(() => {
+    onRecordsOutRate?.(latestRecordsOut)
+  }, [latestRecordsOut, onRecordsOutRate])
+  const ranges: Range[] =
+    startedAt !== null && Date.now() - startedAt < RANGE_MS['24h']
+      ? ['since', '1h', '6h', '24h', '7d']
+      : ['1h', '6h', '24h', '7d']
 
   return (
     <div className="pipeline-monitoring__read-surfaces">
-      <ExplainPanel explain={explain.data} />
-      {explain.isLoading && (
-        <div
-          className="pipeline-monitoring__state pipeline-monitoring__inline-loading"
-          role="status"
-        >
-          <Spinner
-            aria-label={t('pipelines.workspace.runtime.monitoring.explainLoading')}
-            className="text-text-accent"
-          />
-          {t('pipelines.workspace.runtime.monitoring.explainLoading')}
-        </div>
-      )}
-      {explain.isError && (
-        <section className="pipeline-monitoring__state" role="status">
-          <p>{t('pipelines.workspace.runtime.monitoring.explainError')}</p>
-          <Button size="small" variant="secondary" onClick={() => void explain.refetch()}>
-            {t('pipelines.workspace.runtime.monitoring.retry')}
-          </Button>
-        </section>
-      )}
-
       <section className="pipeline-monitoring__card">
         <div className="pipeline-monitoring__card-header pipeline-monitoring__history-header">
           <div>
@@ -387,7 +320,7 @@ export function PipelineReadSurface({
             role="group"
             aria-label={t('pipelines.workspace.runtime.monitoring.rangeLabel')}
           >
-            {(['1h', '6h', '24h', '7d'] as const).map((range) => (
+            {ranges.map((range) => (
               <Button
                 key={range}
                 size="small"
@@ -395,10 +328,14 @@ export function PipelineReadSurface({
                 aria-pressed={selectedRange === range}
                 onClick={() => {
                   setSelectedRange(range)
-                  setWindow(createWindow(range))
+                  setWindow(createWindow(range, startedAt))
                 }}
               >
-                {t(`pipelines.workspace.runtime.monitoring.ranges.${range}`)}
+                {range === 'since' && startedAt !== null
+                  ? t('pipelines.workspace.runtime.monitoring.ranges.since', {
+                      duration: formatDuration(Date.now() - startedAt, i18n.language),
+                    })
+                  : t(`pipelines.workspace.runtime.monitoring.ranges.${range}`)}
               </Button>
             ))}
           </div>
@@ -465,7 +402,7 @@ export function PipelineReadSurface({
                   </span>
                 )}
               </div>
-              <LagSummary history={chartHistory} formatter={formatter} />
+              <LagSummary history={chartHistory} />
               {chartHistory.segments.every((segment) =>
                 segment.points.every((point) => point.lag.length === 0),
               ) && (

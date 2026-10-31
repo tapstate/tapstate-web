@@ -1,7 +1,6 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 
 import {
-  getPipelineExplain,
   getPipelineMetricsHistory,
   type PipelineHistoryQuery,
 } from '@/service/pipelines/pipeline-observability-client'
@@ -35,15 +34,5 @@ export function usePipelineReadSurfaceQueries(
     refetchOnWindowFocus: false,
   })
 
-  const explain = useQuery({
-    queryKey: ['pipelines', pipelineId, 'explain'],
-    queryFn: () => getPipelineExplain(pipelineId, apiFetch),
-    staleTime: 30_000,
-    retry: false,
-    refetchInterval: false,
-    refetchOnReconnect: false,
-    refetchOnWindowFocus: false,
-  })
-
-  return { history, explain, requestedTableCount: tables.length }
+  return { history, requestedTableCount: tables.length }
 }

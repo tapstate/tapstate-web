@@ -1306,14 +1306,15 @@
             "1h": "1h",
             "6h": "6h",
             "24h": "24h",
-            "7d": "7d"
+            "7d": "7d",
+            "since": "Since start · {{duration}}"
           },
           "recordsRate": "Records per second",
           "bytesRate": "Bytes per second",
           "rateUnavailable": "No {{metric}} samples are available in this range.",
           "gapsNote": "{{count}} sampling gaps are shown as breaks.",
           "resetsNote": "{{count}} counter resets start new line segments.",
-          "lagTitle": "Target acknowledgement lag",
+          "lagTitle": "Time since newest change, per output",
           "lagTableLimit": "Showing the first {{count}} tables.",
           "noLagSamples": "No lag samples are available for the selected tables and range.",
           "unavailableSeries": "Unavailable series: {{metrics}}",
@@ -1342,7 +1343,126 @@
           "unavailableTitle": "Monitoring unavailable",
           "unavailableBody": "This Pipeline has not published runtime monitoring yet.",
           "errorTitle": "We couldn't load monitoring",
-          "errorBody": "Check the control plane and try again."
+          "errorBody": "Check the control plane and try again.",
+          "lagMax": "max {{duration}}",
+          "health": {
+            "nextStep": "Suggested next step:",
+            "details": "Diagnosis details",
+            "observed": "Observed {{age}} ago",
+            "loading": {
+              "title": "Initial load in progress: {{table}}, {{read}} of about {{total}} rows ({{percent}})",
+              "titleNoTotal": "Initial load in progress: {{table}}, {{read}} rows read",
+              "body": "Changes to a table are applied once its load lands. {{landed}} of {{total}} tables are loaded and streaming changes."
+            },
+            "stalled": {
+              "title": "{{tables}} not advancing for {{duration}}",
+              "body": "Changes from these tables are not being applied to the target."
+            },
+            "failed": {
+              "title": "Pipeline failed",
+              "body": "The pipeline stopped with a failure. Open Logs for the cause.",
+              "bodyWithCode": "The pipeline stopped with failure {{code}}. Open Logs for the cause."
+            },
+            "stale": {
+              "title": "Monitoring data is out of date",
+              "body": "The cluster has not published a fresh observation for this pipeline. The figures below may be old."
+            },
+            "reconcileFailures": {
+              "title": "The cluster keeps failing to apply this pipeline",
+              "body": "Each attempt to bring the pipeline to its requested state has failed."
+            },
+            "noMovement": {
+              "title": "No data has moved yet",
+              "body": "The pipeline is running but has read no rows so far."
+            },
+            "healthy": {
+              "title": "Sync healthy",
+              "body": "The pipeline is running and nothing is diagnosed. This describes sync status only, not whether the data is correct."
+            },
+            "notRunning": {
+              "title": "Pipeline is not running",
+              "body": "Start or resume the pipeline to see live figures."
+            },
+            "unknown": {
+              "title": "Sync status unknown",
+              "body": "The cluster has not reported a state for this pipeline."
+            }
+          },
+          "figures": {
+            "label": "Key figures",
+            "ago": "{{duration}} ago",
+            "perSecond": "{{value}} /s",
+            "newestChange": "Newest change delivered",
+            "newestChangeHint": "Across all outputs. Quiet tables show larger values below.",
+            "recordsOut": "Records out",
+            "recordsOutHint": "{{total}} total · {{bytes}} · acknowledged by target",
+            "recordsIn": "Records in",
+            "recordsInHint": "Total since start · {{bytes}}",
+            "failures": "Failures since start",
+            "initialLoad": "Initial load",
+            "tablesLoaded": "{{landed}} / {{total}} tables",
+            "rowsReadOf": "{{read}} of about {{total}} rows read",
+            "rowsReadDone": "{{read}} rows read · complete",
+            "rowsReadNoTotal": "{{read}} rows read"
+          },
+          "tables": {
+            "title": "Tables ({{count}})",
+            "description": "Loading and stalled tables first.",
+            "search": "Search tables",
+            "clearSearch": "Clear search",
+            "noMatch": "No tables match “{{query}}”.",
+            "previousPage": "Previous page",
+            "nextPage": "Next page",
+            "afterLoad": "After load",
+            "notReported": "Not reported",
+            "loadedRows": "{{read}} done",
+            "outputsTitle": "Outputs · time since newest change",
+            "columns": {
+              "table": "Table",
+              "phase": "Phase",
+              "initialLoad": "Initial load",
+              "newestChange": "Time since newest change",
+              "notAdvancing": "Not advancing for",
+              "gap": "Frontier gap"
+            },
+            "phase": {
+              "pending": "Waiting to load",
+              "loading": "Initial load",
+              "streaming": "CDC",
+              "loaded": "Loaded",
+              "unknown": "—"
+            }
+          },
+          "transform": {
+            "title": "Advanced · transform state",
+            "nest": "Nest",
+            "join": "Join rebuilds",
+            "root": "root",
+            "unnamedStage": "Unnamed stage",
+            "columns": {
+              "stage": "Stage",
+              "entries": "Entries",
+              "accesses": "Accesses",
+              "backfills": "Backfills",
+              "backfillTime": "Backfill time",
+              "pendingHighWater": "Pending high water",
+              "dimension": "Dimension",
+              "rebuilt": "Rows rebuilt"
+            }
+          },
+          "allMetrics": {
+            "title": "All metrics ({{count}})",
+            "groups": {
+              "throughput": "Throughput",
+              "lag": "Time since newest change",
+              "frontier": "Frontier",
+              "initialLoad": "Initial load",
+              "nest": "Nest state",
+              "join": "Join",
+              "errors": "Failures",
+              "other": "Other"
+            }
+          }
         },
         "states": {
           "DRAFT": "Draft",

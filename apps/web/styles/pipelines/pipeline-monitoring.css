@@ -589,3 +589,339 @@
     gap: 0.25rem;
   }
 }
+
+/* Health banner: the pipeline state and its diagnosis, first on the page. */
+.pipeline-monitoring__health {
+  --health-accent: var(--pipeline-text-muted);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--health-accent) 40%, var(--pipeline-border));
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--health-accent) 7%, var(--pipeline-surface));
+  padding: 0.875rem 1rem;
+}
+
+.pipeline-monitoring__health[data-tone='info'] {
+  --health-accent: var(--pipeline-selection);
+}
+
+.pipeline-monitoring__health[data-tone='warning'] {
+  --health-accent: var(--pipeline-status-paused-text);
+}
+
+.pipeline-monitoring__health[data-tone='error'] {
+  --health-accent: var(--pipeline-status-failed-text);
+}
+
+.pipeline-monitoring__health-icon {
+  flex: 0 0 auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.0625rem;
+  color: var(--health-accent);
+}
+
+.pipeline-monitoring__health-copy {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.pipeline-monitoring__health-title {
+  margin: 0;
+  color: var(--pipeline-text);
+  font-size: 0.875rem;
+  font-weight: 650;
+  line-height: 1.375rem;
+  overflow-wrap: anywhere;
+}
+
+.pipeline-monitoring__health-body,
+.pipeline-monitoring__health-meta {
+  margin: 0;
+  color: var(--pipeline-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+
+.pipeline-monitoring__health-label {
+  color: var(--pipeline-text);
+  font-weight: 600;
+}
+
+.pipeline-monitoring__health-meta {
+  flex: 0 0 auto;
+  color: var(--pipeline-text-subtle);
+  font-size: 0.75rem;
+}
+
+.pipeline-monitoring__health-details {
+  margin-top: 0.25rem;
+}
+
+.pipeline-monitoring__disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--pipeline-text-muted);
+  padding: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  cursor: pointer;
+}
+
+.pipeline-monitoring__disclosure-icon {
+  width: 1rem;
+  height: 1rem;
+  transition: transform 120ms ease;
+}
+
+.pipeline-monitoring__disclosure[data-panel-open] .pipeline-monitoring__disclosure-icon {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pipeline-monitoring__disclosure-icon {
+    transition: none;
+  }
+}
+
+/* Key figures: four readings with their units, read before any table. */
+.pipeline-monitoring__figures {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0.75rem 0 0;
+}
+
+.pipeline-monitoring__figure {
+  display: grid;
+  align-content: start;
+  gap: 0.25rem;
+  min-width: 0;
+  border: 1px solid var(--pipeline-border);
+  border-radius: 0.75rem;
+  background: var(--pipeline-surface);
+  padding: 0.875rem 1rem;
+}
+
+.pipeline-monitoring__figure[data-tone='warning'] {
+  border-color: color-mix(in srgb, var(--pipeline-status-paused-text) 40%, var(--pipeline-border));
+  background: color-mix(in srgb, var(--pipeline-status-paused-text) 7%, var(--pipeline-surface));
+}
+
+.pipeline-monitoring__figure-label {
+  color: var(--pipeline-text-subtle);
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  line-height: 1rem;
+  text-transform: uppercase;
+}
+
+.pipeline-monitoring__figure-value {
+  margin: 0;
+  color: var(--pipeline-text);
+  font-size: 1.375rem;
+  font-weight: 650;
+  line-height: 1.75rem;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.pipeline-monitoring__figure-hint {
+  margin: 0;
+  color: var(--pipeline-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.125rem;
+  overflow-wrap: anywhere;
+}
+
+/* Per-table section and the transform tables: comparison rows, scrolling locally when narrow. */
+.pipeline-monitoring > .pipeline-monitoring__card,
+.pipeline-monitoring > .pipeline-monitoring__collapsible {
+  margin-top: 0.75rem;
+}
+
+.pipeline-monitoring__table-search {
+  flex: 0 1 15rem;
+  min-width: 10rem;
+}
+
+.pipeline-monitoring__table-scroll {
+  overflow-x: auto;
+}
+
+.pipeline-monitoring__table {
+  width: 100%;
+  min-width: 44rem;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+
+.pipeline-monitoring__table caption {
+  padding: 0.75rem 1rem 0.25rem;
+  text-align: left;
+}
+
+.pipeline-monitoring__table th,
+.pipeline-monitoring__table td {
+  border-top: 1px solid var(--pipeline-border);
+  padding: 0.625rem 1rem;
+  color: var(--pipeline-text);
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pipeline-monitoring__table thead th {
+  border-top: 0;
+  background: var(--pipeline-surface-subtle);
+  color: var(--pipeline-text-subtle);
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pipeline-monitoring__table [data-align='end'] {
+  text-align: right;
+}
+
+.pipeline-monitoring__table-name {
+  max-width: 18rem;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+
+.pipeline-monitoring__table tr[data-phase='loading'] > *,
+.pipeline-monitoring__table tr[data-phase='pending'] > * {
+  background: color-mix(in srgb, var(--pipeline-selection) 5%, var(--pipeline-surface));
+}
+
+.pipeline-monitoring__table tr[data-phase='loading'] td:nth-child(2) {
+  font-weight: 650;
+}
+
+.pipeline-monitoring__table tr[data-stalled] td:nth-child(5) {
+  color: var(--pipeline-status-paused-text);
+  font-weight: 600;
+}
+
+.pipeline-monitoring__filter-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.pipeline-monitoring__pagination {
+  border-top: 1px solid var(--pipeline-border);
+  padding: 0.75rem 1rem;
+}
+
+.pipeline-monitoring__outputs {
+  border-top: 1px solid var(--pipeline-border);
+  padding: 0.75rem 1rem 1rem;
+}
+
+/* Collapsed sections: transform state and the full metric list. */
+.pipeline-monitoring__collapsible > .pipeline-monitoring__disclosure {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.75rem 1rem;
+  color: var(--pipeline-text);
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.pipeline-monitoring__group-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-left: auto;
+}
+
+.pipeline-monitoring__group-chip {
+  border-radius: 0.375rem;
+  background: var(--pipeline-surface-subtle);
+  color: var(--pipeline-text-muted);
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+.pipeline-monitoring__metric-group {
+  border-top: 1px solid var(--pipeline-border);
+  padding: 0.75rem 1rem;
+}
+
+.pipeline-monitoring__metric-group dl {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.5rem 0 0;
+}
+
+.pipeline-monitoring__metric-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.75rem;
+  line-height: 1.125rem;
+}
+
+.pipeline-monitoring__metric-row dt {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--pipeline-text-muted);
+  font-family: var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pipeline-monitoring__metric-row dd {
+  margin: 0;
+  color: var(--pipeline-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 960px) {
+  .pipeline-monitoring__figures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .pipeline-monitoring__figures {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pipeline-monitoring__health {
+    flex-wrap: wrap;
+  }
+
+  .pipeline-monitoring__health-meta {
+    flex-basis: 100%;
+  }
+
+  .pipeline-monitoring__card-header {
+    flex-wrap: wrap;
+  }
+
+  .pipeline-monitoring__table-search {
+    flex-basis: 100%;
+  }
+}

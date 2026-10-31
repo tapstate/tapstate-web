@@ -1306,14 +1306,15 @@
             "1h": "1 小時",
             "6h": "6 小時",
             "24h": "24 小時",
-            "7d": "7 天"
+            "7d": "7 天",
+            "since": "自啟動 · {{duration}}"
           },
           "recordsRate": "每秒記錄數",
           "bytesRate": "每秒位元組數",
           "rateUnavailable": "此範圍內沒有可用的 {{metric}} 取樣。",
           "gapsNote": "取樣有 {{count}} 處空隙，圖中以斷線表示。",
           "resetsNote": "計數器重設 {{count}} 次，每次都會開始新的線段。",
-          "lagTitle": "目標確認延遲",
+          "lagTitle": "距最新變更的時間（依輸出）",
           "lagTableLimit": "顯示前 {{count}} 個資料表。",
           "noLagSamples": "所選資料表和時間範圍內沒有可用的延遲取樣。",
           "unavailableSeries": "無法提供的序列：{{metrics}}",
@@ -1342,7 +1343,126 @@
           "unavailableTitle": "監控資料無法使用",
           "unavailableBody": "此 Pipeline 尚未發布執行時監控資料。",
           "errorTitle": "無法載入監控資料",
-          "errorBody": "請檢查控制平面後重試。"
+          "errorBody": "請檢查控制平面後重試。",
+          "lagMax": "最大 {{duration}}",
+          "health": {
+            "nextStep": "建議的下一步：",
+            "details": "診斷詳情",
+            "observed": "{{age}}前採集",
+            "loading": {
+              "title": "初始載入中：{{table}}，已讀 {{read}} 列，約 {{total}} 列（{{percent}}）",
+              "titleNoTotal": "初始載入中：{{table}}，已讀 {{read}} 列",
+              "body": "資料表的變更會在其載入完成後套用。{{total}} 張資料表中已有 {{landed}} 張載入完成並在同步變更。"
+            },
+            "stalled": {
+              "title": "{{tables}} 已 {{duration}} 未推進",
+              "body": "這些資料表的變更沒有寫入目標端。"
+            },
+            "failed": {
+              "title": "Pipeline 執行失敗",
+              "body": "Pipeline 因故障停止。請開啟日誌查看原因。",
+              "bodyWithCode": "Pipeline 因故障 {{code}} 停止。請開啟日誌查看原因。"
+            },
+            "stale": {
+              "title": "監控資料已過期",
+              "body": "叢集沒有為此 Pipeline 發布新的觀測，下方數字可能已過時。"
+            },
+            "reconcileFailures": {
+              "title": "叢集反覆無法套用此 Pipeline",
+              "body": "每次將 Pipeline 調整到請求狀態的嘗試都失敗了。"
+            },
+            "noMovement": {
+              "title": "尚無資料流動",
+              "body": "Pipeline 正在執行，但至今未讀取任何列。"
+            },
+            "healthy": {
+              "title": "同步正常",
+              "body": "Pipeline 正在執行，未診斷出問題。這只描述同步狀態，不代表資料正確。"
+            },
+            "notRunning": {
+              "title": "Pipeline 未執行",
+              "body": "啟動或恢復 Pipeline 後可查看即時數字。"
+            },
+            "unknown": {
+              "title": "同步狀態未知",
+              "body": "叢集尚未回報此 Pipeline 的狀態。"
+            }
+          },
+          "figures": {
+            "label": "關鍵數字",
+            "ago": "{{duration}}前",
+            "perSecond": "{{value}} /秒",
+            "newestChange": "最新變更送達",
+            "newestChangeHint": "取所有輸出中最新的。靜默的資料表在下方會顯示較大的值。",
+            "recordsOut": "輸出記錄",
+            "recordsOutHint": "累計 {{total}} · {{bytes}} · 目標端已確認",
+            "recordsIn": "輸入記錄",
+            "recordsInHint": "自啟動累計 · {{bytes}}",
+            "failures": "自啟動以來的失敗",
+            "initialLoad": "初始載入",
+            "tablesLoaded": "{{landed}} / {{total}} 張資料表",
+            "rowsReadOf": "已讀 {{read}} 列，約 {{total}} 列",
+            "rowsReadDone": "已讀 {{read}} 列 · 完成",
+            "rowsReadNoTotal": "已讀 {{read}} 列"
+          },
+          "tables": {
+            "title": "資料表（{{count}}）",
+            "description": "載入中和停滯的資料表排在前面。",
+            "search": "搜尋資料表",
+            "clearSearch": "清除搜尋",
+            "noMatch": "沒有與「{{query}}」相符的資料表。",
+            "previousPage": "上一頁",
+            "nextPage": "下一頁",
+            "afterLoad": "載入後",
+            "notReported": "未回報",
+            "loadedRows": "{{read}} 完成",
+            "outputsTitle": "輸出 · 距最新變更的時間",
+            "columns": {
+              "table": "資料表",
+              "phase": "階段",
+              "initialLoad": "初始載入",
+              "newestChange": "距最新變更",
+              "notAdvancing": "未推進時長",
+              "gap": "位點差距"
+            },
+            "phase": {
+              "pending": "等待載入",
+              "loading": "初始載入",
+              "streaming": "CDC",
+              "loaded": "已載入",
+              "unknown": "—"
+            }
+          },
+          "transform": {
+            "title": "進階 · 轉換狀態",
+            "nest": "Nest",
+            "join": "Join 重建",
+            "root": "根",
+            "unnamedStage": "未命名階段",
+            "columns": {
+              "stage": "階段",
+              "entries": "條目",
+              "accesses": "存取",
+              "backfills": "回填",
+              "backfillTime": "回填耗時",
+              "pendingHighWater": "等待高水位",
+              "dimension": "維度",
+              "rebuilt": "已重建列"
+            }
+          },
+          "allMetrics": {
+            "title": "全部指標（{{count}}）",
+            "groups": {
+              "throughput": "吞吐",
+              "lag": "距最新變更",
+              "frontier": "處理位點",
+              "initialLoad": "初始載入",
+              "nest": "Nest 狀態",
+              "join": "Join",
+              "errors": "失敗",
+              "other": "其他"
+            }
+          }
         },
         "states": {
           "DRAFT": "草稿",

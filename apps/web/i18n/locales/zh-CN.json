@@ -1306,14 +1306,15 @@
             "1h": "1 小时",
             "6h": "6 小时",
             "24h": "24 小时",
-            "7d": "7 天"
+            "7d": "7 天",
+            "since": "自启动 · {{duration}}"
           },
           "recordsRate": "每秒记录数",
           "bytesRate": "每秒字节数",
           "rateUnavailable": "此范围内没有可用的 {{metric}} 采样。",
           "gapsNote": "采样中有 {{count}} 处空档，图中以断线表示。",
           "resetsNote": "计数器重置 {{count}} 次，每次均从新线段开始。",
-          "lagTitle": "目标确认延迟",
+          "lagTitle": "距最新变更的时间（按输出）",
           "lagTableLimit": "显示前 {{count}} 张表。",
           "noLagSamples": "所选表和时间范围内没有可用的延迟采样。",
           "unavailableSeries": "不可用的序列：{{metrics}}",
@@ -1342,7 +1343,126 @@
           "unavailableTitle": "监控数据不可用",
           "unavailableBody": "此 Pipeline 还没有发布运行时监控数据。",
           "errorTitle": "无法加载监控数据",
-          "errorBody": "请检查控制平面后重试。"
+          "errorBody": "请检查控制平面后重试。",
+          "lagMax": "最大 {{duration}}",
+          "health": {
+            "nextStep": "建议的下一步：",
+            "details": "诊断详情",
+            "observed": "{{age}}前采集",
+            "loading": {
+              "title": "初始加载中：{{table}}，已读 {{read}} 行，约 {{total}} 行（{{percent}}）",
+              "titleNoTotal": "初始加载中：{{table}}，已读 {{read}} 行",
+              "body": "表的变更会在其加载完成后应用。{{total}} 张表中已有 {{landed}} 张加载完成并在同步变更。"
+            },
+            "stalled": {
+              "title": "{{tables}} 已 {{duration}} 未推进",
+              "body": "这些表的变更没有写入目标端。"
+            },
+            "failed": {
+              "title": "Pipeline 运行失败",
+              "body": "Pipeline 因故障停止。请打开日志查看原因。",
+              "bodyWithCode": "Pipeline 因故障 {{code}} 停止。请打开日志查看原因。"
+            },
+            "stale": {
+              "title": "监控数据已过期",
+              "body": "集群没有为此 Pipeline 发布新的观测，下方数字可能已过时。"
+            },
+            "reconcileFailures": {
+              "title": "集群反复无法应用此 Pipeline",
+              "body": "每次将 Pipeline 调整到请求状态的尝试都失败了。"
+            },
+            "noMovement": {
+              "title": "尚无数据流动",
+              "body": "Pipeline 正在运行，但至今未读取任何行。"
+            },
+            "healthy": {
+              "title": "同步正常",
+              "body": "Pipeline 正在运行，未诊断出问题。这只描述同步状态，不代表数据正确。"
+            },
+            "notRunning": {
+              "title": "Pipeline 未运行",
+              "body": "启动或恢复 Pipeline 后可查看实时数字。"
+            },
+            "unknown": {
+              "title": "同步状态未知",
+              "body": "集群尚未报告此 Pipeline 的状态。"
+            }
+          },
+          "figures": {
+            "label": "关键数字",
+            "ago": "{{duration}}前",
+            "perSecond": "{{value}} /秒",
+            "newestChange": "最新变更送达",
+            "newestChangeHint": "取所有输出中最新的。静默的表在下方会显示较大的值。",
+            "recordsOut": "输出记录",
+            "recordsOutHint": "累计 {{total}} · {{bytes}} · 目标端已确认",
+            "recordsIn": "输入记录",
+            "recordsInHint": "自启动累计 · {{bytes}}",
+            "failures": "自启动以来的失败",
+            "initialLoad": "初始加载",
+            "tablesLoaded": "{{landed}} / {{total}} 张表",
+            "rowsReadOf": "已读 {{read}} 行，约 {{total}} 行",
+            "rowsReadDone": "已读 {{read}} 行 · 完成",
+            "rowsReadNoTotal": "已读 {{read}} 行"
+          },
+          "tables": {
+            "title": "表（{{count}}）",
+            "description": "加载中和停滞的表排在前面。",
+            "search": "搜索表",
+            "clearSearch": "清除搜索",
+            "noMatch": "没有与“{{query}}”匹配的表。",
+            "previousPage": "上一页",
+            "nextPage": "下一页",
+            "afterLoad": "加载后",
+            "notReported": "未上报",
+            "loadedRows": "{{read}} 完成",
+            "outputsTitle": "输出 · 距最新变更的时间",
+            "columns": {
+              "table": "表",
+              "phase": "阶段",
+              "initialLoad": "初始加载",
+              "newestChange": "距最新变更",
+              "notAdvancing": "未推进时长",
+              "gap": "位点差距"
+            },
+            "phase": {
+              "pending": "等待加载",
+              "loading": "初始加载",
+              "streaming": "CDC",
+              "loaded": "已加载",
+              "unknown": "—"
+            }
+          },
+          "transform": {
+            "title": "高级 · 转换状态",
+            "nest": "Nest",
+            "join": "Join 重建",
+            "root": "根",
+            "unnamedStage": "未命名阶段",
+            "columns": {
+              "stage": "阶段",
+              "entries": "条目",
+              "accesses": "访问",
+              "backfills": "回填",
+              "backfillTime": "回填耗时",
+              "pendingHighWater": "等待高水位",
+              "dimension": "维度",
+              "rebuilt": "已重建行"
+            }
+          },
+          "allMetrics": {
+            "title": "全部指标（{{count}}）",
+            "groups": {
+              "throughput": "吞吐",
+              "lag": "距最新变更",
+              "frontier": "处理位点",
+              "initialLoad": "初始加载",
+              "nest": "Nest 状态",
+              "join": "Join",
+              "errors": "失败",
+              "other": "其他"
+            }
+          }
         },
         "states": {
           "DRAFT": "草稿",

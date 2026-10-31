@@ -102,6 +102,36 @@ export interface PipelineExplain {
   next: PipelineExplainNext | null
 }
 
+export type PipelineInitialLoadStage = 'PENDING' | 'READING' | 'LANDING' | 'LANDED'
+
+export interface PipelineTableSnapshot {
+  rowsDone: number
+  rowsTotal?: number | null
+  donePct?: number | null
+  landed?: boolean
+}
+
+export interface PipelineInitialLoadTable {
+  stage: PipelineInitialLoadStage
+  rowsRead?: number | null
+  rowsTotalEstimate?: number | null
+}
+
+export interface PipelineInitialLoad {
+  readMode: string
+  phase?: string
+  landedTables?: number
+  totalTables?: number
+  observedAt?: string
+  tables: Record<string, PipelineInitialLoadTable>
+}
+
+export interface PipelineSnapshot {
+  pipelineId: string
+  snapshot: Record<string, PipelineTableSnapshot>
+  initialLoad?: PipelineInitialLoad | null
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -300,6 +330,52 @@ export async function getPipelineExplain(
   const payload = await request(`/pipelines/${encodeURIComponent(pipelineId)}/explain`, fetcher)
   if (!isPipelineExplain(payload) || payload.pipelineId !== pipelineId) {
     throw new PipelineClientError('protocol', 'Tapstate returned an invalid Pipeline explanation.')
+  }
+  return payload
+}
+
+const INITIAL_LOAD_STAGES = new Set<PipelineInitialLoadStage>([
+  'PENDING',
+  'READING',
+  'LANDING',
+  'LANDED',
+])
+
+function isOptionalCount(value: unknown) {
+  return value === undefined || value === null || isFiniteNumber(value)
+}
+
+function isPipelineSnapshot(value: unknown): value is PipelineSnapshot {
+  if (!isRecord(value) || typeof value.pipelineId !== 'string' || !isRecord(value.snapshot))
+    return false
+  const tablesValid = Object.values(value.snapshot).every(
+    (table) =>
+      isRecord(table) && isFiniteNumber(table.rowsDone) && isOptionalCount(table.rowsTotal),
+  )
+  if (!tablesValid) return false
+  const load = value.initialLoad
+  if (load === undefined || load === null) return true
+  return (
+    isRecord(load) &&
+    typeof load.readMode === 'string' &&
+    isRecord(load.tables) &&
+    Object.values(load.tables).every(
+      (table) =>
+        isRecord(table) &&
+        INITIAL_LOAD_STAGES.has(table.stage as PipelineInitialLoadStage) &&
+        isOptionalCount(table.rowsRead) &&
+        isOptionalCount(table.rowsTotalEstimate),
+    )
+  )
+}
+
+export async function getPipelineSnapshot(
+  pipelineId: string,
+  fetcher: ApiFetcher = fetch,
+): Promise<PipelineSnapshot> {
+  const payload = await request(`/pipelines/${encodeURIComponent(pipelineId)}/snapshot`, fetcher)
+  if (!isPipelineSnapshot(payload) || payload.pipelineId !== pipelineId) {
+    throw new PipelineClientError('protocol', 'Tapstate returned an invalid Pipeline snapshot.')
   }
   return payload
 }
