@@ -2445,6 +2445,164 @@ it.each(['DRAINED', 'UNKNOWN'])(
   },
 )
 
+it.each(['START_REQUESTED', 'UNKNOWN'] as const)(
+  'retains the original scheduled %s selector after schedule OFF and history return',
+  async (state) => {
+    const command = '80000000-0000-4000-8000-000000000001'
+    let stopped = false
+    let current: ValidationTask = {
+      ...saved,
+      scheduleEnabled: true,
+      schedule: {
+        kind: 'INTERVAL',
+        every: '30',
+        unit: 'MINUTES',
+        anchor: '2026-10-31T00:00:00Z',
+        expression: null,
+        zoneId: 'Asia/Shanghai',
+      },
+      scheduleObservation: {
+        node: context.node,
+        boot: context.boot,
+        member: context.member,
+        context: context.incarnation,
+        observedAt: '2026-10-31T00:01:00Z',
+        nextDue: null,
+        lastDue: '2026-10-31T00:00:00Z',
+        state,
+        reason: null,
+        command,
+        run: 'pending-scheduled-entry',
+        sequence: '1',
+      },
+    }
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path),
+        body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':schedule-disable')) {
+        current = {
+          ...current,
+          revision: '2',
+          scheduleEnabled: false,
+          scheduleObservation: null,
+          context: { ...context, node: 'another-node', boot: 'another-boot' },
+        }
+        return json({
+          outcome: 'APPLIED',
+          taskGeneration: generation,
+          receiptRevision: '2',
+          command: body.command,
+          scheduleEnabled: false,
+        })
+      }
+      if (action.endsWith(':progress') || action.endsWith(':stop')) {
+        if (action.endsWith(':stop')) stopped = true
+        return json({
+          original: body,
+          run: 'pending-scheduled-entry',
+          outcome: stopped ? 'ACCEPTED' : 'UNKNOWN',
+          state: stopped ? 'STOPPED' : null,
+          admitted: false,
+          waiting: false,
+          controlUnknown: !stopped,
+          retired: stopped,
+          drain: stopped ? 'DRAINED' : 'UNKNOWN',
+          reason: null,
+          tables: [],
+          premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+          conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+        })
+      }
+      if (action.includes('/reports?')) return json({ items: [], total: '0', offset: 0, limit: 20 })
+      return json(current)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 117 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(button('dataValidation.run.stop').disabled).toBe(false))
+    await click('dataValidation.run.backSettings')
+    await click('dataValidation.schedule.title')
+    await click('dataValidation.schedule.disable')
+    await settled(() => expect(document.body.textContent).toContain('dataValidation.schedule.off'))
+    expect(button('dataValidation.run.stop').disabled).toBe(false)
+    await act(async () => {
+      await queries!.refetchQueries({ queryKey: ['validation', 'progress'], type: 'active' })
+    })
+    const progress = read.mock.calls.filter(([path]) => String(path).endsWith(':progress')).at(-1)!
+    const original = JSON.parse(String(progress[1]?.body))
+    expect(original).toEqual({
+      context,
+      pipeline: 'flow',
+      task: 'full',
+      taskGeneration: generation,
+      revision: '1',
+      sequence: '1',
+      command,
+    })
+    expect(button('dataValidation.bulk.start').disabled).toBe(true)
+    expect(document.body.textContent).not.toContain('dataValidation.retryOriginalStart')
+    await click('dataValidation.schedule.back')
+    await click('dataValidation.history.title')
+    await click('dataValidation.schedule.back')
+    await click('dataValidation.run.view')
+    await click('dataValidation.run.stop')
+    await click('dataValidation.run.confirmStop')
+    await settled(() => expect(stopped).toBe(true))
+    const stop = read.mock.calls.find(([path]) => String(path).endsWith(':stop'))!
+    expect(JSON.parse(String(stop[1]?.body))).toEqual(original)
+    await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+    expect(read.mock.calls.some(([path]) => String(path).endsWith(':start'))).toBe(false)
+  },
+)
+
+it.each([false, true])(
+  'reconciles only a definite unused scheduled admission while physical drain stays UNKNOWN (controlUnknown=%s)',
+  async (controlUnknown) => {
+    const command = '90000000-0000-4000-8000-000000000001'
+    const observed: ValidationTask = {
+      ...saved,
+      scheduleObservation: {
+        node: context.node,
+        boot: context.boot,
+        member: context.member,
+        context: context.incarnation,
+        observedAt: '2026-10-31T00:01:00Z',
+        nextDue: null,
+        lastDue: '2026-10-31T00:00:00Z',
+        state: 'UNKNOWN',
+        reason: null,
+        command,
+        run: 'unused-scheduled-entry',
+        sequence: '1',
+      },
+    }
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) =>
+      String(path).endsWith(':progress')
+        ? json({
+            original: JSON.parse(String(init?.body)),
+            run: 'unused-scheduled-entry',
+            outcome: controlUnknown ? 'UNKNOWN' : 'REJECTED',
+            state: null,
+            admitted: false,
+            waiting: false,
+            controlUnknown,
+            retired: true,
+            drain: 'UNKNOWN',
+            reason: null,
+            tables: [],
+            premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+            conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+          })
+        : json(observed),
+    )
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 118 })
+    await mount(<ValidationPage pipelineId="flow" />)
+    await settled(() => expect(document.body.textContent).toContain('UNKNOWN'))
+    await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(controlUnknown))
+    expect(document.body.textContent).not.toContain('dataValidation.retryOriginalStart')
+    expect(read.mock.calls.some(([path]) => String(path).endsWith(':start'))).toBe(false)
+  },
+)
+
 it('updates live schedule admission observations without overwriting an unsaved rule', async () => {
   let observation: ValidationTask['scheduleObservation'] = null
   const planned: ValidationTask = {

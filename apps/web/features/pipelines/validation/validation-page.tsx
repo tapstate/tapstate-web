@@ -24,7 +24,11 @@ import {
   validationMappingHints,
   type ValidationMappingHint,
 } from './validation-mapping-hints'
-import { sameValidationOperation, validationStartBusy } from './validation-operation'
+import {
+  sameValidationOperation,
+  validationControlSelection,
+  validationStartBusy,
+} from './validation-operation'
 import { validationClientKey } from './validation-query-key'
 import { ValidationRunPanel } from './validation-run-panel'
 import { ValidationScheduleSettings } from './validation-schedule-settings'
@@ -201,6 +205,8 @@ function ValidationWorkspace({
   const [preparingStart, setPreparingStart] = useState(false)
   const [startNotSent, setStartNotSent] = useState(false)
   const [operation, setOperation] = useState<ValidationOperation | null>(null)
+  const [operationSource, setOperationSource] = useState<'MANUAL' | 'SCHEDULED'>('MANUAL')
+  const capturedSchedule = useRef<ValidationOperation | null>(null)
   const [terminalReceipt, setTerminalReceipt] = useState<ValidationExecution | null>(null)
   const [executionObservation, setExecutionObservation] = useState<ValidationExecution | null>(null)
   const [historyReference, setHistoryReference] = useState<ValidationReference | null>(null)
@@ -218,6 +224,21 @@ function ValidationWorkspace({
     retry: false,
     refetchInterval: preparingStart ? false : 3000,
   })
+  useEffect(() => {
+    if (operation) return
+    const live = taskQuery.data ?? basis,
+      selected = live ? validationControlSelection(live) : null
+    if (
+      selected?.source !== 'ENTRY_OBSERVATION' ||
+      sameValidationOperation(capturedSchedule.current, selected.operation)
+    )
+      return
+    // Keep the exact read/stop selector through OFF, task readback and history unmounts.
+    // Recording an observed request never grants a scheduled START replay.
+    capturedSchedule.current = selected.operation
+    setOperationSource('SCHEDULED')
+    setOperation(selected.operation)
+  }, [operation, taskQuery.data, basis])
   useEffect(() => {
     if (!operation) return
     const refused = executionObservation
@@ -285,11 +306,22 @@ function ValidationWorkspace({
           permission.revision === operation.revision))
     if (!terminalReceipt.admitted || reflected) {
       setOperation(null)
-      setTerminalReceipt(null)
+      if (operationSource === 'MANUAL') setTerminalReceipt(null)
     }
-  }, [operation, terminalReceipt, taskQuery.data, executionObservation, t])
+  }, [operation, operationSource, terminalReceipt, taskQuery.data, executionObservation, t])
   const liveTask = taskQuery.data ?? basis
-  const startBusy = liveTask !== null && validationStartBusy(liveTask, terminalReceipt)
+  const selected = liveTask ? validationControlSelection(liveTask) : null
+  const refusedObservedEntry =
+    selected?.source === 'ENTRY_OBSERVATION' &&
+    admissionRefusal !== null &&
+    !admissionRefusal.admitted &&
+    admissionRefusal.retired &&
+    !admissionRefusal.controlUnknown &&
+    admissionRefusal.state === null &&
+    ['REJECTED', 'CAPACITY', 'BUSY'].includes(admissionRefusal.outcome) &&
+    sameValidationOperation(admissionRefusal.original, selected.operation)
+  const startBusy =
+    liveTask !== null && validationStartBusy(liveTask, terminalReceipt) && !refusedObservedEntry
   const changed =
     needsReload ||
     (taskQuery.data !== undefined &&
@@ -430,7 +462,7 @@ function ValidationWorkspace({
     }
   }
   async function retryStart() {
-    if (!operation || pending || mutation.current) return
+    if (!operation || operationSource !== 'MANUAL' || pending || mutation.current) return
     setSection('run')
     mutation.current = true
     setPending(true)
@@ -494,6 +526,7 @@ function ValidationWorkspace({
       }
       setTerminalReceipt(null)
       setExecutionObservation(null)
+      setOperationSource('MANUAL')
       setOperation(original)
       setSection('run')
       originalCreated = true
@@ -577,6 +610,7 @@ function ValidationWorkspace({
         </Button>
       )}
       {operation &&
+        operationSource === 'MANUAL' &&
         (!executionObservation ||
           !sameValidationOperation(executionObservation.original, operation) ||
           !executionObservation.admitted ||
