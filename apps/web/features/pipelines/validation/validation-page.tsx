@@ -119,6 +119,7 @@ function ValidationWorkspace({
   } | null>(null)
   const offOriginal = useRef<ValidationDisable | null>(null)
   const [offUnknown, setOffUnknown] = useState(false)
+  const [preparingStart, setPreparingStart] = useState(false)
   const [startNotSent, setStartNotSent] = useState(false)
   const [operation, setOperation] = useState<ValidationOperation | null>(null)
   const [terminalReceipt, setTerminalReceipt] = useState<ValidationExecution | null>(null)
@@ -135,7 +136,7 @@ function ValidationWorkspace({
     queryKey: taskKey,
     queryFn: ({ signal }) => client.task(pipelineId, 'full', signal),
     retry: false,
-    refetchInterval: 3000,
+    refetchInterval: preparingStart ? false : 3000,
   })
   useEffect(() => {
     if (!operation) return
@@ -324,6 +325,7 @@ function ValidationWorkspace({
     const input = savedValidationSelection(basis)
     if (!input) refuse('dataValidation.definitionChanged')
     let originalCreated = false
+    setPreparingStart(true)
     setStartNotSent(false)
     setPending(true)
     setError(null)
@@ -366,6 +368,7 @@ function ValidationWorkspace({
       setTerminalReceipt(null)
       setOperation(original)
       originalCreated = true
+      setPreparingStart(false)
       // Retain the original selector before submitting. Reading it never dispatches another START.
       await client.start(original)
       void taskQuery.refetch()
@@ -374,6 +377,7 @@ function ValidationWorkspace({
       setError(failed)
       throw failed
     } finally {
+      setPreparingStart(false)
       setPending(false)
     }
   }

@@ -552,6 +552,77 @@ describe('real validation page mutation boundaries', () => {
     expect(targets.every((input) => input.value === '')).toBe(true)
     expect(button('dataValidation.bulk.save').disabled).toBe(true)
   })
+  it('pauses ambient reads only while preparing a new start and resumes monitoring before its reply', async () => {
+    let releaseEvaluation!: () => void
+    let releaseStart!: () => void
+    const preparing = new Promise<void>((resolve) => {
+      releaseEvaluation = resolve
+    })
+    const submitting = new Promise<void>((resolve) => {
+      releaseStart = resolve
+    })
+    let evaluating = false
+    const read = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const action = String(path),
+        body = init?.body ? JSON.parse(String(init.body)) : null
+      if (action.endsWith(':evaluate')) {
+        evaluating = true
+        await preparing
+        return json(evaluate(body))
+      }
+      if (action.endsWith(':start')) {
+        await submitting
+        throw new TypeError('start reply lost')
+      }
+      if (action.endsWith(':progress'))
+        return json({
+          original: body,
+          run: 'unconfirmed-run',
+          outcome: 'UNKNOWN',
+          state: null,
+          admitted: false,
+          waiting: false,
+          controlUnknown: true,
+          retired: false,
+          drain: 'UNKNOWN',
+          reason: null,
+          tables: [],
+          premise: 'INITIAL_SYNC_FINISHED_AND_BOTH_SIDES_STABLE',
+          conclusionScope: 'READ_OBSERVATIONS_NO_COMMON_TIME_SNAPSHOT',
+        })
+      return json(saved)
+    })
+    useAuthStore.setState({ apiFetch: noLoadedModels(read), sessionRevision: 102 })
+    try {
+      await mount(<ValidationPage pipelineId="flow" />)
+      await settled(() => expect(button('dataValidation.bulk.start').disabled).toBe(false))
+      await click('dataValidation.bulk.start')
+      await settled(() => expect(evaluating).toBe(true))
+      const tasks = () =>
+        read.mock.calls.filter(([path]) => String(path).endsWith('/validation-tasks/full')).length
+      const before = tasks()
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 3100))
+      })
+      expect(tasks()).toBe(before)
+      await act(async () => {
+        releaseEvaluation()
+      })
+      await settled(() =>
+        expect(read.mock.calls.some(([path]) => String(path).endsWith(':start'))).toBe(true),
+      )
+      // A possibly admitted START must remain observable even before its transport reply returns.
+      await settled(() =>
+        expect(read.mock.calls.some(([path]) => String(path).endsWith(':progress'))).toBe(true),
+      )
+      expect(button('dataValidation.run.stop').disabled).toBe(false)
+    } finally {
+      await act(async () => {
+        releaseEvaluation()
+        releaseStart()
+      })
+    }
+  })
   it('identifies the previous completed revision when a new start precheck is refused', async () => {
     const task: ValidationTask = {
       ...saved,
