@@ -200,7 +200,12 @@ describe('storage wire and snapshot admission', () => {
 })
 
 describe('storage connection diagnostics', () => {
-  it.each(['io.store-unauthorized', 'store.unreachable', 'store.database-access-failed'])(
+  it.each([
+    'io.store-unauthorized',
+    'store.unreachable',
+    'store.database-access-failed',
+    'io.store-quota-exceeded',
+  ])(
     'retains the safe database failure category %s without arbitrary server details',
     async (causeCode) => {
       const fetcher = vi.fn<typeof fetch>(async () =>

@@ -2,10 +2,15 @@ import { CheckCircle2, Circle, CircleX, Loader2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import type { InitializationProgress } from '@/service/storage-client'
-
 import { Button } from '@/components/ui/button'
+import {
+  isStorageQuotaCode,
+  StorageClientError,
+  type InitializationProgress,
+} from '@/service/storage-client'
 import { replaceWithCloudConsole } from '@/utils/cloud-console'
+
+import { StorageError } from './storage-ui'
 
 function duration(value: number) {
   const seconds = Math.floor(value / 1000)
@@ -129,9 +134,14 @@ export function InitializationMilestones({
                     {t('storage.initialization.runtimeHelp')}
                   </p>
                 )}
-                {step.errorCode && (
-                  <code className="text-destructive mt-2 block text-xs">{step.errorCode}</code>
-                )}
+                {step.errorCode &&
+                  (isStorageQuotaCode(step.errorCode) ? (
+                    <div className="mt-2">
+                      <StorageError error={new StorageClientError(step.errorCode, 503)} />
+                    </div>
+                  ) : (
+                    <code className="text-destructive mt-2 block text-xs">{step.errorCode}</code>
+                  ))}
               </div>
             </li>
           )

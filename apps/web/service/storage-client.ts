@@ -1,3 +1,7 @@
+export function isStorageQuotaCode(code: unknown): boolean {
+  return code === 'io.store-quota-exceeded' || code === 'control.storage-quota-exceeded'
+}
+
 export type StorageLayer = 'CONFIG' | 'CACHE' | 'MASTER'
 export type StorageHealth = 'UNKNOWN' | 'AVAILABLE' | 'UNAVAILABLE' | 'AUTH_READY'
 export const INITIALIZATION_STAGES = [
@@ -166,7 +170,12 @@ export async function storageRequest<T>(
         : undefined
     const causeCode =
       typeof cause === 'string' &&
-      ['io.store-unauthorized', 'store.unreachable', 'store.database-access-failed'].includes(cause)
+      [
+        'io.store-unauthorized',
+        'store.unreachable',
+        'store.database-access-failed',
+        'io.store-quota-exceeded',
+      ].includes(cause)
         ? cause
         : undefined
     throw new StorageClientError(code, response.status, causeCode)
