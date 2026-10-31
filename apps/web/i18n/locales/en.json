@@ -2719,5 +2719,10 @@
       "confirm": "Confirm",
       "close": "Close"
     }
+  },
+  "startup": {
+    "title": "Loading your Cluster",
+    "help": "Connecting to Tapstate. Keep this page open. If it takes longer, reload the page.",
+    "retry": "Reload page"
   }
 }
