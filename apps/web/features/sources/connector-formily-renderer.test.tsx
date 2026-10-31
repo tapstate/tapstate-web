@@ -380,7 +380,7 @@ describe('ConnectorFormily', () => {
     })
     await act(async () => {
       input?.dispatchEvent(new Event('change', { bubbles: true }))
-      await new Promise((resolve) => setTimeout(resolve, 30))
+      await vi.waitFor(() => expect(secretChanges).toHaveLength(1), { timeout: 3000 })
     })
 
     expect(secretChanges).toEqual([

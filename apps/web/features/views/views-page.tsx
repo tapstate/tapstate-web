@@ -39,6 +39,7 @@ export function ViewsPage() {
       </ResourceListHeader>
       <div className="views-page__body">
         <p className="text-muted-foreground text-[13px]">{t('views.intro')}</p>
+        <p className="text-muted-foreground text-[12px]">{t('views.measurementNote')}</p>
         {viewsQuery.isError ? (
           <div className="views-page__state" role="alert">
             <p>{t('views.states.error')}</p>

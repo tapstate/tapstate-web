@@ -1192,4 +1192,3 @@ Every extracted custom property is listed below. Definitions, line citations, va
 | --color-yellow-800 | #723b13 | not declared | not declared | available-in-shipped-package | 0 |
 
 </details>
-

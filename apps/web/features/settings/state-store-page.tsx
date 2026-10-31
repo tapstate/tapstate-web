@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import { ExternalLink, HardDrive } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -90,6 +91,9 @@ export function StateStorePage() {
           >
             {t('stateStorePage.about.title')}
           </button>
+          <Link to="/settings/alerts" className="settings-sections__item">
+            {t('alerts.configuration')}
+          </Link>
         </nav>
         <div className="settings-page__body">
           {activeSection === 'stateStore' ? (

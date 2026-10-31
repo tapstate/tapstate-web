@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 
+import { AlertTopbar } from '@/features/alerts/alert-shared'
+
 import { AppSidebar } from './app-sidebar'
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -8,6 +10,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <AppSidebar />
 
       <main className="app-shell__main">
+        <AlertTopbar />
         <div className="app-shell__content">{children}</div>
       </main>
     </div>

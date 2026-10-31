@@ -41,6 +41,26 @@ describe('listViews', () => {
       listViews(respond({ items: [{ ...view, status: { state: 'fresh' } }] })),
     ).rejects.toBeInstanceOf(ViewClientError)
   })
+  it('checks measurement units, ages and timestamps before presenting them as evidence', async () => {
+    const status = {
+      state: 'fresh',
+      behindSeconds: 3,
+      unit: 's',
+      eventAgeSeconds: 3,
+      observationAgeSeconds: 1,
+      observedAt: '2026-10-29T00:00:00Z',
+      refreshedAt: '2026-10-29T00:00:01Z',
+      aggregation: 'max-input-table-event-age',
+    }
+    await expect(listViews(respond({ items: [{ ...view, status }] }))).resolves.toMatchObject({
+      available: true,
+    })
+    for (const invalid of [{ unit: 'ms' }, { eventAgeSeconds: -1 }, { observedAt: 'yesterday' }]) {
+      await expect(
+        listViews(respond({ items: [{ ...view, status: { ...status, ...invalid } }] })),
+      ).rejects.toBeInstanceOf(ViewClientError)
+    }
+  })
 })
 
 it('preserves output diagnostics returned alongside resolved views', async () => {

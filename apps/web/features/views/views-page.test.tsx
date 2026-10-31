@@ -191,16 +191,56 @@ describe('ViewsPage', () => {
     expect(rows[1].textContent).toContain('View')
     expect(rows[1].textContent).toContain('Loading 42%')
     expect(rows[3].textContent).toContain('Replica')
-    expect(rows[3].textContent).toContain('Stale · 12 min')
+    expect(rows[3].textContent).toContain('Observation unavailable · 12 min old')
     const maintainers = rows.map((row) => row.querySelectorAll('td')[6]?.textContent?.trim())
     expect(maintainers).toEqual(['mirror-core', 'build-c360', 'mirror-core', 'mirror-core'])
     expect(rows.every((row) => !row.querySelector('a[href="/pipelines/$pipelineId/edit"]'))).toBe(
       true,
     )
     expect(page.container.textContent).toContain(
-      '4 views · 2 fresh · 1 stale · 1 loading · slowest 4 s behind',
+      '4 views · 2 observed · 1 unavailable · 1 loading · maximum event age 4 s',
     )
     expect(page.container.textContent).toContain('a Replica is a mirrored copy of one table')
     expect(page.container.textContent).toContain('Tapstate state store')
+  })
+  it('keeps source-idle event age separate from observation availability and shows measurement times', async () => {
+    listViews.mockResolvedValue({
+      available: true,
+      views: [
+        viewEntry('idle', 'view', 'idle-pipeline', {
+          state: 'fresh',
+          behindSeconds: 900,
+          eventAgeSeconds: 900,
+          unit: 's',
+          aggregation: 'max-input-table-event-age',
+          observedAt: '2026-10-29T00:00:00Z',
+          refreshedAt: '2026-10-29T00:00:01Z',
+          observationAgeSeconds: 1,
+        }),
+      ],
+    })
+    page = await renderPage(<ViewsPage />)
+    expect(page.container.textContent).toContain('Observed · event age 15 min')
+    expect(page.container.textContent).toContain('Measured')
+    expect(page.container.textContent).toContain('refreshed')
+    expect(page.container.textContent).toContain('does not measure end-to-end lag')
+    expect(page.container.textContent).not.toContain('behind')
+  })
+  it('shows a clock diagnostic and available refresh time when the measurement time is missing', async () => {
+    listViews.mockResolvedValue({
+      available: true,
+      views: [
+        viewEntry('unknown-clock', 'view', 'clock-pipeline', {
+          state: 'stale',
+          staleSeconds: null,
+          reason: 'clock-or-time-unavailable',
+          observedAt: null,
+          refreshedAt: '2026-10-29T00:00:01Z',
+        }),
+      ],
+    })
+    page = await renderPage(<ViewsPage />)
+    expect(page.container.textContent).toContain('Observation time unavailable')
+    expect(page.container.textContent).toContain('Measured unknown · refreshed')
   })
 })

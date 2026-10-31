@@ -7,14 +7,26 @@ import type { ApiFetcher } from './source-client'
 export type ViewKind = 'view' | 'replica'
 
 /**
- * Freshness as the server combines it from the pipeline's state and its lag. A stopped pipeline
- * makes its views stale even when nothing failed, so the client never derives this itself.
+ * Server-qualified observation availability and target-acked event age. Source idleness can
+ * increase event age while observations remain current; this is not source-to-target lag.
  */
-export type ViewFreshness =
-  | { state: 'fresh'; behindSeconds: number }
-  | { state: 'stale'; staleSeconds: number | null }
-  | { state: 'loading'; percent: number | null }
-  | { state: 'not-loaded' }
+export interface ViewMeasurement {
+  eventAgeSeconds?: number | null
+  observedAt?: string | null
+  refreshedAt?: string | null
+  observationAgeSeconds?: number | null
+  unit?: 's'
+  aggregation?: 'max-input-table-event-age'
+  reason?: string
+}
+
+export type ViewFreshness = ViewMeasurement &
+  (
+    | { state: 'fresh'; behindSeconds: number }
+    | { state: 'stale'; staleSeconds: number | null }
+    | { state: 'loading'; percent: number | null }
+    | { state: 'not-loaded' }
+  )
 
 export interface ViewLocation {
   storeId: string
@@ -107,6 +119,27 @@ function isNullableNumber(value: unknown): value is number | null {
 
 function isFreshness(value: unknown): value is ViewFreshness {
   if (!isRecord(value)) return false
+  for (const field of ['eventAgeSeconds', 'observationAgeSeconds']) {
+    const number = value[field]
+    if (
+      number !== undefined &&
+      number !== null &&
+      (typeof number !== 'number' || !Number.isFinite(number) || number < 0)
+    )
+      return false
+  }
+  for (const field of ['observedAt', 'refreshedAt']) {
+    const time = value[field]
+    if (
+      time !== undefined &&
+      time !== null &&
+      (typeof time !== 'string' || !Number.isFinite(Date.parse(time)))
+    )
+      return false
+  }
+  if (value.unit !== undefined && value.unit !== 's') return false
+  if (value.aggregation !== undefined && value.aggregation !== 'max-input-table-event-age')
+    return false
   switch (value.state) {
     case 'fresh':
       return typeof value.behindSeconds === 'number'

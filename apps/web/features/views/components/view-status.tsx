@@ -28,6 +28,9 @@ export function useFreshnessText() {
       case 'fresh':
         return t('views.status.fresh', { behind: duration(status.behindSeconds) })
       case 'stale':
+        if (status.reason === 'clock-or-time-unavailable') return t('views.status.clockUnavailable')
+        if (status.reason === 'measurement-unavailable')
+          return t('views.status.measurementUnavailable')
         return status.staleSeconds === null || status.staleSeconds === undefined
           ? t('views.status.staleUnknown')
           : t('views.status.stale', { age: duration(status.staleSeconds) })
@@ -49,10 +52,24 @@ export function ViewStatus({ status }: { status: ViewFreshness }) {
     loading: 'normal',
     'not-loaded': 'disabled',
   } as const
+  const { t, i18n } = useTranslation()
+  const time = (value: string) => new Date(value).toLocaleTimeString(i18n.language)
   return (
-    <span className="views-status">
-      <StatusDot className="views-status__dot rounded-full" status={dotStatus[status.state]} />
-      {text(status)}
+    <span className="inline-grid gap-1" title={t('views.measurementNote')}>
+      <span className="views-status">
+        <StatusDot className="views-status__dot rounded-full" status={dotStatus[status.state]} />
+        {text(status)}
+      </span>
+      <span className="text-muted-foreground text-[11px]">
+        {status.observedAt || status.refreshedAt
+          ? t('views.status.times', {
+              measured: status.observedAt ? time(status.observedAt) : t('views.status.unknownTime'),
+              refreshed: status.refreshedAt
+                ? time(status.refreshedAt)
+                : t('views.status.unknownTime'),
+            })
+          : t('views.status.timeUnknown')}
+      </span>
     </span>
   )
 }

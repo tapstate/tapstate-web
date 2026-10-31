@@ -2,7 +2,15 @@ import type { ComponentType, SVGProps } from 'react'
 
 import { useQuery } from '@tanstack/react-query'
 import { Link, useRouterState } from '@tanstack/react-router'
-import { ArrowUpRight, Building2, Database, GitMerge, LayoutDashboard, Table2 } from 'lucide-react'
+import {
+  Activity,
+  ArrowUpRight,
+  Building2,
+  Database,
+  GitMerge,
+  LayoutDashboard,
+  Table2,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
@@ -20,6 +28,7 @@ interface NavigationItem {
 
 const navigation: NavigationItem[] = [
   { labelKey: 'nav.overview', to: '/overview', icon: LayoutDashboard },
+  { labelKey: 'alerts.systemHealth', to: '/health', icon: Activity },
   { labelKey: 'nav.sources', to: '/sources', icon: Database },
   { labelKey: 'nav.pipelines', to: '/pipelines', icon: GitMerge },
   { labelKey: 'nav.views', to: '/views', icon: Table2 },
