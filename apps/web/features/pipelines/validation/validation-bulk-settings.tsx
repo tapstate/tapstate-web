@@ -351,13 +351,13 @@ export function ValidationBulkSettings({
             setDirty(true)
           }}
           aria-label={t('dataValidation.method')}
-          className="gap-3 bg-transparent p-0"
+          className="w-full max-w-full flex-wrap gap-2 bg-transparent p-0 sm:w-auto sm:gap-3"
         >
           {(['FULL_COLUMN', 'UNIQUE_KEY', 'COUNT'] as const).map((value) => (
             <SegmentedControlItem
               value={value}
               key={value}
-              className="gap-2 border-none bg-transparent shadow-none data-checked:bg-transparent data-checked:shadow-none"
+              className="h-auto min-h-11 max-w-full shrink-0 gap-2 border-none bg-transparent whitespace-normal shadow-none data-checked:bg-transparent data-checked:shadow-none sm:min-h-7"
             >
               <span
                 aria-hidden="true"
@@ -413,6 +413,7 @@ export function ValidationBulkSettings({
             setPage(1)
           }}
           aria-label={t('dataValidation.bulk.filter')}
+          className="max-w-full flex-wrap"
         >
           {['pending', 'included', 'excluded', 'all'].map((value) => (
             <SegmentedControlItem key={value} value={value}>
